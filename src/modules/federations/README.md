@@ -19,14 +19,20 @@ federations/
 │   ├── federationPending.js     # "Precisa de você" da Central e da Minha área
 │   ├── affiliations.js          # PR 2: pedido e decisão de filiação de clube/arena, contagens
 │   ├── sanction.js              # PR 2: chancela do torneio (pedir, decidir, retirar) e a exigência "só filiados"
-│   └── officialRanking.js       # PR 2: a CONTA do ranking oficial (cópia em functions/federationRanking.js)
+│   ├── officialRanking.js       # PR 2: a CONTA do ranking oficial (cópia em functions/federationRanking.js)
+│   ├── privateData.js           # PR 3: CPF (só se a federação pede), idade/faixa, menor e dependente, documentos exigidos
+│   ├── transfers.js             # PR 3: troca de clube / de federação — prazo de liberação, carência, estados
+│   ├── importMembers.js         # PR 3: a lista colada (CSV/linhas) → linhas válidas, erros, prévia
+│   ├── courses.js               # PR 3: estado do curso, vagas, cancelar inscrição, estado da credencial
+│   └── discipline.js            # PR 3: sanção (validação, efeito, recurso) e ouvidoria (protocolo)
 ├── services/
 │   ├── federationService.js     # leituras (uma igualdade, ordenação em memória), escritas da regra
 │   │                            # (pedido, página, Pix, módulos, equipe, planos, preferências, "Já paguei")
-│   │                            # e as chamadas ao servidor (reviewFederation, membershipAction, chargeAction, verifyCard)
+│   │                            # e as chamadas ao servidor (reviewFederation, membershipAction, chargeAction, verifyCard;
+│   │                            # PR 3: transferAction, courseAction, disciplineAction, importMembers, fetchDocument)
 │   └── federationExportService.js  # o bloco `federations` da exportação de dados
 ├── hooks/useFederations.js      # chaves em `fedKeys`; useMyFederationRole, useMyMemberships, useCardVerification…
-└── i18n/locales/{en,es}.js      # 687 chaves (inclui os avisos do servidor e os textos dos cartões fora do módulo)
+└── i18n/locales/{en,es}.js      # 1125 chaves (inclui os avisos do servidor e os textos dos cartões fora do módulo)
 ```
 
 Telas: `src/v2/pages/V2Federations.jsx` (`/federacoes`), `V2FederationApply`
@@ -39,7 +45,11 @@ públicas V1 `src/pages/PublicFederation.jsx` (`/f/:slug`) e
 (`src/v2/components/admin/federations/AdminFederationsPanel.jsx`).
 
 Fora do módulo, mas dele (`src/v2/components/federations/`): `FedPublicBlocks.jsx`
-(torneios chancelados, ranking, clubes/arenas na página da federação),
+(torneios chancelados, ranking, clubes/arenas, cursos, credenciados e ouvidoria
+na página da federação), `FedMemberExtras.jsx` (PR 3: documentos do filiado,
+sanções e recurso, transferência), `manage/FedSecretariatPanel.jsx`
+(Transferências · Documentos · Importar), `manage/FedCoursesPanel.jsx`
+(Cursos · Credenciais), `manage/FedDisciplinePanel.jsx` (Sanções · Ouvidoria),
 `FedTags.jsx` (selos), `OrgAffiliationCard.jsx` (gestão do clube e Central da
 arena → Federação), `TournamentSanctionCard.jsx` (gestão do torneio → Geral),
 `FederationResultButton.jsx` (resultados do torneio); e a trava "só filiados"
@@ -47,7 +57,12 @@ em `ModalityRegistrationDialog.jsx` (`membershipRequirement`).
 
 Servidor: `functions/federations.js` (`federationReview`,
 `federationMembership`, `federationChargeConfirm`, `federationVerify`,
-`federationMembershipSweep`) e `functions/federationMembership.js` — **cópia**
+`federationMembershipSweep`), PR 3 `functions/federationTransfers.js`
+(`federationTransfer` + a liberação automática na varredura),
+`federationCourses.js` (`federationCourse`), `federationDiscipline.js`
+(`federationDiscipline`), `federationSecretariat.js`
+(`federationImportMembers`, `federationDocument`) — testes em
+`functions/federationPr3.test.js`; e `functions/federationMembership.js` — **cópia**
 de `domain/membership.js` com paridade em
 `functions/federationMembership.parity.test.js`; `functions/federationRanking.js`
 (`federationRankingRecompute`, `federationRankingConfig`) — **cópia** de
@@ -57,9 +72,13 @@ Coleções (`firestore.rules` § FEDERAÇÕES, provadas em
 `tests/rules/federation.rules.test.js`): `federations` (+ `private/data`),
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`),
 `federation_charges`, `federation_card_index`, `federation_affiliations`,
-`federation_results`, `federation_rankings` (`tests/rules/federationPr2.rules.test.js`).
-Zero índice composto; os únicos campos novos em coleção existente são os
-opcionais `tournaments.federation_id`/`federation_sanction`.
+`federation_results`, `federation_rankings` (`tests/rules/federationPr2.rules.test.js`);
+PR 3 (`tests/rules/federationPr3.rules.test.js`): `federation_documents_submitted`,
+`federation_transfers`, `federation_imports`, `federation_courses`,
+`federation_course_enrollments`, `federation_credentials`,
+`federation_sanctions`, `federation_reports`; Storage `federacao/{uid}/`
+(`storage.rules`: só o dono lê). Zero índice composto; os únicos campos novos
+em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir
 
@@ -87,3 +106,18 @@ opcionais `tournaments.federation_id`/`federation_sanction`.
 - Módulo novo da federação: `FED_MODULE` + `FED_MODULE_META` (nasce `planned`,
   que a aba mostra como "Em breve" e não liga); a tela dele pergunta
   `federation.modules[x]`.
+- **PR 3** — CPF, nascimento e responsável só em `private/data` (nunca no
+  documento da filiação; na Central o CPF nasce mascarado e revelar é
+  auditado). **Dependente** = filiação com `user_id` nulo e `guardian_uid`:
+  "é o dono?" é sempre `fedMemberOwner` na regra, e o cliente consulta
+  `user_id` **e** `guardian_uid` (duas consultas somadas), nunca só `user_id`. **Transferência, inscrição em curso, credencial, sanção
+  e importação só o servidor grava**; a federação antiga **libera** a troca
+  (silêncio = liberada no prazo pela varredura) e os pontos não migram. O
+  **documento** só o dono lê no Storage; a secretaria o vê pela função
+  `federationDocument`. A **suspensão** vale na regra da inscrição
+  (`discipline_until_ms`) e termina sozinha na data — nenhuma varredura a
+  encerra. A **credencial** usa o índice da carteirinha (`kind: 'credential'`)
+  e nasce privada. Manifestação **anônima** não leva `reporter_uid` (regra);
+  o protocolo deriva do id (`reportProtocol`/`protocolToId`). A `origin` da
+  cobrança decide o efeito da confirmação (`course` confirma a inscrição,
+  `fine` quita a sanção) — um caminho só.

@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ExternalLink, Globe, IdCard, Instagram, Landmark, Mail, Phone, Settings2, Users } from 'lucide-react';
+import { ArrowLeftRight, ExternalLink, Globe, IdCard, Instagram, Landmark, Mail, Phone, Settings2, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationRole, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { membershipAction } from '@/modules/federations/services/federationService';
@@ -20,7 +20,10 @@ import { FedBadges, FedLogo, FederationGate, MemberStatusBadge, fedManagePath, f
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import PlansList from '@/v2/components/federations/PlansList';
-import { FedAffiliatesSection, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
+import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
+import { FedMemberDocuments, FedMySanctions, FedTransferDialog } from '@/v2/components/federations/FedMemberExtras';
+import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
+import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
 import { t, tn } from '@/core/i18n';
 
 /** A situação da pessoa nesta federação: filiar-se, pagar, renovar, carteirinha. */
@@ -29,6 +32,7 @@ function MinhaSituacao({ federation, plans }) {
   const mq = useMyMembership(federation.id);
   const cq = useMyFederationCharges();
   const [cartao, setCartao] = useState(false);
+  const [transferindo, setTransferindo] = useState(false);
   const renovar = useFederationMutation(() => membershipAction({ federationId: federation.id, action: 'renew' }));
   if (mq.isError || cq.isError) return <V2ErrorState inline title={t('Não carregou a sua situação nesta federação')} onRetry={() => { if (mq.isError) mq.refetch(); if (cq.isError) cq.refetch(); }} />;
   if (!mq.isSuccess || !cq.isSuccess) return <V2Skeleton lines={3} />;
@@ -45,7 +49,10 @@ function MinhaSituacao({ federation, plans }) {
           <p className="font-display text-lg font-bold text-ink">{t('Você ainda não é filiado')}</p>
           <p className="text-sm text-gray-600">{m?.status === MEMBER_STATUS.REJECTED ? t('O pedido anterior foi recusado: {motivo}.', { motivo: m.reject_reason || t('sem motivo informado') }) : t('Escolha um plano, pague por Pix e receba a carteirinha digital.')}</p>
         </div>
-        <V2Button asChild disabled={!aberta}><Link to={`/federacoes/${federation.id}/filiar`}><IdCard className="h-4 w-4" />{t('Filiar-se')}</Link></V2Button>
+        <div className="flex flex-wrap gap-2">
+          <V2Button asChild disabled={!aberta}><Link to={`/federacoes/${federation.id}/filiar`}><IdCard className="h-4 w-4" />{t('Filiar-se')}</Link></V2Button>
+          <V2Button asChild variant="ghost" disabled={!aberta}><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
+        </div>
       </V2Surface>
     );
   }
@@ -60,7 +67,10 @@ function MinhaSituacao({ federation, plans }) {
       </div>
       {st.status === MEMBER_STATUS.PENDING && <p className="text-sm text-gray-600">{t('A secretaria da federação analisa o pedido e avisa pelo sino.')}</p>}
       {st.status === MEMBER_STATUS.SUSPENDED && <p className="text-sm text-red-600">{t('Filiação suspensa{motivo}.', { motivo: m.suspended_reason ? `: ${m.suspended_reason}` : '' })}</p>}
+      {isDisciplineSuspended(m) && <p className="text-sm text-red-600">{t('Suspensão disciplinar até {data}: sem inscrição em torneio chancelado "só filiados" até lá.', { data: quando(m.discipline_until_ms) })}</p>}
       {cobrancas.map((c) => <PixChargeBlock key={c.id} charge={c} federation={federation} />)}
+      <FedMemberDocuments member={m} plan={plano} />
+      <FedMySanctions federationId={federation.id} />
       <div className="flex flex-wrap gap-2">
         {[MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && m.card_code && (
           <V2Button type="button" onClick={() => setCartao(true)} data-dica="federacao-carteirinha"><IdCard className="h-4 w-4" />{t('Carteirinha digital')}</V2Button>
@@ -70,9 +80,12 @@ function MinhaSituacao({ federation, plans }) {
             {st.status === MEMBER_STATUS.EXPIRED ? t('Renovar a filiação') : t('Renovar antes de vencer')}
           </V2Button>
         )}
+        {LIVE_MEMBER_STATUSES.includes(st.status) && st.status !== MEMBER_STATUS.PENDING && <V2Button type="button" variant="ghost" onClick={() => setTransferindo(true)} data-dica="federacao-transferencia"><ArrowLeftRight className="h-4 w-4" />{t('Transferência')}</V2Button>}
+        <V2Button asChild variant="ghost"><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
         <V2Button asChild variant="ghost"><Link to="/perfil?secao=federacoes">{t('Minhas federações')}</Link></V2Button>
       </div>
       {cartao && <MemberCardDialog open onOpenChange={setCartao} member={{ ...m, user_name: m.user_name || user?.displayName }} federation={federation} plan={plano} />}
+      {transferindo && <FedTransferDialog member={m} federation={federation} onClose={() => setTransferindo(false)} />}
     </V2Surface>
   );
 }
@@ -130,7 +143,10 @@ function Detalhe() {
             <>
               <FedSanctionedTournaments federation={f} />
               <FedRankingBlock federation={f} meUid={user?.uid || null} />
+              <FedCoursesSection federation={f} />
+              <FedCredentialsDirectory federation={f} />
               <FedAffiliatesSection federation={f} />
+              <FedOmbudsmanBlock federation={f} />
             </>
           )}
         </section>

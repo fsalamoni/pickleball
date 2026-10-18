@@ -8,8 +8,9 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
-  Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
+  ArrowLeftRight, Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
   HandCoins, Heart, HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
   Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
@@ -39,12 +40,16 @@ import { USER_AREA_SECTION as S, marketPendingCounts } from '@/modules/athletes/
 import { useMarketCart, useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { ORDER_FINAL_STATUSES } from '@/modules/marketplace/domain/constants';
 import { membershipState } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, MEMBER_STATUS, STAFF_ROLE_LABELS } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, STAFF_ROLE_LABELS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { credentialState } from '@/modules/federations/domain/courses';
+import { verifyPath } from '@/modules/federations/domain/card';
+import { setCredentialPublic } from '@/modules/federations/services/federationService';
+import { FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
 import { FedLogo, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
-import { useFederation } from '@/modules/federations/hooks/useFederations';
-import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { useFederation, useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { V2Badge, V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { HomeAction, HomeEmpty, HomeRow } from '@/v2/components/home/personal/HomeSection';
 import WeekStrip from '@/v2/components/training/WeekStrip';
@@ -621,12 +626,33 @@ function FiliacaoRow({ m }) {
   );
 }
 
+/** Uma credencial da pessoa: aparecer (ou não) no diretório público e o link de verificação. */
+function CredencialRow({ c }) {
+  const st = credentialState(c);
+  const m = useFederationMutation((input) => setCredentialPublic(c.id, input));
+  const alternar = () => m.mutate({ public: !c.public, public_photo: c.public_photo !== false }, { onSuccess: () => toast.success(c.public ? t('Você saiu do diretório público.') : t('Você aparece no diretório público da federação.')), onError: (e) => toast.error(e.message) });
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 p-3">
+      <ShieldCheck className={`h-5 w-5 shrink-0 ${st.valid ? 'text-green-700' : 'text-gray-400'}`} aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-ink">{t(COURSE_KIND_LABELS[c.kind] || COURSE_KIND_LABELS.clinic)}{c.level ? ` · ${c.level}` : ''} <span className="text-xs font-normal text-gray-500">· {c.federation_acronym || c.federation_name}</span></p>
+        <p className="text-xs text-gray-500">{c.course_name}{c.valid_until ? ` · ${t('até {data}', { data: quando(c.valid_until) })}` : ''} · <V2Badge tone={st.valid ? 'green' : 'neutral'}>{st.label}</V2Badge></p>
+      </div>
+      {st.valid && c.code && <V2Button asChild size="sm" variant="secondary"><Link to={verifyPath(c.code)}>{t('Verificar')}</Link></V2Button>}
+      {st.valid && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={alternar} data-dica="minha-area-credencial-publica">{c.public ? t('Sair do diretório') : t('Aparecer no diretório')}</V2Button>}
+    </li>
+  );
+}
+
 function FederacoesSecao({ ctx }) {
-  const { membersQ, chargesQ, rolesQ } = ctx.federacoes;
-  const falhas = [membersQ, chargesQ, rolesQ].filter((q) => q.isError);
+  const { membersQ, chargesQ, rolesQ, dependentsQ, credentialsQ, transfersQ } = ctx.federacoes;
+  const falhas = [membersQ, chargesQ, rolesQ, dependentsQ, credentialsQ, transfersQ].filter((q) => q?.isError);
   const filiacoes = (membersQ.data || []).filter((m) => !['cancelled', 'rejected'].includes(m.status));
   const abertas = (chargesQ.data || []).filter((c) => [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
   const papeis = rolesQ.data || [];
+  const dependentes = dependentsQ?.data || [];
+  const credenciais = credentialsQ?.data || [];
+  const transferencias = (transfersQ?.data || []).filter((x) => x.status === TRANSFER_STATUS.PENDING);
   return (
     <div className="space-y-6">
       {falhas.length > 0 && <V2ErrorState inline title={t('Não carregaram as suas federações')} onRetry={() => falhas.forEach((q) => q.refetch())} />}
@@ -644,6 +670,30 @@ function FederacoesSecao({ ctx }) {
           </HomeEmpty>
         ) : <ul className="space-y-2">{filiacoes.map((m) => <FiliacaoRow key={m.id} m={m} />)}</ul>}
       </Bloco>
+      {transferencias.length > 0 && (
+        <Bloco id="federacoes-transferencias" icon={ArrowLeftRight} title={t('Transferências em análise')}>
+          <ul className="space-y-2">
+            {transferencias.map((x) => (
+              <li key={x.id} className="rounded-2xl border border-gray-100 p-3 text-sm">
+                <p className="font-bold text-ink">{t(TRANSFER_KIND_LABELS[x.kind] || '')} · {x.federation_acronym || x.federation_name}</p>
+                <p className="text-xs text-gray-500">{x.from_club_name || t('sem clube')} → {x.to_club_name || x.to_federation_name || '—'} · <V2Badge tone="amber">{t(TRANSFER_STATUS_LABELS[x.status] || x.status)}</V2Badge></p>
+              </li>
+            ))}
+          </ul>
+        </Bloco>
+      )}
+      {dependentes.length > 0 && (
+        <Bloco id="federacoes-dependentes" icon={Users} title={t('Seus dependentes')}>
+          <ul className="space-y-2">{dependentes.map((m) => <FiliacaoRow key={m.id} m={m} />)}</ul>
+          <p className="mt-2 text-xs text-gray-500">{t('Você responde pela filiação do menor: a cobrança, a carteirinha e os documentos passam por você.')}</p>
+        </Bloco>
+      )}
+      {credenciais.length > 0 && (
+        <Bloco id="federacoes-credenciais" icon={ShieldCheck} title={t('Suas credenciais')}>
+          <ul className="space-y-2">{credenciais.map((c) => <CredencialRow key={c.id} c={c} />)}</ul>
+        </Bloco>
+      )}
+      <FedMySanctions titulo={t('Sanções disciplinares')} />
       {papeis.length > 0 && (
         <Bloco id="federacoes-equipe" icon={ShieldCheck} title={t('Você na equipe')}>
           <Atalhos itens={papeis.map((s) => ({ to: fedManagePath({ id: s.federation_id }), label: s.federation_name || t('Federação'), descricao: t(STAFF_ROLE_LABELS[s.role] || ''), icon: Landmark }))} />

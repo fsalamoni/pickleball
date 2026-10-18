@@ -36,6 +36,27 @@ export const fedKeys = {
   results: (id) => ['federacoes', 'federacao', id, 'resultados'],
   tournamentResults: (tid) => ['federacoes', 'torneio', tid, 'resultados'],
   ranking: (id, season) => ['federacoes', 'federacao', id, 'ranking', season],
+  // PR 3
+  myDependents: (uid) => ['federacoes', 'meus-dependentes', uid],
+  memberPrivate: (memberId) => ['federacoes', 'filiacao-privado', memberId],
+  myDocuments: (uid) => ['federacoes', 'meus-documentos', uid],
+  documents: (id) => ['federacoes', 'federacao', id, 'documentos'],
+  myTransfers: (uid) => ['federacoes', 'minhas-transferencias', uid],
+  transfers: (id) => ['federacoes', 'federacao', id, 'transferencias'],
+  incomingTransfers: (id) => ['federacoes', 'federacao', id, 'transferencias-chegando'],
+  imports: (id) => ['federacoes', 'federacao', id, 'importacoes'],
+  courses: (id) => ['federacoes', 'federacao', id, 'cursos'],
+  publicCourses: (id) => ['federacoes', 'federacao', id, 'cursos', 'publicos'],
+  courseEnrollments: (courseId) => ['federacoes', 'curso', courseId, 'inscritos'],
+  myEnrollments: (uid) => ['federacoes', 'minhas-inscricoes-curso', uid],
+  myCredentials: (uid) => ['federacoes', 'minhas-credenciais', uid],
+  credentials: (id) => ['federacoes', 'federacao', id, 'credenciais'],
+  publicCredentials: (id) => ['federacoes', 'federacao', id, 'credenciais', 'publicas'],
+  mySanctions: (uid) => ['federacoes', 'minhas-sancoes', uid],
+  sanctions: (id) => ['federacoes', 'federacao', id, 'sancoes'],
+  report: (id) => ['federacoes', 'ouvidoria', id],
+  myReports: (uid) => ['federacoes', 'minhas-manifestacoes', uid],
+  reports: (id) => ['federacoes', 'federacao', id, 'ouvidoria'],
 };
 
 /** As federações estão ligadas para quem vê? (a flag do admin) */
@@ -163,4 +184,54 @@ export function useTournamentFederationResults(tournamentId, { enabled = true } 
 /** O ranking oficial da temporada (gravado pelo servidor; `null` = ainda não há). */
 export function useFederationRanking(id, season, { enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.ranking(id, season), queryFn: () => svc.getFederationRanking(id, season), enabled: !!id && !!season && enabled, staleTime: 60_000 });
+}
+
+/* ------------------------------------------- PR 3: dependentes, documentos, transferências, cursos, disciplina -- */
+
+const porUid = (fn, chave) => ({ enabled = true } = {}) => {
+  const { user } = useAuth();
+  return useQuery({ queryKey: chave(user?.uid), queryFn: () => fn(user?.uid), enabled: !!user?.uid && enabled });
+};
+const porFed = (fn, chave) => (id, { enabled = true } = {}) => useQuery({ queryKey: chave(id), queryFn: () => fn(id), enabled: !!id && enabled });
+
+/** As filiações dos dependentes (menores) que a pessoa filiou. */
+export const useMyDependents = porUid(svc.listMyDependents, fedKeys.myDependents);
+export const useMyDocuments = porUid(svc.listMyDocuments, fedKeys.myDocuments);
+export const useMyTransfers = porUid(svc.listMyTransfers, fedKeys.myTransfers);
+export const useMyEnrollments = porUid(svc.listMyEnrollments, fedKeys.myEnrollments);
+export const useMyCredentials = porUid(svc.listMyCredentials, fedKeys.myCredentials);
+export const useMySanctions = porUid(svc.listMySanctions, fedKeys.mySanctions);
+export const useMyReports = porUid(svc.listMyReports, fedKeys.myReports);
+
+/** `private/data` de uma filiação (o próprio/responsável; a secretaria passa por `revealMemberPrivate`). */
+export function useMemberPrivate(memberId, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.memberPrivate(memberId), queryFn: () => svc.getMemberPrivate(memberId), enabled: !!memberId && enabled });
+}
+
+export const useFederationDocuments = porFed(svc.listFederationDocuments, fedKeys.documents);
+export const useFederationTransfers = porFed(svc.listFederationTransfers, fedKeys.transfers);
+export const useIncomingTransfers = porFed(svc.listIncomingTransfers, fedKeys.incomingTransfers);
+export const useFederationImports = porFed(svc.listFederationImports, fedKeys.imports);
+export const useFederationCourses = porFed(svc.listFederationCourses, fedKeys.courses);
+export const useFederationCredentials = porFed(svc.listFederationCredentials, fedKeys.credentials);
+export const useFederationSanctions = porFed(svc.listFederationSanctions, fedKeys.sanctions);
+export const useFederationReports = porFed(svc.listFederationReports, fedKeys.reports);
+
+/** Os cursos que o público vê (página da federação). */
+export function usePublicCourses(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.publicCourses(id), queryFn: () => svc.listPublicCourses(id), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+/** O diretório público de credenciados. */
+export function usePublicCredentials(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.publicCredentials(id), queryFn: () => svc.listPublicCredentials(id), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+export function useCourseEnrollments(courseId, fedId, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.courseEnrollments(courseId), queryFn: () => svc.listCourseEnrollments(courseId, fedId), enabled: !!courseId && !!fedId && enabled });
+}
+
+/** Uma manifestação pelo protocolo (o id). */
+export function useReport(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.report(id), queryFn: () => svc.getReportById(id), enabled: !!id && enabled, retry: 0 });
 }

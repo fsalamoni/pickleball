@@ -309,9 +309,12 @@ com verificação pública; o admin da plataforma aprova a abertura e dá os sel
 escreve (`functions/federations.js`). Flag `federations` (default OFF);
 sub-módulos por federação (`FED_MODULE_META`): `tournaments` (chancela de
 torneios + envio de resultados), `ranking` (ranking oficial, derivado pelo
-servidor) e `affiliations` (clubes e arenas filiados) disponíveis; os demais
-"em breve". Doc: `docs/50-FEDERACAO.md`.
-- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking}.js`,
+servidor), `affiliations` (clubes e arenas filiados), `courses` (cursos e
+credenciais verificáveis) e `discipline` (sanções com efeito na inscrição e
+ouvidoria com protocolo) disponíveis; os demais "em breve". A secretaria
+(transferências, documentos, importação, CPF e dependentes) não é módulo: vem
+com a federação. Doc: `docs/50-FEDERACAO.md`.
+- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking,privateData,transfers,importMembers,courses,discipline}.js`,
   `services/federationService.js`, `hooks/useFederations.js`. README do módulo é a fonte.
 - **Telas**: `/federacoes`, `/federacoes/abrir`, `/federacoes/:id`,
   `/federacoes/:id/filiar`, `/federacoes/:id/gerir?aba=` (a Central:
@@ -323,9 +326,13 @@ servidor) e `affiliations` (clubes e arenas filiados) disponíveis; os demais
   resultados (`FederationResultButton`), selos (`FedTags.jsx`) e a trava "só
   filiados" na inscrição.
 - **Coleções**: `federations` (+ `private/data`), `federation_staff`,
-  `federation_plans`, `federation_members` (+ `private/data`),
-  `federation_charges`, `federation_card_index`, `federation_affiliations`,
-  `federation_results`, `federation_rankings`; campos opcionais
+  `federation_plans`, `federation_members` (+ `private/data`: CPF, nascimento,
+  responsável), `federation_charges`, `federation_card_index`,
+  `federation_affiliations`, `federation_results`, `federation_rankings`,
+  `federation_documents_submitted`, `federation_transfers`,
+  `federation_imports`, `federation_courses`, `federation_course_enrollments`,
+  `federation_credentials`, `federation_sanctions`, `federation_reports`;
+  Storage `federacao/{uid}/`; campos opcionais
   `tournaments.federation_id`/`.federation_sanction`.
 
 ### help/ — tutoriais, dicas guiadas e central de ajuda

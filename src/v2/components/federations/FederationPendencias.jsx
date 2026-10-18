@@ -11,12 +11,18 @@ import { federationPendingItems } from '@/modules/federations/domain/federationP
 import { V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
-export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, perms, onIrParaAba }) {
-  const members = membersQ?.isSuccess ? membersQ.data : undefined;
-  const charges = chargesQ?.isSuccess ? chargesQ.data : undefined;
-  const affiliations = affiliationsQ?.isSuccess ? affiliationsQ.data : undefined;
-  const tournaments = tournamentsQ?.isSuccess ? tournamentsQ.data : undefined;
-  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments }, perms), [members, charges, affiliations, tournaments, perms]);
+const dado = (q) => (q?.isSuccess ? q.data : undefined);
+
+export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, perms, onIrParaAba }) {
+  const members = dado(membersQ);
+  const charges = dado(chargesQ);
+  const affiliations = dado(affiliationsQ);
+  const tournaments = dado(tournamentsQ);
+  const transfers = dado(transfersQ);
+  const documents = dado(documentsQ);
+  const sanctions = dado(sanctionsQ);
+  const reports = dado(reportsQ);
+  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports }, perms), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, perms]);
   if (itens.length === 0) return null;
   return (
     <V2Surface as="section" variant="compacto" aria-label={t('Precisa de você')} data-dica="federacao-pendencias" className="p-4">

@@ -1586,12 +1586,17 @@ andamento impede a exclusão.
 
 ## Federações (flag `federations`, default OFF) — `docs/50-FEDERACAO.md`
 
-Nove coleções com prefixo `federation`, **zero índice composto** (uma ou duas
-igualdades por consulta, ordenação em memória); os únicos campos novos em
-coleção existente são os dois opcionais de `tournaments` (abaixo). Regras no bloco "FEDERAÇÕES" do `firestore.rules`
-(`fedOn()` lê a flag em `platform_settings/global`; `fedHas(fedId, perm)` lê o
-papel em `federation_staff/{fedId}_{uid}`), provadas em
-`tests/rules/federation.rules.test.js`.
+Dezessete coleções com prefixo `federation`, **zero índice composto** (uma ou
+duas igualdades por consulta, ordenação em memória); os únicos campos novos em
+coleção existente são os dois opcionais de `tournaments` (abaixo). Regras no
+bloco "FEDERAÇÕES" do `firestore.rules` (`fedOn()` lê a flag em
+`platform_settings/global`; `fedHas(fedId, perm)` lê o papel em
+`federation_staff/{fedId}_{uid}`; `fedModuleOn(fedId, m)` lê o sub-módulo;
+`fedMemberOwner(data)` = `user_id` **ou** `guardian_uid` da filiação, PR 3),
+provadas em `tests/rules/federation.rules.test.js`, `federationPr2.rules.test.js`
+e `federationPr3.rules.test.js`. **Storage**: `federacao/{uid}/{arquivo}` —
+só o dono lê, lista e apaga; cria imagem (webp/jpeg/png) ou PDF < 5 MB, sem
+sobrescrever (`storage.rules`).
 
 ### `federations/{id}` (NOVO)
 Público quando `status == 'approved'`; antes só quem pediu, a equipe e o admin.
@@ -1599,7 +1604,8 @@ Público quando `status == 'approved'`; antes só quem pediu, a equipe e o admin
 (`state|regional|national`), `state`, `city`, `about`, `site`, `instagram`,
 `contact_public { email, phone }`, `branding { color, logo_url }`,
 `payment { pix_key_type, pix_key, receiver_name, instructions }`,
-`modules { [FED_MODULE]: boolean }`, `status`
+`modules { [FED_MODULE]: boolean }`, `rules { ask_cpf, transfer_release_days,
+transfer_cooldown_days }` (PR 3, opcional; a equipe `admin` grava), `status`
 (`pending|approved|rejected|suspended`), `verified`, `official`,
 `member_count`, `member_counter` (sequência do número de filiado),
 `cnpj_masked`, `review { action, reason, by, at_ms }`, `created_by`,
@@ -1622,36 +1628,50 @@ plataforma); o presidente não se rebaixa sozinho e não sai da equipe.
 (`monthly|annual`), `validity` (`rolling|calendar`), `rollover_mmdd`,
 `calendar_grace_days` (padrão 60), `price_cents` (0 = gratuito, teto
 100.000.000), `age_min`, `age_max`, `discounts { minor_pct, senior_pct,
-family_pct, family_from }`, `auto_approve`, `active`, `sort`, `updated_by`.
+family_pct, family_from }`, `requires_docs[]` (PR 3:
+`identidade|atestado|comprovante_residencia|autorizacao_responsavel|outro`),
+`auto_approve`, `active`, `sort`, `updated_by`.
 Cria/edita `admin` ou `finance`; apaga só o admin da plataforma (desativa).
 
 ### `federation_members/{fedId}_{uid}` (NOVO, **nunca público**)
 Só o servidor cria e muda o estado (`federationMembership`). `federation_id`,
-`federation_name`, `federation_acronym`, `user_id`, `user_name`, `photo_url`,
+`federation_name`, `federation_acronym`, `user_id` (**nulo** no dependente),
+`guardian_uid`/`guardian_name` (PR 3: o responsável; id do dependente
+`{fedId}_dep_{id}`), `user_name`, `photo_url`,
 `person_type`, `tier`, `plan_id`, `plan_name`, `billing`, `status`
 (`pending|awaiting_payment|active|expired|suspended|cancelled|rejected`),
 `member_number` (`SIGLA-ANO-000001`, fixo depois de emitido), `card_code`
 (10 caracteres, gira a cada ativação/renovação/suspensão), `valid_from`,
 `valid_until` (`YYYY-MM-DD`), `activated_at_ms`, `expiry_notified { 30, 7, 1 }`,
 `public_badge`, `show_in_directory`, `public_photo`, `represented_club_id`,
-`note`, `reject_reason`, `suspended_reason`, `requested_at`, `updated_at`. O
-próprio só muda `public_badge`, `show_in_directory`, `public_photo`,
-`prefs_updated_at`. Leem: o próprio, a equipe com `admin`/`members`/`finance`,
-o admin.
-- `private/data` (reservado ao PR 3: CPF, responsável do menor) — o próprio
-  escreve; leem o próprio, `members`, `admin` e o admin da plataforma.
+`note`, `reject_reason`, `suspended_reason`, `requested_at`, `updated_at`;
+PR 3: `discipline_until_ms`/`discipline_sanction_id` (suspensão em vigor —
+lidos por `tournamentMembershipOk`), `excluded_by_sanction_id`,
+`status_before_exclusion`, `minor_photo_consent`. O dono (`fedMemberOwner`:
+o próprio ou o responsável) só muda `public_badge`, `show_in_directory`,
+`public_photo`, `minor_photo_consent`, `prefs_updated_at`. Leem: o dono, a
+equipe com `admin`/`members`/`finance`, o admin.
+- `private/data` (PR 3): `cpf` (só dígitos, ≤ 11, só se
+  `federations.rules.ask_cpf`), `birth_date`, `guardian_name`,
+  `guardian_contact`, `guardian_consent` — o dono escreve; leem o dono, `members`, `admin` e o admin da
+  plataforma. Na Central o CPF aparece mascarado; revelar grava `audit_logs`
+  (`federation_member_private_reveal`).
 
 ### `federation_charges/{id}` (NOVO)
 Só o servidor cria, confirma e cancela. `federation_id`, `member_id`,
-`payer_uid`, `payer_name`, `origin` (`membership|renewal`), `plan_id`,
-`plan_name`, `amount_cents`, `status` (`open|declared|paid|cancelled`),
+`payer_uid` (a pessoa ou o responsável do dependente), `payer_name`, `origin`
+(`membership|renewal|course|fine`), `plan_id`, `plan_name`, `course_id`/
+`enrollment_id` ou `sanction_id` (PR 3), `amount_cents`, `status`
+(`open|declared|paid|cancelled`),
 `due_date` (hoje + 10), `declared_at`, `declared_note` (≤ 300), `paid_at_ms`,
 `confirmed_by`, `confirm_note`, `created_at`, `created_at_ms`. A única escrita
 do pagador: `open|declared` → `declared` com `declared_at`/`declared_note`.
 
 ### `federation_card_index/{code}` (NOVO)
-`{ member_id, federation_id, created_at_ms }`. `allow read, write: if false`:
-só o servidor (a verificação pública é a função `federationVerify`).
+`{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
+(PR 3), `{ kind: 'credential', credential_id, federation_id, created_at_ms }`.
+`allow read, write: if false`: só o servidor (a verificação pública é a função
+`federationVerify`, que responde pelos dois).
 
 ### `federation_affiliations/{fedId}_{kind}_{orgId}` (PR 2)
 Clube (`kind: 'club'`) ou arena (`kind: 'arena'`) filiado à federação.
@@ -1701,6 +1721,79 @@ módulo `tournaments` ligados; `tournamentFederationOk()`) ou apaga os dois
 `tournament_registrations` exige `federation_members/{fed}_{uid}.status ==
 'active'` (`tournamentMembershipOk`). Ver `docs/50-FEDERACAO.md` §6.2.
 
+### `federation_documents_submitted/{id}` (PR 3)
+Registro de um documento enviado pelo filiado. `federation_id`, `member_id`,
+`user_id`, `kind` (os de `requires_docs`), `storage_path`
+(`federacao/{uid}/{arquivo}.{ext}`, conferido na regra), `file_name`,
+`content_type`, `size`, `status` (`pending|approved|rejected`), `review { by,
+at_ms, reason }`,
+`created_at`, `updated_at`. Cria o dono da filiação (`fedMemberOwner`), só
+`pending`; a equipe `members`/`admin` só muda `status`/`review`/`updated_at`;
+apaga o dono (pendente), `admin` ou o admin da plataforma. Leem: o dono, a
+equipe `members`/`admin`, o admin.
+
+### `federation_transfers/{id}` (PR 3, só o servidor — `federationTransfer`)
+`federation_id`, `member_id`, `user_id`, `guardian_uid`, `user_name`, `kind`
+(`club|federation`), `to_club_id`/`to_club_name` ou `to_federation_id`/
+`to_federation_name`, `reason`, `status` (`pending|approved|rejected|cancelled`),
+`requested_at`, `requested_at_ms`, `deadline` (ISO; só na troca de
+federação), `decided_by`, `decided_at_ms`, `auto_released` (liberada pela
+varredura), `updated_at_ms`. Leem: o dono, a equipe
+`members`/`admin` da federação atual e da de destino, o admin.
+
+### `federation_imports/{id}` (PR 3, só o servidor — `federationImportMembers`)
+`federation_id`, `plan_id`, `plan_name`, `by`, `created_at_ms`, `total_rows`,
+`imported_count`, `skipped[]`, `pending[]` (nome, e-mail, número e validade de
+quem **não tem conta** — só a equipe `members`/`admin` lê).
+
+### `federation_courses/{id}` (PR 3; público quando não é `draft`)
+`federation_id`, `federation_acronym`, `name` (3–120), `description`, `kind`
+(`referee|coach|clinic|workshop`), `level`, `status`
+(`draft|open|closed|done|cancelled`), `starts_at`, `ends_at`, `location`,
+`seats`, `price_cents` (≥ 0), `member_price_cents`, `requires_membership`,
+`issues_credential`, `credential_months`, `hours`, `enrolled_count` (**só o
+servidor**), `created_by`, `created_at`, `updated_at`. A equipe `courses`/
+`admin` cria e edita pelo cliente (módulo `courses` ligado; `federation_id` e
+`enrolled_count` intocáveis); apaga `admin` sem inscritos ou o admin da
+plataforma.
+
+### `federation_course_enrollments/{courseId}_{uid}` (PR 3, só o servidor — `federationCourse`)
+`federation_id`, `course_id`, `course_name`, `user_id`, `user_name`,
+`photo_url`, `is_member`, `price_cents`, `status`
+(`awaiting_payment|confirmed|passed|failed|cancelled`), `charge_id`,
+`credential_id`, `created_at_ms`, `updated_at_ms`. Leem: a própria pessoa, a
+equipe `courses`/`finance`/`admin`, o admin.
+
+### `federation_credentials/{courseId}_{uid}` (PR 3, só o servidor emite)
+`federation_id`, `federation_acronym`, `user_id`, `user_name`, `photo_url`,
+`kind`, `level`, `course_id`, `course_name`, `hours`, `issued_at`,
+`valid_until` ('' = sem validade), `status` (`active|expired|revoked`),
+`public` (nasce `false`), `public_photo`, `code` (no `federation_card_index`),
+`issued_by`, `review`, `created_at_ms`, `updated_at_ms`. Leitura: pública
+quando `public && status == 'active'`; senão a pessoa, a equipe
+`courses`/`admin`, o admin. A pessoa muda só `public`/`public_photo`/
+`prefs_updated_at`; a equipe só `status` (`active|revoked`)/`review`/`updated_at`.
+
+### `federation_sanctions/{id}` (PR 3, só o servidor — `federationDiscipline`)
+`federation_id`, `federation_acronym`, `member_id`, `user_id`, `guardian_uid`,
+`user_name`, `kind` (`warning|suspension|fine|exclusion`), `reason`,
+`starts_at`, `ends_at`, `fine_cents`, `tournament_id`, `tournament_name`,
+`status` (`active|appealed|upheld|overturned|ended`), `appeal { text, by,
+at_ms }`, `appeal_decision { upheld, note, by, at_ms }`, `applied_by`,
+`created_at_ms`, `updated_at_ms`. **Nunca pública**: leem o dono (`fedMemberOwner`), a equipe
+`discipline`/`admin`, o admin.
+
+### `federation_reports/{id}` (PR 3, ouvidoria — o cliente cria)
+`federation_id`, `kind` (`conduct|referee|organization|other`),
+`tournament_name`, `body` (20–2000), `anonymous` (bool; `true` ⇒
+`reporter_uid` **nulo**, imposto na regra), `reporter_uid`, `status`
+(`open|in_review|closed`), `notes`, `handled_by` (os dois a pessoa nunca
+grava), `created_at`, `updated_at`. `get`: quem abriu, qualquer conta se
+anônima (consulta pelo protocolo — `reportProtocol(id)`), a equipe
+`discipline`/`admin`, o admin; `list`: quem abriu, a equipe, o admin. A equipe
+só muda `status`/`notes`/`handled_by`/`updated_at`; apaga só o admin da
+plataforma.
+
 ### Avisos e auditoria
 Avisos são `notifications` com `type: 'federation'` (área `federacoes`,
 categoria "Federações" em Configurações → Notificações), `origin: 'server'`,
@@ -1709,16 +1802,28 @@ categoria "Federações" em Configurações → Notificações), `origin: 'serve
 `staff_set`, `staff_remove`, `membership_request|approve|reject|cancel`,
 `charge_confirm|cancel`, revisão; PR 2: `affiliation_request|withdraw|approve|
 reject|suspend`, `sanction_request|withdraw|approve|reject|revoke`,
-`result_send|reject|readmit`, `ranking_config`).
+`result_send|reject|readmit`, `ranking_config`; PR 3: `rules_update`,
+`member_private_reveal`, `document_upload|view`, `transfer_request|approve|
+reject`, `members_import`, `course_save|delete|enroll|pass|fail`,
+`discipline_warning|suspension|fine|exclusion|uphold|overturn|end`,
+`report_update`).
 
 ### Exclusão de conta e exportação
 Filiações e cobranças **ficam sem o nome** (`coletarFederacoes`), os códigos
 em `federation_card_index` são apagados, `federation_staff` da pessoa sai, a
 federação que ela pediu fica com "Usuário removido", a linha dela em
 `federation_results` vira "Atleta removido" sem `uid` (o ranking refeito a
-tira) e o pedido em `federation_affiliations` fica sem `requested_by`; **presidente** bloqueia a
+tira) e o pedido em `federation_affiliations` fica sem `requested_by`; PR 3:
+`private/data` da filiação some, dependentes ficam sem o responsável (nome do
+menor fica; código deixa de verificar), transferências, sanções, inscrições e
+credenciais ficam sem o nome (credencial sai do diretório e do índice),
+manifestação identificada vira anônima, documentos enviados são apagados
+(pasta `federacao/{uid}/` em `STORAGE_PREFIXES`); **presidente** bloqueia a
 exclusão (nomeia outra presidência antes). Exportação: bloco `federations`
-(`federationExportService.js`). Guarda: `exclusaoCobreColecoes.test.js`.
+(`federationExportService.js`: filiações, dependentes, cobranças, papéis,
+federações que pediu, pedidos de clube/arena, resultados, documentos
+[registro], transferências, inscrições em cursos, credenciais, sanções,
+manifestações identificadas). Guarda: `exclusaoCobreColecoes.test.js`.
 
 ## Coleções conferidas na regra (complemento)
 

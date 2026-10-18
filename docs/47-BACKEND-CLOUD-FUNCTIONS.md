@@ -398,16 +398,32 @@ mesmo código; erro inesperado vira `internal`.
 | `federationReview` | `approve` (cria o presidente em `federation_staff`, grava `review`), `reject` (motivo), `suspend` (motivo), `verify`/`unverify`, `official`/`unofficial`; avisa quem pediu/a equipe | admin da plataforma |
 | `federationMembership` | `request` (confere plano ativo, idade do perfil, filiação viva; gratuito com `auto_approve` ativa numa transação, pago gera a cobrança; sem `auto_approve` avisa a secretaria), `renew` (nova cobrança; a validade nova começa no fim da atual), `cancel`; `approve` (número por transação sobre `member_counter`; gratuito ativa, pago cobra), `reject`, `suspend` (gira o código), `reinstate` | a própria pessoa (`request`/`renew`/`cancel`) ou permissão `members` |
 | `federationChargeConfirm` | `confirm` (cobrança `paid`; ativa ou renova a filiação, emite/gira o código da carteirinha, avisa) e `cancel` (devolve o pedido ao estado anterior) | permissão `finance` |
-| `federationVerify` | o mínimo da carteirinha pelo código (`publicVerification`): nome, foto se permitida, federação, vínculo, número, validade, em dia ou não | **sem login** (o QR é lido por qualquer um); `onCall` próprio, 30 s |
+| `federationVerify` | o mínimo da carteirinha pelo código (`publicVerification`): nome, foto se permitida, federação, vínculo, número, validade, em dia ou não; PR 3: o mesmo código responde pela **credencial** de curso (`kind: 'credential'` no índice) | **sem login** (o QR é lido por qualquer um); `onCall` próprio, 30 s |
+| `federationTransfer` (PR 3, `functions/federationTransfers.js`) | `request` (troca de clube ou de federação; confere filiação viva, carência `rules.transfer_cooldown_days` e pedido pendente), `cancel`; `approve` (clube → muda `represented_club_id`; federação → **encerra** a filiação atual e apaga o código), `reject` | a pessoa ou o responsável do dependente (`request`/`cancel`); permissão `members` da federação atual |
+| `federationCourse` (PR 3, `functions/federationCourses.js`) | `enroll` (curso `open` com vaga e módulo ligado; filiação ativa se exigida; preço de filiado; pago → `awaiting_payment` + cobrança `origin: 'course'`, grátis → `confirmed`; vaga por transação), `cancel` (antes do início; devolve a vaga, cancela a cobrança); `pass`/`fail` (aprovado em curso que emite credencial ganha `federation_credentials` com código no `federation_card_index`) | a pessoa (`enroll`/`cancel`); permissão `courses` (`pass`/`fail`) |
+| `federationDiscipline` (PR 3, `functions/federationDiscipline.js`) | `apply` (advertência; suspensão grava `discipline_until_ms` na filiação; multa vira cobrança `origin: 'fine'`; exclusão encerra a filiação guardando o estado anterior), `appeal` (uma vez, em vigor), `decide_appeal` (`uphold`/`overturn` — revertida desfaz o efeito), `end` (antes do prazo) | permissão `discipline` (`apply`/`decide_appeal`/`end`); a pessoa ou o responsável (`appeal`) |
+| `federationImportMembers` (PR 3, `functions/federationSecretariat.js`) | até 500 linhas (nome, e-mail, número, validade) + plano: quem tem conta com o e-mail vira filiado **ativo** numa transação por pessoa; filiação viva é pulada; sem conta fica em `federation_imports.pending` | permissão `members` |
+| `federationDocument` (PR 3, `functions/federationSecretariat.js`) | devolve o arquivo de `federacao/{uid}/…` do Storage em base64 à secretaria (a regra do Storage só deixa o dono ler e não consulta o banco `pickleball`); audita `federation_document_view` | permissão `members` ou `admin` da federação do documento |
+
+`federationChargeConfirm` (PR 3): a `origin` decide o efeito da confirmação —
+`membership|renewal` ativa/renova, `course` confirma a inscrição, `fine` quita a
+sanção; o pagador pode ser o **responsável** do dependente.
 
 **Agendada**: `federationMembershipSweep` — todo dia às 06:00 (Brasília):
 `active` → `expired` na data; avisos 30, 7 e 1 dia antes (uma vez cada, em
-`expiry_notified`); recontagem de `member_count`.
+`expiry_notified`); recontagem de `member_count`; e `federationTransfers.sweep`
+(PR 3): libera as transferências de federação sem resposta até `deadline`
+(`auto_released: true`, avisa os dois lados). A suspensão disciplinar **não**
+passa pela varredura: termina na data gravada, que a regra compara com
+`request.time`.
 
 Toda ação grava `audit_logs` (`federation_*`) e avisa por `notifications`
 (`type: 'federation'`, `origin: 'server'`, `essential: true`, textos por
 `tx()` → `functions/i18n/avisos.json`). Testes: `functions/federations.test.js`
-(ciclo com banco falso) e `tests/rules/federation.rules.test.js` (emulador).
+(ciclo com banco falso), `functions/federationPr3.test.js` (transferência,
+curso, disciplina, importação, documento, dependente, cobrança por origem) e
+`tests/rules/federation.rules.test.js` + `federationPr3.rules.test.js`
+(emulador).
 
 **Gatilhos do ranking oficial** (`functions/federationRanking.js`, PR 2):
 

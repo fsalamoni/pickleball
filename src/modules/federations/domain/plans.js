@@ -3,7 +3,7 @@
  * e o preço de uma pessoa (descontos explicados). Lógica pura.
  */
 import { t } from '@/core/i18n';
-import { PLAN_BILLING, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_VALIDITY } from './constants.js';
+import { DOC_KIND, PLAN_BILLING, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_VALIDITY } from './constants.js';
 
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
 const intOr = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v !== null ? Math.trunc(Number(v)) : d);
@@ -43,6 +43,8 @@ export function validatePlanInput(input = {}) {
       price_cents: Math.max(0, price_cents), age_min, age_max, discounts,
       auto_approve: input.auto_approve === true, active: input.active !== false,
       sort: intOr(input.sort, 0),
+      // PR 3: documentos que a pessoa precisa enviar (a secretaria confere antes de aprovar).
+      requires_docs: [...new Set((Array.isArray(input.requires_docs) ? input.requires_docs : []).filter((k) => Object.values(DOC_KIND).includes(k)))],
     },
   };
 }
