@@ -1333,7 +1333,8 @@ service cloud.firestore {
       // (`arena_confirmed: false`) — a arena confirma ou recusa. Antes qualquer
       // conta punha o torneio na página e no ranking da casa de qualquer arena.
       allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid
-        && tournamentArenaOk();
+        && tournamentArenaOk()
+        && tournamentFederationOk();
       // Update: a regra antiga (platform_admin / tournament_admin / criador)
       // continua valendo para todos os campos. Para o campo 'archived'
       // especificamente:
@@ -1354,6 +1355,15 @@ service cloud.firestore {
           || request.resource.data.get('creator_uid', null) == resource.data.get('creator_uid', null))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['arena_id', 'arena_confirmed'])
           || tournamentArenaOk())
+        // A chancela: o organizador só PEDE (pendente) ou retira — nunca se aprova.
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['federation_id', 'federation_sanction'])
+          || tournamentFederationOk())
+        // A federação (competições) decide a chancela: aprova, recusa, revoga — e só ela.
+        || (resource.data.get('federation_id', null) is string
+          && fedHas(resource.data.federation_id, 'competitions')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['federation_sanction', 'updated_at'])
+          && request.resource.data.get('federation_id', null) == resource.data.federation_id
+          && request.resource.data.federation_sanction.status in ['approved', 'rejected', 'revoked'])
         // A arena decide sobre a sede: confirma, ou recusa (o torneio sai dela).
         || (resource.data.get('arena_id', null) is string
           && isArenaManager(resource.data.arena_id)
@@ -1364,6 +1374,27 @@ service cloud.firestore {
                 && request.resource.data.get('arena_confirmed', false) == false)));
       allow delete: if isPlatformAdmin()
         || (isAuthed() && resource.data.creator_uid == request.auth.uid);
+    }
+    // Sem federação, ou o PEDIDO de chancela (pendente, por quem pede) a uma
+    // federação aprovada com o módulo de torneios ligado. Aprovar é da federação.
+    function tournamentFederationOk() {
+      return isPlatformAdmin()
+        || (request.resource.data.get('federation_id', null) == null
+          && request.resource.data.get('federation_sanction', null) == null)
+        || (request.resource.data.federation_id is string
+          && fedOn()
+          && fedModuleOn(request.resource.data.federation_id, 'tournaments')
+          && request.resource.data.federation_sanction.status == 'pending'
+          && request.resource.data.federation_sanction.requested_by == request.auth.uid);
+    }
+    // O torneio exige filiação? Então quem se inscreve está em dia na federação dele.
+    function tournamentMembershipOk(tid) {
+      let tdoc = get(/databases/$(database)/documents/tournaments/$(tid)).data;
+      return tdoc.get('federation_id', null) == null
+        || tdoc.get('federation_sanction', {}).get('status', '') != 'approved'
+        || tdoc.get('federation_sanction', {}).get('requires_membership', false) != true
+        || (exists(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + request.auth.uid))
+          && get(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + request.auth.uid)).data.status == 'active');
     }
     // Sem sede, sede pendente, ou gerir a arena (o admin da plataforma também).
     function tournamentArenaOk() {
@@ -1431,6 +1462,7 @@ service cloud.firestore {
             || isPlatformAdmin()
             || (request.resource.data.created_by == request.auth.uid
                 && request.resource.data.get('seed', null) == null
+                && tournamentMembershipOk(request.resource.data.tournament_id)
                 && (request.resource.data.get('status', '') in ['waitlist', 'pending_payment']
                     || (request.resource.data.get('status', '') == 'confirmed'
                         && get(/databases/$(database)/documents/tournament_modalities/$(request.resource.data.modality_id)).data.get('entry_fee_cents', 0) == 0))));
@@ -4603,7 +4635,10 @@ service cloud.firestore {
         && request.resource.data.level in ['state', 'regional', 'national'];
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
       allow update: if isPlatformAdmin() || (fedOn() && fedHas(fedId, 'admin')
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(fedLocked()));
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(fedLocked()))
+        // Competições configura só o ranking oficial.
+        || (fedOn() && fedHas(fedId, 'competitions')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ranking_config', 'updated_at']));
       allow delete: if isPlatformAdmin();
 
       // CNPJ completo, razão social: quem pediu (enquanto pendente), a equipe (admin) e o admin da plataforma.
@@ -4710,6 +4745,93 @@ service cloud.firestore {
     // Código da carteirinha → filiação. Só o servidor (a verificação é a função `federationVerify`).
     match /federation_card_index/{code} {
       allow read, write: if false;
+    }
+
+    // --- PR 2: clubes e arenas filiados, resultados chancelados e o ranking oficial ---
+    // Quem gere a organização: admin do clube ou gestor da arena.
+    function fedOrgManager(kind, orgId) {
+      return (kind == 'club' && isClubAdmin(orgId)) || (kind == 'arena' && isArenaManager(orgId));
+    }
+    function fedModuleOn(fedId, moduleId) {
+      return fedApproved(fedId) && fedDoc(fedId).get('modules', {}).get(moduleId, false) == true;
+    }
+
+    // Filiação de CLUBE/ARENA (`{fed}_{club|arena}_{org}`): a organização PEDE
+    // (pendente) e retira; a equipe (filiados/admin) aprova, recusa, suspende.
+    // Filiado é público (página da federação, selo no clube/arena).
+    match /federation_affiliations/{affId} {
+      allow read: if resource.data.status == 'approved'
+        || isPlatformAdmin()
+        || (isAuthed() && resource.data.requested_by == request.auth.uid)
+        || fedOrgManager(resource.data.kind, resource.data.org_id)
+        || fedHas(resource.data.federation_id, 'admin')
+        || fedHas(resource.data.federation_id, 'members');
+      allow create: if fedOn() && isAuthed()
+        && request.resource.data.requested_by == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.kind in ['club', 'arena']
+        && request.resource.data.org_id is string
+        && request.resource.data.federation_id is string
+        && affId == request.resource.data.federation_id + '_' + request.resource.data.kind + '_' + request.resource.data.org_id
+        && request.resource.data.get('message', '') is string
+        && request.resource.data.get('message', '').size() <= 500
+        && fedOrgManager(request.resource.data.kind, request.resource.data.org_id)
+        && fedModuleOn(request.resource.data.federation_id, 'affiliations');
+      allow update: if fedOn()
+        && (fedHas(resource.data.federation_id, 'admin') || fedHas(resource.data.federation_id, 'members'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'review', 'updated_at'])
+        && request.resource.data.status in ['approved', 'rejected', 'suspended'];
+      allow delete: if isPlatformAdmin()
+        || (fedOn() && (fedOrgManager(resource.data.kind, resource.data.org_id) || fedHas(resource.data.federation_id, 'admin')));
+    }
+
+    // O torneio tem a chancela APROVADA desta federação?
+    function fedSanctionedBy(tid, fedId) {
+      let tdoc = get(/databases/$(database)/documents/tournaments/$(tid)).data;
+      return tdoc.get('federation_id', null) == fedId
+        && tdoc.get('federation_sanction', {}).get('status', '') == 'approved';
+    }
+
+    // RESULTADO de uma categoria de torneio chancelado (`{fed}_{torneio}_{categoria}`):
+    // o organizador envia e reenvia (`sent`); competições recusa ou readmite.
+    // Público, como o quadro do torneio — e o ranking que sai dele.
+    match /federation_results/{resId} {
+      allow read: if true;
+      allow create: if fedOn() && isAuthed()
+        && request.resource.data.federation_id is string
+        && request.resource.data.tournament_id is string
+        && request.resource.data.modality_id is string
+        && resId == request.resource.data.federation_id + '_' + request.resource.data.tournament_id + '_' + request.resource.data.modality_id
+        && request.resource.data.status == 'sent'
+        && request.resource.data.sent_by == request.auth.uid
+        && request.resource.data.rows is list
+        && request.resource.data.rows.size() <= 400
+        && isTournamentAdmin(request.resource.data.tournament_id)
+        && fedSanctionedBy(request.resource.data.tournament_id, request.resource.data.federation_id);
+      allow update: if fedOn() && isAuthed()
+        && request.resource.data.federation_id == resource.data.federation_id
+        && request.resource.data.tournament_id == resource.data.tournament_id
+        && request.resource.data.modality_id == resource.data.modality_id
+        && (
+          (request.resource.data.status == 'sent'
+            && request.resource.data.sent_by == request.auth.uid
+            && request.resource.data.rows is list
+            && request.resource.data.rows.size() <= 400
+            && isTournamentAdmin(resource.data.tournament_id)
+            && fedSanctionedBy(resource.data.tournament_id, resource.data.federation_id))
+          || (fedHas(resource.data.federation_id, 'competitions')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'review', 'updated_at'])
+            && request.resource.data.status in ['sent', 'rejected'])
+        );
+      allow delete: if isPlatformAdmin()
+        || fedHas(resource.data.federation_id, 'admin')
+        || (fedOn() && isTournamentAdmin(resource.data.tournament_id));
+    }
+
+    // Ranking oficial por temporada (`{fed}_{ano}`): só o servidor grava (`federationRankingRecompute`).
+    match /federation_rankings/{rankId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

@@ -194,10 +194,13 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_staff: ['listMyStaffRoles'],
   federation_members: ['listMyMemberships'],
   federation_charges: ['listMyCharges'],
+  federation_affiliations: ['listAffiliationsRequestedBy'],
+  federation_results: ['listResultsWith'],
 };
 const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_plans: 'O plano é da federação (nome, preço, regras), não da pessoa; a filiação exportada já diz o plano escolhido.',
   federation_card_index: 'É só o índice código → filiação para a verificação pública; o código já sai na filiação exportada.',
+  federation_rankings: 'Derivado dos resultados (só o servidor grava) e público; a colocação da pessoa já sai nos resultados exportados.',
 };
 
 describe('a exclusão e a exportação cobrem as federações', () => {

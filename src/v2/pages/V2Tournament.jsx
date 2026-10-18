@@ -21,6 +21,7 @@ import { V2TournamentGallery } from '@/v2/components/tournament/V2Gallery';
 import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
+import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
 
 function parseDate(value) {
   if (!value) return null;
@@ -184,6 +185,7 @@ export default function V2Tournament() {
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}</span>
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</span>
             {isAdmin && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> {t('Admin')}</span>}
+            <TournamentSanctionBadge tournament={tournament} />
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">

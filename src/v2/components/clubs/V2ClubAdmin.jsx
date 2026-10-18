@@ -23,6 +23,7 @@ import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { V2Badge, V2Button, V2ErrorState, V2Surface, V2Toggle, V2Input, V2Textarea } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
+import OrgAffiliationCard from '@/v2/components/federations/OrgAffiliationCard';
 
 export default function V2ClubAdmin({ club }) {
   const navigate = useNavigate();
@@ -87,6 +88,7 @@ export default function V2ClubAdmin({ club }) {
     <div className="space-y-4">
       <V2ClubJoinRequests club={club} />
       <V2ClubAddMembers club={club} />
+      <OrgAffiliationCard kind="club" org={club} />
 
       <V2Surface>
         <h3 className="font-display text-base font-bold text-ink">{t('Código de convite')}</h3>

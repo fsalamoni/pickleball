@@ -10,7 +10,8 @@
 import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Landmark, Settings2 } from 'lucide-react';
-import { useFederation, useFederationCharges, useFederationMembers, useFederationPlans, useFederationStaff, useMyFederationRole } from '@/modules/federations/hooks/useFederations';
+import { useFederation, useFederationAffiliations, useFederationCharges, useFederationMembers, useFederationPlans, useFederationResults, useFederationStaff, useFederationTournaments, useMyFederationRole } from '@/modules/federations/hooks/useFederations';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { FED_PERMISSION, FEDERATION_STATUS, FEDERATION_STATUS_LABELS, STAFF_ROLE_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
@@ -25,12 +26,14 @@ const FedMembersPanel = lazy(() => import('@/v2/components/federations/manage/Fe
 const FedFinancePanel = lazy(() => import('@/v2/components/federations/manage/FedFinancePanel'));
 const FedStaffPanel = lazy(() => import('@/v2/components/federations/manage/FedStaffPanel'));
 const FedSettingsPanel = lazy(() => import('@/v2/components/federations/manage/FedSettingsPanel'));
+const FedAffiliationsPanel = lazy(() => import('@/v2/components/federations/manage/FedAffiliationsPanel'));
+const FedCompetitionsPanel = lazy(() => import('@/v2/components/federations/manage/FedCompetitionsPanel'));
 
 function Central({ federationId }) {
   const fq = useFederation(federationId);
   const papel = useMyFederationRole(federationId);
   const perms = papel.perms;
-  const sections = useMemo(() => buildFederationSections(perms), [perms]);
+  const sections = useMemo(() => buildFederationSections(perms, fq.data), [perms, fq.data]);
   const [params, setParams] = useSearchParams();
   const tabPedida = params.get('aba') || '';
   const secaoPedida = params.get('secao') || '';
@@ -53,6 +56,10 @@ function Central({ federationId }) {
   const chargesQ = useFederationCharges(federationId, { enabled: papel.isStaff && podeFinanceiro });
   const plansQ = useFederationPlans(federationId, { enabled: papel.isStaff && (admin || podeFinanceiro) });
   const staffQ = useFederationStaff(federationId, { enabled: papel.isStaff && admin });
+  const podeCompeticoes = perms.includes(FED_PERMISSION.COMPETITIONS);
+  const affiliationsQ = useFederationAffiliations(federationId, { enabled: papel.isStaff && podeFiliados && fedModuleOn(fq.data, 'affiliations') });
+  const tournamentsQ = useFederationTournaments(federationId, { enabled: papel.isStaff && podeCompeticoes && fedModuleOn(fq.data, 'tournaments') });
+  const resultsQ = useFederationResults(federationId, { enabled: papel.isStaff && podeCompeticoes && fedModuleOn(fq.data, 'tournaments') });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -84,7 +91,7 @@ function Central({ federationId }) {
         </p>
       )}
 
-      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} perms={perms} onIrParaAba={irParaAba} />
+      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} perms={perms} onIrParaAba={irParaAba} />
 
       <div className="space-y-3">
         <V2SectionNav ariaLabel={t('Seções da Central da federação')} dica="federacao-secoes" sections={sections} grupos={FED_SECTION_GROUPS} activeId={secaoAtiva.id} onSelect={(s) => setTab(s.tabs[0].value)} />
@@ -92,8 +99,10 @@ function Central({ federationId }) {
       </div>
 
       <Suspense fallback={<V2Skeleton lines={6} />}>
-        {secaoAtiva.id === 'hoje' && <FedHojePanel federation={f} membersQ={membersQ} chargesQ={chargesQ} plansQ={plansQ} perms={perms} onIrParaAba={irParaAba} />}
-        {secaoAtiva.id === 'filiados' && <FedMembersPanel federation={f} membersQ={membersQ} tab={tab} />}
+        {secaoAtiva.id === 'hoje' && <FedHojePanel federation={f} membersQ={membersQ} chargesQ={chargesQ} plansQ={plansQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} perms={perms} onIrParaAba={irParaAba} />}
+        {secaoAtiva.id === 'filiados' && tab === 'filiados-orgs' && <FedAffiliationsPanel affiliationsQ={affiliationsQ} />}
+        {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && <FedMembersPanel federation={f} membersQ={membersQ} tab={tab} />}
+        {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} myRole={papel.role} />}
         {secaoAtiva.id === 'config' && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}

@@ -251,7 +251,17 @@ async function coletarFederacoes(db, uid) {
   cobrancas.docs.forEach((d) => {
     if ((d.data() || {}).payer_name !== REMOVED_ATHLETE) itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE } });
   });
-  return { itens, deletes, truncated: filiacoes.truncated || cobrancas.truncated, count: itens.length };
+  // Resultados enviados ao ranking oficial: a linha fica como "Atleta removido"
+  // e sai de `uids` — o gatilho `federationRankingRecompute` refaz a temporada
+  // (`federation_rankings`, derivado, só o servidor grava) sem a conta; o
+  // adversário segue com a colocação dele.
+  const resultados = await consultar(db, 'federation_results', 'uids', 'array-contains', uid);
+  resultados.docs.forEach((d) => {
+    const data = d.data() || {};
+    const rows = (data.rows || []).map((r) => (r && r.uid === uid ? { ...r, uid: null, name: REMOVED_ATHLETE, photo_url: null } : r));
+    itens.push({ ref: d.ref, patch: { rows, uids: (data.uids || []).filter((u) => u !== uid) } });
+  });
+  return { itens, deletes, truncated: filiacoes.truncated || cobrancas.truncated || resultados.truncated, count: itens.length };
 }
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -1085,7 +1095,9 @@ const PSEUDO_SPECS = Object.freeze([
   // a mensalidade da arena), sem o nome; a carteirinha deixa de verificar
   // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
   // pediu para abrir fica, com "Usuário removido" em quem pediu.
-  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha de federação', cols: ['federation_members', 'federation_charges', 'federation_card_index'] },
+  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha de federação', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_rankings'] },
+  // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
+  { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },
   // Mercado
   { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders', 'market_coupons', 'market_gift_cards'] },

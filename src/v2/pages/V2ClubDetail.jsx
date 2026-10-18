@@ -22,6 +22,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
+import { OrgAffiliationBadges } from '@/v2/components/federations/FedTags';
 
 // Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
@@ -144,6 +145,7 @@ export default function V2ClubDetail() {
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
                 {location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {location}</span>}
                 <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} membro(s)</span>
+                <OrgAffiliationBadges kind="club" orgId={club.id} />
               </div>
               {isMember && (
                 <span className={cn('mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold', isAdmin ? 'bg-acid text-ink' : 'bg-white/15 text-white')}>

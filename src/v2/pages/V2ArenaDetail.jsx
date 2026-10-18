@@ -45,6 +45,7 @@ import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pi
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink, V2Page, TITLE_TYPE } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
+import { OrgAffiliationBadges } from '@/v2/components/federations/FedTags';
 
 
 // O banner de campanha (desenho, modelos, especificação) pesa ~25 kB: vem sob
@@ -197,6 +198,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
             )}
             {arena.court_count > 0 && <V2Badge tone="neutral"><Trophy className="h-3 w-3" /> {t('{n} quadra(s)', { n: arena.court_count })}</V2Badge>}
             {arena.hours && <V2Badge tone="neutral"><Clock className="h-3 w-3" /> {arena.hours}</V2Badge>}
+            <OrgAffiliationBadges kind="arena" orgId={arena.id} />
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">

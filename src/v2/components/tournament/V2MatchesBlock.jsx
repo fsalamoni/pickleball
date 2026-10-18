@@ -36,6 +36,7 @@ import { confrontationSnapshot, buildEtapaDrafts, computeEtapaResult } from '@/m
 import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
 import { TeamLineupDialog, TeamResultDialog } from './TeamConfrontationDialogs';
 import PodiumBlock from '@/v2/components/trophies/PodiumBlock';
+import FederationResultButton from '@/v2/components/federations/FederationResultButton';
 import { t, fmtData } from '@/core/i18n';
 
 function formatMatchTime(iso) {
@@ -793,6 +794,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
     <V2Collapsible defaultOpen={false} persistId={`result:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
       {/* O pódio (só com a categoria encerrada): cartões e parabéns. */}
       <PodiumBlock tournament={tournament} modality={modality} className="mb-4" />
+      {isAdmin && <FederationResultButton tournament={tournament} modality={modality} className="mb-4" />}
       {matches.length === 0 ? (
         falhouJogos ? (
           <V2ErrorState

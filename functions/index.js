@@ -1317,6 +1317,31 @@ exports.federationMembershipSweep = onSchedule(
   async () => { await federations.sweep(fedCtx()); },
 );
 
+// Ranking oficial (PR 2): resultado enviado/recusado → a temporada é refeita;
+// a configuração do ranking da federação mudou → todas as temporadas dela.
+// Só o servidor grava `federation_rankings` (`functions/federationRanking.js`).
+const federationRanking = require('./federationRanking');
+exports.federationRankingRecompute = onDocumentWritten(
+  { document: 'federation_results/{resultId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 120 },
+  async (event) => {
+    try {
+      await federationRanking.onResultWritten(fedCtx(), antes(event), depois(event));
+    } catch (err) {
+      logger.error('federationRankingRecompute falhou', err);
+    }
+  },
+);
+exports.federationRankingConfig = onDocumentWritten(
+  { document: 'federations/{fedId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 300 },
+  async (event) => {
+    try {
+      await federationRanking.onFederationWritten(fedCtx(), event.params.fedId, antes(event), depois(event));
+    } catch (err) {
+      logger.error('federationRankingConfig falhou', err);
+    }
+  },
+);
+
 // Favorito entra/sai → contador do anúncio (o navegador não escreve o contador).
 exports.marketFavoriteCount = onDocumentWritten(
   { document: 'market_favorites/{favId}', database: DATABASE_ID, region: REGION },

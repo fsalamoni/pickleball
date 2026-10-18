@@ -6,9 +6,10 @@
  * presidente e diretor veem tudo. O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { CreditCard, FileText, Puzzle, SlidersHorizontal, Sun, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { Building2, ClipboardList, CreditCard, FileText, Medal, Puzzle, SlidersHorizontal, Sun, Trophy, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
 
 export const FED_SECTION_GROUPS = Object.freeze([
   { id: 'atender', label: tk('Atender') },
@@ -17,11 +18,13 @@ export const FED_SECTION_GROUPS = Object.freeze([
 
 /**
  * @param {string[]} perms permissões de quem vê (`permissionsOf(role)`)
+ * @param {object} [federation] a federação — as abas dos MÓDULOS só existem com o módulo ligado
  * @returns {Array<{ id: string, grupo: string, label: string, icon: Function, dica?: string, tabs: Array<{ value: string, label: string, icon: Function }> }>}
  */
-export function buildFederationSections(perms = []) {
+export function buildFederationSections(perms = [], federation = null) {
   const pode = (p) => perms.includes(p);
   const admin = pode(FED_PERMISSION.ADMIN);
+  const modulo = (id) => fedModuleOn(federation, id);
   return [
     { id: 'hoje', grupo: 'atender', label: tk('Hoje'), icon: Sun, tabs: [{ value: 'hoje', label: tk('Hoje'), icon: Sun }] },
     pode(FED_PERMISSION.MEMBERS) && {
@@ -29,6 +32,17 @@ export function buildFederationSections(perms = []) {
       tabs: [
         { value: 'pedidos', label: tk('Pedidos'), icon: Inbox },
         { value: 'filiados', label: tk('Filiados'), icon: ListChecks },
+        ...(modulo('affiliations') ? [{ value: 'filiados-orgs', label: tk('Clubes e arenas'), icon: Building2 }] : []),
+      ],
+    },
+    pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking')) && {
+      id: 'competicoes', grupo: 'atender', label: tk('Competições'), icon: Trophy, dica: 'federacao-secao-competicoes',
+      tabs: [
+        ...(modulo('tournaments') ? [
+          { value: 'chancelas', label: tk('Chancelas'), icon: Trophy },
+          { value: 'resultados', label: tk('Resultados'), icon: ClipboardList },
+        ] : []),
+        ...(modulo('ranking') ? [{ value: 'ranking', label: tk('Ranking'), icon: Medal }] : []),
       ],
     },
     pode(FED_PERMISSION.FINANCE) && {

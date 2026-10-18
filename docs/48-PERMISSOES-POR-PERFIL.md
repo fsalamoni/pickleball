@@ -291,6 +291,18 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Confirmar/cancelar cobrança | ✖ | ✖ | ✖ | ✔ `finance` | ✔ | **Cloud Function** `federationChargeConfirm` |
 | Ler índice de carteirinha | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false` |
 | Verificar carteirinha pelo código | ✔ | ✔ | ✔ | ✔ | ✔ | **Cloud Function** `federationVerify` (sem login; devolve o mínimo) |
+| Pedir filiação do clube/arena à federação (módulo `affiliations` ligado) | ✖ | ✔ admin do clube / gestor da arena (`fedOrgManager`), só `pending` | — | — | ✔ | rules (`fedModuleOn`) |
+| Aprovar/recusar/suspender filiação de clube/arena | ✖ | ✖ | ✖ | ✔ `members` ou `admin` | ✔ | rules (só `status`/`review`) |
+| Retirar pedido / desfiliar clube ou arena | ✖ | ✔ quem gere a organização | — | ✔ `admin` | ✔ | rules |
+| Ler filiação de clube/arena | ◐ só aprovada | ◐ aprovada; a própria organização | — | ✔ `admin`/`members` | ✔ | rules |
+| Pedir a chancela do torneio (módulo `tournaments`) | ✖ | ✔ admin do torneio, só `pending` com `requested_by` = ele | — | — | ✔ | rules (`tournamentFederationOk`) |
+| Aprovar/recusar/revogar chancela (tipo, só filiados) | ✖ | ✖ | ✖ | ✔ `competitions` (só `federation_sanction`) | ✔ | rules |
+| Inscrever-se em torneio "só filiados" | ✖ | ◐ só com `federation_members/{fed}_{uid}.status == 'active'` | ✔ | — | — | rules (`tournamentMembershipOk`); o admin do torneio inscreve qualquer pessoa |
+| Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`) | — | — | ✔ | rules |
+| Recusar/readmitir resultado | ✖ | ✖ | ✖ | ✔ `competitions` | ✔ | rules |
+| Ler resultados e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
+| Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` |
+| Mudar a tabela de pontos (`ranking_config`) | ✖ | ✖ | ✖ | ✔ `competitions` (só essa chave) | ✔ | rules |
 | Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ◐ | rules (`fedOn()`) e funções (`flagLigada`) |
 
 ### 4.9 Plataforma (admin e dono)

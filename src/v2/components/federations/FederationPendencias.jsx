@@ -1,7 +1,8 @@
 /**
  * "Precisa de você" da Central da federação (`federationPendingItems`): o que
- * espera a secretaria (pedidos, filiações vencendo) e o financeiro (pagamentos
- * informados, cobranças vencidas). Fonte que não carregou ou falhou é
+ * espera a secretaria (pedidos, filiações vencendo, clubes e arenas pedindo
+ * filiação), competições (chancelas) e o financeiro (pagamentos informados,
+ * cobranças vencidas). Fonte que não carregou ou falhou é
  * `undefined` e o item some — nunca vira zero.
  */
 import React, { useMemo } from 'react';
@@ -10,10 +11,12 @@ import { federationPendingItems } from '@/modules/federations/domain/federationP
 import { V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
-export default function FederationPendencias({ membersQ, chargesQ, perms, onIrParaAba }) {
+export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, perms, onIrParaAba }) {
   const members = membersQ?.isSuccess ? membersQ.data : undefined;
   const charges = chargesQ?.isSuccess ? chargesQ.data : undefined;
-  const itens = useMemo(() => federationPendingItems({ members, charges }, perms), [members, charges, perms]);
+  const affiliations = affiliationsQ?.isSuccess ? affiliationsQ.data : undefined;
+  const tournaments = tournamentsQ?.isSuccess ? tournamentsQ.data : undefined;
+  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments }, perms), [members, charges, affiliations, tournaments, perms]);
   if (itens.length === 0) return null;
   return (
     <V2Surface as="section" variant="compacto" aria-label={t('Precisa de você')} data-dica="federacao-pendencias" className="p-4">
