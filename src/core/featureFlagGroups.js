@@ -32,6 +32,11 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.MARKETPLACE],
   },
   {
+    id: 'federations',
+    label: tk('Federações'),
+    keys: [FEATURE_FLAG.FEDERATIONS],
+  },
+  {
     id: 'languages',
     label: tk('Idiomas'),
     keys: [FEATURE_FLAG.MULTI_LANGUAGE],

@@ -48,6 +48,7 @@ import {
   Store,
   Package,
   MessageSquareWarning,
+  Landmark,
   Mail,
   MessageCircle,
   Smartphone,
@@ -118,6 +119,7 @@ const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamifica
 const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/AdminTrainingPanel'));
 const AdminMarketPanel = lazy(() => import('@/v2/components/admin/market/AdminMarketPanel'));
 const AdminMessagingPanel = lazy(() => import('@/v2/components/admin/messaging/AdminMessagingPanel'));
+const AdminFederationsPanel = lazy(() => import('@/v2/components/admin/federations/AdminFederationsPanel'));
 
 const SECTIONS = Object.freeze([
   { id: 'today', label: tk('Hoje'), icon: LayoutDashboard, tabs: [
@@ -152,6 +154,10 @@ const SECTIONS = Object.freeze([
     { id: 'gam-rewards', label: tk('Recompensas'), icon: Gift },
     { id: 'gam-integrity', label: tk('Integridade'), icon: ShieldAlert, keywords: ['sinais', 'cartas', 'moderação'] },
     { id: 'gam-metrics', label: tk('Métricas'), icon: BarChart3 },
+  ] },
+  // Federações (flag `federations`): pedidos de abertura, selos e dados da entidade.
+  { id: 'federations', label: tk('Federações'), icon: Landmark, flag: 'federations', dica: 'admin-secao-federacoes', tabs: [
+    { id: 'federacoes', label: tk('Federações'), icon: Landmark, keywords: ['federação', 'filiação', 'carteirinha', 'aprovar', 'oficial', 'verificada', 'cnpj'] },
   ] },
   // O Mercado (flag `marketplace`): some da barra com a flag desligada.
   { id: 'market', label: tk('Mercado'), icon: Store, flag: 'marketplace', dica: 'admin-secao-mercado', tabs: [
@@ -254,6 +260,11 @@ export default function V2AdminConsole() {
         {tab.startsWith('treino-') && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminTrainingPanel tab={tab} onTab={setTab} />
+          </Suspense>
+        )}
+        {tab === 'federacoes' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminFederationsPanel />
           </Suspense>
         )}
         {tab.startsWith('mercado-') && (

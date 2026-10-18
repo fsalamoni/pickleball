@@ -627,4 +627,96 @@ export default {
       },
     ],
   },
+
+  'termos-federacao': {
+    fonte: '3f59d424',
+    title: 'Terms for Federations',
+    eyebrow: 'Federations · Administrators',
+    description: 'What PickleRush offers a federation, what the federation commits to regarding its members and their data, and what the platform is not.',
+    sections: [
+      {
+        title: '1. What federation management on PickleRush is',
+        description: 'A tool for the entity; the entity remains who it is.',
+        paragraphs: [
+          'PickleRush offers the federation a management area: public page, membership plans, membership requests, Pix billing, a digital membership card with public verification, a team with roles and, as they are released, sanctioned tournaments, an official ranking and additional modules.',
+          'The federation is its own legal entity, with a CNPJ, bylaws and officers. PickleRush is not the federation, does not represent it, does not recognize it as the official body of the sport and is not liable for its acts. The "Verified" and "Official" badges only mean that the platform checked the information provided, or that the entity is the recognized one in its scope, according to the information available on that date.',
+        ],
+      },
+      {
+        title: '2. Who requests the opening and who is accountable',
+        bullets: [
+          'Whoever requests the opening declares that they have the authority to represent the entity and provides a true CNPJ and legal name. Once approved, that person becomes president on the platform and may appoint the team.',
+          'The team\'s acts on the platform (approving a membership, confirming a payment, suspending a member, publishing information) are acts of the federation, and it is accountable for them before its members and the law.',
+          'PickleRush may refuse, suspend or close the area of a federation that provides false information, charges without delivering what it promises, or breaches the law or these Terms, stating the reason.',
+        ],
+      },
+      {
+        title: '3. Monthly and annual fees and Pix',
+        bullets: [
+          'Plan prices are set by the federation. Payment is made by Pix directly to the key provided by the federation; PickleRush does not receive, hold, forward or intermediate the money, and charges no commission on it.',
+          'The federation checks that the payment arrived and confirms it on the platform. Confirming activates the membership and issues the card; the confirmation is the federation\'s responsibility, and a payment confirmed without having arrived is a matter between the federation and the member.',
+          'Receipts, invoices, taxes and the use of what was collected are the federation\'s. PickleRush only keeps the history for both sides.',
+        ],
+      },
+      {
+        title: '4. Members\' data',
+        paragraphs: [
+          'When it receives a membership request, the federation starts to see the name, photo, category and the data the member provided. Regarding that data, the federation is an independent controller under Brazil\'s General Data Protection Law (LGPD): it may only use it for the purpose of the membership (registration, billing, membership card, competitions and the entity\'s announcements), must store it securely and may not sell it, share it with third parties outside that purpose or use it for advertising without consent.',
+          'The digital card shows the public only what public verification releases: name, photo (if the member allows it), federation, type of membership, number and validity. The federation must not expose other member data on public pages, lists or materials.',
+        ],
+      },
+      {
+        title: '5. Indemnity and liability',
+        paragraphs: [
+          'The federation releases PickleRush from liability for claims, charges, fines and lawsuits related to its memberships, billing, sporting and disciplinary decisions, announcements and its use of members\' data, and undertakes to indemnify it, including reasonable defense costs, should it be charged or held liable for an act of the federation.',
+          'PickleRush may change these Terms with reasonable notice; the version in force is the one published in the Legal Center. Breaching them may lead to the suspension of the federation\'s area, without prejudice to legal measures.',
+        ],
+      },
+    ],
+  },
+
+  'termos-filiacao': {
+    fonte: '392c0ffc',
+    title: 'Membership Terms',
+    eyebrow: 'Federations · Members',
+    description: 'What happens when you request membership of a federation through PickleRush: what the federation gets to see, how you pay, what the card is worth and how to leave.',
+    sections: [
+      {
+        title: '1. Who you are joining',
+        paragraphs: [
+          'Membership is a bond between you and the federation, a separate entity with a CNPJ and officers, which is not PickleRush. The platform only organizes the request, the billing, the card and the history. The federation\'s rules (bylaws, regulations, sporting and disciplinary decisions) are its own, and questions about them are answered by the federation, through the contact shown on its page.',
+        ],
+      },
+      {
+        title: '2. What the federation gets to see',
+        bullets: [
+          'When you request membership, the federation\'s team sees your name, photo, the category you play in, the plan you chose and whatever you write in the request. The e-mail, phone, date of birth and address from your account are NOT sent with this request; if the federation needs them, it asks you directly.',
+          'The federation is responsible, under the LGPD, for its use of the data it receives. You may cancel your membership at any time on this platform; that ends the bond here, but does not erase what the federation has already stored outside it.',
+        ],
+      },
+      {
+        title: '3. Payment by Pix',
+        bullets: [
+          'The amount is that of the plan you chose, with the discounts the federation defines (by age, for example). Payment is made by Pix directly to the federation\'s account. PickleRush does not receive the money, charges no fee and does not refund amounts: chargebacks and refunds are handled with the federation.',
+          'After paying, you report it on the platform ("I\'ve paid") and the federation confirms. The membership only becomes active, and the card only becomes valid, after that confirmation. Keep your receipt.',
+          'Monthly and annual fees have a validity period. Near the due date the platform notifies you; once expired, the membership shows as "expired" until renewal, and the card no longer verifies as current.',
+        ],
+      },
+      {
+        title: '4. The digital card',
+        bullets: [
+          'The card shows name, photo (if you allow it), federation, type of membership, number and validity, plus a code with a QR. Anyone with the code can verify, without an account, whether the membership is current — and sees only that data.',
+          'The card is issued by the federation; PickleRush only displays and verifies it. It is not an identity document and is worth whatever the federation and the entities that recognize it decide.',
+          'You choose whether your photo appears in public verification, whether the membership appears on your public profile and whether you are listed in the federation\'s member directory. Those choices are yours and can be changed at any time.',
+        ],
+      },
+      {
+        title: '5. Refusal, suspension and cancellation',
+        paragraphs: [
+          'The federation may refuse a request or suspend a membership, stating the reason, which you read on the platform. Disagreements are handled with the federation, through its channels. PickleRush does not arbitrate the federation\'s decisions, but may suspend the area of a federation that breaches the Terms for Federations.',
+          'You may cancel your membership at any time. Cancellation ends the card\'s validity and does not generate an automatic refund. When you delete your PickleRush account, your memberships remain recorded at the federation without your name, and the card codes are erased.',
+        ],
+      },
+    ],
+  },
 };

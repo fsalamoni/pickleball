@@ -18,7 +18,7 @@ Cada módulo tem um `README.md` próprio, que é a fonte mais detalhada.
 
 **Feature flags** (`src/core/featureFlags.js`): `FEATURE_FLAG` tem só as flags
 que o admin liga (hoje `dupr_official_sync`, `gameday_mexicano`,
-`gameday_king_of_court`, `marketplace`, `multi_language`); as demais viraram
+`gameday_king_of_court`, `marketplace`, `multi_language`, `federations`); as demais viraram
 `PERMANENT_FEATURE` (sempre `true`; os `if` que as consultam são dívida a
 remover). Nova feature nasce atrás de flag, default OFF, aditiva. Quantas são,
 em `docs/46-INVENTARIO.md` §8.
@@ -300,6 +300,25 @@ servidor escreve (`functions/marketplace.js`). Flag `marketplace`.
 - **Coleções**: `market_*` (listings, orders, offers, carts, coupons,
   gift_cards, reviews, disputes, sellers…).
 - Não confundir com o PDV/"Mercado" de estoque da arena (`arena_*`).
+
+### federations/ — federações, filiação e carteirinha digital
+A federação (entidade com CNPJ) filia atletas, professores e árbitros, cobra
+mensalidade ou anuidade por Pix na própria conta e emite a carteirinha digital
+com verificação pública; o admin da plataforma aprova a abertura e dá os selos
+"Verificada" e "Oficial". Filiação, cobrança e confirmação **só o servidor**
+escreve (`functions/federations.js`). Flag `federations` (default OFF);
+sub-módulos por federação (`FED_MODULE_META`, todos ainda "em breve").
+Doc: `docs/50-FEDERACAO.md`.
+- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending}.js`,
+  `services/federationService.js`, `hooks/useFederations.js`. README do módulo é a fonte.
+- **Telas**: `/federacoes`, `/federacoes/abrir`, `/federacoes/:id`,
+  `/federacoes/:id/filiar`, `/federacoes/:id/gerir?aba=` (a Central:
+  `src/v2/components/federations/manage/`); públicas `/f/:slug` e
+  `/f/verificar/:codigo?` (V1, `src/pages/PublicFederation*.jsx`); Minha área →
+  Federações; Painel admin → Federações.
+- **Coleções**: `federations` (+ `private/data`), `federation_staff`,
+  `federation_plans`, `federation_members` (+ `private/data`),
+  `federation_charges`, `federation_card_index`.
 
 ### help/ — tutoriais, dicas guiadas e central de ajuda
 Conteúdo puro e contas das telas de ajuda. Zero banco (memória no

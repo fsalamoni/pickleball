@@ -68,6 +68,24 @@ export const FEATURE_FLAG = Object.freeze({
   MARKETPLACE: 'marketplace',
 
   /**
+   * FEDERAÇÕES — a gestão de federação de pickleball (`/federacoes`).
+   *
+   * Uma federação (estadual, regional ou nacional) abre a sua página, define
+   * planos de filiação (mensal ou anual), aprova filiados, recebe por Pix
+   * manual, emite a carteirinha digital (com código de verificação pública)
+   * e, pelas funcionalidades internas que ela mesma liga (`modules` no
+   * documento), chancela torneios, mantém ranking oficial, filia clubes e
+   * arenas, dá cursos e aplica a disciplina. A abertura passa pela aprovação
+   * do admin da plataforma.
+   *
+   * Desligada, nada aparece — rotas, menu, seção da Minha área, aba do Painel
+   * admin — e a REGRA recusa toda escrita nas coleções `federation_*`
+   * (`fedOn()` no `firestore.rules`, como o Mercado). Ligar e desligar não
+   * apaga nada. Ver `src/modules/federations/README.md` e `docs/50-FEDERACAO.md`.
+   */
+  FEDERATIONS: 'federations',
+
+  /**
    * VÁRIOS IDIOMAS — português (padrão), inglês e espanhol.
    *
    * Cada pessoa escolhe o idioma em Configurações (e na tela de entrada); na
@@ -491,6 +509,10 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.MARKETPLACE]: {
     label: tk('Mercado (marketplace)'),
     description: tk('Abre o Mercado em /mercado: anúncios de atletas, professores, arenas e lojas, com busca, filtros, carrinho, favoritos, perguntas, ofertas, pedidos com Pix direto ao vendedor e avaliações. Desligada, o Mercado some de todo lugar e nada é lido; anúncios e pedidos ficam guardados.'),
+  },
+  [FEATURE_FLAG.FEDERATIONS]: {
+    label: tk('Federações'),
+    description: tk('Abre a gestão de federação em /federacoes: a federação pede abertura (o admin da plataforma aprova), define planos de filiação mensais ou anuais, aprova filiados, confirma o Pix e emite a carteirinha digital com verificação pública. As funcionalidades internas (torneios chancelados, ranking oficial, clubes e arenas filiados, cursos, disciplina) cada federação liga para si. Desligada, tudo some e a regra recusa toda escrita; nada é apagado.'),
   },
   [FEATURE_FLAG.MULTI_LANGUAGE]: {
     label: tk('Vários idiomas (português, inglês, espanhol)'),

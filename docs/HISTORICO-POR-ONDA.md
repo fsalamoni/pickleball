@@ -11,7 +11,7 @@
 
 ## Registro histórico (snapshot de 2026-09-28; ondas posteriores estão em `docs/` e no `git log`)
 
-> Última atualização: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> Última atualização: 2026-10-18 (Federações: abertura aprovada pelo admin, planos mensais/anuais, filiação e cobrança Pix só pelo servidor, carteirinha digital com verificação pública, Central com 8 papéis — atrás de `federations`, ver `docs/50-FEDERACAO.md`). Antes: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
@@ -29,6 +29,23 @@
 >
 > **Destaques por onda**:
 >
+> - **Federações, PR 1** (2026-10-18): *"cada federação deve ter ranking
+>   próprio, torneios próprios, clubes internos, arenas vinculadas, atletas
+>   federados que pagam mensalidade ou anuidade, com carteirinha digital…
+>   toda estrutura em flag próprio… sub-flags internas"*. Nasceu a base: flag
+>   `federations` imposta na REGRA (`fedOn()`), seis coleções `federation*`
+>   com zero índice, pedido de abertura que o admin aprova (quem pediu vira
+>   presidente), planos por tipo de pessoa/vínculo/cobrança/validade com
+>   descontos por idade, filiação e cobrança Pix que **só o servidor** cria e
+>   confirma (o navegador só diz "Já paguei"), carteirinha com código que gira
+>   e verificação pública mínima (`/f/verificar`), Central com dois grupos de
+>   seções por permissão, Minha área → Federações, Painel admin → Federações,
+>   termos legais, ajuda, guias, dicas e en/es. Os módulos internos (torneios
+>   chancelados, ranking, clubes/arenas filiados, cursos, disciplina, notícias,
+>   patrocinadores, loja) ficaram como catálogo "em breve" para os PRs 2–4.
+>   Lição: a conta da validade (mensal, 12 meses, data fixa com carência) tem
+>   cópia no servidor com paridade — a tela promete antes de pagar o que o
+>   servidor grava depois.
 > - **Balanço do jogo** (2026-10-10): *"ao final de um dia de jogo, de um
 >   torneio ou de jogo avulso, a plataforma poderia perguntar… como ele
 >   classifica o seu desempenho, quais seus pontos fortes e fracos, se houve

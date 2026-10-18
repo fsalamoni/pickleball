@@ -91,15 +91,33 @@ function marketBlock(m = {}) {
   return bloco;
 }
 
+/** O bloco das federações (`collectFederationExport`): filiações, cobranças, papéis e federações que pediu para abrir. */
+function federationsBlock(f = {}) {
+  const bloco = {
+    memberships: lista(f.memberships),
+    charges: lista(f.charges),
+    staff_roles: lista(f.staff_roles),
+    federations_created: lista(f.federations_created),
+    not_included: ['Os planos e a equipe das federações (são da federação).'],
+  };
+  bloco.counts = {
+    memberships: bloco.memberships.length,
+    charges: bloco.charges.length,
+    staff_roles: bloco.staff_roles.length,
+    federations_created: bloco.federations_created.length,
+  };
+  return bloco;
+}
+
 /**
  * Monta o pacote de exportação.
- * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, market?, incomplete? }} input
+ * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, market?, federations?, incomplete? }} input
  *   `goals` e `training` só entram quando foram coletados; `incomplete` lista,
  *   em pt-BR, as partes que falharam na leitura.
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, messages, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, messages, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -119,6 +137,7 @@ export function buildDataExport({
   if (goals !== undefined) out.goals = lista(goals);
   if (training !== undefined) out.training = trainingBlock(training || {});
   if (market !== undefined) out.market = marketBlock(market || {});
+  if (federations !== undefined) out.federations = federationsBlock(federations || {});
   // E-mails, WhatsApp e SMS que a plataforma mandou (90 dias; endereço mascarado).
   if (messages !== undefined) out.messages = lista(messages);
   return out;

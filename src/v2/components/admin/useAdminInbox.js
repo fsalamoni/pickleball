@@ -10,6 +10,7 @@ import { expiredSuspensions } from '@/modules/admin/domain/accountStatus';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAdminStores, useOpenDisputes, useOpenReports } from '@/modules/marketplace/hooks/useMarket';
+import { useAdminFederations } from '@/modules/federations/hooks/useFederations';
 
 /** Uma fonte só vale quando a consulta respondeu; carregando ou falha = desconhecida. */
 const fonte = (ok, count) => (ok ? { ok: true, count } : { ok: false });
@@ -30,6 +31,8 @@ export function useAdminInbox(enabled = true) {
   const lojas = useAdminStores({ enabled: enabled && mercadoOn });
   const disputas = useOpenDisputes({ enabled: enabled && mercadoOn });
   const denunciasMercado = useOpenReports({ enabled: enabled && mercadoOn });
+  const federacoesOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
+  const federacoes = useAdminFederations({ enabled: enabled && federacoesOn });
 
   const lista = useMemo(() => buildInbox({
     revisao: fonte(itens.isSuccess, (itens.data || []).filter(isPendingReview).length),
@@ -43,9 +46,10 @@ export function useAdminInbox(enabled = true) {
       disputasMercado: fonte(disputas.isSuccess, (disputas.data || []).length),
       denunciasMercado: fonte(denunciasMercado.isSuccess, new Set((denunciasMercado.data || []).map((r) => r.listing_id)).size),
     } : {}),
+    ...(federacoesOn ? { federacoes: fonte(federacoes.isSuccess, (federacoes.data || []).filter((f) => f.status === 'pending').length) } : {}),
   }), [usuarios.isSuccess, usuarios.data, itens.isSuccess, itens.data, denuncias.isSuccess, denuncias.data, sinais.isLoading, sinais.isError, sinais.flags,
     cartas.isLoading, cartas.isError, cartas.letters, ranking.isSuccess, ranking.data, mercadoOn, lojas.isSuccess, lojas.data,
-    disputas.isSuccess, disputas.data, denunciasMercado.isSuccess, denunciasMercado.data]);
+    disputas.isSuccess, disputas.data, denunciasMercado.isSuccess, denunciasMercado.data, federacoesOn, federacoes.isSuccess, federacoes.data]);
 
   return { itens: lista, badges: inboxBadges(lista), ...inboxTotals(lista) };
 }

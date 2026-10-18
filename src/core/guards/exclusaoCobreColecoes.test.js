@@ -182,3 +182,45 @@ describe('a exclusão e a exportação cobrem os avisos por e-mail e celular', (
     });
   });
 });
+
+/* ---------------------------------------------------------- Federações -- */
+
+const DAS_FEDERACOES = [...REGRAS.matchAll(/^\s{4}match \/((?:federation_[a-z_]+)|federations)\//gm)].map((m) => m[1]);
+const EXPORTA_FED_ARQ = 'src/modules/federations/services/federationExportService.js';
+const EXPORTA_FED = readFileSync(EXPORTA_FED_ARQ, 'utf8');
+/** Como cada coleção da federação chega à exportação (a função lida pelo serviço). */
+const FEDERACOES_EXPORTADAS_POR = {
+  federations: ['listFederationsCreatedBy'],
+  federation_staff: ['listMyStaffRoles'],
+  federation_members: ['listMyMemberships'],
+  federation_charges: ['listMyCharges'],
+};
+const FEDERACOES_FORA_DA_EXPORTACAO = {
+  federation_plans: 'O plano é da federação (nome, preço, regras), não da pessoa; a filiação exportada já diz o plano escolhido.',
+  federation_card_index: 'É só o índice código → filiação para a verificação pública; o código já sai na filiação exportada.',
+};
+
+describe('a exclusão e a exportação cobrem as federações', () => {
+  it('o rules tem as coleções das federações', () => {
+    expect(DAS_FEDERACOES).toEqual(expect.arrayContaining(['federations', 'federation_staff', 'federation_members', 'federation_charges', 'federation_card_index']));
+  });
+
+  it('⭐ toda coleção das federações entra na exclusão de conta', () => {
+    const cobre = colecoesDaExclusao();
+    expect(DAS_FEDERACOES.filter((c) => !cobre.has(c)), 'coleção da federação sem tratamento na exclusão').toEqual([]);
+  });
+
+  it('⭐ toda coleção das federações tem caminho para a exportação (ou isenção com motivo)', () => {
+    expect(DAS_FEDERACOES.filter((c) => !FEDERACOES_EXPORTADAS_POR[c] && !FEDERACOES_FORA_DA_EXPORTACAO[c])).toEqual([]);
+    Object.values(FEDERACOES_FORA_DA_EXPORTACAO).forEach((motivo) => expect(String(motivo).length).toBeGreaterThan(20));
+    const servico = readFileSync('src/modules/federations/services/federationService.js', 'utf8');
+    const constantes = readFileSync('src/modules/federations/domain/constants.js', 'utf8');
+    const tela = readFileSync('src/v2/pages/V2Settings.jsx', 'utf8');
+    expect(tela, 'a exportação da conta não chama collectFederationExport').toMatch(/\bcollectFederationExport\b/);
+    Object.entries(FEDERACOES_EXPORTADAS_POR).forEach(([col, fns]) => fns.forEach((fn) => {
+      expect(EXPORTA_FED, `${fn} não é usada pela exportação das federações`).toMatch(new RegExp(`\\b${fn}\\b`));
+      expect(servico, `${fn} não está no serviço das federações`).toMatch(new RegExp(`export (async )?(function|const) ${fn}\\b`));
+      expect(constantes, `FED_COLLECTIONS não cita '${col}'`).toContain(`'${col}'`);
+    }));
+  });
+});

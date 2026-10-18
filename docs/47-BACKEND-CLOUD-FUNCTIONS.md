@@ -378,6 +378,37 @@ pedido e da oferta × `src/modules/marketplace/domain`),
 `tests/rules/marketplace.functions.test.js` / `marketplace.rules.test.js`
 (emulador). Módulo: `src/modules/marketplace/README.md`.
 
+## 8a. Federações (flag `federations`)
+
+Lógica em `functions/federations.js`; a conta da validade em
+`functions/federationMembership.js` (**cópia** de
+`src/modules/federations/domain/membership.js`, paridade em
+`federationMembership.parity.test.js`). A regra do Firestore **não deixa o
+navegador** criar filiação nem cobrança, mudar o estado de uma filiação ou
+confirmar pagamento (`allow create, delete: if false`); o servidor confere a
+flag (`flagLigada`), a federação aprovada, o plano, a idade e o papel de quem
+pede. Doc: `docs/50-FEDERACAO.md`.
+
+**Callables** (via `federationCallable`, 60 s): sem login → `unauthenticated`;
+`actor = { uid, isPlatformAdmin }`; `FederationError` vira `HttpsError` com o
+mesmo código; erro inesperado vira `internal`.
+
+| Função | Faz | Quem pode (checagem no servidor) |
+|---|---|---|
+| `federationReview` | `approve` (cria o presidente em `federation_staff`, grava `review`), `reject` (motivo), `suspend` (motivo), `verify`/`unverify`, `official`/`unofficial`; avisa quem pediu/a equipe | admin da plataforma |
+| `federationMembership` | `request` (confere plano ativo, idade do perfil, filiação viva; gratuito com `auto_approve` ativa numa transação, pago gera a cobrança; sem `auto_approve` avisa a secretaria), `renew` (nova cobrança; a validade nova começa no fim da atual), `cancel`; `approve` (número por transação sobre `member_counter`; gratuito ativa, pago cobra), `reject`, `suspend` (gira o código), `reinstate` | a própria pessoa (`request`/`renew`/`cancel`) ou permissão `members` |
+| `federationChargeConfirm` | `confirm` (cobrança `paid`; ativa ou renova a filiação, emite/gira o código da carteirinha, avisa) e `cancel` (devolve o pedido ao estado anterior) | permissão `finance` |
+| `federationVerify` | o mínimo da carteirinha pelo código (`publicVerification`): nome, foto se permitida, federação, vínculo, número, validade, em dia ou não | **sem login** (o QR é lido por qualquer um); `onCall` próprio, 30 s |
+
+**Agendada**: `federationMembershipSweep` — todo dia às 06:00 (Brasília):
+`active` → `expired` na data; avisos 30, 7 e 1 dia antes (uma vez cada, em
+`expiry_notified`); recontagem de `member_count`.
+
+Toda ação grava `audit_logs` (`federation_*`) e avisa por `notifications`
+(`type: 'federation'`, `origin: 'server'`, `essential: true`, textos por
+`tx()` → `functions/i18n/avisos.json`). Testes: `functions/federations.test.js`
+(ciclo com banco falso) e `tests/rules/federation.rules.test.js` (emulador).
+
 ## 9. Motores duplicados e testes de paridade
 
 O pacote de Functions não importa `src/`, então estas regras existem **duas

@@ -1584,6 +1584,90 @@ pedidos, ofertas, perguntas e avaliações ficam sem o nome; a ficha pessoal
 fica "Vendedor removido", suspensa, com os anúncios encerrados; pedido em
 andamento impede a exclusão.
 
+## Federações (flag `federations`, default OFF) — `docs/50-FEDERACAO.md`
+
+Seis coleções novas com prefixo `federation`, **zero índice composto** (uma
+igualdade por consulta, ordenação em memória) e **nenhum campo novo** em
+coleção existente. Regras no bloco "FEDERAÇÕES" do `firestore.rules`
+(`fedOn()` lê a flag em `platform_settings/global`; `fedHas(fedId, perm)` lê o
+papel em `federation_staff/{fedId}_{uid}`), provadas em
+`tests/rules/federation.rules.test.js`.
+
+### `federations/{id}` (NOVO)
+Público quando `status == 'approved'`; antes só quem pediu, a equipe e o admin.
+`name`, `acronym`, `slug` (único, `[a-z0-9-]`, a página `/f/:slug`), `level`
+(`state|regional|national`), `state`, `city`, `about`, `site`, `instagram`,
+`contact_public { email, phone }`, `branding { color, logo_url }`,
+`payment { pix_key_type, pix_key, receiver_name, instructions }`,
+`modules { [FED_MODULE]: boolean }`, `status`
+(`pending|approved|rejected|suspended`), `verified`, `official`,
+`member_count`, `member_counter` (sequência do número de filiado),
+`cnpj_masked`, `review { action, reason, by, at_ms }`, `created_by`,
+`created_by_name`, `created_at`, `updated_at`. Campos travados para a equipe
+(`fedLocked()`): status, selos, contadores, `review`, `cnpj_masked`,
+`created_*` — só o admin da plataforma ou o servidor.
+- `private/data`: `cnpj`, `legal_name`, `phone`, `notes` — quem pediu
+  (enquanto pendente), a equipe com `admin`, o admin da plataforma.
+
+### `federation_staff/{fedId}_{uid}` (NOVO)
+`federation_id`, `user_id`, `user_name`, `role`
+(`president|director|secretary|treasurer|competitions|referees|discipline|communication`),
+`added_by`, `created_at`. Leem: a equipe que atende e a própria pessoa. Quem tem
+`admin` cria e troca papéis; `president` só por presidente (ou admin da
+plataforma); o presidente não se rebaixa sozinho e não sai da equipe.
+
+### `federation_plans/{id}` (NOVO, público)
+`federation_id`, `name`, `description`, `benefits[]`, `person_type`
+(`athlete|coach|referee`), `tier` (`registered|federated`), `billing`
+(`monthly|annual`), `validity` (`rolling|calendar`), `rollover_mmdd`,
+`calendar_grace_days` (padrão 60), `price_cents` (0 = gratuito, teto
+100.000.000), `age_min`, `age_max`, `discounts { minor_pct, senior_pct,
+family_pct, family_from }`, `auto_approve`, `active`, `sort`, `updated_by`.
+Cria/edita `admin` ou `finance`; apaga só o admin da plataforma (desativa).
+
+### `federation_members/{fedId}_{uid}` (NOVO, **nunca público**)
+Só o servidor cria e muda o estado (`federationMembership`). `federation_id`,
+`federation_name`, `federation_acronym`, `user_id`, `user_name`, `photo_url`,
+`person_type`, `tier`, `plan_id`, `plan_name`, `billing`, `status`
+(`pending|awaiting_payment|active|expired|suspended|cancelled|rejected`),
+`member_number` (`SIGLA-ANO-000001`, fixo depois de emitido), `card_code`
+(10 caracteres, gira a cada ativação/renovação/suspensão), `valid_from`,
+`valid_until` (`YYYY-MM-DD`), `activated_at_ms`, `expiry_notified { 30, 7, 1 }`,
+`public_badge`, `show_in_directory`, `public_photo`, `represented_club_id`,
+`note`, `reject_reason`, `suspended_reason`, `requested_at`, `updated_at`. O
+próprio só muda `public_badge`, `show_in_directory`, `public_photo`,
+`prefs_updated_at`. Leem: o próprio, a equipe com `admin`/`members`/`finance`,
+o admin.
+- `private/data` (reservado ao PR 3: CPF, responsável do menor) — o próprio
+  escreve; leem o próprio, `members`, `admin` e o admin da plataforma.
+
+### `federation_charges/{id}` (NOVO)
+Só o servidor cria, confirma e cancela. `federation_id`, `member_id`,
+`payer_uid`, `payer_name`, `origin` (`membership|renewal`), `plan_id`,
+`plan_name`, `amount_cents`, `status` (`open|declared|paid|cancelled`),
+`due_date` (hoje + 10), `declared_at`, `declared_note` (≤ 300), `paid_at_ms`,
+`confirmed_by`, `confirm_note`, `created_at`, `created_at_ms`. A única escrita
+do pagador: `open|declared` → `declared` com `declared_at`/`declared_note`.
+
+### `federation_card_index/{code}` (NOVO)
+`{ member_id, federation_id, created_at_ms }`. `allow read, write: if false`:
+só o servidor (a verificação pública é a função `federationVerify`).
+
+### Avisos e auditoria
+Avisos são `notifications` com `type: 'federation'` (área `federacoes`,
+categoria "Federações" em Configurações → Notificações), `origin: 'server'`,
+`essential: true`. Auditoria em `audit_logs` com `action` `federation_*`
+(`apply`, `update`, `payment_update`, `modules_update`, `plan_save`,
+`staff_set`, `staff_remove`, `membership_request|approve|reject|cancel`,
+`charge_confirm|cancel`, revisão).
+
+### Exclusão de conta e exportação
+Filiações e cobranças **ficam sem o nome** (`coletarFederacoes`), os códigos
+em `federation_card_index` são apagados, `federation_staff` da pessoa sai, a
+federação que ela pediu fica com "Usuário removido"; **presidente** bloqueia a
+exclusão (nomeia outra presidência antes). Exportação: bloco `federations`
+(`federationExportService.js`). Guarda: `exclusaoCobreColecoes.test.js`.
+
 ## Coleções conferidas na regra (complemento)
 
 > Coleções que faltavam neste documento. Cada item foi conferido em

@@ -55,6 +55,12 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
     types: ['market'],
   },
   {
+    id: 'federations',
+    label: tk('Federações'),
+    description: tk('Filiação, pagamentos, carteirinha e avisos da sua federação.'),
+    types: ['federation'],
+  },
+  {
     id: 'gamification',
     label: tk('Gamificação'),
     description: tk('Resumo da semana, duelos, resultados de desafios e pedidos de recompensa.'),

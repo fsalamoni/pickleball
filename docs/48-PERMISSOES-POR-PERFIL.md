@@ -42,6 +42,8 @@ as regras consultam.
 | **Participante de dia aberto** | `uid in member_uids` **e** `manage_mode == 'participants'` | `canManageGameDayOf(gdId)` | `canManageGameDay(..., { participants })` |
 | **Admin de torneio** | documento `tournament_admins/{tid}_{uid}` (`role` `owner` ou `admin`); o criador (`tournaments.creator_uid`) ganha o `owner` ao criar | `isTournamentAdmin(tid)`, `isTournamentCreator(tid)` | `useIsTournamentAdmin(tid)` |
 | **Membro de clube** | documento `club_members/{clubId}_{uid}` | `isClubMember(clubId)` | `useMyMembership(clubId)` |
+| **Equipe de federação** (flag `federations`) | documento `federation_staff/{fedId}_{uid}` com `role` (8 papéis → permissões `admin`, `members`, `finance`, …; o presidente nasce na aprovação da federação) | `fedRole(fedId)`, `fedHas(fedId, perm)` | `useMyFederationRole(fedId)` |
+| **Filiado de federação** | documento `federation_members/{fedId}_{uid}` (só o servidor cria) | `resource.data.user_id == uid` | `useMyMembership(fedId)` |
 | **Admin de clube** | o mesmo documento com `role == 'admin'` (`CLUB_ROLE.ADMIN`); o criador do clube (`clubs.created_by`) é registrado como admin | `isClubAdmin(clubId)`, `isClubCreator(clubId)` | `membership.role === CLUB_ROLE.ADMIN` |
 | **Gestor de arena** | documento `arena_managers/{arenaId}_{uid}` (`role` `owner` ou `manager`) | `isArenaManager(arenaId)` | `useMyManagedArenas()` |
 | **Dono da arena** | `arenas.owner_id` + `arena_managers.role == 'owner'` | (`allow delete` do `arenas`, trava de `owner_id`) | — |
@@ -266,6 +268,30 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Responder avaliação revelada | ✖ | ✔ (só `reply`) | — | rules |
 | Denunciar anúncio | ✔ (um por pessoa; não de si mesmo) | ✖ | ✔ trata | rules |
 | Qualquer escrita com o Mercado desligado | ✖ | ✖ | ◐ | rules (`marketOn()`) e funções (`enabled`) |
+
+### 4.8a Federações (flag `federations`) — detalhe em [`50`](./50-FEDERACAO.md)
+
+| Ação | Visitante | Atl (conta) | Filiado (o próprio) | Equipe | Plat | Onde |
+|---|---|---|---|---|---|---|
+| Ler federação aprovada e planos | ✔ | ✔ | ✔ | ✔ | ✔ | rules |
+| Ler federação pendente/recusada/suspensa | ✖ | ◐ só quem pediu | — | ✔ `admin` | ✔ | rules |
+| Pedir a abertura | ✖ | ✔ (`status: 'pending'`, selos falsos, sem campos travados) | — | — | — | rules (flag ligada) |
+| Ler/gravar CNPJ, razão social (`private/data`) | ✖ | ◐ quem pediu, enquanto pendente | ✖ | ✔ `admin` | ✔ | rules |
+| Aprovar, recusar, suspender, selos "Verificada"/"Oficial" | ✖ | ✖ | ✖ | ✖ | ✔ | **Cloud Function** `federationReview` |
+| Editar página, Pix, marca, módulos | ✖ | ✖ | ✖ | ✔ `admin` (nunca `fedLocked()`) | ✔ | rules |
+| Criar/editar plano | ✖ | ✖ | ✖ | ✔ `admin` ou `finance` (federação aprovada) | ✔ | rules; apagar só Plat |
+| Nomear/trocar papel na equipe | ✖ | ✖ | ✖ | ✔ `admin`; `president` só por presidente; o presidente não se rebaixa | ✔ | rules |
+| Sair da equipe | — | — | — | ✔ o próprio (menos o presidente) | ✔ | rules |
+| Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
+| Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
+| Ler filiação | ✖ | ✖ | ✔ a própria | ✔ `admin`/`members`/`finance` | ✔ | rules (**nunca pública**) |
+| Mudar preferências da filiação (selo, diretório, foto) | ✖ | ✖ | ✔ só esses campos | ✖ | — | rules |
+| Criar cobrança | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; só o servidor |
+| Declarar "Já paguei" | ✖ | ✖ | ✔ (`open|declared` → `declared`, nota ≤ 300) | ✖ | — | rules |
+| Confirmar/cancelar cobrança | ✖ | ✖ | ✖ | ✔ `finance` | ✔ | **Cloud Function** `federationChargeConfirm` |
+| Ler índice de carteirinha | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false` |
+| Verificar carteirinha pelo código | ✔ | ✔ | ✔ | ✔ | ✔ | **Cloud Function** `federationVerify` (sem login; devolve o mínimo) |
+| Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ◐ | rules (`fedOn()`) e funções (`flagLigada`) |
 
 ### 4.9 Plataforma (admin e dono)
 

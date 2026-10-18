@@ -40,6 +40,7 @@ export const NOTICE_AREA = Object.freeze({
   AULAS: 'aulas',
   TREINO: 'treino',
   MERCADO: 'mercado',
+  FEDERACOES: 'federacoes',
   SOCIAL: 'social',
   PROMOCOES: 'promocoes',
   GAMIFICACAO: 'gamificacao',
@@ -56,6 +57,7 @@ export const NOTICE_AREAS = Object.freeze([
   { id: NOTICE_AREA.AULAS, label: tk('Aulas'), curto: tk('Aulas') },
   { id: NOTICE_AREA.TREINO, label: tk('Treino'), curto: tk('Treino') },
   { id: NOTICE_AREA.MERCADO, label: tk('Mercado'), curto: tk('Mercado') },
+  { id: NOTICE_AREA.FEDERACOES, label: tk('Federações'), curto: tk('Federações') },
   { id: NOTICE_AREA.SOCIAL, label: tk('Mensagens e comunidade'), curto: tk('Mensagens') },
   { id: NOTICE_AREA.PROMOCOES, label: tk('Promoções e campanhas'), curto: tk('Promoções') },
   { id: NOTICE_AREA.GAMIFICACAO, label: tk('Gamificação'), curto: tk('Gamificação') },
@@ -96,6 +98,7 @@ const AREA_DO_TIPO = Object.freeze({
   training_question: NOTICE_AREA.TREINO,
   training_answer: NOTICE_AREA.TREINO,
   market: NOTICE_AREA.MERCADO,
+  federation: NOTICE_AREA.FEDERACOES,
 });
 
 /** Primeiro segmento do caminho → área (o que não depende do resto). */
@@ -120,6 +123,8 @@ const AREA_DO_CAMINHO = Object.freeze({
   coaches: NOTICE_AREA.AULAS,
   treino: NOTICE_AREA.TREINO,
   mercado: NOTICE_AREA.MERCADO,
+  federacoes: NOTICE_AREA.FEDERACOES,
+  f: NOTICE_AREA.FEDERACOES,
   chat: NOTICE_AREA.SOCIAL,
   atleta: NOTICE_AREA.SOCIAL,
   atletas: NOTICE_AREA.SOCIAL,

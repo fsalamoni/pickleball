@@ -12,8 +12,8 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  Building2, CalendarCheck, Check, ChevronRight, Compass, Dumbbell, GraduationCap, LifeBuoy, Lightbulb, PlayCircle, RotateCcw,
-  Settings, Sparkles, Swords, Trophy, Users,
+  Building2, CalendarCheck, Check, ChevronRight, Compass, Dumbbell, GraduationCap, Landmark, LifeBuoy, Lightbulb, PlayCircle, RotateCcw,
+  Settings, Sparkles, Store, Swords, Trophy, Users,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -30,7 +30,7 @@ import InterruptorDicas from './InterruptorDicas';
 import { t, tn } from '@/core/i18n';
 
 const ICONES = {
-  Building2, CalendarCheck, Compass, Dumbbell, GraduationCap, Settings, Sparkles, Swords, Trophy, Users,
+  Building2, CalendarCheck, Compass, Dumbbell, GraduationCap, Landmark, Settings, Sparkles, Store, Swords, Trophy, Users,
 };
 
 function LinhaGuia({ guia, feito, onIniciar }) {

@@ -1608,6 +1608,8 @@ service cloud.firestore {
         'training_question', 'training_answer',
         // Mercado (flag marketplace).
         'market',
+        // Federações (flag federations).
+        'federation',
       ];
     }
     function isInternalLink(l) {
@@ -4522,6 +4524,192 @@ service cloud.firestore {
         && request.resource.data.get('listing_title', '') is string
         && request.resource.data.get('listing_title', '').size() <= 120;
       allow update, delete: if isPlatformAdmin();
+    }
+
+    // =====================================================================
+    // FEDERAÇÕES (flag `federations`) — coleções `federation_*`, aditivas.
+    //  - a flag DESLIGADA fecha toda escrita (`fedOn()`), como no Mercado;
+    //  - a federação nasce `pending` por qualquer conta; status, verificação e
+    //    selo oficial só o admin da plataforma (ou o servidor) mudam;
+    //  - a equipe (`federation_staff/{fed}_{uid}`) tem PAPEL, e a regra
+    //    pergunta pela PERMISSÃO do papel (`fedHas`) — cópia de
+    //    `STAFF_ROLE_PERMISSIONS`, com teste de paridade; o presidente só é
+    //    trocado por presidente ou pelo admin da plataforma;
+    //  - a FILIAÇÃO só o SERVIDOR cria e muda de estado (`functions/
+    //    federations.js`): o atleta não "se aprova". No documento, a pessoa
+    //    muda só as próprias preferências (selo público, diretório, foto);
+    //  - a lista de filiados NUNCA é pública: lê o próprio, a equipe
+    //    (filiados/financeiro/admin) e o admin da plataforma;
+    //  - a COBRANÇA só o servidor cria; o pagador só DECLARA que pagou
+    //    (aberta → informada); confirmar é do financeiro, pelo servidor;
+    //  - `federation_card_index` (código da carteirinha → filiação): ninguém
+    //    pelo cliente — a verificação é uma função.
+    // =====================================================================
+    function fedOn() {
+      return get(/databases/$(database)/documents/platform_settings/global).data
+        .get('feature_flags', {}).get('federations', false) == true;
+    }
+    function fedDoc(fedId) {
+      return get(/databases/$(database)/documents/federations/$(fedId)).data;
+    }
+    function fedApproved(fedId) {
+      return exists(/databases/$(database)/documents/federations/$(fedId)) && fedDoc(fedId).status == 'approved';
+    }
+    function fedStaffPath(fedId) {
+      return /databases/$(database)/documents/federation_staff/$(fedId + '_' + request.auth.uid);
+    }
+    function fedRole(fedId) {
+      return isAuthed() && exists(fedStaffPath(fedId)) ? get(fedStaffPath(fedId)).data.role : '';
+    }
+    // Papel → permissões (cópia de `src/modules/federations/domain/constants.js`).
+    function fedRolePerms(role) {
+      return role == 'president' || role == 'director'
+        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms']
+        : (role == 'secretary' ? ['members']
+        : (role == 'treasurer' ? ['finance']
+        : (role == 'competitions' ? ['competitions']
+        : (role == 'referees' ? ['courses']
+        : (role == 'discipline' ? ['discipline']
+        : (role == 'communication' ? ['comms'] : []))))));
+    }
+    function fedHas(fedId, perm) {
+      return isAuthed() && perm in fedRolePerms(fedRole(fedId));
+    }
+    // Campos da federação que só o admin da plataforma (ou o servidor) muda.
+    function fedLocked() {
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked'];
+    }
+
+    match /federations/{fedId} {
+      // Aprovada é pública (diretório, /f/:slug); o resto só quem pediu, a equipe e o admin.
+      allow read: if resource.data.status == 'approved'
+        || isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || fedHas(fedId, 'admin');
+      allow create: if fedOn() && isAuthed()
+        && request.resource.data.created_by == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.get('verified', false) == false
+        && request.resource.data.get('official', false) == false
+        && !request.resource.data.keys().hasAny(['member_counter', 'review'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 5
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.acronym is string
+        && request.resource.data.acronym.size() >= 2
+        && request.resource.data.acronym.size() <= 12
+        && request.resource.data.slug is string
+        && request.resource.data.slug.matches('[a-z0-9][a-z0-9-]{1,58}[a-z0-9]')
+        && request.resource.data.level in ['state', 'regional', 'national'];
+      // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
+      allow update: if isPlatformAdmin() || (fedOn() && fedHas(fedId, 'admin')
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(fedLocked()));
+      allow delete: if isPlatformAdmin();
+
+      // CNPJ completo, razão social: quem pediu (enquanto pendente), a equipe (admin) e o admin da plataforma.
+      match /private/{docId} {
+        allow read: if docId == 'data' && (isPlatformAdmin() || fedHas(fedId, 'admin')
+          || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId)) && fedDoc(fedId).created_by == request.auth.uid));
+        allow write: if docId == 'data' && fedOn() && (isPlatformAdmin() || fedHas(fedId, 'admin')
+          || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId))
+            && fedDoc(fedId).created_by == request.auth.uid && fedDoc(fedId).status == 'pending'));
+      }
+    }
+
+    match /federation_staff/{staffId} {
+      // A equipe lê a equipe; a pessoa lê o próprio papel.
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.user_id == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'admin')
+        || fedHas(resource.data.federation_id, 'members')
+        || fedHas(resource.data.federation_id, 'finance');
+      // Quem tem `admin` acrescenta e troca papéis; o presidente só por
+      // presidente (ou admin da plataforma). O id é `{fed}_{uid}` e os dois
+      // campos batem com ele.
+      allow create: if fedOn() && (isPlatformAdmin() || (fedHas(request.resource.data.federation_id, 'admin')
+          && (request.resource.data.role != 'president' || fedRole(request.resource.data.federation_id) == 'president')))
+        && staffId == request.resource.data.federation_id + '_' + request.resource.data.user_id
+        && fedApproved(request.resource.data.federation_id)
+        && request.resource.data.role in ['president', 'director', 'secretary', 'treasurer', 'competitions', 'referees', 'discipline', 'communication'];
+      allow update: if fedOn() && (isPlatformAdmin() || (fedHas(resource.data.federation_id, 'admin')
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['federation_id', 'user_id'])
+          && ((resource.data.role != 'president' && request.resource.data.role != 'president')
+            || fedRole(resource.data.federation_id) == 'president')
+          // O presidente não se rebaixa sozinho: passa a presidência antes.
+          && !(resource.data.user_id == request.auth.uid && resource.data.role == 'president' && request.resource.data.role != 'president')))
+        && request.resource.data.role in ['president', 'director', 'secretary', 'treasurer', 'competitions', 'referees', 'discipline', 'communication'];
+      // Sair da equipe (menos o presidente) ou ser tirado por quem tem `admin`.
+      allow delete: if isPlatformAdmin() || (fedOn() && resource.data.role != 'president'
+        && (fedHas(resource.data.federation_id, 'admin') || (isAuthed() && resource.data.user_id == request.auth.uid)));
+    }
+
+    match /federation_plans/{planId} {
+      // Os planos são públicos (a página da federação os mostra a quem vai se filiar).
+      allow read: if true;
+      allow create: if fedOn() && fedApproved(request.resource.data.federation_id)
+        && (fedHas(request.resource.data.federation_id, 'admin') || fedHas(request.resource.data.federation_id, 'finance'))
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.price_cents is int
+        && request.resource.data.price_cents >= 0
+        && request.resource.data.price_cents <= 100000000
+        && request.resource.data.billing in ['monthly', 'annual']
+        && request.resource.data.tier in ['registered', 'federated']
+        && request.resource.data.person_type in ['athlete', 'coach', 'referee'];
+      allow update: if fedOn() && (fedHas(resource.data.federation_id, 'admin') || fedHas(resource.data.federation_id, 'finance'))
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['federation_id'])
+        && request.resource.data.price_cents is int
+        && request.resource.data.price_cents >= 0
+        && request.resource.data.price_cents <= 100000000
+        && request.resource.data.billing in ['monthly', 'annual'];
+      // Plano com filiação apontando para ele não se apaga: desativa. Só o admin da plataforma apaga.
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /federation_members/{memberId} {
+      // ⭐ NUNCA pública. O próprio, a equipe que atende (filiados, financeiro, admin) e o admin da plataforma.
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.user_id == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'admin')
+        || fedHas(resource.data.federation_id, 'members')
+        || fedHas(resource.data.federation_id, 'finance');
+      // Só o servidor cria (`federationMembership`): número, estado, validade e código.
+      allow create, delete: if false;
+      // O próprio muda só as próprias preferências; tudo o mais é do servidor.
+      allow update: if fedOn() && isAuthed() && resource.data.user_id == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['public_badge', 'show_in_directory', 'public_photo', 'prefs_updated_at']);
+
+      // CPF, campos extras, consentimento do responsável (PR3): o próprio, a secretaria e o admin.
+      match /private/{docId} {
+        allow read: if docId == 'data' && (isPlatformAdmin()
+          || (isAuthed() && memberId.matches('.+_' + request.auth.uid))
+          || fedHas(memberId.split('_')[0], 'members')
+          || fedHas(memberId.split('_')[0], 'admin'));
+        allow write: if docId == 'data' && fedOn() && isAuthed() && memberId.matches('.+_' + request.auth.uid);
+      }
+    }
+
+    match /federation_charges/{chargeId} {
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.payer_uid == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'admin')
+        || fedHas(resource.data.federation_id, 'finance')
+        || fedHas(resource.data.federation_id, 'members');
+      // Só o servidor cria; confirmar e cancelar também são dele.
+      allow create, delete: if false;
+      // "Já paguei": o pagador só DECLARA — aberta/informada → informada, com a observação.
+      allow update: if fedOn() && isAuthed() && resource.data.payer_uid == request.auth.uid
+        && resource.data.status in ['open', 'declared']
+        && request.resource.data.status == 'declared'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'declared_at', 'declared_note'])
+        && request.resource.data.get('declared_note', '') is string
+        && request.resource.data.get('declared_note', '').size() <= 300;
+    }
+
+    // Código da carteirinha → filiação. Só o servidor (a verificação é a função `federationVerify`).
+    match /federation_card_index/{code} {
+      allow read, write: if false;
     }
   }
 }

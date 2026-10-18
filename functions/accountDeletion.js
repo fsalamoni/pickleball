@@ -189,6 +189,8 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'market_favorites', field: 'uid', label: 'Favoritos do Mercado' },
   { col: 'market_follows', field: 'uid', label: 'Lojas seguidas no Mercado' },
   { col: 'market_saved_searches', field: 'uid', label: 'Buscas salvas do Mercado' },
+  // Federações: o papel na equipe é da pessoa (a federação segue com os outros).
+  { col: 'federation_staff', field: 'user_id', label: 'Papéis em equipes de federação' },
   // E-mails, WhatsApp e SMS que a plataforma mandou para a pessoa (registro
   // de 90 dias; o resumo diário também leva o `user_id`).
   { col: 'message_outbox', field: 'user_id', label: 'Registro de e-mails e mensagens recebidos' },
@@ -225,7 +227,32 @@ const RETAINED_AS_IS = Object.freeze([
   // Denúncia de e-mail (link do rodapé): só uids e o id do aviso, sem nome.
   { col: 'message_reports', field: 'reporter_uid', label: 'Denúncias de e-mail que fez' },
   { col: 'message_reports', field: 'sender_uid', label: 'Denúncias de e-mail sobre avisos da conta' },
+  // Planos de federação são da federação; guardam só o uid de quem os salvou.
+  { col: 'federation_plans', field: 'updated_by', label: 'Planos de federação que cadastrou' },
 ]);
+
+/* ------------------------------------------------------- federações ----- */
+
+/**
+ * A filiação e as cobranças ficam sem o nome; o índice do código da
+ * carteirinha é APAGADO (a carteirinha de uma conta excluída não verifica);
+ * os planos (`federation_plans`) são da federação e não citam a pessoa.
+ */
+async function coletarFederacoes(db, uid) {
+  const filiacoes = await consultar(db, 'federation_members', 'user_id', '==', uid);
+  const cobrancas = await consultar(db, 'federation_charges', 'payer_uid', '==', uid);
+  const itens = [];
+  const deletes = [];
+  filiacoes.docs.forEach((d) => {
+    const data = d.data() || {};
+    if (data.card_code) deletes.push(db.collection('federation_card_index').doc(String(data.card_code)));
+    itens.push({ ref: d.ref, patch: { user_name: REMOVED_ATHLETE, photo_url: null, card_code: null, public_badge: false, show_in_directory: false, note: '' } });
+  });
+  cobrancas.docs.forEach((d) => {
+    if ((d.data() || {}).payer_name !== REMOVED_ATHLETE) itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE } });
+  });
+  return { itens, deletes, truncated: filiacoes.truncated || cobrancas.truncated, count: itens.length };
+}
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
 
@@ -252,7 +279,7 @@ const marketPersonalKeys = (uid) => ['athlete_', 'coach_', 'store_'].map((p) => 
  * exclui a arena, o clube, o torneio — e só então exclui a conta.
  *
  * @param {{ arenas?:object[], networks?:object[], clubAdminships?:Array<{club_id:string,club_name?:string,otherAdmins:number}>,
- *           tournaments?:object[], gameDays?:object[], wallets?:object[] }} found
+ *           tournaments?:object[], gameDays?:object[], wallets?:object[], federationPresidencies?:object[] }} found
  * @param {string} uid
  * @param {string} hojeISO  AAAA-MM-DD
  * @returns {Array<{ label:string, detail?:string }>}
@@ -284,6 +311,9 @@ function evaluateBlockers(found = {}, uid, hojeISO) {
   if (abertos.length > 0) {
     out.push({ label: `Tem ${abertos.length} pedido(s) do Mercado em andamento`, detail: 'Espere concluir ou cancele os pedidos antes.' });
   }
+  (found.federationPresidencies || []).forEach((f) => {
+    out.push({ label: `Presidente da federação "${texto(f.name) || f.id}"`, detail: 'Nomeie outra presidência na equipe da federação antes.' });
+  });
   (found.wallets || []).forEach((w) => {
     const saldo = Number(w.balance) || 0;
     if (saldo <= 0) return;
@@ -1051,6 +1081,12 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
   { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
   { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: patchCoachCampaign, countAll: true },
+  // Federações: a filiação e as cobranças FICAM (obrigação da federação, como
+  // a mensalidade da arena), sem o nome; a carteirinha deixa de verificar
+  // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
+  // pediu para abrir fica, com "Usuário removido" em quem pediu.
+  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha de federação', cols: ['federation_members', 'federation_charges', 'federation_card_index'] },
+  { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },
   // Mercado
   { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders', 'market_coupons', 'market_gift_cards'] },
   { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },
@@ -1253,7 +1289,7 @@ async function buscarImpedimentos(db, uid, hojeISO) {
 
   const pedidosVenda = async () => (await Promise.all(marketPersonalKeys(uid).map((k) => consultar(db, 'market_orders', 'seller_key', '==', k))))
     .flatMap((r) => r.docs.map((d) => ({ id: d.id, ...d.data() })));
-  const [arenas, networks, tournaments, gameDays, wallets, clubes, comprados, vendidos] = await Promise.all([
+  const [arenas, networks, tournaments, gameDays, wallets, clubes, comprados, vendidos, fedStaff] = await Promise.all([
     docs('arenas', 'owner_id'),
     docs('arena_networks', 'owner_id'),
     docs('tournaments', 'creator_uid'),
@@ -1262,8 +1298,18 @@ async function buscarImpedimentos(db, uid, hojeISO) {
     docs('club_members', 'user_id'),
     docs('market_orders', 'buyer_uid'),
     pedidosVenda(),
+    docs('federation_staff', 'user_id'),
   ]);
   const marketOrders = [...comprados, ...vendidos];
+
+  // Presidência de federação aprovada: a federação ficaria sem quem a governa.
+  const federationPresidencies = [];
+  for (const st of fedStaff.filter((x) => x.role === 'president' && x.federation_id)) {
+    // eslint-disable-next-line no-await-in-loop
+    const fed = await db.collection('federations').doc(st.federation_id).get();
+    if (!fed.exists || fed.data().status !== 'approved') continue;
+    federationPresidencies.push({ id: fed.id, name: fed.data().name });
+  }
 
   const clubAdminships = [];
   for (const m of clubes.filter((c) => c.role === 'admin' && c.club_id)) {
@@ -1279,7 +1325,7 @@ async function buscarImpedimentos(db, uid, hojeISO) {
     });
   }
 
-  return evaluateBlockers({ arenas, networks, clubAdminships, tournaments, gameDays, wallets, marketOrders }, uid, hojeISO);
+  return evaluateBlockers({ arenas, networks, clubAdminships, tournaments, gameDays, wallets, marketOrders, federationPresidencies }, uid, hojeISO);
 }
 
 /**

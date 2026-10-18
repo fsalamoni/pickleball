@@ -6,12 +6,12 @@
  * As peças de outras telas entram como são (planos e compras nas arenas,
  * aulas, códigos de indicação, progresso): a Minha área JUNTA, não copia.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
   HandCoins, Heart, HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
-  Search, Settings, ShieldCheck, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
+  Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
@@ -38,7 +38,13 @@ import { unreadCount } from '@/modules/training/domain/share';
 import { USER_AREA_SECTION as S, marketPendingCounts } from '@/modules/athletes/domain/userArea';
 import { useMarketCart, useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { ORDER_FINAL_STATUSES } from '@/modules/marketplace/domain/constants';
-import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { membershipState } from '@/modules/federations/domain/membership';
+import { CHARGE_STATUS, MEMBER_STATUS, STAFF_ROLE_LABELS } from '@/modules/federations/domain/constants';
+import { FedLogo, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
+import MemberCardDialog from '@/v2/components/federations/MemberCard';
+import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
+import { useFederation } from '@/modules/federations/hooks/useFederations';
+import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { HomeAction, HomeEmpty, HomeRow } from '@/v2/components/home/personal/HomeSection';
 import WeekStrip from '@/v2/components/training/WeekStrip';
@@ -583,6 +589,78 @@ function TrofeusSecao() {
   );
 }
 
+
+/**
+ * Federações (flag `federations`): as filiações da pessoa (estado, validade,
+ * carteirinha), as cobranças em aberto (Pix) e os papéis na equipe. As
+ * leituras são as da Minha área (`ctx.federacoes`); só a carteirinha abre a
+ * federação (para a cor e o logo do cartão).
+ */
+function FiliacaoRow({ m }) {
+  const [cartao, setCartao] = useState(false);
+  const fq = useFederation(cartao ? m.federation_id : null);
+  const st = membershipState(m);
+  const f = { id: m.federation_id, name: m.federation_name || t('Federação'), acronym: m.federation_acronym || '' };
+  const temCartao = [MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && m.card_code;
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 p-3">
+      <FedLogo federation={f} size="sm" />
+      <div className="min-w-0 flex-1">
+        <Link to={fedPath(f)} className="font-bold text-ink hover:underline">{f.name}</Link>
+        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <MemberStatusBadge status={st.status} label={st.label} />
+          {m.plan_name && <span>{m.plan_name}</span>}
+          {m.member_number && <span>· {m.member_number}</span>}
+          {st.validUntil && <span>· {t('até {data}', { data: quando(st.validUntil) })}</span>}
+        </div>
+      </div>
+      {temCartao && <V2Button type="button" size="sm" variant="secondary" onClick={() => setCartao(true)} data-dica="minha-area-carteirinha"><IdCard className="h-4 w-4" aria-hidden="true" />{t('Carteirinha')}</V2Button>}
+      {st.canRenew && <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Renovar')}</Link></V2Button>}
+      {cartao && <MemberCardDialog open onOpenChange={setCartao} member={m} federation={fq.data || f} />}
+    </li>
+  );
+}
+
+function FederacoesSecao({ ctx }) {
+  const { membersQ, chargesQ, rolesQ } = ctx.federacoes;
+  const falhas = [membersQ, chargesQ, rolesQ].filter((q) => q.isError);
+  const filiacoes = (membersQ.data || []).filter((m) => !['cancelled', 'rejected'].includes(m.status));
+  const abertas = (chargesQ.data || []).filter((c) => [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
+  const papeis = rolesQ.data || [];
+  return (
+    <div className="space-y-6">
+      {falhas.length > 0 && <V2ErrorState inline title={t('Não carregaram as suas federações')} onRetry={() => falhas.forEach((q) => q.refetch())} />}
+      {abertas.length > 0 && (
+        <Bloco id="federacoes-pagar" icon={HandCoins} title={t('Pagamentos da federação')}>
+          <ul className="space-y-3">
+            {abertas.map((c) => <li key={c.id}><CobrancaComFederacao charge={c} /></li>)}
+          </ul>
+        </Bloco>
+      )}
+      <Bloco id="federacoes-filiacoes" icon={Landmark} title={t('Suas filiações')} action={{ to: '/federacoes', label: t('Ver as federações') }}>
+        {membersQ.isSuccess && filiacoes.length === 0 ? (
+          <HomeEmpty icon={Landmark} actions={<HomeAction to="/federacoes" primary>{t('Conhecer as federações')}</HomeAction>}>
+            {t('Você ainda não é filiado a nenhuma federação. Filiado, você recebe a carteirinha digital e pontua no ranking oficial dela.')}
+          </HomeEmpty>
+        ) : <ul className="space-y-2">{filiacoes.map((m) => <FiliacaoRow key={m.id} m={m} />)}</ul>}
+      </Bloco>
+      {papeis.length > 0 && (
+        <Bloco id="federacoes-equipe" icon={ShieldCheck} title={t('Você na equipe')}>
+          <Atalhos itens={papeis.map((s) => ({ to: fedManagePath({ id: s.federation_id }), label: s.federation_name || t('Federação'), descricao: t(STAFF_ROLE_LABELS[s.role] || ''), icon: Landmark }))} />
+        </Bloco>
+      )}
+    </div>
+  );
+}
+
+/** A cobrança precisa da federação (Pix e cor) para montar o QR. */
+function CobrancaComFederacao({ charge }) {
+  const fq = useFederation(charge.federation_id);
+  if (fq.isError) return <V2ErrorState inline title={t('Não carregou a federação desta cobrança')} onRetry={() => fq.refetch()} />;
+  if (!fq.isSuccess) return <V2Skeleton lines={3} />;
+  return <PixChargeBlock charge={charge} federation={fq.data} compact />;
+}
+
 export const SECOES = Object.freeze({
   [S.RESUMO]: ResumoSecao,
   [S.PERFIL]: PerfilSecao,
@@ -591,6 +669,7 @@ export const SECOES = Object.freeze({
   [S.TORNEIOS]: TorneiosSecao,
   [S.TROFEUS]: TrofeusSecao,
   [S.MERCADO]: MercadoSecao,
+  [S.FEDERACOES]: FederacoesSecao,
   [S.CLUBES]: ClubesSecao,
   [S.PROFESSOR]: ProfessorSecao,
   [S.ARENAS]: ArenasSecao,

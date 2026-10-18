@@ -101,6 +101,11 @@ const V2MarketOrders = lazy(() => import('@/v2/pages/V2MarketOrders'));
 const V2MarketOrder = lazy(() => import('@/v2/pages/V2MarketOrder'));
 const V2MarketOffer = lazy(() => import('@/v2/pages/V2MarketOffer'));
 const V2MarketSell = lazy(() => import('@/v2/pages/V2MarketSell'));
+const V2Federations = lazy(() => import('@/v2/pages/V2Federations'));
+const V2FederationApply = lazy(() => import('@/v2/pages/V2FederationApply'));
+const V2FederationDetail = lazy(() => import('@/v2/pages/V2FederationDetail'));
+const V2FederationJoin = lazy(() => import('@/v2/pages/V2FederationJoin'));
+const V2FederationManage = lazy(() => import('@/v2/pages/V2FederationManage'));
 const V2MarketListingEditor = lazy(() => import('@/v2/pages/V2MarketListingEditor'));
 const V2MarketStoreApply = lazy(() => import('@/v2/pages/V2MarketStoreApply'));
 // Centro de Treino (flag `training_center`): cada tela se fecha sozinha com a flag desligada.
@@ -274,6 +279,12 @@ export default function V2App() {
           <Route path="mercado/vendas/:orderId" element={<Isolada nome="mercado"><V2MarketOrder /></Isolada>} />
           <Route path="mercado/ofertas/:offerId" element={<Isolada nome="mercado"><V2MarketOffer /></Isolada>} />
           <Route path="mercado/vender" element={<Isolada nome="mercado"><V2MarketSell /></Isolada>} />
+          {/* Federações (flag `federations`): diretório, abrir, página, filiar e a Central da equipe. */}
+          <Route path="federacoes" element={<Isolada nome="federacoes"><V2Federations /></Isolada>} />
+          <Route path="federacoes/abrir" element={<Isolada nome="federacoes"><V2FederationApply /></Isolada>} />
+          <Route path="federacoes/:federationId" element={<Isolada nome="federacoes"><V2FederationDetail /></Isolada>} />
+          <Route path="federacoes/:federationId/filiar" element={<Isolada nome="federacoes"><V2FederationJoin /></Isolada>} />
+          <Route path="federacoes/:federationId/gerir" element={<Isolada nome="federacoes"><V2FederationManage /></Isolada>} />
           <Route path="mercado/vender/anuncio/novo" element={<Isolada nome="mercado"><V2MarketListingEditor /></Isolada>} />
           <Route path="mercado/loja/abrir" element={<Isolada nome="mercado"><V2MarketStoreApply /></Isolada>} />
           <Route path="mercado/vender/anuncio/:listingId" element={<Isolada nome="mercado"><V2MarketListingEditor /></Isolada>} />

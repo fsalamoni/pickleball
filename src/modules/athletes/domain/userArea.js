@@ -28,6 +28,7 @@ export const USER_AREA_SECTION = Object.freeze({
   TROFEUS: 'trofeus',
   /** Mercado (flag `marketplace`): comprando e vendendo. */
   MERCADO: 'mercado',
+  FEDERACOES: 'federacoes',
   CLUBES: 'clubes',
   PROFESSOR: 'professor',
   ARENAS: 'arenas',
@@ -57,6 +58,7 @@ const META = Object.freeze([
   { id: S.TORNEIOS, label: tk('Torneios'), icone: 'Trophy', grupo: 'voce', quem: 'todos' },
   { id: S.TROFEUS, label: tk('Troféus'), icone: 'Medal', grupo: 'voce', quem: 'todos' },
   { id: S.MERCADO, label: tk('Mercado'), icone: 'ShoppingBag', grupo: 'voce', quem: 'mercado' },
+  { id: S.FEDERACOES, label: tk('Federações'), icone: 'Landmark', grupo: 'voce', quem: 'federacoes' },
   { id: S.CLUBES, label: tk('Clubes'), icone: 'Users', grupo: 'voce', quem: 'clubes' },
   { id: S.PROFESSOR, label: tk('Professor'), icone: 'GraduationCap', grupo: 'gestao', quem: 'professor' },
   { id: S.ARENAS, label: tk('Arenas'), icone: 'Building2', grupo: 'gestao', quem: 'arenas' },
@@ -66,8 +68,8 @@ const META = Object.freeze([
 const temPapel = (v) => v === true || v === 'erro';
 
 /**
- * @param {{ professor?: boolean|'erro', arenas?: boolean|'erro', clubes?: boolean|'erro', admin?: boolean, mercado?: boolean }} papeis
- *   `mercado` = a flag `marketplace` ligada
+ * @param {{ professor?: boolean|'erro', arenas?: boolean|'erro', clubes?: boolean|'erro', admin?: boolean, mercado?: boolean, federacoes?: boolean|'erro' }} papeis
+ *   `mercado` = a flag `marketplace` ligada; `federacoes` = a flag `federations` ligada E a pessoa tem filiação ou papel
  * @returns {Array<{ id: string, label: string, icone: string, grupo: string, dica: string }>}
  */
 export function userAreaSections(papeis = {}) {
@@ -129,6 +131,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   treinosNaoLidos?: number,
  *   duvidasEsperando?: number,
  *   mercado?: ReturnType<typeof marketPendingCounts>,
+ *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number },
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
  */
@@ -207,6 +210,17 @@ export function userAreaPending(fontes = {}) {
   for (const [id, to] of MERCADO_PENDENCIAS) {
     const n = numero(fontes.mercado?.[id]);
     if (n) itens.push({ id: `mercado:${id}`, count: n, to, label: rotulo[id](n) });
+  }
+
+  // Federações: a cobrança espera o Pix; a filiação vencendo ou vencida espera a renovação.
+  const fedRotulo = {
+    pagar: (n) => tn(n, '{n} cobrança da federação esperando o seu Pix', '{n} cobranças de federação esperando o seu Pix'),
+    vencendo: (n) => tn(n, '{n} filiação vencendo em 30 dias', '{n} filiações vencendo em 30 dias'),
+    vencida: (n) => tn(n, '{n} filiação vencida para renovar', '{n} filiações vencidas para renovar'),
+  };
+  for (const id of ['pagar', 'vencendo', 'vencida']) {
+    const n = numero(fontes.federacoes?.[id]);
+    if (n) itens.push({ id: `federacoes:${id}`, count: n, secao: S.FEDERACOES, label: fedRotulo[id](n) });
   }
 
   return itens;
