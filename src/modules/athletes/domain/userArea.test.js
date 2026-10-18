@@ -10,12 +10,13 @@ describe('userAreaSections', () => {
     expect(ids(userAreaSections({}))).toEqual([S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS]);
   });
 
-  it('cada papel traz a sua seção — onze no total, nunca mais', () => {
-    const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true, mercado: true });
+  it('cada papel traz a sua seção — doze no total, nunca mais', () => {
+    const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true, mercado: true, federacoes: true });
     expect(ids(tudo)).toEqual([
-      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS, S.MERCADO, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
+      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS, S.MERCADO, S.FEDERACOES, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
     ]);
-    expect(tudo).toHaveLength(11);
+    expect(tudo).toHaveLength(12);
+    expect(tudo.find((s) => s.id === S.FEDERACOES)).toMatchObject({ grupo: 'voce', icone: 'Landmark' });
     expect(tudo.find((s) => s.id === S.MERCADO)).toMatchObject({ grupo: 'voce', icone: 'ShoppingBag' });
     expect(tudo.find((s) => s.id === S.ARENAS)).toMatchObject({ grupo: 'gestao', dica: 'minha-area-arenas' });
   });
@@ -44,6 +45,15 @@ describe('userAreaSections', () => {
 describe('userAreaPending', () => {
   it('fonte desconhecida não vira zero nem item', () => {
     expect(userAreaPending({})).toEqual([]);
+    expect(userAreaPending({ federacoes: { pagar: undefined, vencendo: undefined, vencida: undefined } })).toEqual([]);
+  });
+
+  it('⭐ Federações: a cobrança e a filiação vencendo/vencida levam à seção Federações', () => {
+    const itens = userAreaPending({ federacoes: { pagar: 1, vencendo: 2, vencida: 0 } });
+    expect(itens.map((i) => [i.id, i.count, i.secao])).toEqual([
+      ['federacoes:pagar', 1, S.FEDERACOES],
+      ['federacoes:vencendo', 2, S.FEDERACOES],
+    ]);
     expect(userAreaPending({ arenas: [{ id: 'a1', name: 'Arena', pendentes: undefined }] })).toEqual([]);
   });
 

@@ -20,6 +20,7 @@ import {
   Award,
   Sparkles,
   Crown,
+  Landmark,
   History,
   FileText,
   Menu,
@@ -157,6 +158,7 @@ function resolvePageTitle(pathname, { userHubOn = false } = {}) {
 function useV2Nav() {
   const { isPlatformAdmin, user } = useAuth();
   const marketplaceOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const federationsOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const performanceOn = true;
   const ratingOn = true;
   const matchmakingOn = true;
@@ -274,6 +276,7 @@ function useV2Nav() {
           // Gamificação V2: a temporada do mês, os desafios e o Hall da Fama são competição.
           gamificationOn && { to: '/gamification', label: rotulos.gamificacao, icon: Sparkles },
           gamificationOn && { to: '/hall-da-fama', label: t('Hall da Fama'), icon: Crown },
+          federationsOn && { to: '/federacoes', label: t('Federações'), icon: Landmark },
         ],
       }),
       // Jogar abre no DIA DE JOGO (os seus dias e os com vaga para você) e as
@@ -360,7 +363,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: t('Painel admin'), icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos, marketplaceOn]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos, marketplaceOn, federationsOn]);
 
   // A barra lateral e a gaveta mostram só os hubs que a pessoa escolheu
   // (core/domain/sidebarNav.js — padrão por papel, editável em Configurações

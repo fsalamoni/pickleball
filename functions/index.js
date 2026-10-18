@@ -1271,6 +1271,52 @@ exports.marketHousekeeping = onSchedule(
   },
 );
 
+// =====================================================================
+// FEDERAÇÕES (flag `federations`): revisão, filiação, cobrança, varredura e a
+// verificação pública da carteirinha — ver `functions/federations.js`.
+// =====================================================================
+const federations = require('./federations');
+
+/** Contexto comum das chamadas de federação. */
+const fedCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: FieldValueDel, Timestamp, now: Date.now(), logger });
+
+/** Chamada de federação: confere a conta e traduz o erro para a tela. */
+function federationCallable(nome, fn) {
+  return onCall({ region: REGION, timeoutSeconds: 60 }, async (req) => {
+    if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
+    const ctx = fedCtx();
+    const actor = { uid: req.auth.uid, isPlatformAdmin: await isPlatformAdminUser(req, ctx.db) };
+    try {
+      return await fn(ctx, actor, req.data || {});
+    } catch (err) {
+      if (err instanceof federations.FederationError) throw new HttpsError(err.code, err.message);
+      if (err instanceof HttpsError) throw err;
+      logger.error(`${nome} falhou`, err);
+      throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+    }
+  });
+}
+
+exports.federationReview = federationCallable('federationReview', federations.review);
+exports.federationMembership = federationCallable('federationMembership', federations.membership);
+exports.federationChargeConfirm = federationCallable('federationChargeConfirm', federations.chargeConfirm);
+
+// Verificação pública da carteirinha: sem conta (o QR é lido por qualquer um).
+exports.federationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
+  try {
+    return await federations.verify(fedCtx(), req.data || {});
+  } catch (err) {
+    if (err instanceof federations.FederationError) throw new HttpsError(err.code, err.message);
+    logger.error('federationVerify falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});
+
+exports.federationMembershipSweep = onSchedule(
+  { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
+  async () => { await federations.sweep(fedCtx()); },
+);
+
 // Favorito entra/sai → contador do anúncio (o navegador não escreve o contador).
 exports.marketFavoriteCount = onDocumentWritten(
   { document: 'market_favorites/{favId}', database: DATABASE_ID, region: REGION },

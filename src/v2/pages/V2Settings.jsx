@@ -107,6 +107,15 @@ export default function V2Settings() {
       } catch (_) {
         mercado = { market: undefined, incomplete: [t('Mercado')] };
       }
+      // Federações: filiações, cobranças, papéis na equipe e federações que pediu
+      // para abrir (entra sempre: a filiação paga é da pessoa, com a flag ou sem).
+      let federacoes = { federations: undefined, incomplete: [] };
+      try {
+        const { collectFederationExport } = await import('@/modules/federations/services/federationExportService');
+        federacoes = await collectFederationExport(user?.uid);
+      } catch (_) {
+        federacoes = { federations: undefined, incomplete: [t('Federações')] };
+      }
       // O que saiu por e-mail, WhatsApp e SMS (registro dos últimos 90 dias).
       let mensagens;
       let mensagensFalhou = false;
@@ -123,6 +132,7 @@ export default function V2Settings() {
         ...(reservas.isSuccess ? [] : [t('Reservas de quadra')]),
         ...extra.incomplete,
         ...mercado.incomplete,
+        ...federacoes.incomplete,
       ];
       const pkg = buildDataExport({
         uid: user?.uid,
@@ -132,6 +142,7 @@ export default function V2Settings() {
         goals: extra.goals,
         training: extra.training,
         market: mercado.market,
+        federations: federacoes.federations,
         messages: mensagens,
         incomplete,
       });

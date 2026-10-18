@@ -13,7 +13,7 @@ import { noticeArea } from '@/modules/notifications/domain/noticeFeed';
 
 const AREAS = Object.freeze([
   'jogos', 'torneios', 'arenas', 'clubes', 'aulas', 'treino',
-  'mercado', 'social', 'promocoes', 'gamificacao', 'conta', 'outros',
+  'mercado', 'federacoes', 'social', 'promocoes', 'gamificacao', 'conta', 'outros',
 ]);
 /** Canais que saem da plataforma (e-mail, WhatsApp, SMS). */
 const EXTERNAL_CHANNELS = Object.freeze(['email', 'whatsapp', 'sms']);
@@ -27,7 +27,7 @@ const VERIFY_CHANNELS = Object.freeze(['auto', 'whatsapp', 'sms']);
 const TIME_ZONE = 'America/Sao_Paulo';
 
 /** Áreas de aviso com prazo ou dinheiro: são as que o padrão manda na hora. */
-const IMPORTANT_AREAS = Object.freeze(['jogos', 'torneios', 'arenas', 'aulas', 'mercado', 'conta']);
+const IMPORTANT_AREAS = Object.freeze(['jogos', 'torneios', 'arenas', 'aulas', 'mercado', 'federacoes', 'conta']);
 
 function defaultMatrix() {
   const m = {};

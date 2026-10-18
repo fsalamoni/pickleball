@@ -28,6 +28,7 @@ export function buildInbox(fontes = {}) {
     // Só existe com o Mercado ligado: sem a fonte, a linha nem aparece.
     { id: 'lojas', tab: 'mercado-lojas', label: tk('Lojas do Mercado esperando aprovação'), qtd: (n) => tn(n, '{n} loja', '{n} lojas'), opcional: true },
     { id: 'disputasMercado', tab: 'mercado-disputas', label: tk('Problemas em pedidos do Mercado'), qtd: (n) => tn(n, '{n} pedido', '{n} pedidos'), opcional: true },
+    { id: 'federacoes', tab: 'federacoes', label: tk('Federações esperando aprovação'), qtd: (n) => tn(n, '{n} federação', '{n} federações'), opcional: true },
     { id: 'denunciasMercado', tab: 'mercado-anuncios', label: tk('Anúncios do Mercado denunciados'), qtd: (n) => tn(n, '{n} anúncio', '{n} anúncios'), opcional: true },
   ].filter((d) => !d.opcional || d.id in fontes);
   return defs.map((d) => {

@@ -834,6 +834,122 @@ export const LEGAL_DOCUMENTS = [
       },
     ],
   },
+  {
+    key: 'termos-federacao',
+    route: 'termos-federacao',
+    title: 'Termos para Federações',
+    eyebrow: 'Federações · Quem administra',
+    description: 'O que a PickleRush oferece a uma federação, o que a federação se compromete a fazer com os filiados e os dados deles, e o que a plataforma não é.',
+    version: 1,
+    effectiveDate: '2026-10-18',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    flag: 'federations',
+    icon: 'Landmark',
+    sections: [
+      {
+        icon: 'Landmark',
+        title: '1. O que é a gestão de federação na PickleRush',
+        description: 'Uma ferramenta para a entidade; a entidade continua sendo quem é.',
+        paragraphs: [
+          'A PickleRush oferece à federação uma área de gestão: página pública, planos de filiação, pedidos de filiação, cobrança por Pix, carteirinha digital com verificação pública, equipe com papéis e, conforme forem liberados, torneios chancelados, ranking oficial e módulos adicionais.',
+          'A federação é uma pessoa jurídica própria, com CNPJ, estatuto e dirigentes. A PickleRush não é a federação, não a representa, não a reconhece como entidade oficial do esporte e não responde pelos atos dela. Os selos "Verificada" e "Oficial" dizem apenas que a plataforma conferiu os dados informados ou que a entidade é a reconhecida na sua abrangência, conforme as informações disponíveis na data.',
+        ],
+      },
+      {
+        icon: 'UserCheck',
+        title: '2. Quem pede a abertura e quem responde',
+        bullets: [
+          'Quem pede a abertura declara ter poderes para representar a entidade e informa CNPJ e razão social verdadeiros. Aprovada, essa pessoa vira presidente na plataforma e pode nomear a equipe.',
+          'Os atos da equipe na plataforma (aprovar filiação, confirmar pagamento, suspender filiado, publicar informação) são atos da federação, e ela responde por eles perante os filiados e a lei.',
+          'A PickleRush pode recusar, suspender ou encerrar a área de uma federação que informe dados falsos, cobre sem prestar o que promete, descumpra a lei ou estes Termos, avisando o motivo.',
+        ],
+      },
+      {
+        icon: 'HandCoins',
+        title: '3. Mensalidades, anuidades e Pix',
+        bullets: [
+          'Os valores dos planos são definidos pela federação. O pagamento é feito por Pix diretamente para a chave informada pela federação; a PickleRush não recebe, não guarda, não repassa e não intermedeia o dinheiro, e não cobra comissão sobre ele.',
+          'A federação confere o recebimento e confirma na plataforma. Confirmar ativa a filiação e emite a carteirinha; a confirmação é responsabilidade da federação, e um pagamento confirmado sem ter entrado é problema entre a federação e o filiado.',
+          'Recibo, nota fiscal, tributos e a destinação do que foi arrecadado são da federação. A PickleRush só registra o histórico para os dois lados.',
+        ],
+      },
+      {
+        icon: 'Lock',
+        title: '4. Dados dos filiados',
+        paragraphs: [
+          'Ao receber um pedido de filiação, a federação passa a ver nome, foto, categoria e os dados que o próprio filiado informou. Quanto a esses dados, a federação é controladora independente perante a Lei Geral de Proteção de Dados: só pode usá-los para a finalidade da filiação (cadastro, cobrança, carteirinha, competições e comunicados da entidade), deve guardá-los com segurança e não pode vendê-los, compartilhá-los com terceiros fora dessa finalidade nem usá-los para propaganda sem consentimento.',
+          'A carteirinha digital mostra ao público apenas o que a verificação pública libera: nome, foto (se o filiado permitir), federação, tipo de vínculo, número e validade. A federação não deve expor outros dados do filiado em páginas, listas ou materiais públicos.',
+        ],
+      },
+      {
+        icon: 'Gavel',
+        title: '5. Isenção e responsabilidade',
+        paragraphs: [
+          'A federação isenta a PickleRush de responsabilidade por reclamações, cobranças, multas e ações relacionadas às suas filiações, cobranças, decisões esportivas e disciplinares, comunicados e ao uso que fizer dos dados dos filiados, e se compromete a indenizá-la, inclusive pelas despesas razoáveis de defesa, caso ela venha a ser cobrada ou condenada por fato da federação.',
+          'A PickleRush pode alterar estes Termos avisando com antecedência razoável; a versão em vigor é a publicada na Central legal. Descumpri-los pode levar à suspensão da área da federação, sem prejuízo das medidas legais.',
+        ],
+      },
+    ],
+  },
+  {
+    key: 'termos-filiacao',
+    route: 'termos-filiacao',
+    title: 'Termos de Filiação',
+    eyebrow: 'Federações · Quem se filia',
+    description: 'O que acontece quando você pede filiação a uma federação pela PickleRush: o que a federação passa a ver, como se paga, o que a carteirinha vale e como sair.',
+    version: 1,
+    effectiveDate: '2026-10-18',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    flag: 'federations',
+    icon: 'IdCard',
+    sections: [
+      {
+        icon: 'Landmark',
+        title: '1. Com quem você está se filiando',
+        paragraphs: [
+          'A filiação é um vínculo entre você e a federação, uma entidade própria, com CNPJ e dirigentes, que não é a PickleRush. A plataforma apenas organiza o pedido, a cobrança, a carteirinha e o histórico. Regras da federação (estatuto, regulamentos, decisões esportivas e disciplinares) são dela, e dúvidas sobre elas são respondidas pela federação, pelo contato que aparece na página dela.',
+        ],
+      },
+      {
+        icon: 'Eye',
+        title: '2. O que a federação passa a ver',
+        bullets: [
+          'Ao pedir filiação, a equipe da federação vê o seu nome, a foto, a categoria em que joga, o plano escolhido e o que você escrever no pedido. E-mail, telefone, nascimento e endereço do seu cadastro NÃO são enviados por este pedido; se a federação precisar deles, ela pede a você diretamente.',
+          'A federação é responsável, perante a Lei Geral de Proteção de Dados, pelo uso que fizer dos dados que recebe. Você pode cancelar a filiação a qualquer momento nesta plataforma; isso encerra o vínculo aqui, mas não apaga o que a federação já guardou fora dela.',
+        ],
+      },
+      {
+        icon: 'HandCoins',
+        title: '3. Pagamento por Pix',
+        bullets: [
+          'O valor é o do plano que você escolheu, com os descontos que a federação definir (por idade, por exemplo). O pagamento é feito por Pix diretamente para a conta da federação. A PickleRush não recebe o dinheiro, não cobra taxa e não devolve valores: estorno e reembolso são tratados com a federação.',
+          'Depois de pagar, você informa na plataforma ("Já paguei") e a federação confirma. A filiação só fica ativa, e a carteirinha só vale, depois dessa confirmação. Guarde o comprovante.',
+          'Mensalidade e anuidade têm validade. Perto do vencimento a plataforma avisa; vencida, a filiação fica como "vencida" até a renovação, e a carteirinha deixa de verificar como em dia.',
+        ],
+      },
+      {
+        icon: 'IdCard',
+        title: '4. A carteirinha digital',
+        bullets: [
+          'A carteirinha mostra nome, foto (se você permitir), federação, tipo de vínculo, número e validade, e um código com QR. Qualquer pessoa com o código pode verificar, sem conta, se a filiação está em dia — e vê só esses dados.',
+          'A carteirinha é emitida pela federação; a PickleRush só a exibe e verifica. Ela não é documento de identidade e vale o que a federação e as entidades que a reconhecem decidirem.',
+          'Você escolhe se a foto aparece na verificação pública, se a filiação aparece no seu perfil público e se você entra no diretório de filiados da federação. Essas escolhas ficam com você e podem ser mudadas a qualquer hora.',
+        ],
+      },
+      {
+        icon: 'Gavel',
+        title: '5. Recusa, suspensão e cancelamento',
+        paragraphs: [
+          'A federação pode recusar um pedido ou suspender uma filiação, informando o motivo, que você lê na plataforma. Discordâncias são tratadas com a federação, pelos canais dela. A PickleRush não arbitra decisões da federação, mas pode suspender a área de uma federação que descumpra os Termos para Federações.',
+          'Você pode cancelar a sua filiação a qualquer momento. O cancelamento encerra a validade da carteirinha e não gera reembolso automático. Ao excluir a sua conta na PickleRush, as suas filiações ficam registradas na federação sem o seu nome, e os códigos de carteirinha são apagados.',
+        ],
+      },
+    ],
+  },
 ];
 
 /** Índice key → documento. */

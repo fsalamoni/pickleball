@@ -53,6 +53,8 @@ export const NOTIFICATION_TYPE = Object.freeze({
   TRAINING_QUESTION: 'training_question',
   TRAINING_ANSWER: 'training_answer',
   MARKET: 'market',
+  // Federações: abertura revisada, filiação decidida, pagamento, vencimento, suspensão.
+  FEDERATION: 'federation',
   GENERIC: 'generic',
 });
 

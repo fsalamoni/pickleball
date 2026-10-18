@@ -22,6 +22,8 @@ const Telao = lazy(() => import('@/pages/Telao'));
 const GameDayTelao = lazy(() => import('@/v2/pages/V2GameDayTelao'));
 const ArenaKiosk = lazy(() => import('@/v2/pages/V2ArenaKiosk'));
 const PublicClub = lazy(() => import('@/pages/PublicClub'));
+const PublicFederation = lazy(() => import('@/pages/PublicFederation'));
+const PublicFederationVerify = lazy(() => import('@/pages/PublicFederationVerify'));
 
 // App principal (V2 / "Athleisure Premium"). Chunk isolado.
 const V2App = lazy(() => import('@/v2/V2App'));
@@ -173,6 +175,9 @@ export default function App() {
                 element={<AparenciaClara><ProtectedRoute><ArenaKiosk /></ProtectedRoute></AparenciaClara>}
               />
               <Route path="/c/:clubId" element={<PublicClub />} />
+              {/* Federações (flag `federations`): página pública e verificação da carteirinha, sem conta. */}
+              <Route path="/f/verificar/:codigo?" element={<PublicFederationVerify />} />
+              <Route path="/f/:slug" element={<PublicFederation />} />
               {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).
                   Pública: quem chega por aqui ainda não tem conta. */}
               <Route path="/r/:code" element={<ReferralLanding />} />

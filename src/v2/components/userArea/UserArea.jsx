@@ -14,7 +14,7 @@
 import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, Building2, Dumbbell, Eye, GraduationCap, LayoutDashboard,
+  ArrowRight, Building2, Dumbbell, Eye, GraduationCap, Landmark, LayoutDashboard,
   LayoutGrid, Medal, Pencil, ShoppingBag, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -36,6 +36,8 @@ import {
   useMyOffers, useMyOrders, useSeller, useSellerOffers, useSellerOrders, useSellerQuestions,
 } from '@/modules/marketplace/hooks/useMarket';
 import { sellerKeyFor } from '@/modules/marketplace/domain/seller';
+import { useMyFederationCharges, useMyFederationRoles, useMyMemberships } from '@/modules/federations/hooks/useFederations';
+import { myFederationPending } from '@/modules/federations/domain/federationPending';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifiedLevel';
 import {
@@ -49,7 +51,7 @@ import { SECOES } from './UserAreaSections';
 import { t } from '@/core/i18n';
 
 const ICONES = {
-  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, ShoppingBag, Users, GraduationCap, Building2, LayoutDashboard,
+  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, ShoppingBag, Landmark, Users, GraduationCap, Building2, LayoutDashboard,
 };
 
 /** `true`/`false` quando a leitura respondeu, `'erro'` quando falhou, `undefined` carregando. */
@@ -76,10 +78,19 @@ export default function UserArea() {
   // Balanço do jogo: só consulta para quem ligou (flag + escolha da pessoa).
   const balancos = usePendingDebriefs();
 
+  // Federações (flag `federations`): filiações, cobranças e papéis na equipe.
+  // A seção só existe para quem tem alguma coisa lá (ou cuja leitura falhou).
+  const { flags } = useFeatureFlags();
+  const federacoesOn = Boolean(flags?.[FEATURE_FLAG.FEDERATIONS]);
+  const fedMembersQ = useMyMemberships({ enabled: federacoesOn });
+  const fedChargesQ = useMyFederationCharges({ enabled: federacoesOn });
+  const fedRolesQ = useMyFederationRoles({ enabled: federacoesOn });
+  const fedQs = [fedMembersQ, fedChargesQ, fedRolesQ];
+  const temFederacao = (fedMembersQ.data || []).some((m) => !['cancelled', 'rejected'].includes(m.status)) || (fedRolesQ.data || []).length > 0;
+
   // Mercado (flag `marketplace`). As vendas só se consultam para quem já vende.
   // ponytail: só a ficha pessoal (`athlete_{uid}`); vendas como professor,
   // arena ou loja ficam no painel de vendas — somar aqui = 4 leituras por ficha.
-  const { flags } = useFeatureFlags();
   const mercadoOn = Boolean(flags?.[FEATURE_FLAG.MARKETPLACE]);
   const sellerKey = mercadoOn && uid ? sellerKeyFor('athlete', uid) : null;
   const sellerQ = useSeller(sellerKey);
@@ -101,8 +112,10 @@ export default function UserArea() {
     clubes: temConvite ? true : papelDe(clubsQ, (clubsQ.data || []).length > 0),
     admin: !!isPlatformAdmin,
     mercado: mercadoOn,
+    federacoes: federacoesOn ? (fedQs.some((q) => q.isError) ? 'erro' : fedMembersQ.isSuccess && fedRolesQ.isSuccess ? temFederacao : undefined) : false,
   }).map((s) => ({ ...s, icon: ICONES[s.icone] })),
-  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn, federacoesOn, temFederacao, fedMembersQ.isSuccess, fedRolesQ.isSuccess, fedMembersQ.isError, fedChargesQ.isError, fedRolesQ.isError]);
 
   const ativa = resolveUserAreaSection(params.get('secao'), secoes);
   const Secao = SECOES[ativa];
@@ -136,6 +149,7 @@ export default function UserArea() {
       myOrders: myOrdersQ.isSuccess ? myOrdersQ.data : undefined,
       myOffers: myOffersQ.isSuccess ? myOffersQ.data : undefined,
     }) : undefined,
+    federacoes: federacoesOn ? myFederationPending(fedMembersQ.isSuccess ? fedMembersQ.data : undefined, fedChargesQ.isSuccess ? fedChargesQ.data : undefined) : undefined,
   });
   const falhas = [
     arenasQ.isError && t('as suas arenas'),
@@ -146,15 +160,16 @@ export default function UserArea() {
     trainingOn && inboxQ.isError && t('os treinos recebidos'),
     balancos.isError && t('os jogos para o balanço'),
     mercadoOn && mercadoQs.some((q) => q.isError) && t('as suas compras e vendas no Mercado'),
+    federacoesOn && fedQs.some((q) => q.isError) && t('as suas federações'),
   ].filter(Boolean);
   const tentarDeNovo = () => {
-    [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ, ...mercadoQs]
+    [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ, ...mercadoQs, ...fedQs]
       .filter((q) => q.isError).forEach((q) => q.refetch());
     if (arenaSummary.pendingError) arenaSummary.refetch?.();
     if (balancos.isError) balancos.refetch();
   };
 
-  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ } };
+  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ } };
 
   return (
     <V2Page className="space-y-6">

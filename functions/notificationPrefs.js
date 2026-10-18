@@ -24,6 +24,7 @@ const CATEGORY_TYPES = Object.freeze({
   partners: ['partner_invite', 'partner_response'],
   training: ['training_share', 'training_review', 'training_comment', 'training_question', 'training_answer'],
   market: ['market'],
+  federations: ['federation'],
   gamification: ['gamification'],
   reminders: ['profile_reminder', 'leveling_reminder'],
 });
@@ -75,6 +76,7 @@ const AREA_DO_TIPO = Object.freeze({
   training_question: 'treino',
   training_answer: 'treino',
   market: 'mercado',
+  federation: 'federacoes',
 });
 
 const AREA_DO_CAMINHO = Object.freeze({

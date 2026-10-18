@@ -628,4 +628,96 @@ export default {
       },
     ],
   },
+
+  'termos-federacao': {
+    fonte: '3f59d424',
+    title: 'Términos para Federaciones',
+    eyebrow: 'Federaciones · Quien administra',
+    description: 'Qué ofrece PickleRush a una federación, a qué se compromete la federación con sus afiliados y sus datos, y qué no es la plataforma.',
+    sections: [
+      {
+        title: '1. Qué es la gestión de federación en PickleRush',
+        description: 'Una herramienta para la entidad; la entidad sigue siendo quien es.',
+        paragraphs: [
+          'PickleRush ofrece a la federación un área de gestión: página pública, planes de afiliación, solicitudes de afiliación, cobro por Pix, carnet digital con verificación pública, equipo con roles y, a medida que se liberen, torneos avalados, ranking oficial y módulos adicionales.',
+          'La federación es una persona jurídica propia, con CNPJ, estatuto y dirigentes. PickleRush no es la federación, no la representa, no la reconoce como entidad oficial del deporte y no responde por sus actos. Los sellos "Verificada" y "Oficial" solo indican que la plataforma comprobó los datos informados o que la entidad es la reconocida en su ámbito, según la información disponible en esa fecha.',
+        ],
+      },
+      {
+        title: '2. Quién solicita la apertura y quién responde',
+        bullets: [
+          'Quien solicita la apertura declara tener poderes para representar a la entidad e informa un CNPJ y una razón social verdaderos. Aprobada, esa persona pasa a ser presidente en la plataforma y puede nombrar al equipo.',
+          'Los actos del equipo en la plataforma (aprobar una afiliación, confirmar un pago, suspender a un afiliado, publicar información) son actos de la federación, y ella responde por ellos ante los afiliados y la ley.',
+          'PickleRush puede rechazar, suspender o cerrar el área de una federación que informe datos falsos, cobre sin prestar lo que promete, incumpla la ley o estos Términos, indicando el motivo.',
+        ],
+      },
+      {
+        title: '3. Mensualidades, anualidades y Pix',
+        bullets: [
+          'Los valores de los planes los define la federación. El pago se hace por Pix directamente a la clave informada por la federación; PickleRush no recibe, no guarda, no transfiere ni intermedia el dinero, y no cobra comisión sobre él.',
+          'La federación comprueba la recepción y la confirma en la plataforma. Confirmar activa la afiliación y emite el carnet; la confirmación es responsabilidad de la federación, y un pago confirmado sin haber entrado es un asunto entre la federación y el afiliado.',
+          'Recibo, factura, impuestos y el destino de lo recaudado son de la federación. PickleRush solo registra el historial para ambas partes.',
+        ],
+      },
+      {
+        title: '4. Datos de los afiliados',
+        paragraphs: [
+          'Al recibir una solicitud de afiliación, la federación pasa a ver el nombre, la foto, la categoría y los datos que el propio afiliado informó. Respecto a esos datos, la federación es controladora independiente ante la Ley General de Protección de Datos de Brasil (LGPD): solo puede usarlos para la finalidad de la afiliación (registro, cobro, carnet, competiciones y comunicados de la entidad), debe guardarlos con seguridad y no puede venderlos, compartirlos con terceros fuera de esa finalidad ni usarlos para publicidad sin consentimiento.',
+          'El carnet digital muestra al público solo lo que la verificación pública libera: nombre, foto (si el afiliado lo permite), federación, tipo de vínculo, número y validez. La federación no debe exponer otros datos del afiliado en páginas, listas o materiales públicos.',
+        ],
+      },
+      {
+        title: '5. Exención y responsabilidad',
+        paragraphs: [
+          'La federación exime a PickleRush de responsabilidad por reclamaciones, cobros, multas y acciones relacionadas con sus afiliaciones, cobros, decisiones deportivas y disciplinarias, comunicados y el uso que haga de los datos de los afiliados, y se compromete a indemnizarla, incluidos los gastos razonables de defensa, en caso de que sea demandada o condenada por un hecho de la federación.',
+          'PickleRush puede modificar estos Términos avisando con antelación razonable; la versión vigente es la publicada en el Centro legal. Incumplirlos puede llevar a la suspensión del área de la federación, sin perjuicio de las medidas legales.',
+        ],
+      },
+    ],
+  },
+
+  'termos-filiacao': {
+    fonte: '392c0ffc',
+    title: 'Términos de Afiliación',
+    eyebrow: 'Federaciones · Quien se afilia',
+    description: 'Qué ocurre cuando solicitas la afiliación a una federación por PickleRush: qué pasa a ver la federación, cómo se paga, qué vale el carnet y cómo salir.',
+    sections: [
+      {
+        title: '1. Con quién te estás afiliando',
+        paragraphs: [
+          'La afiliación es un vínculo entre tú y la federación, una entidad propia, con CNPJ y dirigentes, que no es PickleRush. La plataforma solo organiza la solicitud, el cobro, el carnet y el historial. Las reglas de la federación (estatuto, reglamentos, decisiones deportivas y disciplinarias) son suyas, y las dudas sobre ellas las responde la federación, por el contacto que aparece en su página.',
+        ],
+      },
+      {
+        title: '2. Qué pasa a ver la federación',
+        bullets: [
+          'Al solicitar la afiliación, el equipo de la federación ve tu nombre, la foto, la categoría en la que juegas, el plan elegido y lo que escribas en la solicitud. El correo, el teléfono, la fecha de nacimiento y la dirección de tu cuenta NO se envían con esta solicitud; si la federación los necesita, te los pide directamente.',
+          'La federación es responsable, ante la LGPD, del uso que haga de los datos que recibe. Puedes cancelar la afiliación en cualquier momento en esta plataforma; eso termina el vínculo aquí, pero no borra lo que la federación ya guardó fuera de ella.',
+        ],
+      },
+      {
+        title: '3. Pago por Pix',
+        bullets: [
+          'El valor es el del plan que elegiste, con los descuentos que la federación defina (por edad, por ejemplo). El pago se hace por Pix directamente a la cuenta de la federación. PickleRush no recibe el dinero, no cobra tarifa y no devuelve importes: la devolución y el reembolso se tratan con la federación.',
+          'Después de pagar, lo informas en la plataforma ("Ya pagué") y la federación confirma. La afiliación solo queda activa, y el carnet solo vale, después de esa confirmación. Guarda el comprobante.',
+          'La mensualidad y la anualidad tienen validez. Cerca del vencimiento la plataforma avisa; vencida, la afiliación queda como "vencida" hasta la renovación, y el carnet deja de verificarse como al día.',
+        ],
+      },
+      {
+        title: '4. El carnet digital',
+        bullets: [
+          'El carnet muestra nombre, foto (si lo permites), federación, tipo de vínculo, número y validez, y un código con QR. Cualquier persona con el código puede verificar, sin cuenta, si la afiliación está al día — y ve solo esos datos.',
+          'El carnet lo emite la federación; PickleRush solo lo muestra y lo verifica. No es un documento de identidad y vale lo que la federación y las entidades que lo reconocen decidan.',
+          'Tú eliges si la foto aparece en la verificación pública, si la afiliación aparece en tu perfil público y si entras en el directorio de afiliados de la federación. Esas decisiones son tuyas y pueden cambiarse en cualquier momento.',
+        ],
+      },
+      {
+        title: '5. Rechazo, suspensión y cancelación',
+        paragraphs: [
+          'La federación puede rechazar una solicitud o suspender una afiliación, informando el motivo, que lees en la plataforma. Las discrepancias se tratan con la federación, por sus canales. PickleRush no arbitra las decisiones de la federación, pero puede suspender el área de una federación que incumpla los Términos para Federaciones.',
+          'Puedes cancelar tu afiliación en cualquier momento. La cancelación termina la validez del carnet y no genera reembolso automático. Al eliminar tu cuenta de PickleRush, tus afiliaciones quedan registradas en la federación sin tu nombre, y los códigos de carnet se borran.',
+        ],
+      },
+    ],
+  },
 };

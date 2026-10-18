@@ -593,6 +593,62 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacoes-filiar',
+      flags: ['federations'],
+      guias: ['federacao-filiar'],
+      title: tk('Filiar-se a uma federação'),
+      summary: tk('Escolher o plano, pagar por Pix à federação e receber a carteirinha digital com QR de verificação.'),
+      keywords: ['federação', 'federar', 'filiação', 'filiar', 'carteirinha', 'anuidade', 'mensalidade', 'pix', 'federado', 'cadastrado', 'qr', 'verificar'],
+      blocks: [
+        p(tk('Em Competir → Federações ficam as federações aprovadas na plataforma, perto de você primeiro. Cada uma tem página pública, planos de filiação e, quando a federação liga, torneios chancelados e ranking oficial. A federação é uma entidade própria: a plataforma organiza o pedido, a cobrança e a carteirinha, e o dinheiro vai por Pix direto para a conta dela.')),
+        steps(
+          tk('Abra a federação e toque em "Filiar-se". Escolha o tipo (atleta, professor ou árbitro) e o plano: mensal ou anual, cadastro gratuito ou federado. O preço mostra o desconto que vale para você (por idade, por exemplo).'),
+          tk('Diga se a filiação aparece no seu perfil público e se você entra no diretório de filiados. Se joga por um clube, indique-o. Envie.'),
+          tk('Plano gratuito com aprovação automática ativa na hora. Nos outros, a secretaria aprova e o plano pago gera a cobrança: pague o Pix pelo QR ou pelo "copia e cola" e toque em "Já paguei".'),
+          tk('Quando a federação confirma o recebimento, a filiação fica em dia e a carteirinha aparece: na página da federação e em Minha área → Federações. Dá para compartilhar, baixar PNG ou imprimir.'),
+          tk('Perto do vencimento, o sino avisa. "Renovar" gera a nova cobrança; a validade nova começa no fim da atual, nunca antes.'),
+        ),
+        list(
+          tk('CARTEIRINHA — traz número, validade e um QR. Quem lê o QR vê, sem conta, se a filiação está em dia: nome, foto (se você permitir), federação, vínculo, número e validade. Nada mais.'),
+          tk('CADASTRADO × FEDERADO — cadastrado é o vínculo gratuito, só para constar; federado é o que paga e pontua no ranking oficial da federação.'),
+          tk('O QUE A FEDERAÇÃO VÊ — nome, foto, categoria, plano e o que você escrever. E-mail, telefone, nascimento e endereço não vão no pedido.'),
+          tk('CANCELAR — a qualquer hora, em Minha área → Federações. Não há reembolso automático: isso é com a federação.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+        link('/legal', tk('Termos de Filiação (Central legal)')),
+        warn(tk('Pague só pela cobrança que aparece na plataforma, para a chave da federação. A plataforma não recebe o dinheiro nem cobra taxa.')),
+      ],
+    },
+    {
+      id: 'federacao-gerir',
+      flags: ['federations'],
+      guias: ['federacao-gerir'],
+      title: tk('Abrir e administrar uma federação'),
+      summary: tk('Pedir a abertura, montar planos e Pix, aprovar filiados, confirmar pagamentos e cuidar da equipe.'),
+      keywords: ['federação', 'abrir federação', 'presidente', 'secretaria', 'tesouraria', 'filiados', 'cobranças', 'pix', 'planos', 'equipe', 'cnpj', 'carteirinha', 'central da federação'],
+      blocks: [
+        p(tk('Qualquer conta pode pedir a abertura de uma federação em Federações → "Abrir uma federação": nome, sigla, abrangência (nacional, estadual, regional ou municipal), contato público e os dados da entidade (CNPJ e razão social, que só a equipe do PickleRush lê). A equipe da plataforma analisa; aprovada, quem pediu vira presidente e ganha a Central da federação.')),
+        steps(
+          tk('Na Central → Configurações → Planos, crie ao menos um plano: para quem (atleta, professor, árbitro), cadastrado ou federado, mensal ou anual, o valor (0 = gratuito), descontos por idade e se aprova na hora.'),
+          tk('Em Configurações → Recebimento, cadastre a chave Pix e o nome de quem recebe. Sem Pix, plano pago não gera cobrança.'),
+          tk('Em Configurações → Página, capriche no "Sobre", na cor e no logo: é o que aparece em picklerush.web.app/f/sua-sigla.'),
+          tk('Em Equipe, chame quem vai ajudar: diretor (tudo), secretaria (filiados), tesouraria (financeiro), diretor técnico, de arbitragem, de comunicação e conselho (só leitura). Só o presidente passa a presidência.'),
+          tk('Chegou pedido? Filiados → Pedidos: aprovar ou recusar com motivo. Aprovado em plano pago, a pessoa recebe a cobrança.'),
+          tk('A pessoa pagou e informou? Financeiro → Cobranças: confira o Pix na conta e "Confirmar recebimento". Isso ativa a filiação, emite a carteirinha e avisa a pessoa.'),
+        ),
+        list(
+          tk('HOJE — os números do dia e o que falta para a federação funcionar (plano, Pix). A faixa "Precisa de você" mostra pedidos e pagamentos esperando.'),
+          tk('FILIADOS — em dia, vencendo em 30 dias, vencidos, suspensos. Suspender exige motivo e a carteirinha deixa de verificar; reintegrar devolve.'),
+          tk('RECEBIDOS — o que entrou por mês, com CSV. A plataforma não toca no dinheiro: recibo, nota e tributos são da federação.'),
+          tk('MÓDULOS — torneios chancelados, ranking oficial, clubes e arenas filiados e outros entram aqui conforme forem liberados; cada federação liga o que quiser.'),
+          tk('VARREDURA DIÁRIA — toda manhã a plataforma marca as filiações vencidas e avisa quem vence em 30, 7 e 1 dia.'),
+        ),
+        link('/federacoes/abrir', tk('Abrir uma federação')),
+        link('/legal', tk('Termos para Federações (Central legal)')),
+        tip(tk('Os selos "Verificada" (a plataforma conferiu a entidade) e "Oficial" (a federação reconhecida da região) são dados pela equipe do PickleRush, não pela federação.')),
+      ],
+    },
+    {
       id: 'mercado-comprar',
       flags: ['marketplace'],
       guias: ['mercado-comprar'],
@@ -1855,6 +1911,17 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
   { pattern: '/torneios', label: tk('torneios'),
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'organizar-torneio']] },
+  // --- federações -----------------------------------------------------------
+  { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
+  { pattern: '/federacoes/*/gerir', label: tk('a Central da federação'),
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
+  { pattern: '/federacoes/*/filiar', label: tk('a filiação'),
+    refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar']] },
+  { pattern: '/federacoes/*', label: tk('esta federação'),
+    refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar'], [HELP_SECTION.ATHLETE, 'federacao-gerir']] },
+  { pattern: '/federacoes', label: tk('as federações'),
+    refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar'], [HELP_SECTION.ATHLETE, 'federacao-gerir']] },
   // --- mercado ---------------------------------------------------------------
   { pattern: '/mercado/vender/anuncio/*', label: tk('o seu anúncio'),
     refs: [[HELP_SECTION.ATHLETE, 'mercado-vender']] },
@@ -2095,6 +2162,9 @@ export const HELP_FAQ = Object.freeze([
   // Treino: com a flag desligada, as perguntas somem junto com os artigos.
   { q: tk('Como organizo o meu treino?'), section: HELP_SECTION.ATHLETE, article: 'treino' },
   { q: tk('Como crio um drill e escolho quem vê?'), section: HELP_SECTION.ATHLETE, article: 'treino-criar' },
+  // Federações: com a flag desligada, as perguntas somem junto com os artigos.
+  { q: tk('Como me filio a uma federação e recebo a carteirinha?'), section: HELP_SECTION.ATHLETE, article: 'federacoes-filiar' },
+  { q: tk('Como abro uma federação na plataforma?'), section: HELP_SECTION.ATHLETE, article: 'federacao-gerir' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: tk('Como a plataforma me mostra onde tocar?'), section: HELP_SECTION.START, article: 'dicas' },
 ]);

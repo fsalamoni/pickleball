@@ -51,6 +51,7 @@ export default function MessagingSettingsCard() {
 function Cartao() {
   const { user, userProfile } = useAuth();
   const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const federacoesOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const cfg = useMessagingSettings();
   const st = useMyMessagingStatus();
   const [bruto, setBruto] = useState(() => userProfile?.notification_channels || {});
@@ -87,7 +88,7 @@ function Cartao() {
         <div className="mt-5 space-y-6">
           <Contatos status={s} recarregar={() => st.refetch()} onEsquecer={() => setBruto((b) => comCaminho(comCaminho(b, 'whatsapp.on', false), 'sms.on', false))} />
           <Canais status={s} prefs={prefs} gravar={gravar} />
-          <PorArea status={s} prefs={prefs} settings={cfg.data.settings} gravar={gravar} mercadoOn={mercadoOn} />
+          <PorArea status={s} prefs={prefs} settings={cfg.data.settings} gravar={gravar} mercadoOn={mercadoOn} federacoesOn={federacoesOn} />
           <Silencio prefs={prefs} settings={cfg.data.settings} gravar={gravar} status={s} />
           <Bloqueados prefs={prefs} uid={user?.uid} onDesbloquear={(id) => setBruto((b) => comCaminho(b, 'blocked_senders', (b.blocked_senders || []).filter((x) => x !== id)))} />
         </div>
@@ -308,7 +309,7 @@ function Fixo({ rotulo, texto }) {
   );
 }
 
-function PorArea({ status, prefs, settings, gravar, mercadoOn }) {
+function PorArea({ status, prefs, settings, gravar, mercadoOn, federacoesOn }) {
   const pronto = status.ready || {};
   const celular = status.phone?.verified;
   // Só os canais que a pessoa pode usar agora: o resto não precisa de escolha.
@@ -318,7 +319,7 @@ function PorArea({ status, prefs, settings, gravar, mercadoOn }) {
     pronto.sms && celular && prefs.sms.on && 'sms',
     pronto.push && 'push',
   ].filter(Boolean);
-  const areas = AREAS.filter((a) => a !== 'mercado' || mercadoOn)
+  const areas = AREAS.filter((a) => a !== 'mercado' || mercadoOn).filter((a) => a !== 'federacoes' || federacoesOn)
     .filter((a) => canais.some((ch) => effectiveValue(settings, prefs, ch, a).lock !== 'admin_off'));
   return (
     <section className="space-y-3">
