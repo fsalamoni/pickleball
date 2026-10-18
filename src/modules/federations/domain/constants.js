@@ -18,7 +18,18 @@ export const FED_COLLECTIONS = Object.freeze({
   affiliations: 'federation_affiliations',
   results: 'federation_results',
   rankings: 'federation_rankings',
+  transfers: 'federation_transfers',
+  documents: 'federation_documents_submitted',
+  imports: 'federation_imports',
+  courses: 'federation_courses',
+  enrollments: 'federation_course_enrollments',
+  credentials: 'federation_credentials',
+  sanctions: 'federation_sanctions',
+  reports: 'federation_reports',
 });
+
+/** Id determinístico da inscrição em curso: `{courseId}_{uid}`. */
+export const fedEnrollmentDocId = (courseId, uid) => `${courseId}_${uid}`;
 
 /** Id determinístico da filiação de clube/arena: `{fedId}_{club|arena}_{orgId}`. */
 export const fedOrgDocId = (fedId, kind, orgId) => `${fedId}_${kind}_${orgId}`;
@@ -140,8 +151,8 @@ export const FED_MODULE_META = Object.freeze({
   tournaments: { label: tk('Torneios chancelados'), description: tk('Organizadores pedem a chancela; a federação aprova e o torneio ganha o selo e as regras dela.'), status: 'available' },
   ranking: { label: tk('Ranking oficial'), description: tk('Pontos dos torneios chancelados por temporada, classe e faixa etária.'), status: 'available' },
   affiliations: { label: tk('Clubes e arenas filiados'), description: tk('Clubes e arenas pedem filiação e aparecem como filiados na página da federação.'), status: 'available' },
-  courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'planned' },
-  discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'planned' },
+  courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'available' },
+  discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'available' },
   news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'planned' },
   sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'planned' },
   store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'planned' },
@@ -237,11 +248,15 @@ export const CHARGE_STATUS_LABELS = Object.freeze({
 export const CHARGE_ORIGIN = Object.freeze({
   MEMBERSHIP: 'membership',
   RENEWAL: 'renewal',
+  COURSE: 'course',
+  FINE: 'fine',
 });
 
 export const CHARGE_ORIGIN_LABELS = Object.freeze({
   membership: tk('Filiação'),
   renewal: tk('Renovação'),
+  course: tk('Curso'),
+  fine: tk('Multa'),
 });
 
 /** Dias antes do vencimento em que a renovação é oferecida e avisada. */
@@ -322,3 +337,124 @@ export const DEFAULT_RANKING_CONFIG = Object.freeze({
   /** Só o federado em dia na data do torneio pontua (D12). `false` = todo mundo pontua. */
   members_only: true,
 });
+
+/* ------------------------------------------------- PR 3: dados privados -- */
+
+/** Menor de 18 é menor; abaixo disto só o RESPONSÁVEL filia (D7). */
+export const MINOR_AGE = 18;
+export const GUARDIAN_ONLY_AGE = 12;
+
+/** Documentos que um plano pode exigir (`requires_docs[]`) — valor gravado. */
+export const DOC_KIND = Object.freeze({
+  ID: 'identidade',
+  MEDICAL: 'atestado',
+  ADDRESS: 'comprovante_residencia',
+  GUARDIAN: 'autorizacao_responsavel',
+  OTHER: 'outro',
+});
+
+export const DOC_KIND_LABELS = Object.freeze({
+  identidade: tk('Documento de identidade'),
+  atestado: tk('Atestado médico'),
+  comprovante_residencia: tk('Comprovante de residência'),
+  autorizacao_responsavel: tk('Autorização do responsável'),
+  outro: tk('Outro documento'),
+});
+
+export const DOC_STATUS = Object.freeze({ PENDING: 'pending', APPROVED: 'approved', REJECTED: 'rejected' });
+export const DOC_STATUS_LABELS = Object.freeze({ pending: tk('Em análise'), approved: tk('Aceito'), rejected: tk('Recusado') });
+/** Tamanho máximo de um documento enviado (a regra do Storage confere). */
+export const DOC_MAX_BYTES = 5 * 1024 * 1024;
+
+/* --------------------------------------------------- PR 3: transferência -- */
+
+/** Troca de CLUBE representado (a própria federação decide) ou de FEDERAÇÃO (a antiga libera — D9). */
+export const TRANSFER_KIND = Object.freeze({ CLUB: 'club', FEDERATION: 'federation' });
+export const TRANSFER_KIND_LABELS = Object.freeze({ club: tk('Troca de clube'), federation: tk('Troca de federação') });
+
+export const TRANSFER_STATUS = Object.freeze({ PENDING: 'pending', APPROVED: 'approved', REJECTED: 'rejected', CANCELLED: 'cancelled' });
+export const TRANSFER_STATUS_LABELS = Object.freeze({
+  pending: tk('Aguardando a federação'),
+  approved: tk('Aprovada'),
+  rejected: tk('Recusada'),
+  cancelled: tk('Cancelada'),
+});
+
+/** Prazo para a federação antiga responder; silêncio = liberada (D9). */
+export const TRANSFER_RELEASE_DAYS = 15;
+/** Carência padrão entre transferências (a federação troca em `rules.transfer_cooldown_days`). */
+export const TRANSFER_COOLDOWN_DAYS = 90;
+
+/* ------------------------------------------------------- PR 3: importação -- */
+
+export const IMPORT_MAX_ROWS = 500;
+
+/* ----------------------------------------------------------- PR 3: cursos -- */
+
+export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop' });
+export const COURSE_KIND_LABELS = Object.freeze({
+  referee: tk('Arbitragem'),
+  coach: tk('Formação de treinador'),
+  clinic: tk('Clínica'),
+  workshop: tk('Workshop'),
+});
+
+export const COURSE_STATUS = Object.freeze({ DRAFT: 'draft', OPEN: 'open', CLOSED: 'closed', DONE: 'done', CANCELLED: 'cancelled' });
+export const COURSE_STATUS_LABELS = Object.freeze({
+  draft: tk('Rascunho'),
+  open: tk('Inscrições abertas'),
+  closed: tk('Inscrições encerradas'),
+  done: tk('Realizado'),
+  cancelled: tk('Cancelado'),
+});
+
+export const ENROLLMENT_STATUS = Object.freeze({
+  AWAITING_PAYMENT: 'awaiting_payment',
+  CONFIRMED: 'confirmed',
+  PASSED: 'passed',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled',
+});
+export const ENROLLMENT_STATUS_LABELS = Object.freeze({
+  awaiting_payment: tk('Aguardando pagamento'),
+  confirmed: tk('Inscrito'),
+  passed: tk('Aprovado'),
+  failed: tk('Não aprovado'),
+  cancelled: tk('Cancelada'),
+});
+
+export const CREDENTIAL_STATUS = Object.freeze({ ACTIVE: 'active', EXPIRED: 'expired', REVOKED: 'revoked' });
+export const CREDENTIAL_STATUS_LABELS = Object.freeze({ active: tk('Válida'), expired: tk('Vencida'), revoked: tk('Revogada') });
+
+/* ------------------------------------------------------- PR 3: disciplina -- */
+
+export const DISCIPLINE_KIND = Object.freeze({ WARNING: 'warning', SUSPENSION: 'suspension', FINE: 'fine', EXCLUSION: 'exclusion' });
+export const DISCIPLINE_KIND_LABELS = Object.freeze({
+  warning: tk('Advertência'),
+  suspension: tk('Suspensão'),
+  fine: tk('Multa'),
+  exclusion: tk('Exclusão'),
+});
+
+/** A sanção: aplicada → (recurso) → mantida / revertida; `ended` quando acaba antes. */
+export const DISCIPLINE_STATUS = Object.freeze({ ACTIVE: 'active', APPEALED: 'appealed', UPHELD: 'upheld', OVERTURNED: 'overturned', ENDED: 'ended' });
+export const DISCIPLINE_STATUS_LABELS = Object.freeze({
+  active: tk('Em vigor'),
+  appealed: tk('Com recurso'),
+  upheld: tk('Recurso negado'),
+  overturned: tk('Revertida'),
+  ended: tk('Encerrada'),
+});
+
+/** Ouvidoria: o assunto da manifestação. */
+export const REPORT_KIND = Object.freeze({ CONDUCT: 'conduct', REFEREE: 'referee', ORGANIZATION: 'organization', OTHER: 'other' });
+export const REPORT_KIND_LABELS = Object.freeze({
+  conduct: tk('Conduta de atleta ou dirigente'),
+  referee: tk('Arbitragem'),
+  organization: tk('Organização de torneio'),
+  other: tk('Outro assunto'),
+});
+
+export const REPORT_STATUS = Object.freeze({ OPEN: 'open', IN_REVIEW: 'in_review', CLOSED: 'closed' });
+export const REPORT_STATUS_LABELS = Object.freeze({ open: tk('Recebida'), in_review: tk('Em apuração'), closed: tk('Concluída') });
+export const REPORT_MAX_CHARS = 2000;

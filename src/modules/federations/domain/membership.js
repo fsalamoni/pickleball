@@ -80,13 +80,17 @@ export function toISODate(valor) {
  *
  * @returns {{ status: string, label: string, validUntil: string, daysLeft: number|null, expiring: boolean, canRenew: boolean, countsForRanking: boolean }}
  */
-export function membershipState(member, hoje = isoDate()) {
+export function membershipState(member, hoje = isoDate(), { nowMs = Date.now() } = {}) {
   const validUntil = toISODate(member?.valid_until);
-  const vazio = { status: '', label: '', validUntil, daysLeft: null, expiring: false, canRenew: false, countsForRanking: false };
+  const vazio = { status: '', label: '', validUntil, daysLeft: null, expiring: false, canRenew: false, countsForRanking: false, disciplined: false };
   if (!member) return vazio;
   let status = member.status;
   const daysLeft = validUntil ? daysBetween(hoje, validUntil) : null;
   if (status === MEMBER_STATUS.ACTIVE && daysLeft != null && daysLeft < 0) status = MEMBER_STATUS.EXPIRED;
+  // Suspensão DISCIPLINAR em vigor (PR 3): a filiação segue válida, mas a
+  // carteirinha diz "Suspensa" e a regra recusa a inscrição em chancelado.
+  const disciplined = Number(member.discipline_until_ms) > nowMs && [MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(status);
+  if (disciplined) status = MEMBER_STATUS.SUSPENDED;
   const expiring = status === MEMBER_STATUS.ACTIVE && daysLeft != null && daysLeft <= RENEWAL_WINDOW_DAYS;
   const canRenew = (status === MEMBER_STATUS.ACTIVE && expiring) || status === MEMBER_STATUS.EXPIRED;
   return {
@@ -97,6 +101,7 @@ export function membershipState(member, hoje = isoDate()) {
     expiring,
     canRenew,
     countsForRanking: status === MEMBER_STATUS.ACTIVE,
+    disciplined,
   };
 }
 
@@ -146,13 +151,15 @@ export function normalizeCardCode(raw) {
  * O que a verificação PÚBLICA devolve de uma filiação: o mínimo (D11 e LGPD).
  * Sem e-mail, telefone, nascimento, documento.
  */
-export function publicVerification(member, federation, hoje = isoDate()) {
+export function publicVerification(member, federation, hoje = isoDate(), { nowMs = Date.now() } = {}) {
   if (!member || !federation) return { found: false };
-  const st = membershipState(member, hoje);
+  const st = membershipState(member, hoje, { nowMs });
+  // Menor: a foto só sai com o consentimento do responsável (D7).
+  const semFoto = member.public_photo === false || (member.is_minor === true && member.minor_photo_consent !== true);
   return {
     found: true,
     name: member.user_name || '',
-    photo_url: member.public_photo === false ? '' : (member.photo_url || ''),
+    photo_url: semFoto ? '' : (member.photo_url || ''),
     federation: { name: federation.name, acronym: federation.acronym, slug: federation.slug },
     tier: member.tier || '',
     person_type: member.person_type || '',

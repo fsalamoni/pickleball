@@ -1394,7 +1394,9 @@ service cloud.firestore {
         || tdoc.get('federation_sanction', {}).get('status', '') != 'approved'
         || tdoc.get('federation_sanction', {}).get('requires_membership', false) != true
         || (exists(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + request.auth.uid))
-          && get(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + request.auth.uid)).data.status == 'active');
+          && get(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + request.auth.uid)).data.status == 'active'
+          // Suspensão DISCIPLINAR em vigor (PR 3): a filiação está ativa, mas a pessoa não se inscreve.
+          && get(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + request.auth.uid)).data.get('discipline_until_ms', 0) < request.time.toMillis());
     }
     // Sem sede, sede pendente, ou gerir a arena (o admin da plataforma também).
     function tournamentArenaOk() {
@@ -4702,27 +4704,184 @@ service cloud.firestore {
       allow delete: if isPlatformAdmin();
     }
 
+    // O dono da filiação: a própria pessoa ou, no DEPENDENTE menor (`user_id`
+    // nulo), o responsável que o filiou (`guardian_uid`) — D7.
+    function fedMemberOwner(data) {
+      return isAuthed() && (data.get('user_id', null) == request.auth.uid || data.get('guardian_uid', null) == request.auth.uid);
+    }
     match /federation_members/{memberId} {
-      // ⭐ NUNCA pública. O próprio, a equipe que atende (filiados, financeiro, admin) e o admin da plataforma.
+      // ⭐ NUNCA pública. O próprio (ou o responsável), a equipe que atende (filiados, financeiro, admin) e o admin da plataforma.
       allow read: if isPlatformAdmin()
-        || (isAuthed() && resource.data.user_id == request.auth.uid)
+        || fedMemberOwner(resource.data)
         || fedHas(resource.data.federation_id, 'admin')
         || fedHas(resource.data.federation_id, 'members')
         || fedHas(resource.data.federation_id, 'finance');
       // Só o servidor cria (`federationMembership`): número, estado, validade e código.
       allow create, delete: if false;
       // O próprio muda só as próprias preferências; tudo o mais é do servidor.
-      allow update: if fedOn() && isAuthed() && resource.data.user_id == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['public_badge', 'show_in_directory', 'public_photo', 'prefs_updated_at']);
+      // `minor_photo_consent` é o consentimento do responsável para a foto do menor na verificação pública.
+      allow update: if fedOn() && fedMemberOwner(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['public_badge', 'show_in_directory', 'public_photo', 'minor_photo_consent', 'prefs_updated_at']);
 
-      // CPF, campos extras, consentimento do responsável (PR3): o próprio, a secretaria e o admin.
+      // CPF (se a federação pede), responsável do menor, campos extras (PR 3):
+      // lê o próprio/responsável, a secretaria e o admin; grava o próprio/responsável.
+      // A secretaria REVELA o CPF com auditoria na tela; o servidor não grava aqui.
       match /private/{docId} {
         allow read: if docId == 'data' && (isPlatformAdmin()
-          || (isAuthed() && memberId.matches('.+_' + request.auth.uid))
+          || fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
           || fedHas(memberId.split('_')[0], 'members')
           || fedHas(memberId.split('_')[0], 'admin'));
-        allow write: if docId == 'data' && fedOn() && isAuthed() && memberId.matches('.+_' + request.auth.uid);
+        allow write: if docId == 'data' && fedOn()
+          && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
+          && request.resource.data.get('cpf', '') is string
+          && request.resource.data.get('cpf', '').size() <= 11;
       }
+    }
+
+    // Documento enviado para a filiação (PR 3: identidade, atestado,
+    // autorização do responsável…). O arquivo mora em `federacao/{uid}/…` no
+    // Storage e só quem enviou o abre pela regra; a secretaria o vê pela
+    // função `federationDocument` (confere o papel). Aqui só o registro.
+    match /federation_documents_submitted/{docId} {
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.user_id == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'members')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow create: if fedOn() && isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.federation_id is string
+        && request.resource.data.member_id is string
+        && request.resource.data.kind in ['identidade', 'atestado', 'comprovante_residencia', 'autorizacao_responsavel', 'outro']
+        && request.resource.data.storage_path is string
+        && request.resource.data.storage_path.matches('federacao/' + request.auth.uid + '/[A-Za-z0-9_-]+\\.[a-z]{3,4}')
+        && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(request.resource.data.member_id)).data);
+      // A secretaria aceita ou recusa (com motivo); nada mais muda.
+      allow update: if fedOn() && (fedHas(resource.data.federation_id, 'members') || fedHas(resource.data.federation_id, 'admin'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'review', 'updated_at'])
+        && request.resource.data.status in ['approved', 'rejected'];
+      // Quem enviou apaga enquanto está em análise (e troca o arquivo); o admin sempre.
+      allow delete: if isPlatformAdmin() || fedHas(resource.data.federation_id, 'admin')
+        || (fedOn() && isAuthed() && resource.data.user_id == request.auth.uid && resource.data.status == 'pending');
+    }
+
+    // Transferência de clube ou de federação (PR 3): SÓ o servidor grava
+    // (`federationTransfer`). Lê a pessoa, a secretaria da federação atual e,
+    // na troca de federação, a secretaria da federação de destino.
+    match /federation_transfers/{trId} {
+      allow read: if isPlatformAdmin()
+        || fedMemberOwner(resource.data)
+        || fedHas(resource.data.federation_id, 'members')
+        || fedHas(resource.data.federation_id, 'admin')
+        || (resource.data.get('to_federation_id', null) is string
+          && (fedHas(resource.data.to_federation_id, 'members') || fedHas(resource.data.to_federation_id, 'admin')));
+      allow write: if false;
+    }
+
+    // Relatório de uma importação de filiados (PR 3): e-mails pendentes de
+    // conta. Só a secretaria lê; só o servidor grava (`federationImportMembers`).
+    match /federation_imports/{impId} {
+      allow read: if isPlatformAdmin()
+        || fedHas(resource.data.federation_id, 'members')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow write: if false;
+    }
+
+    // Curso (PR 3, módulo `courses`): público quando não é rascunho; a equipe
+    // (cursos/admin) cria e edita — a inscrição e a credencial são do servidor.
+    match /federation_courses/{courseId} {
+      allow read: if resource.data.status != 'draft'
+        || isPlatformAdmin()
+        || fedHas(resource.data.federation_id, 'courses')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow create: if fedOn() && fedModuleOn(request.resource.data.federation_id, 'courses')
+        && (fedHas(request.resource.data.federation_id, 'courses') || fedHas(request.resource.data.federation_id, 'admin'))
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.kind in ['referee', 'coach', 'clinic', 'workshop']
+        && request.resource.data.status in ['draft', 'open', 'closed', 'done', 'cancelled']
+        && request.resource.data.price_cents is int
+        && request.resource.data.price_cents >= 0
+        && request.resource.data.get('enrolled_count', 0) == 0;
+      allow update: if fedOn()
+        && (fedHas(resource.data.federation_id, 'courses') || fedHas(resource.data.federation_id, 'admin'))
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['federation_id', 'enrolled_count'])
+        && request.resource.data.status in ['draft', 'open', 'closed', 'done', 'cancelled'];
+      allow delete: if isPlatformAdmin() || (fedOn() && fedHas(resource.data.federation_id, 'admin') && resource.data.get('enrolled_count', 0) == 0);
+    }
+
+    // Inscrição em curso (`{curso}_{uid}`): só o servidor (`federationCourse`) —
+    // confere vagas, filiação exigida e gera a cobrança. Lê o próprio e a equipe.
+    match /federation_course_enrollments/{enrId} {
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.user_id == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'courses')
+        || fedHas(resource.data.federation_id, 'finance')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow write: if false;
+    }
+
+    // Credencial (árbitro, treinador…): o servidor emite ao aprovar o curso; a
+    // equipe (cursos/admin) revoga. Pública SÓ se a pessoa marcou `public`
+    // (diretório de credenciados); a pessoa muda só isso.
+    match /federation_credentials/{credId} {
+      allow read: if isPlatformAdmin()
+        || (resource.data.get('public', false) == true && resource.data.status == 'active')
+        || (isAuthed() && resource.data.user_id == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'courses')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow create, delete: if false;
+      allow update: if fedOn() && (
+        (isAuthed() && resource.data.user_id == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['public', 'public_photo', 'prefs_updated_at']))
+        || ((fedHas(resource.data.federation_id, 'courses') || fedHas(resource.data.federation_id, 'admin'))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'review', 'updated_at'])
+          && request.resource.data.status in ['active', 'revoked'])
+      );
+    }
+
+    // Sanção disciplinar (PR 3, módulo `discipline`): SÓ o servidor grava
+    // (`federationDiscipline`), inclusive o recurso. ⭐ Só a pessoa, a
+    // disciplina/admin da federação e o admin da plataforma leem (D11).
+    match /federation_sanctions/{sancId} {
+      allow read: if isPlatformAdmin()
+        || fedMemberOwner(resource.data)
+        || fedHas(resource.data.federation_id, 'discipline')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow write: if false;
+    }
+
+    // Ouvidoria (PR 3): qualquer conta logada abre uma manifestação, anônima
+    // ou não — anônima NÃO grava `reporter_uid`. O protocolo é o id do
+    // documento: quem o tem acompanha (get, nunca list). Trata a disciplina.
+    match /federation_reports/{repId} {
+      allow get: if isPlatformAdmin()
+        || (isAuthed() && resource.data.get('anonymous', false) == true)
+        || (isAuthed() && resource.data.get('reporter_uid', null) == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'discipline')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow list: if isPlatformAdmin()
+        || (isAuthed() && resource.data.get('reporter_uid', null) == request.auth.uid)
+        || fedHas(resource.data.federation_id, 'discipline')
+        || fedHas(resource.data.federation_id, 'admin');
+      allow create: if fedOn() && isAuthed()
+        && fedModuleOn(request.resource.data.federation_id, 'discipline')
+        && request.resource.data.status == 'open'
+        && request.resource.data.kind in ['conduct', 'referee', 'organization', 'other']
+        && request.resource.data.body is string
+        && request.resource.data.body.size() >= 20
+        && request.resource.data.body.size() <= 2000
+        && request.resource.data.anonymous is bool
+        && (request.resource.data.anonymous
+          ? request.resource.data.get('reporter_uid', null) == null
+          : request.resource.data.reporter_uid == request.auth.uid)
+        && !request.resource.data.keys().hasAny(['notes', 'handled_by']);
+      allow update: if fedOn()
+        && (fedHas(resource.data.federation_id, 'discipline') || fedHas(resource.data.federation_id, 'admin'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'notes', 'handled_by', 'updated_at'])
+        && request.resource.data.status in ['open', 'in_review', 'closed'];
+      allow delete: if isPlatformAdmin();
     }
 
     match /federation_charges/{chargeId} {

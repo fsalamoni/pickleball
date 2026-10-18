@@ -17,7 +17,7 @@ import { useFederationBySlug, useFederationPlans } from '@/modules/federations/h
 import { FEDERATION_LEVEL_LABELS } from '@/modules/federations/domain/constants';
 import { FedBadges, FedLogo, fedPath } from '@/v2/components/federations/federationUi';
 import PlansList from '@/v2/components/federations/PlansList';
-import { FedAffiliatesSection, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
+import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -73,7 +73,10 @@ export default function PublicFederation() {
             </section>
             <FedSanctionedTournaments federation={f} />
             <FedRankingBlock federation={f} />
+            <FedCoursesSection federation={f} />
+            <FedCredentialsDirectory federation={f} />
             <FedAffiliatesSection federation={f} />
+            <FedOmbudsmanBlock federation={f} />
             <p className="text-center text-xs text-gray-500">{t('Carteirinha de filiado? Verifique pelo QR ou em {url}.', { url: 'picklerush.web.app/f/verificar' })}</p>
           </>
         )}

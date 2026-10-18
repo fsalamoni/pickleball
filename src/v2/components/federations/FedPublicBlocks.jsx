@@ -10,14 +10,22 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Landmark, Medal, Trophy, Users } from 'lucide-react';
+import { toast } from 'sonner';
+import { Building2, GraduationCap, Landmark, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
 import { sanctionedTournaments } from '@/modules/federations/domain/sanction';
-import { SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
-import { useApprovedAffiliations, useFederationRanking, useFederationTournaments } from '@/modules/federations/hooks/useFederations';
+import { canCancelEnrollment, courseState, credentialState, seatsLeft, sortCourses } from '@/modules/federations/domain/courses';
+import { protocolToId, reportProtocol, validateReportInput } from '@/modules/federations/domain/discipline';
+import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { verifyPath } from '@/modules/federations/domain/card';
+import { COURSE_KIND_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS, REPORT_KIND, REPORT_KIND_LABELS, REPORT_MAX_CHARS, REPORT_STATUS_LABELS, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { courseAction, createReport } from '@/modules/federations/services/federationService';
+import { useApprovedAffiliations, useFederationMutation, useFederationRanking, useFederationTournaments, useMyEnrollments, usePublicCourses, usePublicCredentials, useReport } from '@/modules/federations/hooks/useFederations';
 import { AGE_CATEGORY_LABELS, GENDER_CATEGORY_LABELS, MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
-import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { fmtData, t, tn } from '@/core/i18n';
 
 /* ------------------------------------------------------- filiados (orgs) -- */
@@ -166,5 +174,175 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
       )}
       {!q.isLoading && !q.isError && <p className="flex items-center gap-1 text-xs text-gray-500"><Landmark className="h-3.5 w-3.5" aria-hidden="true" />{t('Ranking oficial da {sigla}: soma só torneios chancelados por ela. O ranking da plataforma segue à parte.', { sigla: federation?.acronym || federation?.name })}</p>}
     </section>
+  );
+}
+
+/* ---------------------------------------------- PR 3: cursos, credenciados, ouvidoria -- */
+
+/**
+ * Os cursos com inscrição aberta (e os já realizados) — módulo `courses`.
+ * Logado, a pessoa se inscreve aqui (o servidor confere vaga, filiação e
+ * preço); sem conta, entra para se inscrever.
+ */
+export function FedCoursesSection({ federation, titulo = true }) {
+  const ligado = fedModuleOn(federation, 'courses');
+  const { isAuthenticated, user } = useAuth();
+  const q = usePublicCourses(federation?.id, { enabled: ligado });
+  const eq = useMyEnrollments({ enabled: ligado && isAuthenticated });
+  const m = useFederationMutation((payload) => courseAction(payload));
+  if (!ligado) return null;
+  const cursos = q.isSuccess ? sortCourses(q.data) : null;
+  const minha = (courseId) => (eq.data || []).find((e) => e.course_id === courseId && e.status !== ENROLLMENT_STATUS.CANCELLED) || null;
+  const agir = (payload, msg) => m.mutate(payload, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
+  return (
+    <section aria-labelledby="fed-cursos" className="space-y-3" data-dica="federacao-cursos-publicos">
+      {titulo && <h2 id="fed-cursos" className="font-display text-xl font-bold text-ink">{t('Cursos e clínicas')}</h2>}
+      {q.isError && <V2ErrorState inline title={t('Não carregaram os cursos')} onRetry={() => q.refetch()} />}
+      {q.isLoading && <V2Skeleton lines={2} />}
+      {cursos && cursos.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum curso publicado ainda.')}</p>}
+      {cursos && cursos.length > 0 && (
+        <ul className="space-y-2">
+          {cursos.map((c) => {
+            const st = courseState(c);
+            const en = isAuthenticated ? minha(c.id) : null;
+            const vagas = seatsLeft(c);
+            return (
+              <li key={c.id}>
+                <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-4">
+                  <GraduationCap className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{c.name}<V2Badge tone={st.open ? 'green' : 'neutral'}>{st.label}</V2Badge>{c.requires_membership && <V2Badge tone="ink">{t('só filiados')}</V2Badge>}{c.issues_credential && <V2Badge tone="ink">{t('emite credencial')}</V2Badge>}</p>
+                    <p className="text-xs text-gray-500">{t(COURSE_KIND_LABELS[c.kind] || COURSE_KIND_LABELS.clinic)}{c.level ? ` · ${c.level}` : ''} · {dataCurta(c.starts_at)}{c.ends_at && c.ends_at !== c.starts_at ? ` – ${dataCurta(c.ends_at)}` : ''}{c.online ? ` · ${t('on-line')}` : c.place ? ` · ${c.place}` : ''}{c.hours ? ` · ${tn(c.hours, '{n} hora', '{n} horas')}` : ''}</p>
+                    <p className="text-xs text-gray-700">{c.price_cents > 0 ? `${formatBrlCents(c.price_cents)}${c.member_price_cents != null && c.member_price_cents < c.price_cents ? ` · ${t('filiado: {valor}', { valor: formatBrlCents(c.member_price_cents) })}` : ''}` : t('Grátis')}{vagas != null ? ` · ${tn(vagas, '{n} vaga', '{n} vagas')}` : ''}{c.instructors ? ` · ${c.instructors}` : ''}</p>
+                    {c.description && <p className="mt-1 text-sm text-gray-600">{c.description}</p>}
+                  </div>
+                  {en ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <V2Badge tone={{ awaiting_payment: 'amber', confirmed: 'green', passed: 'green', failed: 'red' }[en.status] || 'neutral'}>{t(ENROLLMENT_STATUS_LABELS[en.status] || en.status)}</V2Badge>
+                      {en.status === ENROLLMENT_STATUS.AWAITING_PAYMENT && <V2Button asChild size="sm" variant="secondary"><Link to="/perfil?secao=federacoes">{t('Pagar')}</Link></V2Button>}
+                      {canCancelEnrollment(en, c) && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir({ action: 'cancel', courseId: c.id }, t('Inscrição cancelada.'))}>{t('Cancelar inscrição')}</V2Button>}
+                    </div>
+                  ) : st.open ? (
+                    isAuthenticated
+                      ? <V2Button type="button" size="sm" disabled={m.isPending || eq.isLoading} onClick={() => agir({ action: 'enroll', courseId: c.id }, c.price_cents > 0 ? t('Inscrição feita. Pague o Pix em Minha área → Federações.') : t('Inscrição confirmada.'))} data-dica="federacao-curso-inscrever">{t('Inscrever-se')}</V2Button>
+                      : <V2Button asChild size="sm"><Link to={`/login?next=${encodeURIComponent(`/federacoes/${federation.id}`)}`}>{t('Entrar para se inscrever')}</Link></V2Button>
+                  ) : null}
+                </V2Surface>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {eq.isError && <V2ErrorState inline title={t('Não carregaram as suas inscrições')} onRetry={() => eq.refetch()} />}
+      {user && cursos && cursos.length > 0 && <p className="text-xs text-gray-500">{t('Aprovado em curso que emite credencial, você recebe a credencial da federação, com código verificável, na Minha área.')}</p>}
+    </section>
+  );
+}
+
+/** O diretório PÚBLICO de credenciados: só quem marcou "aparecer", válidas. */
+export function FedCredentialsDirectory({ federation, titulo = true }) {
+  const ligado = fedModuleOn(federation, 'courses');
+  const q = usePublicCredentials(federation?.id, { enabled: ligado });
+  if (!ligado) return null;
+  const lista = q.isSuccess ? (q.data || []).filter((c) => credentialState(c).valid).sort((a, b) => String(a.user_name).localeCompare(String(b.user_name))) : null;
+  if (q.isSuccess && !lista.length) return null;
+  return (
+    <section aria-labelledby="fed-credenciados" className="space-y-3" data-dica="federacao-credenciados">
+      {titulo && <h2 id="fed-credenciados" className="font-display text-xl font-bold text-ink">{t('Credenciados')}</h2>}
+      {q.isError && <V2ErrorState inline title={t('Não carregaram os credenciados')} onRetry={() => q.refetch()} />}
+      {q.isLoading && <V2Skeleton lines={2} />}
+      {lista && (
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {lista.map((c) => (
+            <li key={c.id} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
+              <V2Avatar name={c.user_name} photoUrl={c.public_photo === false ? '' : c.photo_url} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-ink">{c.user_name}</p>
+                <p className="text-xs text-gray-500">{t(COURSE_KIND_LABELS[c.kind] || COURSE_KIND_LABELS.clinic)}{c.level ? ` · ${c.level}` : ''}{c.valid_until ? ` · ${t('até {data}', { data: dataCurta(c.valid_until) })}` : ''}</p>
+              </div>
+              <Link to={verifyPath(c.code)} className="text-xs font-semibold text-ink underline">{t('Verificar')}</Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * A ouvidoria pública (módulo `discipline`): abrir uma manifestação (anônima
+ * ou identificada; precisa de conta, para a regra barrar robô) e acompanhar
+ * pelo protocolo. Quem enviou vê só o ESTADO; as anotações são da federação.
+ */
+export function FedOmbudsmanBlock({ federation, titulo = true }) {
+  const ligado = fedModuleOn(federation, 'discipline');
+  const { isAuthenticated, user } = useAuth();
+  const [aberto, setAberto] = useState(false);
+  const [protocolo, setProtocolo] = useState('');
+  const [consulta, setConsulta] = useState('');
+  const rq = useReport(consulta, { enabled: Boolean(consulta) && isAuthenticated });
+  if (!ligado) return null;
+  const buscar = (e) => { e.preventDefault(); const id = protocolToId(protocolo); if (!id) { toast.error(t('Protocolo inválido.')); return; } setConsulta(id); };
+  return (
+    <section aria-labelledby="fed-ouvidoria" className="space-y-3" data-dica="federacao-ouvidoria-publica">
+      {titulo && <h2 id="fed-ouvidoria" className="font-display text-xl font-bold text-ink">{t('Ouvidoria')}</h2>}
+      <V2Surface variant="compacto" className="space-y-3 p-4">
+        <p className="text-sm text-gray-600">{t('Conduta de atleta ou dirigente, arbitragem, organização de torneio: conte à federação. Pode ser anônimo — nem a plataforma guarda quem enviou. Você acompanha pelo protocolo.')}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {isAuthenticated
+            ? <V2Button type="button" size="sm" onClick={() => setAberto(true)} data-dica="federacao-ouvidoria-abrir"><MessageSquareWarning className="h-4 w-4" />{t('Enviar manifestação')}</V2Button>
+            : <V2Button asChild size="sm"><Link to={`/login?next=${encodeURIComponent(`/federacoes/${federation.id}`)}`}>{t('Entrar para enviar')}</Link></V2Button>}
+          {isAuthenticated && (
+            <form className="flex items-center gap-2" onSubmit={buscar}>
+              <V2Input value={protocolo} onChange={(e) => setProtocolo(e.target.value.toUpperCase())} placeholder={t('Protocolo')} aria-label={t('Protocolo da manifestação')} className="h-10 w-48 font-mono uppercase" maxLength={48} />
+              <V2Button type="submit" size="sm" variant="secondary">{t('Acompanhar')}</V2Button>
+            </form>
+          )}
+        </div>
+        {consulta && rq.isError && <p className="text-sm text-red-600">{t('Protocolo não encontrado, ou ele não é seu.')}</p>}
+        {consulta && rq.isSuccess && !rq.data && <p className="text-sm text-red-600">{t('Protocolo não encontrado.')}</p>}
+        {consulta && rq.isSuccess && rq.data && (
+          <p className="text-sm text-gray-700">{t('Protocolo {p}: {estado}, enviada em {data}.', { p: reportProtocol(rq.data.id), estado: t(REPORT_STATUS_LABELS[rq.data.status] || rq.data.status), data: dataCurta(new Date(rq.data.created_at_ms || 0).toISOString().slice(0, 10)) })}</p>
+        )}
+      </V2Surface>
+      {aberto && <OuvidoriaDialog federation={federation} uid={user?.uid} onClose={() => setAberto(false)} />}
+    </section>
+  );
+}
+
+function OuvidoriaDialog({ federation, uid, onClose }) {
+  const [f, setF] = useState({ kind: REPORT_KIND.CONDUCT, body: '', tournament_name: '', anonymous: false });
+  const [erros, setErros] = useState({});
+  const [enviada, setEnviada] = useState(null);
+  const m = useFederationMutation(() => createReport({ federation, uid, input: f }));
+  const enviar = (e) => {
+    e.preventDefault();
+    const r = validateReportInput(f);
+    if (!r.ok) { setErros(r.errors); return; }
+    m.mutate(undefined, { onSuccess: (rep) => setEnviada(rep), onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent sheet className="max-w-lg">
+        <DialogTitle>{t('Manifestação à ouvidoria da {sigla}', { sigla: federation.acronym || federation.name })}</DialogTitle>
+        <DialogDescription>{t('A disciplina da federação recebe e apura. Guarde o protocolo para acompanhar.')}</DialogDescription>
+        {enviada ? (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700">{t('Enviada. Seu protocolo:')}</p>
+            <p className="font-mono text-lg font-bold text-ink">{reportProtocol(enviada.id)}</p>
+            <p className="text-xs text-gray-500">{enviada.anonymous ? t('Anônima: só com o protocolo dá para acompanhar — anote.') : t('Identificada: ela também aparece na sua Minha área → Federações.')}</p>
+            <div className="flex justify-end"><V2Button type="button" onClick={onClose}>{t('Fechar')}</V2Button></div>
+          </div>
+        ) : (
+          <form onSubmit={enviar} noValidate className="space-y-4">
+            <V2Field label={t('Assunto')} htmlFor="ouv-tipo"><V2Select id="ouv-tipo" value={f.kind} onChange={(e) => setF((x) => ({ ...x, kind: e.target.value }))}>{Object.values(REPORT_KIND).map((k) => <option key={k} value={k}>{t(REPORT_KIND_LABELS[k])}</option>)}</V2Select></V2Field>
+            <V2Field label={t('Torneio relacionado (opcional)')} htmlFor="ouv-torneio"><V2Input id="ouv-torneio" maxLength={120} value={f.tournament_name} onChange={(e) => setF((x) => ({ ...x, tournament_name: e.target.value }))} /></V2Field>
+            <V2Field label={t('O que aconteceu')} htmlFor="ouv-texto" error={erros.body} required hint={t('Até {n} caracteres. Não inclua dado pessoal de terceiros além do necessário.', { n: REPORT_MAX_CHARS })}><V2Textarea id="ouv-texto" rows={5} maxLength={REPORT_MAX_CHARS} value={f.body} onChange={(e) => { setF((x) => ({ ...x, body: e.target.value })); setErros({}); }} /></V2Field>
+            <V2Toggle id="ouv-anon" checked={f.anonymous} onChange={(v) => setF((x) => ({ ...x, anonymous: v }))} label={t('Enviar anonimamente')} hint={t('Nem a federação nem a plataforma saberão quem enviou. Só o protocolo acompanha.')} />
+            <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onClose}>{t('Voltar')}</V2Button><V2Button type="submit" disabled={m.isPending}>{t('Enviar')}</V2Button></div>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

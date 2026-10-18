@@ -1312,9 +1312,27 @@ exports.federationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, async 
   }
 });
 
+// PR 3: transferências, cursos/credenciais, disciplina, importação e leitura de documentos — só o servidor grava.
+const federationTransfers = require('./federationTransfers');
+const federationCourses = require('./federationCourses');
+const federationDiscipline = require('./federationDiscipline');
+const federationSecretariat = require('./federationSecretariat');
+exports.federationTransfer = federationCallable('federationTransfer', federationTransfers.transfer);
+exports.federationCourse = federationCallable('federationCourse', federationCourses.course);
+exports.federationDiscipline = federationCallable('federationDiscipline', federationDiscipline.discipline);
+exports.federationImportMembers = federationCallable('federationImportMembers', federationSecretariat.importMembers);
+exports.federationDocument = federationCallable('federationDocument', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationDocument: Storage indisponível.', err); }
+  return federationSecretariat.document({ ...ctx, bucket }, actor, data);
+});
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
-  async () => { await federations.sweep(fedCtx()); },
+  async () => {
+    await federations.sweep(fedCtx());
+    await federationTransfers.sweep(fedCtx());
+  },
 );
 
 // Ranking oficial (PR 2): resultado enviado/recusado → a temporada é refeita;

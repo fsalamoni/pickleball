@@ -11,7 +11,7 @@
 
 ## Registro histórico (snapshot de 2026-09-28; ondas posteriores estão em `docs/` e no `git log`)
 
-> Última atualização: 2026-10-18 (Federações, PR 2: clubes e arenas filiados, chancela de torneios com "só filiados" imposto na regra da inscrição, envio da colocação do pódio e ranking oficial derivado pelo servidor — ver `docs/50-FEDERACAO.md` §6.1–6.3). Antes: 2026-10-18 (Federações: abertura aprovada pelo admin, planos mensais/anuais, filiação e cobrança Pix só pelo servidor, carteirinha digital com verificação pública, Central com 8 papéis — atrás de `federations`, ver `docs/50-FEDERACAO.md`). Antes: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> Última atualização: 2026-10-18 (Federações, PR 3: secretaria — CPF por regra da federação e responsável do menor em `private/data`, dependentes, documentos no Storage lidos pela secretaria por função, transferências de clube/federação com liberação automática, importação de filiados —, cursos com credencial verificável pelo mesmo código da carteirinha e disciplina/ouvidoria com suspensão imposta na regra da inscrição — ver `docs/50-FEDERACAO.md` §6.4–6.6). Antes: 2026-10-18 (Federações, PR 2: clubes e arenas filiados, chancela de torneios com "só filiados" imposto na regra da inscrição, envio da colocação do pódio e ranking oficial derivado pelo servidor — ver `docs/50-FEDERACAO.md` §6.1–6.3). Antes: 2026-10-18 (Federações: abertura aprovada pelo admin, planos mensais/anuais, filiação e cobrança Pix só pelo servidor, carteirinha digital com verificação pública, Central com 8 papéis — atrás de `federations`, ver `docs/50-FEDERACAO.md`). Antes: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
@@ -29,6 +29,27 @@
 >
 > **Destaques por onda**:
 >
+> - **Federações, PR 3** (2026-10-18): a **secretaria** e dois módulos.
+>   Dado pessoal do filiado (CPF, só se a federação pede; nascimento;
+>   responsável) vai para `federation_members/{id}/private/data`, nunca para
+>   o documento da filiação; **menor de 12 só entra como dependente** da conta
+>   do responsável (`user_id` nulo + `guardian_uid`, `fedMemberOwner` na
+>   regra), que paga por ele. **Documentos** exigidos pelo plano ficam no
+>   Storage do dono (`federacao/{uid}/`) e chegam à secretaria por função —
+>   a regra do Storage não consulta o banco `pickleball`. **Transferência**:
+>   a federação atual libera, e o silêncio no prazo libera pela varredura; os
+>   pontos ficam onde foram feitos. **Importação** de até 500 linhas: quem
+>   tem conta vira filiado ativo, quem não tem fica numa lista só da equipe.
+>   **Cursos** (`courses`): inscrição, vaga, cobrança e credencial só pelo
+>   servidor; a credencial verifica pelo mesmo código da carteirinha e nasce
+>   privada. **Disciplina** (`discipline`): suspensão grava
+>   `discipline_until_ms` na filiação e a regra da auto-inscrição "só
+>   filiados" a lê — termina sozinha na data; multa vira cobrança; recurso
+>   uma vez; ouvidoria com manifestação anônima (sem `reporter_uid`, imposto
+>   na regra) e protocolo derivado do id. Lição: "é o dono?" numa filiação
+>   nunca é só `user_id` — o dependente obrigou a trocar por `fedMemberOwner`
+>   em toda regra e serviço; e um só caminho de confirmação de cobrança
+>   (`origin` decide o efeito) evita o segundo escritor.
 > - **Federações, PR 2** (2026-10-18): os três primeiros módulos ligáveis
 >   por federação. **Clubes e arenas filiados** (`affiliations`): quem gere
 >   pede na própria gestão, a secretaria aprova/recusa/suspende com motivo,

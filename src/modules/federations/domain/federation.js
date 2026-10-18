@@ -130,3 +130,21 @@ export function federationReviewActions(f) {
     default: return [];
   }
 }
+
+/* ------------------------------------------------------- PR 3: regras -- */
+
+/**
+ * As REGRAS da federação (`federations.rules`, campo opcional): CPF no pedido
+ * (D6), carência e prazo das transferências (D9). Ausente ⇒ padrão.
+ */
+export function normalizeFederationRules(raw = {}) {
+  const int = (v, d, min, max) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.trunc(n))) : d;
+  };
+  return {
+    ask_cpf: raw?.ask_cpf === true,
+    transfer_cooldown_days: int(raw?.transfer_cooldown_days, 90, 0, 3650),
+    transfer_release_days: int(raw?.transfer_release_days, 15, 1, 365),
+  };
+}

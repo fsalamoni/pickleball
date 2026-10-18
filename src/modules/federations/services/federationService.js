@@ -16,7 +16,8 @@ import { httpsCallable } from 'firebase/functions';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, limit,
 } from 'firebase/firestore';
-import { db, functions } from '@/core/config/firebase';
+import { deleteObject, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { db, functions, storage } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
@@ -28,7 +29,10 @@ import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sancti
 import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
 import { permissionsOf } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
-import { fedModuleOn, normalizeFederationBranding, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
+import { fedModuleOn, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
+import { documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
+import { validateCourseInput } from '../domain/courses.js';
+import { validateReportInput } from '../domain/discipline.js';
 import { validatePlanInput } from '../domain/plans.js';
 import { canDeclarePayment } from '../domain/charges.js';
 import { canChangeStaff } from '../domain/staff.js';
@@ -82,6 +86,19 @@ export const chargeAction = ({ chargeId, action, note = '' }) => chamar('federat
 
 /** Verificação pública da carteirinha — devolve só o mínimo (sem conta). */
 export const verifyCard = (code) => chamar('federationVerify', { code });
+
+/* --- PR 3: as chamadas ao servidor (quem grava transferência, inscrição, credencial e sanção é ele) --- */
+
+/** Transferência: `request` (a pessoa), `cancel`, `approve`/`reject` (secretaria). Ver `functions/federationTransfers.js`. */
+export const transferAction = (payload) => chamar('federationTransfer', payload);
+/** Curso: `enroll`/`cancel` (a pessoa), `pass`/`fail` (cursos). Ver `functions/federationCourses.js`. */
+export const courseAction = (payload) => chamar('federationCourse', payload);
+/** Disciplina: `apply`, `decide_appeal`, `end` (disciplina); `appeal` (a pessoa). Ver `functions/federationDiscipline.js`. */
+export const disciplineAction = (payload) => chamar('federationDiscipline', payload);
+/** Importação de filiados por planilha (secretaria). Devolve { imported, skipped[], pending }. */
+export const importMembers = (payload) => chamar('federationImportMembers', payload);
+/** O arquivo de um documento enviado (base64) — quem enviou, a secretaria ou o admin; a secretaria é auditada. */
+export const fetchDocumentContent = (documentId) => chamar('federationDocument', { documentId });
 
 /* ----------------------------------------------------------- federação -- */
 
@@ -280,10 +297,10 @@ export async function listFederationMembers(fedId) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
-/** Só o que é da PESSOA no documento: mostrar o selo no perfil, aparecer no diretório, foto na verificação. */
+/** Só o que é da PESSOA no documento: selo no perfil, diretório, foto na verificação e (dependente) o consentimento da foto do menor. */
 export async function updateMyMembershipPrefs(memberId, prefs = {}) {
   const patch = {};
-  ['public_badge', 'show_in_directory', 'public_photo'].forEach((k) => { if (typeof prefs[k] === 'boolean') patch[k] = prefs[k]; });
+  ['public_badge', 'show_in_directory', 'public_photo', 'minor_photo_consent'].forEach((k) => { if (typeof prefs[k] === 'boolean') patch[k] = prefs[k]; });
   if (!Object.keys(patch).length) return;
   await updateDoc(doc(db, C.members, memberId), { ...patch, prefs_updated_at: serverTimestamp() });
 }
@@ -531,4 +548,276 @@ export async function updateRankingConfig(fedId, input, { uid } = {}) {
   await updateDoc(doc(db, C.federations, fedId), { ranking_config: value, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'federation_ranking_config', actor: { uid }, details: { federation_id: fedId, ...value } });
   return value;
+}
+
+/* ============================ PR 3: dados privados, dependentes, documentos ============================ */
+
+/** As filiações dos DEPENDENTES que a pessoa filiou (menores, `user_id` nulo). */
+export async function listMyDependents(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.members), where('guardian_uid', '==', uid)))).docs.map(toDoc);
+}
+
+/** CPF, responsável — o próprio/responsável e a secretaria (`private/data`). `null` se não há. */
+export async function getMemberPrivate(memberId) {
+  if (!memberId) return null;
+  const snap = await getDoc(doc(db, C.members, memberId, 'private', 'data'));
+  return snap.exists() ? snap.data() : null;
+}
+
+/**
+ * A secretaria REVELA o CPF: a leitura é a mesma, mas fica registrada
+ * (`federation_member_private_reveal`, com motivo) — como o suporte do admin.
+ */
+export async function revealMemberPrivate(member, { uid, reason = '' } = {}) {
+  const motivo = String(reason || '').trim().slice(0, 300);
+  if (motivo.length < 5) throw new FederationError(t('Diga o motivo (mínimo 5 caracteres).'));
+  const priv = await getMemberPrivate(member.id);
+  await createAuditLog({ action: 'federation_member_private_reveal', actor: { uid }, userId: member.user_id || null, details: { federation_id: member.federation_id, member_id: member.id, reason: motivo } });
+  return priv;
+}
+
+/** Os documentos que a PESSOA enviou (dela e dos dependentes). */
+export async function listMyDocuments(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.documents), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
+/** Todos os documentos enviados à federação (secretaria). */
+export async function listFederationDocuments(fedId) {
+  return (await getDocs(query(collection(db, C.documents), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/**
+ * Envia um documento (PDF/imagem até 5 MB) para `federacao/{uid}/{id}.{ext}` e
+ * registra. O caminho leva o uid de quem envia: a regra do Storage e a da
+ * coleção conferem, e a exclusão de conta apaga a pasta.
+ */
+export async function uploadMemberDocument({ member, kind, file, uid }) {
+  const erro = validateDocumentFile(file);
+  if (erro) throw new FederationError(erro, { file: erro });
+  if (!storage) throw new FederationError(t('Firebase não está configurado neste ambiente.'));
+  const ref = doc(collection(db, C.documents));
+  const storage_path = documentStoragePath(uid, ref.id, file.type);
+  await uploadBytes(storageRef(storage, storage_path), file, { contentType: file.type });
+  const data = {
+    federation_id: member.federation_id, member_id: member.id, user_id: uid, kind, storage_path,
+    content_type: file.type, size: Number(file.size) || 0, file_name: String(file.name || '').slice(0, 120),
+    status: 'pending', review: null, created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
+  };
+  await setDoc(ref, data);
+  await createAuditLog({ action: 'federation_document_upload', actor: { uid }, details: { federation_id: member.federation_id, member_id: member.id, kind, document_id: ref.id } });
+  return { id: ref.id, ...data };
+}
+
+/** Quem enviou apaga (enquanto em análise): o arquivo e o registro. */
+export async function deleteMyDocument(docu) {
+  if (storage) await deleteObject(storageRef(storage, docu.storage_path)).catch(() => undefined);
+  await deleteDoc(doc(db, C.documents, docu.id));
+}
+
+/** A secretaria aceita ou recusa (com motivo). Avisa quem enviou. */
+export async function reviewDocument(docu, action, { uid, reason = '' } = {}) {
+  const status = action === 'approve' ? 'approved' : 'rejected';
+  const motivo = String(reason || '').trim().slice(0, 500);
+  if (status === 'rejected' && motivo.length < 3) throw new FederationError(t('Diga o motivo (mínimo 3 caracteres).'));
+  await updateDoc(doc(db, C.documents, docu.id), { status, review: { by: uid || null, at_ms: Date.now(), reason: motivo }, updated_at: serverTimestamp() });
+  await createAuditLog({ action: `federation_document_${action}`, actor: { uid }, userId: docu.user_id, details: { federation_id: docu.federation_id, member_id: docu.member_id, kind: docu.kind, reason: motivo } });
+  await notifyUsers([docu.user_id], {
+    type: NOTIFICATION_TYPE.FEDERATION, title: status === 'approved' ? t('Documento aceito') : t('Documento recusado'),
+    message: status === 'approved' ? t('A federação aceitou o documento enviado.') : t('A federação recusou o documento enviado. Motivo: {motivo}. Envie outro.', { motivo }),
+    link: '/perfil?secao=federacoes', actor: { uid },
+  }).catch(() => 0);
+  return status;
+}
+
+/** As regras da federação (CPF, carência e prazo das transferências) — permissão `admin`. */
+export async function updateFederationRules(fedId, input, { uid } = {}) {
+  const value = normalizeFederationRules(input);
+  await updateDoc(doc(db, C.federations, fedId), { rules: value, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_rules_update', actor: { uid }, details: { federation_id: fedId, ...value } });
+  return value;
+}
+
+/* ================================================= PR 3: transferências ================================================= */
+
+/** As transferências da pessoa (as dela e as dos dependentes). */
+export async function listMyTransfers(uid) {
+  if (!uid) return [];
+  const [minhas, deps] = await Promise.all([
+    getDocs(query(collection(db, C.transfers), where('user_id', '==', uid))),
+    getDocs(query(collection(db, C.transfers), where('guardian_uid', '==', uid))),
+  ]);
+  const vistos = new Set();
+  return [...minhas.docs, ...deps.docs].filter((d) => !vistos.has(d.id) && vistos.add(d.id)).map(toDoc);
+}
+
+/** As transferências pedidas NESTA federação (secretaria). */
+export async function listFederationTransfers(fedId) {
+  return (await getDocs(query(collection(db, C.transfers), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** As trocas de federação em que esta é o DESTINO (a secretaria acompanha quem está chegando). */
+export async function listIncomingTransfers(fedId) {
+  return (await getDocs(query(collection(db, C.transfers), where('to_federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** Os relatórios das importações (e-mails pendentes de conta). */
+export async function listFederationImports(fedId) {
+  return (await getDocs(query(collection(db, C.imports), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/* ======================================================= PR 3: cursos ======================================================= */
+
+/** Todos os cursos da federação, rascunhos inclusive (equipe `courses`/`admin`). */
+export async function listFederationCourses(fedId) {
+  return (await getDocs(query(collection(db, C.courses), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** Os cursos que o público vê: tudo menos rascunho (a regra só deixa listar o que não é rascunho). */
+export async function listPublicCourses(fedId) {
+  if (!fedId) return [];
+  const q = query(collection(db, C.courses), where('federation_id', '==', fedId), where('status', 'in', ['open', 'closed', 'done', 'cancelled']));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+export async function saveCourse(federation, input, { uid, courseId = null } = {}) {
+  if (!fedModuleOn(federation, 'courses')) throw new FederationError(t('Esta federação não tem o módulo de cursos ligado.'));
+  const r = validateCourseInput(input);
+  if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  const data = { ...r.value, federation_id: federation.id, federation_acronym: federation.acronym || '', updated_at: serverTimestamp(), updated_by: uid || null };
+  if (courseId) {
+    await updateDoc(doc(db, C.courses, courseId), data);
+  } else {
+    const ref = await addDoc(collection(db, C.courses), { ...data, enrolled_count: 0, created_by: uid || null, created_at: serverTimestamp(), created_at_ms: Date.now() });
+    courseId = ref.id;
+  }
+  await createAuditLog({ action: 'federation_course_save', actor: { uid }, details: { federation_id: federation.id, course_id: courseId, name: data.name, status: data.status } });
+  return { id: courseId, ...data };
+}
+
+/** Curso sem inscrito se apaga (permissão `admin`); com inscrito, cancele. */
+export async function deleteCourse(course, { uid } = {}) {
+  if (Number(course.enrolled_count) > 0) throw new FederationError(t('Este curso tem inscritos: cancele em vez de apagar.'));
+  await deleteDoc(doc(db, C.courses, course.id));
+  await createAuditLog({ action: 'federation_course_delete', actor: { uid }, details: { federation_id: course.federation_id, course_id: course.id } });
+}
+
+/** Os inscritos de um curso (equipe). As duas igualdades deixam a regra provável. */
+export async function listCourseEnrollments(courseId, fedId) {
+  if (!courseId || !fedId) return [];
+  return (await getDocs(query(collection(db, C.enrollments), where('course_id', '==', courseId), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** As inscrições em curso da pessoa. */
+export async function listMyEnrollments(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.enrollments), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
+export async function listMyCredentials(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.credentials), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
+/** Todas as credenciais emitidas pela federação (equipe). */
+export async function listFederationCredentials(fedId) {
+  return (await getDocs(query(collection(db, C.credentials), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** O diretório PÚBLICO de credenciados: só quem marcou `public`, válidas. */
+export async function listPublicCredentials(fedId) {
+  if (!fedId) return [];
+  const q = query(collection(db, C.credentials), where('federation_id', '==', fedId), where('public', '==', true), where('status', '==', 'active'));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** A pessoa escolhe se a credencial aparece no diretório público (e com foto). */
+export async function setCredentialPublic(credId, prefs = {}) {
+  const patch = {};
+  ['public', 'public_photo'].forEach((k) => { if (typeof prefs[k] === 'boolean') patch[k] = prefs[k]; });
+  if (!Object.keys(patch).length) return;
+  await updateDoc(doc(db, C.credentials, credId), { ...patch, prefs_updated_at: serverTimestamp() });
+}
+
+/** Cursos/admin revoga (com motivo) ou devolve uma credencial. */
+export async function reviewCredential(cred, action, { uid, reason = '' } = {}) {
+  const status = action === 'revoke' ? 'revoked' : 'active';
+  const motivo = String(reason || '').trim().slice(0, 500);
+  if (status === 'revoked' && motivo.length < 3) throw new FederationError(t('Diga o motivo (mínimo 3 caracteres).'));
+  await updateDoc(doc(db, C.credentials, cred.id), { status, review: status === 'revoked' ? { by: uid || null, at_ms: Date.now(), reason: motivo } : null, updated_at: serverTimestamp() });
+  await createAuditLog({ action: `federation_credential_${action}`, actor: { uid }, userId: cred.user_id, details: { federation_id: cred.federation_id, credential_id: cred.id, reason: motivo } });
+  if (status === 'revoked') {
+    await notifyUsers([cred.user_id], {
+      type: NOTIFICATION_TYPE.FEDERATION, title: t('Credencial revogada — {sigla}', { sigla: cred.federation_acronym || '' }),
+      message: t('A credencial "{curso}" foi revogada. Motivo: {motivo}', { curso: cred.course_name || '', motivo }), link: '/perfil?secao=federacoes', actor: { uid },
+    }).catch(() => 0);
+  }
+  return status;
+}
+
+/* ================================================= PR 3: disciplina e ouvidoria ================================================= */
+
+/** As sanções da pessoa (e dos dependentes) — só ela vê (D11). */
+export async function listMySanctions(uid) {
+  if (!uid) return [];
+  const [minhas, deps] = await Promise.all([
+    getDocs(query(collection(db, C.sanctions), where('user_id', '==', uid))),
+    getDocs(query(collection(db, C.sanctions), where('guardian_uid', '==', uid))),
+  ]);
+  const vistos = new Set();
+  return [...minhas.docs, ...deps.docs].filter((d) => !vistos.has(d.id) && vistos.add(d.id)).map(toDoc);
+}
+
+export async function listFederationSanctions(fedId) {
+  return (await getDocs(query(collection(db, C.sanctions), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/**
+ * Abre uma manifestação na ouvidoria. Anônima NÃO grava quem enviou (nem o
+ * servidor sabe); o protocolo é o id do documento, e é com ele que a pessoa
+ * acompanha. Avisa a disciplina da federação.
+ */
+export async function createReport({ federation, uid, input }) {
+  if (!fedModuleOn(federation, 'discipline')) throw new FederationError(t('Esta federação não tem ouvidoria ligada.'));
+  const r = validateReportInput(input);
+  if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  const data = {
+    federation_id: federation.id, federation_acronym: federation.acronym || '', kind: r.value.kind, body: r.value.body, tournament_name: r.value.tournament_name,
+    anonymous: r.value.anonymous, reporter_uid: r.value.anonymous ? null : uid, status: 'open', created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
+  };
+  const ref = await addDoc(collection(db, C.reports), data);
+  const equipe = await staffUidsWith(federation.id, FED_PERMISSION.DISCIPLINE).catch(() => []);
+  await notifyUsers(equipe, {
+    type: NOTIFICATION_TYPE.FEDERATION, title: t('Nova manifestação na ouvidoria'),
+    message: t('Chegou uma manifestação à ouvidoria da {sigla}. Veja em Disciplina → Ouvidoria.', { sigla: federation.acronym || '' }),
+    link: `/federacoes/${federation.id}/gerir?aba=ouvidoria`, actor: { uid },
+  }).catch(() => 0);
+  return { id: ref.id, ...data };
+}
+
+/** Pelo protocolo (o id): quem o tem acompanha — anônima qualquer conta, a identificada só quem enviou. */
+export async function getReportById(id) {
+  if (!id) return null;
+  const snap = await getDoc(doc(db, C.reports, id));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+/** As manifestações identificadas da pessoa (exportação e Minha área). */
+export async function listMyReports(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.reports), where('reporter_uid', '==', uid)))).docs.map(toDoc);
+}
+
+export async function listFederationReports(fedId) {
+  return (await getDocs(query(collection(db, C.reports), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** A disciplina muda o estado e anota (as anotações só a equipe lê — quem enviou vê só o estado). */
+export async function updateReport(rep, { status, notes, uid } = {}) {
+  const patch = { updated_at: serverTimestamp(), handled_by: uid || null };
+  if (['open', 'in_review', 'closed'].includes(status)) patch.status = status;
+  if (typeof notes === 'string') patch.notes = notes.trim().slice(0, 2000);
+  await updateDoc(doc(db, C.reports, rep.id), patch);
+  await createAuditLog({ action: 'federation_report_update', actor: { uid }, details: { federation_id: rep.federation_id, report_id: rep.id, status: patch.status || rep.status } });
 }

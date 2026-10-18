@@ -229,6 +229,10 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'message_reports', field: 'sender_uid', label: 'Denúncias de e-mail sobre avisos da conta' },
   // Planos de federação são da federação; guardam só o uid de quem os salvou.
   { col: 'federation_plans', field: 'updated_by', label: 'Planos de federação que cadastrou' },
+  // PR 3: o curso e a importação são da federação (quem cadastrou é só o uid
+  // de equipe); a importação lista e-mails de quem AINDA não tem conta.
+  { col: 'federation_courses', field: 'created_by', label: 'Cursos de federação que cadastrou' },
+  { col: 'federation_imports', field: 'by', label: 'Importações de filiados que fez (como equipe)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */
@@ -240,13 +244,24 @@ const RETAINED_AS_IS = Object.freeze([
  */
 async function coletarFederacoes(db, uid) {
   const filiacoes = await consultar(db, 'federation_members', 'user_id', '==', uid);
+  const dependentes = await consultar(db, 'federation_members', 'guardian_uid', '==', uid);
   const cobrancas = await consultar(db, 'federation_charges', 'payer_uid', '==', uid);
   const itens = [];
   const deletes = [];
   filiacoes.docs.forEach((d) => {
     const data = d.data() || {};
     if (data.card_code) deletes.push(db.collection('federation_card_index').doc(String(data.card_code)));
+    // CPF, nascimento e responsável moram em `private/data`: somem com a conta.
+    deletes.push(d.ref.collection('private').doc('data'));
     itens.push({ ref: d.ref, patch: { user_name: REMOVED_ATHLETE, photo_url: null, card_code: null, public_badge: false, show_in_directory: false, note: '' } });
+  });
+  // Dependentes (menores filiados por esta conta): a filiação fica sem o
+  // responsável; o nome do menor fica, porque a filiação é DELE, não da conta.
+  dependentes.docs.forEach((d) => {
+    const data = d.data() || {};
+    if (data.card_code) deletes.push(db.collection('federation_card_index').doc(String(data.card_code)));
+    deletes.push(d.ref.collection('private').doc('data'));
+    itens.push({ ref: d.ref, patch: { guardian_name: REMOVED_USER, card_code: null } });
   });
   cobrancas.docs.forEach((d) => {
     if ((d.data() || {}).payer_name !== REMOVED_ATHLETE) itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE } });
@@ -261,7 +276,30 @@ async function coletarFederacoes(db, uid) {
     const rows = (data.rows || []).map((r) => (r && r.uid === uid ? { ...r, uid: null, name: REMOVED_ATHLETE, photo_url: null } : r));
     itens.push({ ref: d.ref, patch: { rows, uids: (data.uids || []).filter((u) => u !== uid) } });
   });
-  return { itens, deletes, truncated: filiacoes.truncated || cobrancas.truncated || resultados.truncated, count: itens.length };
+  // PR 3 — transferências e sanções (da pessoa e dos dependentes), inscrições
+  // em curso e credenciais ficam sem o nome; a credencial sai do diretório e o
+  // código dela deixa de verificar; a manifestação identificada na ouvidoria
+  // vira anônima; os documentos enviados são APAGADOS (o arquivo vai junto,
+  // pela pasta `federacao/{uid}/` em STORAGE_PREFIXES).
+  const semNome = { user_name: REMOVED_ATHLETE };
+  const transferencias = await consultarUniao(db, 'federation_transfers', [['user_id', '=='], ['guardian_uid', '==']], uid);
+  transferencias.docs.forEach((d) => itens.push({ ref: d.ref, patch: semNome }));
+  const sancoes = await consultarUniao(db, 'federation_sanctions', [['user_id', '=='], ['guardian_uid', '==']], uid);
+  sancoes.docs.forEach((d) => itens.push({ ref: d.ref, patch: semNome }));
+  const inscricoes = await consultar(db, 'federation_course_enrollments', 'user_id', '==', uid);
+  inscricoes.docs.forEach((d) => itens.push({ ref: d.ref, patch: { ...semNome, photo_url: null } }));
+  const credenciais = await consultar(db, 'federation_credentials', 'user_id', '==', uid);
+  credenciais.docs.forEach((d) => {
+    const data = d.data() || {};
+    if (data.code) deletes.push(db.collection('federation_card_index').doc(String(data.code)));
+    itens.push({ ref: d.ref, patch: { ...semNome, photo_url: null, public: false, code: null } });
+  });
+  const manifestacoes = await consultar(db, 'federation_reports', 'reporter_uid', '==', uid);
+  manifestacoes.docs.forEach((d) => itens.push({ ref: d.ref, patch: { reporter_uid: null, anonymous: true } }));
+  const documentos = await consultar(db, 'federation_documents_submitted', 'user_id', '==', uid);
+  documentos.docs.forEach((d) => deletes.push(d.ref));
+  const truncated = [filiacoes, dependentes, cobrancas, resultados, transferencias, sancoes, inscricoes, credenciais, manifestacoes, documentos].some((r) => r.truncated);
+  return { itens, deletes, truncated, count: itens.length + documentos.docs.length };
 }
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -1095,7 +1133,7 @@ const PSEUDO_SPECS = Object.freeze([
   // a mensalidade da arena), sem o nome; a carteirinha deixa de verificar
   // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
   // pediu para abrir fica, com "Usuário removido" em quem pediu.
-  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha de federação', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_rankings'] },
+  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted'] },
   // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
   { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },
@@ -1193,9 +1231,10 @@ async function contaDeLoginExiste(auth, uid) {
 /**
  * As pastas da pessoa no Storage: as fotos e anexos (`uploads/`) e as fotos e
  * vídeos do treino (`treino/`, fora de `uploads/` porque tem regra própria de
- * tipo e tamanho).
+ * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
+ * (`federacao/`).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {

@@ -8,12 +8,12 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Pencil, Plus, Puzzle } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { savePlan, setPlanActive, updateFederationModules, updateFederationPayment, updateFederationProfile } from '@/modules/federations/services/federationService';
+import { savePlan, setPlanActive, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
-import { slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
-import { FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
+import { normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
+import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
 import { PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
@@ -26,7 +26,7 @@ const cents = (txt) => Math.round(Number(String(txt).replace(/\./g, '').replace(
 
 /* ---------------------------------------------------------------- planos -- */
 
-const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN_PERSON_TYPE.ATHLETE, tier: PLAN_TIER.FEDERATED, billing: PLAN_BILLING.ANNUAL, validity: PLAN_VALIDITY.ROLLING, rollover_mmdd: '12-31', calendar_grace_days: 60, preco: '0,00', age_min: '', age_max: '', discounts: { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 }, auto_approve: false, active: true, sort: 0 };
+const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN_PERSON_TYPE.ATHLETE, tier: PLAN_TIER.FEDERATED, billing: PLAN_BILLING.ANNUAL, validity: PLAN_VALIDITY.ROLLING, rollover_mmdd: '12-31', calendar_grace_days: 60, preco: '0,00', age_min: '', age_max: '', discounts: { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 }, requires_docs: [], auto_approve: false, active: true, sort: 0 };
 
 function PlanoForm({ federationId, plano, onFechar }) {
   const { user } = useAuth();
@@ -70,6 +70,18 @@ function PlanoForm({ federationId, plano, onFechar }) {
       </div>
       <V2Field label={t('Descrição')} htmlFor="pl-desc"><V2Textarea id="pl-desc" rows={2} maxLength={600} value={f.description} onChange={(e) => set({ description: e.target.value })} /></V2Field>
       <V2Field label={t('Benefícios (um por linha)')} htmlFor="pl-benef"><V2Textarea id="pl-benef" rows={3} maxLength={1200} value={f.benefits} onChange={(e) => set({ benefits: e.target.value })} /></V2Field>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-semibold text-ink">{t('Documentos exigidos')}</legend>
+        <p className="text-xs text-gray-500">{t('A pessoa envia pela página da federação e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
+        <div className="flex flex-wrap gap-3">
+          {Object.values(DOC_KIND).map((k) => (
+            <label key={k} className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="h-4 w-4 accent-ink" checked={(f.requires_docs || []).includes(k)} onChange={(e) => set({ requires_docs: e.target.checked ? [...(f.requires_docs || []), k] : (f.requires_docs || []).filter((x) => x !== k) })} />
+              {t(DOC_KIND_LABELS[k])}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
         <V2Toggle id="pl-auto" checked={f.auto_approve} onChange={(v) => set({ auto_approve: v })} label={t('Aprovar na hora')} hint={t('Sem fila: pedido aprovado e cobrança gerada no ato.')} />
         <V2Toggle id="pl-ativo" checked={f.active !== false} onChange={(v) => set({ active: v })} label={t('Plano disponível')} hint={t('Desligado, não aparece para quem vai se filiar; quem já tem continua.')} />
@@ -219,7 +231,32 @@ function ModulosTab({ federation }) {
   );
 }
 
+/* ---------------------------------------------------------------- regras -- */
+
+function RegrasTab({ federation }) {
+  const { user } = useAuth();
+  const atual = normalizeFederationRules(federation.rules);
+  const [f, setF] = useState({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days) });
+  const m = useFederationMutation(() => updateFederationRules(federation.id, f, { uid: user?.uid }));
+  return (
+    <section className="space-y-4" aria-label={t('Regras da federação')} data-dica="federacao-regras">
+      <div><h2 className="font-display text-xl font-bold text-ink">{t('Regras')}</h2><p className="text-sm text-gray-500">{t('O que a sua federação pede e como trata transferências. Vale para os pedidos novos.')}</p></div>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => toast.success(t('Regras salvas.')), onError: (er) => toast.error(er.message) }); }}>
+        <V2Surface className="space-y-4">
+          <V2Toggle id="rg-cpf" checked={f.ask_cpf} onChange={(v) => setF((x) => ({ ...x, ask_cpf: v }))} label={t('Pedir o CPF na filiação')} hint={t('Fica reservado (só a secretaria, com motivo registrado). Dependente menor não precisa.')} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <V2Field label={t('Carência entre transferências (dias)')} htmlFor="rg-carencia" hint={t('0 = sem carência.')}><V2Input id="rg-carencia" inputMode="numeric" value={f.transfer_cooldown_days} onChange={(e) => setF((x) => ({ ...x, transfer_cooldown_days: e.target.value }))} /></V2Field>
+            <V2Field label={t('Prazo para liberar quem sai (dias)')} htmlFor="rg-prazo" hint={t('Sem resposta no prazo, a transferência para outra federação é liberada sozinha.')}><V2Input id="rg-prazo" inputMode="numeric" value={f.transfer_release_days} onChange={(e) => setF((x) => ({ ...x, transfer_release_days: e.target.value }))} /></V2Field>
+          </div>
+          <div className="flex justify-end"><V2Button type="submit" disabled={m.isPending}>{t('Salvar regras')}</V2Button></div>
+        </V2Surface>
+      </form>
+    </section>
+  );
+}
+
 export default function FedSettingsPanel({ federation, plansQ, tab }) {
+  if (tab === 'regras') return <RegrasTab federation={federation} />;
   if (tab === 'pix') return <PixTab federation={federation} />;
   if (tab === 'pagina') return <PaginaTab federation={federation} />;
   if (tab === 'modulos') return <ModulosTab federation={federation} />;

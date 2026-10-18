@@ -36,7 +36,7 @@ import {
   useMyOffers, useMyOrders, useSeller, useSellerOffers, useSellerOrders, useSellerQuestions,
 } from '@/modules/marketplace/hooks/useMarket';
 import { sellerKeyFor } from '@/modules/marketplace/domain/seller';
-import { useMyFederationCharges, useMyFederationRoles, useMyMemberships } from '@/modules/federations/hooks/useFederations';
+import { useMyCredentials, useMyDependents, useMyFederationCharges, useMyFederationRoles, useMyMemberships, useMyTransfers } from '@/modules/federations/hooks/useFederations';
 import { myFederationPending } from '@/modules/federations/domain/federationPending';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifiedLevel';
@@ -86,6 +86,11 @@ export default function UserArea() {
   const fedChargesQ = useMyFederationCharges({ enabled: federacoesOn });
   const fedRolesQ = useMyFederationRoles({ enabled: federacoesOn });
   const fedQs = [fedMembersQ, fedChargesQ, fedRolesQ];
+  // Dependentes, credenciais e transferências só quando a seção Federações abre.
+  const fedSecaoAberta = federacoesOn && params.get('secao') === 'federacoes';
+  const fedDependentsQ = useMyDependents({ enabled: fedSecaoAberta });
+  const fedCredentialsQ = useMyCredentials({ enabled: fedSecaoAberta });
+  const fedTransfersQ = useMyTransfers({ enabled: fedSecaoAberta });
   const temFederacao = (fedMembersQ.data || []).some((m) => !['cancelled', 'rejected'].includes(m.status)) || (fedRolesQ.data || []).length > 0;
 
   // Mercado (flag `marketplace`). As vendas só se consultam para quem já vende.
@@ -169,7 +174,7 @@ export default function UserArea() {
     if (balancos.isError) balancos.refetch();
   };
 
-  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ } };
+  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ } };
 
   return (
     <V2Page className="space-y-6">

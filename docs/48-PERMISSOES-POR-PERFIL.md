@@ -303,6 +303,28 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ler resultados e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
 | Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` |
 | Mudar a tabela de pontos (`ranking_config`) | ✖ | ✖ | ✖ | ✔ `competitions` (só essa chave) | ✔ | rules |
+| Regras da federação (`rules`: CPF, prazos de transferência) — PR 3 | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules |
+| Ler/gravar CPF, nascimento e responsável (`federation_members/…/private/data`) | ✖ | ✖ | ✔ o dono (`fedMemberOwner`: o próprio ou o responsável do dependente), `cpf` ≤ 11 dígitos | ✔ `members`/`admin` leem (revelar o CPF: motivo + `audit_logs`) | ✔ | rules |
+| Filiar um dependente (menor de 12), pagar e mudar as preferências dele | ✖ | ✔ o responsável (`guardian_uid`) | — | — | — | **Cloud Function** `federationMembership`; rules (`fedMemberOwner`) |
+| Enviar documento exigido pelo plano | ✖ | ✖ | ✔ o dono, só `pending`, caminho `federacao/{uid}/…` | ✖ | — | rules + `storage.rules` (só o dono lê a pasta) |
+| Ver o arquivo enviado / aceitar ou recusar o documento | ✖ | ✖ | ✔ o dono (o arquivo) | ✔ `members`/`admin` (arquivo pela **Cloud Function** `federationDocument`; decisão só `status`/`review`) | ✔ | function + rules |
+| Pedir/cancelar transferência de clube ou federação | ✖ | ✖ | ✔ o dono (filiação viva, carência) | — | — | **Cloud Function** `federationTransfer` |
+| Aprovar/recusar transferência | ✖ | ✖ | ✖ | ✔ `members` da federação **atual** (a de destino só lê) | ✔ | **Cloud Function** `federationTransfer`; silêncio no prazo = liberada pela varredura |
+| Importar filiados (lista com e-mail) | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationImportMembers`; `federation_imports` só a equipe lê |
+| Criar/editar curso (módulo `courses`) | ✖ | ✖ | ✖ | ✔ `courses` ou `admin` (`federation_id`/`enrolled_count` intocáveis) | ✔ | rules (`fedModuleOn`); apagar `admin` sem inscritos ou Plat |
+| Ler curso | ◐ não `draft` | ◐ não `draft` | ◐ não `draft` | ✔ `courses`/`admin` | ✔ | rules |
+| Inscrever-se / cancelar inscrição em curso | ✖ | ✔ (filiação ativa se o curso exige) | ✔ | — | — | **Cloud Function** `federationCourse` |
+| Aprovar/reprovar inscrito; emitir credencial | ✖ | ✖ | ✖ | ✔ `courses` | ✔ | **Cloud Function** `federationCourse` |
+| Ler credencial | ◐ só pública e válida | ◐ só pública e válida | ✔ a própria | ✔ `courses`/`admin` | ✔ | rules |
+| Tornar a credencial pública/privada | ✖ | ✖ | ✔ só `public`/`public_photo` | ✖ | — | rules |
+| Revogar credencial | ✖ | ✖ | ✖ | ✔ `courses`/`admin` (só `status`/`review`) | ✔ | rules |
+| Aplicar sanção, decidir recurso, encerrar (módulo `discipline`) | ✖ | ✖ | ✖ | ✔ `discipline` | ✔ | **Cloud Function** `federationDiscipline` |
+| Recorrer de sanção (uma vez) | ✖ | ✖ | ✔ o dono | — | — | **Cloud Function** `federationDiscipline` |
+| Ler sanção | ✖ | ✖ | ✔ o dono | ✔ `discipline`/`admin` | ✔ | rules (**nunca pública**; o ranking não desconta) |
+| Inscrever-se em torneio "só filiados" com suspensão em vigor | ✖ | ✖ (`discipline_until_ms` ≥ agora) | ✖ | — | — | rules (`tournamentMembershipOk`) |
+| Abrir manifestação na ouvidoria (identificada ou anônima) | ✖ | ✔ (módulo `discipline` ligado; anônima ⇒ sem `reporter_uid`; nunca `notes`/`handled_by`) | ✔ | — | — | rules |
+| Consultar manifestação pelo protocolo | ✖ | ◐ a própria, ou qualquer anônima (`get`) | ✔ | ✔ `discipline`/`admin` | ✔ | rules |
+| Responder/encerrar manifestação | ✖ | ✖ | ✖ | ✔ `discipline`/`admin` (só `status`/`notes`/`handled_by`) | ✔ | rules; apagar só Plat |
 | Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ◐ | rules (`fedOn()`) e funções (`flagLigada`) |
 
 ### 4.9 Plataforma (admin e dono)

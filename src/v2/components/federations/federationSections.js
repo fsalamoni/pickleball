@@ -6,7 +6,7 @@
  * presidente e diretor veem tudo. O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { Building2, ClipboardList, CreditCard, FileText, Medal, Puzzle, SlidersHorizontal, Sun, Trophy, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Medal, MessageSquareWarning, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Sun, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -33,6 +33,23 @@ export function buildFederationSections(perms = [], federation = null) {
         { value: 'pedidos', label: tk('Pedidos'), icon: Inbox },
         { value: 'filiados', label: tk('Filiados'), icon: ListChecks },
         ...(modulo('affiliations') ? [{ value: 'filiados-orgs', label: tk('Clubes e arenas'), icon: Building2 }] : []),
+        { value: 'transferencias', label: tk('Transferências'), icon: ArrowLeftRight },
+        { value: 'documentos', label: tk('Documentos'), icon: FileUp },
+        { value: 'importar', label: tk('Importar'), icon: Upload },
+      ],
+    },
+    pode(FED_PERMISSION.COURSES) && modulo('courses') && {
+      id: 'cursos', grupo: 'atender', label: tk('Cursos'), icon: GraduationCap, dica: 'federacao-secao-cursos',
+      tabs: [
+        { value: 'cursos', label: tk('Cursos'), icon: GraduationCap },
+        { value: 'credenciais', label: tk('Credenciais'), icon: ShieldCheck },
+      ],
+    },
+    pode(FED_PERMISSION.DISCIPLINE) && modulo('discipline') && {
+      id: 'disciplina', grupo: 'atender', label: tk('Disciplina'), icon: Gavel, dica: 'federacao-secao-disciplina',
+      tabs: [
+        { value: 'sancoes', label: tk('Sanções'), icon: Scale },
+        { value: 'ouvidoria', label: tk('Ouvidoria'), icon: MessageSquareWarning },
       ],
     },
     pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking')) && {
@@ -64,6 +81,7 @@ export function buildFederationSections(perms = [], federation = null) {
         ...(admin ? [
           { value: 'pagina', label: tk('Página'), icon: FileText },
           { value: 'modulos', label: tk('Módulos'), icon: Puzzle },
+          { value: 'regras', label: tk('Regras'), icon: ClipboardList },
         ] : []),
       ],
     },
