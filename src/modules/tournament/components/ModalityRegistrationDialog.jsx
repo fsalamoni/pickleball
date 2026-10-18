@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { AlertTriangle, Info, Search, X } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateRegistration, useRegistrations } from '@/modules/tournament/hooks/useTournament';
+import { Link } from 'react-router-dom';
+import { useFederationsEnabled, useMyMemberships } from '@/modules/federations/hooks/useFederations';
+import { membershipRequirement, sanctionState } from '@/modules/federations/domain/sanction';
 import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
 import { MODALITY_FORMAT, COMPETITION_GENDER } from '@/modules/tournament/domain/constants';
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '@/modules/tournament/domain/capacity';
@@ -65,6 +68,13 @@ export default function ModalityRegistrationDialog({
   // recém-criada para exibir as instruções PIX sem fechar o dialog.
   const [paymentRegId, setPaymentRegId] = useState(null);
   const { data: existingRegs = [] } = useRegistrations(modality?.id);
+  // Torneio chancelado "só para filiados": a regra do banco recusa a
+  // inscrição de quem não está em dia; aqui a tela diz antes e não oferece o
+  // botão. O organizador inscreve qualquer pessoa (a regra também deixa).
+  const fedOn = useFederationsEnabled();
+  const sancao = sanctionState(tournament);
+  const minhasFiliacoes = useMyMemberships({ enabled: fedOn && !isAdmin && sancao.approved && sancao.requiresMembership });
+  const filiacao = fedOn && !isAdmin ? membershipRequirement(tournament, minhasFiliacoes.isSuccess ? minhasFiliacoes.data : undefined) : { required: false, ok: true, message: '' };
   // Seletor de atletas da plataforma: exclusivo do admin da plataforma, atrás
   // da flag, e apenas quando o modal está aberto em modo admin do torneio.
   const canPickAthletes = Boolean(isAdmin && isPlatformAdmin && adminAthleteRegOn);
@@ -204,7 +214,7 @@ export default function ModalityRegistrationDialog({
     );
   }
 
-  const blocked = !isAdmin && eligibility.errors.length > 0;
+  const blocked = (!isAdmin && eligibility.errors.length > 0) || (filiacao.required && filiacao.ok !== true);
   const pixReady = paymentOn
     && !isAdmin
     && (modality.entry_fee_cents || 0) > 0
@@ -351,6 +361,18 @@ export default function ModalityRegistrationDialog({
                 <Info className="w-4 h-4" /> {t('Modalidade lotada')}
               </div>
               <p className="mt-1">{t('Você pode entrar na lista de espera e será promovido se abrir uma vaga.')}</p>
+            </div>
+          )}
+          {filiacao.required && filiacao.ok === false && (
+            <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800" data-dica="torneio-so-filiados">
+              <div className="flex items-center gap-2 font-medium"><AlertTriangle className="w-4 h-4" /> {t('Só para filiados')}</div>
+              <p className="mt-1">{filiacao.message} <Link to={`/federacoes/${sancao.federationId}`} className="font-semibold underline">{t('Ver a federação')}</Link></p>
+            </div>
+          )}
+          {filiacao.required && filiacao.ok === null && !minhasFiliacoes.isError && <p className="text-sm text-gray-500">{t('Conferindo a sua filiação na {sigla}…', { sigla: sancao.acronym })}</p>}
+          {filiacao.required && minhasFiliacoes.isError && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              {t('Não deu para conferir a sua filiação na {sigla}.', { sigla: sancao.acronym })} <button type="button" className="font-semibold underline" onClick={() => minhasFiliacoes.refetch()}>{t('Tentar de novo')}</button>
             </div>
           )}
           {eligibility.errors.length > 0 && (

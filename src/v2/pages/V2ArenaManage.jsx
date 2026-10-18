@@ -62,6 +62,7 @@ const ArenaPlatformTournamentsTab = lazy(() => import('@/v2/components/arenas/to
 const HouseRankingPanel = lazy(() => import('@/v2/components/arenas/houseRanking/HouseRankingPanel'));
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
 const LinkedClubsSection = lazy(() => import('@/modules/clubs/components/LinkedClubsSection'));
+const OrgAffiliationCard = lazy(() => import('@/v2/components/federations/OrgAffiliationCard'));
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -82,6 +83,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tn } from '@/core/i18n';
+import { useFederationsEnabled } from '@/modules/federations/hooks/useFederations';
 
 /**
  * O que falta para a arena receber reserva.
@@ -213,6 +215,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
 
   const coachResidentOn = true;
   const linkedClubsOn = true;
+  const federationsOn = useFederationsEnabled();
   const crmOn = true;
   const opsKpisOn = true;
   const engajamentoOn = true;
@@ -288,7 +291,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
   const sections = buildArenaSections({
-    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn, modulos,
+    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn, modulos, federationsOn,
   });
   // A aba pedida na URL só vale se existir. Aba de módulo desligado cai em
   // Reservas — mas, enquanto os módulos ainda CARREGAM, a aba pedida pode
@@ -469,6 +472,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'torneios' && (modulos.torneios || modulos.torneiosPlataforma) && <ArenaPlatformTournamentsTab arena={arena} />}
         {tab === 'ranking-da-casa' && modulos.torneios && <HouseRankingPanel arena={arena} audience="arena" />}
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title={t('Clubes da arena')} />}
+        {tab === 'federacao' && federationsOn && <OrgAffiliationCard kind="arena" org={arena} />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
         {tab === 'modulos' && arenaModulesOn && (
           <ArenaModulesPanel arenaId={arena.id} canManage={canManage} />

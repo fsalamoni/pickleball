@@ -20,6 +20,7 @@ import { FedBadges, FedLogo, FederationGate, MemberStatusBadge, fedManagePath, f
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import PlansList from '@/v2/components/federations/PlansList';
+import { FedAffiliatesSection, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
 import { t, tn } from '@/core/i18n';
 
 /** A situação da pessoa nesta federação: filiar-se, pagar, renovar, carteirinha. */
@@ -78,6 +79,7 @@ function MinhaSituacao({ federation, plans }) {
 
 function Detalhe() {
   const { federationId } = useParams();
+  const { user } = useAuth();
   const fq = useFederation(federationId);
   const pq = useFederationPlans(federationId);
   const papel = useMyFederationRole(federationId);
@@ -123,6 +125,13 @@ function Detalhe() {
               <h2 id="fed-sobre" className="font-display text-xl font-bold text-ink">{t('Sobre')}</h2>
               <p className="mt-2 whitespace-pre-line text-gray-700">{f.about}</p>
             </section>
+          )}
+          {f.status === FEDERATION_STATUS.APPROVED && (
+            <>
+              <FedSanctionedTournaments federation={f} />
+              <FedRankingBlock federation={f} meUid={user?.uid || null} />
+              <FedAffiliatesSection federation={f} />
+            </>
           )}
         </section>
         <aside className="space-y-3 lg:col-span-4">

@@ -54,10 +54,16 @@ passa de `planned` a `available` quando a tela existir.
    As Cloud Functions também conferem (`flagLigada`). **Nada é apagado** ao
    desligar; religar devolve tudo.
 2. **`federations/{id}.modules`** (`{ [FED_MODULE]: boolean }`) é o que **cada
-   federação** liga para si. Hoje nenhum módulo tem tela (`status: 'planned'`),
-   então a aba só mostra o catálogo com "Em breve". Quando um módulo ficar
-   `available`, a federação liga ali e a tela dele passa a perguntar
-   `federation.modules[x]`.
+   federação** liga para si, em Configurações → Módulos. Desde o PR 2 três
+   módulos têm tela (`status: 'available'`): **`tournaments`** (chancela de
+   torneios e envio de resultados), **`ranking`** (ranking oficial) e
+   **`affiliations`** (clubes e arenas filiados). Os demais seguem `planned`
+   ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
+   `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
+   nem chancela àquela federação. Desligar um módulo não apaga nada: o que
+   está gravado (filiações aprovadas, chancelas, resultados, ranking) deixa de
+   aparecer e volta ao religar.
 
 A filiação, a cobrança e a carteirinha **não** são módulo: toda federação
 aprovada tem.
@@ -171,26 +177,112 @@ Compartilhar / PNG / Imprimir, e sai sempre clara na imagem (`tema-claro`).
 |---|---|---|
 | `/federacoes` | `V2Federations` | "Suas federações" (filiado ou equipe, com "Gerir"), todas as aprovadas (as da região primeiro, `useRegionalList`; a busca ignora a região), "Abrir uma federação" |
 | `/federacoes/abrir` | `V2FederationApply` | Formulário (campos públicos em `FederationPublicFields` + dados da entidade), estado do pedido (em análise / aprovada / recusada com motivo) |
-| `/federacoes/:id` | `V2FederationDetail` | Marca, selos, contagem, planos (`PlansList`), sobre, contato e **a situação da pessoa** (`MinhaSituacao`: filiar-se, cobrança Pix, renovar, carteirinha); "Gerir" para a equipe |
+| `/federacoes/:id` | `V2FederationDetail` | Marca, selos, contagem, planos (`PlansList`), sobre, contato e **a situação da pessoa** (`MinhaSituacao`: filiar-se, cobrança Pix, renovar, carteirinha); "Gerir" para a equipe. Com os módulos ligados (`FedPublicBlocks.jsx`): **Torneios chancelados** (`FedSanctionedTournaments`), **Ranking oficial** (`FedRankingBlock`: temporada, classe, paginação, a minha linha em destaque) e **Clubes e arenas filiados** (`FedAffiliatesSection`) |
 | `/federacoes/:id/filiar` | `V2FederationJoin` | 1. tipo de filiação → 2. plano (preço com o desconto da pessoa; faixa de idade exige nascimento no perfil) → 3. preferências, clube, observação, termos → pedido |
-| `/federacoes/:id/gerir?aba=` | `V2FederationManage` | A Central: **Atender** (Hoje · Filiados: Pedidos, Filiados · Financeiro: Cobranças, Recebidos) e **Gerir** (Equipe · Configurações: Planos, Recebimento, Página, Módulos). A seção só existe para quem tem a permissão; a aba mora na URL (`?aba=`; `?secao=` abre a primeira). Faixa "Precisa de você" (`FederationPendencias` ← `federationPendingItems`) no topo |
-| `/f/:slug` | `PublicFederation` (V1, fora do V2Layout) | A página pública: marca, planos, chamada para entrar/filiar-se |
+| `/federacoes/:id/gerir?aba=` | `V2FederationManage` | A Central: **Atender** (Hoje · Filiados: Pedidos, Filiados, **Clubes e arenas** [módulo `affiliations`] · **Competições** [permissão `competitions`; módulos `tournaments`/`ranking`]: Chancelas, Resultados, Ranking · Financeiro: Cobranças, Recebidos) e **Gerir** (Equipe · Configurações: Planos, Recebimento, Página, Módulos). A seção só existe para quem tem a permissão e a aba de módulo só com o módulo ligado (`buildFederationSections(perms, federation)`); a aba mora na URL (`?aba=`; `?secao=` abre a primeira). Faixa "Precisa de você" (`FederationPendencias` ← `federationPendingItems`: pedidos, pagamentos, **clubes/arenas pedindo**, **chancelas para analisar**) no topo |
+| `/f/:slug` | `PublicFederation` (V1, fora do V2Layout) | A página pública: marca, planos, chamada para entrar/filiar-se; com os módulos ligados, torneios chancelados, ranking oficial e clubes/arenas filiados (os mesmos blocos do detalhe) |
+| Gestão do clube → Federação | `OrgAffiliationCard kind="club"` (`V2ClubAdmin`) | Pedir filiação a uma federação com `affiliations` ligado (mensagem ≤ 500), acompanhar (pendente/aprovada/recusada/suspensa com motivo), retirar o pedido ou desfiliar |
+| Central da arena → Equipe e parceiros → **Federação** (`?aba=federacao`) | `OrgAffiliationCard kind="arena"` (`V2ArenaManage`, aba só com a flag) | O mesmo cartão para a arena |
+| Página do clube / da arena | `OrgAffiliationBadges` (`FedTags.jsx`) | Selo "Filiado · SIGLA" (só filiação **aprovada**), ligando à federação |
+| Gestão do torneio → Geral → **Federação** | `TournamentSanctionCard` (`TournamentAdminTab`) | Pedir a chancela: federação com `tournaments` ligado, tipo proposto (regional/estadual/principal) e "Só filiados em dia se inscrevem"; estado e motivo; retirar o pedido pendente |
+| Torneio (hero, cartão da lista, página pública `/p/:id`) | `TournamentSanctionBadge` | Selo "Chancelado · SIGLA" (+ "só filiados"), só com a chancela **aprovada** |
+| Resultados do torneio (gestão, por categoria) | `FederationResultButton` (ao lado do `PodiumBlock`) | Com a chancela aprovada e a categoria **completa** (`isModalityComplete`): "Enviar ao ranking oficial" / "Reenviar"; mostra "No ranking desde…" ou "recusado: motivo" |
+| Inscrição numa modalidade | `ModalityRegistrationDialog` | Torneio "só filiados": `membershipRequirement(tournament, minhasFiliacoes)` — sem filiação em dia, aviso vermelho com link à federação e **sem botão de inscrever**; consulta falhando ⇒ "não deu para conferir" + tentar de novo (nunca afirma que a pessoa não é filiada). O organizador inscreve qualquer pessoa |
 | `/f/verificar/:codigo?` | `PublicFederationVerify` | Digitar/ler o código → em dia / irregular / não encontrada |
 | Minha área → Federações | `FederacoesSecao` | Cobranças para pagar, filiações (carteirinha, renovar), equipe; pendências na faixa (`myFederationPending`) |
 | Painel admin → Federações | `AdminFederationsPanel` | Filtros por estado, aprovar/recusar/suspender com motivo, selos, dados da entidade; na caixa de entrada do admin, "Federações esperando aprovação" |
 
-Os valores de `?aba=` da Central (`pedidos`, `filiados`, `cobrancas`,
-`recebidos`, `equipe`, `planos`, `pix`, `pagina`, `modulos`, `hoje`) são
-**contrato de link**: os avisos levam a eles. Nunca renomeie.
+Os valores de `?aba=` da Central (`pedidos`, `filiados`, `filiados-orgs`,
+`chancelas`, `resultados`, `ranking`, `cobrancas`, `recebidos`, `equipe`,
+`planos`, `pix`, `pagina`, `modulos`, `hoje`) são **contrato de link**: os
+avisos levam a eles (pedido de clube/arena → `filiados-orgs`; pedido de
+chancela → `chancelas`). Nunca renomeie. O mesmo vale para `?aba=federacao`
+da Central da arena.
+
+### 6.1 Clubes e arenas filiados (módulo `affiliations`)
+
+Quem administra o clube (`isClubAdmin`) ou gere a arena (`isArenaManager`) pede
+— a regra confere os dois (`fedOrgManager(kind, orgId)`), e só com o módulo
+ligado na federação. O pedido é `federation_affiliations/{fedId}_{kind}_{orgId}`
+(`buildAffiliationRequest`, `domain/affiliations.js`): nome, cidade, UF e logo
+da organização **copiados** (a página da federação não lê `clubs`/`arenas`),
+`status: 'pending'`, mensagem ≤ 500. A equipe com `members` ou `admin` decide
+(`affiliationDecision`: aprovar, recusar com motivo ≥ 3, suspender com motivo;
+reintegrar = aprovar de novo) só nas chaves `status`/`review`/`updated_at`.
+**Pedido recusado ou suspenso pode ser refeito**: o serviço apaga o documento
+antigo e cria o novo (mesmo id). Aprovada é **pública** (a lista da federação e
+o selo); pendente/recusada só quem pediu, quem gere a organização e a equipe.
+Quem gere a organização pode apagar (retirar o pedido ou desfiliar). Avisos:
+à equipe (`?aba=filiados-orgs`) e a quem pediu (link ao clube/arena).
+
+### 6.2 Chancela de torneio (módulo `tournaments`)
+
+Dois campos **opcionais** em `tournaments/{id}` — os primeiros campos novos
+em coleção existente da federação: `federation_id` e `federation_sanction
+{ status, federation_name, federation_acronym, tier, requires_membership,
+requested_by, requested_at_ms, decided_by, decided_at_ms, reason }`
+(`buildSanctionRequest`, `domain/sanction.js`). Ausentes, nada muda. A regra:
+
+- o **organizador** só grava o par como `pending` (`tournamentFederationOk()`:
+  flag ligada, módulo `tournaments` ligado na federação, `requested_by` = ele)
+  ou apaga os dois (`SANCTION_WITHDRAW_PATCH`, só pendente); nunca escreve
+  `approved`;
+- a **equipe com `competitions`** decide (`sanctionDecision`: aprovar — podendo
+  trocar `tier` e `requires_membership` —, recusar, revogar; motivo ≥ 3 nos
+  dois últimos) só em `federation_sanction`/`updated_at`, sem mudar
+  `federation_id`, e só para `approved|rejected|revoked`;
+- **"só filiados"** vale na regra da inscrição: `tournament_registrations`
+  criada pela própria pessoa exige `tournamentMembershipOk(tid)` —
+  `federation_members/{fed}_{uid}.status == 'active'` quando a chancela está
+  aprovada com `requires_membership`. O organizador (`isTournamentAdmin`)
+  inscreve qualquer pessoa, como antes.
+
+`sanctionState(tournament)` é a leitura única (status, sigla, `approved`,
+`requiresMembership`, `canRequest`, `canWithdraw`). O **peso** (`tier`:
+regional ×1, estadual ×1,5, principal ×2 por padrão) é o multiplicador dos
+pontos no ranking.
+
+### 6.3 Resultado e ranking oficial (módulos `tournaments` e `ranking`)
+
+- **Envio** (`sendFederationResult`): `federation_results/{fed}_{torneio}_{modalidade}`
+  com a colocação de `modalityPlacement` (**a mesma do pódio e dos cartões**;
+  nunca outra conta), `rows[] { uid, name, photo_url, position, played, won }`
+  (≤ 400, uma linha por **pessoa**, via `registrationAllPeople`), `uids[]`,
+  `gender_category`, `age_category`, `format`, `tier`, `date`, `season` (ano
+  do fim do torneio), `status: 'sent'`. Só o organizador (`isTournamentAdmin`)
+  de torneio com a chancela daquela federação aprovada (`fedSanctionedBy`);
+  reenviar sobrescreve. A equipe `competitions` **recusa** (motivo) ou
+  **readmite** (`reviewFederationResult`), só em `status`/`review`.
+  Documento público (é resultado de torneio público).
+- **Ranking** (`federation_rankings/{fed}_{temporada}`, `allow write: if false`):
+  o servidor recalcula a temporada a cada escrita em `federation_results`
+  (`federationRankingRecompute`) e todas as temporadas quando
+  `federations/{id}.ranking_config` muda (`federationRankingConfig`). A conta é
+  `computeOfficialRanking` (`domain/officialRanking.js`) com **cópia** em
+  `functions/federationRanking.js` e paridade
+  (`functions/federationRanking.parity.test.js`): por **classe**
+  (`gender_age_format`) e **geral**; pontos = `points_by_place[position]` (1º–8º)
+  ou `participation` (9º em diante) × `tier_multipliers[tier]`; contam os
+  `best_n` melhores resultados de cada pessoa por classe (0 = todos); empate
+  divide a posição; resultado `rejected` fica de fora; linha sem `uid` (sem
+  conta) fica de fora; com `members_only`, só quem tinha filiação **federada**
+  ativa na **data do torneio** (`memberValidOn`). `DEFAULT_RANKING_CONFIG` em
+  `constants.js`; a equipe `competitions` edita em Competições → Ranking
+  (`updateRankingConfig`, chave `ranking_config` liberada na regra do
+  documento da federação). A tela só **lê** o documento gravado — nunca
+  recalcula no navegador (lição do ranking da plataforma, `docs/18`).
 
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
-Seis coleções novas, todas com prefixo `federation` e **zero índice composto**
-(consultas de uma igualdade; ordenação em memória): `federations` (+
-`private/data`), `federation_staff`, `federation_plans`, `federation_members`
-(+ `private/data`, reservado ao PR 3), `federation_charges`,
-`federation_card_index`. Nenhum campo novo em coleção existente; os avisos
-são `notifications` com `type: 'federation'`, `origin: 'server'`, `essential`.
+Nove coleções, todas com prefixo `federation` e **zero índice composto**
+(consultas de uma igualdade — ou duas igualdades, que também não pedem
+índice; ordenação em memória): `federations` (+ `private/data`),
+`federation_staff`, `federation_plans`, `federation_members` (+ `private/data`,
+reservado ao PR 3), `federation_charges`, `federation_card_index` e, do PR 2,
+`federation_affiliations`, `federation_results`, `federation_rankings`. Campos
+novos em coleção existente: só os dois **opcionais** de `tournaments`
+(`federation_id`, `federation_sanction`, §6.2). Os avisos são `notifications`
+com `type: 'federation'` (os do PR 2 saem do navegador, `origin` padrão).
 
 **Dado pessoal** (princípio 10): CNPJ completo, razão social e telefone da
 entidade ficam em `federations/{id}/private/data` (quem pediu, a equipe
@@ -200,10 +292,16 @@ verificação pública mostra o mínimo. O que vai no pedido está em §5.2.
 
 **Exclusão de conta**: filiações e cobranças **ficam sem o nome**
 (`coletarFederacoes`), os códigos de carteirinha são apagados, os papéis em
-equipe saem, a federação que a pessoa pediu fica com "Usuário removido";
+equipe saem, a federação que a pessoa pediu fica com "Usuário removido"; nos
+**resultados oficiais** a linha da pessoa vira "Atleta removido" sem `uid` (o
+ranking refeito a tira; os demais seguem valendo), o pedido de filiação de
+clube/arena que ela fez fica sem `requested_by`;
 **presidente de federação não exclui a conta** (bloqueio, como dono de arena —
 passa a presidência antes). **Exportação**: bloco `federations`
-(`collectFederationExport`: filiações, cobranças, papéis, federações que pediu).
+(`collectFederationExport`: filiações, cobranças, papéis, federações que pediu,
+pedidos de filiação de clube/arena, resultados oficiais em que aparece).
+`federation_rankings` fica fora da exportação de propósito: é derivado dos
+resultados, que já vão.
 `exclusaoCobreColecoes.test.js` reprova coleção `federation_*` nova fora dos dois.
 
 ## 8. Servidor (detalhe em `docs/47-BACKEND-CLOUD-FUNCTIONS.md` §8a)
@@ -215,6 +313,8 @@ passa a presidência antes). **Exportação**: bloco `federations`
 | `federationChargeConfirm` | callable | `finance` | `confirm` / `cancel` da cobrança |
 | `federationVerify` | callable **sem login** | qualquer um | o mínimo da carteirinha por código |
 | `federationMembershipSweep` | agendada 06:00 | — | vencimentos, avisos 30/7/1, contagem |
+| `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
+| `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
 
 Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 `notifications` (`origin: 'server'`, textos em `tx()` → `functions/i18n/avisos.json`).
@@ -222,17 +322,28 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 ## 9. Ajuda, dicas, idiomas e termos
 
 - **Central de ajuda** (`helpCenter.js`, parte Atleta, `flags: ['federations']`):
-  "Filiar-se a uma federação" e "Abrir e administrar uma federação"; pistas de
-  rota para `/federacoes*`; duas perguntas no FAQ.
+  "Filiar-se a uma federação" (com torneio chancelado, ranking oficial e
+  clubes/arenas filiados), "Abrir e administrar uma federação" (Competições,
+  Clubes e arenas, Módulos) e **"Torneio chancelado por uma federação"**
+  (`federacao-torneios`: pedir, decidir, só filiados, enviar, pontuar); pistas
+  de rota para `/federacoes*` (a Central também aponta o artigo do torneio);
+  seis perguntas no FAQ.
 - **Guias com seta** (`guias.js`, área **Federações**): `federacao-filiar`
-  (buscar → filiar → plano → enviar → carteirinha) e `federacao-gerir`
-  (Central: seções, configurações, filiados, financeiro, pendências).
-  **Pontos de dica** (`pontosDeDica.js`): abrir, minhas, filiar, carteirinha,
-  seções, pendências, Pix e o do admin. Âncoras `data-dica="federacao-…"` são
-  contrato (guarda `dicas.test.js`).
+  (buscar → filiar → plano → enviar → carteirinha), `federacao-gerir` (Central:
+  seções, configurações, filiados, financeiro, pendências) e
+  **`federacao-chancela`** (lista de torneios → Geral → Federação → a Central
+  decide → enviar o resultado → o ranking na página). **Pontos de dica**
+  (`pontosDeDica.js`): abrir, minhas, filiar, carteirinha, seções, pendências,
+  Pix, o do admin e, do PR 2, torneios chancelados, ranking oficial e clubes/
+  arenas filiados (página da federação), Competições e Clubes e arenas (Central),
+  Federação na gestão do torneio, "Enviar ao ranking oficial", Federação na
+  gestão do clube e na Central da arena. Âncoras `data-dica="federacao-…"`,
+  `torneio-federacao`, `torneio-enviar-resultado`, `torneio-so-filiados`,
+  `clube-federacao` e `arena-federacao` são contrato (guarda `dicas.test.js`).
 - **Idiomas**: catálogo `src/modules/federations/i18n/locales/{en,es}.js`
-  (491 chaves, inclusive os avisos do servidor); `npm run i18n:avisos`
-  regravou `functions/i18n/avisos.json`.
+  (687 chaves, inclusive os avisos do servidor e os textos do PR 2, que o
+  guarda `i18nCatalogos` exige mesmo quando usados nas telas de torneio, clube
+  e arena); `npm run i18n:avisos` regravou `functions/i18n/avisos.json`.
 - **Termos legais** (`legalDocuments.js`, `flags: ['federations']`,
   complementares, sem gate): **Termos para Federações** (`/legal` →
   `termos-federacao`: a federação responde pelos valores e pelos dados;
@@ -260,13 +371,31 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
    igualdade.
 8. Coleção `federation_*` nova entra na **exclusão e na exportação** (guarda).
 9. Os valores de `?aba=` da Central e as âncoras `data-dica` são contrato.
+10. **O ranking oficial é derivado e só o servidor grava** (`federation_rankings`
+    `write: if false`); a tela nunca recalcula. A conta tem cópia no servidor
+    com paridade (`functions/federationRanking.parity.test.js`).
+11. **A colocação enviada é a do pódio** (`modalityPlacement`): nunca uma
+    segunda conta de colocação. Resultado só de categoria **completa**.
+12. **O organizador nunca aprova a própria chancela**: grava só `pending` e
+    só apaga pendente; `approved` é da equipe `competitions`. E "só filiados"
+    vale **na regra da inscrição** (`tournamentMembershipOk`), não só na tela.
+13. **Módulo desligado vale na regra** (`fedModuleOn()`): sem `affiliations`
+    ninguém pede filiação de clube/arena; sem `tournaments` ninguém pede
+    chancela. Provado em `tests/rules/federationPr2.rules.test.js`.
+14. A página da federação **não lê** `clubs`/`arenas`/`tournaments` para
+    mostrar filiados e chancelados: nome, cidade e logo são copiados no pedido
+    (a lista de torneios chancelados é a única consulta em `tournaments`, por
+    `federation_id` + `archived == false`, e só mostra os `approved`).
 
 ## 11. Pendências e próximas fases
 
 - Flavio: ligar a flag `federations` em Painel admin → Funcionalidades;
   revisão jurídica dos dois termos.
-- **PR 2** — clubes e arenas filiados (`affiliations`), chancela de torneios
-  (`tournaments`) e ranking oficial (`ranking`).
+- ~~**PR 2**~~ — entregue: clubes e arenas filiados (`affiliations`),
+  chancela de torneios (`tournaments`) e ranking oficial (`ranking`).
+  Fora de propósito: ranking por **dupla** (as linhas são por pessoa, como o
+  ranking da plataforma), descarte de resultado por **data** (só `best_n`),
+  e a federação **convidar** clube/arena (quem gere pede). Quando pedirem.
 - **PR 3** — `federation_members/{id}/private/data` (CPF, responsável do
   menor), transferências, importação de filiados, cursos e credenciais
   (`courses`), disciplina e ouvidoria (`discipline`).

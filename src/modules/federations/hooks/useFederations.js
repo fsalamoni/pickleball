@@ -29,6 +29,13 @@ export const fedKeys = {
   myCreated: (uid) => ['federacoes', 'pedidas-por', uid],
   membership: (fedId, uid) => ['federacoes', 'federacao', fedId, 'filiacao', uid],
   verify: (code) => ['federacoes', 'verificar', code],
+  affiliations: (id) => ['federacoes', 'federacao', id, 'filiados-orgs'],
+  approvedAffiliations: (id) => ['federacoes', 'federacao', id, 'filiados-orgs', 'aprovados'],
+  orgAffiliations: (kind, orgId, approvedOnly) => ['federacoes', 'organizacao', kind, orgId, approvedOnly ? 'aprovadas' : 'todas'],
+  tournaments: (id) => ['federacoes', 'federacao', id, 'torneios'],
+  results: (id) => ['federacoes', 'federacao', id, 'resultados'],
+  tournamentResults: (tid) => ['federacoes', 'torneio', tid, 'resultados'],
+  ranking: (id, season) => ['federacoes', 'federacao', id, 'ranking', season],
 };
 
 /** As federações estão ligadas para quem vê? (a flag do admin) */
@@ -119,4 +126,41 @@ export function useCardVerification(code) {
 export function useFederationMutation(fn) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: fn, onSettled: () => qc.invalidateQueries({ queryKey: fedKeys.all }) });
+}
+
+/* ------------------------------------------- PR 2: filiados, chancela, ranking -- */
+
+export function useFederationAffiliations(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.affiliations(id), queryFn: () => svc.listFederationAffiliations(id), enabled: !!id && enabled });
+}
+
+/** Os filiados aprovados — público (página da federação). */
+export function useApprovedAffiliations(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.approvedAffiliations(id), queryFn: () => svc.listApprovedAffiliations(id), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+/** As filiações de um clube/arena. `approvedOnly` para quem não gere (o selo público). */
+export function useOrgAffiliations(kind, orgId, { approvedOnly = false, enabled = true } = {}) {
+  const ligado = useFederationsEnabled();
+  return useQuery({ queryKey: fedKeys.orgAffiliations(kind, orgId, approvedOnly), queryFn: () => svc.listOrgAffiliations(kind, orgId, { approvedOnly }), enabled: !!kind && !!orgId && ligado && enabled, staleTime: 5 * 60_000 });
+}
+
+/** Os torneios ligados à federação (pendentes de chancela e chancelados). */
+export function useFederationTournaments(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.tournaments(id), queryFn: () => svc.listFederationTournaments(id), enabled: !!id && enabled });
+}
+
+export function useFederationResults(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.results(id), queryFn: () => svc.listFederationResults(id), enabled: !!id && enabled });
+}
+
+/** O que o organizador já enviou deste torneio. */
+export function useTournamentFederationResults(tournamentId, { enabled = true } = {}) {
+  const ligado = useFederationsEnabled();
+  return useQuery({ queryKey: fedKeys.tournamentResults(tournamentId), queryFn: () => svc.listTournamentFederationResults(tournamentId), enabled: !!tournamentId && ligado && enabled });
+}
+
+/** O ranking oficial da temporada (gravado pelo servidor; `null` = ainda não há). */
+export function useFederationRanking(id, season, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.ranking(id, season), queryFn: () => svc.getFederationRanking(id, season), enabled: !!id && !!season && enabled, staleTime: 60_000 });
 }

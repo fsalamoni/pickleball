@@ -1,0 +1,110 @@
+/**
+ * CHANCELA de torneio pela federação (módulo `tournaments`). Lógica pura.
+ *
+ * O torneio guarda `federation_id` + `federation_sanction` — campos ADITIVOS
+ * (ausentes, o torneio é o de sempre). O organizador só PEDE (`pending`) ou
+ * retira; aprovar, recusar e revogar são da equipe de competições, e a REGRA
+ * separa os dois lados (`tournamentFederationOk` em `firestore.rules`).
+ */
+import { t } from '@/core/i18n';
+import { SANCTION_STATUS, SANCTION_STATUS_LABELS, SANCTION_TIER } from './constants.js';
+
+const str = (v, max = 500) => String(v ?? '').trim().slice(0, max);
+
+/** O estado da chancela de um torneio (sem nada = nunca pediu). */
+export function sanctionState(tournament = null) {
+  const s = tournament?.federation_sanction || null;
+  const status = tournament?.federation_id && s?.status ? s.status : null;
+  return {
+    status,
+    label: status ? SANCTION_STATUS_LABELS[status] || status : null,
+    federationId: tournament?.federation_id || null,
+    acronym: s?.federation_acronym || '',
+    name: s?.federation_name || '',
+    approved: status === SANCTION_STATUS.APPROVED,
+    pending: status === SANCTION_STATUS.PENDING,
+    tier: s?.tier || SANCTION_TIER.REGIONAL,
+    requiresMembership: Boolean(s?.requires_membership),
+    /** O organizador pode pedir: sem pedido, recusado ou revogado. */
+    canRequest: !status || status === SANCTION_STATUS.REJECTED || status === SANCTION_STATUS.REVOKED,
+    /** O organizador pode retirar o pedido enquanto pendente. */
+    canWithdraw: status === SANCTION_STATUS.PENDING,
+  };
+}
+
+/** O patch que o organizador grava ao PEDIR a chancela (a regra exige `pending`). */
+export function buildSanctionRequest({ federation, uid, tier = SANCTION_TIER.REGIONAL, requiresMembership = false } = {}) {
+  if (!federation?.id || !uid) throw new Error(t('Escolha a federação.'));
+  const nivel = Object.values(SANCTION_TIER).includes(tier) ? tier : SANCTION_TIER.REGIONAL;
+  return {
+    federation_id: federation.id,
+    federation_sanction: {
+      status: SANCTION_STATUS.PENDING,
+      federation_name: str(federation.name, 120),
+      federation_acronym: str(federation.acronym, 12),
+      tier: nivel,
+      requires_membership: Boolean(requiresMembership),
+      requested_by: uid,
+      requested_at_ms: Date.now(),
+      decided_by: null,
+      decided_at_ms: null,
+      reason: '',
+    },
+  };
+}
+
+/** O patch que RETIRA o pedido (o organizador) — o torneio volta a ser sem federação. */
+export const SANCTION_WITHDRAW_PATCH = Object.freeze({ federation_id: null, federation_sanction: null });
+
+/** A decisão da equipe de competições: aprovar, recusar ou revogar (motivo). */
+export function sanctionDecision(tournament, action, { uid, reason = '', tier = null, requiresMembership = null } = {}) {
+  const atual = tournament?.federation_sanction || {};
+  const mapa = { approve: SANCTION_STATUS.APPROVED, reject: SANCTION_STATUS.REJECTED, revoke: SANCTION_STATUS.REVOKED };
+  const status = mapa[action];
+  if (!status) throw new Error(t('Ação inválida.'));
+  const motivo = str(reason, 500);
+  if (status !== SANCTION_STATUS.APPROVED && motivo.length < 3) throw new Error(t('Diga o motivo (mínimo 3 caracteres).'));
+  return {
+    federation_sanction: {
+      ...atual,
+      status,
+      tier: Object.values(SANCTION_TIER).includes(tier) ? tier : atual.tier || SANCTION_TIER.REGIONAL,
+      requires_membership: requiresMembership == null ? Boolean(atual.requires_membership) : Boolean(requiresMembership),
+      decided_by: uid || null,
+      decided_at_ms: Date.now(),
+      reason: motivo,
+    },
+  };
+}
+
+/** Só o que ainda espera decisão, mais antigo primeiro. */
+export function pendingSanctions(tournaments = []) {
+  return (tournaments || [])
+    .filter((tt) => sanctionState(tt).pending)
+    .sort((a, b) => (a.federation_sanction?.requested_at_ms || 0) - (b.federation_sanction?.requested_at_ms || 0));
+}
+
+/** Os torneios chancelados (aprovados), mais recentes primeiro. */
+export function sanctionedTournaments(tournaments = []) {
+  return (tournaments || [])
+    .filter((tt) => sanctionState(tt).approved && tt.archived !== true)
+    .sort((a, b) => String(b.starts_at || '').localeCompare(String(a.starts_at || '')));
+}
+
+/**
+ * A inscrição num torneio que EXIGE filiação: a pessoa está em dia nesta federação?
+ * `members` são as filiações da pessoa (`listMyMemberships`); indefinido = não
+ * carregou, e aí não se afirma nada (`docs/27-FALHA-NAO-E-VAZIO.md`).
+ * @returns {{ required: boolean, ok: boolean|null, message: string }}
+ */
+export function membershipRequirement(tournament, members, { hoje = '' } = {}) {
+  const st = sanctionState(tournament);
+  if (!st.approved || !st.requiresMembership) return { required: false, ok: true, message: '' };
+  if (!Array.isArray(members)) return { required: true, ok: null, message: '' };
+  const emDia = members.some((m) => m.federation_id === st.federationId && m.status === 'active' && (!hoje || !m.valid_until || m.valid_until >= hoje));
+  return {
+    required: true,
+    ok: emDia,
+    message: emDia ? '' : t('Este torneio é só para filiados em dia da {sigla}. Filie-se antes de se inscrever.', { sigla: st.acronym || st.name }),
+  };
+}

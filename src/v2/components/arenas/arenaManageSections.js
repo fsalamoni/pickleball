@@ -11,7 +11,7 @@ import {
   BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList,
   Clock, Cpu, Crown, DollarSign, Gift, GraduationCap, Image, Info, LayoutGrid, Megaphone,
   Network, Package, Palette, Puzzle, ShoppingBag, SlidersHorizontal, Smile, Sparkles, Star, Sun,
-  Swords, Tag, Trophy, UserCheck, Users, Wallet, Wrench,
+  Swords, Tag, Trophy, UserCheck, Users, Wallet, Wrench, Landmark,
 } from 'lucide-react';
 import { tk } from '@/core/i18n';
 
@@ -39,7 +39,7 @@ export const ARENA_SECTION_GROUPS = Object.freeze([
 // competidor. Desligado o módulo, a seção não existe e a Central fica
 // idêntica ao que era.
 export function buildArenaSections({
-  coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn = false, modulos = {},
+  coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn = false, modulos = {}, federationsOn = false,
 }) {
   return [
     // Hoje (Fase 3.3): a abertura da Central — a agenda do dia e, com o módulo
@@ -216,6 +216,8 @@ export function buildArenaSections({
         ...(modulos.plantao ? [{ value: 'plantao', label: tk('Plantão'), icon: Clock }] : []),
         ...(coachResidentOn && !modulos.aulas ? [{ value: 'professores', label: tk('Professores'), icon: GraduationCap }] : []),
         ...(linkedClubsOn ? [{ value: 'clubes', label: tk('Clubes'), icon: Users }] : []),
+        // Federação (flag `federations`): pedir e acompanhar a filiação da arena.
+        ...(federationsOn ? [{ value: 'federacao', label: tk('Federação'), icon: Landmark }] : []),
       ],
     },
     // Configurações fecha o ciclo: o que a arena LIGA para si. Vem por último

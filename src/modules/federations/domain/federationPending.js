@@ -4,21 +4,22 @@
  * (`docs/27-FALHA-NAO-E-VAZIO.md`). As contas são as MESMAS das abas.
  */
 import { tk } from '@/core/i18n';
-import { CHARGE_STATUS, FED_PERMISSION, MEMBER_STATUS } from './constants.js';
+import { AFFILIATION_STATUS, CHARGE_STATUS, FED_PERMISSION, MEMBER_STATUS } from './constants.js';
+import { sanctionState } from './sanction.js';
 import { isChargeOverdue } from './charges.js';
 import { isoDate, membershipState } from './membership.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
 /**
- * @param {{ members?: object[], charges?: object[] }} fontes
+ * @param {{ members?: object[], charges?: object[], affiliations?: object[], tournaments?: object[] }} fontes
  * @param {string[]} perms permissões de quem vê (só vê o que pode resolver)
  * @param {{ hoje?: string }} quando
  * @returns {Array<{ id: string, count: number, label: string, aba: string }>}
  */
 export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate() } = {}) {
   const itens = [];
-  const { members, charges } = fontes;
+  const { members, charges, affiliations, tournaments } = fontes;
   const pode = (p) => perms.includes(p);
 
   if (pode(FED_PERMISSION.MEMBERS) && Array.isArray(members)) {
@@ -26,6 +27,14 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
     if (n) itens.push({ id: 'pedidos', count: n, aba: 'pedidos', label: plural(n, tk('pedido de filiação para analisar'), tk('pedidos de filiação para analisar')) });
     const venc = members.filter((m) => membershipState(m, hoje).expiring).length;
     if (venc) itens.push({ id: 'vencendo', count: venc, aba: 'filiados', label: plural(venc, tk('filiação vence em 30 dias'), tk('filiações vencem em 30 dias')) });
+  }
+  if (pode(FED_PERMISSION.MEMBERS) && Array.isArray(affiliations)) {
+    const n = affiliations.filter((a) => a.status === AFFILIATION_STATUS.PENDING).length;
+    if (n) itens.push({ id: 'orgs', count: n, aba: 'filiados-orgs', label: plural(n, tk('clube ou arena pedindo filiação'), tk('clubes ou arenas pedindo filiação')) });
+  }
+  if (pode(FED_PERMISSION.COMPETITIONS) && Array.isArray(tournaments)) {
+    const n = tournaments.filter((tt) => sanctionState(tt).pending).length;
+    if (n) itens.push({ id: 'chancelas', count: n, aba: 'chancelas', label: plural(n, tk('pedido de chancela para analisar'), tk('pedidos de chancela para analisar')) });
   }
   if (pode(FED_PERMISSION.FINANCE) && Array.isArray(charges)) {
     const n = charges.filter((c) => c.status === CHARGE_STATUS.DECLARED).length;

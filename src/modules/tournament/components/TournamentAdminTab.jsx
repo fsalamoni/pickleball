@@ -8,6 +8,7 @@ import {
   PlatformMetricCard,
   PlatformSurfaceCard,
 } from '@/components/ui/platform-page';
+import TournamentSanctionCard from '@/v2/components/federations/TournamentSanctionCard';
 import { toast } from 'sonner';
 import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import {
@@ -479,6 +480,7 @@ export default function TournamentAdminTab({ tournament }) {
                 </div>
               </PlatformFormSection>
             )}
+          <TournamentSanctionCard tournament={tournament} />
         </PlatformSurfaceCard>
 
         <div className="space-y-5">

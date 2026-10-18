@@ -15,7 +15,17 @@ export const FED_COLLECTIONS = Object.freeze({
   members: 'federation_members',
   charges: 'federation_charges',
   cardIndex: 'federation_card_index',
+  affiliations: 'federation_affiliations',
+  results: 'federation_results',
+  rankings: 'federation_rankings',
 });
+
+/** Id determinístico da filiação de clube/arena: `{fedId}_{club|arena}_{orgId}`. */
+export const fedOrgDocId = (fedId, kind, orgId) => `${fedId}_${kind}_${orgId}`;
+/** Id determinístico do resultado enviado: `{fedId}_{tournamentId}_{modalityId}`. */
+export const fedResultDocId = (fedId, tournamentId, modalityId) => `${fedId}_${tournamentId}_${modalityId}`;
+/** Id determinístico do ranking da temporada: `{fedId}_{ano}`. */
+export const fedRankingDocId = (fedId, season) => `${fedId}_${season}`;
 
 /** Id determinístico das relações únicas (equipe e filiação): `{fedId}_{uid}`. */
 export const fedUserDocId = (fedId, uid) => `${fedId}_${uid}`;
@@ -127,9 +137,9 @@ export const FED_MODULE = Object.freeze({
 });
 
 export const FED_MODULE_META = Object.freeze({
-  tournaments: { label: tk('Torneios chancelados'), description: tk('Organizadores pedem a chancela; a federação aprova e o torneio ganha o selo e as regras dela.'), status: 'planned' },
-  ranking: { label: tk('Ranking oficial'), description: tk('Pontos dos torneios chancelados por temporada, classe e faixa etária.'), status: 'planned' },
-  affiliations: { label: tk('Clubes e arenas filiados'), description: tk('Clubes e arenas pedem filiação e aparecem como filiados na página da federação.'), status: 'planned' },
+  tournaments: { label: tk('Torneios chancelados'), description: tk('Organizadores pedem a chancela; a federação aprova e o torneio ganha o selo e as regras dela.'), status: 'available' },
+  ranking: { label: tk('Ranking oficial'), description: tk('Pontos dos torneios chancelados por temporada, classe e faixa etária.'), status: 'available' },
+  affiliations: { label: tk('Clubes e arenas filiados'), description: tk('Clubes e arenas pedem filiação e aparecem como filiados na página da federação.'), status: 'available' },
   courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'planned' },
   discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'planned' },
   news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'planned' },
@@ -240,3 +250,75 @@ export const RENEWAL_WINDOW_DAYS = 30;
 export const EXPIRY_NOTICE_DAYS = Object.freeze([30, 7, 1]);
 /** Dias para o pagador declarar antes de a cobrança em aberto ser cancelada. */
 export const CHARGE_DUE_DAYS = 10;
+
+/** Filiação de CLUBE ou ARENA à federação (módulo `affiliations`). */
+export const ORG_KIND = Object.freeze({ CLUB: 'club', ARENA: 'arena' });
+export const ORG_KIND_LABELS = Object.freeze({ club: tk('Clube'), arena: tk('Arena') });
+
+export const AFFILIATION_STATUS = Object.freeze({
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  SUSPENDED: 'suspended',
+});
+
+export const AFFILIATION_STATUS_LABELS = Object.freeze({
+  pending: tk('Aguardando aprovação'),
+  approved: tk('Filiado'),
+  rejected: tk('Recusado'),
+  suspended: tk('Suspenso'),
+});
+
+/** Chancela de um torneio (módulo `tournaments`): o organizador PEDE, a federação decide. */
+export const SANCTION_STATUS = Object.freeze({
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  REVOKED: 'revoked',
+});
+
+export const SANCTION_STATUS_LABELS = Object.freeze({
+  pending: tk('Chancela pedida'),
+  approved: tk('Chancelado'),
+  rejected: tk('Chancela recusada'),
+  revoked: tk('Chancela revogada'),
+});
+
+/** Peso do torneio no ranking oficial (multiplicador dos pontos). */
+export const SANCTION_TIER = Object.freeze({
+  REGIONAL: 'regional',
+  STATE: 'state',
+  MAJOR: 'major',
+});
+
+export const SANCTION_TIER_LABELS = Object.freeze({
+  regional: tk('Etapa regional'),
+  state: tk('Etapa estadual'),
+  major: tk('Campeonato principal'),
+});
+
+/** Resultado de categoria enviado ao ranking oficial. */
+export const RESULT_STATUS = Object.freeze({ SENT: 'sent', REJECTED: 'rejected' });
+
+export const RESULT_STATUS_LABELS = Object.freeze({
+  sent: tk('No ranking'),
+  rejected: tk('Recusado pela federação'),
+});
+
+/**
+ * Como o ranking oficial pontua, por padrão. A federação troca tudo em
+ * Central → Competições → Ranking (`federations.ranking_config`); a cópia do
+ * servidor (`functions/federationRanking.js`) tem teste de paridade.
+ */
+export const DEFAULT_RANKING_CONFIG = Object.freeze({
+  /** Pontos por colocação (1º…8º); abaixo disso vale `participation`. */
+  points_by_place: Object.freeze({ 1: 100, 2: 70, 3: 50, 4: 40, 5: 30, 6: 30, 7: 25, 8: 25 }),
+  /** Pontos por ter jogado a categoria (quem ficou fora dos 8). */
+  participation: 10,
+  /** Quantos melhores resultados somam na temporada (0 = todos). */
+  best_n: 6,
+  /** Peso por tipo de torneio. */
+  tier_multipliers: Object.freeze({ regional: 1, state: 1.5, major: 2 }),
+  /** Só o federado em dia na data do torneio pontua (D12). `false` = todo mundo pontua. */
+  members_only: true,
+});

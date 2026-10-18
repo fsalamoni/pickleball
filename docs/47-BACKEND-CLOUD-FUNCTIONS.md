@@ -409,6 +409,19 @@ Toda ação grava `audit_logs` (`federation_*`) e avisa por `notifications`
 `tx()` → `functions/i18n/avisos.json`). Testes: `functions/federations.test.js`
 (ciclo com banco falso) e `tests/rules/federation.rules.test.js` (emulador).
 
+**Gatilhos do ranking oficial** (`functions/federationRanking.js`, PR 2):
+
+| Função | Gatilho | Faz |
+|---|---|---|
+| `federationRankingRecompute` | `onDocumentWritten federation_results/{resultId}` | Recalcula `federation_rankings/{fed}_{temporada}` da temporada do resultado (e da anterior, se o resultado mudou de temporada). Lê `federations/{fed}.ranking_config`, os `federation_results` da federação e temporada e os `federation_members` da federação (para `members_only`: filiação federada ativa na data do torneio). |
+| `federationRankingConfig` | `onDocumentWritten federations/{fedId}` | Só quando `ranking_config` mudou (comparação por JSON): refaz todas as temporadas com resultado. |
+
+A conta (`computeOfficialRanking`) é **cópia** de
+`src/modules/federations/domain/officialRanking.js`, com paridade em
+`functions/federationRanking.parity.test.js`; o documento gravado corta os
+`results` de cada linha em 12. `federation_rankings` é `allow write: if false`:
+o navegador só lê. Não avisa ninguém e não grava auditoria (é derivado).
+
 ## 9. Motores duplicados e testes de paridade
 
 O pacote de Functions não importa `src/`, então estas regras existem **duas

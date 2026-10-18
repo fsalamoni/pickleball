@@ -1586,9 +1586,9 @@ andamento impede a exclusão.
 
 ## Federações (flag `federations`, default OFF) — `docs/50-FEDERACAO.md`
 
-Seis coleções novas com prefixo `federation`, **zero índice composto** (uma
-igualdade por consulta, ordenação em memória) e **nenhum campo novo** em
-coleção existente. Regras no bloco "FEDERAÇÕES" do `firestore.rules`
+Nove coleções com prefixo `federation`, **zero índice composto** (uma ou duas
+igualdades por consulta, ordenação em memória); os únicos campos novos em
+coleção existente são os dois opcionais de `tournaments` (abaixo). Regras no bloco "FEDERAÇÕES" do `firestore.rules`
 (`fedOn()` lê a flag em `platform_settings/global`; `fedHas(fedId, perm)` lê o
 papel em `federation_staff/{fedId}_{uid}`), provadas em
 `tests/rules/federation.rules.test.js`.
@@ -1653,18 +1653,70 @@ do pagador: `open|declared` → `declared` com `declared_at`/`declared_note`.
 `{ member_id, federation_id, created_at_ms }`. `allow read, write: if false`:
 só o servidor (a verificação pública é a função `federationVerify`).
 
+### `federation_affiliations/{fedId}_{kind}_{orgId}` (PR 2)
+Clube (`kind: 'club'`) ou arena (`kind: 'arena'`) filiado à federação.
+`federation_id`, `federation_name`, `federation_acronym`, `kind`, `org_id`,
+`org_name`, `org_city`, `org_state`, `org_logo` (copiados — a página da
+federação não lê `clubs`/`arenas`), `status`
+(`pending|approved|rejected|suspended`), `message` (≤ 500), `requested_by`,
+`review { by, at_ms, reason }`, `created_at`, `updated_at`. Leitura: aprovada é
+pública; o resto só quem pediu, quem gere a organização (`fedOrgManager`), a
+equipe `admin`/`members` e o admin. Criação: quem gere a organização, só
+`pending`, com a flag e o módulo `affiliations` ligados (`fedModuleOn`).
+Atualização: equipe `admin`/`members`, só `status`/`review`/`updated_at`.
+Apagar: quem gere a organização, equipe `admin` ou admin.
+
+### `federation_results/{fedId}_{tournamentId}_{modalityId}` (PR 2, público)
+A colocação de uma categoria de torneio chancelado, enviada pelo organizador.
+`federation_id`, `federation_acronym`, `tournament_id`, `tournament_name`,
+`modality_id`, `modality_name`, `gender_category`, `age_category`, `format`,
+`tier`, `date` (ISO), `season` (ano), `rows[] { uid, name, photo_url, position,
+played, won }` (≤ 400, uma por pessoa), `uids[]`, `status` (`sent|rejected`),
+`sent_by`, `sent_at`, `review { by, at_ms, reason }`. Criação/reenvio: admin do
+torneio com a chancela desta federação aprovada (`fedSanctionedBy`). Revisão:
+equipe `competitions`, só `status`/`review`/`updated_at`. Apagar: admin do
+torneio, equipe `admin` ou admin da plataforma.
+
+### `federation_rankings/{fedId}_{season}` (PR 2, público, `write: if false`)
+Derivado pelo servidor (`federationRankingRecompute`/`federationRankingConfig`,
+`functions/federationRanking.js`). `federation_id`, `season`, `results_count`,
+`config` (a tabela usada), `categories[] { key, gender_category, age_category,
+format, rows[] }`, `general[]`, `updated_at_ms`; cada linha `{ uid, name,
+photo_url, points, events, titles, position, results[] (≤ 12) }`.
+
+### `federations/{id}.ranking_config` (PR 2, opcional)
+`{ points_by_place { 1..8 }, participation, best_n, tier_multipliers
+{ regional, state, major }, members_only }`; ausente valem
+`DEFAULT_RANKING_CONFIG`. A equipe `competitions` grava só esta chave (cláusula
+própria na regra do documento).
+
+### `tournaments/{id}.federation_id` + `.federation_sanction` (PR 2, opcionais)
+`federation_id` (string ou `null`) e `federation_sanction { status
+(pending|approved|rejected|revoked), federation_name, federation_acronym, tier
+(regional|state|major), requires_membership, requested_by, requested_at_ms,
+decided_by, decided_at_ms, reason }`. O organizador só grava `pending` (flag e
+módulo `tournaments` ligados; `tournamentFederationOk()`) ou apaga os dois
+(pendente); a equipe `competitions` decide só em `federation_sanction`. Com
+`approved` + `requires_membership`, a **auto-inscrição** em
+`tournament_registrations` exige `federation_members/{fed}_{uid}.status ==
+'active'` (`tournamentMembershipOk`). Ver `docs/50-FEDERACAO.md` §6.2.
+
 ### Avisos e auditoria
 Avisos são `notifications` com `type: 'federation'` (área `federacoes`,
 categoria "Federações" em Configurações → Notificações), `origin: 'server'`,
 `essential: true`. Auditoria em `audit_logs` com `action` `federation_*`
 (`apply`, `update`, `payment_update`, `modules_update`, `plan_save`,
 `staff_set`, `staff_remove`, `membership_request|approve|reject|cancel`,
-`charge_confirm|cancel`, revisão).
+`charge_confirm|cancel`, revisão; PR 2: `affiliation_request|withdraw|approve|
+reject|suspend`, `sanction_request|withdraw|approve|reject|revoke`,
+`result_send|reject|readmit`, `ranking_config`).
 
 ### Exclusão de conta e exportação
 Filiações e cobranças **ficam sem o nome** (`coletarFederacoes`), os códigos
 em `federation_card_index` são apagados, `federation_staff` da pessoa sai, a
-federação que ela pediu fica com "Usuário removido"; **presidente** bloqueia a
+federação que ela pediu fica com "Usuário removido", a linha dela em
+`federation_results` vira "Atleta removido" sem `uid` (o ranking refeito a
+tira) e o pedido em `federation_affiliations` fica sem `requested_by`; **presidente** bloqueia a
 exclusão (nomeia outra presidência antes). Exportação: bloco `federations`
 (`federationExportService.js`). Guarda: `exclusaoCobreColecoes.test.js`.
 

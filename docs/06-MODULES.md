@@ -307,18 +307,26 @@ mensalidade ou anuidade por Pix na própria conta e emite a carteirinha digital
 com verificação pública; o admin da plataforma aprova a abertura e dá os selos
 "Verificada" e "Oficial". Filiação, cobrança e confirmação **só o servidor**
 escreve (`functions/federations.js`). Flag `federations` (default OFF);
-sub-módulos por federação (`FED_MODULE_META`, todos ainda "em breve").
-Doc: `docs/50-FEDERACAO.md`.
-- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending}.js`,
+sub-módulos por federação (`FED_MODULE_META`): `tournaments` (chancela de
+torneios + envio de resultados), `ranking` (ranking oficial, derivado pelo
+servidor) e `affiliations` (clubes e arenas filiados) disponíveis; os demais
+"em breve". Doc: `docs/50-FEDERACAO.md`.
+- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking}.js`,
   `services/federationService.js`, `hooks/useFederations.js`. README do módulo é a fonte.
 - **Telas**: `/federacoes`, `/federacoes/abrir`, `/federacoes/:id`,
   `/federacoes/:id/filiar`, `/federacoes/:id/gerir?aba=` (a Central:
   `src/v2/components/federations/manage/`); públicas `/f/:slug` e
   `/f/verificar/:codigo?` (V1, `src/pages/PublicFederation*.jsx`); Minha área →
-  Federações; Painel admin → Federações.
+  Federações; Painel admin → Federações. Fora do módulo: cartão Federação na
+  gestão do clube e na Central da arena (`OrgAffiliationCard`), na gestão do
+  torneio (`TournamentSanctionCard`), "Enviar ao ranking oficial" nos
+  resultados (`FederationResultButton`), selos (`FedTags.jsx`) e a trava "só
+  filiados" na inscrição.
 - **Coleções**: `federations` (+ `private/data`), `federation_staff`,
   `federation_plans`, `federation_members` (+ `private/data`),
-  `federation_charges`, `federation_card_index`.
+  `federation_charges`, `federation_card_index`, `federation_affiliations`,
+  `federation_results`, `federation_rankings`; campos opcionais
+  `tournaments.federation_id`/`.federation_sanction`.
 
 ### help/ — tutoriais, dicas guiadas e central de ajuda
 Conteúdo puro e contas das telas de ajuda. Zero banco (memória no

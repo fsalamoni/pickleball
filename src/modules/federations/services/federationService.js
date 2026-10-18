@@ -19,8 +19,16 @@ import {
 import { db, functions } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
-import { FED_COLLECTIONS as C, FEDERATION_STATUS, STAFF_ROLE, fedUserDocId } from '../domain/constants.js';
-import { normalizeFederationBranding, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import {
+  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, RESULT_STATUS, STAFF_ROLE, fedOrgDocId, fedRankingDocId, fedResultDocId, fedUserDocId,
+} from '../domain/constants.js';
+import { affiliationDecision, affiliationState, buildAffiliationRequest } from '../domain/affiliations.js';
+import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sanctionState } from '../domain/sanction.js';
+import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
+import { permissionsOf } from '../domain/staff.js';
+import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
+import { fedModuleOn, normalizeFederationBranding, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
 import { validatePlanInput } from '../domain/plans.js';
 import { canDeclarePayment } from '../domain/charges.js';
 import { canChangeStaff } from '../domain/staff.js';
@@ -308,4 +316,219 @@ export async function declarePayment(charge, { note = '' } = {}) {
   await updateDoc(doc(db, C.charges, charge.id), {
     status: 'declared', declared_at: serverTimestamp(), declared_note: String(note || '').trim().slice(0, 300),
   });
+}
+
+/* ------------------------------------------- avisos à equipe (cliente) -- */
+
+/** Os uids da equipe com a permissão (para avisar quem pode resolver). */
+async function staffUidsWith(fedId, perm) {
+  const equipe = await listFederationStaff(fedId);
+  return equipe.filter((s) => permissionsOf(s.role).includes(perm) || permissionsOf(s.role).includes(FED_PERMISSION.ADMIN)).map((s) => s.user_id);
+}
+
+/* ------------------------------------------- clubes e arenas filiados -- */
+
+/** Toda filiação de organização da federação (a equipe filtra em memória). */
+export async function listFederationAffiliations(fedId) {
+  const q = query(collection(db, C.affiliations), where('federation_id', '==', fedId));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** Só os FILIADOS (aprovados) — consulta pública da página da federação. */
+export async function listApprovedAffiliations(fedId) {
+  const q = query(collection(db, C.affiliations), where('federation_id', '==', fedId), where('status', '==', AFFILIATION_STATUS.APPROVED));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** As filiações de UM clube/arena (quem gere vê todas; o público, as aprovadas). */
+export async function listOrgAffiliations(kind, orgId, { approvedOnly = false } = {}) {
+  if (!kind || !orgId) return [];
+  const filtros = [where('kind', '==', kind), where('org_id', '==', orgId)];
+  if (approvedOnly) filtros.push(where('status', '==', AFFILIATION_STATUS.APPROVED));
+  return (await getDocs(query(collection(db, C.affiliations), ...filtros))).docs.map(toDoc);
+}
+
+/** Pedidos que a PESSOA fez (exportação de dados). */
+export async function listAffiliationsRequestedBy(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.affiliations), where('requested_by', '==', uid)))).docs.map(toDoc);
+}
+
+/**
+ * O clube/arena PEDE a filiação. A regra confere quem gere a organização, a
+ * federação aprovada com o módulo ligado e `status: 'pending'`. Recusado ou
+ * suspenso pede de novo: o documento antigo sai e o pedido nasce limpo.
+ */
+export async function requestAffiliation({ federation, kind, org, uid, message = '' }) {
+  if (!fedModuleOn(federation, 'affiliations')) throw new FederationError(t('Esta federação ainda não recebe filiação de clubes e arenas.'));
+  const { id, data } = buildAffiliationRequest({ federation, kind, org, uid, message });
+  const ref = doc(db, C.affiliations, id);
+  const atual = await getDoc(ref);
+  if (atual.exists()) {
+    const st = affiliationState(atual.data());
+    if (!st.canRequest) throw new FederationError(st.pending ? t('O pedido já foi enviado e aguarda a federação.') : t('Esta organização já é filiada.'));
+    await deleteDoc(ref);
+  }
+  await setDoc(ref, { ...data, requested_at: serverTimestamp(), updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_affiliation_request', actor: { uid }, details: { federation_id: federation.id, kind, org_id: org.id } });
+  const equipe = await staffUidsWith(federation.id, FED_PERMISSION.MEMBERS).catch(() => []);
+  await notifyUsers(equipe, {
+    type: NOTIFICATION_TYPE.FEDERATION,
+    title: t('Pedido de filiação de {org}', { org: data.org_name }),
+    message: kind === 'club' ? t('O clube {org} pediu filiação à {sigla}. Analise em Filiados → Clubes e arenas.', { org: data.org_name, sigla: data.federation_acronym }) : t('A arena {org} pediu filiação à {sigla}. Analise em Filiados → Clubes e arenas.', { org: data.org_name, sigla: data.federation_acronym }),
+    link: `/federacoes/${federation.id}/gerir?aba=filiados-orgs`,
+    actor: { uid },
+  }).catch(() => 0);
+  return { id, ...data };
+}
+
+/** A organização retira o pedido ou se desfilia (apaga o documento). */
+export async function withdrawAffiliation(affiliation, { uid } = {}) {
+  await deleteDoc(doc(db, C.affiliations, affiliation.id));
+  await createAuditLog({ action: 'federation_affiliation_withdraw', actor: { uid }, details: { federation_id: affiliation.federation_id, kind: affiliation.kind, org_id: affiliation.org_id, was: affiliation.status } });
+}
+
+/** A equipe decide: aprovar, recusar, suspender. Avisa quem pediu. */
+export async function decideAffiliation(affiliation, action, { uid, reason = '' } = {}) {
+  const patch = affiliationDecision(action, { uid, reason });
+  await updateDoc(doc(db, C.affiliations, affiliation.id), { ...patch, updated_at: serverTimestamp() });
+  await createAuditLog({ action: `federation_affiliation_${action}`, actor: { uid }, details: { federation_id: affiliation.federation_id, kind: affiliation.kind, org_id: affiliation.org_id, reason: patch.review.reason } });
+  const textos = {
+    approve: t('{org} agora é filiado à {sigla}. O selo já aparece na página.', { org: affiliation.org_name, sigla: affiliation.federation_acronym }),
+    reject: t('A {sigla} recusou a filiação de {org}. Motivo: {motivo}', { org: affiliation.org_name, sigla: affiliation.federation_acronym, motivo: patch.review.reason }),
+    suspend: t('A {sigla} suspendeu a filiação de {org}. Motivo: {motivo}', { org: affiliation.org_name, sigla: affiliation.federation_acronym, motivo: patch.review.reason }),
+  };
+  await notifyUsers([affiliation.requested_by], {
+    type: NOTIFICATION_TYPE.FEDERATION, title: t('Filiação à {sigla}', { sigla: affiliation.federation_acronym }), message: textos[action],
+    link: affiliation.kind === 'club' ? `/clubes/${affiliation.org_id}` : `/arenas/${affiliation.org_id}`, actor: { uid },
+  }).catch(() => 0);
+  return patch;
+}
+
+/* ------------------------------------------------- chancela de torneios -- */
+
+/** Os torneios (não arquivados) ligados à federação — pendentes e chancelados; a tela separa. */
+export async function listFederationTournaments(fedId) {
+  const q = query(collection(db, 'tournaments'), where('federation_id', '==', fedId), where('archived', '==', false));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** O organizador PEDE a chancela (o patch que a regra aceita: pendente, por quem pede). */
+export async function requestSanction(tournament, { federation, uid, tier, requiresMembership }) {
+  if (!fedModuleOn(federation, 'tournaments')) throw new FederationError(t('Esta federação ainda não chancela torneios.'));
+  const st = sanctionState(tournament);
+  if (!st.canRequest) throw new FederationError(st.pending ? t('A chancela já foi pedida e aguarda a federação.') : t('Este torneio já é chancelado.'));
+  const patch = buildSanctionRequest({ federation, uid, tier, requiresMembership });
+  await updateDoc(doc(db, 'tournaments', tournament.id), { ...patch, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'tournament_sanction_request', actor: { uid }, tournamentId: tournament.id, details: { federation_id: federation.id, tier: patch.federation_sanction.tier } });
+  const equipe = await staffUidsWith(federation.id, FED_PERMISSION.COMPETITIONS).catch(() => []);
+  await notifyUsers(equipe, {
+    type: NOTIFICATION_TYPE.FEDERATION, title: t('Pedido de chancela: {torneio}', { torneio: tournament.name }),
+    message: t('O torneio {torneio} pediu a chancela da {sigla}. Analise em Competições → Chancelas.', { torneio: tournament.name, sigla: patch.federation_sanction.federation_acronym }),
+    link: `/federacoes/${federation.id}/gerir?aba=chancelas`, actor: { uid },
+  }).catch(() => 0);
+  return patch;
+}
+
+/** O organizador retira o pedido pendente (o torneio volta a ser sem federação). */
+export async function withdrawSanction(tournament, { uid } = {}) {
+  if (!sanctionState(tournament).canWithdraw) throw new FederationError(t('Só um pedido pendente pode ser retirado.'));
+  await updateDoc(doc(db, 'tournaments', tournament.id), { ...SANCTION_WITHDRAW_PATCH, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'tournament_sanction_withdraw', actor: { uid }, tournamentId: tournament.id, details: { federation_id: tournament.federation_id } });
+}
+
+/** Competições decide: aprovar (com peso e exigência de filiação), recusar, revogar. Avisa quem pediu. */
+export async function decideSanction(tournament, action, { uid, reason = '', tier = null, requiresMembership = null } = {}) {
+  const patch = sanctionDecision(tournament, action, { uid, reason, tier, requiresMembership });
+  await updateDoc(doc(db, 'tournaments', tournament.id), { ...patch, updated_at: serverTimestamp() });
+  await createAuditLog({ action: `tournament_sanction_${action}`, actor: { uid }, tournamentId: tournament.id, details: { federation_id: tournament.federation_id, reason: patch.federation_sanction.reason, tier: patch.federation_sanction.tier } });
+  const sigla = patch.federation_sanction.federation_acronym || '';
+  const textos = {
+    approve: t('A {sigla} chancelou o torneio {torneio}. Ao fim de cada categoria, envie o resultado ao ranking oficial.', { sigla, torneio: tournament.name }),
+    reject: t('A {sigla} recusou a chancela do torneio {torneio}. Motivo: {motivo}', { sigla, torneio: tournament.name, motivo: patch.federation_sanction.reason }),
+    revoke: t('A {sigla} revogou a chancela do torneio {torneio}. Motivo: {motivo}', { sigla, torneio: tournament.name, motivo: patch.federation_sanction.reason }),
+  };
+  const destino = [tournament.federation_sanction?.requested_by, tournament.creator_uid].filter(Boolean);
+  await notifyUsers(destino, { type: NOTIFICATION_TYPE.FEDERATION, title: t('Chancela: {torneio}', { torneio: tournament.name }), message: textos[action], link: `/torneios/${tournament.id}`, actor: { uid } }).catch(() => 0);
+  return patch;
+}
+
+/* ------------------------------------------------- resultados e ranking -- */
+
+export async function listFederationResults(fedId) {
+  return (await getDocs(query(collection(db, C.results), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** Os resultados de UM torneio (a tela do organizador sabe o que já foi enviado). */
+export async function listTournamentFederationResults(tournamentId) {
+  if (!tournamentId) return [];
+  return (await getDocs(query(collection(db, C.results), where('tournament_id', '==', tournamentId)))).docs.map(toDoc);
+}
+
+/** Os resultados em que a PESSOA aparece (exportação de dados). */
+export async function listResultsWith(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.results), where('uids', 'array-contains', uid)))).docs.map(toDoc);
+}
+
+/**
+ * O organizador ENVIA (ou reenvia) o resultado de uma categoria ao ranking
+ * oficial. A colocação sai de `modalityPlacement` — a MESMA conta do pódio e
+ * dos cartões (`docs/43`). Só quem tem conta entra em `uids` (quem pontua).
+ */
+export async function sendFederationResult({ tournament, modality, matches, registrations, uid }) {
+  const st = sanctionState(tournament);
+  if (!st.approved) throw new FederationError(t('O torneio precisa da chancela aprovada para enviar resultados.'));
+  const colocacao = modalityPlacement({ modality, tournament, matches });
+  const rows = [];
+  (registrations || []).forEach((reg) => {
+    const c = colocacao.get(String(reg.id));
+    if (!c || (c.position == null && c.played === 0)) return;
+    registrationAllPeople(reg).forEach((p) => rows.push({ uid: p.user_id || null, name: String(p.name || '').slice(0, 120), photo_url: p.photo_url || null, position: c.position, played: c.played, won: c.won, registration_id: reg.id }));
+  });
+  if (!rows.length) throw new FederationError(t('Ainda não há resultado nesta categoria.'));
+  rows.sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
+  const id = fedResultDocId(st.federationId, tournament.id, modality.id);
+  const data = {
+    federation_id: st.federationId, federation_acronym: st.acronym, tournament_id: tournament.id, tournament_name: String(tournament.name || '').slice(0, 120),
+    modality_id: modality.id, modality_name: String(modality.name || '').slice(0, 120),
+    gender_category: modality.gender_category || 'open', age_category: modality.age_category || 'open', format: modality.format || 'doubles',
+    tier: st.tier, date: tournamentDay(tournament), season: resultSeason(tournament),
+    rows: rows.slice(0, 400), uids: [...new Set(rows.map((r) => r.uid).filter(Boolean))],
+    status: RESULT_STATUS.SENT, sent_by: uid, sent_at: serverTimestamp(), review: null, updated_at: serverTimestamp(),
+  };
+  await setDoc(doc(db, C.results, id), data);
+  await createAuditLog({ action: 'federation_result_send', actor: { uid }, tournamentId: tournament.id, details: { federation_id: st.federationId, modality_id: modality.id, rows: data.rows.length } });
+  return { id, ...data };
+}
+
+/** Competições recusa (com motivo) ou readmite um resultado. */
+export async function reviewFederationResult(result, action, { uid, reason = '' } = {}) {
+  const status = action === 'reject' ? RESULT_STATUS.REJECTED : RESULT_STATUS.SENT;
+  const motivo = String(reason || '').trim().slice(0, 500);
+  if (status === RESULT_STATUS.REJECTED && motivo.length < 3) throw new FederationError(t('Diga o motivo (mínimo 3 caracteres).'));
+  await updateDoc(doc(db, C.results, result.id), { status, review: status === RESULT_STATUS.REJECTED ? { by: uid || null, at_ms: Date.now(), reason: motivo } : null, updated_at: serverTimestamp() });
+  await createAuditLog({ action: `federation_result_${action}`, actor: { uid }, tournamentId: result.tournament_id, details: { federation_id: result.federation_id, modality_id: result.modality_id, reason: motivo } });
+  if (status === RESULT_STATUS.REJECTED && result.sent_by) {
+    await notifyUsers([result.sent_by], {
+      type: NOTIFICATION_TYPE.FEDERATION, title: t('Resultado recusado: {torneio}', { torneio: result.tournament_name }),
+      message: t('A {sigla} recusou o resultado de {categoria}. Motivo: {motivo}', { sigla: result.federation_acronym || '', categoria: result.modality_name, motivo: motivo }),
+      link: `/torneios/${result.tournament_id}`, actor: { uid },
+    }).catch(() => 0);
+  }
+}
+
+/** O ranking da temporada (gravado pelo servidor). `null` = ainda não há. */
+export async function getFederationRanking(fedId, season) {
+  if (!fedId || !season) return null;
+  const snap = await getDoc(doc(db, C.rankings, fedRankingDocId(fedId, season)));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+/** A configuração do ranking (admin e competições). O servidor refaz as temporadas ao gravar. */
+export async function updateRankingConfig(fedId, input, { uid } = {}) {
+  const value = normalizeRankingConfig(input);
+  await updateDoc(doc(db, C.federations, fedId), { ranking_config: value, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_ranking_config', actor: { uid }, details: { federation_id: fedId, ...value } });
+  return value;
 }
