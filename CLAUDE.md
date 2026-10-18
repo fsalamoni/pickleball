@@ -676,10 +676,18 @@ Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas li
   deploys dos PRs #282 e #283 pararam no passo de regras, e produção ficou sem
   regras, site e funções dos dois. O deploy publica a cópia compactada
   (`scripts/firestore-rules-compactar.mjs --escrever`: sem comentário, linha
-  vazia nem recuo; o CI testa as regras no emulador já compactadas). Continue
-  comentando as regras à vontade; o guarda
-  `src/core/guards/firestoreRulesTamanho.test.js` reprova quando a cópia
-  compactada chega a 90% do teto. Ver `docs/03-WORKFLOW.md` §4.3
+  vazia nem recuo; o CI testa as regras no emulador já compactadas). **E há um
+  SEGUNDO teto, que a CLI não mostra**: o ruleset COMPILADO tem de ficar
+  abaixo de 250 KB — quando passa, o PATCH da release falha calado e a CLI sai
+  com `409 Release … already exists` (foi o que segurou os deploys dos PRs
+  #281–#284; o compilado fica em ~1,8× o compactado). Por isso toda regra usa
+  os atalhos `nd()` (= `request.resource.data`), `od()` (= `resource.data`),
+  `me()` (= `request.auth.uid`), `chg()` (= o `affectedKeys()` do update),
+  `isOwner(x)`, `arenaOd()`/`arenaNd()`, `clubOd()` — **nunca** escreva essas
+  expressões por extenso (161 KB → 125 KB compactados). Continue comentando as
+  regras à vontade; o guarda `src/core/guards/firestoreRulesTamanho.test.js`
+  reprova o compactado acima de 140 KB e a expressão por extenso, e o deploy
+  repete com `--debug` ao receber 409. Ver `docs/03-WORKFLOW.md` §4.3
 - **O runtime das Cloud Functions tem prazo.** `engines.node` em
   `functions/package.json` (e no lockfile) decide o `nodejs<N>` do deploy. O
   Node.js 20 é DESLIGADO em 2026-10-31 — depois disso nenhum deploy passa, nem

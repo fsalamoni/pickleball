@@ -75,7 +75,7 @@ describe('sincronia domínio ↔ firestore.rules ↔ schema', () => {
   });
 
   it('o teto do schema bate com o teto declarado na regra do Firestore', () => {
-    expect(RULES).toContain(`request.resource.data.level <= ${MAX_LEVEL_V2}`);
+    expect(RULES).toContain(`nd().level <= ${MAX_LEVEL_V2}`);  // nd() = request.resource.data (atalho das regras)
   });
 
   it('o snapshot de skill trees do domínio é aceito pelo schema', () => {
@@ -93,7 +93,7 @@ describe('sincronia domínio ↔ firestore.rules ↔ schema', () => {
   });
 
   it('as regras exigem a mesma quantidade de trilhas do domínio', () => {
-    expect(RULES).toContain(`request.resource.data.skillTrees.size() == ${SKILL_TREE_KEYS.length}`);
+    expect(RULES).toContain(`nd().skillTrees.size() == ${SKILL_TREE_KEYS.length}`);
   });
 
   it('o schema de conquista aceita TODA família e raridade do catálogo', () => {

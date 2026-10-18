@@ -23,7 +23,7 @@
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 7 |
 | Arquivos de teste (`*.test.js(x)`) | 695 |
-| Workflows do GitHub Actions | 6 |
+| Workflows do GitHub Actions | 7 |
 | Documentos/pastas em `docs/` | 56 |
 
 ## 2. Stack (de `package.json`)
@@ -391,6 +391,7 @@ Workflows:
 - `deploy-firebase.yml`
 - `deploy-pages.yml`
 - `firestore-manual-export.yml`
+- `firestore-rules-diagnostico.yml`
 - `functions-watchdog.yml`
 - `privacy-legacy-email-cleanup.yml`
 
