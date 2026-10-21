@@ -459,7 +459,7 @@ vira anônima.
 
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
-Dezenove coleções, todas com prefixo `federation` e **zero índice composto**
+Vinte coleções, todas com prefixo `federation` e **zero índice composto**
 (consultas de uma igualdade — ou duas igualdades, que também não pedem
 índice; ordenação em memória): `federations` (+ `private/data`),
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`:
@@ -468,10 +468,14 @@ CPF, nascimento, responsável — PR 3), `federation_charges`,
 `federation_results`, `federation_rankings`; do PR 3,
 `federation_documents_submitted`, `federation_transfers`, `federation_imports`,
 `federation_courses`, `federation_course_enrollments`, `federation_credentials`,
-`federation_sanctions`, `federation_reports` e, do PR 4, `federation_news`
-(campos opcionais novos na própria federação: `sponsors`, `governance`).
+`federation_sanctions`, `federation_reports`, do PR 4, `federation_news`
+(campos opcionais novos na própria federação: `sponsors`, `governance`), do
+PR 7, `federation_admin_grants` (campos novos: `staff_roles`) e, do PR 8,
+`federation_docs` (campo novo: `doc_numbers`, §14).
 **Storage**: `federacao/{uid}/`
-(só o dono lê; PDF ou imagem < 5 MB). Campos novos em coleção existente: só os
+(só o dono lê; PDF ou imagem < 5 MB); do PR 8, `federacao-acervo/{uid}/`
+(rascunho do acervo, só o dono) e `federacao-acervo-oficial/` (fechada à
+regra; só o servidor e o link com token). Campos novos em coleção existente: só os
 dois **opcionais** de `tournaments` (`federation_id`, `federation_sanction`,
 §6.2). Os avisos são `notifications` com `type: 'federation'` (os do PR 2 saem
 do navegador, `origin` padrão; os das funções, `origin: 'server'`).
@@ -526,6 +530,7 @@ derivado dos resultados, que já vão.
 | `federationImportMembers` | callable | `members` | importa até 500 linhas; quem tem conta vira filiado ativo, quem não tem fica em `federation_imports` |
 | `federationDocument` | callable | `members`/`admin` da federação do documento | devolve o arquivo do Storage (base64) à secretaria, com auditoria |
 | `federationNews` | callable | `comms`/`admin` da federação | avisa os filiados ativos de uma notícia publicada, uma vez só (§6.7) |
+| `federationAcervo` | callable (540 s, 1 GiB) | `docs`/`admin` da federação; `file` para quem lê o documento | acervo oficial: rascunho, publicação numerada com SHA-256, retificação, visibilidade, retirada do ar, entrega de arquivo restrito (§14) |
 | `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
 | `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
 
@@ -692,6 +697,24 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
     falhou o registro, o acesso não abre. A federação não vê o registro.
 38. **Lógica de cargos com cópia no servidor** (`functions/federationStaffPolicy.js`
     ⇄ `domain/staff.js`, paridade em `functions/federationStaff.parity.test.js`).
+39. **Documento publicado não se edita nem se apaga.** Corrige-se por
+    retificação (versão nova com motivo; a anterior fica em `versions[]`, com
+    os arquivos e o SHA-256), errata, ato que altera ou que revoga. Tirar do
+    ar é só do `admin`, com motivo, e nada é apagado (§14).
+40. **`federation_docs` só o servidor grava** (`write: if false`), e o
+    contador `federations.doc_numbers` está em `fedLocked()` — o número do
+    ato é dado numa transação, uma vez só.
+41. **O link do arquivo existe só enquanto o documento é PÚBLICO.** Mudar
+    para "só filiados"/"só a equipe" ou retirar do ar troca o token e mata o
+    link; o arquivo restrito (até 9 MB) é entregue pela função (`file`) a
+    quem pode ler. A pasta oficial é fechada à regra do Storage.
+42. **Arquivo novo só da pasta de quem salva** (`exigeDono`): ninguém anexa o
+    rascunho que outra pessoa enviou. Tipo e tamanho são conferidos pelo que
+    o Storage diz, não pelo que a tela mandou.
+43. **Validação do acervo com cópia no servidor**
+    (`functions/federationAcervoPolicy.js` ⇄ `domain/acervo.js`, paridade em
+    `functions/federationAcervo.parity.test.js`): tipos, categorias,
+    numerados, tetos, famílias de arquivo e links de vídeo.
 
 ## 11. Pendências e próximas fases
 
@@ -869,3 +892,109 @@ histórico, passar a administração; Equipe → Cargos, só admin master),
 `federacao-equipe` e guia `federacao-equipe`; âncoras `federacao-equipe`,
 `federacao-equipe-adicionar`, `federacao-equipe-passar`, `federacao-aba-cargos`,
 `federacao-cargos`, `federacao-acesso-suporte`, `admin-federacoes-acessos`.
+
+## 14. Acervo oficial e transparência (Etapa 2 do acervo, PR 8)
+
+Pedido do dono (2026-10-21): normas, regulamentos, atos, atas, convocações,
+súmulas, avaliação de arenas, vídeo e áudio, com envio de arquivos e gestão
+completa, e um ambiente público para ler, baixar e compartilhar. Base de
+transparência: Lei Geral do Esporte (Lei 14.597/2023, art. 36). Esta parte
+(PR 8a) é a gestão na Central; a página pública do acervo vem no PR 8b.
+
+### 14.1 Módulo, permissão e tela
+
+Sub-módulo `official_docs` ("Acervo oficial"); permissão `docs` (cargo
+modelo `secretary`). Seção **Acervo oficial** da Central
+(`federationSections`, `grupo: 'atender'`), aberta a quem tem `docs` ou
+`admin` com o módulo ligado: abas **Documentos** (`?aba=acervo`) e
+**Transparência** (`?aba=transparencia`). Telas em
+`src/v2/components/federations/manage/FedAcervoPanel.jsx` (lista com busca
+sem acento, categoria, situação e ano; detalhe; diálogos de publicar,
+retificar, visibilidade, retirar e apagar) e `FedAcervoForm.jsx` (rascunho,
+envio de arquivos com progresso, links de vídeo, relações com outros atos).
+
+### 14.2 Catálogo (`domain/acervo.js`)
+
+Dez categorias (estrutura e organização, ética e disciplina, regulamentos
+esportivos, atos e deliberações, convocações, atas e registros, eventos e
+competições, transparência e finanças, mídia, calendário) e 38 tipos — de
+estatuto, regimento, código de ética e regulamento de competições a
+resolução, portaria, deliberação, edital, nota oficial, errata, edital de
+convocação, ata, lista de presença, súmula, boletim de resultados, relatório
+de arbitragem, **avaliação de arena**, demonstrações financeiras, parecer do
+conselho fiscal, vídeo, áudio e calendário anual. O tipo decide a categoria
+e se é **numerado** (atos, editais, atas, decisões disciplinares). Os ids de
+tipo e categoria são gravados: nunca renomeie.
+
+Relações entre atos: `revokes` (revoga), `amends` (altera), `errata`
+(corrige), `regulates` (regulamenta), `refers` (cita). A errata exige apontar
+o corrigido; só se relaciona com ato **publicado** da mesma federação, e
+revogar/alterar/corrigir um revogado é recusado.
+
+Arquivos: documentos (PDF, Office, ODF, texto, CSV) até 25 MB, imagens
+(WebP, JPEG, PNG) até 10 MB, áudio até 50 MB, vídeo até 100 MB; até 10 por
+documento. Vídeo longo vai por link do **YouTube** (incorporado por
+`youtube-nocookie.com`) ou **Vimeo** — outro site é recusado. Tetos de
+texto: título 200, resumo 600, corpo 30.000, 10 palavras-chave, 10 relações,
+5 links.
+
+### 14.3 Ciclo do documento (`functions/federationAcervo.js`)
+
+1. **Rascunho** (`save`): os arquivos sobem para `federacao-acervo/{uid}/`
+   (só o dono lê e escreve; tipo e teto na regra do Storage; sem
+   sobrescrever). O servidor valida com a mesma régua da tela e só aceita
+   arquivo NOVO da pasta de quem salva. Rascunho se edita e se apaga
+   (`delete`, que apaga os arquivos).
+2. **Publicar** (`publish`): copia cada arquivo para
+   `federacao-acervo-oficial/{fed}/{doc}/v1/{n}.{ext}`, confere tipo e
+   tamanho **pelo Storage**, calcula o **SHA-256** e, numa transação, dá o
+   número por tipo e ano de Brasília (`federations.doc_numbers`, ex.:
+   "Resolução nº 3/2026") e marca nos atos relacionados `related_by[]` (e
+   `revoked_by` quando revoga). Documento público ganha link com token
+   (`firebaseStorageDownloadTokens`, cache de um ano).
+3. **Retificar** (`rectify`): versão nova com motivo (≥ 10 letras); tipo,
+   número, visibilidade e relações não mudam. A versão anterior vai para
+   `versions[]` (até 10) com os arquivos e os códigos. Revogado não se
+   retifica.
+4. **Visibilidade** (`visibility`): público / só filiados / só a equipe. Cada
+   troca gera token novo: o link antigo morre e só volta a existir se ficar
+   público. Restrito aceita arquivo de até 9 MB (entregue pela função).
+5. **Retirar do ar** (`withdraw`, só `admin`): motivo (≥ 20 letras), status
+   `withdrawn`, links mortos; o documento e os arquivos ficam para a equipe.
+6. **Arquivo restrito** (`file`): até 9 MB, em base64, para quem pode ler o
+   documento sem link público (filiado ativo, equipe, rascunho para `docs`).
+
+Toda ação grava `audit_logs` (`federation_doc_save`, `_delete`, `_publish`,
+`_rectify`, `_visibility`, `_withdraw`).
+
+### 14.4 Quem lê (regra e servidor iguais)
+
+Publicado e **público**: qualquer um, até sem conta. **Só filiados**: filiado
+`active` e qualquer pessoa da equipe. **Só a equipe**: qualquer cargo.
+**Rascunho e retirado**: só `docs`/`admin`. O admin da plataforma lê com o
+acesso justificado valendo (`fedPlat`). A lista pública consulta por três
+igualdades (`federation_id` + `status` + `visibility`) — sem índice. Provado
+em `tests/rules/federationAcervo.rules.test.js`.
+
+### 14.5 Transparência
+
+A aba Transparência confere, entre os documentos **públicos e em vigor**, os
+itens do art. 36 da Lei 14.597/2023 e das boas práticas
+(`TRANSPARENCY_ITEMS`): estatuto, dirigentes e remuneração, convênios e
+prestação de contas, demonstrações financeiras e parecer fiscal (do ano
+passado para cá), relatório e atos de gestão, calendário e atas das
+assembleias, regulamento de competições, código de ética. O que falta
+aparece como "não publicado", com atalho para publicar.
+
+### 14.6 Exclusão de conta e exportação
+
+O documento é ato da federação, não dado da pessoa: fica, guardando só o
+`created_by` (contado como retido na prévia), e não vai na exportação. Os
+rascunhos não usados em `federacao-acervo/{uid}/` são apagados com a conta.
+
+### 14.7 Âncoras
+
+`federacao-secao-acervo`, `federacao-acervo`, `federacao-acervo-novo`,
+`federacao-acervo-formulario`, `federacao-acervo-anexar`,
+`federacao-acervo-relacoes`, `federacao-transparencia`. Artigo de ajuda,
+guia e a página pública chegam no PR 8b.

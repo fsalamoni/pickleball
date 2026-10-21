@@ -2205,3 +2205,18 @@ das permissões do cargo, o mandato vencido fecha o acesso (salvo o último
 admin master) e o acesso do admin vai antes ao registro interno. Etapa 1 de
 4 (acervo e mural, calendário e assembleias, comentários). Detalhe em
 `docs/50-FEDERACAO.md` §13.
+
+## Federações — acervo oficial e transparência (2026-10-21)
+
+Pedido do dono: normas, regulamentos, atos, atas, convocações, súmulas,
+avaliação de arenas, vídeo e áudio publicados pela federação, com envio de
+arquivos e gestão completa. Antes não havia lugar para isso: a federação só
+tinha notícias, e um ato oficial virava texto solto, sem número, sem versão e
+sem como provar que o arquivo era o original. Agora o acervo é gravado só pelo
+servidor, o ato ganha número por tipo e ano numa transação, o arquivo é
+copiado para uma pasta oficial com SHA-256, o publicado não se edita (corrige
+por retificação com motivo, errata ou ato que altera/revoga, com o histórico
+visível) e o link do arquivo só existe enquanto o documento é público. A aba
+Transparência confere o que a Lei 14.597/2023, art. 36, pede publicado. Etapa
+2 de 4, parte 1 (a Central); a página pública vem em seguida. Detalhe em
+`docs/50-FEDERACAO.md` §14.

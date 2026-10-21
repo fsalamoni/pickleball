@@ -1281,8 +1281,8 @@ const federations = require('./federations');
 const fedCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: FieldValueDel, Timestamp, now: Date.now(), logger });
 
 /** Chamada de federação: confere a conta e traduz o erro para a tela. */
-function federationCallable(nome, fn) {
-  return onCall({ region: REGION, timeoutSeconds: 60 }, async (req) => {
+function federationCallable(nome, fn, opts = {}) {
+  return onCall({ region: REGION, timeoutSeconds: 60, ...opts }, async (req) => {
     if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
     const ctx = fedCtx();
     const token = req.auth.token || {};
@@ -1332,6 +1332,14 @@ exports.federationAdminAccess = federationCallable('federationAdminAccess', (ctx
   const raw = (req && req.rawRequest) || {};
   return federationStaff.adminAccess(ctx, actor, data, { ip: raw.ip || '', userAgent: (raw.headers && raw.headers['user-agent']) || '' });
 });
+// Acervo oficial (normas, atos, atas, transparência): só o servidor grava — `functions/federationAcervo.js`.
+// Publicar copia e confere arquivos de até 100 MB (SHA-256): mais tempo e memória.
+const federationAcervo = require('./federationAcervo');
+exports.federationAcervo = federationCallable('federationAcervo', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationAcervo: Storage indisponível.', err); }
+  return federationAcervo.acervo({ ...ctx, bucket }, actor, data);
+}, { timeoutSeconds: 540, memory: '1GiB' });
 exports.federationDocument = federationCallable('federationDocument', (ctx, actor, data) => {
   let bucket = null;
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationDocument: Storage indisponível.', err); }

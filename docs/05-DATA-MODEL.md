@@ -1639,6 +1639,37 @@ Acesso justificado do admin da plataforma a uma Central: `federation_id`,
 (o registro em `admin_access_logs`, `action: 'federation_access'`). Só o admin
 da plataforma lê; ninguém grava pelo cliente (`federationAdminAccess`).
 
+### `federation_docs/{id}` (PR 8, NOVO — acervo oficial)
+Ato oficial da federação (estatuto, resolução, ata, súmula, avaliação de
+arena, vídeo…; catálogo em `domain/acervo.js`). `federation_id`, `type`,
+`category` (derivada do tipo), `title`, `summary`, `body`, `act_date`
+(`AAAA-MM-DD`), `signed_by`, `tags[]`, `visibility`
+(`public|members|staff`), `relations[]` (`{ kind:
+revokes|amends|errata|regulates|refers, doc_id }`), `media_links[]` (`{ url,
+title }`, só YouTube/Vimeo), `files[]` (`{ name, path, size, content_type,
+sha256, url? }` — `url` só enquanto público), `status`
+(`draft|published|withdrawn`), `version`, `created_by`, `created_by_name`,
+`created_at(_ms)`, `updated_at(_ms)`, `updated_by`. Ao publicar: `number`
+(por tipo e ano, só nos numerados), `year`, `code` ("Resolução nº 3/2026"),
+`published_at(_ms)`, `published_by(_name)`, `versions[]` (até 10: versões
+anteriores com `title`, `summary`, `body`, `files`, `media_links`,
+`version_reason`, `version_at_ms`), `version_reason`, `version_at_ms`.
+Recebidos de outros atos: `related_by[]` (até 50) e `revoked_by`. Retirado:
+`withdrawn_reason`, `withdrawn_at_ms`, `withdrawn_by`. Leitura: publicado
+público por todos (até sem conta); só filiados por filiado ativo e equipe; só
+equipe por qualquer cargo; rascunho e retirado por `docs`/`admin`. **Só o
+servidor grava** (`federationAcervo`, `write: if false`). Zero índice (a lista
+pública usa três igualdades).
+
+### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
+Contador da numeração: `{ "<tipo>_<ano>": n }`. Só o servidor grava, numa
+transação ao publicar.
+
+**Storage do acervo** (PR 8): `federacao-acervo/{uid}/{id}.{ext}` — rascunho,
+só o dono lê e escreve, tipos e tetos do catálogo, sem sobrescrever;
+`federacao-acervo-oficial/{fed}/{doc}/v{n}/{i}.{ext}` — fechada à regra
+(cópia feita pelo servidor; o público baixa pelo link com token).
+
 ### `federation_plans/{id}` (NOVO, público)
 `federation_id`, `name`, `description`, `benefits` (texto, um por linha), `person_type`
 (`athlete|coach|referee`), `tier` (`registered|federated`), `billing`

@@ -28,6 +28,7 @@ export const FED_COLLECTIONS = Object.freeze({
   sanctions: 'federation_sanctions',
   reports: 'federation_reports',
   news: 'federation_news',
+  officialDocs: 'federation_docs',
 });
 
 /** Id determinístico da inscrição em curso: `{courseId}_{uid}`. */
@@ -83,6 +84,8 @@ export const FED_PERMISSION = Object.freeze({
   COURSES: 'courses',
   DISCIPLINE: 'discipline',
   COMMS: 'comms',
+  /** Acervo oficial: rascunhos, publicação, retificação e visibilidade (só o servidor grava — `federationAcervo`). */
+  DOCS: 'docs',
   /** Pessoas da equipe: nomear, prorrogar mandato, tirar (só o servidor confere — `federationStaff`). */
   STAFF: 'staff',
 });
@@ -96,6 +99,7 @@ export const FED_PERMISSION_META = Object.freeze({
   courses: { label: tk('Cursos e credenciais'), description: tk('Cursos, inscrições, aprovação e credenciais.') },
   discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções e manifestações da ouvidoria.') },
   comms: { label: tk('Comunicação'), description: tk('Notícias, avisos, cupons e campanhas.') },
+  docs: { label: tk('Acervo oficial'), description: tk('Normas, atos, atas, editais e documentos de transparência: rascunho, publicação, retificação e visibilidade.') },
   staff: { label: tk('Equipe'), description: tk('Nomeia pessoas para cargos sem poder de admin master, prorroga mandatos e tira da equipe.') },
 });
 
@@ -132,7 +136,7 @@ export const STAFF_ROLE_LABELS = Object.freeze({
 export const STAFF_ROLE_DESCRIPTIONS = Object.freeze({
   president: tk('Admin master: tudo, inclusive montar os cargos e passar a administração.'),
   director: tk('Tudo na Central, menos montar os cargos e mexer nos admins master.'),
-  secretary: tk('Filiados: aprova, recusa, suspende e vê os pedidos.'),
+  secretary: tk('Filiados e acervo: aprova filiações e publica atos, atas e editais.'),
   treasurer: tk('Cobranças: confirma pagamentos e vê o financeiro.'),
   competitions: tk('Chancela de torneios, calendário e ranking oficial.'),
   referees: tk('Cursos, árbitros e credenciais.'),
@@ -146,7 +150,7 @@ const TODAS = Object.values(FED_PERMISSION);
 export const STAFF_ROLE_PERMISSIONS = Object.freeze({
   president: TODAS,
   director: TODAS,
-  secretary: [FED_PERMISSION.MEMBERS],
+  secretary: [FED_PERMISSION.MEMBERS, FED_PERMISSION.DOCS],
   treasurer: [FED_PERMISSION.FINANCE],
   competitions: [FED_PERMISSION.COMPETITIONS],
   referees: [FED_PERMISSION.COURSES],
@@ -169,6 +173,7 @@ export const FED_MODULE = Object.freeze({
   SPONSORS: 'sponsors',
   STORE: 'store',
   PROMOS: 'promos',
+  OFFICIAL_DOCS: 'official_docs',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -181,6 +186,7 @@ export const FED_MODULE_META = Object.freeze({
   sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'available' },
   store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'available' },
   promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available' },
+  official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available' },
 });
 
 /* ---------------------------------------------------- PR 4: notícias -- */

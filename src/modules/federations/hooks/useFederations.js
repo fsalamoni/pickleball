@@ -64,6 +64,10 @@ export const fedKeys = {
   news: (id) => ['federacoes', 'federacao', id, 'noticias'],
   publicNews: (id) => ['federacoes', 'federacao', id, 'noticias', 'publicas'],
   memberNews: (id) => ['federacoes', 'federacao', id, 'noticias', 'filiados'],
+  // Acervo oficial
+  docsAll: (id) => ['federacoes', 'federacao', id, 'acervo'],
+  docsPublished: (id, visibility) => ['federacoes', 'federacao', id, 'acervo', 'publicados', visibility],
+  officialDoc: (docId) => ['federacoes', 'acervo-documento', docId],
 };
 
 /** As federações estão ligadas para quem vê? (a flag do admin) */
@@ -284,6 +288,20 @@ export function usePublicNews(id, { enabled = true } = {}) {
 /** As notícias "só filiados" — só com filiação ATIVA (`enabled` decide; a regra confere). */
 export function useMemberNews(id, { enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.memberNews(id), queryFn: () => svc.listMemberNews(id), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+/* ---------------------------------------------- Acervo oficial -- */
+
+/** Todo o acervo, rascunhos inclusive (permissão `docs`/`admin`). */
+export const useFederationDocsAll = porFed(svc.listFederationDocsAll, fedKeys.docsAll);
+
+/** Os publicados de uma visibilidade (`public` para todos; `members` só filiado ativo; `staff` só a equipe — `enabled` decide, a regra confere). */
+export function usePublishedDocs(id, visibility, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.docsPublished(id, visibility), queryFn: () => svc.listPublishedDocs(id, visibility), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+export function useOfficialDoc(docId, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.officialDoc(docId), queryFn: () => svc.getOfficialDoc(docId), enabled: !!docId && enabled, retry: 0 });
 }
 
 /** Uma manifestação pelo protocolo (o id). */

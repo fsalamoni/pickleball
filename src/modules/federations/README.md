@@ -93,7 +93,11 @@ PR 3 (`tests/rules/federationPr3.rules.test.js`): `federation_documents_submitte
 (`tests/rules/federationPr4.rules.test.js`): `federation_news`, os campos
 `federations.sponsors`/`governance`, a federação como emissora em `promo_*` e
 como vendedora em `market_sellers`; Storage `federacao/{uid}/`
-(`storage.rules`: só o dono lê). Zero índice composto; os únicos campos novos
+(`storage.rules`: só o dono lê); PR 8 (`tests/rules/federationAcervo.rules.test.js`):
+`federation_docs` (acervo oficial, só o servidor grava — `functions/federationAcervo.js`,
+régua em `federationAcervoPolicy.js` com paridade contra `domain/acervo.js`),
+o contador `federations.doc_numbers` e o Storage `federacao-acervo/{uid}/`
+(rascunho) + `federacao-acervo-oficial/` (fechada à regra). Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir
@@ -158,3 +162,9 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   filiação em dia, sem suspensão e com código, e a do próprio filiado obedece
   a `rules.member_declarations` (a secretaria emite sempre). Ver
   `docs/50-FEDERACAO.md` §6.8.
+- **PR 8** (acervo oficial): documento publicado não se edita nem se apaga —
+  retificação (versão nova com motivo, a anterior em `versions[]`), errata,
+  ato que altera ou revoga; retirar do ar só `admin`, com motivo, sem apagar.
+  O link do arquivo existe só enquanto o documento é público (cada troca gera
+  token novo); o restrito, até 9 MB, vai pela função (`file`). Arquivo novo só
+  da pasta de quem salva. Ver `docs/50-FEDERACAO.md` §14.
