@@ -191,6 +191,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'market_saved_searches', field: 'uid', label: 'Buscas salvas do Mercado' },
   // Federações: o papel na equipe é da pessoa (a federação segue com os outros).
   { col: 'federation_staff', field: 'user_id', label: 'Papéis em equipes de federação' },
+  { col: 'federation_followers', field: 'user_id', label: 'Acervos de federação que seguia' },
   // Acesso de suporte a federações que estava aberto (o registro do motivo
   // fica em `admin_access_logs`, que não é apagado).
   { col: 'federation_admin_grants', field: 'admin_uid', label: 'Acessos de suporte a federações abertos' },

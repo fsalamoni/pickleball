@@ -11,6 +11,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import * as svc from '../services/federationService';
 import { FED_PERMISSION } from '../domain/constants.js';
 import { grantActive, staffIsMaster, staffPerms, staffRoleName } from '../domain/staff.js';
+import { fedModuleOn } from '../domain/federation.js';
+import { mergeDocLists } from '../domain/acervo.js';
 
 export const fedKeys = {
   all: ['federacoes'],
@@ -68,6 +70,7 @@ export const fedKeys = {
   docsAll: (id) => ['federacoes', 'federacao', id, 'acervo'],
   docsPublished: (id, visibility) => ['federacoes', 'federacao', id, 'acervo', 'publicados', visibility],
   officialDoc: (docId) => ['federacoes', 'acervo-documento', docId],
+  follow: (fedId, uid) => ['federacoes', 'federacao', fedId, 'acervo', 'sigo', uid],
 };
 
 /** As federações estão ligadas para quem vê? (a flag do admin) */
@@ -302,6 +305,46 @@ export function usePublishedDocs(id, visibility, { enabled = true } = {}) {
 
 export function useOfficialDoc(docId, { enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.officialDoc(docId), queryFn: () => svc.getOfficialDoc(docId), enabled: !!docId && enabled, retry: 0 });
+}
+
+/**
+ * O acervo que ESTA pessoa vê numa federação: o público sempre; "só filiados"
+ * para filiado ativo e equipe; "só a equipe" para a equipe. Cada lista falha
+ * sozinha: `incompleto` diz que parte ficou de fora, nunca um vazio calado.
+ */
+export function useVisibleAcervo(federation, { enabled = true } = {}) {
+  const fedId = federation?.id;
+  const ligado = enabled && fedModuleOn(federation, 'official_docs');
+  const papel = useMyFederationRole(ligado ? fedId : null);
+  const mq = useMyMembership(fedId, { enabled: ligado });
+  const filiado = mq.data?.status === 'active';
+  const pub = usePublishedDocs(fedId, 'public', { enabled: ligado });
+  const mem = usePublishedDocs(fedId, 'members', { enabled: ligado && (filiado || papel.isStaff) });
+  const eqp = usePublishedDocs(fedId, 'staff', { enabled: ligado && papel.isStaff });
+  return {
+    ligado,
+    docs: pub.isSuccess ? mergeDocLists(pub.data, mem.data, eqp.data) : null,
+    isLoading: pub.isLoading,
+    isError: pub.isError,
+    incompleto: mem.isError || eqp.isError,
+    refetch: () => { pub.refetch(); if (mem.isError) mem.refetch(); if (eqp.isError) eqp.refetch(); },
+    filiado, isStaff: papel.isStaff,
+  };
+}
+
+/** Sigo o acervo da federação? */
+export function useAcervoFollow(fedId, { enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({ queryKey: fedKeys.follow(fedId, user?.uid), queryFn: () => svc.getAcervoFollow(fedId, user?.uid), enabled: !!fedId && !!user?.uid && enabled });
+}
+
+export function useSetAcervoFollow(fedId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (seguir) => svc.setAcervoFollow(fedId, user?.uid, seguir),
+    onSuccess: () => qc.invalidateQueries({ queryKey: fedKeys.follow(fedId, user?.uid) }),
+  });
 }
 
 /** Uma manifestação pelo protocolo (o id). */

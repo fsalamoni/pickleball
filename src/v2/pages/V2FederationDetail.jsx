@@ -22,6 +22,7 @@ import MembershipDeclarationDialog from '@/v2/components/federations/MembershipD
 import { normalizeFederationRules } from '@/modules/federations/domain/federation';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import PlansList from '@/v2/components/federations/PlansList';
+import { FedAcervoBlock } from '@/v2/components/federations/acervo/AcervoPublic';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
 import { FedMemberDocuments, FedMySanctions, FedTransferDialog } from '@/v2/components/federations/FedMemberExtras';
 import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip, FedStoreLink } from '@/v2/components/federations/FedCommsBlocks';
@@ -161,6 +162,7 @@ function Detalhe() {
           {f.status === FEDERATION_STATUS.APPROVED && (
             <>
               <FedNewsSection federation={f} memberOf={filiadoAtivo} />
+              <FedAcervoBlock federation={f} />
               <FedPromosSection federation={f} />
               <FedSanctionedTournaments federation={f} />
               <FedRankingBlock federation={f} meUid={user?.uid || null} />

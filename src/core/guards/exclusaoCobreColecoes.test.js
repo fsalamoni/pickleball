@@ -202,6 +202,7 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_credentials: ['listMyCredentials'],
   federation_sanctions: ['listMySanctions'],
   federation_reports: ['listMyReports'],
+  federation_followers: ['listMyAcervoFollows'],
 };
 const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_plans: 'O plano é da federação (nome, preço, regras), não da pessoa; a filiação exportada já diz o plano escolhido.',

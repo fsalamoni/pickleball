@@ -4,7 +4,7 @@
  * O que é da FEDERAÇÃO (planos, equipe, filiados dos outros) fica com ela.
  */
 import {
-  listAffiliationsRequestedBy, listFederationsCreatedBy, listMyCharges, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
+  listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
   listMyMembersPrivate, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
 } from './federationService.js';
 
@@ -25,6 +25,7 @@ export async function collectFederationExport(uid) {
     ['credentials', 'Credenciais emitidas por federações', () => listMyCredentials(uid)],
     ['sanctions', 'Sanções disciplinares (suas e dos dependentes)', () => listMySanctions(uid)],
     ['reports', 'Manifestações identificadas na ouvidoria', () => listMyReports(uid)],
+    ['acervo_follows', 'Acervos de federação que você segue', () => listMyAcervoFollows(uid)],
   ];
   const lidas = await Promise.allSettled(partes.map(([, , ler]) => ler()));
   const federations = {};

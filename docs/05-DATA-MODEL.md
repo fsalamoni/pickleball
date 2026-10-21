@@ -1661,6 +1661,14 @@ equipe por qualquer cargo; rascunho e retirado por `docs`/`admin`. **Só o
 servidor grava** (`federationAcervo`, `write: if false`). Zero índice (a lista
 pública usa três igualdades).
 
+### `federation_followers/{fed}_{uid}` (PR 8b, NOVO — quem segue o acervo)
+`federation_id`, `user_id`, `created_at` (= `request.time`). Só a própria
+pessoa lê, cria (com o acervo da federação ligado) e apaga; o `get` do
+documento ainda inexistente é permitido (é como o botão "Seguir" sabe). O
+servidor lê para avisar de ato publicado ou retificado (só quem pode ler o
+ato). Sai na exclusão de conta e vai na exportação. Zero índice (uma
+igualdade).
+
 ### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
 Contador da numeração: `{ "<tipo>_<ano>": n }`. Só o servidor grava, numa
 transação ao publicar.

@@ -13,11 +13,14 @@ import { toast } from 'sonner';
 import { CheckCircle2, CircleAlert, Copy, Eye, EyeOff, ExternalLink, FilePen, FileText, History, Library, Pencil, Plus, Send, ShieldOff, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { acervoAction, fetchAcervoFile } from '@/modules/federations/services/federationService';
+import { acervoAction } from '@/modules/federations/services/federationService';
+import { abrirArquivoDoAcervo } from '../acervo/acervoFiles';
+import AcervoPosterButton from '../acervo/AcervoPoster';
+import { Link } from 'react-router-dom';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import {
   DOC_CATEGORIES, DOC_REASON_MIN, DOC_RELATION, DOC_RELATION_INVERSE_LABELS, DOC_STATUS, DOC_STATUS_LABELS, DOC_VISIBILITY, DOC_VISIBILITY_HINTS,
-  DOC_VISIBILITY_LABELS, DOC_WITHDRAW_REASON_MIN, docActions, docCategory, docCode, docDisplayTitle, docPublicPath, docType, docYears, fileSizeLabel, filterDocs,
+  DOC_VISIBILITY_LABELS, DOC_WITHDRAW_REASON_MIN, acervoPublicPath, docActions, docCategory, docCode, docDisplayTitle, docPublicPath, docType, docYears, fileSizeLabel, filterDocs,
   isDocCurrent, transparencyChecklist,
 } from '@/modules/federations/domain/acervo';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
@@ -26,25 +29,6 @@ import { quando } from '../federationUi';
 import { AcervoUploader, DocForm, MediaLinksEditor } from './FedAcervoForm';
 
 const STATUS_TONE = { draft: 'neutral', published: 'green', withdrawn: 'red' };
-
-/**
- * Abre o arquivo: o link público direto; sem link (filiado, equipe, rascunho),
- * o servidor entrega o conteúdo e ele é BAIXADO — abrir aba depois de uma
- * espera o navegador bloqueia como janela não pedida.
- */
-async function abrirArquivoDoAcervo({ federationId, doc, file }) {
-  if (file.url) { window.open(file.url, '_blank', 'noopener,noreferrer'); return; }
-  const r = await fetchAcervoFile({ federationId, docId: doc.id, path: file.path });
-  const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
-  const url = URL.createObjectURL(new Blob([bytes], { type: r.contentType }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = r.name || file.name || 'arquivo';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
 
 /* --------------------------------------------------------------- detalhe -- */
 
@@ -281,7 +265,11 @@ function DocumentosTab({ federation, docsQ, isAdmin }) {
           <h2 className="font-display text-xl font-bold text-ink">{t('Acervo oficial')}</h2>
           <p className="text-sm text-gray-500">{t('Estatuto, regulamentos, resoluções, editais, atas, súmulas, prestação de contas, áudio e vídeo. O rascunho só a equipe vê; publicado, ganha número (quando o tipo é numerado), código de integridade e endereço próprio, e não se edita mais.')}</p>
         </div>
-        <V2Button type="button" onClick={() => abrir('novo', null)} data-dica="federacao-acervo-novo"><Plus className="h-4 w-4" />{t('Novo documento')}</V2Button>
+        <div className="flex flex-wrap gap-2">
+          <V2Button type="button" onClick={() => abrir('novo', null)} data-dica="federacao-acervo-novo"><Plus className="h-4 w-4" />{t('Novo documento')}</V2Button>
+          <V2Button asChild variant="secondary"><Link to={acervoPublicPath(federation)}><ExternalLink className="h-4 w-4" />{t('Ver como o público vê')}</Link></V2Button>
+          <AcervoPosterButton federation={federation} />
+        </div>
       </div>
       {docsQ.isError && <V2ErrorState inline title={t('Não carregou o acervo')} onRetry={() => docsQ.refetch()} />}
       {docsQ.isLoading && <V2Skeleton lines={4} />}

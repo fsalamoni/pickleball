@@ -292,6 +292,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Criar/editar/apagar rascunho, publicar, retificar, mudar visibilidade | ✖ | ✖ | ✖ | ✔ `docs`/`admin` | ◐ com acesso justificado | **Cloud Function** `federationAcervo` (rules `write: if false`; `doc_numbers` em `fedLocked()`) |
 | Retirar documento do ar | ✖ | ✖ | ✖ | ✔ `admin` (motivo ≥ 20 letras) | ◐ com acesso justificado | **Cloud Function** `federationAcervo` |
 | Enviar arquivo de rascunho do acervo | ✖ | ✔ só à própria pasta `federacao-acervo/{uid}/` (tipo e teto) | — | — | — | storage.rules (o servidor só aceita do próprio uid) |
+| Seguir / deixar de seguir o acervo (aviso de ato novo) | ✖ | ✔ só a si mesmo, com o acervo ligado | ✔ | ✔ | — | rules `federation_followers`; o aviso sai da **Cloud Function** `federationAcervo` só para quem pode ler o ato |
 | Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
 | Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
 | Ler filiação | ✖ | ✖ | ✔ a própria (também o `get` dela ainda inexistente, pelo id `{fed}_{uid}`) | ✔ `admin`/`members`/`finance`/`discipline` | ✔ | rules (**nunca pública**) |

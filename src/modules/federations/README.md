@@ -97,7 +97,10 @@ como vendedora em `market_sellers`; Storage `federacao/{uid}/`
 `federation_docs` (acervo oficial, só o servidor grava — `functions/federationAcervo.js`,
 régua em `federationAcervoPolicy.js` com paridade contra `domain/acervo.js`),
 o contador `federations.doc_numbers` e o Storage `federacao-acervo/{uid}/`
-(rascunho) + `federacao-acervo-oficial/` (fechada à regra). Zero índice composto; os únicos campos novos
+(rascunho) + `federacao-acervo-oficial/` (fechada à regra); PR 8b:
+`federation_followers` (quem segue o acervo; só a própria pessoa) e a página
+pública `/f/:slug/acervo(/:docId)` (`src/pages/PublicFederationAcervo.jsx` +
+`src/v2/components/federations/acervo/`). Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir

@@ -303,6 +303,50 @@ export function transparencyChecklist(docs = [], { nowMs = Date.now() } = {}) {
 /** O endereço público do documento (o QR e o compartilhar levam a ele). */
 export const docPublicPath = (federation, docId) => `/f/${encodeURIComponent(federation?.slug || federation?.id || '')}/acervo/${encodeURIComponent(docId)}`;
 
+/** O endereço público do acervo (o mural da federação). */
+export const acervoPublicPath = (federation) => `/f/${encodeURIComponent(federation?.slug || federation?.id || '')}/acervo`;
+
+/** Como o arquivo abre na página: `pdf`, `image`, `audio`, `video` ou `download` (só baixar). */
+export function fileViewKind(contentType) {
+  const ct = String(contentType || '');
+  if (ct === 'application/pdf') return 'pdf';
+  const fam = fileFamilyOf(ct)?.id;
+  return fam === 'image' || fam === 'audio' || fam === 'video' ? fam : 'download';
+}
+
+/** Os documentos de várias listas (público + filiados + equipe), sem repetir. */
+export function mergeDocLists(...listas) {
+  const vistos = new Map();
+  listas.flat().filter(Boolean).forEach((d) => { if (d?.id && !vistos.has(d.id)) vistos.set(d.id, d); });
+  return [...vistos.values()];
+}
+
+/** O mural: os publicados mais recentes primeiro (pela publicação, não pela data do ato). */
+export const muralDocs = (docs = [], limite = 20) => [...(docs || [])]
+  .filter((d) => d.status === DOC_STATUS.PUBLISHED)
+  .sort((a, b) => (Number(b.version_at_ms) || Number(b.published_at_ms) || 0) - (Number(a.version_at_ms) || Number(a.published_at_ms) || 0))
+  .slice(0, limite);
+
+/** "Novo" no mural: publicado ou retificado nos últimos 7 dias. */
+export const isDocNew = (doc, nowMs = Date.now()) => nowMs - (Number(doc?.version_at_ms) || Number(doc?.published_at_ms) || 0) < 7 * 86400000;
+
+/**
+ * Confere um SHA-256 (de um arquivo que a pessoa tem) contra os arquivos do
+ * documento — a versão atual e as anteriores.
+ * @returns {{ file: object, version: number, current: boolean } | null}
+ */
+export function findFileByHash(doc, hash) {
+  const h = String(hash || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(h) || !doc) return null;
+  const atual = (doc.files || []).find((x) => x.sha256 === h);
+  if (atual) return { file: atual, version: Number(doc.version) || 1, current: true };
+  for (const v of [...(doc.versions || [])].reverse()) {
+    const antigo = (v.files || []).find((x) => x.sha256 === h);
+    if (antigo) return { file: antigo, version: Number(v.version) || 1, current: false };
+  }
+  return null;
+}
+
 /** Ações possíveis sobre um documento, para quem tem a permissão do acervo. */
 export function docActions(doc, { isAdmin = false } = {}) {
   const draft = doc?.status === DOC_STATUS.DRAFT;

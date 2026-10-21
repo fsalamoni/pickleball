@@ -216,3 +216,40 @@ describe('acervo oficial: depois de publicado', () => {
     expect(acoes).toEqual(expect.arrayContaining(['federation_doc_save', 'federation_doc_publish']));
   });
 });
+
+describe('acervo oficial: quem segue é avisado', () => {
+  const seguir = (c, uid) => c.db.store.docs.set(`federation_followers/fpp_${uid}`, { federation_id: 'fpp', user_id: uid });
+  const avisos = (c) => [...c.db.store.docs.entries()].filter(([p]) => p.startsWith('notifications/')).map(([, d]) => d);
+
+  it('ato público: avisa quem segue (menos quem publicou), com o link da página do documento', async () => {
+    const c = cenario();
+    ['ana', 'zzz', 'sec'].forEach((u) => seguir(c, u));
+    const { docId } = await chamar(c, SEC, { action: 'save', doc: rascunho() });
+    const r = await chamar(c, SEC, { action: 'publish', docId });
+    expect(r.notified).toBe(2);
+    const lista = avisos(c);
+    expect(lista.map((n) => n.user_id).sort()).toEqual(['ana', 'zzz']);
+    expect(lista[0]).toMatchObject({ link: `/f/fpp/acervo/${docId}`, origin: 'server' });
+    expect(lista[0].title).toContain('FPP publicou');
+  });
+
+  it('só filiados: avisa filiado ativo e equipe, nunca quem não pode ler; só equipe: ninguém', async () => {
+    const c = cenario();
+    ['ana', 'zzz', 'fin'].forEach((u) => seguir(c, u));
+    const { docId } = await chamar(c, SEC, { action: 'save', doc: rascunho({ visibility: 'members' }) });
+    await chamar(c, SEC, { action: 'publish', docId });
+    expect(avisos(c).map((n) => n.user_id).sort()).toEqual(['ana', 'fin']);
+    const outro = await chamar(c, SEC, { action: 'save', doc: rascunho({ visibility: 'staff', files: [arquivo(PDF2)] }) });
+    const r = await chamar(c, SEC, { action: 'publish', docId: outro.docId });
+    expect(r.notified).toBe(0);
+  });
+
+  it('retificação também avisa', async () => {
+    const c = cenario();
+    seguir(c, 'ana');
+    const { docId } = await chamar(c, SEC, { action: 'save', doc: rascunho() });
+    await chamar(c, SEC, { action: 'publish', docId });
+    await chamar(c, SEC, { action: 'rectify', docId, reason: 'Corrige a data da etapa 3', keep_files: doc(c, docId).files.map((x) => x.path) });
+    expect(avisos(c).some((n) => n.title.includes('retificou'))).toBe(true);
+  });
+});
