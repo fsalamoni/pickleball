@@ -26,7 +26,7 @@ import { ARENA_TEMPLATES_MAX, arenaTemplatesFrom } from '@/modules/arenas/domain
 import { COUPON_TEMPLATES_FIELD, arenaCouponTemplatesFrom } from '@/modules/arenas/domain/couponArt';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
-  PROMO_COLLECTIONS, PROMO_FAMILY, PROMO_ISSUER, PROMO_VISIBILITY, issuerOf, normalizeIssuer,
+  PROMO_AUDIENCES_BY_ISSUER, PROMO_COLLECTIONS, PROMO_FAMILY, PROMO_ISSUER, PROMO_VISIBILITY, issuerOf, normalizeIssuer,
   normalizePromoCouponInput, normalizePromoDestination, normalizePromoPlacement, normalizeReach,
   promoDestinationLink, promoFamily, promoNoticeLink, promoSettingsId,
 } from '../domain/promo.js';
@@ -361,8 +361,24 @@ export async function listCoachPublicPromos(coachId) {
   return { coupons: lista(cupons), campaigns: lista(campanhas) };
 }
 
+/** O que UMA federação divulga na página dela (cupons públicos + campanhas da página). */
+export async function listFederationPublicPromos(fedId) {
+  if (!db || !fedId) return { coupons: [], campaigns: [] };
+  const [cupons, campanhas] = await Promise.all([
+    getDocs(query(
+      collection(db, COL_COUPONS),
+      where('issuer_type', '==', PROMO_ISSUER.FEDERATION), where('issuer_id', '==', fedId), where('show_public', '==', true),
+    )),
+    getDocs(query(
+      collection(db, COL_CAMPAIGNS),
+      where('issuer_type', '==', PROMO_ISSUER.FEDERATION), where('issuer_id', '==', fedId), where('show_on_page', '==', true),
+    )),
+  ]);
+  return { coupons: lista(cupons), campaigns: lista(campanhas) };
+}
+
 /* ------------------------------------------------------------------ */
-/*  Campanhas                                                         */
+/*  Campanhas                                                     */
 /* ------------------------------------------------------------------ */
 
 /** As campanhas do emissor (a lista da gestão), as mais novas primeiro. */
@@ -403,7 +419,8 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
   if (!db) throw new Error(t('Firestore indisponível.'));
   const nome = str(input.name).slice(0, 120);
   const mensagem = str(input.message).slice(0, 1000);
-  const avisar = input.notify !== false;
+  // Emissor sem público de aviso (federação: o aviso é a notícia, pelo servidor) não avisa.
+  const avisar = input.notify !== false && (PROMO_AUDIENCES_BY_ISSUER[e.type] || []).length > 0;
   if (!nome) throw new Error(t('Dê um nome à campanha.'));
   if (avisar && !mensagem) throw new Error(t('Escreva a mensagem do aviso.'));
 
@@ -449,7 +466,7 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
     sent_at: serverTimestamp(),
     destination: destino.value,
     reach: alcance.value,
-    visibility: e.type === PROMO_ISSUER.COACH && input.visibility === PROMO_VISIBILITY.STUDENTS
+    visibility: (e.type === PROMO_ISSUER.COACH || e.type === PROMO_ISSUER.FEDERATION) && input.visibility === PROMO_VISIBILITY.STUDENTS
       ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL,
     ...(banner.value ? {
       banner: banner.value,
@@ -530,7 +547,7 @@ export async function updatePromoCampaign(campaignId, patch = {}, actor = null, 
     mudancas.reach = alcance.value;
   }
   if ('visibility' in patch) {
-    mudancas.visibility = e.type === PROMO_ISSUER.COACH && patch.visibility === PROMO_VISIBILITY.STUDENTS
+    mudancas.visibility = (e.type === PROMO_ISSUER.COACH || e.type === PROMO_ISSUER.FEDERATION) && patch.visibility === PROMO_VISIBILITY.STUDENTS
       ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL;
   }
   const mexeNoLugar = ['show_on_page', 'show_home', 'banner_until'].some((k) => k in patch);

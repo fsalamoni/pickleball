@@ -115,6 +115,7 @@ function KindPicker({ issuerType, onPick }) {
 export default function PromoCouponForm({ issuer, cupom = null, unitCost = null, onClose }) {
   const issuerType = issuer.type;
   const ehProfessor = issuerType === PROMO_ISSUER.COACH;
+  const ehFederacao = issuerType === PROMO_ISSUER.FEDERATION;
   const [kind, setKind] = useState(cupom ? (cupom.kind || COUPON_KIND.DISCOUNT) : null);
   const [form, setForm] = useState(() => estadoInicial(cupom, kind || COUPON_KIND.DISCOUNT, unitCost));
   const [art, setArt] = useState(() => cupom?.art || null);
@@ -133,7 +134,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
   const meta = kind ? PROMO_KIND_META[issuerType]?.[kind] : null;
   const Icone = kind ? PROMO_KIND_ICON[kind] : null;
   const salvando = criar.isPending || editar.isPending;
-  const onde = ehProfessor ? t('no seu perfil') : t('na vitrine de promoções');
+  const onde = ehProfessor ? t('no seu perfil') : ehFederacao ? t('na página da federação') : t('na vitrine de promoções');
 
   const escolherTipo = (k) => {
     setKind(k);
@@ -225,7 +226,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
               <V2Input id="pcup-face" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.face_value} onChange={(e) => set({ face_value: e.target.value })} />
             </V2Field>
-            <V2Field label={ehProfessor ? t('Custo para você (R$)') : t('Custo para a plataforma (R$)')} htmlFor="pcup-custo"
+            <V2Field label={ehProfessor ? t('Custo para você (R$)') : ehFederacao ? t('Custo para a federação (R$)') : t('Custo para a plataforma (R$)')} htmlFor="pcup-custo"
               hint={<span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" aria-hidden /> {t('Só você vê. Entra no controle de uso.')}</span>}>
               <V2Input id="pcup-custo" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.unit_cost} onChange={(e) => set({ unit_cost: e.target.value })} />
@@ -245,7 +246,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
 
       <V2Field label={t('Descrição')} htmlFor="pcup-desc" className="mt-3" hint={t('Aparece para quem usa o código. Diga a regra em uma linha.')}>
         <V2Input id="pcup-desc" maxLength={160}
-          placeholder={ehProfessor ? t('Para a primeira aula de quem nunca treinou comigo') : t('Válido no Open de Primavera')}
+          placeholder={ehProfessor ? t('Para a primeira aula de quem nunca treinou comigo') : ehFederacao ? t('Para filiados, na inscrição da etapa estadual') : t('Válido no Open de Primavera')}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
 
@@ -274,15 +275,17 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
         {t('Cada pessoa pode usar uma vez só')}
       </label>
 
-      {ehProfessor && (
+      {(ehProfessor || ehFederacao) && (
         <label className="mt-2 flex items-start gap-2 text-sm text-gray-600">
           <input type="checkbox" checked={form.visibility === PROMO_VISIBILITY.STUDENTS}
             onChange={(e) => set({ visibility: e.target.checked ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL })}
             className="mt-0.5 h-4 w-4 rounded border-gray-300" />
           <span>
-            {t('Mostrar só para os meus alunos')}
+            {ehFederacao ? t('Mostrar só para os filiados') : t('Mostrar só para os meus alunos')}
             <span className="block text-xs text-gray-500">
-              {t('Na vitrine, no seu perfil e na tela inicial, só quem é seu aluno vê. Quem recebeu o código de você continua podendo usá-lo.')}
+              {ehFederacao
+                ? t('Na vitrine, na página da federação e na tela inicial, só quem tem filiação ativa vê. A equipe confere a carteirinha ao registrar o uso.')
+                : t('Na vitrine, no seu perfil e na tela inicial, só quem é seu aluno vê. Quem recebeu o código de você continua podendo usá-lo.')}
             </span>
           </span>
         </label>
@@ -293,7 +296,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
           onChange={(e) => set({ show_public: e.target.checked, ...(e.target.checked ? {} : { show_home: false }) })}
           className="mt-0.5 h-4 w-4 rounded border-gray-300" />
         <span>
-          {ehProfessor ? t('Divulgar no meu perfil e na vitrine de promoções') : t('Divulgar na vitrine de promoções')}
+          {ehProfessor ? t('Divulgar no meu perfil e na vitrine de promoções') : ehFederacao ? t('Divulgar na página da federação e na vitrine de promoções') : t('Divulgar na vitrine de promoções')}
           <span className="block text-xs text-gray-500">
             {t('Aparece com o código, para quem quiser usar. Sem marcar, o cupom é um código que você entrega a quem quiser.')}
           </span>
@@ -320,7 +323,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
           {t('Vai valer como:')} <strong className="text-ink">{couponLabel({ ...previa.value })}</strong>
           {previa.value.max_uses ? ` · ${t('até {n} usos', { n: previa.value.max_uses })}` : ` · ${t('usos ilimitados')}`}
           {previa.value.show_home ? ` · ${t('banner na tela inicial ({regiao})', { regiao: reachLabel(previa.value.reach) })}` : ''}
-          {previa.value.visibility === PROMO_VISIBILITY.STUDENTS ? ` · ${t('só para os seus alunos')}` : ''}
+          {previa.value.visibility === PROMO_VISIBILITY.STUDENTS ? ` · ${ehFederacao ? t('só para os filiados') : t('só para os seus alunos')}` : ''}
         </p>
       )}
 

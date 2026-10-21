@@ -98,8 +98,8 @@ function LinhaDaCampanha({ campaign, today, onEditar }) {
           )}
           {enviadaEm && <span>{formatDateShortBR(enviadaEm)}</span>}
           {campaign.banner && campaign.show_home && <span>{t('Tela inicial: {regiao}', { regiao: reachLabel(campaign.reach) })}</span>}
-          {campaign.issuer_type === PROMO_ISSUER.COACH && campaign.visibility === PROMO_VISIBILITY.STUDENTS && (
-            <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" aria-hidden /> {t('Só alunos')}</span>
+          {campaign.issuer_type !== PROMO_ISSUER.PLATFORM && campaign.visibility === PROMO_VISIBILITY.STUDENTS && (
+            <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" aria-hidden /> {campaign.issuer_type === PROMO_ISSUER.FEDERATION ? t('Só filiados') : t('Só alunos')}</span>
           )}
         </p>
         {campaign.banner && <p className="mt-0.5 text-xs text-gray-500">{promoPlacementText(campaign)}</p>}
@@ -141,6 +141,7 @@ export default function PromoCampaignsPanel({ issuer }) {
   const today = todayISO();
   const [form, setForm] = useState(null); // null | { campaign: object|null }
   const ehProfessor = issuer.type === PROMO_ISSUER.COACH;
+  const ehFederacao = issuer.type === PROMO_ISSUER.FEDERATION;
 
   const campanhas = useMemo(() => [...(q.data || [])].sort((a, b) => (
     (instanteEmMs(b.sent_at) || instanteEmMs(b.created_at) || 0)
@@ -160,7 +161,7 @@ export default function PromoCampaignsPanel({ issuer }) {
           <p className="mt-0.5 text-xs text-gray-500">
             {ehProfessor
               ? t('Banner no seu perfil e na tela inicial, levando a marcar aula, clínicas, loja ou conteúdo — e aviso para os seus alunos.')
-              : t('Banner na vitrine de promoções e na tela inicial, levando a torneios, jogos, arenas, professores e ranking — e aviso para a comunidade.')}
+              : ehFederacao ? t('Banner na página da federação, na vitrine e na tela inicial, levando a torneios chancelados, à loja ou à página da federação. O aviso aos filiados vai pelas Notícias.') : t('Banner na vitrine de promoções e na tela inicial, levando a torneios, jogos, arenas, professores e ranking — e aviso para a comunidade.')}
           </p>
         </div>
         {!form && !q.isError && !q.isLoading && (
@@ -191,7 +192,7 @@ export default function PromoCampaignsPanel({ issuer }) {
             title={t('Nenhuma campanha ainda')}
             description={ehProfessor
               ? t('Uma campanha põe um banner no seu perfil (e, se quiser, na tela inicial) e avisa os seus alunos. Comece por um dos cinco modelos.')
-              : t('Uma campanha põe um banner na vitrine e na tela inicial e avisa a comunidade — toda ou só uma região. Comece por um dos cinco modelos.')}
+              : ehFederacao ? t('Uma campanha põe um banner na página da federação (e, se quiser, na tela inicial da sua região). Comece por um dos cinco modelos.') : t('Uma campanha põe um banner na vitrine e na tela inicial e avisa a comunidade — toda ou só uma região. Comece por um dos cinco modelos.')}
           />
         )
       ) : (

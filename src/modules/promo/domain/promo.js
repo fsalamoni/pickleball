@@ -30,6 +30,7 @@ import {
 import { BANNER_REGION, cityKey, normalizeLocality } from '../../arenas/domain/homeBanners.js';
 import { LESSON_COUPON_STATUS } from './lessonCoupon.js';
 import { BR_UFS } from '../../../core/domain/ufs.js';
+import { membershipState } from '../../federations/domain/membership.js';
 import { t, tk, fmtLista } from '@/core/i18n';
 
 /* ------------------------------------------------------------------ */
@@ -241,9 +242,14 @@ export function isVisibleTo(doc, { uid = null, coachIdsDoAluno = new Set(), fedI
   return uid === doc.issuer_id || coachIdsDoAluno.has(doc.issuer_id);
 }
 
-/** As federações em que a pessoa tem filiação ATIVA — o que decide o "só filiados". */
-export function fedIdsOfMember(memberships = []) {
-  return new Set((memberships || []).filter((m) => m?.federation_id && m.status === 'active').map((m) => m.federation_id));
+/**
+ * As federações em que a pessoa tem filiação ATIVA (e dentro da validade) — o
+ * que decide o "só filiados". A mesma conta da carteirinha (`membershipState`).
+ */
+export function fedIdsOfMember(memberships = [], hoje) {
+  return new Set((memberships || [])
+    .filter((m) => m?.federation_id && membershipState(m, hoje).status === 'active')
+    .map((m) => m.federation_id));
 }
 
 /**

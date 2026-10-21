@@ -37,7 +37,8 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { usePlatformHome } from '@/core/lib/FeatureFlagsContext';
+import { useFeatureFlag, usePlatformHome } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useRelogio } from '@/core/lib/useRelogio';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -107,6 +108,7 @@ export default function V2PersonalHome() {
   const actionHomeOn = true;
   const coachMarketingOn = true;
   const platformMarketingOn = true;
+  const federacoesOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const { promocoes: promocoesOn } = usePlatformHome();
   const treinoOn = true;
   const balancoOn = true;
@@ -266,7 +268,7 @@ export default function V2PersonalHome() {
             admin da plataforma liga ou desliga a área para todos. */}
         {promocoesOn && (arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
           <Suspense fallback={null}>
-            <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} className="mb-8" />
+            <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} federationsOn={federacoesOn} className="mb-8" />
           </Suspense>
         )}
 
@@ -325,7 +327,7 @@ export default function V2PersonalHome() {
           (cupons e campanhas). Vitrine: some sem nada. */}
       {promocoesOn && (arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
         <Suspense fallback={null}>
-          <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} className="mb-8" />
+          <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} federationsOn={federacoesOn} className="mb-8" />
         </Suspense>
       )}
 

@@ -15,8 +15,9 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { GraduationCap, Megaphone, Tag } from 'lucide-react';
+import { GraduationCap, Landmark, Megaphone, Tag } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
@@ -37,9 +38,11 @@ export default function V2Promotions() {
   const { flags, isLoading: flagsCarregando } = useFeatureFlags();
   const plataformaOn = Boolean(true);
   const professoresOn = Boolean(true);
+  // Federações: a vitrine mostra o que elas divulgam só com a flag ligada.
+  const federacoesOn = Boolean(flags?.[FEATURE_FLAG.FEDERATIONS]);
   const ligado = plataformaOn || professoresOn;
   const q = usePromoShowcase({ enabled: ligado });
-  const quem = usePromoViewer({ enabled: professoresOn });
+  const quem = usePromoViewer({ enabled: professoresOn, federations: federacoesOn });
   const today = todayISO();
 
   // Minha região: as promoções da região da pessoa (as nacionais sempre
@@ -51,8 +54,9 @@ export default function V2Promotions() {
   const filtraRegiao = Boolean(regiaoPromo) && regiaoPromo.mode !== BANNER_REGION.UNKNOWN
     && regiaoPromo.mode !== BANNER_REGION.ALL && !verTodas;
 
-  const { banners, cuponsPlataforma, cuponsProfessores, fora } = useMemo(() => {
-    const emissorLigado = (d) => (d.issuer_type === PROMO_ISSUER.PLATFORM ? plataformaOn : professoresOn);
+  const { banners, cuponsPlataforma, cuponsProfessores, cuponsFederacoes, fora } = useMemo(() => {
+    const emissorLigado = (d) => (d.issuer_type === PROMO_ISSUER.PLATFORM ? plataformaOn
+      : d.issuer_type === PROMO_ISSUER.FEDERATION ? federacoesOn : professoresOn);
     const visivelSemRegiao = (d) => emissorLigado(d) && isVisibleTo(d, quem);
     const naRegiao = (d) => !filtraRegiao || reachMatchesRegion(d.reach, regiaoPromo);
     let foraDaRegiao = 0;
@@ -67,10 +71,11 @@ export default function V2Promotions() {
       banners: livePromoBanners(q.data?.campaigns || [], { today, lugar: 'page' }).filter(visivel),
       cuponsPlataforma: cupons.filter((c) => c.issuer_type === PROMO_ISSUER.PLATFORM),
       cuponsProfessores: cupons.filter((c) => c.issuer_type === PROMO_ISSUER.COACH),
+      cuponsFederacoes: cupons.filter((c) => c.issuer_type === PROMO_ISSUER.FEDERATION),
       fora: foraDaRegiao,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q.data, quem, today, plataformaOn, professoresOn, filtraRegiao, minha.matcher, minha.region]);
+  }, [q.data, quem, today, plataformaOn, professoresOn, federacoesOn, filtraRegiao, minha.matcher, minha.region]);
   // A barra da região, no formato que ela espera.
   const regional = {
     ...minha,
@@ -84,7 +89,7 @@ export default function V2Promotions() {
 
   if (!flagsCarregando && !ligado) return <Navigate to="/" replace />;
 
-  const nada = banners.length + cuponsPlataforma.length + cuponsProfessores.length === 0;
+  const nada = banners.length + cuponsPlataforma.length + cuponsProfessores.length + cuponsFederacoes.length === 0;
 
   return (
     <V2Page className="space-y-6">
@@ -111,8 +116,8 @@ export default function V2Promotions() {
           {quem.falhou && professoresOn && (
             <V2ErrorState
               inline
-              title={t('Não deu para conferir de quem você é aluno')}
-              description={t('Promoções só para alunos podem não aparecer.')}
+              title={federacoesOn ? t('Não deu para conferir de quem você é aluno ou filiado') : t('Não deu para conferir de quem você é aluno')}
+              description={federacoesOn ? t('Promoções só para alunos ou filiados podem não aparecer.') : t('Promoções só para alunos podem não aparecer.')}
               onRetry={() => quem.recarregar()}
             />
           )}
@@ -163,6 +168,17 @@ export default function V2Promotions() {
                 {t('O desconto na aula entra quando você informa o código ao')}{' '}
                 <Link to="/coaches" className="font-semibold text-ink underline">{t('pedir a aula')}</Link>.
               </p>
+            </section>
+          )}
+
+          {cuponsFederacoes.length > 0 && (
+            <section aria-labelledby="promo-federacoes" className="space-y-3">
+              <h2 id="promo-federacoes" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+                <Landmark className="h-5 w-5" aria-hidden /> {t('Das federações')}
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {cuponsFederacoes.map((c) => <PromoCouponCard key={c.id} coupon={c} />)}
+              </div>
             </section>
           )}
         </>

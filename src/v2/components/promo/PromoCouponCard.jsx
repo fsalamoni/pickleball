@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, Landmark } from 'lucide-react';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { instanteEmMs } from '@/core/domain/instant';
 import { PROMO_ISSUER, PROMO_VISIBILITY, promoBenefitText, promoUseHint } from '@/modules/promo/domain/promo';
@@ -25,6 +25,7 @@ function ateQuando(coupon) {
 /** @param {{ coupon: object, showIssuer?: boolean, notch?: string }} props */
 export default function PromoCouponCard({ coupon, showIssuer = true, notch = 'bg-paper' }) {
   const ehProfessor = coupon.issuer_type === PROMO_ISSUER.COACH;
+  const ehFederacao = coupon.issuer_type === PROMO_ISSUER.FEDERATION;
   const dono = issuerDisplayName(coupon);
   return (
     <div className="space-y-1.5" data-promo-cupom={coupon.code}>
@@ -37,8 +38,13 @@ export default function PromoCouponCard({ coupon, showIssuer = true, notch = 'bg
             <GraduationCap className="h-3.5 w-3.5" aria-hidden /> {dono}
           </Link>
         )}
+        {showIssuer && ehFederacao && (
+          <Link to={`/federacoes/${coupon.issuer_id}`} className="inline-flex items-center gap-1 font-semibold text-ink hover:underline">
+            <Landmark className="h-3.5 w-3.5" aria-hidden /> {dono}
+          </Link>
+        )}
         <span>{promoUseHint(coupon)}</span>
-        {coupon.visibility === PROMO_VISIBILITY.STUDENTS && <span className="font-semibold text-ink">{t('Só para alunos')}</span>}
+        {coupon.visibility === PROMO_VISIBILITY.STUDENTS && <span className="font-semibold text-ink">{ehFederacao ? t('Só para filiados') : t('Só para alunos')}</span>}
         {coupon.once_per_user !== false && <span>{t('1 por pessoa')}</span>}
       </p>
     </div>

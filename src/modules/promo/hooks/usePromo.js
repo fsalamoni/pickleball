@@ -9,10 +9,11 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useStudentCoaches } from '@/modules/coaches/hooks/useStudents';
-import { coachIdsOfStudent, normalizeIssuer, promoSettingsId } from '../domain/promo.js';
+import { useMyMemberships } from '@/modules/federations/hooks/useFederations';
+import { coachIdsOfStudent, fedIdsOfMember, normalizeIssuer, promoSettingsId } from '../domain/promo.js';
 import {
   createPromoCoupon, deletePromoCampaign, deletePromoCoupon, findCoachCouponByCode, findPromoCouponByCode, getPromoCampaign,
-  getPromoSettings, listCoachPublicPromos, listHomePromoCampaigns, listHomePromoCoupons, listIssuerCampaigns,
+  getPromoSettings, listCoachPublicPromos, listFederationPublicPromos, listHomePromoCampaigns, listHomePromoCoupons, listIssuerCampaigns,
   listIssuerCoupons, listPagePromoCampaigns, listPublicPromoCoupons, publishPromoCampaign, redeemPromoCoupon,
   savePromoBannerTemplates, savePromoCouponTemplates, setPromoCouponActive, setPromoCouponUnitCost,
   updatePromoCampaign, updatePromoCoupon,
@@ -29,6 +30,7 @@ export const promoKeys = Object.freeze({
   home: () => ['promo', 'home'],
   vitrine: () => ['promo', 'vitrine'],
   doProfessor: (coachId) => ['promo', 'coach-public', coachId],
+  daFederacao: (fedId) => ['promo', 'federation-public', fedId],
 });
 
 /** Depois de qualquer escrita: tudo o que mostra divulgação fica velho. */
@@ -149,6 +151,16 @@ export function useCoachPublicPromos(coachId, { enabled = true } = {}) {
   });
 }
 
+/** O que UMA federação divulga (a página dela). */
+export function useFederationPublicPromos(fedId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: promoKeys.daFederacao(fedId),
+    queryFn: () => listFederationPublicPromos(fedId),
+    enabled: enabled && !!fedId,
+    staleTime: 2 * 60_000,
+  });
+}
+
 /** Uma campanha (a página "saiba mais"). */
 export function usePromoCampaign(campaignId) {
   return useQuery({
@@ -164,17 +176,23 @@ export function usePromoCampaign(campaignId) {
  * do próprio aluno (a regra deixa). `falhou`: não dá para saber de quem a
  * pessoa é aluna, e a tela avisa em vez de afirmar que não há nada.
  */
-export function usePromoViewer({ enabled = true } = {}) {
+export function usePromoViewer({ enabled = true, federations = false } = {}) {
   const { user } = useAuth();
   const uid = user?.uid || null;
   const vinculos = useStudentCoaches(enabled ? uid : null);
+  // "Só para os filiados" (cupom de federação): as filiações ativas da pessoa.
+  const filiacoes = useMyMemberships({ enabled: enabled && federations });
   const coachIdsDoAluno = useMemo(() => coachIdsOfStudent(vinculos.data || []), [vinculos.data]);
-  const { isError: falhou, refetch: recarregar } = vinculos;
-  // Ainda sem resposta: "é aluno?" é DESCONHECIDO, não "não é".
-  const carregando = Boolean(enabled && uid && vinculos.isLoading);
+  const fedIdsDoFiliado = useMemo(() => fedIdsOfMember(filiacoes.data || []), [filiacoes.data]);
+  const falhou = vinculos.isError || (federations && filiacoes.isError);
+  const { refetch: refetchVinculos } = vinculos;
+  const { refetch: refetchFiliacoes } = filiacoes;
+  const recarregar = useMemo(() => () => { refetchVinculos(); if (federations) refetchFiliacoes(); }, [refetchVinculos, refetchFiliacoes, federations]);
+  // Ainda sem resposta: "é aluno/filiado?" é DESCONHECIDO, não "não é".
+  const carregando = Boolean(enabled && uid && (vinculos.isLoading || (federations && filiacoes.isLoading)));
   return useMemo(
-    () => ({ uid, coachIdsDoAluno, falhou, carregando, recarregar }),
-    [uid, coachIdsDoAluno, falhou, carregando, recarregar],
+    () => ({ uid, coachIdsDoAluno, fedIdsDoFiliado, falhou, carregando, recarregar }),
+    [uid, coachIdsDoAluno, fedIdsDoFiliado, falhou, carregando, recarregar],
   );
 }
 
