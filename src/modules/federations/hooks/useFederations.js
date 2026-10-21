@@ -13,6 +13,7 @@ import { FED_PERMISSION } from '../domain/constants.js';
 import { grantActive, staffIsMaster, staffPerms, staffRoleName } from '../domain/staff.js';
 import { fedModuleOn } from '../domain/federation.js';
 import { mergeDocLists } from '../domain/acervo.js';
+import { mergeEventLists, tournamentAgendaItem } from '../domain/agenda.js';
 
 export const fedKeys = {
   all: ['federacoes'],
@@ -71,6 +72,9 @@ export const fedKeys = {
   docsPublished: (id, visibility) => ['federacoes', 'federacao', id, 'acervo', 'publicados', visibility],
   officialDoc: (docId) => ['federacoes', 'acervo-documento', docId],
   follow: (fedId, uid) => ['federacoes', 'federacao', fedId, 'acervo', 'sigo', uid],
+  // Calendário oficial
+  events: (id, visibility) => ['federacoes', 'federacao', id, 'agenda', visibility],
+  event: (eventId) => ['federacoes', 'agenda-evento', eventId],
 };
 
 /** As federações estão ligadas para quem vê? (a flag do admin) */
@@ -329,6 +333,46 @@ export function useVisibleAcervo(federation, { enabled = true } = {}) {
     incompleto: mem.isError || eqp.isError,
     refetch: () => { pub.refetch(); if (mem.isError) mem.refetch(); if (eqp.isError) eqp.refetch(); },
     filiado, isStaff: papel.isStaff,
+  };
+}
+
+/* ---------------------------------------------- Calendário oficial -- */
+
+export function useFederationEvents(id, visibility, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.events(id, visibility), queryFn: () => svc.listFederationEvents(id, visibility), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+export function useFederationEvent(eventId, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.event(eventId), queryFn: () => svc.getFederationEvent(eventId), enabled: !!eventId && enabled, retry: 0 });
+}
+
+/**
+ * A agenda que ESTA pessoa vê: os eventos públicos sempre, "só filiados" para
+ * filiado ativo e equipe, "só a equipe" para a equipe, e os torneios
+ * chancelados (derivados). Cada lista falha sozinha: `incompleto` diz que
+ * parte ficou de fora, nunca um vazio calado.
+ */
+export function useVisibleAgenda(federation, { enabled = true } = {}) {
+  const fedId = federation?.id;
+  const ligado = enabled && fedModuleOn(federation, 'calendar');
+  const comTorneios = ligado && fedModuleOn(federation, 'tournaments');
+  const papel = useMyFederationRole(ligado ? fedId : null);
+  const mq = useMyMembership(fedId, { enabled: ligado });
+  const filiado = mq.data?.status === 'active';
+  const pub = useFederationEvents(fedId, 'public', { enabled: ligado });
+  const mem = useFederationEvents(fedId, 'members', { enabled: ligado && (filiado || papel.isStaff) });
+  const eqp = useFederationEvents(fedId, 'staff', { enabled: ligado && papel.isStaff });
+  const tq = useFederationTournaments(fedId, { enabled: comTorneios });
+  const items = useMemo(() => (pub.isSuccess
+    ? mergeEventLists(pub.data, mem.data, eqp.data, (tq.data || []).map(tournamentAgendaItem).filter(Boolean))
+    : null), [pub.isSuccess, pub.data, mem.data, eqp.data, tq.data]);
+  return {
+    ligado, items,
+    isLoading: pub.isLoading,
+    isError: pub.isError,
+    incompleto: mem.isError || eqp.isError || tq.isError,
+    refetch: () => { pub.refetch(); if (mem.isError) mem.refetch(); if (eqp.isError) eqp.refetch(); if (tq.isError) tq.refetch(); },
+    filiado, isStaff: papel.isStaff, perms: papel.perms,
   };
 }
 

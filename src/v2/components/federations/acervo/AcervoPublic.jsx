@@ -51,21 +51,22 @@ export function AcervoDocItem({ federation, doc, nowMs = Date.now() }) {
 
 /* ---------------------------------------------------------------- seguir -- */
 
-export function AcervoFollowButton({ federation }) {
+/** Seguir as publicações oficiais (acervo e calendário): `next` é para onde volta depois de entrar. */
+export function AcervoFollowButton({ federation, next = '' }) {
   const { isAuthenticated } = useAuth();
   const q = useAcervoFollow(federation?.id, { enabled: isAuthenticated });
   const m = useSetAcervoFollow(federation?.id);
   if (!isAuthenticated) {
     return (
       <V2Button asChild variant="secondary" size="sm">
-        <Link to={`/login?next=${encodeURIComponent(acervoPublicPath(federation))}`}><Bell className="h-4 w-4" />{t('Entrar para seguir')}</Link>
+        <Link to={`/login?next=${encodeURIComponent(next || acervoPublicPath(federation))}`}><Bell className="h-4 w-4" />{t('Entrar para seguir')}</Link>
       </V2Button>
     );
   }
   if (q.isLoading || q.isError) return null;
   const sigo = Boolean(q.data);
   const alternar = () => m.mutate(!sigo, {
-    onSuccess: () => toast.success(sigo ? t('Você deixou de seguir o acervo.') : t('Pronto: você recebe um aviso a cada publicação.')),
+    onSuccess: () => toast.success(sigo ? t('Você deixou de seguir as publicações oficiais.') : t('Pronto: você recebe um aviso a cada ato publicado e a cada evento marcado, adiado ou cancelado.')),
     onError: () => toast.error(t('Não foi possível agora. Tente de novo.')),
   });
   return (

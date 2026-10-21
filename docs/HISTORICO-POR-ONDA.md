@@ -2228,3 +2228,19 @@ promessa do código de integridade só vale se qualquer pessoa conseguir
 conferir. Quem segue o acervo recebe aviso de ato novo (só do que pode ler), e
 a Central imprime o cartaz com QR para o mural da sede, que a lei também pede.
 §14.8.
+
+### Federação — calendário oficial (PR 9a, Etapa 3 do acervo, 2026-10-21)
+
+Pedido do dono: agenda esportiva, de diretorias e setores, assembleias e
+eventos, publicada pela federação. Antes não havia data oficial em lugar
+nenhum: a assembleia era notícia, e quem a remarcava apagava a anterior sem
+deixar rastro. Agora o calendário é gravado só pelo servidor, com catorze
+tipos em três agendas (esportiva, institucional, eventos), quem vê (público,
+só filiados, só a equipe) e documentos do acervo ligados. O evento já
+divulgado não muda de data nem some calado: remarcar, adiar e cancelar pedem
+motivo, ficam no histórico visível e avisam quem segue; apagar só o que só a
+equipe viu. Os torneios chancelados entram sozinhos. O público tem
+`/f/:slug/agenda`, cada evento com "Adicionar ao calendário" e Google Agenda,
+e a agenda inteira assinável por ICS (`/api/agenda/{slug}.ics`), que atualiza
+no celular quando a federação remarca. As reuniões com pauta, quórum e votação
+são a parte 2. `docs/50-FEDERACAO.md` §15.

@@ -39,6 +39,7 @@ const FedCoursesPanel = lazy(() => import('@/v2/components/federations/manage/Fe
 const FedDisciplinePanel = lazy(() => import('@/v2/components/federations/manage/FedDisciplinePanel'));
 const FedCommsPanel = lazy(() => import('@/v2/components/federations/manage/FedCommsPanel'));
 const FedAcervoPanel = lazy(() => import('@/v2/components/federations/manage/FedAcervoPanel'));
+const FedAgendaPanel = lazy(() => import('@/v2/components/federations/manage/FedAgendaPanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
 
@@ -139,6 +140,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'disciplina' && <FedDisciplinePanel federation={f} membersQ={membersQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} tab={tab} />}
         {secaoAtiva.id === 'comunicacao' && <FedCommsPanel federation={f} newsQ={newsQ} tab={tab} />}
         {secaoAtiva.id === 'acervo' && <FedAcervoPanel federation={f} docsQ={docsQ} tab={tab} isAdmin={admin} />}
+        {secaoAtiva.id === 'agenda' && <FedAgendaPanel federation={f} perms={perms} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {secaoAtiva.id === 'indicadores' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}

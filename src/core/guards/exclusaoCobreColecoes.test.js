@@ -212,6 +212,7 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_imports: 'Relatório da secretaria: e-mails de quem ainda não tem conta; a pessoa importada já aparece na filiação exportada.',
   federation_news: 'A notícia é da federação (título, texto, público), não da pessoa; quem escreveu é só o uid de equipe.',
   federation_docs: 'O documento do acervo é ato oficial da federação (estatuto, resolução, ata), não dado da pessoa; quem preparou é só o uid de equipe.',
+  federation_events: 'O evento é da agenda oficial da federação (data, local, órgão), não dado da pessoa; quem marcou é só o uid de equipe.',
   federation_admin_grants: 'Acesso de suporte do admin da plataforma a uma federação: registro interno e temporário (até 8 h), não é dado do titular.',
 };
 

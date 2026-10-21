@@ -6,7 +6,7 @@
  * o admin master vê tudo (os cargos são de cada federação). O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { ArrowLeftRight, BadgeCheck, Eye, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -77,6 +77,10 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'acervo', label: tk('Documentos'), icon: ScrollText },
         { value: 'transparencia', label: tk('Transparência'), icon: Eye },
       ],
+    },
+    (admin || pode(FED_PERMISSION.DOCS) || pode(FED_PERMISSION.COMPETITIONS)) && modulo('calendar') && {
+      id: 'agenda', grupo: 'atender', label: tk('Agenda'), icon: CalendarDays, dica: 'federacao-secao-agenda',
+      tabs: [{ value: 'agenda', label: tk('Calendário oficial'), icon: CalendarDays }],
     },
     pode(FED_PERMISSION.FINANCE) && {
       id: 'financeiro', grupo: 'atender', label: tk('Financeiro'), icon: Wallet, dica: 'federacao-secao-financeiro',
