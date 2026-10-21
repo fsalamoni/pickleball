@@ -106,6 +106,9 @@ describe('⭐ a federação', () => {
     await assertFails(updateDoc(doc(como(PRES), 'federations', FED), { status: 'suspended' }));
     await assertFails(updateDoc(doc(como(SEC), 'federations', FED), { about: 'Olá' }));
     await assertFails(updateDoc(doc(como(ANA), 'federations', FED), { about: 'Olá' }));
+    // O admin da plataforma só com o acesso JUSTIFICADO valendo (a revisão vai pelo servidor).
+    await assertFails(updateDoc(doc(como(ADMIN), 'federations', FED), { status: 'suspended', verified: true }));
+    await semRegras((db) => setDoc(doc(db, 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() + 3600000 }));
     await assertSucceeds(updateDoc(doc(como(ADMIN), 'federations', FED), { status: 'suspended', verified: true }));
   });
   it('CNPJ completo: quem pediu, a equipe (admin) e o admin da plataforma', async () => {
@@ -119,31 +122,34 @@ describe('⭐ a federação', () => {
 });
 
 describe('⭐ a equipe', () => {
-  it('quem tem admin acrescenta papéis; presidente só por presidente', async () => {
-    await assertSucceeds(setDoc(doc(como(PRES), 'federation_staff', `${FED}_${BIA}`), staff(BIA, 'communication')));
-    await assertSucceeds(setDoc(doc(como(DIR), 'federation_staff', `${FED}_${ANA}`), staff(ANA, 'discipline')));
-    await assertFails(setDoc(doc(como(DIR), 'federation_staff', `${FED}_x1`), staff('x1', 'president')));
-    await assertSucceeds(setDoc(doc(como(PRES), 'federation_staff', `${FED}_x1`), staff('x1', 'president')));
-    await assertFails(setDoc(doc(como(SEC), 'federation_staff', `${FED}_x2`), staff('x2', 'secretary')));
-    await assertFails(setDoc(doc(como(PRES), 'federation_staff', `${FED}_x3`), staff('x3', 'king')));
-    // id tem de bater com os campos.
-    await assertFails(setDoc(doc(como(PRES), 'federation_staff', `${FED}_errado`), staff('x4', 'secretary')));
-    // federação pendente não tem equipe ainda.
-    await assertFails(setDoc(doc(como(BIA), 'federation_staff', `pend_${BIA}`), { federation_id: 'pend', user_id: BIA, role: 'president' }));
+  it('⭐ cargos e mandatos só o servidor grava — nem o presidente nem o admin pelo navegador', async () => {
+    await assertFails(setDoc(doc(como(PRES), 'federation_staff', `${FED}_${BIA}`), staff(BIA, 'communication')));
+    await assertFails(updateDoc(doc(como(PRES), 'federation_staff', `${FED}_${SEC}`), { role: 'treasurer' }));
+    await assertFails(updateDoc(doc(como(SEC), 'federation_staff', `${FED}_${SEC}`), { term_end_ms: 0 }));
+    await assertFails(deleteDoc(doc(como(SEC), 'federation_staff', `${FED}_${SEC}`)));
+    await assertFails(setDoc(doc(como(ADMIN), 'federation_staff', `${FED}_${BIA}`), staff(BIA, 'president')));
+    await assertFails(updateDoc(doc(como(PRES), 'federations', FED), { staff_roles: [] }));
   });
-  it('troca de papel: diretor não mexe no presidente; presidente não se rebaixa sozinho', async () => {
-    await assertSucceeds(updateDoc(doc(como(DIR), 'federation_staff', `${FED}_${SEC}`), { role: 'treasurer' }));
-    await assertFails(updateDoc(doc(como(DIR), 'federation_staff', `${FED}_${PRES}`), { role: 'director' }));
-    await assertFails(updateDoc(doc(como(DIR), 'federation_staff', `${FED}_${SEC}`), { role: 'president' }));
-    await assertFails(updateDoc(doc(como(PRES), 'federation_staff', `${FED}_${PRES}`), { role: 'director' }));
-    await assertSucceeds(updateDoc(doc(como(PRES), 'federation_staff', `${FED}_${DIR}`), { role: 'president' }));
-    await assertFails(updateDoc(doc(como(DIR), 'federation_staff', `${FED}_${SEC}`), { federation_id: 'outra' }));
+  it('⭐ a cópia das permissões vale; mandato vencido não dá poder — salvo ao admin master', async () => {
+    const ontem = Date.now() - 86400000;
+    await semRegras(async (db) => {
+      await setDoc(doc(db, 'federation_staff', `${FED}_${SEC}`), { ...staff(SEC, 'secretary'), perms: ['finance'], is_master: false, term_end_ms: 0 });
+      await setDoc(doc(db, 'federation_staff', `${FED}_${TES}`), { ...staff(TES, 'treasurer'), perms: ['finance'], is_master: false, term_end_ms: ontem });
+      await setDoc(doc(db, 'federation_staff', `${FED}_${PRES}`), { ...staff(PRES, 'president'), perms: ['admin', 'finance'], is_master: true, term_end_ms: ontem });
+    });
+    await assertSucceeds(setDoc(doc(como(SEC), 'federation_plans', 'p2'), plano({ name: 'Mensal', billing: 'monthly' })));
+    await assertFails(setDoc(doc(como(TES), 'federation_plans', 'p3'), plano({ name: 'Mensal', billing: 'monthly' })));
+    await assertSucceeds(setDoc(doc(como(PRES), 'federation_plans', 'p4'), plano({ name: 'Mensal', billing: 'monthly' })));
   });
-  it('sai da equipe quem quer (menos o presidente); quem tem admin tira os outros', async () => {
-    await assertSucceeds(deleteDoc(doc(como(SEC), 'federation_staff', `${FED}_${SEC}`)));
-    await assertFails(deleteDoc(doc(como(PRES), 'federation_staff', `${FED}_${PRES}`)));
-    await assertSucceeds(deleteDoc(doc(como(DIR), 'federation_staff', `${FED}_${TES}`)));
-    await assertFails(deleteDoc(doc(como(ANA), 'federation_staff', `${FED}_${DIR}`)));
+  it('⭐ acesso do admin da plataforma: só com o acesso valendo; o registro do acesso só o admin lê, ninguém grava', async () => {
+    await assertFails(setDoc(doc(como(ADMIN), 'federation_plans', 'p2'), plano({ name: 'Mensal', billing: 'monthly' })));
+    await semRegras((db) => setDoc(doc(db, 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() - 1000 }));
+    await assertFails(setDoc(doc(como(ADMIN), 'federation_plans', 'p2'), plano({ name: 'Mensal', billing: 'monthly' })));
+    await semRegras((db) => setDoc(doc(db, 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() + 3600000 }));
+    await assertSucceeds(setDoc(doc(como(ADMIN), 'federation_plans', 'p2'), plano({ name: 'Mensal', billing: 'monthly' })));
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'federation_admin_grants', `${FED}_${ADMIN}`)));
+    await assertFails(getDoc(doc(como(PRES), 'federation_admin_grants', `${FED}_${ADMIN}`)));
+    await assertFails(setDoc(doc(como(ADMIN), 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() + 99999999 }));
   });
   it('a equipe lê a equipe; a pessoa lê o próprio papel; conta logada lê a equipe de federação APROVADA; anônimo não', async () => {
     await assertSucceeds(getDocs(query(collection(como(SEC), 'federation_staff'), where('federation_id', '==', FED))));

@@ -70,6 +70,11 @@ class FakeQuery {
         const valor = String(f).split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), data);
         if (op === '==') return valor === v;
         if (op === 'array-contains') return Array.isArray(valor) && valor.includes(v);
+        // Faixas: como no Firestore, campo ausente ou de outro tipo não entra.
+        if (['>', '>=', '<', '<='].includes(op)) {
+          if (typeof valor !== typeof v || valor === null || valor === undefined) return false;
+          return op === '>' ? valor > v : op === '>=' ? valor >= v : op === '<' ? valor < v : valor <= v;
+        }
         throw new Error(`operador não suportado no falso: ${op}`);
       }))
       .slice(0, this.lim)

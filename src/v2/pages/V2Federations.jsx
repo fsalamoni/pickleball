@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { Landmark, Plus, Search, ShieldCheck, Users } from 'lucide-react';
 import { useMyFederationRoles, useMyMemberships, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { membershipState } from '@/modules/federations/domain/membership';
-import { STAFF_ROLE_LABELS } from '@/modules/federations/domain/constants';
+import { staffRoleName } from '@/modules/federations/domain/staff';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { V2Button, V2EmptyState, V2ErrorState, V2Page, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -68,7 +68,7 @@ function MinhasFederacoes({ federacoes }) {
                 <div className="min-w-0 flex-1">
                   <Link to={fedPath(f)} className="truncate font-bold text-ink hover:underline">{f.name}</Link>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                    {i.equipe && <span className="inline-flex items-center gap-1 font-semibold text-ink"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{t(STAFF_ROLE_LABELS[i.equipe.role] || '')}</span>}
+                    {i.equipe && <span className="inline-flex items-center gap-1 font-semibold text-ink"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{staffRoleName(i.equipe)}</span>}
                     {i.estado && <MemberStatusBadge status={i.estado.status} label={i.estado.label} />}
                     {i.estado?.validUntil && <span>{t('até {data}', { data: quando(i.estado.validUntil) })}</span>}
                   </div>

@@ -53,7 +53,7 @@ export default function AdminSupportRevealDialog({ user, onRevealed, onClose }) 
             </V2Select>
           </V2Field>
           <V2Field label={t('Motivo')} htmlFor="reveal-texto" required error={texto && errors.reason_text}
-            hint={t('Mínimo {min} caracteres. A pessoa lê este texto no aviso.', { min: REVEAL_TEXT_MIN })}>
+            hint={t('Mínimo {min} caracteres. Fica só no registro interno.', { min: REVEAL_TEXT_MIN })}>
             <V2Textarea id="reveal-texto" rows={3} maxLength={500} value={texto} onChange={(e) => setTexto(e.target.value)}
               placeholder={t('Ex.: a pessoa pediu por WhatsApp para conferir o telefone do cadastro')} />
           </V2Field>

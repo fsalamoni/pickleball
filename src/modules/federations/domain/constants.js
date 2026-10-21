@@ -11,6 +11,7 @@ import { tk } from '@/core/i18n';
 export const FED_COLLECTIONS = Object.freeze({
   federations: 'federations',
   staff: 'federation_staff',
+  adminGrants: 'federation_admin_grants',
   plans: 'federation_plans',
   members: 'federation_members',
   charges: 'federation_charges',
@@ -82,7 +83,28 @@ export const FED_PERMISSION = Object.freeze({
   COURSES: 'courses',
   DISCIPLINE: 'discipline',
   COMMS: 'comms',
+  /** Pessoas da equipe: nomear, prorrogar mandato, tirar (só o servidor confere — `federationStaff`). */
+  STAFF: 'staff',
 });
+
+/** O que cada permissão abre — é o que aparece ao montar um cargo. */
+export const FED_PERMISSION_META = Object.freeze({
+  admin: { label: tk('Página e configurações'), description: tk('Página pública, planos, Pix, módulos, regras e governança.') },
+  members: { label: tk('Filiados'), description: tk('Pedidos de filiação, filiados, transferências, documentos e importação.') },
+  finance: { label: tk('Financeiro'), description: tk('Cobranças, recebimentos e a conta Pix.') },
+  competitions: { label: tk('Competições'), description: tk('Chancela de torneios, resultados e ranking oficial.') },
+  courses: { label: tk('Cursos e credenciais'), description: tk('Cursos, inscrições, aprovação e credenciais.') },
+  discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções e manifestações da ouvidoria.') },
+  comms: { label: tk('Comunicação'), description: tk('Notícias, avisos, cupons e campanhas.') },
+  staff: { label: tk('Equipe'), description: tk('Nomeia pessoas para cargos sem poder de admin master, prorroga mandatos e tira da equipe.') },
+});
+
+/** Mandato: o máximo que o cargo pode durar sem alerta (Lei 14.597/2023, art. 36: até 4 anos). */
+export const STAFF_TERM_MAX_MONTHS = 48;
+/** Avisos antes de o mandato vencer (dias). */
+export const STAFF_TERM_WARN_DAYS = Object.freeze([30, 7, 1]);
+/** Um admin da plataforma entra numa federação por no máximo estas horas. */
+export const FED_ADMIN_ACCESS_HOURS = Object.freeze([1, 2, 4, 8]);
 
 /** Os papéis da equipe (D3: os 8 das federações reais; dá para usar só dois). */
 export const STAFF_ROLE = Object.freeze({
@@ -108,8 +130,8 @@ export const STAFF_ROLE_LABELS = Object.freeze({
 });
 
 export const STAFF_ROLE_DESCRIPTIONS = Object.freeze({
-  president: tk('Tudo. Só o presidente (ou o admin da plataforma) troca o presidente.'),
-  director: tk('Tudo, menos trocar o presidente.'),
+  president: tk('Admin master: tudo, inclusive montar os cargos e passar a administração.'),
+  director: tk('Tudo na Central, menos montar os cargos e mexer nos admins master.'),
   secretary: tk('Filiados: aprova, recusa, suspende e vê os pedidos.'),
   treasurer: tk('Cobranças: confirma pagamentos e vê o financeiro.'),
   competitions: tk('Chancela de torneios, calendário e ranking oficial.'),

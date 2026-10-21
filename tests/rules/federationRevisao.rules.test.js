@@ -83,8 +83,10 @@ beforeEach(async () => {
   });
 });
 
-describe('⭐ o admin da plataforma tem toda permissão — na regra também', () => {
+describe('⭐ o admin da plataforma tem toda permissão — na regra também, com o acesso justificado valendo', () => {
   it('cria plano, edita notícia, decide filiação de clube e configura o ranking', async () => {
+    await assertFails(setDoc(doc(como(ADMIN), 'federation_plans', 'p2'), plano({ name: 'Simpatizante', price_cents: 0, tier: 'registered' })));
+    await semRegras((db) => setDoc(doc(db, 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() + 3600000 }));
     await assertSucceeds(setDoc(doc(como(ADMIN), 'federation_plans', 'p2'), plano({ name: 'Simpatizante', price_cents: 0, tier: 'registered' })));
     await assertSucceeds(updateDoc(doc(como(ADMIN), 'federation_news', 'n1'), { title: 'Novo título', updated_at: 1 }));
     await assertSucceeds(updateDoc(doc(como(ADMIN), 'federation_affiliations', `${FED}_club_clube1`), { status: 'approved', review: { by: ADMIN } }));

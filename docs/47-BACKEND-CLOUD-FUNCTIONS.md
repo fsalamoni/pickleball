@@ -404,6 +404,8 @@ mesmo código; erro inesperado vira `internal`.
 | `federationDiscipline` (PR 3, `functions/federationDiscipline.js`) | `apply` (advertência; suspensão grava `discipline_until_ms` na filiação; multa vira cobrança `origin: 'fine'`; exclusão encerra a filiação guardando o estado anterior), `appeal` (uma vez, em vigor), `decide_appeal` (`uphold`/`overturn` — revertida desfaz o efeito), `end` (antes do prazo) | permissão `discipline` (`apply`/`decide_appeal`/`end`); a pessoa ou o responsável (`appeal`) |
 | `federationImportMembers` (PR 3, `functions/federationSecretariat.js`) | até 500 linhas (nome, e-mail, número, validade) + plano: quem tem conta com o e-mail vira filiado **ativo** numa transação por pessoa; filiação viva é pulada; sem conta fica em `federation_imports.pending` | permissão `members` |
 | `federationDocument` (PR 3, `functions/federationSecretariat.js`) | devolve o arquivo de `federacao/{uid}/…` do Storage em base64 à secretaria (a regra do Storage só deixa o dono ler e não consulta o banco `pickleball`); audita `federation_document_view` | permissão `members` ou `admin` da federação do documento |
+| `federationStaff` (PR 7, `functions/federationStaff.js`) | `role_save`/`role_delete` (cargos em `federations.staff_roles`; mudar regrava a cópia `perms` de quem ocupa; cargo com gente não sai), `appoint` (nomear ou mudar cargo, com mandato), `extend` (nova data + motivo + ato, em `term_history`), `remove`, `transfer` (vira admin master; `leave` tira quem passou). Nunca deixa a federação sem admin master. Lógica pura em `federationStaffPolicy.js` (paridade com `domain/staff.js`) | admin master; permissão `staff` só em cargo não master, nunca em si, só com permissões que tem; a própria pessoa sai |
+| `federationAdminAccess` (PR 7) | `grant` (categoria, motivo ≥ 20 letras, 1/2/4/8 h, referência): grava PRIMEIRO `admin_access_logs` (`federation_access`) e depois `federation_admin_grants`; `end` registra `federation_access_end` e apaga | admin da plataforma |
 | `federationNews` (PR 4, `functions/federationNews.js`) | `notify`: notícia **publicada** e ainda não avisada, de federação com o módulo `news` → um aviso por conta entre as filiações `active` (o dependente avisa o responsável), lotes de 400, link `/federacoes/{id}?noticia={id}`; grava `notified_at`/`notified_count`/`notified_by` (a regra recusa o cliente nesses campos) e audita `federation_news_notify`. Segunda chamada ⇒ `failed-precondition` | permissão `comms` ou `admin` da federação |
 
 `federationChargeConfirm` (PR 3): a `origin` decide o efeito da confirmação —
@@ -413,7 +415,7 @@ de quem não é filiado não tem `member_id`, e confirmar/cancelar funciona sem
 ele; quitar filiação sem `member_id` é `failed-precondition`.
 
 **Agendada**: `federationMembershipSweep` — todo dia às 06:00 (Brasília),
-três varreduras independentes (`Promise.allSettled`: uma falhando não derruba
+quatro varreduras independentes (`Promise.allSettled`: uma falhando não derruba
 as outras, e o erro vai para o log): `federations.sweep` — `active` →
 `expired` quando a validade já PASSOU (`daysLeft < 0`); avisos 30, 7 e 1 dia
 antes e "vence hoje" (uma vez cada, em `expiry_notified`); recontagem de
@@ -423,7 +425,7 @@ true`, avisa os dois lados); e `federationDiscipline.sweep` — aplica na data a
 suspensão gravada com início FUTURO (`applied_at_ms` nulo). O FIM da
 suspensão não passa pela varredura: termina na data gravada, que a regra
 compara com `request.time`; suspensões sobrepostas valem até a mais longa
-(`recalcularSuspensao`).
+(`recalcularSuspensao`). `federationStaff.sweep` (PR 7) — avisa 30, 7 e 1 dia antes do fim do mandato (pessoa e admins master, uma vez cada em `term_warned`); vencido, tira da equipe e avisa, salvo o último admin master (fica, um aviso só em `term_held_notified`).
 
 Toda ação grava `audit_logs` (`federation_*`) e avisa por `notifications`
 (`type: 'federation'`, `origin: 'server'`, `essential: true`, textos por

@@ -3,9 +3,10 @@
  *
  * Como a Central da arena: seções em dois grupos (Atender · Gerir), a aba na
  * URL, os painéis baixando sob demanda. Quem entra é a EQUIPE
- * (`federation_staff`) — e cada papel só vê as seções da sua permissão
- * (`buildFederationSections(perms)`); o admin da plataforma vê tudo. Sem
- * papel, a pessoa volta à página da federação.
+ * (`federation_staff`) — e cada cargo só vê as seções da sua permissão
+ * (`buildFederationSections(perms)`), com o mandato valendo. O admin da
+ * plataforma entra só com o acesso justificado (`FedSupportAccessGate`:
+ * motivo + prazo, no registro interno). Sem cargo, a pessoa volta à página.
  */
 import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
@@ -15,13 +16,14 @@ import {
   useFederationReports, useFederationResults, useFederationSanctions, useFederationStaff, useFederationTournaments, useFederationTransfers, useIncomingTransfers, useMyFederationRole,
 } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
-import { FED_PERMISSION, FEDERATION_STATUS, FEDERATION_STATUS_LABELS, STAFF_ROLE_LABELS } from '@/modules/federations/domain/constants';
+import { FED_PERMISSION, FEDERATION_STATUS, FEDERATION_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { PAGE_TITLE } from '@/v2/ui/pageFrame';
 import { FED_SECTION_GROUPS, buildFederationSections, sectionOfTab } from '@/v2/components/federations/federationSections';
 import { FedBadges, FedLogo, FederationGate, fedPath } from '@/v2/components/federations/federationUi';
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
+import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { t } from '@/core/i18n';
 
 const FedHojePanel = lazy(() => import('@/v2/components/federations/manage/FedHojePanel'));
@@ -43,7 +45,7 @@ function Central({ federationId }) {
   const fq = useFederation(federationId);
   const papel = useMyFederationRole(federationId);
   const perms = papel.perms;
-  const sections = useMemo(() => buildFederationSections(perms, fq.data), [perms, fq.data]);
+  const sections = useMemo(() => buildFederationSections(perms, fq.data, { isMaster: papel.isMaster }), [perms, fq.data, papel.isMaster]);
   const [params, setParams] = useSearchParams();
   const tabPedida = params.get('aba') || '';
   const secaoPedida = params.get('secao') || '';
@@ -65,7 +67,7 @@ function Central({ federationId }) {
   const membersQ = useFederationMembers(federationId, { enabled: papel.isStaff && (podeFiliados || perms.includes(FED_PERMISSION.DISCIPLINE)) }); // a disciplina escolhe o filiado na lista
   const chargesQ = useFederationCharges(federationId, { enabled: papel.isStaff && podeFinanceiro });
   const plansQ = useFederationPlans(federationId, { enabled: papel.isStaff && (admin || podeFinanceiro || podeFiliados) });
-  const staffQ = useFederationStaff(federationId, { enabled: papel.isStaff && admin });
+  const staffQ = useFederationStaff(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.STAFF) });
   const podeCompeticoes = perms.includes(FED_PERMISSION.COMPETITIONS);
   const affiliationsQ = useFederationAffiliations(federationId, { enabled: papel.isStaff && podeFiliados && fedModuleOn(fq.data, 'affiliations') });
   const tournamentsQ = useFederationTournaments(federationId, { enabled: papel.isStaff && podeCompeticoes && fedModuleOn(fq.data, 'tournaments') });
@@ -88,6 +90,7 @@ function Central({ federationId }) {
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
   const f = fq.data;
   if (!f) return <V2Page><V2EmptyState icon={Landmark} title={t('Federação não encontrada')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} /></V2Page>;
+  if (papel.needsGrant) return <V2Page className="space-y-4"><V2BackLink to={fedPath(f)}>{f.acronym || f.name}</V2BackLink><FedSupportAccessGate federation={f} /></V2Page>;
   if (!papel.isStaff) return <Navigate to={fedPath(f)} replace />;
 
   const naoAprovada = f.status !== FEDERATION_STATUS.APPROVED;
@@ -101,12 +104,14 @@ function Central({ federationId }) {
           <h1 className={PAGE_TITLE}>{f.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <FedBadges federation={f} />
-            {papel.role && <V2Badge tone="ink">{t(STAFF_ROLE_LABELS[papel.role] || papel.role)}</V2Badge>}
+            {papel.grant ? <V2Badge tone="amber">{t('Suporte da plataforma')}</V2Badge> : papel.roleName && <V2Badge tone="ink">{papel.roleName}</V2Badge>}
             {naoAprovada && <V2Badge tone="amber">{t(FEDERATION_STATUS_LABELS[f.status] || f.status)}</V2Badge>}
           </div>
         </div>
         <Settings2 className="hidden h-6 w-6 text-gray-500 sm:block" aria-hidden="true" />
       </header>
+
+      {papel.grant && <FedSupportAccessBanner federationId={f.id} grant={papel.grant} onExpired={papel.refetch} />}
 
       {naoAprovada && (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -132,7 +137,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {secaoAtiva.id === 'indicadores' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
-        {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} myRole={papel.role} />}
+        {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
         {secaoAtiva.id === 'config' && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>
     </V2Page>

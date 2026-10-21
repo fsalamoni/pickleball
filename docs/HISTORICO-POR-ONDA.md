@@ -2193,3 +2193,15 @@ imprimível com os resultados oficiais e o QR da verificação pública; a
 federação decide se o filiado emite a própria). Zero banco: só a chave
 opcional `rules.member_declarations`. Detalhe em `docs/50-FEDERACAO.md` §6.8.
 
+## Federações — cargos, mandatos e acesso justificado (2026-10-21)
+
+Pedido do dono: cargos criados pela própria federação, com atribuições
+precisas e mandato de início e fim prorrogável; admins master (vários, nunca
+nenhum) que passam a administração; e o admin da plataforma entrando só com
+justificativa registrada e por prazo. Antes eram 8 papéis fixos, sem mandato,
+um presidente só, e o admin da plataforma tinha toda permissão na Central sem
+deixar rastro. Agora a equipe é gravada só pelo servidor, a regra lê a cópia
+das permissões do cargo, o mandato vencido fecha o acesso (salvo o último
+admin master) e o acesso do admin vai antes ao registro interno. Etapa 1 de
+4 (acervo e mural, calendário e assembleias, comentários). Detalhe em
+`docs/50-FEDERACAO.md` §13.

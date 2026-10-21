@@ -260,10 +260,11 @@ async function operatorUids(db, sellerKey) {
   if (!p) return [];
   if (p.type === 'federation') {
     // A loja da federação: quem tem `admin` ou `finance` na equipe (a mesma conta da regra `isMarketOperator`).
-    const { PERMS } = require('./federations.js');
+    const { permsOf } = require('./federationStaffPolicy.js');
     const equipe = await db.collection('federation_staff').where('federation_id', '==', p.id).get();
+    const agora = Date.now();
     return [...new Set(equipe.docs.map((d) => d.data())
-      .filter((s) => (PERMS[s.role] || []).some((x) => x === 'admin' || x === 'finance'))
+      .filter((s) => permsOf(s, agora).some((x) => x === 'admin' || x === 'finance'))
       .map((s) => s.user_id).filter(Boolean))];
   }
   if (p.type !== 'arena') return [p.id];

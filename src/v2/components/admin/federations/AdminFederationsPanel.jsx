@@ -8,14 +8,16 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { BadgeCheck, Ban, CheckCircle2, ExternalLink, Eye, Landmark, ShieldCheck, XCircle } from 'lucide-react';
+import { BadgeCheck, Ban, CheckCircle2, ExternalLink, Eye, KeyRound, Landmark, ShieldCheck, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { reviewFederation } from '@/modules/federations/services/federationService';
-import { useAdminFederations, useFederationMutation, useFederationPrivate } from '@/modules/federations/hooks/useFederations';
+import { useAdminFederations, useFederationAccessLogs, useFederationMutation, useFederationPrivate } from '@/modules/federations/hooks/useFederations';
 import { federationReviewActions } from '@/modules/federations/domain/federation';
 import { FEDERATION_LEVEL_LABELS, FEDERATION_STATUS, FEDERATION_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
-import { FedBadges, FedLogo, fedPath, fedPublicPath, quando } from '@/v2/components/federations/federationUi';
+import { FedBadges, FedLogo, fedManagePath, fedPath, fedPublicPath, quando } from '@/v2/components/federations/federationUi';
+import { REVEAL_REASON_META } from '@/modules/admin/domain/supportAccess';
+import { fmtData } from '@/core/i18n';
 import { t, tn } from '@/core/i18n';
 
 const TONS = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'neutral' };
@@ -90,11 +92,43 @@ function FederationRow({ f }) {
           {acoes.includes('unofficial') && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir('unofficial', t('Selo "Oficial" retirado.'))}>{t('Tirar "Oficial"')}</V2Button>}
           <V2Button type="button" size="sm" variant="ghost" onClick={() => setPrivados((v) => !v)}><Eye className="h-4 w-4" />{privados ? t('Ocultar dados da entidade') : t('Dados da entidade')}</V2Button>
           <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Abrir no app')}</Link></V2Button>
+          {f.status === FEDERATION_STATUS.APPROVED && <V2Button asChild size="sm" variant="ghost"><Link to={fedManagePath(f)}><KeyRound className="h-4 w-4" />{t('Entrar na Central (com motivo)')}</Link></V2Button>}
           {f.status === FEDERATION_STATUS.APPROVED && <V2Button asChild size="sm" variant="ghost"><Link to={fedPublicPath(f)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</Link></V2Button>}
         </div>
       </V2Surface>
       {motivo && <MotivoDialog acao={motivo} federation={f} onClose={() => setMotivo(null)} />}
     </li>
+  );
+}
+
+/**
+ * Os acessos do admin da plataforma às Centrais das federações: o registro
+ * interno (`admin_access_logs`, só o admin lê). Ninguém da federação vê.
+ */
+function AcessosAsCentrais() {
+  const [aberto, setAberto] = useState(false);
+  const q = useFederationAccessLogs({ enabled: aberto });
+  const lista = q.data || [];
+  return (
+    <details className="rounded-2xl border border-gray-100 bg-white p-4" onToggle={(e) => setAberto(e.currentTarget.open)} data-dica="admin-federacoes-acessos">
+      <summary className="cursor-pointer font-bold text-ink">{t('Acessos de suporte às Centrais')}</summary>
+      <p className="mt-1 text-sm text-gray-500">{t('Cada entrada do admin numa Central de federação, com motivo e prazo. Registro interno: a federação não vê.')}</p>
+      <div className="mt-3">
+        {q.isError ? <V2ErrorState inline title={t('Não carregou o registro')} onRetry={() => q.refetch()} />
+          : q.isLoading ? <V2Skeleton lines={3} />
+          : !lista.length ? <p className="text-sm text-gray-500">{t('Nenhum acesso registrado.')}</p>
+          : (
+            <ul className="divide-y divide-gray-100 text-sm">
+              {lista.map((l) => (
+                <li key={l.id} className="py-2">
+                  <p className="text-ink"><strong>{l.target_name_snapshot || l.target_federation_id}</strong> · {l.admin_email || l.admin_uid} · {fmtData(new Date(l.at_ms), { dateStyle: 'short', timeStyle: 'short' })} · {tn(l.hours || 0, '{n} hora', '{n} horas')}</p>
+                  <p className="text-xs text-gray-500">{t(REVEAL_REASON_META[l.reason_category] || l.reason_category || '')}: {l.reason_text}{l.ticket_ref ? ` · ${l.ticket_ref}` : ''}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+      </div>
+    </details>
   );
 }
 
@@ -112,13 +146,14 @@ export default function AdminFederationsPanel() {
     <section className="space-y-4" aria-label={t('Federações')} data-dica="admin-federacoes">
       <div>
         <h2 className="font-display text-xl font-bold text-ink">{t('Federações')}</h2>
-        <p className="text-sm text-gray-500">{t('Quem pede abre com CNPJ e razão social. Aprovada, quem pediu vira presidente, monta planos e Pix e começa a filiar. "Verificada" diz que a plataforma conferiu a entidade; "Oficial" é a federação reconhecida da região.')}</p>
+        <p className="text-sm text-gray-500">{t('Quem pede abre com CNPJ e razão social. Aprovada, quem pediu vira presidente (admin master), monta cargos, planos e Pix e começa a filiar. Para entrar numa Central, o admin informa motivo e prazo. "Verificada" diz que a plataforma conferiu a entidade; "Oficial" é a federação reconhecida da região.')}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {FILTROS.map((f) => <V2FilterChip key={f} active={filtro === f} onClick={() => setFiltro(f)}>{f === 'todas' ? t('Todas') : t(FEDERATION_STATUS_LABELS[f])} ({contas[f]})</V2FilterChip>)}
       </div>
       {!lista.length ? <V2EmptyState icon={Landmark} title={filtro === 'pending' ? t('Nenhum pedido esperando') : t('Nenhuma federação neste filtro')} description={filtro === 'pending' ? tn(contas.approved, '{n} federação aprovada na plataforma.', '{n} federações aprovadas na plataforma.') : undefined} />
         : <ul className="space-y-3">{lista.map((f) => <FederationRow key={f.id} f={f} />)}</ul>}
+      <AcessosAsCentrais />
     </section>
   );
 }

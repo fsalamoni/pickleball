@@ -1,7 +1,7 @@
 /**
- * FEDERAÇÕES — leitura e escrita direta no Firestore (federação, equipe,
- * planos, preferências do filiado, declaração de pagamento) e as chamadas ao
- * servidor (`federationReview`, `federationMembership`,
+ * FEDERAÇÕES — leitura e escrita direta no Firestore (federação, planos,
+ * preferências do filiado, declaração de pagamento) e as chamadas ao
+ * servidor (`federationReview`, `federationMembership`, `federationStaff`,
  * `federationChargeConfirm`, `federationVerify`).
  *
  * O estado da filiação, o número, a validade, o código da carteirinha e toda
@@ -22,13 +22,13 @@ import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
-  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, STAFF_ROLE, fedRankingDocId, fedResultDocId, fedUserDocId,
+  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, fedRankingDocId, fedResultDocId, fedUserDocId,
 } from '../domain/constants.js';
 import { isoDate } from '../domain/membership.js';
 import { affiliationDecision, affiliationState, buildAffiliationRequest } from '../domain/affiliations.js';
 import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sanctionState } from '../domain/sanction.js';
 import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
-import { permissionsOf } from '../domain/staff.js';
+import { staffPerms } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
 import { fedModuleOn, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
 import { documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
@@ -39,7 +39,6 @@ import { validateSponsors } from '../domain/sponsors.js';
 import { validateGovernance } from '../domain/governance.js';
 import { validatePlanInput } from '../domain/plans.js';
 import { canDeclarePayment } from '../domain/charges.js';
-import { canChangeStaff } from '../domain/staff.js';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
 
@@ -231,35 +230,33 @@ export async function listMyStaffRoles(uid) {
 }
 
 /**
- * Acrescenta ou troca o papel de alguém. Quem chama é conferido pela REGRA
- * (`fedHas(admin)`; presidente só por presidente); aqui a mesma conta diz
- * antes o motivo da recusa.
+ * Equipe: cargos, nomeações, mandatos e admins master — SÓ pelo servidor
+ * (`federationStaff`), que confere quem pode e que sempre sobra um admin
+ * master. Ações: `role_save` (`role`), `role_delete` (`roleId`), `appoint`
+ * (`userId`, `roleId`, `termStart`, `termEnd`), `extend` (`userId`,
+ * `termEnd`, `reason`, `act`), `remove` (`userId`, `reason`) e `transfer`
+ * (`userId`, `roleId`, `leave`).
  */
-export async function setStaffRole(fedId, { userId, userName = '', role, federationName = '', federationAcronym = '' }, { actor, actorRole, targetRole = null }) {
-  if (!Object.values(STAFF_ROLE).includes(role)) throw new FederationError(t('Papel inválido.'));
-  if (!canChangeStaff({ actorRole, targetRole, newRole: role, isSelf: actor.uid === userId })) {
-    throw new FederationError(t('Só o presidente pode passar ou tirar a presidência.'));
-  }
-  const ref = doc(db, C.staff, fedUserDocId(fedId, userId));
-  const atual = await getDoc(ref);
-  const data = {
-    federation_id: fedId, federation_name: String(federationName || '').slice(0, 120), federation_acronym: String(federationAcronym || '').slice(0, 12),
-    user_id: userId, user_name: String(userName || '').slice(0, 120), role,
-    added_by: atual.exists() ? atual.data().added_by : actor.uid, updated_at: serverTimestamp(),
-    ...(atual.exists() ? {} : { created_at: serverTimestamp() }),
-  };
-  await setDoc(ref, data, { merge: true });
-  await createAuditLog({ action: 'federation_staff_set', actor, userId, details: { federation_id: fedId, role } });
-  return { id: ref.id, ...data };
+export const staffAction = (federationId, action, payload = {}) => chamar('federationStaff', { federationId, action, ...payload });
+
+/**
+ * Admin da plataforma: abre (`grant`, com motivo e horas) ou encerra (`end`)
+ * o acesso a uma federação. O motivo vai para o registro interno da
+ * plataforma (`admin_access_logs`).
+ */
+export const federationAdminAccess = (federationId, action, payload = {}) => chamar('federationAdminAccess', { federationId, action, ...payload });
+
+/** O acesso de suporte do admin a esta federação (ou nulo). */
+export async function getMyFederationGrant(fedId, uid) {
+  if (!fedId || !uid) return null;
+  const snap = await getDoc(doc(db, C.adminGrants, fedUserDocId(fedId, uid)));
+  return snap.exists() ? toDoc(snap) : null;
 }
 
-export async function removeStaff(fedId, userId, { actor, actorRole, targetRole }) {
-  if (targetRole === STAFF_ROLE.PRESIDENT) throw new FederationError(t('Passe a presidência antes de tirar o presidente.'));
-  if (actor.uid !== userId && !canChangeStaff({ actorRole, targetRole, newRole: targetRole })) {
-    throw new FederationError(t('Você não tem permissão para isso.'));
-  }
-  await deleteDoc(doc(db, C.staff, fedUserDocId(fedId, userId)));
-  await createAuditLog({ action: 'federation_staff_remove', actor, userId, details: { federation_id: fedId } });
+/** Admin da plataforma: os acessos às federações (o registro interno), mais recentes primeiro. */
+export async function listFederationAccessLogs() {
+  const q = query(collection(db, 'admin_access_logs'), where('action', '==', 'federation_access'), limit(200));
+  return (await getDocs(q)).docs.map(toDoc).sort((a, b) => (b.at_ms || 0) - (a.at_ms || 0));
 }
 
 /* -------------------------------------------------------------- planos -- */
@@ -350,7 +347,7 @@ export async function declarePayment(charge, { note = '' } = {}) {
 /** Os uids da equipe com a permissão (para avisar quem pode resolver). */
 async function staffUidsWith(fedId, perm) {
   const equipe = await listFederationStaff(fedId);
-  return equipe.filter((s) => permissionsOf(s.role).includes(perm) || permissionsOf(s.role).includes(FED_PERMISSION.ADMIN)).map((s) => s.user_id);
+  return equipe.filter((s) => staffPerms(s).includes(perm) || staffPerms(s).includes(FED_PERMISSION.ADMIN)).map((s) => s.user_id);
 }
 
 /* ------------------------------------------- clubes e arenas filiados -- */
