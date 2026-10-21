@@ -459,7 +459,7 @@ vira anônima.
 
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
-Vinte e uma coleções, todas com prefixo `federation` e **zero índice composto**
+Vinte e duas coleções, todas com prefixo `federation` e **zero índice composto**
 (consultas de uma igualdade — ou duas igualdades, que também não pedem
 índice; ordenação em memória): `federations` (+ `private/data`),
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`:
@@ -472,7 +472,8 @@ CPF, nascimento, responsável — PR 3), `federation_charges`,
 (campos opcionais novos na própria federação: `sponsors`, `governance`), do
 PR 7, `federation_admin_grants` (campos novos: `staff_roles`) e, do PR 8,
 `federation_docs` (campo novo: `doc_numbers`, §14) e `federation_followers`
-(quem segue o acervo, §14.8).
+(quem segue o acervo e o calendário, §14.8) e, do PR 9a, `federation_events`
+(calendário oficial, §15).
 **Storage**: `federacao/{uid}/`
 (só o dono lê; PDF ou imagem < 5 MB); do PR 8, `federacao-acervo/{uid}/`
 (rascunho do acervo, só o dono) e `federacao-acervo-oficial/` (fechada à
@@ -532,6 +533,8 @@ derivado dos resultados, que já vão.
 | `federationDocument` | callable | `members`/`admin` da federação do documento | devolve o arquivo do Storage (base64) à secretaria, com auditoria |
 | `federationNews` | callable | `comms`/`admin` da federação | avisa os filiados ativos de uma notícia publicada, uma vez só (§6.7) |
 | `federationAcervo` | callable (540 s, 1 GiB) | `docs`/`admin` da federação; `file` para quem lê o documento | acervo oficial: rascunho, publicação numerada com SHA-256, retificação, visibilidade, retirada do ar, entrega de arquivo restrito (§14) |
+| `federationAgenda` | callable | `docs`/`admin` da federação; `competitions` só na agenda esportiva | calendário oficial: marcar/editar (motivo e histórico ao remarcar o que já foi divulgado), adiar, cancelar, apagar o nunca divulgado, aviso a quem segue (§15) |
+| `federationAgendaFeed` | HTTP público (`/api/agenda/{slug}.ics`) | qualquer um | a agenda assinável (ICS) com os eventos públicos e os torneios chancelados (§15.6) |
 | `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
 | `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
 
@@ -716,6 +719,17 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
     (`functions/federationAcervoPolicy.js` ⇄ `domain/acervo.js`, paridade em
     `functions/federationAcervo.parity.test.js`): tipos, categorias,
     numerados, tetos, famílias de arquivo e links de vídeo.
+44. **`federation_events` só o servidor grava** (`federationAgenda`), e o
+    evento já divulgado **não muda de data nem some calado**: remarcar,
+    reabrir, adiar e cancelar exigem motivo, entram no histórico e avisam
+    quem segue; apagar só o que só a equipe viu (§15).
+45. **Os tipos de evento são gravados** e a validação tem cópia no servidor
+    (`federationAgendaPolicy.js` ⇄ `domain/agenda.js`, paridade em
+    `federationAgenda.parity.test.js`, que também confere o ICS byte a
+    byte). O horário é sempre o de Brasília.
+46. **A agenda assinável leva só o público.** O que é só para filiados ou só
+    da equipe nunca entra no ICS (o endereço é aberto); torneio entra só
+    chancelado e público.
 
 ## 11. Pendências e próximas fases
 
@@ -1047,3 +1061,111 @@ ajuda `federacao-acervo` e guia `federacao-acervo` (Central → publicar).
   carteirinha — a lei pede as publicações também em mural físico.
 - **CSP**: `frame-src` ganhou `https://firebasestorage.googleapis.com` e
   `blob:` (o PDF dentro da página).
+
+## 15. Calendário oficial (Etapa 3 do acervo, PR 9a)
+
+A agenda esportiva e institucional da federação: competições, assembleias,
+reuniões dos órgãos, prazos e eventos. A lei pede que a entidade divulgue os
+atos e as convocações (Lei Geral do Esporte, art. 36); o calendário é onde
+quem joga e quem é filiado vê **quando** as coisas acontecem, e o que mudou.
+As **reuniões com pauta, quórum, presença e votação** são o PR 9b (o tipo
+`meeting` do catálogo já marca quais eventos as terão).
+
+### 15.1 Módulo, permissão e tela
+
+Sub-módulo `calendar` ("Calendário oficial"). Marca e gerencia quem tem
+`docs` ou `admin` (qualquer evento); a diretoria de competições
+(`competitions`) marca e gerencia **só a agenda esportiva**. Seção **Agenda**
+da Central (`?aba=agenda`), componente
+`src/v2/components/federations/manage/FedAgendaPanel.jsx`: formulário de
+evento, adiar/cancelar com motivo, apagar o que nunca foi divulgado, lista de
+próximos e anteriores, e "Ver como o público vê".
+
+### 15.2 Catálogo e validação (`domain/agenda.js`)
+
+Três agendas (`group`): `sport`, `institutional`, `event`. Catorze tipos
+(`kind`, **gravados — nunca renomeie**): competição, seletiva, curso,
+outro esportivo; assembleia geral ordinária, extraordinária, especial ou
+eleitoral, diretoria, conselho fiscal, comissão (estes seis com
+`meeting: true`), prazo oficial, expediente/recesso; solenidade, evento.
+Horário **de Brasília** (UTC−3, sem horário de verão); dia inteiro ou com
+início e fim; até um ano de duração; local (nome, endereço, cidade, UF da
+lista), link `https://` para acompanhar online, órgão que se reúne, descrição
+(até 4.000 caracteres), até 10 documentos **publicados** do acervo ligados e
+quem vê (`public`, `members`, `staff`). A validação tem **cópia no servidor**
+(`functions/federationAgendaPolicy.js`, paridade em
+`functions/federationAgenda.parity.test.js`), e é ela que calcula
+`starts_at_ms`/`ends_at_ms`.
+
+### 15.3 Ciclo do evento (`functions/federationAgenda.js`)
+
+- **`save`** cria ou edita. Evento que **já foi divulgado**
+  (`ever_visible`: algum dia foi público ou só filiados) e muda de data ou
+  horário, ou que estava adiado/cancelado, **exige motivo** (≥ 10
+  caracteres) e ganha uma linha no histórico (`rescheduled` ou `reopened`,
+  com a data anterior e a nova). Ao divulgar pela primeira vez, a equipe
+  escolhe avisar quem segue.
+- **`postpone`** — adiado sem nova data, com motivo; fica na agenda como
+  "Adiado — nova data a definir". Só um evento confirmado e que ainda não
+  aconteceu.
+- **`cancel`** — cancelado, com motivo; fica na agenda, riscado.
+- **`delete`** — só o que **nunca** foi divulgado. O resto se cancela.
+
+O histórico guarda as 20 últimas mudanças (`history[]`: `kind`, `reason`,
+`at_ms`, `by_name`, datas de antes e depois). Remarcar, reabrir, adiar e
+cancelar **avisam quem segue** as publicações oficiais
+(`federation_followers`, o mesmo botão do acervo) e pode ver o evento;
+auditoria `federation_event_save|postpone|cancel|delete` com a contagem de
+avisados.
+
+### 15.4 Quem lê (regra)
+
+`federation_events`: público para todos; "só filiados" para filiado ativo e
+equipe; "só a equipe" para quem tem cargo; o admin da plataforma só com o
+acesso justificado valendo (`fedPlat`). `write: if false`. A tela consulta
+por `federation_id` + `visibility` (duas igualdades, sem índice) — consulta
+que a regra consegue provar. Emulador:
+`tests/rules/federationEvents.rules.test.js`.
+
+### 15.5 Torneios chancelados
+
+Com o módulo `tournaments` ligado, os torneios **chancelados** (chancela
+aprovada, públicos, não arquivados, nem rascunho nem cancelados) entram na
+agenda como itens **derivados** (`tournamentAgendaItem`, nada gravado), com o
+link para o torneio. Também vão no ICS.
+
+### 15.6 Página pública e agenda assinável
+
+- **Endereço**: `/f/:slug/agenda` e `/f/:slug/agenda/:eventId`
+  (`src/pages/PublicFederationAgenda.jsx`, rota em `src/App.jsx`). Módulo
+  desligado ⇒ "Agenda não disponível"; evento que a pessoa não pode ver
+  (permissão negada) é dito diferente de falha de rede.
+- **Lista** (`v2/components/federations/agenda/AgendaPublic.jsx`):
+  `useVisibleAgenda` junta públicos, só filiados (para filiado ou equipe), só
+  equipe e torneios; parte que falhou é dita ("Parte da agenda… não
+  carregou"), nunca vira vazio. Próximos e anteriores (`?aba=`), busca, filtro
+  por agenda, grupos por mês e os adiados à parte. Bloco `FedAgendaBlock`
+  (próximos 4) na página pública e na página logada da federação.
+- **Evento** (`AgendaEventView.jsx`): selos, faixa de adiado/cancelado com o
+  motivo, data e local (mapa), link online, órgão, descrição, documentos
+  ligados (cadeado quando restritos), **Adicionar ao calendário** (.ics do
+  evento), **Google Agenda**, compartilhar/WhatsApp/copiar, seguir e "O que
+  mudou".
+- **Assinar a agenda**: `/api/agenda/{slug ou id}.ics`, servido por
+  `federationAgendaFeed` (rewrite no `firebase.json`; cache de 15 min). Leva só
+  os eventos **públicos** do último ano para a frente e os torneios
+  chancelados; o adiado sai como `STATUS:TENTATIVE`, o cancelado como
+  `CANCELLED` (o calendário de quem assinou atualiza sozinho). A tela oferece
+  `webcal://`, o Google Agenda (`calendar/r?cid=`) e copiar o endereço.
+
+### 15.7 Exclusão de conta e exportação
+
+O evento é da federação: a conta excluída fica só como `created_by` (contado
+na prévia como retido, em `accountDeletion.js`); não vai na exportação.
+
+### 15.8 Âncoras
+
+Central: `federacao-secao-agenda`, `federacao-agenda`,
+`federacao-agenda-novo`. Público: `federacao-agenda-publica` (bloco),
+`federacao-agenda-pagina`, `federacao-agenda-assinar`. Artigo de ajuda e guia
+`federacao-agenda`.

@@ -25,6 +25,7 @@ const PublicClub = lazy(() => import('@/pages/PublicClub'));
 const PublicFederation = lazy(() => import('@/pages/PublicFederation'));
 const PublicFederationVerify = lazy(() => import('@/pages/PublicFederationVerify'));
 const PublicFederationAcervo = lazy(() => import('@/pages/PublicFederationAcervo'));
+const PublicFederationAgenda = lazy(() => import('@/pages/PublicFederationAgenda'));
 
 // App principal (V2 / "Athleisure Premium"). Chunk isolado.
 const V2App = lazy(() => import('@/v2/V2App'));
@@ -180,6 +181,7 @@ export default function App() {
               <Route path="/f/verificar/:codigo?" element={<PublicFederationVerify />} />
               <Route path="/f/:slug" element={<PublicFederation />} />
               <Route path="/f/:slug/acervo/:docId?" element={<PublicFederationAcervo />} />
+              <Route path="/f/:slug/agenda/:eventId?" element={<PublicFederationAgenda />} />
               {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).
                   Pública: quem chega por aqui ainda não tem conta. */}
               <Route path="/r/:code" element={<ReferralLanding />} />

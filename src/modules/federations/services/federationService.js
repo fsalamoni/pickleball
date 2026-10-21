@@ -959,6 +959,24 @@ export async function listMyAcervoFollows(uid) {
 /** As ações do acervo são do SERVIDOR (numeração, cópia oficial, SHA-256): prazo longo para vídeo grande. */
 export const acervoAction = (payload) => chamar('federationAcervo', payload, { timeout: 540_000 });
 
+/* ===================================================== Calendário oficial (módulo `calendar`) ===================================================== */
+
+/** Os eventos de UMA visibilidade. Duas igualdades: a regra prova (público / filiado ativo / equipe) sem índice. */
+export async function listFederationEvents(fedId, visibility = 'public') {
+  if (!fedId) return [];
+  const q = query(collection(db, C.events), where('federation_id', '==', fedId), where('visibility', '==', visibility));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+export async function getFederationEvent(id) {
+  if (!id) return null;
+  const snap = await getDoc(doc(db, C.events, id));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+/** As ações da agenda são do SERVIDOR (motivo, histórico, aviso a quem segue). */
+export const agendaAction = (payload) => chamar('federationAgenda', payload);
+
 /** O arquivo de um documento sem link público (filiado, equipe, rascunho), em base64. */
 export const fetchAcervoFile = ({ federationId, docId, path }) => acervoAction({ federationId, action: 'file', docId, path });
 

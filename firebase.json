@@ -40,6 +40,13 @@
           }
         },
         {
+          "source": "/api/agenda/**",
+          "function": {
+            "functionId": "federationAgendaFeed",
+            "region": "southamerica-east1"
+          }
+        },
+        {
           "source": "/api/mensagens/**",
           "function": {
             "functionId": "messagingHook",

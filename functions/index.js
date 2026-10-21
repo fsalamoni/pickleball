@@ -1340,7 +1340,10 @@ exports.federationAcervo = federationCallable('federationAcervo', (ctx, actor, d
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationAcervo: Storage indisponível.', err); }
   return federationAcervo.acervo({ ...ctx, bucket }, actor, data);
 }, { timeoutSeconds: 540, memory: '1GiB' });
-exports.federationDocument = federationCallable('federationDocument', (ctx, actor, data) => {
+// Calendário oficial (agenda esportiva e institucional): só o servidor grava — `functions/federationAgenda.js`.
+const federationAgenda = require('./federationAgenda');
+exports.federationAgenda = federationCallable('federationAgenda', federationAgenda.agenda);
+exports.federationDocument =federationCallable('federationDocument', (ctx, actor, data) => {
   let bucket = null;
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationDocument: Storage indisponível.', err); }
   return federationSecretariat.document({ ...ctx, bucket }, actor, data);
@@ -1519,6 +1522,27 @@ exports.clientErrorReport = onRequest(
       if (entrada) logger.write(entrada);
     }
     res.status(204).end();
+  },
+);
+
+// Agenda ASSINÁVEL da federação (`/api/agenda/{slug}.ics`, rewrite do Hosting):
+// só o que é público. Sem conta, de propósito: é o endereço que o celular assina.
+exports.federationAgendaFeed = onRequest(
+  { region: REGION, maxInstances: 3, memory: '256MiB', invoker: 'public' },
+  async (req, res) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') { res.status(405).end(); return; }
+    const m = String(req.path || '').match(/\/api\/agenda\/([A-Za-z0-9_-]{1,80})\.ics$/);
+    if (!m) { res.status(404).end(); return; }
+    try {
+      const ics = await federationAgenda.feed(fedCtx(), m[1]);
+      if (!ics) { res.status(404).type('text/plain').send('Agenda não encontrada.'); return; }
+      res.set('Cache-Control', 'public, max-age=900, s-maxage=900');
+      res.set('Content-Disposition', `inline; filename="agenda-${m[1]}.ics"`);
+      res.type('text/calendar; charset=utf-8').send(ics);
+    } catch (err) {
+      logger.error('federationAgendaFeed falhou', err);
+      res.status(500).end();
+    }
   },
 );
 

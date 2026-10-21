@@ -4996,10 +4996,25 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Quem SEGUE o acervo oficial (id `{fed}_{uid}`): só a própria pessoa lê,
-    // segue e deixa de seguir. O aviso de ato novo é do servidor, e só vai a
-    // quem pode ler o ato. `get` do documento que ainda não existe: é assim
-    // que o botão sabe se a pessoa segue (sem isso o `get` dá permissão negada).
+    // CALENDÁRIO OFICIAL (módulo `calendar`): agenda esportiva, assembleias,
+    // reuniões, prazos e eventos. Só o SERVIDOR grava
+    // (`functions/federationAgenda.js`): adiar, remarcar e cancelar o que já
+    // foi divulgado exige motivo e histórico. Não há rascunho: o evento "só
+    // equipe" é o que ainda não se divulga. Leitura como no acervo — público,
+    // qualquer um; "só filiados", filiado ativo e equipe; "só equipe", a
+    // equipe. A tela consulta com `visibility` em igualdade (regra provável).
+    match /federation_events/{eventId} {
+      allow read: if od().visibility == 'public'
+        || (od().visibility == 'members' && fedMemberActive(od().federation_id))
+        || (od().visibility in ['members', 'staff'] && (fedPlat(od().federation_id) || fedPerms(od().federation_id).size() > 0));
+      allow write: if false;
+    }
+
+    // Quem SEGUE as publicações oficiais — acervo e calendário (id
+    // `{fed}_{uid}`): só a própria pessoa lê, segue e deixa de seguir. O aviso
+    // é do servidor, e só vai a quem pode ler o ato ou o evento. `get` do
+    // documento que ainda não existe: é assim que o botão sabe se a pessoa
+    // segue (sem isso o `get` dá permissão negada).
     match /federation_followers/{id} {
       allow get: if isAuthed() && resource == null && id == id.split('_')[0] + '_' + me();
       allow read, delete: if isOwner(od().user_id);
@@ -5008,7 +5023,7 @@ service cloud.firestore {
         && nd().user_id == me()
         && nd().keys().hasOnly(['federation_id', 'user_id', 'created_at'])
         && nd().created_at == request.time
-        && fedModuleOn(nd().federation_id, 'official_docs');
+        && (fedModuleOn(nd().federation_id, 'official_docs') || fedModuleOn(nd().federation_id, 'calendar'));
     }
 
     match /federation_charges/{chargeId} {

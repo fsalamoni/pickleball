@@ -100,7 +100,15 @@ o contador `federations.doc_numbers` e o Storage `federacao-acervo/{uid}/`
 (rascunho) + `federacao-acervo-oficial/` (fechada à regra); PR 8b:
 `federation_followers` (quem segue o acervo; só a própria pessoa) e a página
 pública `/f/:slug/acervo(/:docId)` (`src/pages/PublicFederationAcervo.jsx` +
-`src/v2/components/federations/acervo/`). Zero índice composto; os únicos campos novos
+`src/v2/components/federations/acervo/`); PR 9a
+(`tests/rules/federationEvents.rules.test.js`): `federation_events`
+(calendário oficial, módulo `calendar`; só o servidor grava —
+`functions/federationAgenda.js`, régua e ICS em `federationAgendaPolicy.js`
+com paridade contra `domain/agenda.js`), a agenda assinável
+`/api/agenda/{slug}.ics` (`federationAgendaFeed`) e a página pública
+`/f/:slug/agenda(/:eventId)` (`src/pages/PublicFederationAgenda.jsx` +
+`src/v2/components/federations/agenda/`; gestão em
+`manage/FedAgendaPanel.jsx`). Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir

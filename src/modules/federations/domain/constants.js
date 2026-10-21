@@ -30,6 +30,7 @@ export const FED_COLLECTIONS = Object.freeze({
   news: 'federation_news',
   officialDocs: 'federation_docs',
   followers: 'federation_followers',
+  events: 'federation_events',
 });
 
 /** Id determinístico da inscrição em curso: `{courseId}_{uid}`. */
@@ -175,6 +176,7 @@ export const FED_MODULE = Object.freeze({
   STORE: 'store',
   PROMOS: 'promos',
   OFFICIAL_DOCS: 'official_docs',
+  CALENDAR: 'calendar',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -188,6 +190,7 @@ export const FED_MODULE_META = Object.freeze({
   store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'available' },
   promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available' },
   official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available' },
+  calendar: { label: tk('Calendário oficial'), description: tk('Agenda esportiva e institucional (assembleias, diretoria, conselho fiscal, prazos e eventos), com torneios chancelados, adiamentos com motivo e agenda para assinar no celular.'), status: 'available' },
 });
 
 /* ---------------------------------------------------- PR 4: notícias -- */

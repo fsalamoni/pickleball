@@ -240,6 +240,7 @@ const RETAINED_AS_IS = Object.freeze([
   // PR 4: a notícia é da federação (quem escreveu é só o uid de equipe).
   { col: 'federation_news', field: 'created_by', label: 'Notícias de federação que escreveu (como equipe)' },
   { col: 'federation_docs', field: 'created_by', label: 'Documentos do acervo oficial de federação que preparou (como equipe; o ato publicado é registro da federação)' },
+  { col: 'federation_events', field: 'created_by', label: 'Eventos do calendário oficial de federação que marcou (como equipe; o evento é da agenda da federação)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */

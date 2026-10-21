@@ -19,6 +19,7 @@ import { FEDERATION_LEVEL_LABELS } from '@/modules/federations/domain/constants'
 import { FedBadges, FedLogo, fedPath } from '@/v2/components/federations/federationUi';
 import PlansList from '@/v2/components/federations/PlansList';
 import { FedAcervoBlock } from '@/v2/components/federations/acervo/AcervoPublic';
+import { FedAgendaBlock } from '@/v2/components/federations/agenda/AgendaPublic';
 import { FedGovernanceBlock, FedNewsSection, FedSponsorsStrip, FedStoreLink } from '@/v2/components/federations/FedCommsBlocks';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -76,6 +77,7 @@ export default function PublicFederation() {
             </section>
             <FedNewsSection federation={f} />
             <FedAcervoBlock federation={f} />
+            <FedAgendaBlock federation={f} />
             <FedSanctionedTournaments federation={f} />
             <FedRankingBlock federation={f} />
             <FedCoursesSection federation={f} />

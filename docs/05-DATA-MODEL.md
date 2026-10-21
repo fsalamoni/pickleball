@@ -1661,13 +1661,38 @@ equipe por qualquer cargo; rascunho e retirado por `docs`/`admin`. **Só o
 servidor grava** (`federationAcervo`, `write: if false`). Zero índice (a lista
 pública usa três igualdades).
 
-### `federation_followers/{fed}_{uid}` (PR 8b, NOVO — quem segue o acervo)
+### `federation_followers/{fed}_{uid}` (PR 8b, NOVO — quem segue o acervo e o calendário)
 `federation_id`, `user_id`, `created_at` (= `request.time`). Só a própria
-pessoa lê, cria (com o acervo da federação ligado) e apaga; o `get` do
-documento ainda inexistente é permitido (é como o botão "Seguir" sabe). O
-servidor lê para avisar de ato publicado ou retificado (só quem pode ler o
-ato). Sai na exclusão de conta e vai na exportação. Zero índice (uma
+pessoa lê, cria (com o acervo **ou** o calendário da federação ligado) e
+apaga; o `get` do documento ainda inexistente é permitido (é como o botão
+"Seguir" sabe). O servidor lê para avisar de ato publicado ou retificado e de
+evento marcado, remarcado, adiado ou cancelado (só quem pode ler o ato ou o
+evento). Sai na exclusão de conta e vai na exportação. Zero índice (uma
 igualdade).
+
+### `federation_events/{id}` (PR 9a, NOVO — calendário oficial)
+`federation_id`, `kind` (14 tipos, gravados: `competition`, `selection`,
+`course`, `sport_other`, `assembly_ordinary`, `assembly_extraordinary`,
+`assembly_special`, `board`, `fiscal_council`, `committee`, `deadline`,
+`office`, `ceremony`, `event`), `group` (`sport` | `institutional` | `event`),
+`title`, `description`, `date`/`end_date` (ISO, horário de Brasília),
+`all_day`, `start_time`/`end_time` (`HH:MM`), `starts_at_ms`/`ends_at_ms`
+(calculados pela validação), `place` `{ name, address, city, state }`,
+`online_url` (`https://`), `organ`, `visibility` (`public` | `members` |
+`staff`), `related_docs[]` `{ doc_id, code, title, type, visibility }` (até 10
+atos **publicados** do acervo, copiados pelo servidor), `status`
+(`scheduled` | `postponed` | `cancelled`), `status_reason`, `history[]` (até
+20: `kind` `rescheduled|reopened|postponed|cancelled`, `reason`, `at_ms`,
+`by_name`, `from_date`, `from_time`, `to_date`, `to_time`), `ever_visible`
+(algum dia foi público ou só filiados — o que proíbe apagar e exige motivo ao
+remarcar), `created_by`, `created_by_name`, `created_at(_ms)`,
+`updated_at(_ms)`, `updated_by`. Leitura: público para todos; `members` para
+filiado ativo e equipe; `staff` para qualquer cargo; admin da plataforma com
+acesso justificado. **Só o servidor grava** (`federationAgenda`,
+`write: if false`). Zero índice (a tela consulta `federation_id` +
+`visibility`). Na exclusão de conta fica (é da federação; só `created_by`);
+fora da exportação. Os torneios chancelados entram na agenda **derivados**,
+nada gravado.
 
 ### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
 Contador da numeração: `{ "<tipo>_<ano>": n }`. Só o servidor grava, numa
