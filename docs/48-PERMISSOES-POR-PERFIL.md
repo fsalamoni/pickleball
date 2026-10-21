@@ -42,7 +42,7 @@ as regras consultam.
 | **Participante de dia aberto** | `uid in member_uids` **e** `manage_mode == 'participants'` | `canManageGameDayOf(gdId)` | `canManageGameDay(..., { participants })` |
 | **Admin de torneio** | documento `tournament_admins/{tid}_{uid}` (`role` `owner` ou `admin`); o criador (`tournaments.creator_uid`) ganha o `owner` ao criar | `isTournamentAdmin(tid)`, `isTournamentCreator(tid)` | `useIsTournamentAdmin(tid)` |
 | **Membro de clube** | documento `club_members/{clubId}_{uid}` | `isClubMember(clubId)` | `useMyMembership(clubId)` |
-| **Equipe de federação** (flag `federations`) | documento `federation_staff/{fedId}_{uid}` com `role` (8 papéis → permissões `admin`, `members`, `finance`, …; o presidente nasce na aprovação da federação) | `fedRole(fedId)`, `fedHas(fedId, perm)` | `useMyFederationRole(fedId)` |
+| **Equipe de federação** (flag `federations`) | documento `federation_staff/{fedId}_{uid}` com o cargo e a cópia `perms` (cargos da federação em `staff_roles` ou os 8 de modelo; o presidente nasce admin master na aprovação; mandato vencido não dá poder, salvo ao último admin master) | `fedPerms(fedId)`, `fedHas(fedId, perm)`; o admin da plataforma só com `fedPlat(fedId)` | `useMyFederationRole(fedId)` |
 | **Filiado de federação** | documento `federation_members/{fedId}_{uid}` (só o servidor cria) | `resource.data.user_id == uid` | `useMyMembership(fedId)` |
 | **Admin de clube** | o mesmo documento com `role == 'admin'` (`CLUB_ROLE.ADMIN`); o criador do clube (`clubs.created_by`) é registrado como admin | `isClubAdmin(clubId)`, `isClubCreator(clubId)` | `membership.role === CLUB_ROLE.ADMIN` |
 | **Gestor de arena** | documento `arena_managers/{arenaId}_{uid}` (`role` `owner` ou `manager`) | `isArenaManager(arenaId)` | `useMyManagedArenas()` |
@@ -281,8 +281,10 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Editar página, Pix, marca, módulos | ✖ | ✖ | ✖ | ✔ `admin` (nunca `fedLocked()`; nome/sigla/endereço/nível revalidados); `finance` só o Pix (`payment`) | ✔ | rules |
 | Ler a equipe da federação | ✖ | ◐ federação aprovada | ✔ | ✔ | ✔ | rules (a diretoria é pública na página; anônimo não lê) |
 | Criar/editar plano | ✖ | ✖ | ✖ | ✔ `admin` ou `finance` (federação aprovada) | ✔ | rules; apagar só Plat |
-| Nomear/trocar papel na equipe | ✖ | ✖ | ✖ | ✔ `admin`; `president` só por presidente; o presidente não se rebaixa | ✔ | rules |
-| Sair da equipe | — | — | — | ✔ o próprio (menos o presidente) | ✔ | rules |
+| Montar cargos, mexer em admin master, passar a administração | ✖ | ✖ | ✖ | ✔ admin master | ✔ com acesso justificado | **Cloud Function** `federationStaff` |
+| Nomear, prorrogar mandato, tirar da equipe | ✖ | ✖ | ✖ | ✔ admin master; `staff` só em cargo não master, nunca em si, só com permissões que tem | ✔ com acesso justificado | **Cloud Function** `federationStaff` (nunca fica sem admin master) |
+| Sair da equipe | — | — | — | ✔ o próprio (o último admin master não) | — | **Cloud Function** `federationStaff` |
+| Entrar na Central de uma federação (escrever, ler CPF/sanções) | ✖ | ✖ | ✖ | — | ◐ com motivo e prazo (1–8 h), registrado em `admin_access_logs` | **Cloud Function** `federationAdminAccess` + rules `fedPlat` |
 | Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
 | Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
 | Ler filiação | ✖ | ✖ | ✔ a própria (também o `get` dela ainda inexistente, pelo id `{fed}_{uid}`) | ✔ `admin`/`members`/`finance`/`discipline` | ✔ | rules (**nunca pública**) |

@@ -40,8 +40,9 @@ import { USER_AREA_SECTION as S, marketPendingCounts } from '@/modules/athletes/
 import { useMarketCart, useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { ORDER_FINAL_STATUSES } from '@/modules/marketplace/domain/constants';
 import { membershipState } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, STAFF_ROLE_LABELS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { credentialState } from '@/modules/federations/domain/courses';
+import { staffRoleName } from '@/modules/federations/domain/staff';
 import { verifyPath } from '@/modules/federations/domain/card';
 import { membershipAction, setCredentialPublic } from '@/modules/federations/services/federationService';
 import { FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
@@ -703,7 +704,7 @@ function FederacoesSecao({ ctx }) {
       <FedMySanctions titulo={t('Sanções disciplinares')} />
       {papeis.length > 0 && (
         <Bloco id="federacoes-equipe" icon={ShieldCheck} title={t('Você na equipe')}>
-          <Atalhos itens={papeis.map((s) => ({ to: fedManagePath({ id: s.federation_id }), label: s.federation_name || t('Federação'), descricao: t(STAFF_ROLE_LABELS[s.role] || ''), icon: Landmark }))} />
+          <Atalhos itens={papeis.map((s) => ({ to: fedManagePath({ id: s.federation_id }), label: s.federation_name || t('Federação'), descricao: staffRoleName(s), icon: Landmark }))} />
         </Bloco>
       )}
     </div>

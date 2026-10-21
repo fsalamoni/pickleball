@@ -607,7 +607,7 @@ export default {
   "Migrados:": "Migrated:",
   "Migrando…": "Migrating…",
   "Mínimo {min} caracteres.": "At least {min} characters.",
-  "Mínimo {min} caracteres. A pessoa lê este texto no aviso.": "At least {min} characters. The person reads this text in the notice.",
+  "Mínimo {min} caracteres. Fica só no registro interno.": "At least {min} characters. It stays only in the internal log.",
   "Moderação atualizada. Vale na próxima passada do servidor.": "Moderation updated. Applies on the server's next run.",
   "Moderar uma conta": "Moderate an account",
   "módulo desligado — só vale quando você ligar": "module off — only applies once you turn it on",

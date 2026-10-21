@@ -77,15 +77,17 @@ aprovada tem.
 | Perfil | Como é reconhecido | O que faz |
 |---|---|---|
 | **Quem pede a abertura** | `federations.created_by == uid` | Lê a própria federação pendente/recusada, edita `private/data` enquanto pendente, corrige e pede de novo |
-| **Equipe** (`federation_staff/{fedId}_{uid}.role`) | 8 papéis → permissões (`STAFF_ROLE_PERMISSIONS`, cópia na regra `fedRolePerms`, paridade em `staff.test.js`) | `president`/`director`: tudo (`admin`, `members`, `finance`, …); `secretary`: `members`; `treasurer`: `finance`; `competitions`, `referees` (→ `courses`), `discipline`, `communication` (→ `comms`: notícias, cupons e campanhas): só o seu |
+| **Equipe** (`federation_staff/{fedId}_{uid}`) | um **cargo** da federação (`federations.staff_roles`, ou os 8 de modelo enquanto a federação não monta os seus) e um **mandato**; a regra lê a cópia `perms` do documento (`fedPerms`) e, sem ela, o mapa dos 8 papéis (`fedRolePerms`) | o que o cargo abre (`admin`, `members`, `finance`, `competitions`, `courses`, `discipline`, `comms`, `staff`); o **admin master** tem tudo. Mandato vencido não dá poder — salvo ao último admin master (§13) |
 | **Filiado** (`federation_members/{fedId}_{uid}`) | `user_id == uid` | Lê a própria filiação e cobranças, muda só as próprias preferências (`public_badge`, `show_in_directory`, `public_photo`), declara o pagamento ("Já paguei"), pede renovação e cancela |
 | **Visitante** | sem conta | Lê federação aprovada e planos (`/f/:slug`) e verifica carteirinha (`federationVerify`) |
-| **Admin da plataforma** | `isPlatformAdmin()` | Aprova/recusa/suspende a federação, dá e tira os selos "Verificada" e "Oficial", lê os dados da entidade |
+| **Admin da plataforma** | `isPlatformAdmin()`; dentro da Central, só com o **acesso justificado** valendo (`fedPlat`) | Aprova/recusa/suspende a federação e dá os selos (pelo servidor); para agir na Central ou ler dado pessoal informa motivo e prazo (§13) |
 
-Só o **presidente** (ou o admin da plataforma) nomeia ou troca o presidente, e
-o presidente não se rebaixa sozinho: passa a presidência antes. Quem tem `admin`
-acrescenta e troca os demais papéis; qualquer um (menos o presidente) sai da
-equipe sozinho. Tudo isso é regra (`federation_staff`), não só tela.
+Desde a Etapa 1 do acervo (PR 7) **só o servidor grava a equipe** (`federationStaff`; a regra de
+`federation_staff` é `allow write: if false`). Só admin master monta os cargos,
+mexe em admin master e passa a administração; quem tem a permissão `staff`
+nomeia, prorroga e tira pessoas de cargos que não são admin master, nunca a si
+mesmo, e só dá permissões que tem. Sempre fica pelo menos um admin master.
+Detalhe em §13.
 
 ## 4. O ciclo da federação
 
@@ -457,7 +459,7 @@ vira anônima.
 
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
-Dezoito coleções, todas com prefixo `federation` e **zero índice composto**
+Dezenove coleções, todas com prefixo `federation` e **zero índice composto**
 (consultas de uma igualdade — ou duas igualdades, que também não pedem
 índice; ordenação em memória): `federations` (+ `private/data`),
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`:
@@ -677,6 +679,19 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 34. **A declaração só sai com a filiação em dia, sem suspensão e com
     código** (`buildMembershipDeclaration`), e a do próprio filiado obedece a
     `rules.member_declarations`; a secretaria emite sempre.
+35. **A equipe só o servidor grava** (`federation_staff` `write: if false`;
+    `federations.staff_roles` em `fedLocked()`), e a regra lê a CÓPIA das
+    permissões gravada no documento da pessoa — mudar um cargo regrava a cópia
+    de todos que o ocupam.
+36. **Sempre há um admin master.** Tirar, rebaixar ou deixar sair o último é
+    recusado; o mandato vencido do último NÃO fecha o acesso (regra e
+    varredura), só avisa uma vez.
+37. **O admin da plataforma só age na Central com o acesso justificado
+    valendo** (`fedPlat`: `federation_admin_grants/{fed}_{uid}` com
+    `expires_ms` no futuro). O registro vai PRIMEIRO para `admin_access_logs`;
+    falhou o registro, o acesso não abre. A federação não vê o registro.
+38. **Lógica de cargos com cópia no servidor** (`functions/federationStaffPolicy.js`
+    ⇄ `domain/staff.js`, paridade em `functions/federationStaff.parity.test.js`).
 
 ## 11. Pendências e próximas fases
 
@@ -791,3 +806,66 @@ ajustes nos quatro arquivos existentes)
 - Teste de navegador (`tests/e2e/logado.spec.js`, `@emuladores`): página
   pública sem conta, diretório, página da federação, formulário de filiação e
   Minha área → Federações montam com a flag ligada.
+
+## 13. Cargos, mandatos, admins master e acesso justificado (Etapa 1 do acervo, PR 7)
+
+Pedido do dono (2026-10-21): a federação cria cargos com atribuições próprias,
+com mandato de início e fim prorrogável; o admin master passa a administração;
+pode haver vários admins master e nunca nenhum; o admin da plataforma entra
+com justificativa registrada e por prazo. Plano das quatro etapas (cargos →
+acervo e mural → calendário e assembleias → comentários) em
+`/mnt/project-files/federacao/plano-acervo-calendario-cargos.md`.
+
+### 13.1 Cargos (`federations.staff_roles`)
+
+Lista de até 30 cargos `{ id, name, description, perms[], is_master,
+term_months }` (0 = sem prazo, até 120). Ausente ou vazia, valem os 8 de
+modelo (`DEFAULT_STAFF_ROLES`: `president` é admin master; presidente e
+diretor com mandato de 48 meses). Só admin master grava (`role_save`,
+`role_delete`), sempre pelo servidor; cargo com gente não pode ser apagado e
+mudar as permissões regrava a cópia `perms` de todos que o ocupam. A permissão
+nova `staff` ("Equipe") abre a seção Equipe sem dar admin master.
+
+### 13.2 Pessoas e mandatos (`federation_staff/{fed}_{uid}`)
+
+Campos novos (todos opcionais; documento antigo vale pelo `role`):
+`role_id`, `role_name`, `perms[]` (cópia), `is_master`, `term_start`,
+`term_end` (`''` = sem fim), `term_end_ms` (0 = sem fim), `term_history[]`
+(até 20: `{ at_ms, by, from, to, reason, act }`), `term_warned[]`,
+`term_held_notified`. Ações do `federationStaff`: `appoint` (nomear ou mudar
+cargo; a pessoa é escolhida pela lista de usuários e recebe aviso), `extend`
+(nova data + motivo + ato), `remove` (tirar ou sair), `transfer` (torna outra
+pessoa admin master; com `leave`, quem passou sai na hora).
+
+Regras de quem pode: admin master pode tudo; quem tem `staff` age só em
+cargos que não são admin master, nunca em si mesmo e só dando permissões que
+tem. Sempre fica um admin master (`lastMasterBlocked`).
+
+**Varredura** (dentro de `federationMembershipSweep`): avisa a pessoa e os
+admins master 30, 7 e 1 dia antes do fim (`term_warned`); vencido, tira da
+equipe e avisa — salvo o último admin master, que fica e recebe um aviso só.
+
+### 13.3 Acesso justificado do admin da plataforma
+
+Na Central de uma federação em que não é da equipe, o admin da plataforma vê
+`FedSupportAccessGate`: categoria do motivo (`REVEAL_REASON_META`), texto de
+pelo menos 20 letras, prazo de 1, 2, 4 ou 8 horas e uma referência opcional.
+`federationAdminAccess` (`grant`) grava primeiro em `admin_access_logs`
+(`action: 'federation_access'`) e só então `federation_admin_grants/{fed}_{uid}`
+(só o admin lê, ninguém grava pelo cliente). A faixa
+`FedSupportAccessBanner` mostra o prazo e "Encerrar acesso" (`end`, registrado
+como `federation_access_end`). A regra `fedPlat(fedId)` exige o acesso
+valendo para toda escrita e para a leitura de CPF e sanções. A revisão da
+federação (aprovar, selos) continua pelo servidor, sem acesso. No Painel
+admin → Federações, "Entrar na Central (com motivo)" e a lista "Acessos de
+suporte às Centrais". Como no suporte de cadastros, a federação **não vê** o
+registro (decisão do dono, 2026-10-12).
+
+### 13.4 Telas
+
+`FedStaffPanel` (Equipe → Pessoas: nomear, mudar cargo, prorrogar, tirar,
+histórico, passar a administração; Equipe → Cargos, só admin master),
+`FedSupportAccess.jsx` (porta e faixa do acesso justificado). Ajuda: artigo
+`federacao-equipe` e guia `federacao-equipe`; âncoras `federacao-equipe`,
+`federacao-equipe-adicionar`, `federacao-equipe-passar`, `federacao-aba-cargos`,
+`federacao-cargos`, `federacao-acesso-suporte`, `admin-federacoes-acessos`.

@@ -191,6 +191,9 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'market_saved_searches', field: 'uid', label: 'Buscas salvas do Mercado' },
   // Federações: o papel na equipe é da pessoa (a federação segue com os outros).
   { col: 'federation_staff', field: 'user_id', label: 'Papéis em equipes de federação' },
+  // Acesso de suporte a federações que estava aberto (o registro do motivo
+  // fica em `admin_access_logs`, que não é apagado).
+  { col: 'federation_admin_grants', field: 'admin_uid', label: 'Acessos de suporte a federações abertos' },
   // E-mails, WhatsApp e SMS que a plataforma mandou para a pessoa (registro
   // de 90 dias; o resumo diário também leva o `user_id`).
   { col: 'message_outbox', field: 'user_id', label: 'Registro de e-mails e mensagens recebidos' },
@@ -1361,12 +1364,16 @@ async function buscarImpedimentos(db, uid, hojeISO) {
   ]);
   const marketOrders = [...comprados, ...vendidos];
 
-  // Presidência de federação aprovada: a federação ficaria sem quem a governa.
+  // Único admin master de federação aprovada: a federação ficaria sem quem a governa.
+  const { isMaster } = require('./federationStaffPolicy.js');
   const federationPresidencies = [];
-  for (const st of fedStaff.filter((x) => x.role === 'president' && x.federation_id)) {
+  for (const st of fedStaff.filter((x) => isMaster(x) && x.federation_id)) {
     // eslint-disable-next-line no-await-in-loop
     const fed = await db.collection('federations').doc(st.federation_id).get();
     if (!fed.exists || fed.data().status !== 'approved') continue;
+    // eslint-disable-next-line no-await-in-loop
+    const outros = await db.collection('federation_staff').where('federation_id', '==', st.federation_id).get();
+    if (outros.docs.some((d) => d.data().user_id !== uid && isMaster(d.data()))) continue;
     federationPresidencies.push({ id: fed.id, name: fed.data().name });
   }
 

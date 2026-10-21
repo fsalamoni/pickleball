@@ -4626,13 +4626,15 @@ service cloud.firestore {
     function fedStaffPath(fedId) {
       return /databases/$(database)/documents/federation_staff/$(fedId + '_' + me());
     }
-    function fedRole(fedId) {
-      return isAuthed() && exists(fedStaffPath(fedId)) ? get(fedStaffPath(fedId)).data.role : '';
+    function fedStaff(fedId) {
+      return get(fedStaffPath(fedId)).data;
     }
-    // Papel → permissões (cópia de `src/modules/federations/domain/constants.js`).
+    // Papel ANTIGO → permissões (documento sem `perms`; cópia de
+    // `src/modules/federations/domain/constants.js`). O cargo novo grava a
+    // cópia das permissões em `perms` — só o servidor (`federationStaff`).
     function fedRolePerms(role) {
       return role == 'president' || role == 'director'
-        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms']
+        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'staff']
         : (role == 'secretary' ? ['members']
         : (role == 'treasurer' ? ['finance']
         : (role == 'competitions' ? ['competitions']
@@ -4640,11 +4642,28 @@ service cloud.firestore {
         : (role == 'discipline' ? ['discipline']
         : (role == 'communication' ? ['comms'] : []))))));
     }
-    // O admin da plataforma tem TODA permissão em toda federação — é o que o
-    // cliente (`useMyFederationRole`) e o servidor (`staffPerms`) já diziam;
-    // a regra discordava e recusava o que a tela oferecia.
+    // As permissões do cargo com o MANDATO valendo (`term_end_ms` 0 = sem
+    // prazo). O admin master segura: a federação nunca fica sem ninguém, e o
+    // servidor só o tira quando sobra outro. Mesma conta de `staffPerms` no
+    // cliente e de `permsOf` no servidor.
+    function fedPerms(fedId) {
+      return isAuthed() && exists(fedStaffPath(fedId))
+        && (fedStaff(fedId).get('is_master', fedStaff(fedId).role == 'president')
+          || fedStaff(fedId).get('term_end_ms', 0) == 0
+          || fedStaff(fedId).term_end_ms > request.time.toMillis())
+        ? fedStaff(fedId).get('perms', fedRolePerms(fedStaff(fedId).role)) : [];
+    }
+    // O admin da plataforma só administra uma federação com o acesso
+    // JUSTIFICADO valendo: motivo e prazo (até 8 h) registrados pelo servidor
+    // (`federationAdminAccess` → `admin_access_logs`). A revisão (aprovar,
+    // suspender) e a leitura dos pedidos seguem com `isPlatformAdmin()`.
+    function fedPlat(fedId) {
+      return isPlatformAdmin()
+        && exists(/databases/$(database)/documents/federation_admin_grants/$(fedId + '_' + me()))
+        && get(/databases/$(database)/documents/federation_admin_grants/$(fedId + '_' + me())).data.expires_ms > request.time.toMillis();
+    }
     function fedHas(fedId, perm) {
-      return isAuthed() && (isPlatformAdmin() || perm in fedRolePerms(fedRole(fedId)));
+      return isAuthed() && (fedPlat(fedId) || perm in fedPerms(fedId));
     }
     // Nome, sigla, endereço e nível válidos — no pedido de abertura E em toda edição.
     function fedProfileOk() {
@@ -4660,7 +4679,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles'];
     }
 
     match /federations/{fedId} {
@@ -4674,10 +4693,10 @@ service cloud.firestore {
         && nd().status == 'pending'
         && nd().get('verified', false) == false
         && nd().get('official', false) == false
-        && !nd().keys().hasAny(['member_counter', 'review'])
+        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles'])
         && fedProfileOk();
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
-      allow update: if isPlatformAdmin() || (fedOn() && fedHas(fedId, 'admin')
+      allow update: if fedPlat(fedId) || (fedOn() && fedHas(fedId, 'admin')
         && !chg().hasAny(fedLocked())
         && (!chg().hasAny(['name', 'acronym', 'slug', 'level']) || fedProfileOk())
         // PR 4: patrocinadores são lista curta (a página e a carteirinha os mostram).
@@ -4694,7 +4713,7 @@ service cloud.firestore {
       match /private/{docId} {
         allow read: if docId == 'data' && (isPlatformAdmin() || fedHas(fedId, 'admin')
           || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId)) && fedDoc(fedId).created_by == me()));
-        allow write: if docId == 'data' && fedOn() && (isPlatformAdmin() || fedHas(fedId, 'admin')
+        allow write: if docId == 'data' && fedOn() && (fedHas(fedId, 'admin')
           || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId))
             && fedDoc(fedId).created_by == me() && fedDoc(fedId).status == 'pending'));
       }
@@ -4710,24 +4729,17 @@ service cloud.firestore {
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'finance');
-      // Quem tem `admin` acrescenta e troca papéis; o presidente só por
-      // presidente (ou admin da plataforma). O id é `{fed}_{uid}` e os dois
-      // campos batem com ele.
-      allow create: if fedOn() && (isPlatformAdmin() || (fedHas(nd().federation_id, 'admin')
-          && (nd().role != 'president' || fedRole(nd().federation_id) == 'president')))
-        && staffId == nd().federation_id + '_' + nd().user_id
-        && fedApproved(nd().federation_id)
-        && nd().role in ['president', 'director', 'secretary', 'treasurer', 'competitions', 'referees', 'discipline', 'communication'];
-      allow update: if fedOn() && (isPlatformAdmin() || (fedHas(od().federation_id, 'admin')
-          && !chg().hasAny(['federation_id', 'user_id'])
-          && ((od().role != 'president' && nd().role != 'president')
-            || fedRole(od().federation_id) == 'president')
-          // O presidente não se rebaixa sozinho: passa a presidência antes.
-          && !(od().user_id == me() && od().role == 'president' && nd().role != 'president')))
-        && nd().role in ['president', 'director', 'secretary', 'treasurer', 'competitions', 'referees', 'discipline', 'communication'];
-      // Sair da equipe (menos o presidente) ou ser tirado por quem tem `admin`.
-      allow delete: if isPlatformAdmin() || (fedOn() && od().role != 'president'
-        && (fedHas(od().federation_id, 'admin') || (isOwner(od().user_id))));
+      // Cargos, mandatos e admins master: SÓ o servidor (`federationStaff`).
+      // Ele confere quem pode nomear para quê, grava a cópia das permissões do
+      // cargo e garante que sempre sobra um admin master.
+      allow write: if false;
+    }
+
+    // O acesso justificado do admin da plataforma a uma federação (`fedPlat`):
+    // só o servidor abre e fecha; o admin lê o próprio para saber até quando vale.
+    match /federation_admin_grants/{grantId} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
     }
 
     match /federation_plans/{planId} {
@@ -4751,7 +4763,7 @@ service cloud.firestore {
         && nd().price_cents <= 100000000
         && nd().billing in ['monthly', 'annual'];
       // Plano com filiação apontando para ele não se apaga: desativa. Só o admin da plataforma apaga.
-      allow delete: if isPlatformAdmin();
+      allow delete: if fedPlat(od().federation_id);
     }
 
     // O dono da filiação: a própria pessoa ou, no DEPENDENTE menor (`user_id`
@@ -4761,8 +4773,7 @@ service cloud.firestore {
     }
     match /federation_members/{memberId} {
       // ⭐ NUNCA pública. O próprio (ou o responsável), a equipe que atende (filiados, financeiro, admin) e o admin da plataforma.
-      allow read: if isPlatformAdmin()
-        || fedMemberOwner(od())
+      allow read: if fedMemberOwner(od())
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'finance')
@@ -4786,8 +4797,7 @@ service cloud.firestore {
       // idade e o consentimento do responsável — não é o navegador que os muda.
       // A secretaria REVELA o CPF com auditoria na tela.
       match /private/{docId} {
-        allow read: if docId == 'data' && (isPlatformAdmin()
-          || fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
+        allow read: if docId == 'data' && (fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
           || fedHas(memberId.split('_')[0], 'members')
           || fedHas(memberId.split('_')[0], 'admin'));
         allow write: if false;
@@ -4799,8 +4809,7 @@ service cloud.firestore {
     // Storage e só quem enviou o abre pela regra; a secretaria o vê pela
     // função `federationDocument` (confere o papel). Aqui só o registro.
     match /federation_documents_submitted/{docId} {
-      allow read: if isPlatformAdmin()
-        || (isOwner(od().user_id))
+      allow read: if (isOwner(od().user_id))
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && isAuthed()
@@ -4818,7 +4827,7 @@ service cloud.firestore {
         && chg().hasOnly(['status', 'review', 'updated_at'])
         && nd().status in ['approved', 'rejected'];
       // Quem enviou apaga enquanto está em análise (e troca o arquivo); o admin sempre.
-      allow delete: if isPlatformAdmin() || (fedOn() && fedHas(od().federation_id, 'admin'))
+      allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin'))
         || (fedOn() && isOwner(od().user_id) && od().status == 'pending');
     }
 
@@ -4826,8 +4835,7 @@ service cloud.firestore {
     // (`federationTransfer`). Lê a pessoa, a secretaria da federação atual e,
     // na troca de federação, a secretaria da federação de destino.
     match /federation_transfers/{trId} {
-      allow read: if isPlatformAdmin()
-        || fedMemberOwner(od())
+      allow read: if fedMemberOwner(od())
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'admin')
         || (od().get('to_federation_id', null) is string
@@ -4838,8 +4846,7 @@ service cloud.firestore {
     // Relatório de uma importação de filiados (PR 3): e-mails pendentes de
     // conta. Só a secretaria lê; só o servidor grava (`federationImportMembers`).
     match /federation_imports/{impId} {
-      allow read: if isPlatformAdmin()
-        || fedHas(od().federation_id, 'members')
+      allow read: if fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'admin');
       allow write: if false;
     }
@@ -4848,7 +4855,6 @@ service cloud.firestore {
     // (cursos/admin) cria e edita — a inscrição e a credencial são do servidor.
     match /federation_courses/{courseId} {
       allow read: if od().status != 'draft'
-        || isPlatformAdmin()
         || fedHas(od().federation_id, 'courses')
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && fedModuleOn(nd().federation_id, 'courses')
@@ -4865,14 +4871,13 @@ service cloud.firestore {
         && (fedHas(od().federation_id, 'courses') || fedHas(od().federation_id, 'admin'))
         && !chg().hasAny(['federation_id', 'enrolled_count'])
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled'];
-      allow delete: if isPlatformAdmin() || (fedOn() && fedHas(od().federation_id, 'admin') && od().get('enrolled_count', 0) == 0);
+      allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin') && od().get('enrolled_count', 0) == 0);
     }
 
     // Inscrição em curso (`{curso}_{uid}`): só o servidor (`federationCourse`) —
     // confere vagas, filiação exigida e gera a cobrança. Lê o próprio e a equipe.
     match /federation_course_enrollments/{enrId} {
-      allow read: if isPlatformAdmin()
-        || (isOwner(od().user_id))
+      allow read: if (isOwner(od().user_id))
         || fedHas(od().federation_id, 'courses')
         || fedHas(od().federation_id, 'finance')
         || fedHas(od().federation_id, 'admin');
@@ -4883,8 +4888,7 @@ service cloud.firestore {
     // equipe (cursos/admin) revoga. Pública SÓ se a pessoa marcou `public`
     // (diretório de credenciados); a pessoa muda só isso.
     match /federation_credentials/{credId} {
-      allow read: if isPlatformAdmin()
-        || (od().get('public', false) == true && od().status == 'active')
+      allow read: if (od().get('public', false) == true && od().status == 'active')
         || (isOwner(od().user_id))
         || fedHas(od().federation_id, 'courses')
         || fedHas(od().federation_id, 'admin');
@@ -4902,8 +4906,7 @@ service cloud.firestore {
     // (`federationDiscipline`), inclusive o recurso. ⭐ Só a pessoa, a
     // disciplina/admin da federação e o admin da plataforma leem (D11).
     match /federation_sanctions/{sancId} {
-      allow read: if isPlatformAdmin()
-        || fedMemberOwner(od())
+      allow read: if fedMemberOwner(od())
         || fedHas(od().federation_id, 'discipline')
         || fedHas(od().federation_id, 'admin');
       allow write: if false;
@@ -4913,13 +4916,11 @@ service cloud.firestore {
     // ou não — anônima NÃO grava `reporter_uid`. O protocolo é o id do
     // documento: quem o tem acompanha (get, nunca list). Trata a disciplina.
     match /federation_reports/{repId} {
-      allow get: if isPlatformAdmin()
-        || (isAuthed() && od().get('anonymous', false) == true)
+      allow get: if (isAuthed() && od().get('anonymous', false) == true)
         || (isAuthed() && od().get('reporter_uid', null) == me())
         || fedHas(od().federation_id, 'discipline')
         || fedHas(od().federation_id, 'admin');
-      allow list: if isPlatformAdmin()
-        || (isAuthed() && od().get('reporter_uid', null) == me())
+      allow list: if (isAuthed() && od().get('reporter_uid', null) == me())
         || fedHas(od().federation_id, 'discipline')
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && isAuthed()
@@ -4938,7 +4939,7 @@ service cloud.firestore {
         && (fedHas(od().federation_id, 'discipline') || fedHas(od().federation_id, 'admin'))
         && chg().hasOnly(['status', 'notes', 'handled_by', 'updated_at'])
         && nd().status in ['open', 'in_review', 'closed'];
-      allow delete: if isPlatformAdmin();
+      allow delete: if fedPlat(od().federation_id);
     }
 
     // PR 4: NOTÍCIAS E AVISOS (módulo `news`). A equipe de comunicação
@@ -4954,7 +4955,6 @@ service cloud.firestore {
     match /federation_news/{newsId} {
       allow read: if (od().status == 'published'
           && (od().audience == 'public' || (od().audience == 'members' && fedMemberActive(od().federation_id))))
-        || isPlatformAdmin()
         || fedHas(od().federation_id, 'comms')
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && fedModuleOn(nd().federation_id, 'news')
@@ -4975,13 +4975,12 @@ service cloud.firestore {
         && nd().title.size() <= 140
         && nd().status in ['draft', 'published', 'archived']
         && nd().audience in ['public', 'members'];
-      allow delete: if isPlatformAdmin()
+      allow delete: if fedPlat(od().federation_id)
         || (fedOn() && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin')));
     }
 
     match /federation_charges/{chargeId} {
-      allow read: if isPlatformAdmin()
-        || (isOwner(od().payer_uid))
+      allow read: if (isOwner(od().payer_uid))
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'finance')
         || fedHas(od().federation_id, 'members');
@@ -5015,7 +5014,6 @@ service cloud.firestore {
     // Filiado é público (página da federação, selo no clube/arena).
     match /federation_affiliations/{affId} {
       allow read: if od().status == 'approved'
-        || isPlatformAdmin()
         || (isOwner(od().requested_by))
         || fedOrgManager(od().kind, od().org_id)
         || fedHas(od().federation_id, 'admin')
@@ -5035,7 +5033,7 @@ service cloud.firestore {
         && (fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'members'))
         && chg().hasOnly(['status', 'review', 'updated_at'])
         && nd().status in ['approved', 'rejected', 'suspended'];
-      allow delete: if isPlatformAdmin()
+      allow delete: if fedPlat(od().federation_id)
         || (fedOn() && (fedOrgManager(od().kind, od().org_id) || fedHas(od().federation_id, 'admin')));
     }
 
@@ -5079,7 +5077,7 @@ service cloud.firestore {
             && chg().hasOnly(['status', 'review', 'updated_at'])
             && nd().status in ['sent', 'rejected'])
         );
-      allow delete: if isPlatformAdmin()
+      allow delete: if fedPlat(od().federation_id)
         || (fedOn() && fedHas(od().federation_id, 'admin'))
         || (fedOn() && isTournamentAdmin(od().tournament_id));
     }

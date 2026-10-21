@@ -138,7 +138,7 @@ function Detalhe() {
           {f.status !== FEDERATION_STATUS.APPROVED && <p className="mt-2 text-sm font-semibold text-amber-700">{f.status === FEDERATION_STATUS.PENDING ? t('Em análise pela equipe do PickleRush.') : f.status === FEDERATION_STATUS.SUSPENDED ? t('Suspensa pela plataforma.') : t('Pedido recusado.')}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          {papel.isStaff && <V2Button asChild variant="secondary" data-dica="federacao-gerir"><Link to={fedManagePath(f)}><Settings2 className="h-4 w-4" />{t('Gerir')}</Link></V2Button>}
+          {(papel.isStaff || papel.needsGrant) && <V2Button asChild variant="secondary" data-dica="federacao-gerir"><Link to={fedManagePath(f)}><Settings2 className="h-4 w-4" />{t('Gerir')}</Link></V2Button>}
           {f.status === FEDERATION_STATUS.APPROVED && <V2Button asChild variant="ghost"><a href={publica} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</a></V2Button>}
         </div>
       </header>

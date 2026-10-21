@@ -210,6 +210,7 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_courses: 'O curso é da federação (nome, datas, preço); a inscrição exportada já diz o curso e o resultado.',
   federation_imports: 'Relatório da secretaria: e-mails de quem ainda não tem conta; a pessoa importada já aparece na filiação exportada.',
   federation_news: 'A notícia é da federação (título, texto, público), não da pessoa; quem escreveu é só o uid de equipe.',
+  federation_admin_grants: 'Acesso de suporte do admin da plataforma a uma federação: registro interno e temporário (até 8 h), não é dado do titular.',
 };
 
 describe('a exclusão e a exportação cobrem as federações', () => {

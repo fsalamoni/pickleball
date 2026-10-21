@@ -1586,12 +1586,12 @@ andamento impede a exclusão.
 
 ## Federações (flag `federations`, default OFF) — `docs/50-FEDERACAO.md`
 
-Dezoito coleções com prefixo `federation`, **zero índice composto** (uma ou
+Dezenove coleções com prefixo `federation`, **zero índice composto** (uma ou
 duas igualdades por consulta, ordenação em memória); os únicos campos novos em
 coleção existente são os dois opcionais de `tournaments` (abaixo). Regras no
 bloco "FEDERAÇÕES" do `firestore.rules` (`fedOn()` lê a flag em
 `platform_settings/global`; `fedHas(fedId, perm)` lê o papel em
-`federation_staff/{fedId}_{uid}`; `fedModuleOn(fedId, m)` lê o sub-módulo;
+`federation_staff/{fedId}_{uid}` (a cópia `perms`; mandato vencido não conta, salvo admin master) ou o acesso justificado do admin da plataforma (`fedPlat`); `fedModuleOn(fedId, m)` lê o sub-módulo;
 `fedMemberOwner(data)` = `user_id` **ou** `guardian_uid` da filiação, PR 3),
 provadas em `tests/rules/federation.rules.test.js`, `federationPr2.rules.test.js`,
 `federationPr3.rules.test.js`, `federationPr4.rules.test.js` e
@@ -1619,11 +1619,25 @@ filiado emite a própria declaração de vínculo), `status`
   (enquanto pendente), a equipe com `admin`, o admin da plataforma.
 
 ### `federation_staff/{fedId}_{uid}` (NOVO)
-`federation_id`, `user_id`, `user_name`, `role`
-(`president|director|secretary|treasurer|competitions|referees|discipline|communication`),
-`added_by`, `created_at`. Leem: a equipe que atende e a própria pessoa. Quem tem
-`admin` cria e troca papéis; `president` só por presidente (ou admin da
-plataforma); o presidente não se rebaixa sozinho e não sai da equipe.
+`federation_id`, `user_id`, `user_name`, `role` (id do cargo; os de modelo:
+`president|director|secretary|treasurer|competitions|referees|discipline|communication`),
+`added_by`, `created_at`. PR 7 (opcionais): `role_id`, `role_name`, `perms[]`
+(cópia das permissões do cargo — é o que a regra lê), `is_master`,
+`term_start`, `term_end` (`''` = sem fim), `term_end_ms` (0 = sem fim),
+`term_history[]` (até 20), `term_warned[]`, `term_held_notified`. Leem: a
+equipe que atende e a própria pessoa. **Só o servidor grava**
+(`federationStaff`, `write: if false`).
+
+### `federations.staff_roles` (PR 7, campo opcional, `fedLocked()`)
+Até 30 `{ id, name, description, perms[], is_master, term_months }`. Ausente,
+valem os 8 cargos de modelo. Só o servidor grava (ação `role_save` de admin master).
+
+### `federation_admin_grants/{fedId}_{adminUid}` (PR 7, NOVO)
+Acesso justificado do admin da plataforma a uma Central: `federation_id`,
+`federation_name`, `admin_uid`, `admin_email`, `reason_category`,
+`reason_text`, `ticket_ref`, `hours`, `granted_at_ms`, `expires_ms`, `log_id`
+(o registro em `admin_access_logs`, `action: 'federation_access'`). Só o admin
+da plataforma lê; ninguém grava pelo cliente (`federationAdminAccess`).
 
 ### `federation_plans/{id}` (NOVO, público)
 `federation_id`, `name`, `description`, `benefits` (texto, um por linha), `person_type`

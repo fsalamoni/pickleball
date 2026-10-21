@@ -1288,7 +1288,7 @@ function federationCallable(nome, fn) {
     const token = req.auth.token || {};
     const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '', isPlatformAdmin: await isPlatformAdminUser(req, ctx.db) };
     try {
-      return await fn(ctx, actor, req.data || {});
+      return await fn(ctx, actor, req.data || {}, req);
     } catch (err) {
       if (err instanceof federations.FederationError) throw new HttpsError(err.code, err.message);
       if (err instanceof HttpsError) throw err;
@@ -1324,6 +1324,14 @@ exports.federationDiscipline = federationCallable('federationDiscipline', federa
 exports.federationImportMembers = federationCallable('federationImportMembers', federationSecretariat.importMembers);
 const federationNews = require('./federationNews');
 exports.federationNews = federationCallable('federationNews', federationNews.notify);
+// Cargos, mandatos e admins master (só o servidor grava a equipe) — `functions/federationStaff.js`.
+const federationStaff = require('./federationStaff');
+exports.federationStaff = federationCallable('federationStaff', federationStaff.staff);
+// O admin da plataforma entra numa federação só com motivo e prazo; o registro vai para `admin_access_logs`.
+exports.federationAdminAccess = federationCallable('federationAdminAccess', (ctx, actor, data, req) => {
+  const raw = (req && req.rawRequest) || {};
+  return federationStaff.adminAccess(ctx, actor, data, { ip: raw.ip || '', userAgent: (raw.headers && raw.headers['user-agent']) || '' });
+});
 exports.federationDocument = federationCallable('federationDocument', (ctx, actor, data) => {
   let bucket = null;
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationDocument: Storage indisponível.', err); }
@@ -1334,7 +1342,7 @@ exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

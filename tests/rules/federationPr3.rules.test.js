@@ -95,10 +95,12 @@ beforeEach(async () => {
 
 describe('⭐ dados privados e dependente', () => {
   const priv = (uid, memberId = `${FED}_${ANA}`) => doc(como(uid), 'federation_members', memberId, 'private', 'data');
-  it('o CPF: lê o próprio, a secretaria, o presidente e o admin; o financeiro, o colega e o anônimo não', async () => {
+  it('o CPF: lê o próprio, a secretaria, o presidente e o admin (com o acesso justificado); o financeiro, o colega e o anônimo não', async () => {
     await assertSucceeds(getDoc(priv(ANA)));
     await assertSucceeds(getDoc(priv(SEC)));
     await assertSucceeds(getDoc(priv(PRES)));
+    await assertFails(getDoc(priv(ADMIN)));
+    await semRegras((db) => setDoc(doc(db, 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() + 3600000 }));
     await assertSucceeds(getDoc(priv(ADMIN)));
     await assertFails(getDoc(priv(TES)));
     await assertFails(getDoc(priv(BIA)));
@@ -189,6 +191,8 @@ describe('⭐ só o servidor grava: transferência, importação, inscrição em
     await assertSucceeds(getDoc(doc(como(BIA), 'federation_sanctions', 's1')));
     await assertSucceeds(getDoc(doc(como(DISC), 'federation_sanctions', 's1')));
     await assertSucceeds(getDoc(doc(como(PRES), 'federation_sanctions', 's1')));
+    await assertFails(getDoc(doc(como(ADMIN), 'federation_sanctions', 's1')));
+    await semRegras((db) => setDoc(doc(db, 'federation_admin_grants', `${FED}_${ADMIN}`), { federation_id: FED, admin_uid: ADMIN, expires_ms: Date.now() + 3600000 }));
     await assertSucceeds(getDoc(doc(como(ADMIN), 'federation_sanctions', 's1')));
     await assertFails(getDoc(doc(como(ANA), 'federation_sanctions', 's1')));
     await assertFails(getDoc(doc(como(SEC), 'federation_sanctions', 's1')));

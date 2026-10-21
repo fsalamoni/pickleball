@@ -3,10 +3,10 @@
  * grupos — "Atender" (o trabalho do dia) e "Gerir" (como a federação é) —,
  * como a Central da arena. A seção só existe para quem tem a permissão dela
  * (`FED_PERMISSION`): a secretaria vê Filiados, o financeiro vê Financeiro,
- * presidente e diretor veem tudo. O valor de cada aba é ÚNICO e é contrato de
+ * o admin master vê tudo (os cargos são de cada federação). O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { ArrowLeftRight, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -17,11 +17,12 @@ export const FED_SECTION_GROUPS = Object.freeze([
 ]);
 
 /**
- * @param {string[]} perms permissões de quem vê (`permissionsOf(role)`)
+ * @param {string[]} perms permissões de quem vê (`staffPerms(doc)`)
  * @param {object} [federation] a federação — as abas dos MÓDULOS só existem com o módulo ligado
+ * @param {{ isMaster?: boolean }} [opts] admin master vê também a aba Cargos
  * @returns {Array<{ id: string, grupo: string, label: string, icon: Function, dica?: string, tabs: Array<{ value: string, label: string, icon: Function }> }>}
  */
-export function buildFederationSections(perms = [], federation = null) {
+export function buildFederationSections(perms = [], federation = null, { isMaster = false } = {}) {
   const pode = (p) => perms.includes(p);
   const admin = pode(FED_PERMISSION.ADMIN);
   const modulo = (id) => fedModuleOn(federation, id);
@@ -81,9 +82,12 @@ export function buildFederationSections(perms = [], federation = null) {
       id: 'indicadores', grupo: 'gerir', label: tk('Indicadores'), icon: BarChart3, dica: 'federacao-secao-indicadores',
       tabs: [{ value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 }],
     },
-    admin && {
+    pode(FED_PERMISSION.STAFF) && {
       id: 'equipe', grupo: 'gerir', label: tk('Equipe'), icon: UserCog, dica: 'federacao-secao-equipe',
-      tabs: [{ value: 'equipe', label: tk('Equipe'), icon: UserCog }],
+      tabs: [
+        { value: 'equipe', label: tk('Pessoas'), icon: UserCog },
+        ...(isMaster ? [{ value: 'cargos', label: tk('Cargos'), icon: BadgeCheck, dica: 'federacao-aba-cargos' }] : []),
+      ],
     },
     (admin || pode(FED_PERMISSION.FINANCE)) && {
       id: 'config', grupo: 'gerir', label: tk('Configurações'), icon: SlidersHorizontal, dica: 'federacao-secao-config',

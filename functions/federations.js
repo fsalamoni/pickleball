@@ -33,6 +33,7 @@
 const crypto = require('node:crypto');
 const m = require('./federationMembership.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
+const P = require('./federationStaffPolicy.js');
 
 class FederationError extends Error {
   constructor(code, message) { super(message); this.code = code; this.name = 'FederationError'; }
@@ -48,12 +49,8 @@ const C = Object.freeze({
 });
 const MINOR_AGE = 18;
 const GUARDIAN_ONLY_AGE = 12;
-const PERMS = Object.freeze({
-  president: ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms'],
-  director: ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms'],
-  secretary: ['members'], treasurer: ['finance'], competitions: ['competitions'], referees: ['courses'],
-  discipline: ['discipline'], communication: ['comms'],
-});
+// Cargo → permissões, mandato e admin master: `federationStaffPolicy.js` (cópia do cliente, com paridade).
+const PERMS = P.PERMS;
 const LIVE = Object.freeze(['pending', 'awaiting_payment', 'active', 'expired', 'suspended']);
 const texto = (v, max = 300) => String(v == null ? '' : v).trim().slice(0, max);
 
@@ -83,10 +80,18 @@ async function flagLigada(ctx) {
   return Boolean(snap.exists && snap.data().feature_flags && snap.data().feature_flags.federations === true);
 }
 
+/**
+ * As permissões de quem age NESTA federação: o cargo com o mandato valendo.
+ * O admin da plataforma só tem poder com o acesso JUSTIFICADO valendo
+ * (`federation_admin_grants`, aberto por `federationAdminAccess`).
+ */
 async function staffPerms(ctx, fedId, actor) {
-  if (actor.isPlatformAdmin) return PERMS.president;
+  if (actor.isPlatformAdmin) {
+    const g = await ctx.db.collection('federation_admin_grants').doc(`${fedId}_${actor.uid}`).get();
+    if (g.exists && P.grantActive(g.data(), ctx.now)) return [...P.ALL];
+  }
   const snap = await ctx.db.collection(C.staff).doc(`${fedId}_${actor.uid}`).get();
-  return snap.exists ? (PERMS[snap.data().role] || []) : [];
+  return snap.exists ? P.permsOf(snap.data(), ctx.now) : [];
 }
 
 async function exigePerm(ctx, fedId, actor, perm) {
@@ -102,7 +107,7 @@ async function federacao(ctx, fedId) {
 
 const staffIds = async (ctx, fedId, perm) => {
   const snap = await ctx.db.collection(C.staff).where('federation_id', '==', fedId).get();
-  return snap.docs.map((d) => d.data()).filter((s) => (PERMS[s.role] || []).includes(perm)).map((s) => s.user_id);
+  return snap.docs.map((d) => d.data()).filter((s) => P.permsOf(s, ctx.now).includes(perm)).map((s) => s.user_id);
 };
 
 const novoCodigo = () => m.cardCodeFromBytes(crypto.randomBytes(m.CARD_CODE_LENGTH));
@@ -142,7 +147,14 @@ async function review(ctx, actor, data) {
     const staffRef = ctx.db.collection(C.staff).doc(`${fed.id}_${fed.created_by}`);
     const [atual, conta] = await Promise.all([staffRef.get(), ctx.db.collection('users').doc(fed.created_by).get()]);
     if (!atual.exists && conta.exists) {
-      batch.set(staffRef, { federation_id: fed.id, federation_name: fed.name, federation_acronym: fed.acronym || '', user_id: fed.created_by, user_name: fed.created_by_name || '', role: 'president', added_by: actor.uid, created_at: ctx.Timestamp.fromMillis(ctx.now) });
+      // O primeiro admin master (cargo de presidente), sem data de fim — a federação monta os mandatos depois.
+      const pres = P.effectiveRoles(fed).find((r) => r.is_master) || P.DEFAULT_ROLES[0];
+      batch.set(staffRef, {
+        federation_id: fed.id, federation_name: fed.name, federation_acronym: fed.acronym || '', user_id: fed.created_by, user_name: fed.created_by_name || '',
+        role: pres.id, role_id: pres.id, role_name: pres.name, perms: [...pres.perms], is_master: true,
+        term_start: m.isoDateBR(ctx.now), term_end: '', term_end_ms: 0, term_history: [], term_warned: [],
+        added_by: actor.uid, created_at: ctx.Timestamp.fromMillis(ctx.now),
+      });
     }
   }
   const link = `/federacoes/${fed.id}/gerir`;

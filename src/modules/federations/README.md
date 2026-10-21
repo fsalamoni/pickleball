@@ -11,7 +11,7 @@ federations/
 ├── domain/                      # regra pura, cada arquivo com .test.js ao lado
 │   ├── constants.js             # coleções, enums GRAVADOS (status, papéis, permissões, planos, módulos)
 │   ├── federation.js            # validação do pedido/página/Pix, slug, selos, ações de revisão, FED_MODULE_META
-│   ├── staff.js                 # papel → permissões, canChangeStaff (presidente só por presidente)
+│   ├── staff.js                 # cargos (os da federação ou os 8 de modelo), mandato, admin master, quem pode nomear/prorrogar/passar (cópia no servidor: federationStaffPolicy.js)
 │   ├── plans.js                 # validatePlanInput, planPrice (descontos por idade), rótulos
 │   ├── membership.js            # a CONTA da filiação: validade, renovação, estado, número, código, verificação
 │   ├── charges.js               # estado da cobrança, resumo financeiro, CSV
@@ -83,7 +83,7 @@ de `domain/membership.js` com paridade em
 
 Coleções (`firestore.rules` § FEDERAÇÕES, provadas em
 `tests/rules/federation.rules.test.js`): `federations` (+ `private/data`),
-`federation_staff`, `federation_plans`, `federation_members` (+ `private/data`),
+`federation_staff`, `federation_admin_grants` (PR 7), `federation_plans`, `federation_members` (+ `private/data`),
 `federation_charges`, `federation_card_index`, `federation_affiliations`,
 `federation_results`, `federation_rankings` (`tests/rules/federationPr2.rules.test.js`);
 PR 3 (`tests/rules/federationPr3.rules.test.js`): `federation_documents_submitted`,

@@ -10,7 +10,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import * as svc from '../services/federationService';
 import { FED_PERMISSION } from '../domain/constants.js';
-import { permissionsOf } from '../domain/staff.js';
+import { grantActive, staffIsMaster, staffPerms, staffRoleName } from '../domain/staff.js';
 
 export const fedKeys = {
   all: ['federacoes'],
@@ -24,6 +24,8 @@ export const fedKeys = {
   members: (id) => ['federacoes', 'federacao', id, 'filiados'],
   charges: (id) => ['federacoes', 'federacao', id, 'cobrancas'],
   myRoles: (uid) => ['federacoes', 'meus-papeis', uid],
+  myGrant: (fedId, uid) => ['federacoes', 'federacao', fedId, 'acesso-suporte', uid],
+  accessLogs: ['federacoes', 'admin', 'acessos'],
   myMemberships: (uid) => ['federacoes', 'minhas-filiacoes', uid],
   myCharges: (uid) => ['federacoes', 'minhas-cobrancas', uid],
   myCreated: (uid) => ['federacoes', 'pedidas-por', uid],
@@ -116,15 +118,43 @@ export function useMyFederationRoles({ enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.myRoles(user?.uid), queryFn: () => svc.listMyStaffRoles(user?.uid), enabled: !!user?.uid && enabled, staleTime: 60_000 });
 }
 
-/** O papel e as permissões de quem vê NESTA federação (admin da plataforma tem tudo). */
+/** O acesso de suporte do admin da plataforma a esta federação (só o admin consulta). */
+export function useMyFederationGrant(fedId, { enabled = true } = {}) {
+  const { user, isPlatformAdmin } = useAuth();
+  return useQuery({ queryKey: fedKeys.myGrant(fedId, user?.uid), queryFn: () => svc.getMyFederationGrant(fedId, user?.uid), enabled: !!fedId && !!user?.uid && !!isPlatformAdmin && enabled });
+}
+
+/** Admin da plataforma: o registro dos acessos às federações. */
+export function useFederationAccessLogs({ enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.accessLogs, queryFn: svc.listFederationAccessLogs, enabled });
+}
+
+/**
+ * O cargo e as permissões de quem vê NESTA federação: o cargo com o mandato
+ * valendo (`staffPerms`). O admin da plataforma tem tudo SÓ com o acesso
+ * justificado valendo (`grant`); sem ele, `needsGrant` diz que a Central deve
+ * pedir o motivo antes.
+ */
 export function useMyFederationRole(fedId) {
   const { isPlatformAdmin } = useAuth();
   const q = useMyFederationRoles({ enabled: !!fedId });
+  const g = useMyFederationGrant(fedId);
+  const { refetch: qRefetch } = q;
+  const { refetch: gRefetch } = g;
   return useMemo(() => {
+    const agora = Date.now();
     const mine = (q.data || []).find((s) => s.federation_id === fedId) || null;
-    const perms = isPlatformAdmin ? Object.values(FED_PERMISSION) : permissionsOf(mine?.role);
-    return { staff: mine, role: mine?.role || null, perms, has: (p) => perms.includes(p), isStaff: Boolean(mine) || isPlatformAdmin, isLoading: q.isLoading, isError: q.isError, refetch: q.refetch };
-  }, [q.data, q.isLoading, q.isError, q.refetch, fedId, isPlatformAdmin]);
+    const grant = isPlatformAdmin && grantActive(g.data, agora) ? g.data : null;
+    const proprias = staffPerms(mine, agora);
+    const perms = grant ? Object.values(FED_PERMISSION) : proprias;
+    const carregando = q.isLoading || (isPlatformAdmin && g.isLoading);
+    return {
+      staff: mine, role: mine?.role || null, roleName: staffRoleName(mine), isMaster: Boolean(grant) || (staffIsMaster(mine) && proprias.length > 0),
+      perms, has: (p) => perms.includes(p), isStaff: perms.length > 0, grant,
+      needsGrant: Boolean(isPlatformAdmin) && !grant && proprias.length === 0 && !carregando,
+      isLoading: carregando, isError: q.isError || g.isError, refetch: () => { qRefetch(); if (isPlatformAdmin) gRefetch(); },
+    };
+  }, [q.data, q.isLoading, q.isError, qRefetch, g.data, g.isLoading, g.isError, gRefetch, fedId, isPlatformAdmin]);
 }
 
 export function useMyMemberships({ enabled = true } = {}) {
