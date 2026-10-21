@@ -1606,7 +1606,9 @@ Público quando `status == 'approved'`; antes só quem pediu, a equipe e o admin
 `contact_public { email, phone }`, `branding { color, logo_url }`,
 `payment { pix_key_type, pix_key, receiver_name, instructions }`,
 `modules { [FED_MODULE]: boolean }`, `rules { ask_cpf, transfer_release_days,
-transfer_cooldown_days }` (PR 3, opcional; a equipe `admin` grava), `status`
+transfer_cooldown_days, member_declarations }` (PR 3, opcional; a equipe
+`admin` grava; `member_declarations` — PR 6, ausente ⇒ sim — diz se o
+filiado emite a própria declaração de vínculo), `status`
 (`pending|approved|rejected|suspended`), `verified`, `official`,
 `member_count`, `member_counter` (sequência do número de filiado),
 `cnpj_masked`, `review { action, reason, by, at_ms }`, `created_by`,

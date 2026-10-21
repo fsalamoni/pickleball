@@ -2180,3 +2180,16 @@ o `get` da própria filiação ainda inexistente (quem não é filiado nunca via
 "Filiar-se") e a lista de benefícios do plano derrubava a página pública.
 A lição de teste que fica: `affectedKeys()` de um update idêntico é vazio, e um
 `hasOnly` sobre ele passa sem provar nada. Detalhe em `docs/50-FEDERACAO.md` §12.
+
+## Federações — indicadores e declaração de vínculo (2026-10-21)
+
+Pedido do dono: "há algo mais para aprimorar a nova funcionalidade? Faça!".
+Duas coisas que uma federação de verdade pede toda semana e a plataforma não
+dava: os números para a diretoria e a prestação de contas (agora a seção
+**Indicadores** da Central: 12 meses de filiados, renovação, recebido e atraso,
+com CSV, das mesmas leituras que a Central já fazia) e a **declaração de
+vínculo** que o atleta leva à Bolsa Atleta, à escola ou ao patrocinador (folha
+imprimível com os resultados oficiais e o QR da verificação pública; a
+federação decide se o filiado emite a própria). Zero banco: só a chave
+opcional `rules.member_declarations`. Detalhe em `docs/50-FEDERACAO.md` §6.8.
+

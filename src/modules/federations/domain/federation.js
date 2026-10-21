@@ -137,7 +137,9 @@ export function federationReviewActions(f) {
 
 /**
  * As REGRAS da federação (`federations.rules`, campo opcional): CPF no pedido
- * (D6), carência e prazo das transferências (D9). Ausente ⇒ padrão.
+ * (D6), carência e prazo das transferências (D9) e se o filiado emite a
+ * própria declaração de vínculo (`member_declarations`, padrão sim — a
+ * secretaria emite sempre). Ausente ⇒ padrão.
  */
 export function normalizeFederationRules(raw = {}) {
   const int = (v, d, min, max) => {
@@ -148,5 +150,6 @@ export function normalizeFederationRules(raw = {}) {
     ask_cpf: raw?.ask_cpf === true,
     transfer_cooldown_days: int(raw?.transfer_cooldown_days, 90, 0, 3650),
     transfer_release_days: int(raw?.transfer_release_days, 15, 1, 365),
+    member_declarations: raw?.member_declarations !== false,
   };
 }

@@ -304,7 +304,9 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ler resultados e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
 | Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` |
 | Mudar a tabela de pontos (`ranking_config`) | ✖ | ✖ | ✖ | ✔ `competitions` (só essa chave) | ✔ | rules |
-| Regras da federação (`rules`: CPF, prazos de transferência) — PR 3 | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules |
+| Regras da federação (`rules`: CPF, prazos de transferência, declaração pelo filiado) — PR 3/6 | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules |
+| Ver os Indicadores da Central — PR 6 | ✖ | ✖ | ✖ | ✔ `members` (bloco de filiados) e/ou `finance` (bloco do dinheiro) | ✔ | tela (sem leitura nova: as mesmas de Filiados e Financeiro, já presas pela regra) |
+| Emitir declaração de vínculo (filiação em dia, sem suspensão) — PR 6 | ✖ | ✖ | ✔ o dono/responsável, se `rules.member_declarations` (padrão sim) | ✔ `members` (sempre) | ✔ | tela (nada é gravado; a autenticidade é a verificação pública) |
 | Ler CPF, nascimento e responsável (`federation_members/…/private/data`) | ✖ | ✖ | ✔ o dono (`fedMemberOwner`: o próprio ou o responsável do dependente) | ✔ `members`/`admin` (revelar o CPF: motivo + `audit_logs`) | ✔ | rules; **gravar só o servidor** (`write: if false`) |
 | Filiar um dependente (menor de 12), pagar e mudar as preferências dele | ✖ | ✔ o responsável (`guardian_uid`) | — | — | — | **Cloud Function** `federationMembership`; rules (`fedMemberOwner`) |
 | Enviar documento exigido pelo plano | ✖ | ✖ | ✔ o dono, só `pending`, caminho `federacao/{uid}/…` | ✖ | — | rules + `storage.rules` (só o dono lê a pasta) |
