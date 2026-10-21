@@ -2244,3 +2244,18 @@ equipe viu. Os torneios chancelados entram sozinhos. O público tem
 e a agenda inteira assinável por ICS (`/api/agenda/{slug}.ics`), que atualiza
 no celular quando a federação remarca. As reuniões com pauta, quórum e votação
 são a parte 2. `docs/50-FEDERACAO.md` §15.
+
+### Federação — reuniões e assembleias (PR 9b, Etapa 3 do acervo, 2026-10-21)
+
+Segunda parte do calendário: a assembleia deixa de ser só uma data. Antes do
+dia, a federação CONVOCA — data do edital (o ato publicado no acervo),
+quórum de primeira e segunda chamada e a pauta, item a item, como
+deliberação, eleição ou informe. O prazo mínimo do estatuto (padrão 8 dias,
+em Configurações → Regras) só AVISA quando a convocação sai em cima da hora:
+o estatuto pode prever urgência, e barrar seria decidir pela federação.
+Depois do início, registra o RESULTADO: chamada, presentes e aptos, quórum e
+o que se decidiu em cada item, com votos, resumo, o ato que saiu dele, a ata,
+a lista de presença e o registro de votação. Sem quórum nada se decide. Mudar
+a pauta divulgada e corrigir o resultado pedem motivo e ficam no histórico,
+avisando quem segue. Tudo no campo `meeting` do evento, gravado só pelo
+servidor, sem coleção nem regra nova. `docs/50-FEDERACAO.md` §15.9.

@@ -9,15 +9,18 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Ban, CalendarDays, CalendarPlus, ExternalLink, PauseCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Ban, CalendarDays, CalendarPlus, ClipboardCheck, ExternalLink, Megaphone, PauseCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { agendaAction } from '@/modules/federations/services/federationService';
 import { useFederationMutation, useVisibleAcervo, useVisibleAgenda } from '@/modules/federations/hooks/useFederations';
 import {
-  EVENT_GROUPS, EVENT_REASON_MIN, EVENT_VISIBILITY, EVENT_VISIBILITY_LABELS, agendaPublicPath, eventActions, eventKind, kindsFor, saveNeedsReason,
+  EVENT_GROUPS, EVENT_REASON_MIN, EVENT_VISIBILITY, EVENT_VISIBILITY_LABELS, agendaPublicPath, canManageKind, eventActions, eventKind, kindsFor, saveNeedsReason,
   splitAgenda, validateEventInput,
 } from '@/modules/federations/domain/agenda';
 import { docDisplayTitle } from '@/modules/federations/domain/acervo';
+import { convocationNotice, isMeetingConvened, isMeetingRecorded, meetingActions } from '@/modules/federations/domain/meeting';
+import { normalizeFederationRules } from '@/modules/federations/domain/federation';
+import { ConveneForm, RecordForm } from './FedMeetingDialogs';
 import { BR_UFS } from '@/core/domain/ufs';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
@@ -189,6 +192,9 @@ function ApagarDialog({ federation, ev, onFechar }) {
 function EventRow({ federation, ev, perms, onAbrir }) {
   const kind = ev.derived ? { label: tk('Torneio chancelado') } : eventKind(ev.kind);
   const a = eventActions(ev, perms);
+  const reuniao = !ev.derived && Boolean(kind?.meeting);
+  const r = meetingActions(ev, { canManage: canManageKind(perms, ev.kind), isMeeting: reuniao });
+  const prazo = reuniao && ev.status === 'scheduled' ? convocationNotice(ev, normalizeFederationRules(federation.rules).convocation_min_days) : null;
   return (
     <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-3">
       <DateBadge ev={ev} adiado={ev.status === 'postponed'} />
@@ -200,8 +206,18 @@ function EventRow({ federation, ev, perms, onAbrir }) {
         </p>
         <p className={`font-bold text-ink ${ev.status === 'cancelled' ? 'line-through' : ''}`}>{ev.title}</p>
         <p className="text-xs text-gray-500">{ev.status === 'postponed' ? t('Nova data a definir') : `${dataDoEvento(ev)} · ${horarioDoEvento(ev)}`}</p>
+        {reuniao && (
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+            {isMeetingRecorded(ev) ? <V2Badge tone="green">{t('Resultado publicado')}</V2Badge>
+              : isMeetingConvened(ev) ? <V2Badge tone="neutral">{t('Convocada · pauta com {n} itens', { n: ev.meeting.items?.length || 0 })}</V2Badge>
+                : ev.status === 'scheduled' && <V2Badge tone="neutral">{t('Ainda sem convocação')}</V2Badge>}
+            {prazo?.late && !isMeetingRecorded(ev) && <span className="inline-flex items-center gap-1 font-semibold text-amber-700"><AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />{t('Convocada com {dias} dias; o estatuto pede {min}', { dias: Math.max(0, prazo.days), min: prazo.min })}</span>}
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
+        {r.convene && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('convocar', ev)}><Megaphone className="h-4 w-4" />{isMeetingConvened(ev) ? t('Convocação') : t('Convocar')}</V2Button>}
+        {r.record && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('resultado', ev)}><ClipboardCheck className="h-4 w-4" />{isMeetingRecorded(ev) ? t('Corrigir o resultado') : t('Registrar o resultado')}</V2Button>}
         {ev.derived
           ? <V2Button asChild size="sm" variant="ghost"><Link to={`/torneios/${encodeURIComponent(ev.tournament_id)}`}><ExternalLink className="h-4 w-4" />{t('Abrir o torneio')}</Link></V2Button>
           : <V2Button asChild size="sm" variant="ghost"><Link to={`${agendaPublicPath(federation)}/${encodeURIComponent(ev.id)}`} aria-label={t('Ver {titulo}', { titulo: ev.title })}><ExternalLink className="h-4 w-4" /></Link></V2Button>}
@@ -214,7 +230,7 @@ function EventRow({ federation, ev, perms, onAbrir }) {
   );
 }
 
-const TITULOS = { novo: tk('Marcar na agenda'), editar: tk('Editar evento'), postpone: tk('Adiar evento'), cancel: tk('Cancelar evento'), apagar: tk('Apagar evento') };
+const TITULOS = { novo: tk('Marcar na agenda'), editar: tk('Editar evento'), postpone: tk('Adiar evento'), cancel: tk('Cancelar evento'), apagar: tk('Apagar evento'), convocar: tk('Convocação e pauta'), resultado: tk('Resultado da reunião') };
 
 export default function FedAgendaPanel({ federation, perms = [] }) {
   const a = useVisibleAgenda(federation);
@@ -262,6 +278,8 @@ export default function FedAgendaPanel({ federation, perms = [] }) {
           {(modo === 'novo' || modo === 'editar') && <EventForm federation={federation} perms={perms} ev={modo === 'editar' ? ev : null} onFechar={fechar} />}
           {(modo === 'postpone' || modo === 'cancel') && <SituacaoDialog federation={federation} ev={ev} acao={modo} onFechar={fechar} />}
           {modo === 'apagar' && <ApagarDialog federation={federation} ev={ev} onFechar={fechar} />}
+          {modo === 'convocar' && <ConveneForm federation={federation} ev={ev} onFechar={fechar} />}
+          {modo === 'resultado' && <RecordForm federation={federation} ev={ev} onFechar={fechar} />}
         </DialogContent>
       </Dialog>
     </section>

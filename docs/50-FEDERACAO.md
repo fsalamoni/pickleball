@@ -533,7 +533,7 @@ derivado dos resultados, que já vão.
 | `federationDocument` | callable | `members`/`admin` da federação do documento | devolve o arquivo do Storage (base64) à secretaria, com auditoria |
 | `federationNews` | callable | `comms`/`admin` da federação | avisa os filiados ativos de uma notícia publicada, uma vez só (§6.7) |
 | `federationAcervo` | callable (540 s, 1 GiB) | `docs`/`admin` da federação; `file` para quem lê o documento | acervo oficial: rascunho, publicação numerada com SHA-256, retificação, visibilidade, retirada do ar, entrega de arquivo restrito (§14) |
-| `federationAgenda` | callable | `docs`/`admin` da federação; `competitions` só na agenda esportiva | calendário oficial: marcar/editar (motivo e histórico ao remarcar o que já foi divulgado), adiar, cancelar, apagar o nunca divulgado, aviso a quem segue (§15) |
+| `federationAgenda` | callable | `docs`/`admin` da federação; `competitions` só na agenda esportiva | calendário oficial: marcar/editar (motivo e histórico ao remarcar o que já foi divulgado), adiar, cancelar, apagar o nunca divulgado, aviso a quem segue (§15); reunião: convocar (pauta, edital, quórum) e registrar o resultado (presença, decisão por item, ata) (§15.9) |
 | `federationAgendaFeed` | HTTP público (`/api/agenda/{slug}.ics`) | qualquer um | a agenda assinável (ICS) com os eventos públicos e os torneios chancelados (§15.6) |
 | `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
 | `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
@@ -730,6 +730,14 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 46. **A agenda assinável leva só o público.** O que é só para filiados ou só
     da equipe nunca entra no ICS (o endereço é aberto); torneio entra só
     chancelado e público.
+47. **Reunião: a convocação e o resultado são do servidor** (`federationAgenda`,
+    ações `convene` e `record`), com a validação copiada em
+    `federationMeetingPolicy.js` (paridade com `domain/meeting.js`). Sem
+    quórum nada se decide (só adiado ou retirado); votos só no que foi votado;
+    mudar a convocação divulgada e corrigir resultado exigem motivo e vão ao
+    histórico; o resultado só depois do início, e depois dele a data não muda.
+    O prazo do estatuto (`rules.convocation_min_days`) **avisa, não bloqueia**
+    (§15.9).
 
 ## 11. Pendências e próximas fases
 
@@ -1068,8 +1076,8 @@ A agenda esportiva e institucional da federação: competições, assembleias,
 reuniões dos órgãos, prazos e eventos. A lei pede que a entidade divulgue os
 atos e as convocações (Lei Geral do Esporte, art. 36); o calendário é onde
 quem joga e quem é filiado vê **quando** as coisas acontecem, e o que mudou.
-As **reuniões com pauta, quórum, presença e votação** são o PR 9b (o tipo
-`meeting` do catálogo já marca quais eventos as terão).
+As **reuniões com pauta, quórum, presença e votação** vieram no PR 9b
+(§15.9): o tipo `meeting` do catálogo marca quais eventos as têm.
 
 ### 15.1 Módulo, permissão e tela
 
@@ -1169,3 +1177,58 @@ Central: `federacao-secao-agenda`, `federacao-agenda`,
 `federacao-agenda-novo`. Público: `federacao-agenda-publica` (bloco),
 `federacao-agenda-pagina`, `federacao-agenda-assinar`. Artigo de ajuda e guia
 `federacao-agenda`.
+
+### 15.9 Reuniões e assembleias: convocação, pauta e resultado (PR 9b)
+
+Vale para os tipos com `meeting` no catálogo (assembleias ordinária,
+extraordinária e especial; diretoria; conselho fiscal; comissões). Tudo mora
+no campo `meeting` do próprio evento — **nenhuma coleção nova, nenhuma regra
+nova** (`federation_events` já é `write: if false`). Quem age é `docs` ou
+`admin` (são tipos institucionais; `competitions` não convoca).
+
+**Convocação** (ação `convene`): data do edital (não futura, não depois da
+reunião), o **edital** — um ato **publicado** do acervo do tipo convocação ou
+aviso, copiado com código, título e visibilidade —, quórum da primeira
+chamada, horário e quórum da segunda e a **pauta** (até 40 itens, cada um
+`deliberation`, `election` ou `information`, com id pela posição `p1…`). A
+primeira convocação avisa quem segue, se a equipe pedir e o evento não for só
+da equipe. Mudar a convocação de reunião já divulgada **pede motivo**, entra
+no histórico (`agenda_changed`) e avisa. Não se convoca evento cancelado,
+adiado ou com resultado.
+
+**Prazo do estatuto**: `federations.rules.convocation_min_days` (padrão 8,
+0–365; Configurações → Regras). Com menos antecedência a Central mostra um
+aviso no evento e no formulário — **não bloqueia**, porque o estatuto pode
+prever urgência e a federação responde por isso.
+
+**Resultado** (ação `record`): só com convocação, evento confirmado e depois
+do horário de início. Chamada (primeira ou segunda), horário de abertura,
+presentes e aptos (presentes ≤ aptos), se houve quórum e, por item da pauta,
+o resultado — aprovado ou rejeitado (deliberação), eleição realizada
+(eleição), informado (informe), adiado ou retirado (qualquer um) —, os votos
+(a favor, contra, abstenções; guardados só em aprovado, rejeitado e eleito),
+um resumo e o **ato** do acervo que saiu do item. Documentos da reunião: ata,
+lista de presença e registro de votação, cada um do tipo certo. **Sem quórum
+nada se decide**: só adiado ou retirado. O primeiro registro avisa quem segue
+(`recorded`); corrigir pede motivo, vai ao histórico (`record_corrected`) e
+avisa. Auditoria `federation_event_convene|record`.
+
+**Travas no `save`**: reunião convocada não vira outro tipo de evento; a data
+não pode ficar antes da convocação; com resultado registrado a data não muda.
+
+**Telas**: na Central, cada reunião mostra "Ainda sem convocação", "Convocada
+· pauta com N itens" ou "Resultado publicado", o aviso de prazo e os botões
+Convocar e Registrar/Corrigir o resultado (`manage/FedMeetingDialogs.jsx`).
+Na página pública do evento, `agenda/MeetingBlock.jsx` mostra a convocação
+(com quantos dias de antecedência saiu), a pauta e, depois, presença, chamada,
+quórum e a decisão de cada item com os documentos (restrito com cadeado).
+
+**Âncoras**: `federacao-reuniao-convocar`, `federacao-reuniao-resultado`
+(Central), `federacao-reuniao-publica` (página do evento). Artigo de ajuda
+`federacao-reuniao`.
+
+**Testes**: `functions/federationMeeting.test.js` (servidor contra banco
+falso), `functions/federationMeeting.parity.test.js` (cliente × servidor),
+`domain/meeting.test.js`, `manage/FedMeetingDialogs.runtime.test.jsx` e a
+página do evento em `agenda/AgendaPublic.runtime.test.jsx`.
+

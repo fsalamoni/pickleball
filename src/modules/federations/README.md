@@ -108,7 +108,10 @@ com paridade contra `domain/agenda.js`), a agenda assinável
 `/api/agenda/{slug}.ics` (`federationAgendaFeed`) e a página pública
 `/f/:slug/agenda(/:eventId)` (`src/pages/PublicFederationAgenda.jsx` +
 `src/v2/components/federations/agenda/`; gestão em
-`manage/FedAgendaPanel.jsx`). Zero índice composto; os únicos campos novos
+`manage/FedAgendaPanel.jsx`); PR 9b: reuniões e assembleias no campo
+`meeting` do evento (convocação com pauta e quórum, resultado por item, ata),
+domínio `domain/meeting.js` com cópia em `functions/federationMeetingPolicy.js`,
+telas `manage/FedMeetingDialogs.jsx` e `agenda/MeetingBlock.jsx`. Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir

@@ -2854,7 +2854,7 @@ const GUIAS_BASE = [
         route: '/federacoes/*/gerir',
         target: 'federacao-agenda-novo',
         title: tk('Marcar na agenda'),
-        body: tk('Escolha o tipo, a data e o horário de Brasília (ou dia inteiro), o local ou o link da transmissão e quem vê. Para divulgar, marque "Avisar quem segue a federação". Se depois precisar mudar a data, adiar ou cancelar, o motivo fica no histórico e quem segue é avisado.'),
+        body: tk('Escolha o tipo, a data e o horário de Brasília (ou dia inteiro), o local ou o link da transmissão e quem vê. Para divulgar, marque "Avisar quem segue a federação". Se depois precisar mudar a data, adiar ou cancelar, o motivo fica no histórico e quem segue é avisado. Numa assembleia ou reunião, "Convocar" no evento monta a pauta e o quórum, e "Registrar o resultado" publica o que se decidiu.'),
       },
     ],
   },

@@ -72,6 +72,7 @@ export const eventGroup = (id) => EVENT_GROUPS.find((g) => g.id === id) || null;
 /** O que fica no histórico do evento. */
 export const EVENT_CHANGE_LABELS = Object.freeze({
   rescheduled: tk('Remarcado'), postponed: tk('Adiado'), cancelled: tk('Cancelado'), reopened: tk('Reaberto'),
+  agenda_changed: tk('Convocação alterada'), record_corrected: tk('Resultado corrigido'),
 });
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;

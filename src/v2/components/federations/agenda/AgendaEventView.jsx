@@ -15,6 +15,7 @@ import { docPublicPath } from '@/modules/federations/domain/acervo';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
 import { fmtData, t } from '@/core/i18n';
 import { AcervoFollowButton } from '../acervo/AcervoPublic';
+import MeetingBlock from './MeetingBlock';
 import { StatusBadge, StatusBanner, baixarIcs, dataCurta, dataDoEvento, horarioDoEvento, urlDoEvento } from './agendaUi';
 
 function Linha({ icone: Icone, children }) {
@@ -58,6 +59,7 @@ export default function AgendaEventView({ federation, ev }) {
         {ev.organ && <Linha icone={Landmark}>{ev.organ}</Linha>}
       </section>
       {ev.description && <div className="whitespace-pre-line text-base leading-relaxed text-gray-800">{ev.description}</div>}
+      <MeetingBlock federation={federation} ev={ev} />
       {ev.related_docs?.length > 0 && (
         <section aria-labelledby="ev-docs" className="space-y-2">
           <h2 id="ev-docs" className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Documentos ligados')}</h2>

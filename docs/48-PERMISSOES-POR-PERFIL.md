@@ -297,6 +297,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ler evento do calendário "só filiados" | ✖ | ✖ | ◐ filiação `active` | ✔ qualquer cargo | ◐ com acesso justificado | rules |
 | Ler evento do calendário "só a equipe" | ✖ | ✖ | ✖ | ✔ qualquer cargo | ◐ com acesso justificado | rules |
 | Marcar, editar, adiar, cancelar evento; apagar o nunca divulgado | ✖ | ✖ | ✖ | ✔ `docs`/`admin` (todos); `competitions` só a agenda esportiva | ◐ com acesso justificado | **Cloud Function** `federationAgenda` (rules `write: if false`; motivo obrigatório ao mexer no que já foi divulgado) |
+| Convocar reunião/assembleia (pauta, edital, quórum) e registrar ou corrigir o resultado | ✖ | ✖ | ✖ | ✔ `docs`/`admin` | ◐ com acesso justificado | **Cloud Function** `federationAgenda` (`convene`/`record`; motivo ao mudar o divulgado; a leitura segue a visibilidade do evento) |
 | Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
 | Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
 | Ler filiação | ✖ | ✖ | ✔ a própria (também o `get` dela ainda inexistente, pelo id `{fed}_{uid}`) | ✔ `admin`/`members`/`finance`/`discipline` | ✔ | rules (**nunca pública**) |

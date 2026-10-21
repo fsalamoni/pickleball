@@ -1608,7 +1608,8 @@ Público quando `status == 'approved'`; antes só quem pediu, a equipe e o admin
 `modules { [FED_MODULE]: boolean }`, `rules { ask_cpf, transfer_release_days,
 transfer_cooldown_days, member_declarations }` (PR 3, opcional; a equipe
 `admin` grava; `member_declarations` — PR 6, ausente ⇒ sim — diz se o
-filiado emite a própria declaração de vínculo), `status`
+filiado emite a própria declaração de vínculo; `convocation_min_days` — PR 9b,
+ausente ⇒ 8, 0–365 — o prazo mínimo de convocação do estatuto, que só avisa), `status`
 (`pending|approved|rejected|suspended`), `verified`, `official`,
 `member_count`, `member_counter` (sequência do número de filiado),
 `cnpj_masked`, `review { action, reason, by, at_ms }`, `created_by`,
@@ -1685,7 +1686,16 @@ atos **publicados** do acervo, copiados pelo servidor), `status`
 20: `kind` `rescheduled|reopened|postponed|cancelled`, `reason`, `at_ms`,
 `by_name`, `from_date`, `from_time`, `to_date`, `to_time`), `ever_visible`
 (algum dia foi público ou só filiados — o que proíbe apagar e exige motivo ao
-remarcar), `created_by`, `created_by_name`, `created_at(_ms)`,
+remarcar), `meeting` (PR 9b, opcional, só nos tipos de reunião:
+`{ convened_on, convened_at_ms, edital { doc_id, code, title, type,
+visibility } | null, quorum_first, second_call_time, quorum_second, items[]
+{ id 'p1'…, title, description, kind deliberation|election|information },
+record }`; `record` = `{ call first|second, opened_at, quorum_reached,
+present, eligible, notes, items[] { id, result
+approved|rejected|elected|informed|postponed|withdrawn, votes { yes, no,
+abstain } | null, summary, doc }, minutes, attendance, votes (documentos),
+recorded_at_ms, recorded_by_name, updated_at_ms }`; o histórico ganha
+`agenda_changed` e `record_corrected`), `created_by`, `created_by_name`, `created_at(_ms)`,
 `updated_at(_ms)`, `updated_by`. Leitura: público para todos; `members` para
 filiado ativo e equipe; `staff` para qualquer cargo; admin da plataforma com
 acesso justificado. **Só o servidor grava** (`federationAgenda`,

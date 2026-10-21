@@ -96,4 +96,24 @@ describe('AgendaEventView', () => {
     expect(container.textContent).toContain('Chuva forte prevista');
     expect(container.textContent).not.toContain('Adicionar ao calendário');
   });
+
+  it('reunião convocada mostra pauta e edital; com resultado, presença, votos e ata', async () => {
+    const pauta = [{ id: 'p1', title: 'Contas de 2025', kind: 'deliberation' }, { id: 'p2', title: 'Conselho fiscal', kind: 'election' }];
+    const meeting = { convened_on: '2026-10-01', quorum_first: 'Maioria absoluta', second_call_time: '19:30', edital: { doc_id: 'ed1', code: 'Edital 1/2026', title: 'AGO', visibility: 'public' }, items: pauta, record: null };
+    await montar(<AgendaEventView federation={fed} ev={ev('7', 20, { kind: 'assembly_ordinary', meeting })} />);
+    expect(container.textContent).toContain('Convocação');
+    expect(container.textContent).toContain('1. Contas de 2025');
+    expect(container.textContent).toContain('Quórum na primeira chamada: Maioria absoluta');
+    expect([...container.querySelectorAll('a')].some((a) => a.getAttribute('href') === '/f/fpp/acervo/ed1')).toBe(true);
+    expect(container.textContent).not.toContain('Aprovado');
+
+    const record = { call: 'second', opened_at: '19:35', quorum_reached: true, present: 23, eligible: 40, items: [{ id: 'p1', result: 'approved', votes: { yes: 20, no: 2, abstain: 1 }, summary: '', doc: null }, { id: 'p2', result: 'elected', votes: null, summary: 'Eleitos: A e B.', doc: null }], minutes: { doc_id: 'ata1', code: 'Ata 3/2026', title: 'AGO', visibility: 'members' } };
+    await montar(<AgendaEventView federation={fed} ev={ev('7', -1, { kind: 'assembly_ordinary', meeting: { ...meeting, record } })} />);
+    expect(container.textContent).toContain('Reunião realizada');
+    expect(container.textContent).toContain('23 presentes de 40 aptos');
+    expect(container.textContent).toContain('Com quórum');
+    expect(container.textContent).toContain('A favor 20 · Contra 2 · Abstenções 1');
+    expect(container.textContent).toContain('Eleitos: A e B.');
+    expect(container.querySelector('a[href="/f/fpp/acervo/ata1"] [aria-label="Restrito"]')).not.toBeNull();
+  });
 });
