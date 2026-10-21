@@ -215,11 +215,19 @@ jobs:
           # falha (ex.: ruleset COMPILADO acima de 250 KB), ela tenta CRIAR a
           # release e sai com "409 already exists". Repete com --debug e mostra
           # só o diálogo com o serviço de regras (sem a fonte, que é enorme).
+          # O 409 também aparece quando o PATCH só DEMOROU (a release foi
+          # atualizada, mas a CLI desistiu e tentou criar): se a repetição
+          # publicar, as regras estão no ar e o deploy segue (PR #297).
           if echo "$OUT" | grep -q "HTTP Error: 409"; then
             echo "::group::Resposta do serviço de regras (--debug)"
-            firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --debug 2>&1 \
-              | grep -iE "rules\]|releases|rulesets|status\]|body\]|Error" | grep -v '"source"' | cut -c1-1500
+            DBG=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --debug 2>&1)
+            DRC=$?
+            echo "$DBG" | grep -iE "rules\]|releases|rulesets|status\]|body\]|Error" | grep -v '"source"' | cut -c1-1500
             echo "::endgroup::"
+            if [ $DRC -eq 0 ] && echo "$DBG" | grep -qE "released rules|updated release"; then
+              echo "::warning title=Regras publicadas na segunda tentativa::A primeira publicação devolveu 409, a repetição publicou. Se repetir sempre, confira o tamanho do ruleset (docs/03-WORKFLOW.md §4.3)."
+              exit 0
+            fi
             echo "::error title=Regras do Firestore não publicadas::O serviço recusou a release (409 na criação = o PATCH falhou antes). Causa comum: ruleset compilado acima de 250 KB — rode node scripts/firestore-rules-compactar.mjs e fatore repetições em funções (docs/03-WORKFLOW.md §4.3)."
           fi
           exit $RC

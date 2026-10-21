@@ -65,5 +65,7 @@ describe('tamanho do firestore.rules', () => {
 
   it('⭐ quando a publicação falha, o deploy repete com --debug e mostra a resposta do serviço de regras', () => {
     expect(WORKFLOW).toMatch(/firebase deploy --only "firestore:rules,firestore:\$FIRESTORE_DATABASE_ID"[^\n]*--debug/);
+    // 409 com o PATCH só atrasado: a repetição publica e o deploy segue.
+    expect(WORKFLOW).toMatch(/\[ \$DRC -eq 0 \] && echo "\$DBG" \| grep -qE "released rules\|updated release"/);
   });
 });
