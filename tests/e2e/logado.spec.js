@@ -252,9 +252,13 @@ test.describe('@emuladores com conta', () => {
   test('⭐ federação: diretório, página, filiação e página pública abrem com a flag ligada', async ({ page }) => {
     const fed = `fed_${Date.now()}`;
     const slug = `fpp-${Date.now().toString(36)}`;
+    // Nome ÚNICO por execução: os projetos (chromium, mobile-chrome) dividem o
+    // mesmo emulador, e com dois "Federação de Teste" no diretório o `.first()`
+    // abria a do outro projeto (foi o que reprovou o CI).
+    const nome = `Federação de Teste ${slug}`;
     await ligarFlag('federations');
     await semear(`federations/${fed}`, {
-      name: 'Federação de Teste de Pickleball', acronym: 'FTP', slug, level: 'state', state: 'RS', city: 'Porto Alegre',
+      name: nome, acronym: 'FTP', slug, level: 'state', state: 'RS', city: 'Porto Alegre',
       status: 'approved', created_by: 'seed', verified: false, official: false, member_count: 0,
       about: 'A federação dos testes de ponta a ponta.', modules: { tournaments: true, ranking: true },
       branding: { color: '#1d4ed8', logo_url: '' }, contact_public: { email: 'contato@ftp.teste' }, sponsors: [],
@@ -270,7 +274,7 @@ test.describe('@emuladores com conta', () => {
 
     // Sem conta: a página pública lê federação e planos pela regra (aprovada ⇒ pública).
     await page.goto(`/f/${slug}`);
-    await expect(page.getByRole('heading', { name: 'Federação de Teste de Pickleball' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: nome })).toBeVisible();
     await expect(page.getByText('Federado anual').first()).toBeVisible();
 
     await entrar(page, await criarAtleta());
@@ -278,9 +282,9 @@ test.describe('@emuladores com conta', () => {
 
     await page.goto('/federacoes');
     await expect(page.locator('main h1').first()).toBeVisible();
-    await tocar(page.getByRole('link', { name: /Federação de Teste de Pickleball/ }).first());
+    await tocar(page.locator(`a[href="/federacoes/${fed}"]`).first());
     await expect(page).toHaveURL(new RegExp(`/federacoes/${fed}$`));
-    await expect(page.getByRole('heading', { name: 'Federação de Teste de Pickleball' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: nome })).toBeVisible();
     await expect(page.getByText('Federado anual').first()).toBeVisible();
     // Aprovada ⇒ o botão de filiar é um link de verdade (numa suspensa ele não existe).
     const filiar = page.getByRole('link', { name: 'Filiar-se' });
