@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignableRoles, canChangeStaff, roleHas, staffHas } from './staff.js';
+import { assignableRoles, canChangeStaff, roleHas, staffHas, storeFederations } from './staff.js';
 import { FED_PERMISSION, STAFF_ROLE, STAFF_ROLE_PERMISSIONS } from './constants.js';
 
 describe('papéis e permissões', () => {
@@ -31,5 +31,16 @@ describe('canChangeStaff', () => {
     expect(assignableRoles('director')).not.toContain('president');
     expect(assignableRoles('president')).toContain('president');
     expect(assignableRoles('secretary')).toEqual([]);
+  });
+});
+
+describe('storeFederations', () => {
+  const fed = (id, store = true) => ({ id, name: id, modules: { store } });
+  it('só admin/financeiro, só com a loja ligada, sem repetir', () => {
+    const roles = [
+      { federation_id: 'a', role: 'treasurer' }, { federation_id: 'b', role: 'secretary' },
+      { federation_id: 'c', role: 'president' }, { federation_id: 'a', role: 'director' }, { federation_id: 'x', role: 'president' },
+    ];
+    expect(storeFederations(roles, [fed('a'), fed('b'), fed('c', false)]).map((f) => f.id)).toEqual(['a']);
   });
 });

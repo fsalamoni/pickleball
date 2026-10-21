@@ -13,7 +13,7 @@ import QRCode from 'qrcode';
 import { BadgeCheck, Landmark } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
-import { instanteEmMs } from '@/core/domain/instant';
+import { instanteDoDiaEmMs } from '@/core/domain/instant';
 import { normalizeHex, readableInk, BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
 import {
   CHARGE_STATUS, CHARGE_STATUS_LABELS, FEDERATION_LEVEL_LABELS, MEMBER_STATUS, MEMBER_STATUS_LABELS,
@@ -36,7 +36,7 @@ export function FederationGate({ children }) {
 
 /** Data curta de um valor do banco (Timestamp, ms ou ISO). */
 export function quando(valor) {
-  const ms = instanteEmMs(valor);
+  const ms = instanteDoDiaEmMs(valor); // "2026-10-12" é o dia LOCAL, não meia-noite UTC
   return ms ? fmtData(new Date(ms), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 }
 

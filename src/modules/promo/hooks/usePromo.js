@@ -181,7 +181,9 @@ export function usePromoViewer({ enabled = true, federations = false } = {}) {
   const uid = user?.uid || null;
   const vinculos = useStudentCoaches(enabled ? uid : null);
   // "Só para os filiados" (cupom de federação): as filiações ativas da pessoa.
-  const filiacoes = useMyMemberships({ enabled: enabled && federations });
+  // Independe de `enabled` (que liga os vínculos de aluno): a página da
+  // federação só precisa das filiações.
+  const filiacoes = useMyMemberships({ enabled: federations });
   const coachIdsDoAluno = useMemo(() => coachIdsOfStudent(vinculos.data || []), [vinculos.data]);
   const fedIdsDoFiliado = useMemo(() => fedIdsOfMember(filiacoes.data || []), [filiacoes.data]);
   const falhou = vinculos.isError || (federations && filiacoes.isError);
@@ -189,7 +191,7 @@ export function usePromoViewer({ enabled = true, federations = false } = {}) {
   const { refetch: refetchFiliacoes } = filiacoes;
   const recarregar = useMemo(() => () => { refetchVinculos(); if (federations) refetchFiliacoes(); }, [refetchVinculos, refetchFiliacoes, federations]);
   // Ainda sem resposta: "é aluno/filiado?" é DESCONHECIDO, não "não é".
-  const carregando = Boolean(enabled && uid && (vinculos.isLoading || (federations && filiacoes.isLoading)));
+  const carregando = Boolean(uid && ((enabled && vinculos.isLoading) || (federations && filiacoes.isLoading)));
   return useMemo(
     () => ({ uid, coachIdsDoAluno, fedIdsDoFiliado, falhou, carregando, recarregar }),
     [uid, coachIdsDoAluno, fedIdsDoFiliado, falhou, carregando, recarregar],

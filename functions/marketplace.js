@@ -250,14 +250,22 @@ async function loadContext(db) {
 }
 
 function parseSellerKey(key) {
-  const m = /^(athlete|coach|arena|store)_(.+)$/.exec(String(key || ''));
+  const m = /^(athlete|coach|arena|store|federation)_(.+)$/.exec(String(key || ''));
   return m ? { type: m[1], id: m[2] } : null;
 }
 
-/** Quem opera a chave: o dono do uid, ou quem gere a arena. */
+/** Quem opera a chave: o dono do uid, quem gere a arena ou a equipe da federação. */
 async function operatorUids(db, sellerKey) {
   const p = parseSellerKey(sellerKey);
   if (!p) return [];
+  if (p.type === 'federation') {
+    // A loja da federação: quem tem `admin` ou `finance` na equipe (a mesma conta da regra `isMarketOperator`).
+    const { PERMS } = require('./federations.js');
+    const equipe = await db.collection('federation_staff').where('federation_id', '==', p.id).get();
+    return [...new Set(equipe.docs.map((d) => d.data())
+      .filter((s) => (PERMS[s.role] || []).some((x) => x === 'admin' || x === 'finance'))
+      .map((s) => s.user_id).filter(Boolean))];
+  }
   if (p.type !== 'arena') return [p.id];
   const snap = await db.collection('arena_managers').where('arena_id', '==', p.id).get();
   return [...new Set(snap.docs.map((d) => d.data().user_id).filter(Boolean))];

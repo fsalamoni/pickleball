@@ -14,7 +14,7 @@ const STOPWORDS = new Set([
 ]);
 const LISTING_NEW = 'product_new';
 const LISTING_USED = 'product_used';
-const SELLER_IDS = new Set(['athlete', 'coach', 'arena', 'store']);
+const SELLER_IDS = new Set(['athlete', 'coach', 'arena', 'store', 'federation']);
 const SHIP_IDS = new Set(['pickup', 'meetup', 'shipping']);
 
 function normalizeSearchText(text) {

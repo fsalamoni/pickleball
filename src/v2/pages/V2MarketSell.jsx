@@ -20,6 +20,10 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useMyFederationRoles, usePublicFederations } from '@/modules/federations/hooks/useFederations';
+import { storeFederations } from '@/modules/federations/domain/staff';
 import { coverOf, listingCompleteness, vacationState } from '@/modules/marketplace/domain/listing';
 import { PIX_KEY_TYPES, sellerKeyFor, sellingIdentities } from '@/modules/marketplace/domain/seller';
 import {
@@ -103,7 +107,7 @@ function StartSelling({ identity, defaults }) {
   return (
     <V2Surface className="mx-auto max-w-xl space-y-4 text-center">
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-acid/30"><Store className="h-7 w-7 text-ink" /></span>
-      <h2 className="font-display text-2xl font-bold text-ink">{identity.type === 'arena' ? t('Comece a vender pela arena') : identity.type === 'coach' ? t('Comece a vender como professor') : t('Comece a vender no Mercado')}</h2>
+      <h2 className="font-display text-2xl font-bold text-ink">{identity.type === 'arena' ? t('Comece a vender pela arena') : identity.type === 'federation' ? t('Abra a loja oficial da federação') : identity.type === 'coach' ? t('Comece a vender como professor') : t('Comece a vender no Mercado')}</h2>
       <p className="text-sm text-gray-500">{t('Sem comissão. O comprador paga por Pix direto para você, depois que você aceitar o pedido.')}</p>
       <form
         className="space-y-3 text-left"
@@ -773,7 +777,13 @@ function SellPage() {
   const storeKey = user ? sellerKeyFor('store', user.uid) : '';
   const store = useSeller(storeKey);
   const nome = userProfile?.platform_name || userProfile?.full_name || user?.displayName || '';
-  const ids = useMemo(() => sellingIdentities({ uid: user?.uid, name: nome, isCoach: Boolean(coach.data), arenas, store: store.data }), [user?.uid, nome, coach.data, arenas, store.data]);
+  // A loja oficial da federação (PR 4): só com a flag, o módulo `store` e papel de admin/financeiro.
+  const federacoesOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
+  const papeis = useMyFederationRoles({ enabled: federacoesOn });
+  const temPapel = federacoesOn && (papeis.data || []).length > 0;
+  const feds = usePublicFederations({ enabled: temPapel });
+  const federations = useMemo(() => (temPapel ? storeFederations(papeis.data, feds.data || []) : []), [temPapel, papeis.data, feds.data]);
+  const ids = useMemo(() => sellingIdentities({ uid: user?.uid, name: nome, isCoach: Boolean(coach.data), arenas, store: store.data, federations }), [user?.uid, nome, coach.data, arenas, store.data, federations]);
   const como = ids.find((i) => i.key === params.get('como')) || ids[0];
   const aba = ABAS.some((a) => a.value === params.get('aba')) ? params.get('aba') : 'resumo';
   const secao = SECOES.find((sec) => sec.abas.some((a) => a.value === aba));
@@ -781,7 +791,9 @@ function SellPage() {
   const ir = (patch) => setParams((p) => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; }, { replace: true });
 
   const arenaDe = como?.type === 'arena' ? arenas.find((a) => a.id === como.entity_id) : null;
-  const defaults = { name: arenaDe?.name || nome, city: arenaDe?.city || userProfile?.city || '', state: arenaDe?.state || userProfile?.state || '', photo: arenaDe?.logo_url || userProfile?.photo_url || '' };
+  const fedDe = como?.type === 'federation' ? federations.find((f) => f.id === como.entity_id) : null;
+  const org = arenaDe || (fedDe && { name: fedDe.name, city: fedDe.city, state: fedDe.state, logo_url: fedDe.branding?.logo_url });
+  const defaults = { name: org?.name || nome, city: org?.city || userProfile?.city || '', state: org?.state || userProfile?.state || '', photo: org?.logo_url || userProfile?.photo_url || '' };
   let corpo;
   if (!como) corpo = <V2Skeleton className="h-64" />;
   else if (sq.isError) corpo = <V2ErrorState onRetry={() => sq.refetch()} />;

@@ -16,7 +16,7 @@ export function sellerKeyFor(type, id) {
 }
 
 export function parseSellerKey(key) {
-  const m = /^(athlete|coach|arena|store)_(.+)$/.exec(String(key || ''));
+  const m = /^(athlete|coach|arena|store|federation)_(.+)$/.exec(String(key || ''));
   return m ? { type: m[1], id: m[2] } : null;
 }
 
@@ -30,11 +30,13 @@ export function slugify(text) {
  * perfil de professor; pelas arenas que gere; pela loja, se tiver.
  * `arenas` = [{ id, name }]; `store` = documento do vendedor-loja ou null.
  */
-export function sellingIdentities({ uid, name, isCoach = false, arenas = [], store = null }) {
+export function sellingIdentities({ uid, name, isCoach = false, arenas = [], store = null, federations = [] }) {
   if (!uid) return [];
   const out = [{ key: sellerKeyFor('athlete', uid), type: 'athlete', label: t('Eu ({nome})', { nome: name || t('atleta') }), entity_id: uid }];
   if (isCoach) out.push({ key: sellerKeyFor('coach', uid), type: 'coach', label: t('Como professor'), entity_id: uid });
   arenas.forEach((a) => out.push({ key: sellerKeyFor('arena', a.id), type: 'arena', label: t('Pela arena {nome}', { nome: a.name || '' }).trim(), entity_id: a.id }));
+  // A loja oficial da federação (módulo `store`): quem chama já filtrou papel (admin/financeiro) e módulo.
+  federations.forEach((f) => out.push({ key: sellerKeyFor('federation', f.id), type: 'federation', label: t('Pela federação {nome}', { nome: f.acronym || f.name || '' }).trim(), entity_id: f.id }));
   if (store && store.status === SELLER_STATUS.ACTIVE) {
     out.push({ key: store.seller_key || sellerKeyFor('store', uid), type: 'store', label: t('Pela loja {nome}', { nome: store.display_name || '' }).trim(), entity_id: uid });
   }
