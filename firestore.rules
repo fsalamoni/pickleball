@@ -4996,6 +4996,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Quem SEGUE o acervo oficial (id `{fed}_{uid}`): só a própria pessoa lê,
+    // segue e deixa de seguir. O aviso de ato novo é do servidor, e só vai a
+    // quem pode ler o ato. `get` do documento que ainda não existe: é assim
+    // que o botão sabe se a pessoa segue (sem isso o `get` dá permissão negada).
+    match /federation_followers/{id} {
+      allow get: if isAuthed() && resource == null && id == id.split('_')[0] + '_' + me();
+      allow read, delete: if isOwner(od().user_id);
+      allow create: if fedOn() && isAuthed()
+        && id == nd().federation_id + '_' + me()
+        && nd().user_id == me()
+        && nd().keys().hasOnly(['federation_id', 'user_id', 'created_at'])
+        && nd().created_at == request.time
+        && fedModuleOn(nd().federation_id, 'official_docs');
+    }
+
     match /federation_charges/{chargeId} {
       allow read: if (isOwner(od().payer_uid))
         || fedHas(od().federation_id, 'admin')

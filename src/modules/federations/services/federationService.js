@@ -936,6 +936,26 @@ export async function getOfficialDoc(id) {
   return snap.exists() ? toDoc(snap) : null;
 }
 
+/** Sigo o acervo desta federação? (`{fed}_{uid}`; o `get` do documento ausente é permitido ao próprio.) */
+export async function getAcervoFollow(fedId, uid) {
+  if (!fedId || !uid) return null;
+  const snap = await getDoc(doc(db, C.followers, `${fedId}_${uid}`));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+/** Seguir/deixar de seguir: o servidor avisa quem segue quando a federação publica ou retifica. */
+export async function setAcervoFollow(fedId, uid, seguir) {
+  const ref = doc(db, C.followers, `${fedId}_${uid}`);
+  if (seguir) await setDoc(ref, { federation_id: fedId, user_id: uid, created_at: serverTimestamp() });
+  else await deleteDoc(ref);
+}
+
+/** Os acervos que sigo (exportação de dados). */
+export async function listMyAcervoFollows(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.followers), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
 /** As ações do acervo são do SERVIDOR (numeração, cópia oficial, SHA-256): prazo longo para vídeo grande. */
 export const acervoAction = (payload) => chamar('federationAcervo', payload, { timeout: 540_000 });
 

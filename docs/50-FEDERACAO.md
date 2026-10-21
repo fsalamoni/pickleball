@@ -459,7 +459,7 @@ vira anônima.
 
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
-Vinte coleções, todas com prefixo `federation` e **zero índice composto**
+Vinte e uma coleções, todas com prefixo `federation` e **zero índice composto**
 (consultas de uma igualdade — ou duas igualdades, que também não pedem
 índice; ordenação em memória): `federations` (+ `private/data`),
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`:
@@ -471,7 +471,8 @@ CPF, nascimento, responsável — PR 3), `federation_charges`,
 `federation_sanctions`, `federation_reports`, do PR 4, `federation_news`
 (campos opcionais novos na própria federação: `sponsors`, `governance`), do
 PR 7, `federation_admin_grants` (campos novos: `staff_roles`) e, do PR 8,
-`federation_docs` (campo novo: `doc_numbers`, §14).
+`federation_docs` (campo novo: `doc_numbers`, §14) e `federation_followers`
+(quem segue o acervo, §14.8).
 **Storage**: `federacao/{uid}/`
 (só o dono lê; PDF ou imagem < 5 MB); do PR 8, `federacao-acervo/{uid}/`
 (rascunho do acervo, só o dono) e `federacao-acervo-oficial/` (fechada à
@@ -898,8 +899,9 @@ histórico, passar a administração; Equipe → Cargos, só admin master),
 Pedido do dono (2026-10-21): normas, regulamentos, atos, atas, convocações,
 súmulas, avaliação de arenas, vídeo e áudio, com envio de arquivos e gestão
 completa, e um ambiente público para ler, baixar e compartilhar. Base de
-transparência: Lei Geral do Esporte (Lei 14.597/2023, art. 36). Esta parte
-(PR 8a) é a gestão na Central; a página pública do acervo vem no PR 8b.
+transparência: Lei Geral do Esporte (Lei 14.597/2023, art. 36). O PR 8a fez
+a gestão na Central; o PR 8b, a página pública, seguir o acervo e o cartaz
+da sede (§14.8).
 
 ### 14.1 Módulo, permissão e tela
 
@@ -991,10 +993,57 @@ aparece como "não publicado", com atalho para publicar.
 O documento é ato da federação, não dado da pessoa: fica, guardando só o
 `created_by` (contado como retido na prévia), e não vai na exportação. Os
 rascunhos não usados em `federacao-acervo/{uid}/` são apagados com a conta.
+O "seguir" (`federation_followers`) é da pessoa: sai com a conta e vai na
+exportação ("Acervos de federação que você segue").
 
 ### 14.7 Âncoras
 
 `federacao-secao-acervo`, `federacao-acervo`, `federacao-acervo-novo`,
 `federacao-acervo-formulario`, `federacao-acervo-anexar`,
-`federacao-acervo-relacoes`, `federacao-transparencia`. Artigo de ajuda,
-guia e a página pública chegam no PR 8b.
+`federacao-acervo-relacoes`, `federacao-transparencia`,
+`federacao-acervo-cartaz`; na página pública, `federacao-acervo-publico`
+(bloco na página da federação), `federacao-acervo-pagina`,
+`federacao-acervo-transparencia`, `federacao-acervo-seguir`,
+`federacao-acervo-compartilhar`, `federacao-acervo-integridade`. Artigo de
+ajuda `federacao-acervo` e guia `federacao-acervo` (Central → publicar).
+
+### 14.8 Página pública, seguir e mural da sede (PR 8b)
+
+- **Endereço**: `/f/:slug/acervo` e `/f/:slug/acervo/:docId`
+  (`src/pages/PublicFederationAcervo.jsx`, rota em `src/App.jsx`, fora do
+  V2Layout, abre sem conta). Flag desligada ⇒ início; módulo desligado ⇒
+  "Acervo não disponível". Documento de outra federação, rascunho, retirado
+  ou sem permissão ⇒ "Documento indisponível" (a regra não distingue
+  "não existe" de "não pode", e a tela não finge saber), com "Entrar" para
+  quem não tem conta. Outra falha ⇒ `V2ErrorState`.
+- **Lista** (`v2/components/federations/acervo/AcervoPublic.jsx`):
+  `useVisibleAcervo` junta as três consultas (públicos, só filiados para
+  filiado ativo/equipe, só equipe para a equipe) por `mergeDocLists`; se as
+  restritas falham, a lista mostra os públicos e DIZ que faltou. Abas
+  **Mural** (`muralDocs`, publicações e retificações mais recentes, selo
+  "Novo" por 7 dias), **Documentos** (busca sem acento, categoria, ano, "só
+  em vigor") e **Transparência** (o mesmo `TRANSPARENCY_ITEMS` da Central),
+  com `?aba=` na URL. Bloco `FedAcervoBlock` (últimos 4) na página da
+  federação — pública e no app.
+- **Documento** (`AcervoDocView.jsx`): código, título, selos, aviso de
+  revogado (com link para o ato que revoga) e de retificado; metadados;
+  leitor no próprio lugar (`fileViewKind`: PDF em `iframe`, imagem, áudio,
+  vídeo; o restrito chega pela função como `blob:`), "Abrir ou baixar",
+  vídeo por link só depois do toque; atos relacionados e versões anteriores
+  com os arquivos; **compartilhar** (nativo ou WhatsApp, copiar link, QR com
+  download), **imprimir** (rodapé com o endereço); **conferir integridade**:
+  a pessoa escolhe o arquivo, o SHA-256 é calculado no aparelho
+  (`crypto.subtle`) e comparado com os da versão atual e das anteriores
+  (`findFileByHash`) — o arquivo não sai do aparelho.
+- **Seguir** (`federation_followers/{fed}_{uid}`, campos `federation_id`,
+  `user_id`, `created_at`): só a própria pessoa lê, cria e apaga; o `get` do
+  documento ainda inexistente é permitido (é como o botão sabe). Publicar e
+  retificar avisam no sino quem segue **e pode ler** o ato (público: todos;
+  só filiados: filiado ativo ou equipe; só equipe: ninguém), menos quem
+  publicou; lotes de 400; a contagem vai na auditoria
+  (`followers_notified`) e falha no aviso nunca desfaz a publicação.
+- **Cartaz da sede** (Central → Acervo → "Cartaz para a sede"): folha A4
+  com marca, nome e QR do acervo, pelo mesmo caminho de impressão da
+  carteirinha — a lei pede as publicações também em mural físico.
+- **CSP**: `frame-src` ganhou `https://firebasestorage.googleapis.com` e
+  `blob:` (o PDF dentro da página).

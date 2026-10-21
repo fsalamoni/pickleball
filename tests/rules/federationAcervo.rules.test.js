@@ -12,11 +12,14 @@
  *  6. ⭐ `doc_numbers` (o contador) é campo de confiança da federação;
  *  7. ⭐ Storage: o rascunho sobe só para a própria pasta, com tipo e teto
  *     conferidos, sem sobrescrever; ninguém lê a pasta de outra pessoa.
+ *  8. ⭐ seguir o acervo (`federation_followers`): só a si mesma, e o `get`
+ *     do documento ainda inexistente responde (é como o botão sabe);
+ *  9. ⭐ seguir não leva campo a mais e exige o acervo ligado.
  */
 import { readFileSync } from 'node:fs';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getBytes, ref, uploadBytes } from 'firebase/storage';
 
 const PRES = 'pres1';
@@ -108,6 +111,29 @@ describe('acervo: escrita', () => {
 
   it('6. o contador da numeração é do servidor', async () => {
     await assertFails(updateDoc(doc(como(PRES), 'federations', FED), { doc_numbers: { resolution_2026: 7 } }));
+  });
+});
+
+describe('acervo: seguir', () => {
+  const seguir = (uid, over = {}) => setDoc(doc(como(uid), 'federation_followers', `${FED}_${uid}`), { federation_id: FED, user_id: uid, created_at: serverTimestamp(), ...over });
+
+  it('8. a pessoa segue, lê e deixa de seguir só a si mesma; sem conta não segue', async () => {
+    await assertSucceeds(getDoc(doc(como(ZE), 'federation_followers', `${FED}_${ZE}`)));
+    await assertSucceeds(seguir(ZE));
+    await assertSucceeds(getDoc(doc(como(ZE), 'federation_followers', `${FED}_${ZE}`)));
+    await assertSucceeds(getDocs(query(collection(como(ZE), 'federation_followers'), where('user_id', '==', ZE))));
+    await assertFails(getDoc(doc(como(ANA), 'federation_followers', `${FED}_${ZE}`)));
+    await assertFails(getDoc(doc(como(ANA), 'federation_followers', `${FED}_${ZE}x`)));
+    await assertFails(setDoc(doc(como(ANA), 'federation_followers', `${FED}_${ZE}`), { federation_id: FED, user_id: ZE, created_at: serverTimestamp() }));
+    await assertFails(setDoc(doc(anonimo(), 'federation_followers', `${FED}_x`), { federation_id: FED, user_id: 'x', created_at: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(como(ANA), 'federation_followers', `${FED}_${ZE}`)));
+    await assertSucceeds(deleteDoc(doc(como(ZE), 'federation_followers', `${FED}_${ZE}`)));
+  });
+
+  it('9. campo a mais ou acervo desligado: recusado', async () => {
+    await assertFails(seguir(ANA, { role: 'admin' }));
+    await semRegras((db) => updateDoc(doc(db, 'federations', FED), { modules: { official_docs: false } }));
+    await assertFails(seguir(ANA));
   });
 });
 

@@ -18,6 +18,8 @@
  *    arquivo só existe enquanto o documento é público;
  *  - `withdraw` (só `admin`): retira do ar com motivo (ordem judicial, dado
  *    pessoal). Nada é apagado; o link público morre;
+ *  - publicar e retificar avisam quem SEGUE o acervo (`federation_followers`)
+ *    e pode ler o ato;
  *  - `file`: entrega o arquivo (até 9 MB) a quem pode ler o documento e não
  *    tem link público — filiado, equipe, rascunho.
  *
@@ -26,13 +28,56 @@
 const crypto = require('node:crypto');
 const A = require('./federationAcervoPolicy.js');
 const f = require('./federations.js');
+const P = require('./federationStaffPolicy.js');
+const { tx } = require('./avisoI18n.js');
 
 const { falha, texto } = f;
 const DOCS = 'federation_docs';
 const VERSIONS_MAX = 10;
 const BR_OFFSET_MS = 3 * 3600000;
 
+const FOLLOWERS = 'federation_followers';
+const LOTE = 400;
+
 const podeAcervo = (perms) => perms.includes('docs') || perms.includes('admin');
+
+/**
+ * Avisa quem SEGUE o acervo (`federation_followers`) do ato publicado ou
+ * retificado. Só quem pode ler recebe: público ⇒ todos; só filiados ⇒ filiado
+ * ativo ou equipe; só equipe ⇒ ninguém (a equipe já está na Central). Quem
+ * publicou não se avisa. Falha aqui nunca desfaz a publicação: devolve -1.
+ */
+async function avisarSeguidores(ctx, actor, fed, doc, kind) {
+  if (doc.visibility === 'staff') return 0;
+  try {
+    const snap = await ctx.db.collection(FOLLOWERS).where('federation_id', '==', fed.id).get();
+    let uids = [...new Set(snap.docs.map((d) => d.data().user_id).filter((u) => u && u !== actor.uid))];
+    if (!uids.length) return 0;
+    if (doc.visibility === 'members') {
+      const [membros, equipe] = await Promise.all([
+        ctx.db.collection(f.C.members).where('federation_id', '==', fed.id).where('status', '==', 'active').get(),
+        ctx.db.collection(f.C.staff).where('federation_id', '==', fed.id).get(),
+      ]);
+      const podem = new Set([
+        ...membros.docs.map((d) => d.data().user_id),
+        ...equipe.docs.map((d) => d.data()).filter((s) => P.permsOf(s, ctx.now).length > 0).map((s) => s.user_id),
+      ].filter(Boolean));
+      uids = uids.filter((u) => podem.has(u));
+    }
+    const params = { sigla: fed.acronym || fed.name, titulo: texto(doc.title, 140) };
+    const title = kind === 'rectify' ? tx('{sigla} retificou: {titulo}', params) : tx('{sigla} publicou: {titulo}', params);
+    const message = texto(doc.summary, 300) || (doc.code ? texto(doc.code, 80) : '');
+    const link = `/f/${encodeURIComponent(fed.slug || fed.id)}/acervo/${encodeURIComponent(doc.id)}`;
+    for (let i = 0; i < uids.length; i += LOTE) {
+      const batch = ctx.db.batch();
+      uids.slice(i, i + LOTE).forEach((uid) => f.aviso(ctx, batch, uid, { title, message, link }));
+      await batch.commit();
+    }
+    return uids.length;
+  } catch {
+    return -1;
+  }
+}
 const anoBrasil = (ms) => new Date(ms - BR_OFFSET_MS).getUTCFullYear();
 
 async function contexto(ctx, actor, data) {
@@ -213,8 +258,9 @@ async function publish(ctx, actor, data, { fed }) {
     alvoSnaps.forEach((s, i) => tr.update(rels[i].ref, marcaRecebida(s.data() || {}, rels[i], novo)));
     return { number, code };
   });
-  await f.auditoria(ctx, actor, 'federation_doc_publish', { federation_id: fed.id, doc_id: doc.id, code: resultado.code, type: value.type });
-  return { ok: true, ...resultado };
+  const avisados = await avisarSeguidores(ctx, actor, fed, { ...value, id: doc.id, code: resultado.code }, 'publish');
+  await f.auditoria(ctx, actor, 'federation_doc_publish', { federation_id: fed.id, doc_id: doc.id, code: resultado.code, type: value.type, followers_notified: avisados });
+  return { ok: true, ...resultado, notified: avisados };
 }
 
 async function rectify(ctx, actor, data, { fed }) {
@@ -253,8 +299,9 @@ async function rectify(ctx, actor, data, { fed }) {
     files: [...mantidos, ...novos], version: versao, version_reason: reason, version_at_ms: ctx.now, versions: [...versoes, anterior],
     updated_at: ts, updated_at_ms: ctx.now, updated_by: actor.uid,
   });
-  await f.auditoria(ctx, actor, 'federation_doc_rectify', { federation_id: fed.id, doc_id: doc.id, version: versao, reason });
-  return { ok: true, version: versao };
+  const avisados = await avisarSeguidores(ctx, actor, fed, { ...doc, title: value.title, summary: value.summary }, 'rectify');
+  await f.auditoria(ctx, actor, 'federation_doc_rectify', { federation_id: fed.id, doc_id: doc.id, version: versao, reason, followers_notified: avisados });
+  return { ok: true, version: versao, notified: avisados };
 }
 
 async function visibility(ctx, actor, data, { fed }) {
@@ -331,4 +378,4 @@ async function acervo(ctx, actor, data = {}) {
   return fn(ctx, actor, data, c);
 }
 
-module.exports = { acervo, DOCS, VERSIONS_MAX };
+module.exports = { acervo, DOCS, FOLLOWERS, VERSIONS_MAX };

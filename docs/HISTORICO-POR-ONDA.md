@@ -2218,5 +2218,13 @@ copiado para uma pasta oficial com SHA-256, o publicado não se edita (corrige
 por retificação com motivo, errata ou ato que altera/revoga, com o histórico
 visível) e o link do arquivo só existe enquanto o documento é público. A aba
 Transparência confere o que a Lei 14.597/2023, art. 36, pede publicado. Etapa
-2 de 4, parte 1 (a Central); a página pública vem em seguida. Detalhe em
-`docs/50-FEDERACAO.md` §14.
+2 de 4, parte 1 (a Central). Detalhe em `docs/50-FEDERACAO.md` §14.
+
+Parte 2 (PR 8b): o acervo ganhou endereço público (`/f/:slug/acervo`) com
+mural, busca e transparência; cada documento abre numa página para ler ali
+mesmo, baixar, imprimir, compartilhar (link, WhatsApp, QR) e conferir se um
+arquivo recebido é o oficial — o SHA-256 é calculado no aparelho, porque a
+promessa do código de integridade só vale se qualquer pessoa conseguir
+conferir. Quem segue o acervo recebe aviso de ato novo (só do que pode ler), e
+a Central imprime o cartaz com QR para o mural da sede, que a lei também pede.
+§14.8.

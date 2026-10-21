@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DOC_CATEGORIES, DOC_TYPES, docActions, docCode, docDisplayTitle, docPublicPath, docYears, filterDocs, fileFamilyOf, fileSizeLabel, isDocCurrent,
   sortDocs, transparencyChecklist, typesOfCategory, validateAcervoFile, validateDocInput, videoEmbed, acervoUploadPath,
+  acervoPublicPath, fileViewKind, findFileByHash, isDocNew, mergeDocLists, muralDocs,
 } from './acervo.js';
 
 const arq = { name: 'a.pdf', path: 'federacao-acervo/u1/abc.pdf', size: 1000, content_type: 'application/pdf' };
@@ -111,6 +112,37 @@ describe('acervo: exibição', () => {
     expect(docActions(pub())).toMatchObject({ edit: false, rectify: true, revoke: true, withdraw: false });
     expect(docActions(pub(), { isAdmin: true }).withdraw).toBe(true);
     expect(docActions(pub({ revoked_by: { doc_id: 'x' } }))).toMatchObject({ rectify: false, revoke: false, errata: true });
+  });
+});
+
+describe('acervo: página pública', () => {
+  const H1 = 'a'.repeat(64);
+  const H0 = 'b'.repeat(64);
+  const doc = { version: 2, files: [{ name: 'v2.pdf', sha256: H1 }], versions: [{ version: 1, files: [{ name: 'v1.pdf', sha256: H0 }] }] };
+
+  it('confere o código contra a versão atual e as anteriores', () => {
+    expect(findFileByHash(doc, H1.toUpperCase())).toMatchObject({ version: 2, current: true });
+    expect(findFileByHash(doc, ` ${H0} `)).toMatchObject({ version: 1, current: false, file: { name: 'v1.pdf' } });
+    expect(findFileByHash(doc, 'c'.repeat(64))).toBeNull();
+    expect(findFileByHash(doc, 'xyz')).toBeNull();
+  });
+
+  it('como cada arquivo abre', () => {
+    expect(fileViewKind('application/pdf')).toBe('pdf');
+    expect(fileViewKind('image/png')).toBe('image');
+    expect(fileViewKind('audio/mpeg')).toBe('audio');
+    expect(fileViewKind('video/mp4')).toBe('video');
+    expect(fileViewKind('text/csv')).toBe('download');
+  });
+
+  it('mural: publicados, pela publicação (retificação conta), sem repetir entre listas', () => {
+    const a = { id: 'a', status: 'published', published_at_ms: 10 };
+    const b = { id: 'b', status: 'published', published_at_ms: 5, version_at_ms: 50 };
+    const c = { id: 'c', status: 'draft', published_at_ms: 99 };
+    expect(muralDocs(mergeDocLists([a, b], [b, c], undefined)).map((d) => d.id)).toEqual(['b', 'a']);
+    expect(isDocNew({ published_at_ms: 0 }, 6 * 86400000)).toBe(true);
+    expect(isDocNew({ published_at_ms: 0 }, 8 * 86400000)).toBe(false);
+    expect(acervoPublicPath({ slug: 'fgp' })).toBe('/f/fgp/acervo');
   });
 });
 
