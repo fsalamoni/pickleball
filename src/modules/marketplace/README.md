@@ -37,8 +37,11 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
    avaliação, os termos proibidos e a configuração —
    `functions/marketplace.parity.test.js`.
 5. **Chave do vendedor é contrato**: `athlete_{uid}`, `coach_{uid}`,
-   `arena_{arenaId}`, `store_{uid}` (`domain/seller.js`). A regra decide quem
-   opera cada uma (`isMarketOperator`).
+   `arena_{arenaId}`, `store_{uid}` e `federation_{fedId}` (loja oficial da
+   federação, módulo `store`; `domain/seller.js`). A regra decide quem opera
+   cada uma (`isMarketOperator`), e o servidor responde igual
+   (`operatorUids` em `functions/marketplace.js`) — na federação, a equipe com
+   `admin` ou `finance`.
 6. **Zero índice composto**: consultas por igualdade/`in`, ordenação em
    memória (`domain/search.js`).
 7. **Coleção `market_*` nova entra na exclusão de conta E na exportação** —

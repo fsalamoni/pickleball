@@ -22,7 +22,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
-  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, RESULT_STATUS, STAFF_ROLE, fedOrgDocId, fedRankingDocId, fedResultDocId, fedUserDocId,
+  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, STAFF_ROLE, fedOrgDocId, fedRankingDocId, fedResultDocId, fedUserDocId,
 } from '../domain/constants.js';
 import { affiliationDecision, affiliationState, buildAffiliationRequest } from '../domain/affiliations.js';
 import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sanctionState } from '../domain/sanction.js';
@@ -33,6 +33,9 @@ import { fedModuleOn, normalizeFederationBranding, normalizeFederationRules, nor
 import { documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
 import { validateCourseInput } from '../domain/courses.js';
 import { validateReportInput } from '../domain/discipline.js';
+import { validateNewsInput } from '../domain/news.js';
+import { validateSponsors } from '../domain/sponsors.js';
+import { validateGovernance } from '../domain/governance.js';
 import { validatePlanInput } from '../domain/plans.js';
 import { canDeclarePayment } from '../domain/charges.js';
 import { canChangeStaff } from '../domain/staff.js';
@@ -820,4 +823,67 @@ export async function updateReport(rep, { status, notes, uid } = {}) {
   if (typeof notes === 'string') patch.notes = notes.trim().slice(0, 2000);
   await updateDoc(doc(db, C.reports, rep.id), patch);
   await createAuditLog({ action: 'federation_report_update', actor: { uid }, details: { federation_id: rep.federation_id, report_id: rep.id, status: patch.status || rep.status } });
+}
+
+/* ===================================================== PR 4: notícias, patrocinadores, governança ===================================================== */
+
+/** Todas as notícias da federação, rascunhos inclusive (equipe `comms`/`admin`). */
+export async function listFederationNews(fedId) {
+  return (await getDocs(query(collection(db, C.news), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** As notícias PÚBLICAS publicadas (a página, dentro e fora do app). Três igualdades: a regra prova sem índice. */
+export async function listPublicNews(fedId) {
+  if (!fedId) return [];
+  const q = query(collection(db, C.news), where('federation_id', '==', fedId), where('status', '==', NEWS_STATUS.PUBLISHED), where('audience', '==', NEWS_AUDIENCE.PUBLIC));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** As notícias "só filiados" publicadas — só para quem tem filiação ATIVA (a regra confere). */
+export async function listMemberNews(fedId) {
+  if (!fedId) return [];
+  const q = query(collection(db, C.news), where('federation_id', '==', fedId), where('status', '==', NEWS_STATUS.PUBLISHED), where('audience', '==', NEWS_AUDIENCE.MEMBERS));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+export async function saveNews(federation, input, { uid, newsId = null } = {}) {
+  if (!fedModuleOn(federation, 'news')) throw new FederationError(t('Esta federação não tem o módulo de notícias ligado.'));
+  const r = validateNewsInput(input);
+  if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  const data = { ...r.value, federation_id: federation.id, federation_acronym: federation.acronym || '', updated_at: serverTimestamp(), updated_by: uid || null };
+  if (data.status === NEWS_STATUS.PUBLISHED && !data.published_at) data.published_at = new Date().toISOString().slice(0, 10);
+  if (newsId) {
+    await updateDoc(doc(db, C.news, newsId), data);
+  } else {
+    const ref = await addDoc(collection(db, C.news), { ...data, created_by: uid || null, created_at: serverTimestamp(), created_at_ms: Date.now() });
+    newsId = ref.id;
+  }
+  await createAuditLog({ action: 'federation_news_save', actor: { uid }, details: { federation_id: federation.id, news_id: newsId, title: data.title, status: data.status, audience: data.audience } });
+  return { id: newsId, ...data };
+}
+
+export async function deleteNews(news, { uid } = {}) {
+  await deleteDoc(doc(db, C.news, news.id));
+  await createAuditLog({ action: 'federation_news_delete', actor: { uid }, details: { federation_id: news.federation_id, news_id: news.id } });
+}
+
+/** O aviso da notícia aos filiados ativos — do SERVIDOR (`federationNews`), um só por notícia. */
+export const notifyNews = (newsId) => chamar('federationNews', { newsId });
+
+/** Os patrocinadores (campo da federação; a página e a carteirinha mostram com o módulo ligado) — permissão `admin`. */
+export async function updateFederationSponsors(id, sponsors, { uid } = {}) {
+  const r = validateSponsors(sponsors);
+  if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  await updateDoc(doc(db, C.federations, id), { sponsors: r.value, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_sponsors_update', actor: { uid }, details: { federation_id: id, count: r.value.length } });
+  return r.value;
+}
+
+/** Governança (estatuto, mandato, diretoria, atas) — pública; permissão `admin`. */
+export async function updateFederationGovernance(id, input, { uid } = {}) {
+  const r = validateGovernance(input);
+  if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  await updateDoc(doc(db, C.federations, id), { governance: r.value, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_governance_update', actor: { uid }, details: { federation_id: id, board: r.value.board.length, minutes: r.value.minutes.length } });
+  return r.value;
 }

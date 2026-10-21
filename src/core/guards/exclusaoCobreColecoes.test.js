@@ -209,6 +209,7 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_rankings: 'Derivado dos resultados (só o servidor grava) e público; a colocação da pessoa já sai nos resultados exportados.',
   federation_courses: 'O curso é da federação (nome, datas, preço); a inscrição exportada já diz o curso e o resultado.',
   federation_imports: 'Relatório da secretaria: e-mails de quem ainda não tem conta; a pessoa importada já aparece na filiação exportada.',
+  federation_news: 'A notícia é da federação (título, texto, público), não da pessoa; quem escreveu é só o uid de equipe.',
 };
 
 describe('a exclusão e a exportação cobrem as federações', () => {

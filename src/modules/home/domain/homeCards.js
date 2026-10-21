@@ -45,6 +45,7 @@ export const HOME_CARD = Object.freeze({
   EVOLUCAO: 'evolucao',
   TREINO: 'treino',
   MERCADO: 'mercado',
+  FEDERACAO: 'federacao',
 });
 
 /** ⭐ O que todo mundo vê sem ter escolhido — nesta ordem. */
@@ -132,6 +133,14 @@ export const HOME_CARD_META = Object.freeze({
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
     requer: 'mercado',
+  }),
+  [HOME_CARD.FEDERACAO]: Object.freeze({
+    label: tk('Federação'),
+    description: tk('As suas filiações, o que falta pagar ou renovar e a última notícia da federação.'),
+    icon: 'Landmark',
+    group: HOME_CARD_GROUP.ROTINA,
+    focos: [],
+    requer: 'federacao',
   }),
   [HOME_CARD.TORNEIOS]: Object.freeze({
     label: tk('Torneios'),
@@ -239,7 +248,7 @@ export function isDefaultHomeCards(lista) {
 /**
  * O card pode aparecer agora? Depende da funcionalidade de que ele precisa.
  * @param {string} id
- * @param {{ evolucao?: boolean, treino?: boolean, mercado?: boolean }} [ctx] o que está ligado
+ * @param {{ evolucao?: boolean, treino?: boolean, mercado?: boolean, federacao?: boolean }} [ctx] o que está ligado
  */
 export function homeCardAvailable(id, ctx = {}) {
   const meta = HOME_CARD_META[id];

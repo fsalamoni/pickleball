@@ -3408,6 +3408,9 @@ service cloud.firestore {
         (type == 'platform' && id == 'platform' && isPlatformAdmin())
         || (type == 'coach' && id == me()
           && exists(/databases/$(database)/documents/coaches/$(me())))
+        // PR 4: a federação (módulo `promos`) emite pela equipe de comunicação.
+        || (type == 'federation' && fedOn() && fedModuleOn(id, 'promos')
+          && (fedHas(id, 'comms') || fedHas(id, 'admin')))
       );
     }
     function promoIssuerKept() {
@@ -3435,7 +3438,7 @@ service cloud.firestore {
     // custo interno de cada vale. Id = 'platform' ou o uid do professor.
     match /promo_settings/{issuerId} {
       allow read, write: if isPlatformAdmin()
-        || (issuerId != 'platform' && isPromoIssuer('coach', issuerId));
+        || (issuerId != 'platform' && (isPromoIssuer('coach', issuerId) || isPromoIssuer('federation', issuerId)));
     }
 
     // ======================================================================
@@ -4238,7 +4241,10 @@ service cloud.firestore {
         key == 'athlete_' + me()
         || key == 'coach_' + me()
         || key == 'store_' + me()
-        || (key.matches('arena_[^/]+') && isArenaManager(key.replace('^arena_', ''))));
+        || (key.matches('arena_[^/]+') && isArenaManager(key.replace('^arena_', '')))
+        // PR 4: a loja oficial da federação (módulo `store`) — quem tem `admin` ou `finance`.
+        || (key.matches('federation_[^/]+') && fedOn() && fedModuleOn(key.replace('^federation_', ''), 'store')
+          && (fedHas(key.replace('^federation_', ''), 'admin') || fedHas(key.replace('^federation_', ''), 'finance'))));
     }
     function marketSeller(key) {
       return get(/databases/$(database)/documents/market_sellers/$(key)).data;
@@ -4262,6 +4268,7 @@ service cloud.firestore {
           (key == 'athlete_' + me() && nd().seller_type == 'athlete' && nd().status == 'active')
           || (key == 'coach_' + me() && nd().seller_type == 'coach' && nd().status == 'active' && isCoachUser(me()))
           || (key.matches('arena_[^/]+') && nd().seller_type == 'arena' && nd().status == 'active')
+          || (key.matches('federation_[^/]+') && nd().seller_type == 'federation' && nd().status == 'active')
           || (key == 'store_' + me() && nd().seller_type == 'store' && nd().status == 'pending')
         );
       // A loja recusada pode pedir de novo (volta a "em análise"); fora isso,
@@ -4650,7 +4657,9 @@ service cloud.firestore {
         && nd().level in ['state', 'regional', 'national'];
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
       allow update: if isPlatformAdmin() || (fedOn() && fedHas(fedId, 'admin')
-        && !chg().hasAny(fedLocked()))
+        && !chg().hasAny(fedLocked())
+        // PR 4: patrocinadores são lista curta (a página e a carteirinha os mostram).
+        && (!('sponsors' in chg()) || (nd().sponsors is list && nd().sponsors.size() <= 12)))
         // Competições configura só o ranking oficial.
         || (fedOn() && fedHas(fedId, 'competitions')
           && chg().hasOnly(['ranking_config', 'updated_at']));
@@ -4895,6 +4904,44 @@ service cloud.firestore {
         && chg().hasOnly(['status', 'notes', 'handled_by', 'updated_at'])
         && nd().status in ['open', 'in_review', 'closed'];
       allow delete: if isPlatformAdmin();
+    }
+
+    // PR 4: NOTÍCIAS E AVISOS (módulo `news`). A equipe de comunicação
+    // (`comms`/`admin`) grava pelo cliente. Publicada e PÚBLICA é lida por
+    // qualquer um (página fora do app); "só filiados" por quem tem filiação
+    // ATIVA nesta federação. O aviso aos filiados é do servidor
+    // (`federationNews`): `notified_at`/`notified_count` o cliente não toca.
+    function fedMemberActive(fedId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/federation_members/$(fedId + '_' + me()))
+        && get(/databases/$(database)/documents/federation_members/$(fedId + '_' + me())).data.status == 'active';
+    }
+    match /federation_news/{newsId} {
+      allow read: if (od().status == 'published'
+          && (od().audience == 'public' || (od().audience == 'members' && fedMemberActive(od().federation_id))))
+        || isPlatformAdmin()
+        || fedHas(od().federation_id, 'comms')
+        || fedHas(od().federation_id, 'admin');
+      allow create: if fedOn() && fedModuleOn(nd().federation_id, 'news')
+        && (fedHas(nd().federation_id, 'comms') || fedHas(nd().federation_id, 'admin'))
+        && nd().title is string
+        && nd().title.size() >= 3
+        && nd().title.size() <= 140
+        && nd().body is string
+        && nd().body.size() <= 6000
+        && nd().status in ['draft', 'published', 'archived']
+        && nd().audience in ['public', 'members']
+        && !nd().keys().hasAny(['notified_at', 'notified_count']);
+      allow update: if fedOn()
+        && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin'))
+        && !chg().hasAny(['federation_id', 'notified_at', 'notified_count'])
+        && nd().title is string
+        && nd().title.size() >= 3
+        && nd().title.size() <= 140
+        && nd().status in ['draft', 'published', 'archived']
+        && nd().audience in ['public', 'members'];
+      allow delete: if isPlatformAdmin()
+        || (fedOn() && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin')));
     }
 
     match /federation_charges/{chargeId} {

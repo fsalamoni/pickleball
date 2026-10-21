@@ -17,7 +17,7 @@
  */
 import React, { useId, useMemo, useState } from 'react';
 import {
-  Building2, CalendarCheck, CalendarDays, ChevronDown, ChevronUp, ClipboardList, Dumbbell, GraduationCap, Handshake,
+  Building2, CalendarCheck, CalendarDays, ChevronDown, ChevronUp, ClipboardList, Dumbbell, GraduationCap, Handshake, Landmark,
   LayoutGrid, Medal, Megaphone, Plus, RotateCcw, Sparkles, Store, Swords, TrendingUp, Trophy, Users, Zap,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
@@ -29,7 +29,7 @@ import { useHomeCards, useHomeCardsContext } from '@/modules/home/hooks/useHomeC
 import { t, tn } from '@/core/i18n';
 
 const ICONES = {
-  Building2, CalendarCheck, CalendarDays, ClipboardList, Dumbbell, GraduationCap, Handshake, Medal, Megaphone, Store, Swords,
+  Building2, CalendarCheck, CalendarDays, ClipboardList, Dumbbell, GraduationCap, Handshake, Landmark, Medal, Megaphone, Store, Swords,
   TrendingUp, Trophy, Users, Zap,
 };
 

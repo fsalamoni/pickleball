@@ -311,10 +311,14 @@ sub-módulos por federação (`FED_MODULE_META`): `tournaments` (chancela de
 torneios + envio de resultados), `ranking` (ranking oficial, derivado pelo
 servidor), `affiliations` (clubes e arenas filiados), `courses` (cursos e
 credenciais verificáveis) e `discipline` (sanções com efeito na inscrição e
-ouvidoria com protocolo) disponíveis; os demais "em breve". A secretaria
+ouvidoria com protocolo) disponíveis e, do PR 4, `news` (notícias com aviso
+aos filiados pelo servidor), `sponsors` (patrocinadores), `promos` (a
+federação como emissora de cupons e campanhas no `promo/`) e `store` (loja
+oficial no Mercado, vendedor `federation_{id}`); os demais "em breve". A
+governança (estatuto, mandato, diretoria, atas) não é módulo. A secretaria
 (transferências, documentos, importação, CPF e dependentes) não é módulo: vem
 com a federação. Doc: `docs/50-FEDERACAO.md`.
-- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking,privateData,transfers,importMembers,courses,discipline}.js`,
+- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking,privateData,transfers,importMembers,courses,discipline,news,sponsors,governance}.js`,
   `services/federationService.js`, `hooks/useFederations.js`. README do módulo é a fonte.
 - **Telas**: `/federacoes`, `/federacoes/abrir`, `/federacoes/:id`,
   `/federacoes/:id/filiar`, `/federacoes/:id/gerir?aba=` (a Central:
@@ -331,8 +335,9 @@ com a federação. Doc: `docs/50-FEDERACAO.md`.
   `federation_affiliations`, `federation_results`, `federation_rankings`,
   `federation_documents_submitted`, `federation_transfers`,
   `federation_imports`, `federation_courses`, `federation_course_enrollments`,
-  `federation_credentials`, `federation_sanctions`, `federation_reports`;
-  Storage `federacao/{uid}/`; campos opcionais
+  `federation_credentials`, `federation_sanctions`, `federation_reports`,
+  `federation_news`; Storage `federacao/{uid}/`; campos opcionais
+  `federations.sponsors`/`.governance`,
   `tournaments.federation_id`/`.federation_sanction`.
 
 ### help/ — tutoriais, dicas guiadas e central de ajuda

@@ -2,7 +2,8 @@
  * Equipe da federação: papel → permissões. A regra tem a MESMA tabela
  * (`fedHas` no `firestore.rules`); `staff.test.js` compara as duas.
  */
-import { FED_PERMISSION, STAFF_ROLE, STAFF_ROLE_PERMISSIONS } from './constants.js';
+import { FED_MODULE, FED_PERMISSION, STAFF_ROLE, STAFF_ROLE_PERMISSIONS } from './constants.js';
+import { fedModuleOn } from './federation.js';
 
 /** O papel tem a permissão? Papel desconhecido não tem nenhuma. */
 export function roleHas(role, permission) {
@@ -36,4 +37,17 @@ export function permissionsOf(role) {
 export function assignableRoles(actorRole) {
   if (!roleHas(actorRole, FED_PERMISSION.ADMIN)) return [];
   return Object.values(STAFF_ROLE).filter((r) => r !== STAFF_ROLE.PRESIDENT || actorRole === STAFF_ROLE.PRESIDENT);
+}
+
+/**
+ * As federações pelas quais a pessoa vende no Mercado: a loja (`store`) ligada
+ * e um papel com `admin` ou `finance` — a mesma conta de `isMarketOperator`
+ * na regra. `roles` = documentos de `federation_staff` da pessoa.
+ */
+export function storeFederations(roles = [], federations = []) {
+  const porId = new Map(federations.map((f) => [f.id, f]));
+  return roles
+    .filter((r) => roleHas(r.role, FED_PERMISSION.ADMIN) || roleHas(r.role, FED_PERMISSION.FINANCE))
+    .map((r) => porId.get(r.federation_id))
+    .filter((f, i, arr) => f && fedModuleOn(f, FED_MODULE.STORE) && arr.indexOf(f) === i);
 }

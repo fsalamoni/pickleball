@@ -185,3 +185,21 @@ export function memberCounts(members = [], hoje = isoDate()) {
   });
   return out;
 }
+
+/**
+ * O card "Federação" do início: as filiações vivas da pessoa, a que pede uma
+ * ação primeiro (pagar, renovar), cada uma com o que fazer. Dependente
+ * (menor) entra junto — o responsável é quem paga.
+ * @returns {Array<{ member: object, estado: object, acao: ''|'pagar'|'renovar' }>}
+ */
+export function homeFederationRows(memberships = [], hoje = isoDate()) {
+  const peso = { pagar: 0, renovar: 1, '': 2 };
+  return (memberships || [])
+    .map((member) => {
+      const estado = membershipState(member, hoje);
+      const acao = estado.status === MEMBER_STATUS.AWAITING_PAYMENT ? 'pagar' : estado.canRenew ? 'renovar' : '';
+      return { member, estado, acao };
+    })
+    .filter((r) => LIVE_MEMBER_STATUSES.includes(r.estado.status))
+    .sort((a, b) => peso[a.acao] - peso[b.acao]);
+}

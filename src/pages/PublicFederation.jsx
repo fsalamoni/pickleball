@@ -17,6 +17,7 @@ import { useFederationBySlug, useFederationPlans } from '@/modules/federations/h
 import { FEDERATION_LEVEL_LABELS } from '@/modules/federations/domain/constants';
 import { FedBadges, FedLogo, fedPath } from '@/v2/components/federations/federationUi';
 import PlansList from '@/v2/components/federations/PlansList';
+import { FedGovernanceBlock, FedNewsSection, FedSponsorsStrip, FedStoreLink } from '@/v2/components/federations/FedCommsBlocks';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
@@ -71,12 +72,16 @@ export default function PublicFederation() {
               <h2 id="planos-titulo" className="font-display text-xl font-bold text-ink">{t('Planos de filiação')}</h2>
               {pq.isError ? <V2ErrorState inline title={t('Não carregaram os planos')} onRetry={() => pq.refetch()} /> : pq.isLoading ? <V2Skeleton lines={3} /> : <PlansList plans={pq.data} federation={f} />}
             </section>
+            <FedNewsSection federation={f} />
             <FedSanctionedTournaments federation={f} />
             <FedRankingBlock federation={f} />
             <FedCoursesSection federation={f} />
             <FedCredentialsDirectory federation={f} />
             <FedAffiliatesSection federation={f} />
             <FedOmbudsmanBlock federation={f} />
+            <FedStoreLink federation={f} />
+            <FedSponsorsStrip federation={f} />
+            <FedGovernanceBlock federation={f} />
             <p className="text-center text-xs text-gray-500">{t('Carteirinha de filiado? Verifique pelo QR ou em {url}.', { url: 'picklerush.web.app/f/verificar' })}</p>
           </>
         )}

@@ -22,6 +22,7 @@ import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import PlansList from '@/v2/components/federations/PlansList';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
 import { FedMemberDocuments, FedMySanctions, FedTransferDialog } from '@/v2/components/federations/FedMemberExtras';
+import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip, FedStoreLink } from '@/v2/components/federations/FedCommsBlocks';
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
 import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
 import { t, tn } from '@/core/i18n';
@@ -96,6 +97,9 @@ function Detalhe() {
   const fq = useFederation(federationId);
   const pq = useFederationPlans(federationId);
   const papel = useMyFederationRole(federationId);
+  // Mesma consulta da "Sua filiação" (mesma chave): decide as notícias "só filiados".
+  const minha = useMyMembership(federationId);
+  const filiadoAtivo = membershipState(minha.data).status === MEMBER_STATUS.ACTIVE;
   const f = fq.data;
   const publica = useMemo(() => (f ? `${typeof window !== 'undefined' ? window.location.origin : ''}${fedPublicPath(f)}` : ''), [f]);
 
@@ -141,16 +145,21 @@ function Detalhe() {
           )}
           {f.status === FEDERATION_STATUS.APPROVED && (
             <>
+              <FedNewsSection federation={f} memberOf={filiadoAtivo} />
+              <FedPromosSection federation={f} />
               <FedSanctionedTournaments federation={f} />
               <FedRankingBlock federation={f} meUid={user?.uid || null} />
               <FedCoursesSection federation={f} />
               <FedCredentialsDirectory federation={f} />
               <FedAffiliatesSection federation={f} />
               <FedOmbudsmanBlock federation={f} />
+              <FedSponsorsStrip federation={f} />
+              <FedGovernanceBlock federation={f} />
             </>
           )}
         </section>
         <aside className="space-y-3 lg:col-span-4">
+          {f.status === FEDERATION_STATUS.APPROVED && <FedStoreLink federation={f} />}
           <V2Surface variant="compacto" className="space-y-2 p-4">
             <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Contato')}</p>
             {contato.email && <a href={`mailto:${contato.email}`} className="flex items-center gap-2 text-sm text-ink hover:underline"><Mail className="h-4 w-4" aria-hidden="true" />{contato.email}</a>}

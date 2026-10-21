@@ -11,7 +11,7 @@ import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Landmark, Settings2 } from 'lucide-react';
 import {
-  useFederation, useFederationAffiliations, useFederationCharges, useFederationCourses, useFederationCredentials, useFederationDocuments, useFederationImports, useFederationMembers, useFederationPlans,
+  useFederation, useFederationAffiliations, useFederationCharges, useFederationCourses, useFederationCredentials, useFederationDocuments, useFederationImports, useFederationMembers, useFederationNews, useFederationPlans,
   useFederationReports, useFederationResults, useFederationSanctions, useFederationStaff, useFederationTournaments, useFederationTransfers, useIncomingTransfers, useMyFederationRole,
 } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -34,6 +34,7 @@ const FedCompetitionsPanel = lazy(() => import('@/v2/components/federations/mana
 const FedSecretariatPanel = lazy(() => import('@/v2/components/federations/manage/FedSecretariatPanel'));
 const FedCoursesPanel = lazy(() => import('@/v2/components/federations/manage/FedCoursesPanel'));
 const FedDisciplinePanel = lazy(() => import('@/v2/components/federations/manage/FedDisciplinePanel'));
+const FedCommsPanel = lazy(() => import('@/v2/components/federations/manage/FedCommsPanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
 
@@ -79,6 +80,8 @@ function Central({ federationId }) {
   const podeDisciplina = perms.includes(FED_PERMISSION.DISCIPLINE) && fedModuleOn(fq.data, 'discipline');
   const sanctionsQ = useFederationSanctions(federationId, { enabled: papel.isStaff && podeDisciplina });
   const reportsQ = useFederationReports(federationId, { enabled: papel.isStaff && podeDisciplina });
+  // PR 4 — comunicação: as notícias só com a permissão e o módulo.
+  const newsQ = useFederationNews(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.COMMS) && fedModuleOn(fq.data, 'news') });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -124,6 +127,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} tab={tab} />}
         {secaoAtiva.id === 'cursos' && <FedCoursesPanel federation={f} coursesQ={coursesQ} credentialsQ={credentialsQ} tab={tab} />}
         {secaoAtiva.id === 'disciplina' && <FedDisciplinePanel federation={f} membersQ={membersQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} tab={tab} />}
+        {secaoAtiva.id === 'comunicacao' && <FedCommsPanel federation={f} newsQ={newsQ} tab={tab} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} myRole={papel.role} />}

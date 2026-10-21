@@ -595,6 +595,23 @@ export const PONTOS_DE_DICA = Object.freeze([
     flags: ['federations'],
   },
   {
+    id: 'federacao:noticias-publicas',
+    route: '/federacoes/*',
+    target: 'federacao-noticias-publicas',
+    title: tk('Notícias'),
+    body: tk('Os avisos da federação. Filiado em dia vê também as notícias só para filiados, e recebe o aviso no sino quando a federação pede.'),
+    flags: ['federations'],
+  },
+  {
+    id: 'federacao:secao-comunicacao',
+    route: '/federacoes/*/gerir',
+    target: 'federacao-secao-comunicacao',
+    title: tk('Comunicação'),
+    body: tk('Notícias com aviso aos filiados, cupons e campanhas da federação e os patrocinadores que aparecem na página e na carteirinha.'),
+    guide: 'federacao-comunicacao',
+    flags: ['federations'],
+  },
+  {
     id: 'federacao:secao-cursos',
     route: '/federacoes/*/gerir',
     target: 'federacao-secao-cursos',

@@ -57,6 +57,8 @@ export function MemberCard({ card, qrDataUrl, showPhoto = true, className }) {
             <div><dt className="uppercase tracking-widest text-gray-500">{t('Válida até')}</dt><dd className="font-bold">{card.validUntilLabel}</dd></div>
           </dl>
           <span className={cn('mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-bold', FAIXA[card.band.tone] || FAIXA.gray)}>{card.band.label}</span>
+          {/* Só os nomes: logo de outro site quebraria o PNG (a imagem cruzada "suja" o desenho). */}
+          {f.sponsors?.length > 0 && <p className="mt-1 truncate text-2xs text-gray-500">{t('Patrocínio: {nomes}', { nomes: f.sponsors.map((s) => s.name).join(' · ') })}</p>}
         </div>
         {qrDataUrl && (
           <div className="flex shrink-0 flex-col items-center justify-center gap-1">

@@ -57,6 +57,10 @@ export const fedKeys = {
   report: (id) => ['federacoes', 'ouvidoria', id],
   myReports: (uid) => ['federacoes', 'minhas-manifestacoes', uid],
   reports: (id) => ['federacoes', 'federacao', id, 'ouvidoria'],
+  // PR 4
+  news: (id) => ['federacoes', 'federacao', id, 'noticias'],
+  publicNews: (id) => ['federacoes', 'federacao', id, 'noticias', 'publicas'],
+  memberNews: (id) => ['federacoes', 'federacao', id, 'noticias', 'filiados'],
 };
 
 /** As federações estão ligadas para quem vê? (a flag do admin) */
@@ -229,6 +233,21 @@ export function usePublicCredentials(id, { enabled = true } = {}) {
 
 export function useCourseEnrollments(courseId, fedId, { enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.courseEnrollments(courseId), queryFn: () => svc.listCourseEnrollments(courseId, fedId), enabled: !!courseId && !!fedId && enabled });
+}
+
+/* ---------------------------------------------- PR 4: notícias -- */
+
+/** Todas as notícias (equipe `comms`/`admin`). */
+export const useFederationNews = porFed(svc.listFederationNews, fedKeys.news);
+
+/** As notícias públicas publicadas (página da federação, dentro e fora do app). */
+export function usePublicNews(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.publicNews(id), queryFn: () => svc.listPublicNews(id), enabled: !!id && enabled, staleTime: 5 * 60_000 });
+}
+
+/** As notícias "só filiados" — só com filiação ATIVA (`enabled` decide; a regra confere). */
+export function useMemberNews(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.memberNews(id), queryFn: () => svc.listMemberNews(id), enabled: !!id && enabled, staleTime: 5 * 60_000 });
 }
 
 /** Uma manifestação pelo protocolo (o id). */

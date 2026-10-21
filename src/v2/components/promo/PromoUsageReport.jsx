@@ -116,7 +116,7 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
         <Resumo label={t('Custo')} valor={dinheiro(total.custo)}
           dica={total.custo == null ? t('Falta o custo de algum cupom') : (ehProfessor ? t('Descontos nas aulas e vales') : t('Vales entregues'))} />
         <Resumo label={ehProfessor ? t('Aulas com cupom renderam') : t('Receita')} valor={dinheiro(total.receita)}
-          dica={ehProfessor ? t('Aulas confirmadas que usaram um desconto') : t('A plataforma não cobra pelo que divulga')} />
+          dica={ehProfessor ? t('Aulas confirmadas que usaram um desconto') : issuer.type === PROMO_ISSUER.FEDERATION ? t('A receita fica na cobrança de cada evento') : t('A plataforma não cobra pelo que divulga')} />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-100">
@@ -167,7 +167,9 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
       <p className="text-xs leading-5 text-gray-500">
         {ehProfessor
           ? t('Custo é o que você deu: o desconto abatido nas aulas confirmadas com o código e os vales entregues (usos × custo unitário). Receita é o que essas aulas renderam.')
-          : t('Custo é o que a plataforma deu nos vales (usos × custo unitário). O desconto da plataforma não passa por um preço da plataforma — por isso só os usos.')}
+          : issuer.type === PROMO_ISSUER.FEDERATION
+            ? t('Custo é o que a federação deu nos vales (usos × custo unitário). O desconto é aplicado pela equipe no balcão ou no parceiro — por isso só os usos.')
+            : t('Custo é o que a plataforma deu nos vales (usos × custo unitário). O desconto da plataforma não passa por um preço da plataforma — por isso só os usos.')}
         {' '}{t('“—” quer dizer que o número não é conhecido, nunca que foi zero.')}
       </p>
     </div>

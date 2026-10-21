@@ -11,7 +11,7 @@
 
 ## Registro histórico (snapshot de 2026-09-28; ondas posteriores estão em `docs/` e no `git log`)
 
-> Última atualização: 2026-10-18 (Federações, PR 3: secretaria — CPF por regra da federação e responsável do menor em `private/data`, dependentes, documentos no Storage lidos pela secretaria por função, transferências de clube/federação com liberação automática, importação de filiados —, cursos com credencial verificável pelo mesmo código da carteirinha e disciplina/ouvidoria com suspensão imposta na regra da inscrição — ver `docs/50-FEDERACAO.md` §6.4–6.6). Antes: 2026-10-18 (Federações, PR 2: clubes e arenas filiados, chancela de torneios com "só filiados" imposto na regra da inscrição, envio da colocação do pódio e ranking oficial derivado pelo servidor — ver `docs/50-FEDERACAO.md` §6.1–6.3). Antes: 2026-10-18 (Federações: abertura aprovada pelo admin, planos mensais/anuais, filiação e cobrança Pix só pelo servidor, carteirinha digital com verificação pública, Central com 8 papéis — atrás de `federations`, ver `docs/50-FEDERACAO.md`). Antes: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> Última atualização: 2026-10-21 (Federações, PR 4: notícias com aviso aos filiados só pelo servidor, patrocinadores, governança, a federação como emissora de cupons e campanhas, loja oficial no Mercado e card Federação no início — ver `docs/50-FEDERACAO.md` §6.7). Antes: 2026-10-18 (Federações, PR 3: secretaria — CPF por regra da federação e responsável do menor em `private/data`, dependentes, documentos no Storage lidos pela secretaria por função, transferências de clube/federação com liberação automática, importação de filiados —, cursos com credencial verificável pelo mesmo código da carteirinha e disciplina/ouvidoria com suspensão imposta na regra da inscrição — ver `docs/50-FEDERACAO.md` §6.4–6.6). Antes: 2026-10-18 (Federações, PR 2: clubes e arenas filiados, chancela de torneios com "só filiados" imposto na regra da inscrição, envio da colocação do pódio e ranking oficial derivado pelo servidor — ver `docs/50-FEDERACAO.md` §6.1–6.3). Antes: 2026-10-18 (Federações: abertura aprovada pelo admin, planos mensais/anuais, filiação e cobrança Pix só pelo servidor, carteirinha digital com verificação pública, Central com 8 papéis — atrás de `federations`, ver `docs/50-FEDERACAO.md`). Antes: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
@@ -29,6 +29,20 @@
 >
 > **Destaques por onda**:
 >
+> - **Federações, PR 4** (2026-10-21): a **comunicação** e quatro módulos.
+>   **Notícias** (`news`, `federation_news`): a equipe de comunicação escreve
+>   pelo cliente, pública ou "só filiados" (conferido na regra), e o **aviso**
+>   aos filiados ativos é do servidor (`federationNews`), uma vez só
+>   (`notified_at`, que a regra recusa ao cliente). **Patrocinadores**
+>   (`sponsors`, ≤ 12, também na carteirinha) e **governança** (estatuto,
+>   mandato, diretoria, atas — não é módulo) em campos opcionais da própria
+>   federação. **Cupons e campanhas** (`promos`): a federação virou o terceiro
+>   emissor do `promo/`, com "só filiados" e sem aviso de campanha (o canal é
+>   a notícia). **Loja oficial** (`store`): vendedor `federation_{id}` no
+>   Mercado, operado por `admin`/`finance`. Card **Federação** no início, só
+>   com a flag. Lição: quem opera a loja é uma pergunta feita em três lugares
+>   (regra, servidor, tela) — as três respostas têm de bater, e o teste prova
+>   cada uma.
 > - **Federações, PR 3** (2026-10-18): a **secretaria** e dois módulos.
 >   Dado pessoal do filiado (CPF, só se a federação pede; nascimento;
 >   responsável) vai para `federation_members/{id}/private/data`, nunca para

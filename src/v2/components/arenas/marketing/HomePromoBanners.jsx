@@ -38,7 +38,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, GraduationCap, MapPin, Pause, Play, Tag,
+  ChevronLeft, ChevronRight, GraduationCap, Landmark, MapPin, Pause, Play, Tag,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
@@ -171,10 +171,12 @@ function ItemDaDivulgacao({ banner, posicao, total }) {
   const { doc } = banner;
   const dono = issuerDisplayName(doc);
   const ehProfessor = doc.issuer_type === PROMO_ISSUER.COACH;
+  const ehFederacao = doc.issuer_type === PROMO_ISSUER.FEDERATION;
   const alcance = doc.reach?.mode && doc.reach.mode !== 'brasil' ? ` · ${reachLabel(doc.reach)}` : '';
   const legenda = (
     <p className="flex min-w-0 items-center gap-1 text-xs font-semibold text-gray-500">
-      {ehProfessor ? <GraduationCap className="h-3.5 w-3.5 shrink-0" aria-hidden /> : <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+      {ehProfessor ? <GraduationCap className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        : ehFederacao ? <Landmark className="h-3.5 w-3.5 shrink-0" aria-hidden /> : <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
       <span className="truncate">{dono}{alcance}</span>
     </p>
   );
@@ -188,7 +190,9 @@ function ItemDaDivulgacao({ banner, posicao, total }) {
     );
   }
   const naAula = ehProfessor && LESSON_COUPON_KINDS.includes(couponKind(doc));
-  const caminho = !ehProfessor
+  const caminho = ehFederacao
+    ? { to: `/federacoes/${encodeURIComponent(doc.issuer_id)}#federacao-promocoes`, label: t('Ver na federação') }
+    : !ehProfessor
     ? { to: '/promocoes', label: t('Ver promoções') }
     : naAula
       ? { to: `/coaches/${encodeURIComponent(doc.issuer_id)}?marcar=1&cupom=${encodeURIComponent(doc.code)}`, label: t('Pedir aula com este cupom') }
@@ -261,15 +265,15 @@ function Banner({ banner, posicao, total }) {
  *   `platformOn` (divulgação da plataforma), `coachesOn` (dos professores).
  */
 export default function HomePromoBanners({
-  arenasOn = true, platformOn = false, coachesOn = false, className = 'mb-8',
+  arenasOn = true, platformOn = false, coachesOn = false, federationsOn = false, className = 'mb-8',
 } = {}) {
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const cupons = useHomeBannerCoupons({ enabled: arenasOn });
   const campanhas = useHomeCampaignBanners({ enabled: arenasOn });
-  const promosOn = platformOn || coachesOn;
+  const promosOn = platformOn || coachesOn || federationsOn;
   const promos = useHomePromos({ enabled: promosOn });
-  const quem = usePromoViewer({ enabled: coachesOn });
+  const quem = usePromoViewer({ enabled: coachesOn, federations: federationsOn });
   const listaCupons = useMemo(() => (Array.isArray(cupons.data) ? cupons.data : []), [cupons.data]);
   const listaCampanhas = useMemo(() => (Array.isArray(campanhas.data) ? campanhas.data : []), [campanhas.data]);
   const arenaIds = useMemo(() => [...new Set(
@@ -306,8 +310,8 @@ export default function HomePromoBanners({
     isCampaignOnIn: (id) => marketingLigado.isOnIn(id) && campanhasLigadas.isOnIn(id),
   };
   const promoItens = useMemo(() => (promosOn && promos.data ? homePromoItems({
-    coupons: promos.data.coupons, campaigns: promos.data.campaigns, platformOn, coachesOn, viewer: quem, today: todayISO(),
-  }) : []), [promosOn, promos.data, platformOn, coachesOn, quem]);
+    coupons: promos.data.coupons, campaigns: promos.data.campaigns, platformOn, coachesOn, federationsOn, viewer: quem, today: todayISO(),
+  }) : []), [promosOn, promos.data, platformOn, coachesOn, federationsOn, quem]);
   const cidades = mergeBannerCities(arenasOn ? bannerCities(dados) : [], promoCities(promoItens));
   const banners = [
     ...(arenasOn ? homeBanners(dados, region) : []),

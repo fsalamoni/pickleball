@@ -8,7 +8,7 @@ import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   BadgeCheck, Bell, BellOff, Box, Dumbbell, Footprints, GraduationCap, Heart, MapPin, Network, Shirt, Star, Store, Tag, Truck, Volleyball, Backpack,
-  Building2,
+  Building2, Landmark,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -58,6 +58,7 @@ const SELLER_TYPE_META = {
   store: { label: tk('Loja'), Icon: Store },
   arena: { label: tk('Arena'), Icon: Building2 },
   coach: { label: tk('Professor'), Icon: GraduationCap },
+  federation: { label: tk('Federação'), Icon: Landmark },
   athlete: { label: tk('Atleta'), Icon: null },
 };
 

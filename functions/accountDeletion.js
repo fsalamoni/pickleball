@@ -233,6 +233,8 @@ const RETAINED_AS_IS = Object.freeze([
   // de equipe); a importação lista e-mails de quem AINDA não tem conta.
   { col: 'federation_courses', field: 'created_by', label: 'Cursos de federação que cadastrou' },
   { col: 'federation_imports', field: 'by', label: 'Importações de filiados que fez (como equipe)' },
+  // PR 4: a notícia é da federação (quem escreveu é só o uid de equipe).
+  { col: 'federation_news', field: 'created_by', label: 'Notícias de federação que escreveu (como equipe)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */

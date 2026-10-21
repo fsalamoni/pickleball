@@ -69,7 +69,7 @@ function estadoInicial(campaign, today, issuerType) {
     message: campaign?.message || '',
     audience: PROMO_AUDIENCES_BY_ISSUER[issuerType][0],
     detail: { interest: '', state: '', city: '' },
-    notify: !campaign,
+    notify: !campaign && PROMO_AUDIENCES_BY_ISSUER[issuerType].length > 0,
     destination: campaign?.destination || { type: PROMO_DESTINATION.DETAILS, target_id: '', target_label: '' },
     source: !b ? (campaign ? SEM_BANNER : BANNER_SOURCE.DESIGN) : b.source,
     templateId: b?.template_id || (b ? null : base.id),
@@ -129,6 +129,9 @@ function DetalheDoPublico({ audience, detail, onChange }) {
  */
 export default function PromoCampaignForm({ issuer, campaign = null, onClose }) {
   const ehProfessor = issuer.type === PROMO_ISSUER.COACH;
+  const ehFederacao = issuer.type === PROMO_ISSUER.FEDERATION;
+  // Federação não avisa pela campanha: o aviso aos filiados é a notícia.
+  const podeAvisar = PROMO_AUDIENCES_BY_ISSUER[issuer.type].length > 0;
   const editando = Boolean(campaign);
   const today = todayISO();
   const [f, setF] = useState(() => estadoInicial(campaign, today, issuer.type));
@@ -159,7 +162,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
   const vLugar = banner ? normalizePromoPlacement(f, { today }) : { valid: true, errors: {} };
   const vAlcance = banner && f.show_home ? normalizeReach(f.reach) : { valid: true, errors: {} };
   const cta = promoDestinationCta(f.destination, f.design);
-  const pagina = ehProfessor ? t('no seu perfil') : t('na vitrine de promoções');
+  const pagina = ehProfessor ? t('no seu perfil') : ehFederacao ? t('na página da federação') : t('na vitrine de promoções');
 
   const falta = [
     ...(!editando && !f.name.trim() ? [t('o nome da campanha')] : []),
@@ -171,7 +174,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
     ...(!editando && f.notify && publicoCarregando ? [t('carregar o público do aviso')] : []),
     ...(!editando && f.notify && publicoFalhou ? [t('carregar o público do aviso')] : []),
     ...(!editando && f.notify && !publicoFalhou && !publicoCarregando && destinatarios.length === 0 ? [t('alguém no público do aviso')] : []),
-    ...(!editando && !f.notify && !banner ? [t('um banner ou um aviso — a campanha precisa aparecer em algum lugar')] : []),
+    ...(!editando && !f.notify && !banner ? [podeAvisar ? t('um banner ou um aviso — a campanha precisa aparecer em algum lugar') : t('o banner')] : []),
     ...(editando && !banner ? [t('o banner')] : []),
   ];
 
@@ -184,6 +187,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
       : null,
     t('Leva a: {destino}.', { destino: `${t(PROMO_DESTINATION_META[vDestino.value.type].label)}${vDestino.value.target_label ? ` (${vDestino.value.target_label})` : ''}` }),
     ehProfessor && banner && f.visibility === PROMO_VISIBILITY.STUDENTS ? t('O banner aparece só para os seus alunos.') : null,
+    ehFederacao && banner && f.visibility === PROMO_VISIBILITY.STUDENTS ? t('O banner aparece só para os filiados.') : null,
     !editando && f.notify ? t('Aviso no aplicativo para {publico} — não dá para cancelar depois. Mantenha esta tela aberta até terminar de enviar.', { publico: pessoas(destinatarios.length) }) : null,
   ].filter(Boolean);
 
@@ -240,7 +244,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
           <Secao n={1} titulo={t('O que é')} descricao={t('O nome aparece para você na lista e é o título do aviso.')}>
             <V2Field label={t('Nome da campanha')} htmlFor="pcamp-nome" required>
               <V2Input id="pcamp-nome" maxLength={80}
-                placeholder={ehProfessor ? t('Turma nova de iniciantes') : t('Inscrições abertas para o Open')}
+                placeholder={ehProfessor ? t('Turma nova de iniciantes') : ehFederacao ? t('Etapa estadual: inscrições abertas') : t('Inscrições abertas para o Open')}
                 value={f.name} onChange={(e) => set({ name: e.target.value })} />
             </V2Field>
           </Secao>
@@ -281,9 +285,10 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_on_page}
                   onChange={(e) => set({ show_on_page: e.target.checked })} />
                 <span>
-                  <span className="block text-sm font-bold text-ink">{ehProfessor ? t('No seu perfil') : t('Na vitrine de promoções')}</span>
+                  <span className="block text-sm font-bold text-ink">{ehProfessor ? t('No seu perfil') : ehFederacao ? t('Na página da federação') : t('Na vitrine de promoções')}</span>
                   <span className="block text-xs text-gray-500">
-                    {ehProfessor ? t('No topo do seu perfil de professor — e na vitrine de promoções.') : t('A página de promoções da plataforma.')}
+                    {ehProfessor ? t('No topo do seu perfil de professor — e na vitrine de promoções.')
+                      : ehFederacao ? t('Na página pública da federação — e na vitrine de promoções.') : t('A página de promoções da plataforma.')}
                   </span>
                 </span>
               </label>
@@ -299,13 +304,15 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
             {f.show_home && (
               <PromoReachPicker idPrefix="pcamp-alcance" value={f.reach} onChange={(reach) => set({ reach })} />
             )}
-            {ehProfessor && (
+            {(ehProfessor || ehFederacao) && (
               <label className="flex items-start gap-2 text-sm text-gray-600">
                 <input type="checkbox" className="mt-0.5 h-4 w-4 accent-ink" checked={f.visibility === PROMO_VISIBILITY.STUDENTS}
                   onChange={(e) => set({ visibility: e.target.checked ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL })} />
                 <span>
-                  {t('Mostrar o banner só para os meus alunos')}
-                  <span className="block text-xs text-gray-500">{t('Útil para avisos da turma. Desmarcado, é para atrair gente nova.')}</span>
+                  {ehFederacao ? t('Mostrar o banner só para os filiados') : t('Mostrar o banner só para os meus alunos')}
+                  <span className="block text-xs text-gray-500">
+                    {ehFederacao ? t('Benefício de quem tem filiação ativa. Desmarcado, é para atrair novos filiados.') : t('Útil para avisos da turma. Desmarcado, é para atrair gente nova.')}
+                  </span>
                 </span>
               </label>
             )}
@@ -316,7 +323,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
           </Secao>
         )}
 
-        {!editando && (
+        {!editando && podeAvisar && (
           <Secao n={banner ? 5 : 4} titulo={t('Aviso no aplicativo')} descricao={t('Chega na hora para o público escolhido, e leva ao mesmo destino do banner.')}>
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.notify} onChange={(e) => set({ notify: e.target.checked })} />

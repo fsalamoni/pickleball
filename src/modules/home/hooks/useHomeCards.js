@@ -31,7 +31,8 @@ export function useHomeCardsContext() {
   const evolucao = true;
   const treino = true;
   const mercado = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
-  return useMemo(() => ({ evolucao, treino, mercado }), [evolucao, treino, mercado]);
+  const federacao = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
+  return useMemo(() => ({ evolucao, treino, mercado, federacao }), [evolucao, treino, mercado, federacao]);
 }
 
 /**

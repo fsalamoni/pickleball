@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Timestamp } from 'firebase/firestore';
 import {
-  addMonthsISO, canRequestMembership, cardCodeFromBytes, computeValidUntil, daysBetween, formatMemberNumber, memberCounts, membershipState,
+  addMonthsISO, canRequestMembership, homeFederationRows, cardCodeFromBytes, computeValidUntil, daysBetween, formatMemberNumber, memberCounts, membershipState,
   normalizeCardCode, publicVerification, renewalStart, toISODate, CARD_CODE_ALPHABET,
 } from './membership.js';
 
@@ -94,5 +94,18 @@ describe('publicVerification', () => {
       { status: 'pending' }, { status: 'active', valid_until: '2026-11-01' }, { status: 'active', valid_until: '2026-01-01' },
     ], '2026-10-18');
     expect(c).toMatchObject({ total: 3, pending: 1, active: 1, expiring: 1, expired: 1 });
+  });
+});
+
+describe('homeFederationRows', () => {
+  it('a filiação que pede ação vem primeiro; cancelada e recusada saem', () => {
+    const rows = homeFederationRows([
+      { id: 'a', status: 'active', valid_until: '2027-06-01' },
+      { id: 'b', status: 'awaiting_payment' },
+      { id: 'c', status: 'active', valid_until: '2026-10-25' },
+      { id: 'd', status: 'cancelled' },
+      { id: 'e', status: 'rejected' },
+    ], '2026-10-21');
+    expect(rows.map((r) => [r.member.id, r.acao])).toEqual([['b', 'pagar'], ['c', 'renovar'], ['a', '']]);
   });
 });
