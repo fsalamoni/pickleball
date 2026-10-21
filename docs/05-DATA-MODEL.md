@@ -1600,7 +1600,13 @@ só o dono lê, lista e apaga; cria imagem (webp/jpeg/png) ou PDF < 5 MB, sem
 sobrescrever (`storage.rules`).
 
 ### `federations/{id}` (NOVO)
-Público quando `status == 'approved'`; antes só quem pediu, a equipe e o admin.
+Público quando `status == 'approved'` **e** `published == true` (`fedPublic()`);
+fora disso só quem pediu, a equipe, o filiado ativo e o admin (`fedSees()` vale
+o mesmo para as coleções filhas). `published` (opcional, booleano, ausente =
+oculta; só a permissão `admin` grava e só com a federação aprovada; o pedido
+não nasce com ele) + `published_at`/`published_by` e
+`unpublished_at`/`unpublished_by` — `docs/50-FEDERACAO.md` §17. O diretório
+consulta `status` + `published` (duas igualdades, sem índice).
 `name`, `acronym`, `slug` (único, `[a-z0-9-]`, a página `/f/:slug`), `level`
 (`state|regional|national`), `state`, `city`, `about`, `site`, `instagram`,
 `contact_public { email, phone }`, `branding { color, logo_url }`,

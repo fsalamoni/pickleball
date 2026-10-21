@@ -2569,6 +2569,13 @@ const GUIAS_BASE = [
         body: tk('Crie ao menos um plano e cadastre o Pix que recebe. Sem os dois, ninguém consegue se filiar num plano pago.'),
       },
       {
+        id: 'publicar',
+        route: '/federacoes/*/gerir',
+        target: 'federacao-aba-publicacao',
+        title: tk('Por último, publicar'),
+        body: tk('A federação nasce oculta: só a equipe e os filiados a veem. Com tudo pronto, Publicação → "Tornar pública" abre a página, o diretório e a filiação para todo mundo. A lista ao lado diz o que ainda falta.'),
+      },
+      {
         id: 'filiados',
         route: '/federacoes/*/gerir',
         target: 'federacao-secao-filiados',

@@ -6,7 +6,7 @@
  * o admin master vê tudo (os cargos são de cada federação). O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -113,6 +113,7 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'planos', label: tk('Planos'), icon: CreditCard },
         { value: 'pix', label: tk('Recebimento'), icon: Wallet },
         ...(admin ? [
+          { value: 'publicacao', label: tk('Publicação'), icon: Globe, dica: 'federacao-aba-publicacao' },
           { value: 'pagina', label: tk('Página'), icon: FileText },
           { value: 'modulos', label: tk('Módulos'), icon: Puzzle },
           { value: 'regras', label: tk('Regras'), icon: ClipboardList },

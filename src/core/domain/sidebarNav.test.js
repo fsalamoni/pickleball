@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   ALL_SIDEBAR_ITEMS, SIDEBAR_ITEM as I, SIDEBAR_ITEM_META, SIDEBAR_PRESET, SIDEBAR_PRESET_ITEMS,
   chosenSidebar, defaultSidebarPreset, hiddenSidebarItems, isPresetSidebar, moveSidebarItem,
-  sidebarPresetAvailable, toggleSidebarItem, visibleSidebarItems,
+  newSidebarItems, sidebarPresetAvailable, toggleSidebarItem, visibleSidebarItems,
 } from './sidebarNav';
+
+const semFlags = (itens) => itens.filter((i) => i !== I.MERCADO && i !== I.FEDERACOES);
 
 describe('padrões por papel', () => {
   it('arena > professor > atleta', () => {
@@ -27,9 +29,9 @@ describe('padrões por papel', () => {
 
 describe('chosenSidebar', () => {
   it('sem escolha, o padrão do papel; o item de papel que a pessoa não tem some', () => {
-    // O Mercado só entra com a flag dele ligada.
-    expect(chosenSidebar(null, {})).toEqual({ preset: 'atleta', items: SIDEBAR_PRESET_ITEMS.atleta.filter((i) => i !== I.MERCADO) });
-    expect(chosenSidebar(null, { mercado: true })).toEqual({ preset: 'atleta', items: SIDEBAR_PRESET_ITEMS.atleta });
+    // O Mercado e as Federações só entram com a flag de cada um ligada.
+    expect(chosenSidebar(null, {})).toEqual({ preset: 'atleta', items: semFlags(SIDEBAR_PRESET_ITEMS.atleta) });
+    expect(chosenSidebar(null, { mercado: true, federacoes: true })).toEqual({ preset: 'atleta', items: SIDEBAR_PRESET_ITEMS.atleta });
     const arena = chosenSidebar(null, { arenas: true });
     expect(arena.preset).toBe('arena');
     expect(arena.items[1]).toBe(I.MINHA_ARENA);
@@ -47,6 +49,29 @@ describe('chosenSidebar', () => {
   });
 });
 
+describe('⭐ item que a pessoa passa a ver entra na barra que ela já escolheu', () => {
+  it('as Federações estão nos três padrões, antes do Mercado', () => {
+    Object.values(SIDEBAR_PRESET_ITEMS).forEach((itens) => {
+      expect(itens.indexOf(I.FEDERACOES)).toBe(itens.indexOf(I.MERCADO) - 1);
+    });
+  });
+  it('escolha antiga (sem `known`): só as Federações entram, antes da Minha área', () => {
+    expect(newSidebarItems(undefined)).toEqual([I.FEDERACOES]);
+    const r = chosenSidebar({ preset: 'atleta', items: [I.INICIO, I.JOGAR, I.PERFIL] }, { federacoes: true, mercado: true });
+    expect(r.items).toEqual([I.INICIO, I.JOGAR, I.FEDERACOES, I.PERFIL]);
+    // Sem a flag, nada muda.
+    expect(chosenSidebar({ preset: 'atleta', items: [I.INICIO, I.JOGAR, I.PERFIL] }, {}).items).toEqual([I.INICIO, I.JOGAR, I.PERFIL]);
+  });
+  it('com `known`: o que a pessoa já podia ver e tirou continua fora; a funcionalidade que ela não via entra; item de papel, não', () => {
+    const known = ALL_SIDEBAR_ITEMS.filter((i) => i !== I.FEDERACOES && i !== I.MINHA_ARENA);
+    const salvo = { preset: 'atleta', items: [I.INICIO, I.JOGAR, I.PERFIL], known };
+    const r = chosenSidebar(salvo, { federacoes: true, mercado: true, arenas: true });
+    expect(r.items).toEqual([I.INICIO, I.JOGAR, I.FEDERACOES, I.PERFIL]);
+    expect(r.items).not.toContain(I.MERCADO);
+    expect(chosenSidebar({ ...salvo, known: ALL_SIDEBAR_ITEMS }, { federacoes: true }).items).toEqual([I.INICIO, I.JOGAR, I.PERFIL]);
+  });
+});
+
 describe('editar', () => {
   const papeis = { arenas: true, professor: true };
   it('ligar entra antes da Minha área; desligar tira; fixo não sai', () => {
@@ -61,7 +86,7 @@ describe('editar', () => {
     expect(toggleSidebarItem(base, I.MINHA_ARENA, {})).not.toContain(I.MINHA_ARENA);
   });
   it('mover: ninguém passa à frente do Início; na ponta não faz nada', () => {
-    const base = SIDEBAR_PRESET_ITEMS.atleta.filter((i) => i !== I.MERCADO);
+    const base = semFlags(SIDEBAR_PRESET_ITEMS.atleta);
     expect(moveSidebarItem(base, I.JOGAR, -1)).toEqual(base);
     expect(moveSidebarItem(base, I.INICIO, 1)).toEqual(base);
     expect(moveSidebarItem(base, I.COMPETIR, -1)[1]).toBe(I.COMPETIR);

@@ -305,10 +305,11 @@ async function feed(ctx, chave) {
   const porId = await ctx.db.collection(f.C.federations).doc(k).get();
   if (porId.exists) fed = { id: porId.id, ...porId.data() };
   else {
-    const q = await ctx.db.collection(f.C.federations).where('slug', '==', k).where('status', '==', 'approved').limit(1).get();
+    const q = await ctx.db.collection(f.C.federations).where('slug', '==', k).where('status', '==', 'approved').where('published', '==', true).limit(1).get();
     if (!q.empty) fed = { id: q.docs[0].id, ...q.docs[0].data() };
   }
-  if (!fed || fed.status !== 'approved' || !(fed.modules && fed.modules.calendar === true)) return null;
+  // A agenda assinável é pública: a federação oculta (ainda não publicada) não tem.
+  if (!f.publicada(fed) || !(fed.modules && fed.modules.calendar === true)) return null;
   const desde = ctx.now - FEED_PAST_DAYS * DAY_MS;
   const evs = (await ctx.db.collection(EVENTS).where('federation_id', '==', fed.id).where('visibility', '==', 'public').get())
     .docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => (Number(e.ends_at_ms) || 0) >= desde);

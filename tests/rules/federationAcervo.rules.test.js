@@ -53,7 +53,7 @@ beforeEach(async () => {
   await testEnv.clearStorage();
   await semRegras(async (db, storage) => {
     await setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: { federations: true } });
-    await setDoc(doc(db, 'federations', FED), { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', created_by: PRES, modules: { official_docs: true } });
+    await setDoc(doc(db, 'federations', FED), { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', published: true, created_by: PRES, modules: { official_docs: true } });
     await setDoc(doc(db, 'federation_staff', `${FED}_${PRES}`), { federation_id: FED, user_id: PRES, role: 'president' });
     await setDoc(doc(db, 'federation_staff', `${FED}_${SEC}`), { federation_id: FED, user_id: SEC, role: 'secretary' });
     await setDoc(doc(db, 'federation_staff', `${FED}_${TES}`), { federation_id: FED, user_id: TES, role: 'treasurer' });

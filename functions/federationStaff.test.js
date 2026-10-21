@@ -24,7 +24,7 @@ const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discip
 function cenario() {
   return createFakeDb({
     'platform_settings/global': { feature_flags: { federations: true } },
-    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved' },
+    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true },
     'federations/nova': { name: 'Nova', acronym: 'FN', slug: 'fn', status: 'pending' },
     // presidente antigo (sem `perms`): vale pelo papel e é admin master
     'federation_staff/fpp_pres': { federation_id: 'fpp', user_id: 'pres', user_name: 'Pres', role: 'president' },

@@ -15,7 +15,7 @@ import {
   useFederation, useFederationAffiliations, useFederationDocsAll, useFederationCharges, useFederationCourses, useFederationCredentials, useFederationDocuments, useFederationImports, useFederationMembers, useFederationNews, useFederationPlans,
   useFederationReports, useFederationResults, useFederationSanctions, useFederationStaff, useFederationTournaments, useFederationTransfers, useIncomingTransfers, useMyFederationRole,
 } from '@/modules/federations/hooks/useFederations';
-import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { fedModuleOn, isFederationHidden } from '@/modules/federations/domain/federation';
 import { FED_PERMISSION, FEDERATION_STATUS, FEDERATION_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
@@ -24,6 +24,7 @@ import { FED_SECTION_GROUPS, buildFederationSections, sectionOfTab } from '@/v2/
 import { FedBadges, FedLogo, FederationGate, fedPath } from '@/v2/components/federations/federationUi';
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
+import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
 import { t } from '@/core/i18n';
 
 const FedHojePanel = lazy(() => import('@/v2/components/federations/manage/FedHojePanel'));
@@ -112,6 +113,7 @@ function Central({ federationId }) {
             <FedBadges federation={f} />
             {papel.grant ? <V2Badge tone="amber">{t('Suporte da plataforma')}</V2Badge> : papel.roleName && <V2Badge tone="ink">{papel.roleName}</V2Badge>}
             {naoAprovada && <V2Badge tone="amber">{t(FEDERATION_STATUS_LABELS[f.status] || f.status)}</V2Badge>}
+            {isFederationHidden(f) && <V2Badge tone="amber">{t('Oculta')}</V2Badge>}
           </div>
         </div>
         <Settings2 className="hidden h-6 w-6 text-gray-500 sm:block" aria-hidden="true" />
@@ -121,9 +123,11 @@ function Central({ federationId }) {
 
       {naoAprovada && (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {f.status === FEDERATION_STATUS.SUSPENDED ? t('A federação está suspensa pela plataforma: a página pública e as filiações ficam fechadas até a revisão.') : f.status === FEDERATION_STATUS.REJECTED ? t('O pedido de abertura foi recusado pela plataforma: {motivo}.', { motivo: f.review?.reason || t('sem motivo informado') }) : t('A federação ainda não foi aprovada pela plataforma. Você já pode preparar planos, Pix e página; a filiação abre depois da aprovação.')}
+          {f.status === FEDERATION_STATUS.SUSPENDED ? t('A federação está suspensa pela plataforma: a página pública e as filiações ficam fechadas até a revisão.') : f.status === FEDERATION_STATUS.REJECTED ? t('O pedido de abertura foi recusado pela plataforma: {motivo}.', { motivo: f.review?.reason || t('sem motivo informado') }) : t('A federação ainda não foi aprovada pela plataforma. Você já pode preparar planos, Pix e página. Depois da aprovação ela segue oculta até o admin da federação publicá-la.')}
         </p>
       )}
+
+      <FedHiddenBanner federation={f} canPublish={admin} onOpen={() => setTab('publicacao')} />
 
       <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} perms={perms} onIrParaAba={irParaAba} />
 

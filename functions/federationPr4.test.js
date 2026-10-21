@@ -20,7 +20,7 @@ const SEC = { uid: 'sec' };
 function cenario({ modules = { news: true } } = {}) {
   return createFakeDb({
     'platform_settings/global': { feature_flags: { federations: true } },
-    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', modules },
+    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, modules },
     'federation_staff/fpp_com': { federation_id: 'fpp', user_id: 'com', role: 'communication' },
     'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
     'federation_staff/fpp_tes': { federation_id: 'fpp', user_id: 'tes', role: 'treasurer' },

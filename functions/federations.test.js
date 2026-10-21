@@ -22,7 +22,7 @@ const ADMIN = { uid: 'admin', isPlatformAdmin: true };
 function cenario({ flag = true } = {}) {
   return createFakeDb({
     'platform_settings/global': { feature_flags: { federations: flag } },
-    'federations/fpp': { name: 'Federação Paulista de Pickleball', acronym: 'FPP', slug: 'fpp', status: 'approved', member_counter: 0, created_by: 'pres' },
+    'federations/fpp': { name: 'Federação Paulista de Pickleball', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, member_counter: 0, created_by: 'pres' },
     'federations/nova': { name: 'Federação Nova', acronym: 'FN', slug: 'fn', status: 'pending', created_by: 'bia', created_by_name: 'Bia' },
     'federations/clone': { name: 'Federação Clone', acronym: 'FC', slug: 'fpp', status: 'pending', created_by: 'bia', created_by_name: 'Bia' },
     'federations/semdono': { name: 'Federação Sem Dono', acronym: 'FSD', slug: 'fsd', status: 'pending', created_by: 'zed', created_by_name: 'Zed' },
@@ -40,6 +40,15 @@ describe('federações no servidor', () => {
   it('com a flag desligada nada se filia', async () => {
     const db = cenario({ flag: false });
     await expect(fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'anual' })).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('aprovada mas OCULTA (o admin ainda não publicou): ninguém se filia', async () => {
+    const db = cenario();
+    db.store.docs.set('federations/fpp', { ...doc(db, 'federations/fpp'), published: false });
+    await expect(fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'anual' })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(fed.publicada({ status: 'approved' })).toBe(false);
+    expect(fed.publicada({ status: 'suspended', published: true })).toBe(false);
+    expect(fed.publicada({ status: 'approved', published: true })).toBe(true);
   });
 
   it('pedido → aprovação → cobrança → confirmação → carteirinha verificável → suspensão gira o código', async () => {

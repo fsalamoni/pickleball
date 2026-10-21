@@ -54,14 +54,14 @@ async function alvoDe(ctx, fed, kind, id) {
   return { ref, alvo: { id: snap.id, ...snap.data() }, key: `${kind}_${snap.id}` };
 }
 
-/** Quem lê: igual à regra do documento ou do evento. */
+/** Quem lê: igual à regra do documento ou do evento (o público da federação OCULTA é quem a vê: equipe e filiados — `fedSees`). */
 async function podeLer(ctx, fed, kind, alvo, actor, perms) {
   if (moderador(perms)) return true;
   if (kind === 'doc' && alvo.status !== 'published') return false;
-  if (alvo.visibility === 'public') return true;
+  if (alvo.visibility === 'public' && f.publicada(fed)) return true;
   if (!actor) return false;
   if (perms.length > 0) return true;
-  if (alvo.visibility !== 'members') return false;
+  if (alvo.visibility !== 'members' && alvo.visibility !== 'public') return false;
   const m = await ctx.db.collection(f.C.members).doc(`${fed.id}_${actor.uid}`).get();
   return m.exists && m.data().status === 'active';
 }

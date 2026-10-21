@@ -26,6 +26,7 @@ export const SIDEBAR_ITEM = Object.freeze({
   PERFIL: 'perfil',
   PARCEIROS: 'parceiros',
   MERCADO: 'mercado',
+  FEDERACOES: 'federacoes',
   MINHA_ARENA: 'minha-arena',
   PROFESSOR: 'professor',
   ADMIN: 'admin',
@@ -35,7 +36,7 @@ const I = SIDEBAR_ITEM;
 
 /**
  * `requer`: o papel de que o item depende (`arenas`, `professor`, `admin`) —
- * ou, no `mercado`, a flag do Mercado ligada.
+ * ou, no `mercado` e em `federacoes`, a flag da funcionalidade ligada.
  * `fixo`: não sai da barra. Os rótulos são os do menu (o da arena é o nome dela).
  */
 export const SIDEBAR_ITEM_META = Object.freeze({
@@ -48,6 +49,7 @@ export const SIDEBAR_ITEM_META = Object.freeze({
   [I.PERFIL]: { label: tk('Minha área'), description: tk('Tudo o que é seu, inclusive o que você gere.'), fixo: true },
   [I.PARCEIROS]: { label: tk('Parceiros'), description: tk('Os parceiros da plataforma.') },
   [I.MERCADO]: { label: tk('Mercado'), description: tk('Comprar e vender produtos de pickleball.'), requer: 'mercado' },
+  [I.FEDERACOES]: { label: tk('Federações'), description: tk('As federações, a sua filiação e a Central da que você gere.'), requer: 'federacoes' },
   [I.MINHA_ARENA]: { label: tk('Minha arena'), description: tk('A Central da arena que você gere, com as pendências.'), requer: 'arenas' },
   [I.PROFESSOR]: { label: tk('Painel do professor'), description: tk('Agenda, alunos, clínicas e horários.'), requer: 'professor' },
   [I.ADMIN]: { label: tk('Admin'), description: tk('O painel da plataforma.'), requer: 'admin', fixo: true },
@@ -66,12 +68,40 @@ export const SIDEBAR_PRESET_META = Object.freeze({
 
 /** Os itens de cada padrão, na ordem. Admin entra sozinho para quem é (fixo). */
 export const SIDEBAR_PRESET_ITEMS = Object.freeze({
-  [SIDEBAR_PRESET.ATLETA]: Object.freeze([I.INICIO, I.JOGAR, I.COMPETIR, I.ARENAS, I.COMUNIDADE, I.AULAS, I.MERCADO, I.PERFIL]),
-  [SIDEBAR_PRESET.ARENA]: Object.freeze([I.INICIO, I.MINHA_ARENA, I.ARENAS, I.JOGAR, I.COMPETIR, I.MERCADO, I.PERFIL]),
-  [SIDEBAR_PRESET.PROFESSOR]: Object.freeze([I.INICIO, I.PROFESSOR, I.AULAS, I.JOGAR, I.COMPETIR, I.MERCADO, I.PERFIL]),
+  [SIDEBAR_PRESET.ATLETA]: Object.freeze([I.INICIO, I.JOGAR, I.COMPETIR, I.ARENAS, I.COMUNIDADE, I.AULAS, I.FEDERACOES, I.MERCADO, I.PERFIL]),
+  [SIDEBAR_PRESET.ARENA]: Object.freeze([I.INICIO, I.MINHA_ARENA, I.ARENAS, I.JOGAR, I.COMPETIR, I.FEDERACOES, I.MERCADO, I.PERFIL]),
+  [SIDEBAR_PRESET.PROFESSOR]: Object.freeze([I.INICIO, I.PROFESSOR, I.AULAS, I.JOGAR, I.COMPETIR, I.FEDERACOES, I.MERCADO, I.PERFIL]),
 });
 
-/** @typedef {{ arenas?: boolean, professor?: boolean, admin?: boolean, mercado?: boolean }} Papeis */
+/**
+ * Itens que chegaram DEPOIS da primeira versão da escolha. Quem já tinha um
+ * menu personalizado salvo (sem `known`) não os conhecia: eles entram na barra
+ * dessa pessoa uma vez, antes de Minha área — e ela tira, se não quiser. A
+ * escolha nova grava `known` (os itens que a pessoa podia ver), e daí em diante
+ * vale o mesmo para qualquer item novo ou funcionalidade ligada, sem mexer nesta
+ * lista. Item de PAPEL (Minha arena, Painel do professor) nunca entra sozinho:
+ * ele mora na Minha área e volta à barra pelo padrão do papel ou pela escolha.
+ */
+export const SIDEBAR_ITEMS_ADDED_LATER = Object.freeze([I.FEDERACOES]);
+const POR_PAPEL = new Set(['arenas', 'professor', 'admin']);
+
+/** Os itens novos para quem salvou conhecendo `known` (ausente = a primeira versão). */
+export function newSidebarItems(known) {
+  const conhecidos = Array.isArray(known) ? new Set(known) : new Set(ALL_SIDEBAR_ITEMS.filter((id) => !SIDEBAR_ITEMS_ADDED_LATER.includes(id)));
+  return ALL_SIDEBAR_ITEMS.filter((id) => !conhecidos.has(id) && !SIDEBAR_ITEM_META[id].fixo && !POR_PAPEL.has(SIDEBAR_ITEM_META[id].requer));
+}
+
+/** Acrescenta os itens novos a uma lista salva: antes de Minha área/Admin, que fecham a barra. */
+function comItensNovos(lista, known) {
+  const novos = newSidebarItems(known).filter((id) => !lista.includes(id));
+  if (!novos.length) return lista;
+  const corte = lista.findIndex((x) => x === I.PERFIL || x === I.ADMIN);
+  const saida = [...lista];
+  saida.splice(corte < 0 ? saida.length : corte, 0, ...novos);
+  return saida;
+}
+
+/** @typedef {{ arenas?: boolean, professor?: boolean, admin?: boolean, mercado?: boolean, federacoes?: boolean }} Papeis */
 
 /** O item pode aparecer para esta pessoa? */
 export function sidebarItemAvailable(id, papeis = {}) {
@@ -124,15 +154,16 @@ export function visibleSidebarItems(escolhidos, papeis = {}) {
 }
 
 /**
- * A escolha em vigor: a salva (`{ preset, items }`) ou o padrão do papel.
- * @param {{ preset?: string, items?: string[] }|null|undefined} salvo `null` = nunca escolheu
+ * A escolha em vigor: a salva (`{ preset, items, known }`) ou o padrão do papel.
+ * Item que nasceu depois da escolha salva entra nela (`newSidebarItems`).
+ * @param {{ preset?: string, items?: string[], known?: string[]|null }|null|undefined} salvo `null` = nunca escolheu
  * @param {Papeis} papeis
  * @returns {{ preset: string, items: string[] }}
  */
 export function chosenSidebar(salvo, papeis = {}) {
   if (salvo && Array.isArray(salvo.items)) {
     const preset = SIDEBAR_PRESET_META[salvo.preset] ? salvo.preset : defaultSidebarPreset(papeis);
-    return { preset, items: visibleSidebarItems(salvo.items, papeis) };
+    return { preset, items: visibleSidebarItems(comItensNovos(normalizeSidebarItems(salvo.items), salvo.known), papeis) };
   }
   const preset = defaultSidebarPreset(papeis);
   return { preset, items: visibleSidebarItems(SIDEBAR_PRESET_ITEMS[preset], papeis) };

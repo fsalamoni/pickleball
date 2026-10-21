@@ -17,7 +17,7 @@
  *   que sempre sobra um admin master. Estas contas dizem antes, na tela.
  */
 import { FED_MODULE, FED_PERMISSION, STAFF_ROLE, STAFF_ROLE_DESCRIPTIONS, STAFF_ROLE_LABELS, STAFF_ROLE_PERMISSIONS, STAFF_TERM_MAX_MONTHS } from './constants.js';
-import { fedModuleOn } from './federation.js';
+import { fedModuleOn, isFederationPublic } from './federation.js';
 import { t } from '@/core/i18n';
 
 export const ALL_PERMISSIONS = Object.freeze(Object.values(FED_PERMISSION));
@@ -157,7 +157,7 @@ export function storeFederations(roles = [], federations = [], nowMs = Date.now(
   return roles
     .filter((r) => staffHas(r, FED_PERMISSION.ADMIN, nowMs) || staffHas(r, FED_PERMISSION.FINANCE, nowMs))
     .map((r) => porId.get(r.federation_id))
-    .filter((f, i, arr) => f && fedModuleOn(f, FED_MODULE.STORE) && arr.indexOf(f) === i);
+    .filter((f, i, arr) => f && isFederationPublic(f) && fedModuleOn(f, FED_MODULE.STORE) && arr.indexOf(f) === i);
 }
 
 /** O acesso de suporte do admin da plataforma ainda vale? */

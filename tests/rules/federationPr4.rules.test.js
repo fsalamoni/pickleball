@@ -27,7 +27,7 @@ const FED2 = 'fedB';
 
 const federacao = (over = {}) => ({
   name: 'Federação Gaúcha de Pickleball', acronym: 'FGP', slug: 'fgp', level: 'state', state: 'RS',
-  status: 'approved', created_by: PRES, modules: { news: true, sponsors: true, promos: true, store: true }, payment: {}, rules: {}, ...over,
+  status: 'approved', published: true, created_by: PRES, modules: { news: true, sponsors: true, promos: true, store: true }, payment: {}, rules: {}, ...over,
 });
 const staff = (uid, role, fed = FED) => ({ federation_id: fed, user_id: uid, role, user_name: uid });
 const noticia = (over = {}) => ({ federation_id: FED, title: 'Etapa estadual', body: 'Inscrições abertas até sexta.', status: 'published', audience: 'public', ...over });
@@ -134,5 +134,22 @@ describe('5. loja oficial no Mercado', () => {
   it('a loja nasce ativa e não traz selo nem reputação', async () => {
     await assertFails(setDoc(doc(como(PRES), 'market_sellers', `federation_${FED}`), vendedor(PRES, { status: 'pending' })));
     await assertFails(setDoc(doc(como(PRES), 'market_sellers', `federation_${FED}`), vendedor(PRES, { verified: true })));
+  });
+});
+
+describe('⭐ federação oculta: notícia pública só para dentro; cupom e loja só depois de publicar', () => {
+  const ocultar = () => semRegras((db) => updateDoc(doc(db, 'federations', FED), { published: false }));
+  it('a notícia "pública" de uma federação oculta não chega a quem é de fora', async () => {
+    await ocultar();
+    await assertFails(getDoc(doc(anonimo(), 'federation_news', 'pub')));
+    await assertSucceeds(getDoc(doc(como(ANA), 'federation_news', 'pub')));
+    await assertSucceeds(getDoc(doc(como(COM), 'federation_news', 'pub')));
+  });
+  it('a equipe segue escrevendo notícia, mas cupom, campanha e a loja só abrem publicada', async () => {
+    await ocultar();
+    await assertSucceeds(setDoc(doc(como(COM), 'federation_news', 'n9'), noticia({ status: 'draft' })));
+    await assertFails(setDoc(doc(como(COM), 'promo_coupons', 'c1'), cupom()));
+    await assertFails(setDoc(doc(como(COM), 'promo_campaigns', 'k1'), { issuer_type: 'federation', issuer_id: FED, title: 'Etapa' }));
+    await assertFails(setDoc(doc(como(TES), 'market_sellers', `federation_${FED}`), vendedor(TES)));
   });
 });

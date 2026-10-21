@@ -225,7 +225,7 @@ function Pagina() {
   if (fq.isError || pq.isError || mq.isError || cq.isError) corpo = <V2ErrorState onRetry={() => [fq, pq, mq, cq].filter((q) => q.isError).forEach((q) => q.refetch())} />;
   else if (fq.isLoading || pq.isLoading || mq.isLoading || cq.isLoading) corpo = <V2Skeleton className="h-96" />;
   else if (!f) corpo = <V2EmptyState icon={Landmark} title={t('Federação não encontrada')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} />;
-  else if (f.status !== FEDERATION_STATUS.APPROVED) corpo = <V2Surface><p className="text-gray-600">{t('Esta federação não está recebendo filiações no momento.')}</p></V2Surface>;
+  else if (f.status !== FEDERATION_STATUS.APPROVED || f.published !== true) corpo = <V2Surface><p className="text-gray-600">{f.status === FEDERATION_STATUS.APPROVED ? t('A filiação abre quando a federação for publicada pelo admin dela.') : t('Esta federação não está recebendo filiações no momento.')}</p></V2Surface>;
   else if (dependente) corpo = <Formulario federation={f} plans={pq.data} dependente onEnviado={() => setParams({}, { replace: true })} />;
   else if (!canRequestMembership(mq.data)) {
     const abertas = (cq.data || []).filter((c) => c.federation_id === f.id && [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));

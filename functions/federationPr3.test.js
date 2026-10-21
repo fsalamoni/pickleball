@@ -29,8 +29,8 @@ const SEC2 = { uid: 'sec2' };
 function cenario() {
   return createFakeDb({
     'platform_settings/global': { feature_flags: { federations: true } },
-    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', member_counter: 0, modules: { courses: true, discipline: true }, rules: { ask_cpf: true, transfer_release_days: 15 } },
-    'federations/fgp': { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', member_counter: 0, modules: {}, rules: {} },
+    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, member_counter: 0, modules: { courses: true, discipline: true }, rules: { ask_cpf: true, transfer_release_days: 15 } },
+    'federations/fgp': { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', published: true, member_counter: 0, modules: {}, rules: {} },
     'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
     'federation_staff/fpp_tes': { federation_id: 'fpp', user_id: 'tes', role: 'treasurer' },
     'federation_staff/fpp_ref': { federation_id: 'fpp', user_id: 'ref', role: 'referees' },

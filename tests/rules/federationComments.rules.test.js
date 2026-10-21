@@ -38,7 +38,7 @@ beforeEach(async () => {
   await testEnv.clearFirestore();
   await semRegras(async (db) => {
     await setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: { federations: true } });
-    await setDoc(doc(db, 'federations', FED), { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', created_by: PRES, modules: { official_docs: true } });
+    await setDoc(doc(db, 'federations', FED), { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', published: true, created_by: PRES, modules: { official_docs: true } });
     await setDoc(doc(db, 'federation_staff', `${FED}_${PRES}`), { federation_id: FED, user_id: PRES, role: 'president' });
     await setDoc(doc(db, 'federation_comments', 'c1'), comentario());
     await setDoc(doc(db, 'federation_comment_reports', `c1_${ZE}`), { federation_id: FED, comment_id: 'c1', reporter_id: ZE, reason: 'spam', created_at_ms: 2 });

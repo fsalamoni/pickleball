@@ -22,7 +22,7 @@ function cenario(mods = { calendar: true, official_docs: true, tournaments: true
   return {
     db: createFakeDb({
       'platform_settings/global': { feature_flags: { federations: true } },
-      'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', modules: mods },
+      'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, modules: mods },
       'federation_staff/fpp_pres': { federation_id: 'fpp', user_id: 'pres', role: 'president' },
       'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
       'federation_staff/fpp_comp': { federation_id: 'fpp', user_id: 'comp', role: 'competitions' },
@@ -159,5 +159,13 @@ describe('calendário oficial: agenda assinável', () => {
     expect(await ag.feed(ctx(c), 'nao-existe')).toBe(null);
     expect(await ag.feed(ctx(c), '../x')).toBe(null);
     expect(await ag.feed(ctx(cenario({})), 'fpp')).toBe(null);
+  });
+
+  it('federação oculta (ainda não publicada) não tem agenda assinável', async () => {
+    const c = cenario();
+    await chamar(c, SEC, { action: 'save', event: ago() });
+    const db = c.db || c;
+    db.store.docs.set('federations/fpp', { ...db.store.docs.get('federations/fpp'), published: false });
+    expect(await ag.feed(ctx(c), 'fpp')).toBe(null);
   });
 });

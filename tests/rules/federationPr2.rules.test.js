@@ -33,7 +33,7 @@ const TID = 'torneio1';
 
 const federacao = (over = {}) => ({
   name: 'Federação Gaúcha de Pickleball', acronym: 'FGP', slug: 'fgp', level: 'state', state: 'RS',
-  status: 'approved', verified: false, official: false, created_by: PRES, modules: { affiliations: true, tournaments: true, ranking: true }, payment: {}, ...over,
+  status: 'approved', published: true, verified: false, official: false, created_by: PRES, modules: { affiliations: true, tournaments: true, ranking: true }, payment: {}, ...over,
 });
 const staff = (uid, role, fed = FED) => ({ federation_id: fed, user_id: uid, role, user_name: uid });
 const pedidoFiliacao = (kind, orgId, over = {}) => ({
@@ -220,5 +220,19 @@ describe('⭐ resultados e ranking oficial', () => {
     await assertFails(updateDoc(doc(como(COMP), 'federations', FED), { ranking_config: { best_n: 4 }, name: 'Outro nome' }));
     // Valor DIFERENTE do que a linha anterior gravou: update idêntico tem `affectedKeys()` vazio e não prova nada.
     await assertFails(updateDoc(doc(como(TES), 'federations', FED), { ranking_config: { best_n: 5 } }));
+  });
+});
+
+describe('⭐ federação oculta: ninguém de fora pede nada', () => {
+  it('filiação de clube e pedido de chancela só depois de publicar', async () => {
+    await semRegras(async (db) => {
+      await updateDoc(doc(db, 'federations', FED), { published: false });
+      await deleteDoc(doc(db, 'federation_affiliations', `${FED}_club_clube1`));
+    });
+    await assertFails(setDoc(doc(como(CLUBADM), 'federation_affiliations', `${FED}_club_clube1`), pedidoFiliacao('club', 'clube1')));
+    await assertFails(updateDoc(doc(como(ORG), 'tournaments', TID), { federation_id: FED, federation_sanction: chancela('pending') }));
+    await assertFails(setDoc(doc(como(ORG), 'tournaments', 't4'), { creator_uid: ORG, name: 'T4', federation_id: FED, federation_sanction: chancela('pending') }));
+    await semRegras((db) => updateDoc(doc(db, 'federations', FED), { published: true }));
+    await assertSucceeds(setDoc(doc(como(CLUBADM), 'federation_affiliations', `${FED}_club_clube1`), pedidoFiliacao('club', 'clube1')));
   });
 });

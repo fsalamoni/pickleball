@@ -108,22 +108,33 @@ export const fetchDocumentContent = (documentId) => chamar('federationDocument',
 
 export async function getFederation(id) {
   if (!id) return null;
-  const snap = await getDoc(doc(db, C.federations, id));
-  return snap.exists() ? toDoc(snap) : null;
+  try {
+    const snap = await getDoc(doc(db, C.federations, id));
+    return snap.exists() ? toDoc(snap) : null;
+  } catch (e) {
+    // Oculta (ainda não publicada), pendente ou suspensa: a regra recusa a
+    // leitura a quem não é dela — para a tela é "indisponível", não "falhou".
+    if (e?.code === 'permission-denied') return null;
+    throw e;
+  }
 }
 
-/** Pela URL pública. Só aprovada tem página; o slug é único entre as aprovadas. */
+/** Pela URL pública. Só a PUBLICADA (aprovada + aberta pelo admin dela) tem página. */
 export async function getFederationBySlug(slug) {
   const s = String(slug || '').toLowerCase();
   if (!s) return null;
-  const q = query(collection(db, C.federations), where('slug', '==', s), where('status', '==', FEDERATION_STATUS.APPROVED), limit(1));
+  const q = query(collection(db, C.federations), where('slug', '==', s), where('status', '==', FEDERATION_STATUS.APPROVED), where('published', '==', true), limit(1));
   const snap = await getDocs(q);
   return snap.empty ? null : toDoc(snap.docs[0]);
 }
 
-/** O diretório: as aprovadas. Filtro de região e ordenação ficam na tela. */
+/**
+ * O diretório: as publicadas (aprovadas pela plataforma e abertas pelo admin
+ * dela). Duas igualdades — a regra é provável e não pede índice composto.
+ * Filtro de região e ordenação ficam na tela.
+ */
 export async function listPublicFederations() {
-  const q = query(collection(db, C.federations), where('status', '==', FEDERATION_STATUS.APPROVED));
+  const q = query(collection(db, C.federations), where('status', '==', FEDERATION_STATUS.APPROVED), where('published', '==', true));
   return (await getDocs(q)).docs.map(toDoc);
 }
 
@@ -146,13 +157,14 @@ export async function getFederationPrivate(id) {
 }
 
 /**
- * O endereço já é de uma federação APROVADA? Só as aprovadas são legíveis por
- * todo mundo, e a consulta precisa ser provável pela regra: sem o filtro de
- * `status` o Firestore a recusava e a conferência "passava" em silêncio. A
- * colisão com um pedido ainda pendente é conferida pelo SERVIDOR na aprovação.
+ * O endereço já é de uma federação PUBLICADA? Só as publicadas são legíveis
+ * por todo mundo, e a consulta precisa ser provável pela regra: sem os filtros
+ * de `status` e `published` o Firestore a recusava e a conferência "passava"
+ * em silêncio. A colisão com uma aprovada ainda oculta (ou um pedido pendente)
+ * é conferida pelo SERVIDOR na aprovação, e de novo aqui ao publicar.
  */
 async function slugEmUso(slug, ignorarId = null) {
-  const q = query(collection(db, C.federations), where('slug', '==', slug), where('status', '==', FEDERATION_STATUS.APPROVED), limit(5));
+  const q = query(collection(db, C.federations), where('slug', '==', slug), where('status', '==', FEDERATION_STATUS.APPROVED), where('published', '==', true), limit(5));
   const snap = await getDocs(q);
   return snap.docs.some((d) => d.id !== ignorarId);
 }
@@ -206,6 +218,25 @@ export async function updateFederationPayment(id, input, { uid } = {}) {
   await updateDoc(doc(db, C.federations, id), { payment: r.value, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'federation_payment_update', actor: { uid }, details: { federation_id: id, pix_key_type: r.value.pix_key_type } });
   return r.value;
+}
+
+/**
+ * Publicar (abrir ao público) ou tirar do ar. Só o admin da federação, e só a
+ * aprovada (a regra confere). Ao publicar, o endereço não pode estar em uso
+ * por outra federação já publicada.
+ */
+export async function setFederationPublished(federation, published, { uid } = {}) {
+  if (!federation?.id) throw new FederationError(t('Federação não encontrada.'));
+  if (federation.status !== FEDERATION_STATUS.APPROVED) throw new FederationError(t('A federação precisa estar aprovada pela plataforma para ser publicada.'));
+  const abrir = Boolean(published);
+  if (abrir && federation.slug && (await slugEmUso(federation.slug, federation.id))) {
+    throw new FederationError(t('O endereço desta federação já está em uso por outra federação publicada. Troque o endereço em Página antes de publicar.'));
+  }
+  const patch = abrir
+    ? { published: true, published_at: serverTimestamp(), published_by: uid || null, updated_at: serverTimestamp() }
+    : { published: false, unpublished_at: serverTimestamp(), unpublished_by: uid || null, updated_at: serverTimestamp() };
+  await updateDoc(doc(db, C.federations, federation.id), patch);
+  await createAuditLog({ action: abrir ? 'federation_publish' : 'federation_unpublish', actor: { uid }, details: { federation_id: federation.id, slug: federation.slug || '' } });
 }
 
 /** Os módulos internos que a federação liga para si. */

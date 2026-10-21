@@ -9,8 +9,8 @@
  */
 import React, { useId, useMemo, useState } from 'react';
 import {
-  Building2, ChevronDown, ChevronUp, GraduationCap, HeartHandshake, LayoutDashboard, LayoutGrid, Lock, PanelLeft,
-  RotateCcw, Swords, Trophy, User, Users,
+  Building2, ChevronDown, ChevronUp, GraduationCap, HeartHandshake, Landmark, LayoutDashboard, LayoutGrid, Lock, PanelLeft,
+  RotateCcw, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -28,6 +28,7 @@ import { t, tn } from '@/core/i18n';
 const ICONES = {
   inicio: LayoutGrid, jogar: Swords, competir: Trophy, comunidade: Users, arenas: Building2, ensino: GraduationCap,
   perfil: User, parceiros: HeartHandshake, 'minha-arena': LayoutDashboard, professor: GraduationCap, admin: LayoutDashboard,
+  mercado: Store, federacoes: Landmark,
 };
 
 function Interruptor({ ligado, onClick, labelledBy }) {
@@ -212,12 +213,14 @@ export default function SidebarSettingsCard() {
   const { arenas } = useMyArenaSummary();
   const coach = useCoach(user?.uid).data;
   const mercado = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const federacoes = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const papeis = useMemo(() => ({
     arenas: arenas.length > 0,
     professor: !!coach,
     admin: !!isPlatformAdmin,
     mercado,
-  }), [arenas.length, coach, isPlatformAdmin, mercado]);
+    federacoes,
+  }), [arenas.length, coach, isPlatformAdmin, mercado, federacoes]);
   const nomes = useMemo(() => (arenas.length === 1 ? { 'minha-arena': arenas[0].name || t('Minha arena') } : {}), [arenas]);
 
   const { itens, preset, padrao } = useSidebarNav(papeis);

@@ -122,7 +122,10 @@ describe('validações', () => {
 });
 
 describe('storeFederations', () => {
-  const fed = (id, store = true) => ({ id, name: id, modules: { store } });
+  const fed = (id, store = true, published = true) => ({ id, name: id, status: 'approved', published, modules: { store } });
+  it('a federação oculta (ainda não publicada) não vende', () => {
+    expect(storeFederations([{ federation_id: 'a', role: 'president' }], [fed('a', true, false)], AGORA)).toEqual([]);
+  });
   it('só admin/financeiro com o mandato valendo, só com a loja ligada, sem repetir', () => {
     const roles = [
       { federation_id: 'a', role: 'treasurer' }, { federation_id: 'b', role: 'secretary' },

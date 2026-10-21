@@ -12,7 +12,7 @@ import { BadgeCheck, Ban, CheckCircle2, ExternalLink, Eye, KeyRound, Landmark, S
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { reviewFederation } from '@/modules/federations/services/federationService';
 import { useAdminFederations, useFederationAccessLogs, useFederationMutation, useFederationPrivate } from '@/modules/federations/hooks/useFederations';
-import { federationReviewActions } from '@/modules/federations/domain/federation';
+import { federationReviewActions, isFederationHidden, isFederationPublic } from '@/modules/federations/domain/federation';
 import { FEDERATION_LEVEL_LABELS, FEDERATION_STATUS, FEDERATION_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { FedBadges, FedLogo, fedManagePath, fedPath, fedPublicPath, quando } from '@/v2/components/federations/federationUi';
@@ -75,7 +75,7 @@ function FederationRow({ f }) {
         <div className="flex flex-wrap items-start gap-3">
           <FedLogo federation={f} />
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{f.name}<V2Badge tone={TONS[f.status] || 'neutral'}>{t(FEDERATION_STATUS_LABELS[f.status] || f.status)}</V2Badge></p>
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{f.name}<V2Badge tone={TONS[f.status] || 'neutral'}>{t(FEDERATION_STATUS_LABELS[f.status] || f.status)}</V2Badge>{isFederationHidden(f) && <V2Badge tone="amber">{t('Oculta')}</V2Badge>}</p>
             <p className="text-xs text-gray-500">{f.acronym} · {t(FEDERATION_LEVEL_LABELS[f.level] || '')}{lugar ? ` · ${lugar}` : ''} · {t('CNPJ {cnpj}', { cnpj: f.cnpj_masked || '—' })} · {t('pedido por {nome} em {data}', { nome: f.created_by_name || '—', data: quando(f.created_at) })}</p>
             <div className="mt-1"><FedBadges federation={f} /></div>
             {f.review?.reason && f.status !== FEDERATION_STATUS.APPROVED && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: f.review.reason })}</p>}
@@ -83,7 +83,7 @@ function FederationRow({ f }) {
         </div>
         {privados && <DadosPrivados federationId={f.id} />}
         <div className="flex flex-wrap gap-2">
-          {acoes.includes('approve') && <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('approve', t('Federação aprovada. Quem pediu virou presidente e foi avisado.'))}><CheckCircle2 className="h-4 w-4" />{t('Aprovar')}</V2Button>}
+          {acoes.includes('approve') && <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('approve', t('Federação aprovada. Quem pediu virou presidente, foi avisado e publica quando estiver pronta.'))}><CheckCircle2 className="h-4 w-4" />{t('Aprovar')}</V2Button>}
           {acoes.includes('reject') && <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('reject')}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>}
           {acoes.includes('suspend') && <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('suspend')}><Ban className="h-4 w-4" />{t('Suspender')}</V2Button>}
           {acoes.includes('verify') && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir('verify', t('Selo "Verificada" concedido.'))}><BadgeCheck className="h-4 w-4" />{t('Marcar verificada')}</V2Button>}
@@ -93,7 +93,7 @@ function FederationRow({ f }) {
           <V2Button type="button" size="sm" variant="ghost" onClick={() => setPrivados((v) => !v)}><Eye className="h-4 w-4" />{privados ? t('Ocultar dados da entidade') : t('Dados da entidade')}</V2Button>
           <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Abrir no app')}</Link></V2Button>
           {f.status === FEDERATION_STATUS.APPROVED && <V2Button asChild size="sm" variant="ghost"><Link to={fedManagePath(f)}><KeyRound className="h-4 w-4" />{t('Entrar na Central (com motivo)')}</Link></V2Button>}
-          {f.status === FEDERATION_STATUS.APPROVED && <V2Button asChild size="sm" variant="ghost"><Link to={fedPublicPath(f)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</Link></V2Button>}
+          {isFederationPublic(f) && <V2Button asChild size="sm" variant="ghost"><Link to={fedPublicPath(f)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</Link></V2Button>}
         </div>
       </V2Surface>
       {motivo && <MotivoDialog acao={motivo} federation={f} onClose={() => setMotivo(null)} />}

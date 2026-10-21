@@ -600,7 +600,7 @@ const ATLETA = {
       summary: tk('Escolher o plano, pagar por Pix à federação e receber a carteirinha digital com QR de verificação.'),
       keywords: ['federação', 'federar', 'filiação', 'filiar', 'carteirinha', 'anuidade', 'mensalidade', 'pix', 'federado', 'cadastrado', 'qr', 'verificar'],
       blocks: [
-        p(tk('Em Competir → Federações ficam as federações aprovadas na plataforma, perto de você primeiro. Cada uma tem página pública, planos de filiação e, quando a federação liga, torneios chancelados e ranking oficial. A federação é uma entidade própria: a plataforma organiza o pedido, a cobrança e a carteirinha, e o dinheiro vai por Pix direto para a conta dela.')),
+        p(tk('No menu, Federações mostra as federações abertas ao público, perto de você primeiro. A federação aprovada só aparece depois que quem a administra a torna pública, em Configurações → Publicação. Cada uma tem página pública, planos de filiação e, quando a federação liga, torneios chancelados e ranking oficial. A federação é uma entidade própria: a plataforma organiza o pedido, a cobrança e a carteirinha, e o dinheiro vai por Pix direto para a conta dela.')),
         steps(
           tk('Abra a federação e toque em "Filiar-se". Escolha o tipo (atleta, professor ou árbitro) e o plano: mensal ou anual, cadastro gratuito ou federado. O preço mostra o desconto que vale para você (por idade, por exemplo).'),
           tk('Diga se a filiação aparece no seu perfil público e se você entra no diretório de filiados. Se joga por um clube, indique-o. Envie.'),
@@ -641,6 +641,7 @@ const ATLETA = {
           tk('Na Central → Configurações → Planos, crie ao menos um plano: para quem (atleta, professor, árbitro), cadastrado ou federado, mensal ou anual, o valor (0 = gratuito), descontos por idade e se aprova na hora.'),
           tk('Em Configurações → Recebimento, cadastre a chave Pix e o nome de quem recebe. Sem Pix, plano pago não gera cobrança.'),
           tk('Em Configurações → Página, capriche no "Sobre", na cor e no logo: é o que aparece em picklerush.web.app/f/sua-sigla.'),
+          tk('Aprovada, a federação nasce OCULTA: só a equipe e os filiados a veem, para você montar tudo com calma. Quando estiver pronta, Configurações → Publicação → "Tornar pública" (só o admin) abre a página, o diretório e a filiação para todo mundo. "Tirar do ar" volta a esconder, sem apagar nada.'),
           tk('Em Equipe, nomeie quem vai ajudar, escolhendo a pessoa pela lista de usuários, o cargo e o mandato. Os cargos de modelo (presidente, diretor, secretaria, financeiro, diretor técnico, de arbitragem, de comunicação e conselho) podem ser editados ou trocados por cargos próprios em Equipe → Cargos.'),
           tk('Chegou pedido? Filiados → Pedidos: aprovar ou recusar com motivo. Aprovado em plano pago, a pessoa recebe a cobrança.'),
           tk('A pessoa pagou e informou? Financeiro → Cobranças: confira o Pix na conta e "Confirmar recebimento". Isso ativa a filiação, emite a carteirinha e avisa a pessoa.'),

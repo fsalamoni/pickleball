@@ -99,6 +99,14 @@ async function exigePerm(ctx, fedId, actor, perm) {
   if (!perms.includes(perm)) falha('permission-denied', 'Você não tem permissão para isso nesta federação.');
 }
 
+/**
+ * PUBLICADA: aprovada pela plataforma E aberta pelo admin dela (`published`,
+ * ausente = oculta). Mesma conta de `fedPublic` na regra e de
+ * `isFederationPublic` no cliente. Oculta, a equipe trabalha; quem é de fora
+ * não se filia, não transfere para ela, não comenta nem assina a agenda.
+ */
+const publicada = (fed) => Boolean(fed) && fed.status === 'approved' && fed.published === true;
+
 async function federacao(ctx, fedId) {
   const snap = await ctx.db.collection(C.federations).doc(texto(fedId, 80)).get();
   if (!snap.exists) falha('not-found', 'Federação não encontrada.');
@@ -159,7 +167,7 @@ async function review(ctx, actor, data) {
   }
   const link = `/federacoes/${fed.id}/gerir`;
   const avisos = {
-    approve: [tx('{sigla} foi aprovada'), tx('A federação está no ar. Configure o Pix, os planos e a equipe na Central da federação.')],
+    approve: [tx('{sigla} foi aprovada'), tx('A federação foi aprovada e segue oculta até você publicar. Configure o Pix, os planos e a equipe na Central e, quando estiver pronta, publique em Configurações → Publicação.')],
     reject: [tx('O pedido da {sigla} foi recusado'), tx('Motivo: {motivo}. Corrija e peça de novo.')],
     suspend: [tx('{sigla} foi suspensa'), tx('Motivo: {motivo}. A página e as filiações ficam fora do ar até a revisão.')],
     verify: [tx('{sigla} recebeu o selo de verificada'), tx('O CNPJ e o estatuto foram conferidos pela plataforma.')],
@@ -398,7 +406,7 @@ function encerrarFiliacao(ctx, batch, memberRef, member, patch) {
  * responsável e nascimento do dependente vão para `private/data`.
  */
 async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
-  if (fed.status !== 'approved') falha('failed-precondition', 'Esta federação não está recebendo filiações.');
+  if (!publicada(fed)) falha('failed-precondition', 'Esta federação não está recebendo filiações.');
   const uid = actor.uid;
   const p = await plano(ctx, fed.id, data.planId);
   if (p.active === false) falha('failed-precondition', 'Este plano não está mais disponível.');
@@ -675,5 +683,5 @@ async function verify(ctx, data) {
 module.exports = {
   FederationError, PERMS, REVIEW, LIVE, C, MINOR_AGE, review, membership, chargeConfirm, sweep, verify, idadeDe,
   // Compartilhado com os módulos do PR 3 (`federationTransfers.js`, `federationCourses.js`, `federationDiscipline.js`, `federationSecretariat.js`).
-  falha, texto, aviso, auditoria, flagLigada, staffPerms, exigePerm, federacao, staffIds, plano, novoCodigo, novoId, novaCobranca, destinatario, encerrarFiliacao, ativar, idadeDoMembro, exigeSemOutraFederacao,
+  falha, texto, aviso, auditoria, flagLigada, staffPerms, exigePerm, federacao, publicada, staffIds, plano, novoCodigo, novoId, novaCobranca, destinatario, encerrarFiliacao, ativar, idadeDoMembro, exigeSemOutraFederacao,
 };

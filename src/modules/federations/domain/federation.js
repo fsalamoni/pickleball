@@ -2,7 +2,7 @@
  * A federação — validação do pedido de abertura, da página e do Pix; os
  * módulos internos que ela liga para si. Lógica pura.
  */
-import { t } from '@/core/i18n';
+import { t, tk } from '@/core/i18n';
 import { isBrazilUF } from '@/core/domain/ufs.js';
 import { isValidCnpj, maskCnpj } from '@/modules/marketplace/domain/seller.js';
 import { normalizePixPayment } from '@/modules/arenas/domain/pix_payment.js';
@@ -116,11 +116,36 @@ export function normalizeModules(raw = {}) {
   return Object.fromEntries(Object.values(FED_MODULE).map((k) => [k, raw?.[k] === true]));
 }
 
-/** A federação aparece em público (diretório, `/f/:slug`)? */
-export const isFederationPublic = (f) => f?.status === FEDERATION_STATUS.APPROVED;
+/**
+ * A federação aparece em público (diretório, `/f/:slug`)? Aprovada pela
+ * plataforma E publicada pelo admin dela (`published`, ausente = oculta) —
+ * a mesma conta de `fedPublic` na regra e de `publicada` no servidor.
+ */
+export const isFederationPublic = (f) => f?.status === FEDERATION_STATUS.APPROVED && f?.published === true;
 
-/** A federação ainda recebe filiados? Suspensa não. */
-export const isFederationOpen = (f) => f?.status === FEDERATION_STATUS.APPROVED;
+/** A federação recebe filiados? Só publicada — suspensa ou oculta não. */
+export const isFederationOpen = isFederationPublic;
+
+/** Aprovada, mas ainda oculta: a equipe está estruturando antes de abrir. */
+export const isFederationHidden = (f) => f?.status === FEDERATION_STATUS.APPROVED && f?.published !== true;
+
+/**
+ * O que conferir antes de publicar — recomendações, não travas (a federação
+ * pode abrir sem patrocinador nem notícia). Cada item: `{ id, ok, label }`.
+ * `plans` indefinido (não carregou) não vira "falta plano".
+ */
+export function publicationChecklist(f, plans) {
+  const ativos = Array.isArray(plans) ? plans.filter((p) => p.active !== false) : null;
+  const pago = (ativos || []).some((p) => Number(p.price_cents) > 0);
+  const pix = Boolean(f?.payment?.pix_key);
+  return [
+    { id: 'pagina', ok: Boolean(String(f?.about || '').trim()) && Boolean(f?.city), label: tk('Página com "Sobre" e cidade') },
+    { id: 'logo', ok: Boolean(f?.branding?.logo_url), label: tk('Logo enviado') },
+    { id: 'contato', ok: Boolean(f?.contact_public?.email || f?.contact_public?.phone), label: tk('Contato público (e-mail ou telefone)') },
+    { id: 'planos', ok: ativos == null ? null : ativos.length > 0, label: tk('Ao menos um plano de filiação ativo') },
+    { id: 'pix', ok: ativos == null ? null : (!pago || pix), label: tk('Pix para receber as filiações pagas') },
+  ];
+}
 
 /** O que a revisão do admin pode fazer com uma federação, dado o estado atual. */
 export function federationReviewActions(f) {

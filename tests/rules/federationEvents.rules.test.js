@@ -40,7 +40,7 @@ beforeEach(async () => {
   await testEnv.clearFirestore();
   await semRegras(async (db) => {
     await setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: { federations: true } });
-    await setDoc(doc(db, 'federations', FED), { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', created_by: PRES, modules: { calendar: true } });
+    await setDoc(doc(db, 'federations', FED), { name: 'Federação Gaúcha', acronym: 'FGP', slug: 'fgp', status: 'approved', published: true, created_by: PRES, modules: { calendar: true } });
     await setDoc(doc(db, 'federation_staff', `${FED}_${PRES}`), { federation_id: FED, user_id: PRES, role: 'president' });
     await setDoc(doc(db, 'federation_staff', `${FED}_${TES}`), { federation_id: FED, user_id: TES, role: 'treasurer' });
     await setDoc(doc(db, 'federation_members', `${FED}_${ANA}`), { federation_id: FED, user_id: ANA, status: 'active' });

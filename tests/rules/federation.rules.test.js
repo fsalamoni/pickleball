@@ -53,7 +53,7 @@ beforeEach(async () => {
   await semRegras(async (db) => {
     await setDoc(doc(db, 'users', ADMIN), { uid: ADMIN, role: 'platform_admin' });
     await setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: { federations: true } });
-    await setDoc(doc(db, 'federations', FED), federacao());
+    await setDoc(doc(db, 'federations', FED), federacao({ published: true }));
     await setDoc(doc(db, 'federations', FED, 'private', 'data'), { cnpj: '11222333000181', legal_name: 'FGP' });
     await setDoc(doc(db, 'federations', 'pend'), federacao({ status: 'pending', slug: 'pend', created_by: BIA }));
     await setDoc(doc(db, 'federation_staff', `${FED}_${PRES}`), staff(PRES, 'president'));
@@ -91,12 +91,12 @@ describe('⭐ a federação', () => {
     await assertSucceeds(getDoc(doc(como(BIA), 'federations', 'pend')));
     await assertFails(getDoc(doc(como(ANA), 'federations', 'pend')));
     await assertSucceeds(getDoc(doc(como(ADMIN), 'federations', 'pend')));
-    await assertSucceeds(getDocs(query(collection(anonimo(), 'federations'), where('status', '==', 'approved'))));
+    await assertSucceeds(getDocs(query(collection(anonimo(), 'federations'), where('status', '==', 'approved'), where('published', '==', true))));
     await assertSucceeds(getDocs(query(collection(como(BIA), 'federations'), where('created_by', '==', BIA))));
     await assertFails(getDocs(collection(como(BIA), 'federations')));
   });
   it('quem pede a abertura confere o endereço só entre as APROVADAS (sem o status a regra não prova a consulta)', async () => {
-    await assertSucceeds(getDocs(query(collection(como(BIA), 'federations'), where('slug', '==', 'fgp'), where('status', '==', 'approved'))));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'federations'), where('slug', '==', 'fgp'), where('status', '==', 'approved'), where('published', '==', true))));
     await assertFails(getDocs(query(collection(como(BIA), 'federations'), where('slug', '==', 'fgp'))));
   });
   it('a equipe (admin) edita a página, nunca status, verificação ou selo', async () => {
@@ -241,5 +241,39 @@ describe('aviso do tipo federation', () => {
     await assertFails(setDoc(doc(como(PRES), 'notifications', 'n2'), {
       user_id: ANA, title: 'X', message: 'Y', type: 'federation_xpto', read: false, created_at: new Date(), sent_by: PRES,
     }));
+  });
+});
+
+describe('⭐ federação aprovada nasce OCULTA até o admin publicar', () => {
+  const ocultar = () => semRegras((db) => updateDoc(doc(db, 'federations', FED), { published: false }));
+  it('oculta: quem é de fora não lê nem acha no diretório; equipe, filiado e o suporte, sim', async () => {
+    await ocultar();
+    await assertFails(getDoc(doc(anonimo(), 'federations', FED)));
+    await assertFails(getDoc(doc(como(BIA), 'federations', FED)));
+    await assertSucceeds(getDoc(doc(como(SEC), 'federations', FED)));
+    await assertSucceeds(getDoc(doc(como(ANA), 'federations', FED)));
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'federations', FED)));
+    await assertSucceeds(getDocs(query(collection(anonimo(), 'federations'), where('status', '==', 'approved'), where('published', '==', true))));
+    await assertFails(getDocs(query(collection(anonimo(), 'federations'), where('status', '==', 'approved'))));
+  });
+  it('o campo ausente vale OCULTA (federação aprovada antes da mudança)', async () => {
+    await semRegras((db) => setDoc(doc(db, 'federations', FED), federacao()));
+    await assertFails(getDoc(doc(como(BIA), 'federations', FED)));
+    await assertSucceeds(getDoc(doc(como(PRES), 'federations', FED)));
+  });
+  it('oculta: planos não aparecem para quem é de fora', async () => {
+    await ocultar();
+    await assertFails(getDoc(doc(como(BIA), 'federation_plans', 'p1')));
+    await assertSucceeds(getDoc(doc(como(TES), 'federation_plans', 'p1')));
+  });
+  it('só o admin publica, e só a federação APROVADA; o pedido não nasce publicado', async () => {
+    await ocultar();
+    await assertFails(updateDoc(doc(como(SEC), 'federations', FED), { published: true }));
+    await assertFails(updateDoc(doc(como(ANA), 'federations', FED), { published: true }));
+    await assertFails(updateDoc(doc(como(PRES), 'federations', FED), { published: 'sim' }));
+    await assertSucceeds(updateDoc(doc(como(PRES), 'federations', FED), { published: true, published_at: 1, published_by: PRES }));
+    await assertSucceeds(updateDoc(doc(como(PRES), 'federations', FED), { published: false }));
+    await assertFails(updateDoc(doc(como(BIA), 'federations', 'pend'), { published: true }));
+    await assertFails(setDoc(doc(como(BIA), 'federations', 'n6'), federacao({ status: 'pending', created_by: BIA, slug: 'n6', published: true })));
   });
 });

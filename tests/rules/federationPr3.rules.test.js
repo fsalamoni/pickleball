@@ -39,7 +39,7 @@ const DEP = `${FED}_dep_x1`;
 
 const federacao = (over = {}) => ({
   name: 'Federação Gaúcha de Pickleball', acronym: 'FGP', slug: 'fgp', level: 'state', state: 'RS',
-  status: 'approved', verified: false, official: false, created_by: PRES, modules: { courses: true, discipline: true }, payment: {}, rules: { ask_cpf: true }, ...over,
+  status: 'approved', published: true, verified: false, official: false, created_by: PRES, modules: { courses: true, discipline: true }, payment: {}, rules: { ask_cpf: true }, ...over,
 });
 const staff = (uid, role, fed = FED) => ({ federation_id: fed, user_id: uid, role, user_name: uid });
 const membro = (uid, over = {}) => ({ federation_id: FED, user_id: uid, status: 'active', tier: 'federated', valid_until: '2027-01-01', public_badge: true, ...over });

@@ -22,7 +22,7 @@ function cenario() {
   return {
     db: createFakeDb({
       'platform_settings/global': { feature_flags: { federations: true } },
-      'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', modules: { calendar: true, official_docs: true } },
+      'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, modules: { calendar: true, official_docs: true } },
       'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
       'federation_staff/fpp_comp': { federation_id: 'fpp', user_id: 'comp', role: 'competitions' },
       'federation_followers/fpp_ana': { federation_id: 'fpp', user_id: 'ana' },
