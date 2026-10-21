@@ -3,7 +3,7 @@ import {
   PROMO_ISSUER, PLATFORM_ISSUER_ID, normalizeIssuer, issuerOf, promoSettingsId,
   PROMO_FAMILY, promoFamily, promoKinds, promoKindLabel,
   PROMO_REACH, normalizeReach, reachLabel, reachMatchesRegion,
-  PROMO_VISIBILITY, isVisibleTo, coachIdsOfStudent,
+  PROMO_VISIBILITY, isVisibleTo, coachIdsOfStudent, fedIdsOfMember,
   normalizePromoCouponInput, livePromoCoupons, promoBenefitText, promoUseHint,
   PROMO_DESTINATION, PROMO_DESTINATIONS_BY_ISSUER, normalizePromoDestination, promoDestinationLink,
   promoNoticeLink, promoDestinationCta,
@@ -591,5 +591,42 @@ describe('⭐ tela inicial', () => {
     expect(mergeBannerCities([{ key: 'RS|porto alegre', city: 'Porto Alegre', state: 'RS', count: 2 }], promoCities(itens)))
       .toEqual([{ key: 'RS|porto alegre', city: 'Porto Alegre', state: 'RS', count: 3 }]);
     expect([{ expiresAt: null }, { expiresAt: 5 }, { expiresAt: 1 }].sort(byExpiry).map((i) => i.expiresAt)).toEqual([1, 5, null]);
+  });
+});
+
+describe('federação como emissora (PR 4)', () => {
+  const F = PROMO_ISSUER.FEDERATION;
+  it('"só filiados" vale só para quem tem filiação ativa naquela federação', () => {
+    const cupom = { issuer_type: F, issuer_id: 'fpp', visibility: PROMO_VISIBILITY.STUDENTS };
+    expect(isVisibleTo(cupom, { uid: 'ana', fedIdsDoFiliado: new Set(['fpp']) })).toBe(true);
+    expect(isVisibleTo(cupom, { uid: 'ana', fedIdsDoFiliado: new Set(['fgp']) })).toBe(false);
+    expect(isVisibleTo(cupom, { uid: 'ana' })).toBe(false);
+    expect(isVisibleTo({ ...cupom, visibility: undefined }, { uid: null })).toBe(true);
+  });
+
+  it('fedIdsOfMember: ativa e dentro da validade; vencida, pendente e cancelada não contam', () => {
+    const ids = fedIdsOfMember([
+      { federation_id: 'a', status: 'active', valid_until: '2027-01-01' },
+      { federation_id: 'b', status: 'active', valid_until: '2026-01-01' },
+      { federation_id: 'c', status: 'awaiting_payment' },
+      { federation_id: 'd', status: 'cancelled' },
+    ], '2026-10-21');
+    expect([...ids]).toEqual(['a']);
+  });
+
+  it('a campanha da federação não manda aviso; os destinos levam à página e à loja dela', () => {
+    expect(PROMO_AUDIENCES_BY_ISSUER[F]).toEqual([]);
+    expect(PROMO_DESTINATIONS_BY_ISSUER[F]).toContain(PROMO_DESTINATION.STORE);
+    expect(promoDestinationLink({ type: PROMO_DESTINATION.FEDERATION }, { issuerType: F, issuerId: 'fpp' })).toBe('/federacoes/fpp');
+    expect(promoDestinationLink({ type: PROMO_DESTINATION.STORE }, { issuerType: F, issuerId: 'fpp' })).toBe('/mercado/vendedor/federation_fpp');
+  });
+
+  it('a vitrine do início só mostra a federação com a flag ligada', () => {
+    const hoje = '2026-10-21';
+    const cupom = { id: 'c1', issuer_type: F, issuer_id: 'fpp', active: true, show_public: true, show_home: true, code: 'FPP10', type: 'percent', value: 10 };
+    expect(homePromoItems({ coupons: [cupom], federationsOn: false, today: hoje })).toEqual([]);
+    expect(homePromoItems({ coupons: [cupom], federationsOn: true, today: hoje }).map((i) => i.id)).toEqual(['promo-cupom:c1']);
+    const soFiliados = { ...cupom, visibility: PROMO_VISIBILITY.STUDENTS };
+    expect(homePromoItems({ coupons: [soFiliados], federationsOn: true, today: hoje, viewer: { fedIdsDoFiliado: new Set() } })).toEqual([]);
   });
 });
