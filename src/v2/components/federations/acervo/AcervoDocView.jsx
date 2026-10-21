@@ -21,6 +21,7 @@ import { t } from '@/core/i18n';
 import { quando, useQrDataUrl } from '../federationUi';
 import { baixarBlob, fetchAcervoBlob, sha256DoArquivo } from './acervoFiles';
 import { AcervoFollowButton } from './AcervoPublic';
+import CommentsSection from '../comments/CommentsSection';
 
 /* --------------------------------------------------------------- arquivo -- */
 
@@ -265,6 +266,7 @@ export default function AcervoDocView({ federation, doc, relacionados = [] }) {
         <Link to={acervoPublicPath(federation)} className="text-sm font-semibold text-ink underline">{t('Ver todo o acervo')}</Link>
       </div>
       <p className="hidden text-xs text-gray-500 print:block">{t('Documento oficial publicado em {url}', { url: `${window.location.host}${docPublicPath(federation, doc.id)}` })}</p>
+      {doc.status === 'published' && <div className="print:hidden"><CommentsSection federation={federation} kind="doc" targetId={doc.id} /></div>}
     </article>
   );
 }

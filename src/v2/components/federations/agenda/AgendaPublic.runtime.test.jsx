@@ -16,6 +16,8 @@ vi.mock('@/modules/federations/hooks/useFederations', () => ({
   useVisibleAgenda: () => estado.agenda,
   useAcervoFollow: () => ({ data: null, isLoading: false }),
   useSetAcervoFollow: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useFederationComments: () => ({ data: { state: { open: true, mode: 'open', why: null }, comments: [], count: 0, can_moderate: false, signed_in: false }, isLoading: false }),
+  useFederationMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const { AgendaBrowser, FedAgendaBlock } = await import('./AgendaPublic');

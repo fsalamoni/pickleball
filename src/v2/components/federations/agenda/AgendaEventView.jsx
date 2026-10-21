@@ -16,6 +16,7 @@ import { V2Badge, V2Button } from '@/v2/ui/primitives';
 import { fmtData, t } from '@/core/i18n';
 import { AcervoFollowButton } from '../acervo/AcervoPublic';
 import MeetingBlock from './MeetingBlock';
+import CommentsSection from '../comments/CommentsSection';
 import { StatusBadge, StatusBanner, baixarIcs, dataCurta, dataDoEvento, horarioDoEvento, urlDoEvento } from './agendaUi';
 
 function Linha({ icone: Icone, children }) {
@@ -103,6 +104,7 @@ export default function AgendaEventView({ federation, ev }) {
           </ul>
         </details>
       )}
+      {!ev.derived && <div className="print:hidden"><CommentsSection federation={federation} kind="event" targetId={ev.id} /></div>}
     </article>
   );
 }

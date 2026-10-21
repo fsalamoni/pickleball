@@ -738,6 +738,14 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
     histórico; o resultado só depois do início, e depois dele a data não muda.
     O prazo do estatuto (`rules.convocation_min_days`) **avisa, não bloqueia**
     (§15.9).
+48. **Comentários: tudo pelo servidor, e a lista não entrega uid.**
+    `federation_comments` só o autor lê direto e ninguém grava;
+    `federation_comment_reports` ninguém lê nem grava. A lista
+    (`federationCommentsList`) confere a leitura do documento ou evento com a
+    régua da regra; três denúncias de pessoas diferentes ocultam; ocultar exige
+    motivo e avisa o autor; consulta pública vai até o fim do dia em Brasília
+    (paridade `federationComments.parity.test.js`). Modos e motivos de
+    denúncia são gravados — nunca renomeie (§16).
 
 ## 11. Pendências e próximas fases
 
@@ -1232,3 +1240,72 @@ falso), `functions/federationMeeting.parity.test.js` (cliente × servidor),
 `domain/meeting.test.js`, `manage/FedMeetingDialogs.runtime.test.jsx` e a
 página do evento em `agenda/AgendaPublic.runtime.test.jsx`.
 
+
+## 16. Comentários nos documentos e eventos (Etapa 4 do acervo, PR 10)
+
+Documento **publicado** do acervo e evento da agenda (não o torneio derivado)
+têm, no fim da página, a seção de comentários
+(`v2/components/federations/comments/CommentsSection.jsx`). Domínio em
+`domain/comments.js`, servidor em `functions/federationComments.js`, régua
+copiada em `functions/federationCommentsPolicy.js` (paridade em
+`federationComments.parity.test.js`).
+
+**Quem lê e quem comenta.** A lista vem da função **`federationCommentsList`**
+(abre sem login), que confere a leitura do documento ou evento com a mesma
+régua da regra (público: todos; só filiados: filiado ativo e equipe; só a
+equipe: equipe; documento não publicado: ninguém) e **não entrega uid de
+ninguém** — só o nome gravado e "é meu". Comentar, denunciar, apagar o
+próprio, responder, ocultar, reabrir, mudar o modo e ver a fila passam pela
+`federationComments` (com login). Os comentários ocultos só a moderação e o
+próprio autor veem.
+
+**Limites.** Texto de 3 a 1.000 caracteres (espaços e linhas em excesso são
+limpos); 30 s entre comentários e no máximo 10 por dia, por pessoa, no mesmo
+documento ou evento; a lista mostra os 300 mais recentes.
+
+**Abertos, fechados ou consulta pública.** Cada documento ou evento guarda
+`comments: { mode, until_date, until_ms }` (`open` | `closed` |
+`consultation`; ausente ⇒ aberto). A consulta vai até o **fim do dia**
+escolhido em Brasília (`endOfDayBr`) e não começa no passado; encerrada,
+ninguém comenta e o que foi escrito fica. A federação inteira desliga em
+Configurações → Regras (`rules.comments === false`, ausente ⇒ ligado);
+desligado e sem nada escrito, a seção some.
+
+**Moderação** (permissão `docs` ou `admin`):
+- **resposta oficial** em nome da federação (`official: true`, `org_name`),
+  só a comentário (não a resposta), avisa quem comentou;
+- **denúncia** com motivo (`offensive`, `personal_data`, `spam`, `off_topic`,
+  `other`), uma por pessoa (`federation_comment_reports/{comentário}_{uid}`,
+  numa transação); **3 de pessoas diferentes ocultam** (`hidden_by:
+  'reports'`). Não se denuncia o próprio comentário nem a resposta oficial (a
+  ouvidoria é o caminho);
+- **ocultar** com motivo (≥ 10 caracteres, `hidden_by: 'staff'`) avisa o
+  autor com o motivo; **reabrir** zera as denúncias;
+- **apagar** é só do autor e leva as respostas e as denúncias junto;
+- a **fila** (`queue`) fica na Central → Acervo oficial → **Comentários**
+  (sem o acervo, Agenda → Comentários): ocultos por denúncias, pela
+  moderação e visíveis com denúncia (`manage/FedCommentsPanel.jsx`).
+- Auditoria `federation_comment_reply|hide|restore|settings`.
+
+**Regras.** `federation_comments`: só o autor lê o próprio (a exportação);
+ninguém grava pelo navegador. `federation_comment_reports`: ninguém lê nem
+grava. Provado em `tests/rules/federationComments.rules.test.js`.
+
+**Exclusão de conta e exportação.** A exclusão apaga os comentários da pessoa
+(`user_id`) e as denúncias que ela fez (`reporter_id`); a exportação leva os
+comentários (`listMyFederationComments`). A denúncia fica fora da exportação
+de propósito: é sobre o comentário de outra pessoa e serve à moderação.
+
+**Âncoras**: `federacao-comentarios`, `federacao-comentarios-escrever`,
+`federacao-comentarios-config` (página), `federacao-comentarios-moderacao`
+(Central). Artigo de ajuda `federacao-comentarios`.
+
+**Testes**: `functions/federationComments.test.js` (servidor contra banco
+falso), `functions/federationComments.parity.test.js`,
+`domain/comments.test.js`, `comments/CommentsSection.runtime.test.jsx` e a
+regra no emulador.
+
+Fora de propósito: editar comentário (apaga-se e escreve-se de novo, para a
+resposta oficial nunca ficar respondendo a outro texto); curtidas; resposta de
+quem não é da federação a outro comentário (a conversa fica entre a pessoa e
+a federação, e a página oficial não vira fórum). Quando pedirem.

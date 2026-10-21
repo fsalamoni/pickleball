@@ -237,7 +237,7 @@ function ModulosTab({ federation }) {
 function RegrasTab({ federation }) {
   const { user } = useAuth();
   const atual = normalizeFederationRules(federation.rules);
-  const [f, setF] = useState({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days) });
+  const [f, setF] = useState({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days), comments: atual.comments });
   const m = useFederationMutation(() => updateFederationRules(federation.id, f, { uid: user?.uid }));
   return (
     <section className="space-y-4" aria-label={t('Regras da federação')} data-dica="federacao-regras">
@@ -246,6 +246,7 @@ function RegrasTab({ federation }) {
         <V2Surface className="space-y-4">
           <V2Toggle id="rg-cpf" checked={f.ask_cpf} onChange={(v) => setF((x) => ({ ...x, ask_cpf: v }))} label={t('Pedir o CPF na filiação')} hint={t('Fica reservado (só a secretaria, com motivo registrado). Dependente menor não precisa.')} />
           <V2Toggle id="rg-declaracao" checked={f.member_declarations} onChange={(v) => setF((x) => ({ ...x, member_declarations: v }))} label={t('O filiado emite a própria declaração de vínculo')} hint={t('Só com a filiação em dia, com o QR que confere a validade. Desligado, só a secretaria emite (Filiados → Ficha).')} />
+          <V2Toggle id="rg-comentarios" checked={f.comments} onChange={(v) => setF((x) => ({ ...x, comments: v }))} label={t('Comentários nos documentos e eventos')} hint={t('Quem tem conta comenta no que pode ler; a equipe do acervo responde e modera. Desligado, ninguém comenta e o que já foi escrito continua à vista.')} />
           <div className="grid gap-4 sm:grid-cols-2">
             <V2Field label={t('Carência entre transferências (dias)')} htmlFor="rg-carencia" hint={t('0 = sem carência.')}><V2Input id="rg-carencia" inputMode="numeric" value={f.transfer_cooldown_days} onChange={(e) => setF((x) => ({ ...x, transfer_cooldown_days: e.target.value }))} /></V2Field>
             <V2Field label={t('Prazo para liberar quem sai (dias)')} htmlFor="rg-prazo" hint={t('Sem resposta no prazo, a transferência para outra federação é liberada sozinha.')}><V2Input id="rg-prazo" inputMode="numeric" value={f.transfer_release_days} onChange={(e) => setF((x) => ({ ...x, transfer_release_days: e.target.value }))} /></V2Field>

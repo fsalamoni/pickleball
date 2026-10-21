@@ -31,6 +31,7 @@ export const FED_COLLECTIONS = Object.freeze({
   officialDocs: 'federation_docs',
   followers: 'federation_followers',
   events: 'federation_events',
+  comments: 'federation_comments',
 });
 
 /** Id determinístico da inscrição em curso: `{courseId}_{uid}`. */

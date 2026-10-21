@@ -5015,6 +5015,19 @@ service cloud.firestore {
     // é do servidor, e só vai a quem pode ler o ato ou o evento. `get` do
     // documento que ainda não existe: é assim que o botão sabe se a pessoa
     // segue (sem isso o `get` dá permissão negada).
+    // COMENTÁRIOS nos documentos do acervo e nos eventos da agenda: só o
+    // SERVIDOR grava (`federationComments`), e a lista pública passa por ele
+    // (quem vê o comentário é quem vê o documento ou o evento AGORA). A pessoa
+    // lê só os próprios — é a exportação dos dados. As denúncias ninguém lê
+    // pelo cliente: quem denunciou não aparece para quem foi denunciado.
+    match /federation_comments/{id} {
+      allow read: if isOwner(od().user_id);
+      allow write: if false;
+    }
+    match /federation_comment_reports/{id} {
+      allow read, write: if false;
+    }
+
     match /federation_followers/{id} {
       allow get: if isAuthed() && resource == null && id == id.split('_')[0] + '_' + me();
       allow read, delete: if isOwner(od().user_id);
