@@ -793,6 +793,30 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-reuniao',
+      flags: ['federations'],
+      title: tk('Assembleias e reuniões: convocação, pauta e resultado'),
+      summary: tk('O edital com a pauta e o quórum, o prazo do estatuto, e depois a presença, o que se decidiu em cada item e a ata.'),
+      keywords: ['federação', 'assembleia', 'reunião', 'convocação', 'edital', 'pauta', 'ordem do dia', 'quórum', 'segunda chamada', 'presença', 'votação', 'eleição', 'ata', 'deliberação', 'prazo', 'estatuto'],
+      blocks: [
+        p(tk('Assembleias (ordinárias, extraordinárias e especiais) e reuniões da diretoria, do conselho fiscal e das comissões são eventos da agenda com duas etapas a mais: a CONVOCAÇÃO, antes, e o RESULTADO, depois. Quem cuida é a presidência ou quem tem a permissão do acervo.')),
+        steps(
+          tk('CONVOCAR — na Agenda da Central, "Convocar" no evento: a data do edital, o edital publicado no acervo, o quórum da primeira chamada, o horário e o quórum da segunda chamada e a pauta (cada item como deliberação, eleição ou informe, na ordem do dia). Na primeira convocação, quem segue a federação pode ser avisado.'),
+          tk('PRAZO — em Configurações → Regras fica o prazo mínimo de convocação do estatuto (padrão 8 dias). Convocação com menos antecedência mostra um aviso na Central, mas não é barrada: o estatuto pode prever urgência.'),
+          tk('MUDAR A PAUTA — depois de divulgada, mudar a convocação pede o motivo, que fica no histórico do evento, e quem segue é avisado.'),
+          tk('REGISTRAR O RESULTADO — a partir do horário da reunião, "Registrar o resultado": a chamada em que começou, presentes e aptos, se houve quórum e, item a item, aprovado, rejeitado, eleição realizada, informado, adiado ou retirado, com os votos e um resumo. Ligue a ata, a lista de presença, o registro de votação e o ato que saiu de cada item.'),
+          tk('SEM QUÓRUM — nada se decide: cada item fica adiado ou sai da pauta.'),
+          tk('CORRIGIR — resultado já publicado se corrige com motivo, e a correção também fica no histórico.'),
+        ),
+        list(
+          tk('NA PÁGINA DO EVENTO — quem pode ver o evento vê a convocação, a pauta com quantos dias de antecedência ela saiu e, depois, a presença e o que se decidiu em cada item.'),
+          tk('DOCUMENTOS — edital, ata e lista vêm do acervo, publicados. Documento restrito aparece com um cadeado e abre só para quem pode ver.'),
+          tk('DATA — a reunião não pode ser marcada antes da própria convocação, e depois de registrado o resultado a data não muda mais.'),
+        ),
+        tip(tk('Publique o edital no acervo antes de convocar: assim a convocação aponta para o documento oficial, numerado, que ninguém altera depois.')),
+      ],
+    },
+    {
       id: 'mercado-comprar',
       flags: ['marketplace'],
       guias: ['mercado-comprar'],
@@ -2059,7 +2083,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
   { pattern: '/federacoes/*/gerir', label: tk('a Central da federação'),
-    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda']] },
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao']] },
   { pattern: '/federacoes/*/filiar', label: tk('a filiação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar']] },
   { pattern: '/federacoes/*', label: tk('esta federação'),
@@ -2326,6 +2350,8 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Como sei se o regulamento que recebi é o oficial da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-acervo' },
   { q: tk('Como ponho as datas da federação no calendário do meu celular?'), section: HELP_SECTION.ATHLETE, article: 'federacao-agenda' },
   { q: tk('A assembleia foi adiada. Onde vejo a nova data e o motivo?'), section: HELP_SECTION.ATHLETE, article: 'federacao-agenda' },
+  { q: tk('Onde vejo a pauta da assembleia e o que foi decidido?'), section: HELP_SECTION.ATHLETE, article: 'federacao-reuniao' },
+  { q: tk('A assembleia não teve quórum. O que acontece com a pauta?'), section: HELP_SECTION.ATHLETE, article: 'federacao-reuniao' },
   { q: tk('Como a federação vende uniforme e material pelo Mercado?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comunicacao' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: tk('Como a plataforma me mostra onde tocar?'), section: HELP_SECTION.START, article: 'dicas' },

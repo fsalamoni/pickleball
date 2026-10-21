@@ -237,7 +237,7 @@ function ModulosTab({ federation }) {
 function RegrasTab({ federation }) {
   const { user } = useAuth();
   const atual = normalizeFederationRules(federation.rules);
-  const [f, setF] = useState({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations });
+  const [f, setF] = useState({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days) });
   const m = useFederationMutation(() => updateFederationRules(federation.id, f, { uid: user?.uid }));
   return (
     <section className="space-y-4" aria-label={t('Regras da federação')} data-dica="federacao-regras">
@@ -249,6 +249,7 @@ function RegrasTab({ federation }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <V2Field label={t('Carência entre transferências (dias)')} htmlFor="rg-carencia" hint={t('0 = sem carência.')}><V2Input id="rg-carencia" inputMode="numeric" value={f.transfer_cooldown_days} onChange={(e) => setF((x) => ({ ...x, transfer_cooldown_days: e.target.value }))} /></V2Field>
             <V2Field label={t('Prazo para liberar quem sai (dias)')} htmlFor="rg-prazo" hint={t('Sem resposta no prazo, a transferência para outra federação é liberada sozinha.')}><V2Input id="rg-prazo" inputMode="numeric" value={f.transfer_release_days} onChange={(e) => setF((x) => ({ ...x, transfer_release_days: e.target.value }))} /></V2Field>
+            <V2Field label={t('Prazo mínimo de convocação (dias)')} htmlFor="rg-convocacao" hint={t('O que o estatuto pede entre o edital e a reunião. Fora do prazo, a agenda avisa (não bloqueia).')}><V2Input id="rg-convocacao" inputMode="numeric" value={f.convocation_min_days} onChange={(e) => setF((x) => ({ ...x, convocation_min_days: e.target.value }))} /></V2Field>
           </div>
           <div className="flex justify-end"><V2Button type="submit" disabled={m.isPending}>{t('Salvar regras')}</V2Button></div>
         </V2Surface>
