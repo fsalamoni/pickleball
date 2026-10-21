@@ -29,12 +29,16 @@ import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
+import { safeHttpUrl } from '@/core/domain/externalUrl';
+import { destinoDeAviso } from '@/core/domain/internalLink';
 import { quando } from './federationUi';
 
 /* ---------------------------------------------------------------- notícias -- */
 
 function Noticia({ n, aberta, onToggle, ancoraRef }) {
-  const interno = n.link && n.link.startsWith('/');
+  // O link vem do banco: interno só caminho de UMA barra; externo só http(s).
+  const interno = destinoDeAviso(n.link);
+  const externo = interno ? '' : safeHttpUrl(n.link);
   return (
     <li ref={ancoraRef} id={`noticia-${n.id}`} className="scroll-mt-4">
       <V2Surface variant="compacto" className="p-4">
@@ -54,9 +58,9 @@ function Noticia({ n, aberta, onToggle, ancoraRef }) {
           <div className="mt-3 space-y-3 pl-7">
             {n.image_url && <img src={n.image_url} alt="" loading="lazy" className="max-h-80 w-full rounded-2xl object-cover" />}
             <p className="whitespace-pre-line text-sm leading-6 text-gray-700">{n.body}</p>
-            {n.link && (interno
-              ? <Link to={n.link} className="inline-flex items-center gap-1 text-sm font-bold text-ink underline">{t('Saiba mais')}</Link>
-              : <a href={n.link} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 text-sm font-bold text-ink underline"><ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />{t('Saiba mais')}</a>)}
+            {(interno || externo) && (interno
+              ? <Link to={interno} className="inline-flex items-center gap-1 text-sm font-bold text-ink underline">{t('Saiba mais')}</Link>
+              : <a href={externo} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 text-sm font-bold text-ink underline"><ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />{t('Saiba mais')}</a>)}
           </div>
         )}
       </V2Surface>
@@ -159,8 +163,8 @@ export function FedSponsorsStrip({ federation, titulo = true }) {
           const classe = 'flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3';
           return (
             <li key={`${s.name}-${i}`}>
-              {s.url
-                ? <a href={s.url} target="_blank" rel="noopener noreferrer nofollow sponsored" className={`${classe} transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30`}>{corpo}</a>
+              {safeHttpUrl(s.url)
+                ? <a href={safeHttpUrl(s.url)} target="_blank" rel="noopener noreferrer nofollow sponsored" className={`${classe} transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30`}>{corpo}</a>
                 : <div className={classe}>{corpo}</div>}
             </li>
           );
@@ -184,7 +188,7 @@ export function FedGovernanceBlock({ federation }) {
       <V2Surface variant="compacto" className="space-y-4 p-4">
         {(g.statute_url || mandato) && (
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            {g.statute_url && <a href={g.statute_url} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-ink underline"><FileText className="h-4 w-4" aria-hidden="true" />{t('Estatuto')}</a>}
+            {safeHttpUrl(g.statute_url) && <a href={safeHttpUrl(g.statute_url)} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-ink underline"><FileText className="h-4 w-4" aria-hidden="true" />{t('Estatuto')}</a>}
             {mandato && <span className="text-gray-600">{t('Mandato da diretoria: {periodo}', { periodo: mandato })}</span>}
           </div>
         )}
@@ -201,7 +205,7 @@ export function FedGovernanceBlock({ federation }) {
             <ul className="space-y-1 text-sm">
               {atas.map((a, i) => (
                 <li key={i} className="flex flex-wrap items-center gap-2">
-                  {a.url ? <a href={a.url} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-ink underline">{a.title}</a> : <span className="font-semibold text-ink">{a.title}</span>}
+                  {safeHttpUrl(a.url) ? <a href={safeHttpUrl(a.url)} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-ink underline">{a.title}</a> : <span className="font-semibold text-ink">{a.title}</span>}
                   {a.date && <span className="text-xs text-gray-500">{quando(a.date)}</span>}
                 </li>
               ))}

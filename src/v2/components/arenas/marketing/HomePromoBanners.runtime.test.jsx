@@ -341,7 +341,7 @@ describe('⭐ a tela inicial monta os banners', () => {
     // com o interruptor do admin ligado — nos dois ramos da tela.
     for (const arquivo of ['src/v2/components/home/personal/V2PersonalHome.jsx']) {
       const src = readFileSync(arquivo, 'utf8');
-      const montagens = src.match(/\{promocoesOn && \(arenaModulesOn \|\| platformMarketingOn \|\| coachMarketingOn\) && \(\s*<Suspense fallback=\{null\}>\s*<HomePromoBanners arenasOn=\{arenaModulesOn\} platformOn=\{platformMarketingOn\} coachesOn=\{coachMarketingOn\} className="mb-8" \/>/g) || [];
+      const montagens = src.match(/\{promocoesOn && \(arenaModulesOn \|\| platformMarketingOn \|\| coachMarketingOn\) && \(\s*<Suspense fallback=\{null\}>\s*<HomePromoBanners arenasOn=\{arenaModulesOn\} platformOn=\{platformMarketingOn\} coachesOn=\{coachMarketingOn\} federationsOn=\{federacoesOn\} className="mb-8" \/>/g) || [];
       expect(montagens.length).toBe(2);
       expect(src).not.toMatch(/case HOME_CARD\.DESTAQUES/);
       expect(src).toMatch(/usePlatformHome\(\)/);
