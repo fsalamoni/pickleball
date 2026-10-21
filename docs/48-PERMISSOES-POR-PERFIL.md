@@ -325,6 +325,12 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Abrir manifestação na ouvidoria (identificada ou anônima) | ✖ | ✔ (módulo `discipline` ligado; anônima ⇒ sem `reporter_uid`; nunca `notes`/`handled_by`) | ✔ | — | — | rules |
 | Consultar manifestação pelo protocolo | ✖ | ◐ a própria, ou qualquer anônima (`get`) | ✔ | ✔ `discipline`/`admin` | ✔ | rules |
 | Responder/encerrar manifestação | ✖ | ✖ | ✖ | ✔ `discipline`/`admin` (só `status`/`notes`/`handled_by`) | ✔ | rules; apagar só Plat |
+| Ler notícia da federação (módulo `news`) — PR 4 | ◐ publicada e pública | ◐ publicada e pública; "só filiados" com filiação **ativa** | ✔ publicada | ✔ `comms`/`admin` (rascunhos e a lista inteira) | ✔ | rules (`fedMemberActive`) |
+| Escrever/apagar notícia | ✖ | ✖ | ✖ | ✔ `comms`/`admin` (sem `notified_*`, sem trocar a federação) | ✔ | rules (`fedModuleOn`) |
+| Avisar os filiados de uma notícia | ✖ | ✖ | ✖ | ✔ `comms`/`admin`, uma vez por notícia | ✔ | **Cloud Function** `federationNews` |
+| Patrocinadores (`sponsors`, ≤ 12) e governança (`governance`) | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules (`federations`) |
+| Cupom/campanha com a federação como emissora (módulo `promos`) | ✖ | ✖ | ✖ | ✔ `comms`/`admin` (o emissor não muda) | ✔ | rules (`isPromoIssuer`); a campanha da federação não manda aviso |
+| Abrir/operar a loja oficial no Mercado (`market_sellers/federation_{id}`, módulo `store`) | ✖ | ✖ | ✖ | ✔ `admin`/`finance` (nasce `active`, sem selo) | ✔ | rules (`isMarketOperator`); servidor `operatorUids` com a mesma resposta |
 | Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ◐ | rules (`fedOn()`) e funções (`flagLigada`) |
 
 ### 4.9 Plataforma (admin e dono)

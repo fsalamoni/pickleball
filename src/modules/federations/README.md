@@ -24,15 +24,19 @@ federations/
 │   ├── transfers.js             # PR 3: troca de clube / de federação — prazo de liberação, carência, estados
 │   ├── importMembers.js         # PR 3: a lista colada (CSV/linhas) → linhas válidas, erros, prévia
 │   ├── courses.js               # PR 3: estado do curso, vagas, cancelar inscrição, estado da credencial
-│   └── discipline.js            # PR 3: sanção (validação, efeito, recurso) e ouvidoria (protocolo)
+│   ├── discipline.js            # PR 3: sanção (validação, efeito, recurso) e ouvidoria (protocolo)
+│   ├── news.js                  # PR 4: validação da notícia, quem a vê (`visibleNews`), o link do aviso
+│   ├── sponsors.js              # PR 4: lista de patrocinadores (≤ 12, cotas, links https)
+│   └── governance.js            # PR 4: estatuto, mandato, diretoria e atas (`validateGovernance`)
 ├── services/
 │   ├── federationService.js     # leituras (uma igualdade, ordenação em memória), escritas da regra
 │   │                            # (pedido, página, Pix, módulos, equipe, planos, preferências, "Já paguei")
 │   │                            # e as chamadas ao servidor (reviewFederation, membershipAction, chargeAction, verifyCard;
-│   │                            # PR 3: transferAction, courseAction, disciplineAction, importMembers, fetchDocument)
+│   │                            # PR 3: transferAction, courseAction, disciplineAction, importMembers, fetchDocument;
+│   │                            # PR 4: notícias, notifyNews, patrocinadores, governança)
 │   └── federationExportService.js  # o bloco `federations` da exportação de dados
 ├── hooks/useFederations.js      # chaves em `fedKeys`; useMyFederationRole, useMyMemberships, useCardVerification…
-└── i18n/locales/{en,es}.js      # 1125 chaves (inclui os avisos do servidor e os textos dos cartões fora do módulo)
+└── i18n/locales/{en,es}.js      # 1224 chaves (inclui os avisos do servidor e os textos dos cartões fora do módulo)
 ```
 
 Telas: `src/v2/pages/V2Federations.jsx` (`/federacoes`), `V2FederationApply`
@@ -53,7 +57,12 @@ sanções e recurso, transferência), `manage/FedSecretariatPanel.jsx`
 `FedTags.jsx` (selos), `OrgAffiliationCard.jsx` (gestão do clube e Central da
 arena → Federação), `TournamentSanctionCard.jsx` (gestão do torneio → Geral),
 `FederationResultButton.jsx` (resultados do torneio); e a trava "só filiados"
-em `ModalityRegistrationDialog.jsx` (`membershipRequirement`).
+em `ModalityRegistrationDialog.jsx` (`membershipRequirement`). PR 4:
+`FedCommsBlocks.jsx` (notícias, promoções, patrocinadores, governança e o link
+da loja na página), `manage/FedCommsPanel.jsx` (Notícias · Cupons e campanhas ·
+Patrocinadores), Governança e Loja em `manage/FedSettingsPanel.jsx`,
+`HomeFederationCard.jsx` (card do início) e, no Mercado, o vendedor
+`federation_{id}` (`V2MarketSell.jsx` + `storeFederations` em `domain/staff.js`).
 
 Servidor: `functions/federations.js` (`federationReview`,
 `federationMembership`, `federationChargeConfirm`, `federationVerify`,
@@ -62,7 +71,9 @@ Servidor: `functions/federations.js` (`federationReview`,
 `federationCourses.js` (`federationCourse`), `federationDiscipline.js`
 (`federationDiscipline`), `federationSecretariat.js`
 (`federationImportMembers`, `federationDocument`) — testes em
-`functions/federationPr3.test.js`; e `functions/federationMembership.js` — **cópia**
+`functions/federationPr3.test.js`; PR 4 `functions/federationNews.js`
+(`federationNews`) e o operador da loja em `functions/marketplace.js`
+(`operatorUids`) — testes em `functions/federationPr4.test.js`; e `functions/federationMembership.js` — **cópia**
 de `domain/membership.js` com paridade em
 `functions/federationMembership.parity.test.js`; `functions/federationRanking.js`
 (`federationRankingRecompute`, `federationRankingConfig`) — **cópia** de
@@ -76,7 +87,10 @@ Coleções (`firestore.rules` § FEDERAÇÕES, provadas em
 PR 3 (`tests/rules/federationPr3.rules.test.js`): `federation_documents_submitted`,
 `federation_transfers`, `federation_imports`, `federation_courses`,
 `federation_course_enrollments`, `federation_credentials`,
-`federation_sanctions`, `federation_reports`; Storage `federacao/{uid}/`
+`federation_sanctions`, `federation_reports`; PR 4
+(`tests/rules/federationPr4.rules.test.js`): `federation_news`, os campos
+`federations.sponsors`/`governance`, a federação como emissora em `promo_*` e
+como vendedora em `market_sellers`; Storage `federacao/{uid}/`
 (`storage.rules`: só o dono lê). Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
@@ -121,3 +135,10 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   o protocolo deriva do id (`reportProtocol`/`protocolToId`). A `origin` da
   cobrança decide o efeito da confirmação (`course` confirma a inscrição,
   `fine` quita a sanção) — um caminho só.
+- **PR 4** — o **aviso da notícia** é do servidor e sai uma vez só
+  (`notified_at`, que a regra recusa ao cliente); "só filiados" vale na regra
+  (`fedMemberActive`). A **campanha** da federação não manda aviso (o canal é
+  a notícia). **Quem opera a loja oficial** tem três respostas que precisam
+  bater: `isMarketOperator` (regra), `operatorUids` (servidor) e
+  `storeFederations` (cliente) — `admin` ou `finance`, só com `store`. O card
+  do início exige a flag (`requer: 'federacao'`).

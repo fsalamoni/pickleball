@@ -4,6 +4,14 @@ Flags `platform_marketing` e `coach_marketing` (default OFF). As mesmas
 ferramentas do marketing da arena, para dois emissores novos. Documento
 completo: `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2.
 
+**Terceiro emissor (PR 4 das federações):** `PROMO_ISSUER.FEDERATION`
+(`issuer_id` = id da federação). Emite quem tem `comms`/`admin` na equipe, só
+com o módulo `promos` e a flag `federations` (regra `isPromoIssuer`). "Só
+filiados" reusa `PROMO_VISIBILITY.STUDENTS` e vale para quem tem filiação
+ativa naquela federação (`fedIdsOfMember`); a campanha da federação **não
+manda aviso** (`PROMO_AUDIENCES_BY_ISSUER.federation = []`); destinos: a
+página da federação e a loja oficial. Ver `docs/50-FEDERACAO.md` §6.7.
+
 ```
 promo/
 ├── domain/

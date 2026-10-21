@@ -57,8 +57,10 @@ passa de `planned` a `available` quando a tela existir.
    federação** liga para si, em Configurações → Módulos. Desde o PR 2 três
    módulos têm tela (`status: 'available'`): **`tournaments`** (chancela de
    torneios e envio de resultados), **`ranking`** (ranking oficial) e
-   **`affiliations`** (clubes e arenas filiados). Os demais seguem `planned`
-   ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   **`affiliations`** (clubes e arenas filiados); do PR 3, **`courses`** e
+   **`discipline`**; do PR 4, **`news`** (notícias e avisos), **`sponsors`**
+   (patrocinadores), **`promos`** (cupons e campanhas) e **`store`** (loja
+   oficial no Mercado). Os demais seguem `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
    (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
    `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
    nem chancela àquela federação. Desligar um módulo não apaga nada: o que
@@ -73,7 +75,7 @@ aprovada tem.
 | Perfil | Como é reconhecido | O que faz |
 |---|---|---|
 | **Quem pede a abertura** | `federations.created_by == uid` | Lê a própria federação pendente/recusada, edita `private/data` enquanto pendente, corrige e pede de novo |
-| **Equipe** (`federation_staff/{fedId}_{uid}.role`) | 8 papéis → permissões (`STAFF_ROLE_PERMISSIONS`, cópia na regra `fedRolePerms`, paridade em `staff.test.js`) | `president`/`director`: tudo (`admin`, `members`, `finance`, …); `secretary`: `members`; `treasurer`: `finance`; `competitions`, `referees` (→ `courses`), `discipline`, `communication` (→ `comms`): só o seu, ainda sem tela |
+| **Equipe** (`federation_staff/{fedId}_{uid}.role`) | 8 papéis → permissões (`STAFF_ROLE_PERMISSIONS`, cópia na regra `fedRolePerms`, paridade em `staff.test.js`) | `president`/`director`: tudo (`admin`, `members`, `finance`, …); `secretary`: `members`; `treasurer`: `finance`; `competitions`, `referees` (→ `courses`), `discipline`, `communication` (→ `comms`: notícias, cupons e campanhas): só o seu |
 | **Filiado** (`federation_members/{fedId}_{uid}`) | `user_id == uid` | Lê a própria filiação e cobranças, muda só as próprias preferências (`public_badge`, `show_in_directory`, `public_photo`), declara o pagamento ("Já paguei"), pede renovação e cancela |
 | **Visitante** | sem conta | Lê federação aprovada e planos (`/f/:slug`) e verifica carteirinha (`federationVerify`) |
 | **Admin da plataforma** | `isPlatformAdmin()` | Aprova/recusa/suspende a federação, dá e tira os selos "Verificada" e "Oficial", lê os dados da entidade |
@@ -205,8 +207,9 @@ termina sozinha na data gravada (`discipline_until_ms`, lido pela regra).
 | `/federacoes/abrir` | `V2FederationApply` | Formulário (campos públicos em `FederationPublicFields` + dados da entidade), estado do pedido (em análise / aprovada / recusada com motivo) |
 | `/federacoes/:id` | `V2FederationDetail` | Marca, selos, contagem, planos (`PlansList`), sobre, contato e **a situação da pessoa** (`MinhaSituacao`: filiar-se, cobrança Pix, renovar, carteirinha); "Gerir" para a equipe. Com os módulos ligados (`FedPublicBlocks.jsx`): **Torneios chancelados** (`FedSanctionedTournaments`), **Ranking oficial** (`FedRankingBlock`: temporada, classe, paginação, a minha linha em destaque), **Cursos** (`FedCoursesSection`, inscrever-se/cancelar), **Credenciados** (`FedCredentialsDirectory`, só credenciais válidas que a pessoa tornou públicas), **Clubes e arenas filiados** (`FedAffiliatesSection`) e **Ouvidoria** (`FedOmbudsmanBlock`: abrir manifestação, consultar protocolo). Para o filiado (PR 3): aviso de suspensão disciplinar, **Documentos** (`FedMemberDocuments`), **Sanções** (`FedMySanctions`, com recurso), **Transferência** (`FedTransferDialog`) e "Filiar um dependente" |
 | `/federacoes/:id/filiar` | `V2FederationJoin` | 1. tipo de filiação → 2. plano (preço com o desconto da pessoa; faixa de idade exige nascimento no perfil) → 3. preferências, clube, observação, termos → pedido. PR 3: CPF se a federação pede (`federationAsksCpf`), responsável ciente para 12–17, menor de 12 só com `?dependente=1` (nome, nascimento e dados do dependente, na conta do responsável), documentos exigidos listados antes de enviar |
-| `/federacoes/:id/gerir?aba=` | `V2FederationManage` | A Central: **Atender** (Hoje · Filiados: Pedidos, Filiados, **Clubes e arenas** [módulo `affiliations`], **Transferências**, **Documentos**, **Importar** [`FedSecretariatPanel`] · **Competições** [permissão `competitions`; módulos `tournaments`/`ranking`]: Chancelas, Resultados, Ranking · **Cursos** [permissão `courses`; módulo `courses`; `FedCoursesPanel`]: Cursos, Credenciais · **Disciplina** [permissão `discipline`; módulo `discipline`; `FedDisciplinePanel`]: Sanções, Ouvidoria · Financeiro: Cobranças, Recebidos) e **Gerir** (Equipe · Configurações: Planos, Recebimento, Página, Módulos, **Regras**). A seção só existe para quem tem a permissão e a aba de módulo só com o módulo ligado (`buildFederationSections(perms, federation)`); a aba mora na URL (`?aba=`; `?secao=` abre a primeira). Faixa "Precisa de você" (`FederationPendencias` ← `federationPendingItems`: pedidos, pagamentos, **clubes/arenas pedindo**, **chancelas para analisar**, transferências para responder, documentos para conferir, recursos de sanção, manifestações sem resposta) no topo |
-| `/f/:slug` | `PublicFederation` (V1, fora do V2Layout) | A página pública: marca, planos, chamada para entrar/filiar-se; com os módulos ligados, torneios chancelados, ranking oficial e clubes/arenas filiados (os mesmos blocos do detalhe) |
+| `/federacoes/:id/gerir?aba=` | `V2FederationManage` | A Central: **Atender** (Hoje · Filiados: Pedidos, Filiados, **Clubes e arenas** [módulo `affiliations`], **Transferências**, **Documentos**, **Importar** [`FedSecretariatPanel`] · **Competições** [permissão `competitions`; módulos `tournaments`/`ranking`]: Chancelas, Resultados, Ranking · **Cursos** [permissão `courses`; módulo `courses`; `FedCoursesPanel`]: Cursos, Credenciais · **Disciplina** [permissão `discipline`; módulo `discipline`; `FedDisciplinePanel`]: Sanções, Ouvidoria · **Comunicação** [permissão `comms`; PR 4]: **Notícias** [módulo `news`], **Cupons e campanhas** [módulo `promos`], **Patrocinadores** [`admin` + módulo `sponsors`] · Financeiro: Cobranças, Recebidos) e **Gerir** (Equipe · Configurações: Planos, Recebimento, Página, Módulos, **Regras**, **Governança**, **Loja** [`admin`/`finance` + módulo `store`]). A seção só existe para quem tem a permissão e a aba de módulo só com o módulo ligado (`buildFederationSections(perms, federation)`); a aba mora na URL (`?aba=`; `?secao=` abre a primeira). Faixa "Precisa de você" (`FederationPendencias` ← `federationPendingItems`: pedidos, pagamentos, **clubes/arenas pedindo**, **chancelas para analisar**, transferências para responder, documentos para conferir, recursos de sanção, manifestações sem resposta) no topo |
+| `/f/:slug` | `PublicFederation` (V1, fora do V2Layout) | A página pública: marca, planos, chamada para entrar/filiar-se; com os módulos ligados, torneios chancelados, ranking oficial e clubes/arenas filiados (os mesmos blocos do detalhe); do PR 4, notícias públicas, promoções, patrocinadores, governança e o link da loja oficial (`FedCommsBlocks.jsx`) |
+| Início → card **Federação** | `HomeFederationCard` (`home_cards`, opcional, só com a flag) | Até 3 filiações (as que pedem pagar ou renovar primeiro, `homeFederationRows`) e a última notícia de cada federação |
 | Gestão do clube → Federação | `OrgAffiliationCard kind="club"` (`V2ClubAdmin`) | Pedir filiação a uma federação com `affiliations` ligado (mensagem ≤ 500), acompanhar (pendente/aprovada/recusada/suspensa com motivo), retirar o pedido ou desfiliar |
 | Central da arena → Equipe e parceiros → **Federação** (`?aba=federacao`) | `OrgAffiliationCard kind="arena"` (`V2ArenaManage`, aba só com a flag) | O mesmo cartão para a arena |
 | Página do clube / da arena | `OrgAffiliationBadges` (`FedTags.jsx`) | Selo "Filiado · SIGLA" (só filiação **aprovada**), ligando à federação |
@@ -221,7 +224,8 @@ termina sozinha na data gravada (`discipline_until_ms`, lido pela regra).
 Os valores de `?aba=` da Central (`pedidos`, `filiados`, `filiados-orgs`,
 `transferencias`, `documentos`, `importar`, `chancelas`, `resultados`,
 `ranking`, `cursos`, `credenciais`, `sancoes`, `ouvidoria`, `cobrancas`,
-`recebidos`, `equipe`, `planos`, `pix`, `pagina`, `modulos`, `regras`, `hoje`)
+`recebidos`, `equipe`, `planos`, `pix`, `pagina`, `modulos`, `regras`, `hoje`
+e, do PR 4, `noticias`, `divulgacao`, `patrocinadores`, `governanca`, `loja`)
 são **contrato de link**: os avisos levam a eles (pedido de clube/arena →
 `filiados-orgs`; pedido de chancela → `chancelas`; transferência →
 `transferencias`; recurso → `sancoes`; manifestação → `ouvidoria`). Nunca
@@ -381,9 +385,48 @@ equipe `discipline` responde (`open|in_review|closed`, `notes`, `handled_by` —
 campos que a pessoa nunca grava). Manifestação identificada de conta excluída
 vira anônima.
 
+### 6.7 Comunicação, patrocínio, governança e loja (PR 4)
+
+- **Notícias** (módulo `news`, `federation_news`): a equipe de comunicação
+  (`comms`) ou a presidência (`admin`) escreve pelo cliente — título, resumo,
+  corpo, imagem, link, fixada (`pinned`), `audience` (`public` | `members`) e `status` (`draft` |
+  `published`). A regra lê: publicada e pública, qualquer um (até sem conta);
+  "só filiados", quem tem filiação **ativa** (`fedMemberActive`); rascunho e a
+  lista inteira, só `comms`/`admin`. O cliente **nunca** grava
+  `notified_at`/`notified_count` nem troca a federação. **Avisar os
+  filiados** é da função `federationNews` (§8): um aviso por conta (o
+  dependente avisa o responsável), uma vez só, link
+  `/federacoes/{id}?noticia={id}` (a página abre a notícia). Na página: bloco
+  Notícias (`FedNewsSection`, âncora `#federacao-noticias`); no card do início,
+  a última de cada federação.
+- **Patrocinadores** (módulo `sponsors`): `federations.sponsors` (campo
+  opcional, lista de até 12 `{ name, tier, logo_url, url }`), só `admin`
+  grava. Aparecem na página (`FedSponsorsStrip`) e, só os nomes, na
+  carteirinha.
+- **Governança** (não é módulo: transparência não se desliga; em branco nada
+  aparece): `federations.governance` (`statute_url`, `bylaws`, `mandate`,
+  `board` ≤ 12, `minutes` ≤ 24), só `admin` grava, validada por
+  `validateGovernance` (`domain/governance.js`, links só https). Bloco
+  `FedGovernanceBlock` na página.
+- **Cupons e campanhas** (módulo `promos`): a federação é o terceiro emissor
+  do `promo/` (`PROMO_ISSUER.FEDERATION`, `issuer_id` = id da federação),
+  com os mesmos editores da plataforma e dos professores. "Só filiados" reusa
+  `PROMO_VISIBILITY.STUDENTS` e vale para quem tem filiação ativa naquela
+  federação (`fedIdsOfMember`). **A campanha da federação não manda aviso**
+  (`PROMO_AUDIENCES_BY_ISSUER.federation = []`): o canal de aviso é a notícia.
+  Destinos: a página da federação e a loja. Na página, `FedPromosSection`; no
+  início, a vitrine de promoções só mostra federação com a flag ligada.
+- **Loja oficial** (módulo `store`): vendedor do Mercado de chave
+  `federation_{id}` (`SELLER_TYPE.FEDERATION`). Abre e opera quem tem `admin`
+  ou `finance` na equipe — no cliente `storeFederations` (`domain/staff.js`),
+  na regra `isMarketOperator`, no servidor `operatorUids`
+  (`functions/marketplace.js`): as três perguntas têm de dar a mesma resposta.
+  A loja nasce `active`, sem selo nem reputação. O resto (anúncio, pedido,
+  Pix direto à federação) é o Mercado de sempre.
+
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
-Dezessete coleções, todas com prefixo `federation` e **zero índice composto**
+Dezoito coleções, todas com prefixo `federation` e **zero índice composto**
 (consultas de uma igualdade — ou duas igualdades, que também não pedem
 índice; ordenação em memória): `federations` (+ `private/data`),
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`:
@@ -392,7 +435,9 @@ CPF, nascimento, responsável — PR 3), `federation_charges`,
 `federation_results`, `federation_rankings`; do PR 3,
 `federation_documents_submitted`, `federation_transfers`, `federation_imports`,
 `federation_courses`, `federation_course_enrollments`, `federation_credentials`,
-`federation_sanctions`, `federation_reports`. **Storage**: `federacao/{uid}/`
+`federation_sanctions`, `federation_reports` e, do PR 4, `federation_news`
+(campos opcionais novos na própria federação: `sponsors`, `governance`).
+**Storage**: `federacao/{uid}/`
 (só o dono lê; PDF ou imagem < 5 MB). Campos novos em coleção existente: só os
 dois **opcionais** de `tournaments` (`federation_id`, `federation_sanction`,
 §6.2). Os avisos são `notifications` com `type: 'federation'` (os do PR 2 saem
@@ -427,7 +472,9 @@ dela deixa de verificar); a manifestação identificada vira anônima; os
 pedidos de filiação de clube/arena, resultados oficiais em que aparece;
 PR 3: dependentes, documentos [registro], transferências, inscrições em
 cursos, credenciais, sanções [suas e dos dependentes], manifestações
-identificadas). `federation_rankings` fica fora da exportação de propósito: é
+identificadas). PR 4: as notícias que a pessoa escreveu ficam (são da federação;
+guardam só o `created_by`, contado na prévia como retido) e não vão na
+exportação. `federation_rankings` fica fora da exportação de propósito: é
 derivado dos resultados, que já vão.
 `exclusaoCobreColecoes.test.js` reprova coleção `federation_*` nova fora dos dois.
 
@@ -445,6 +492,7 @@ derivado dos resultados, que já vão.
 | `federationDiscipline` | callable | `discipline` (`apply`, `decide_appeal`, `end`) ou a pessoa/responsável (`appeal`) | sanção e o efeito na filiação (§6.6) |
 | `federationImportMembers` | callable | `members` | importa até 500 linhas; quem tem conta vira filiado ativo, quem não tem fica em `federation_imports` |
 | `federationDocument` | callable | `members`/`admin` da federação do documento | devolve o arquivo do Storage (base64) à secretaria, com auditoria |
+| `federationNews` | callable | `comms`/`admin` da federação | avisa os filiados ativos de uma notícia publicada, uma vez só (§6.7) |
 | `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
 | `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
 
@@ -460,8 +508,10 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
   administrar uma federação" (Competições, Clubes e arenas, Módulos e, do PR 3,
   Secretaria, Regras, Cursos, Disciplina, varredura diária) e **"Torneio
   chancelado por uma federação"** (`federacao-torneios`: pedir, decidir, só
-  filiados, enviar, pontuar); pistas de rota para `/federacoes*` (a Central
-  também aponta o artigo do torneio); doze perguntas no FAQ.
+  filiados, enviar, pontuar); do PR 4, **"Notícias, cupons e loja da
+  federação"** (`federacao-comunicacao`); pistas de rota para `/federacoes*`
+  (a Central também aponta o artigo do torneio e o da comunicação); catorze
+  perguntas no FAQ.
 - **Guias com seta** (`guias.js`, área **Federações**): `federacao-filiar`
   (buscar → filiar → plano → enviar → carteirinha), `federacao-gerir` (Central:
   seções, configurações, filiados, financeiro, pendências),
@@ -470,23 +520,26 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
   **`federacao-secretaria`** (abrir a Central → a secretaria em Filiados →
   regras e documentos do plano em Configurações → Cursos → Disciplina) e
   **`federacao-cursos`** (encontrar a federação → Cursos e clínicas →
-  inscrever-se → a credencial na sua filiação). **Pontos de
+  inscrever-se → a credencial na sua filiação) e, do PR 4,
+  **`federacao-comunicacao`** (abrir a Central → Comunicação → nova notícia →
+  publicar e avisar). **Pontos de
   dica** (`pontosDeDica.js`): abrir, minhas, filiar, carteirinha, seções,
   pendências, Pix, o do admin, do PR 2 torneios chancelados, ranking oficial e
   clubes/arenas filiados (página da federação), Competições e Clubes e arenas
   (Central), Federação na gestão do torneio, "Enviar ao ranking oficial",
   Federação na gestão do clube e na Central da arena; do PR 3 cursos e
-  ouvidoria (página da federação), Cursos e Disciplina (Central). Âncoras
+  ouvidoria (página da federação), Cursos e Disciplina (Central); do PR 4
+  notícias (página da federação) e Comunicação (Central). Âncoras
   `data-dica="federacao-…"`, `torneio-federacao`, `torneio-enviar-resultado`,
   `torneio-so-filiados`, `clube-federacao`, `arena-federacao` e
   `minha-area-credencial-publica` são contrato (guarda `dicas.test.js`). Uma
   rota tem no máximo 8 pontos (`guias.test.js`): `/federacoes/*` e
-  `/federacoes/*/gerir` estão com 7.
+  `/federacoes/*/gerir` estão com 8 — ponto novo ali exige tirar outro.
 - **Idiomas**: catálogo `src/modules/federations/i18n/locales/{en,es}.js`
-  (1125 chaves, inclusive os avisos do servidor e os textos do PR 2 e do PR 3
-  usados nas telas de torneio, clube, arena e Minha área, que o guarda
+  (1224 chaves, inclusive os avisos do servidor e os textos do PR 2 e do PR 3
+  usados nas telas de torneio, clube, arena, Minha área, Mercado e início, que o guarda
   `i18nCatalogos` exige); `npm run i18n:avisos` regravou
-  `functions/i18n/avisos.json` (425 avisos).
+  `functions/i18n/avisos.json` (426 avisos).
 - **Termos legais** (`legalDocuments.js`, `flags: ['federations']`,
   complementares, sem gate): **Termos para Federações** (`/legal` →
   `termos-federacao`: a federação responde pelos valores e pelos dados;
@@ -559,6 +612,18 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 22. **Cobrança de curso confirma a inscrição; de multa, quita a sanção** —
     tudo em `chargeConfirm`, pela `origin`. Nunca crie um segundo caminho de
     confirmação.
+23. **O aviso da notícia é do servidor e sai uma vez só** (`notified_at`); a
+    regra recusa o cliente gravando `notified_*`, e "só filiados" é conferido
+    na regra (`fedMemberActive`), não só na tela. Provado em
+    `tests/rules/federationPr4.rules.test.js` e `functions/federationPr4.test.js`.
+24. **A campanha da federação não manda aviso** (`PROMO_AUDIENCES_BY_ISSUER`):
+    abrir esse canal seria um segundo jeito de mandar mensagem em massa aos
+    filiados, sem o controle de uma vez só da notícia.
+25. **Quem opera a loja oficial é uma pergunta com três respostas que têm de
+    bater**: `isMarketOperator` (regra), `operatorUids` (servidor) e
+    `storeFederations` (cliente) — `admin` ou `finance`, só com `store` ligado.
+26. **O card do início só existe com a flag** (`requer: 'federacao'` no
+    catálogo de cards); flag desligada, ele some até do seletor.
 
 ## 11. Pendências e próximas fases
 
@@ -578,6 +643,8 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
   **não** é apagado por prazo (a pessoa apaga o pendente; a exclusão de conta
   apaga todos); o ranking oficial **não** desconta suspensão (D11). Quando
   pedirem.
-- **PR 4** — notícias e avisos (`news`), patrocinadores (`sponsors`), cupons e
-  vantagens (emissor `federation` no `promo/`), loja no Mercado (`store`),
-  governança e card no início.
+- ~~**PR 4**~~ — entregue: notícias e avisos (`news`), patrocinadores
+  (`sponsors`), cupons e campanhas (emissor `federation` no `promo/`), loja
+  oficial no Mercado (`store`), governança e card no início (§6.7). Fora de
+  propósito: notícia agendada (publica-se na hora), aviso de campanha (o canal
+  é a notícia) e patrocinador com contrato/valores (só a vitrine).

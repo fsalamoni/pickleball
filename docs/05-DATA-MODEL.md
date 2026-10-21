@@ -1586,7 +1586,7 @@ andamento impede a exclusão.
 
 ## Federações (flag `federations`, default OFF) — `docs/50-FEDERACAO.md`
 
-Dezessete coleções com prefixo `federation`, **zero índice composto** (uma ou
+Dezoito coleções com prefixo `federation`, **zero índice composto** (uma ou
 duas igualdades por consulta, ordenação em memória); os únicos campos novos em
 coleção existente são os dois opcionais de `tournaments` (abaixo). Regras no
 bloco "FEDERAÇÕES" do `firestore.rules` (`fedOn()` lê a flag em
@@ -1794,6 +1794,26 @@ anônima (consulta pelo protocolo — `reportProtocol(id)`), a equipe
 só muda `status`/`notes`/`handled_by`/`updated_at`; apaga só o admin da
 plataforma.
 
+### `federation_news/{id}` (PR 4, módulo `news` — o cliente escreve)
+`federation_id`, `title`, `summary`, `body`, `image_url`, `link`, `pinned`,
+`audience` (`public|members`), `status` (`draft|published`), `published_at`,
+`created_by`, `created_at`, `updated_at`; `notified_at`/`notified_count`/
+`notified_by` **só o servidor** (`federationNews`; a regra recusa o cliente).
+Leitura: publicada e pública, qualquer um (até sem conta); `members`, filiação
+**ativa** (`fedMemberActive`); rascunho e a lista inteira, equipe
+`comms`/`admin` e o admin da plataforma. Escrita: `comms`/`admin` com o módulo
+`news` ligado, sem trocar `federation_id`. Consultas de igualdade, zero índice.
+
+### Campos do PR 4 em `federations/{id}` (opcionais)
+`sponsors` (lista ≤ 12 de `{ name, tier, logo_url, url }`, só `admin`, módulo
+`sponsors`) e `governance` (`statute_url`, `bylaws`, `mandate { start, end }`,
+`board` ≤ 12, `minutes` ≤ 24; só `admin`; públicos como o resto da federação).
+A federação também é **emissora** em `promo_coupons`/`promo_campaigns`/
+`promo_settings` (`issuer_type: 'federation'`, `issuer_id` = id da federação;
+equipe `comms`/`admin` com o módulo `promos`) e **vendedora** em
+`market_sellers/federation_{id}` (`seller_type: 'federation'`; `admin`/`finance`
+com o módulo `store`).
+
 ### Avisos e auditoria
 Avisos são `notifications` com `type: 'federation'` (área `federacoes`,
 categoria "Federações" em Configurações → Notificações), `origin: 'server'`,
@@ -1806,7 +1826,8 @@ reject|suspend`, `sanction_request|withdraw|approve|reject|revoke`,
 `member_private_reveal`, `document_upload|view`, `transfer_request|approve|
 reject`, `members_import`, `course_save|delete|enroll|pass|fail`,
 `discipline_warning|suspension|fine|exclusion|uphold|overturn|end`,
-`report_update`).
+`report_update`; PR 4: `news_save|delete|notify`, `sponsors_update`,
+`governance_update`).
 
 ### Exclusão de conta e exportação
 Filiações e cobranças **ficam sem o nome** (`coletarFederacoes`), os códigos
@@ -1818,7 +1839,8 @@ tira) e o pedido em `federation_affiliations` fica sem `requested_by`; PR 3:
 menor fica; código deixa de verificar), transferências, sanções, inscrições e
 credenciais ficam sem o nome (credencial sai do diretório e do índice),
 manifestação identificada vira anônima, documentos enviados são apagados
-(pasta `federacao/{uid}/` em `STORAGE_PREFIXES`); **presidente** bloqueia a
+(pasta `federacao/{uid}/` em `STORAGE_PREFIXES`); PR 4: `federation_news`
+fica como está (é da federação, guarda só o `created_by` — `RETAINED_AS_IS`); **presidente** bloqueia a
 exclusão (nomeia outra presidência antes). Exportação: bloco `federations`
 (`federationExportService.js`: filiações, dependentes, cobranças, papéis,
 federações que pediu, pedidos de clube/arena, resultados, documentos
