@@ -111,7 +111,14 @@ com paridade contra `domain/agenda.js`), a agenda assinável
 `manage/FedAgendaPanel.jsx`); PR 9b: reuniões e assembleias no campo
 `meeting` do evento (convocação com pauta e quórum, resultado por item, ata),
 domínio `domain/meeting.js` com cópia em `functions/federationMeetingPolicy.js`,
-telas `manage/FedMeetingDialogs.jsx` e `agenda/MeetingBlock.jsx`. Zero índice composto; os únicos campos novos
+telas `manage/FedMeetingDialogs.jsx` e `agenda/MeetingBlock.jsx`; PR 10
+(`tests/rules/federationComments.rules.test.js`): comentários no documento
+publicado e no evento — `federation_comments` (só o autor lê direto) e
+`federation_comment_reports` (ninguém lê), tudo gravado por
+`functions/federationComments.js` e listado por `federationCommentsList`
+(sem uid), régua em `domain/comments.js` com cópia em
+`functions/federationCommentsPolicy.js`; telas `comments/CommentsSection.jsx`
+e a fila `manage/FedCommentsPanel.jsx`. Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir

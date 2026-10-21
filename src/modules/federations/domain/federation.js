@@ -153,5 +153,6 @@ export function normalizeFederationRules(raw = {}) {
     transfer_release_days: int(raw?.transfer_release_days, 15, 1, 365),
     member_declarations: raw?.member_declarations !== false,
     convocation_min_days: int(raw?.convocation_min_days, 8, 0, 365),
+    comments: raw?.comments !== false,
   };
 }

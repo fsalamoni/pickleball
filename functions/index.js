@@ -1343,6 +1343,20 @@ exports.federationAcervo = federationCallable('federationAcervo', (ctx, actor, d
 // Calendário oficial (agenda esportiva e institucional): só o servidor grava — `functions/federationAgenda.js`.
 const federationAgenda = require('./federationAgenda');
 exports.federationAgenda = federationCallable('federationAgenda', federationAgenda.agenda);
+// Comentários nos documentos do acervo e nos eventos da agenda: só o servidor grava; a lista é pública (também sem conta).
+const federationComments = require('./federationComments');
+exports.federationComments = federationCallable('federationComments', federationComments.comments);
+exports.federationCommentsList = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
+  const ctx = fedCtx();
+  try {
+    const actor = req.auth ? { uid: req.auth.uid, name: (req.auth.token || {}).name || '', email: (req.auth.token || {}).email || '', isPlatformAdmin: await isPlatformAdminUser(req, ctx.db) } : null;
+    return await federationComments.list(ctx, actor, req.data || {});
+  } catch (err) {
+    if (err instanceof federations.FederationError) throw new HttpsError(err.code, err.message);
+    logger.error('federationCommentsList falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});
 exports.federationDocument =federationCallable('federationDocument', (ctx, actor, data) => {
   let bucket = null;
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationDocument: Storage indisponível.', err); }

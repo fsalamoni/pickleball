@@ -1702,7 +1702,28 @@ acesso justificado. **Só o servidor grava** (`federationAgenda`,
 `write: if false`). Zero índice (a tela consulta `federation_id` +
 `visibility`). Na exclusão de conta fica (é da federação; só `created_by`);
 fora da exportação. Os torneios chancelados entram na agenda **derivados**,
-nada gravado.
+nada gravado. PR 10: campo opcional `comments` `{ mode open|closed|consultation,
+until_date, until_ms, updated_at_ms, updated_by }` (ausente ⇒ aberto) — vale
+também em `federation_docs`; só o servidor grava.
+
+### `federation_comments/{id}` (PR 10, NOVO — comentários no acervo e na agenda)
+`federation_id`, `target_kind` (`doc` | `event`), `target_id`, `target_key`
+(`{kind}_{id}`), `target_title`, `user_id`, `user_name` (copiado do cadastro),
+`org_name` (na resposta oficial), `text` (3–1.000), `official`, `parent_id`
+(resposta oficial a um comentário), `status` (`visible` | `hidden`),
+`reports_count`, `hidden_by` (`reports` | `staff`), `hidden_reason`,
+`hidden_at_ms`, `moderated_by`, `restored_at_ms`, `created_at_ms`. Leitura:
+**só o autor** (a exportação); a página lista pela função
+`federationCommentsList`, que confere a leitura do alvo e não entrega uid.
+**Só o servidor grava** (`federationComments`). Zero índice. Na exclusão de
+conta sai (por `user_id`); na exportação entra.
+
+### `federation_comment_reports/{comentário}_{uid}` (PR 10, NOVO)
+`federation_id`, `comment_id`, `reporter_id`, `reason` (`offensive` |
+`personal_data` | `spam` | `off_topic` | `other`), `created_at_ms`. Ninguém
+lê nem grava pelo navegador. Na exclusão de conta sai (por `reporter_id`);
+fora da exportação (é sobre o comentário de outra pessoa). `federations.rules`
+ganha `comments` (opcional; `false` desliga os comentários da federação).
 
 ### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
 Contador da numeração: `{ "<tipo>_<ano>": n }`. Só o servidor grava, numa
@@ -1899,7 +1920,10 @@ Leitura: publicada e pública, qualquer um (até sem conta); `members`, filiaç�
 ### Campos do PR 4 em `federations/{id}` (opcionais)
 `sponsors` (lista ≤ 12 de `{ name, tier, logo_url, url }`, só `admin`, módulo
 `sponsors`) e `governance` (`statute_url`, `bylaws`, `mandate { start, end }`,
-`board` ≤ 12, `minutes` ≤ 24; só `admin`; públicos como o resto da federação).
+`board` ≤ 12, `minutes` ≤ 24, `women_count` — PR 10, opcional: QUANTAS pessoas
+da diretoria são mulheres, nunca quem, para o aviso da cota de 30% do art. 36,
+IX; inteiro de 0 ao tamanho de `board`, ou `null`; a página pública não mostra;
+só `admin`; públicos como o resto da federação).
 A federação também é **emissora** em `promo_coupons`/`promo_campaigns`/
 `promo_settings` (`issuer_type: 'federation'`, `issuer_id` = id da federação;
 equipe `comms`/`admin` com o módulo `promos`) e **vendedora** em

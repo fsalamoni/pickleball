@@ -2259,3 +2259,25 @@ a lista de presença e o registro de votação. Sem quórum nada se decide. Muda
 a pauta divulgada e corrigir o resultado pedem motivo e ficam no histórico,
 avisando quem segue. Tudo no campo `meeting` do evento, gravado só pelo
 servidor, sem coleção nem regra nova. `docs/50-FEDERACAO.md` §15.9.
+
+### Federação — comentários no acervo e na agenda (PR 10, Etapa 4 do acervo, 2026-10-21)
+
+O pedido era que o público pudesse ler, baixar, compartilhar e COMENTAR os
+documentos e os eventos da federação. Comentário num documento oficial é
+diferente de comentário em rede social: o nome vai junto, a federação
+responde em destaque (resposta oficial, com aviso a quem perguntou), e o que
+fere alguém sai com motivo dito ao autor. Três denúncias de pessoas
+diferentes ocultam sozinhas até a moderação olhar, para que um comentário
+com o telefone de alguém não fique no ar a noite inteira esperando a
+secretaria. Cada documento ou evento pode ficar com comentários abertos,
+fechados ou em CONSULTA PÚBLICA até uma data — o caminho para ouvir os
+filiados sobre um regulamento antes de aprová-lo. Tudo passa pelo servidor:
+a coleção só o autor lê (é como a exportação encontra os dele) e a lista da
+página sai de uma função que confere quem pode ler o documento e não entrega
+o uid de ninguém. `docs/50-FEDERACAO.md` §16.
+
+No mesmo PR, o aviso da cota de 30% de mulheres nos cargos de direção (Lei
+Geral do Esporte, art. 36, IX) entrou na aba Transparência e na Governança. A
+federação informa só QUANTAS pessoas da diretoria são mulheres — nunca quem —
+e a página pública não mostra o número. É aviso, não trava: quem responde
+pela composição da diretoria é a federação. `docs/50-FEDERACAO.md` §14.5.

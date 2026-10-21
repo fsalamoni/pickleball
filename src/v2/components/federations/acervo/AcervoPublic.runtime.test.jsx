@@ -17,6 +17,8 @@ vi.mock('@/modules/federations/hooks/useFederations', () => ({
   useVisibleAcervo: () => estado.acervo,
   useAcervoFollow: () => ({ data: null, isLoading: false }),
   useSetAcervoFollow: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useFederationComments: () => ({ data: { state: { open: true, mode: 'open', why: null }, comments: [], count: 0, can_moderate: false, signed_in: false }, isLoading: false }),
+  useFederationMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('./acervoFiles', () => ({
   sha256DoArquivo: vi.fn(async () => 'a'.repeat(64)),

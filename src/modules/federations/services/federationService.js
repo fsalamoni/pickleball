@@ -977,6 +977,20 @@ export async function getFederationEvent(id) {
 /** As ações da agenda são do SERVIDOR (motivo, histórico, aviso a quem segue). */
 export const agendaAction = (payload) => chamar('federationAgenda', payload);
 
+/* ===================================================== Comentários (acervo e agenda) ===================================================== */
+
+/** A lista de um documento (`doc`) ou evento (`event`), pelo servidor — também sem conta. */
+export const listFederationComments = ({ federationId, kind, targetId }) => chamar('federationCommentsList', { federationId, kind, targetId });
+
+/** Comentar, responder (equipe), denunciar, ocultar, reabrir, apagar, abrir/fechar, fila da moderação. */
+export const commentAction = (payload) => chamar('federationComments', payload);
+
+/** Os meus comentários (exportação de dados; a regra só deixa ler os próprios). */
+export async function listMyFederationComments(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.comments), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
 /** O arquivo de um documento sem link público (filiado, equipe, rascunho), em base64. */
 export const fetchAcervoFile = ({ federationId, docId, path }) => acervoAction({ federationId, action: 'file', docId, path });
 

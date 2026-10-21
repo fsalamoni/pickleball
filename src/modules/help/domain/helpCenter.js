@@ -817,6 +817,25 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-comentarios',
+      flags: ['federations'],
+      title: tk('Comentários nos documentos e eventos da federação'),
+      summary: tk('Comentar, responder oficialmente, denunciar e moderar, e abrir uma consulta pública com prazo.'),
+      keywords: ['federação', 'comentário', 'comentar', 'denunciar', 'denúncia', 'moderação', 'ocultar', 'resposta oficial', 'consulta pública', 'prazo', 'acervo', 'agenda'],
+      blocks: [
+        p(tk('Documento publicado do acervo e evento da agenda têm comentários no fim da página. Comenta quem tem conta e pode ler aquele conteúdo: no documento só para filiados, só os filiados e a equipe. O comentário é público, com o nome da pessoa.')),
+        list(
+          tk('RESPOSTA OFICIAL — quem cuida do acervo (ou administra a federação) responde em nome da federação, em destaque, e quem comentou é avisado.'),
+          tk('DENUNCIAR — "Denunciar", com o motivo. Quem escreveu não sabe quem denunciou; três denúncias de pessoas diferentes ocultam o comentário até a moderação olhar.'),
+          tk('OCULTAR E REABRIR — a moderação oculta com motivo (quem escreveu recebe o motivo) e pode reabrir, o que zera as denúncias. A fila fica na Central, na aba Comentários do Acervo oficial (ou da Agenda, sem acervo).'),
+          tk('ABERTOS, FECHADOS OU CONSULTA — em cada documento ou evento a equipe escolhe: comentários abertos, fechados ou consulta pública aberta até uma data (até o fim do dia, horário de Brasília). Encerrada, ninguém comenta e o que foi escrito continua à vista.'),
+          tk('APAGAR — quem escreveu apaga o próprio comentário a qualquer hora; a resposta oficial a ele sai junto.'),
+          tk('DESLIGAR — Configurações → Regras → "Comentários nos documentos e eventos" fecha os comentários da federação inteira.'),
+        ),
+        tip(tk('Comentário não é recurso nem denúncia formal: para isso existe a ouvidoria, com protocolo e prazo de resposta.')),
+      ],
+    },
+    {
       id: 'mercado-comprar',
       flags: ['marketplace'],
       guias: ['mercado-comprar'],
@@ -2083,7 +2102,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
   { pattern: '/federacoes/*/gerir', label: tk('a Central da federação'),
-    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao']] },
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao'], [HELP_SECTION.ATHLETE, 'federacao-comentarios']] },
   { pattern: '/federacoes/*/filiar', label: tk('a filiação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar']] },
   { pattern: '/federacoes/*', label: tk('esta federação'),
@@ -2352,6 +2371,8 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('A assembleia foi adiada. Onde vejo a nova data e o motivo?'), section: HELP_SECTION.ATHLETE, article: 'federacao-agenda' },
   { q: tk('Onde vejo a pauta da assembleia e o que foi decidido?'), section: HELP_SECTION.ATHLETE, article: 'federacao-reuniao' },
   { q: tk('A assembleia não teve quórum. O que acontece com a pauta?'), section: HELP_SECTION.ATHLETE, article: 'federacao-reuniao' },
+  { q: tk('Como denuncio um comentário num documento da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comentarios' },
+  { q: tk('Como abro uma consulta pública sobre um regulamento?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comentarios' },
   { q: tk('Como a federação vende uniforme e material pelo Mercado?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comunicacao' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: tk('Como a plataforma me mostra onde tocar?'), section: HELP_SECTION.START, article: 'dicas' },

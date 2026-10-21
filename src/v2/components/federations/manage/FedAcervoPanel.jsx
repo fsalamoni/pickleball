@@ -25,6 +25,7 @@ import {
 } from '@/modules/federations/domain/acervo';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tk, tn } from '@/core/i18n';
+import { womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
 import { quando } from '../federationUi';
 import { AcervoUploader, DocForm, MediaLinksEditor } from './FedAcervoForm';
 
@@ -306,7 +307,23 @@ function DocumentosTab({ federation, docsQ, isAdmin }) {
 
 /* ----------------------------------------------------------- transparência -- */
 
-function TransparenciaTab({ docsQ }) {
+/** A cota de mulheres na direção (art. 36, IX): só aviso, a partir da Governança. */
+function CotaDeMulheres({ federation }) {
+  const q = womenQuota(federation?.governance);
+  const ok = q.status === 'ok';
+  return (
+    <V2Surface variant="compacto" className="flex items-start gap-3 p-4" data-dica="federacao-transparencia-cota">
+      {ok ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" aria-hidden="true" /> : <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />}
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-ink">{t('Mulheres nos cargos de direção')}</p>
+        <p className="text-xs text-gray-500">{t('Lei 14.597/2023, art. 36, IX: no mínimo 30%. Só aviso — a plataforma não barra nada.')}</p>
+        <p className="text-sm text-gray-500">{q.status === 'empty' ? t('A diretoria não está cadastrada (Configurações → Governança).') : womenQuotaText(q)}</p>
+      </div>
+    </V2Surface>
+  );
+}
+
+function TransparenciaTab({ federation, docsQ }) {
   const itens = docsQ.isSuccess ? transparencyChecklist(docsQ.data) : null;
   const ok = itens ? itens.filter((x) => x.ok).length : 0;
   return (
@@ -339,11 +356,12 @@ function TransparenciaTab({ docsQ }) {
           )}
         </>
       )}
+      <CotaDeMulheres federation={federation} />
     </section>
   );
 }
 
 export default function FedAcervoPanel({ federation, docsQ, tab, isAdmin }) {
-  if (tab === 'transparencia') return <TransparenciaTab docsQ={docsQ} />;
+  if (tab === 'transparencia') return <TransparenciaTab federation={federation} docsQ={docsQ} />;
   return <DocumentosTab federation={federation} docsQ={docsQ} isAdmin={isAdmin} />;
 }

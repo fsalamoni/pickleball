@@ -74,6 +74,8 @@ export const fedKeys = {
   follow: (fedId, uid) => ['federacoes', 'federacao', fedId, 'acervo', 'sigo', uid],
   // Calendário oficial
   events: (id, visibility) => ['federacoes', 'federacao', id, 'agenda', visibility],
+  comments: (id, kind, targetId, uid) => ['federacoes', 'federacao', id, 'comentarios', kind, targetId, uid || null],
+  commentsQueue: (id) => ['federacoes', 'federacao', id, 'comentarios', 'moderacao'],
   event: (eventId) => ['federacoes', 'agenda-evento', eventId],
 };
 
@@ -389,6 +391,24 @@ export function useSetAcervoFollow(fedId) {
     mutationFn: (seguir) => svc.setAcervoFollow(fedId, user?.uid, seguir),
     onSuccess: () => qc.invalidateQueries({ queryKey: fedKeys.follow(fedId, user?.uid) }),
   });
+}
+
+/* ------------------------------------------------- comentários (acervo e agenda) -- */
+
+/** Os comentários de um documento ou evento (a lista vem do servidor, que confere quem pode ver). */
+export function useFederationComments(federation, kind, targetId, { enabled = true } = {}) {
+  const { user } = useAuth();
+  const fedId = federation?.id;
+  return useQuery({
+    queryKey: fedKeys.comments(fedId, kind, targetId, user?.uid),
+    queryFn: () => svc.listFederationComments({ federationId: fedId, kind, targetId }),
+    enabled: !!fedId && !!targetId && enabled,
+  });
+}
+
+/** A fila da moderação: comentários ocultos e denunciados da federação. */
+export function useCommentsQueue(fedId, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.commentsQueue(fedId), queryFn: () => svc.commentAction({ federationId: fedId, action: 'queue' }), enabled: !!fedId && enabled });
 }
 
 /** Uma manifestação pelo protocolo (o id). */
