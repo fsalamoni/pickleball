@@ -6,7 +6,7 @@
  * presidente e diretor veem tudo. O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { ArrowLeftRight, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Medal, MessageSquareWarning, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Sun, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -62,6 +62,14 @@ export function buildFederationSections(perms = [], federation = null) {
         ...(modulo('ranking') ? [{ value: 'ranking', label: tk('Ranking'), icon: Medal }] : []),
       ],
     },
+    pode(FED_PERMISSION.COMMS) && (modulo('news') || modulo('promos') || (admin && modulo('sponsors'))) && {
+      id: 'comunicacao', grupo: 'atender', label: tk('Comunicação'), icon: Megaphone, dica: 'federacao-secao-comunicacao',
+      tabs: [
+        ...(modulo('news') ? [{ value: 'noticias', label: tk('Notícias'), icon: Newspaper }] : []),
+        ...(modulo('promos') ? [{ value: 'divulgacao', label: tk('Cupons e campanhas'), icon: Tag }] : []),
+        ...(admin && modulo('sponsors') ? [{ value: 'patrocinadores', label: tk('Patrocinadores'), icon: Handshake }] : []),
+      ],
+    },
     pode(FED_PERMISSION.FINANCE) && {
       id: 'financeiro', grupo: 'atender', label: tk('Financeiro'), icon: Wallet, dica: 'federacao-secao-financeiro',
       tabs: [
@@ -82,7 +90,9 @@ export function buildFederationSections(perms = [], federation = null) {
           { value: 'pagina', label: tk('Página'), icon: FileText },
           { value: 'modulos', label: tk('Módulos'), icon: Puzzle },
           { value: 'regras', label: tk('Regras'), icon: ClipboardList },
+          { value: 'governanca', label: tk('Governança'), icon: Landmark },
         ] : []),
+        ...((admin || pode(FED_PERMISSION.FINANCE)) && modulo('store') ? [{ value: 'loja', label: tk('Loja'), icon: Store }] : []),
       ],
     },
   ].filter(Boolean);

@@ -39,6 +39,8 @@ import { t, tk, fmtLista } from '@/core/i18n';
 export const PROMO_ISSUER = Object.freeze({
   PLATFORM: 'platform',
   COACH: 'coach',
+  /** PR 4 das federações: `issuer_id` = id da federação (módulo `promos`). */
+  FEDERATION: 'federation',
 });
 
 /** O `issuer_id` fixo da plataforma (nunca colide com um uid, que tem 28). */
@@ -63,7 +65,7 @@ export function normalizeIssuer(input = {}) {
   const id = type === PROMO_ISSUER.PLATFORM ? PLATFORM_ISSUER_ID : String(input.id || '').trim();
   if (!id) return null;
   const name = String(input.name || '').replace(/\s+/g, ' ').trim().slice(0, 80)
-    || (type === PROMO_ISSUER.PLATFORM ? 'PickleRush' : 'Professor');
+    || (type === PROMO_ISSUER.PLATFORM ? 'PickleRush' : type === PROMO_ISSUER.FEDERATION ? 'Federação' : 'Professor');
   return { type, id, name };
 }
 
@@ -115,6 +117,16 @@ export const PROMO_KIND_META = Object.freeze({
     [K.RENTAL]: { label: tk('Aluguel de equipamento'), hint: tk('Raquete ou outro equipamento emprestado.'), example: tk('Raquete para a primeira aula') },
     [K.EVENT]: { label: tk('Evento'), hint: tk('Participação num evento ou treino especial seu.'), example: tk('Treino coletivo de sábado') },
     [K.OTHER]: { label: tk('Outro benefício'), hint: tk('Qualquer outra vantagem.'), example: tk('Avaliação de nível grátis') },
+  }),
+  [PROMO_ISSUER.FEDERATION]: Object.freeze({
+    [K.DISCOUNT]: { label: tk('Desconto'), hint: tk('Percentual ou valor fixo — na inscrição de um torneio chancelado, num curso, na loja da federação ou num parceiro. Quem usa mostra o código e a equipe registra o uso.') },
+    [K.EVENT]: { label: tk('Inscrição em evento'), hint: tk('Inscrição num torneio chancelado ou evento da federação.'), example: tk('Inscrição na etapa estadual') },
+    [K.CLINIC]: { label: tk('Clínica ou curso'), hint: tk('Vaga numa clínica, curso ou capacitação da federação.'), example: tk('Clínica de arbitragem') },
+    [K.PRODUCT]: { label: tk('Produto ou brinde'), hint: tk('Um item da loja oficial ou um brinde de parceiro.'), example: tk('1 camiseta oficial') },
+    [K.RENTAL]: { label: tk('Aluguel de equipamento'), hint: tk('Raquete, bolas ou outro equipamento num evento.'), example: tk('Aluguel de raquete na etapa') },
+    [K.FOOD]: { label: tk('Comida'), hint: tk('Um lanche ou refeição num evento da federação.'), example: tk('1 lanche na etapa') },
+    [K.DRINK]: { label: tk('Bebida'), hint: tk('Uma bebida num evento da federação.'), example: tk('1 água de coco') },
+    [K.OTHER]: { label: tk('Outro benefício'), hint: tk('Qualquer outra vantagem (parceiros, convênios).'), example: tk('Desconto no fisioterapeuta parceiro') },
   }),
 });
 
@@ -220,11 +232,18 @@ export const PROMO_VISIBILITY = Object.freeze({
  * @param {object} doc cupom ou campanha
  * @param {{ uid?: string, coachIdsDoAluno?: Set<string> }} ctx
  */
-export function isVisibleTo(doc, { uid = null, coachIdsDoAluno = new Set() } = {}) {
+export function isVisibleTo(doc, { uid = null, coachIdsDoAluno = new Set(), fedIdsDoFiliado = new Set() } = {}) {
   if (!doc) return false;
-  if (doc.issuer_type !== PROMO_ISSUER.COACH) return true;
   if (doc.visibility !== PROMO_VISIBILITY.STUDENTS) return true;
+  // O mesmo valor gravado ("alunos") quer dizer "só filiados" numa federação.
+  if (doc.issuer_type === PROMO_ISSUER.FEDERATION) return fedIdsDoFiliado.has(doc.issuer_id);
+  if (doc.issuer_type !== PROMO_ISSUER.COACH) return true;
   return uid === doc.issuer_id || coachIdsDoAluno.has(doc.issuer_id);
+}
+
+/** As federações em que a pessoa tem filiação ATIVA — o que decide o "só filiados". */
+export function fedIdsOfMember(memberships = []) {
+  return new Set((memberships || []).filter((m) => m?.federation_id && m.status === 'active').map((m) => m.federation_id));
 }
 
 /**
@@ -259,7 +278,7 @@ export function normalizePromoCouponInput(input = {}, { issuerType } = {}) {
   if (!permitidos[kind]) errors.kind = t('Tipo de cupom não disponível.');
   const alcance = normalizeReach(input.reach || {});
   if (!alcance.valid) Object.assign(errors, alcance.errors);
-  const visibility = issuerType === PROMO_ISSUER.COACH && input.visibility === PROMO_VISIBILITY.STUDENTS
+  const visibility = (issuerType === PROMO_ISSUER.COACH || issuerType === PROMO_ISSUER.FEDERATION) && input.visibility === PROMO_VISIBILITY.STUDENTS
     ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL;
   const {
     referrer_reward, referred_reward_kind, referred_reward_value, first_booking_only, max_per_referrer,
@@ -299,6 +318,7 @@ export function promoUseHint(coupon) {
   const coach = coupon?.issuer_type === PROMO_ISSUER.COACH;
   if (coach && couponKind(coupon) === K.DISCOUNT) return t('Informe o código ao pedir a aula.');
   if (coach) return t('Mostre o código ao professor.');
+  if (coupon?.issuer_type === PROMO_ISSUER.FEDERATION) return t('Mostre o código à equipe da federação ou ao parceiro.');
   return t('Mostre o código para usar.');
 }
 
@@ -328,6 +348,8 @@ export const PROMO_DESTINATION = Object.freeze({
   BOOK_LESSON: 'book_lesson',
   CLINICS: 'clinics',
   STORE: 'store',
+  /** PR 4: a página da federação emissora. */
+  FEDERATION: 'federation',
   CONTENT: 'content',
 });
 
@@ -353,6 +375,7 @@ export const PROMO_DESTINATION_META = Object.freeze({
   [D.BOOK_LESSON]: { label: tk('Marcar aula'), hint: tk('Abre o pedido de aula no seu perfil.'), cta: tk('Marcar aula') },
   [D.CLINICS]: { label: tk('Minhas clínicas'), hint: tk('As clínicas e workshops abertos.'), cta: tk('Ver clínicas') },
   [D.STORE]: { label: tk('Minha loja'), hint: tk('Os produtos à venda com você.'), cta: tk('Ver a loja') },
+  [D.FEDERATION]: { label: tk('Página da federação'), hint: tk('A página pública da federação: planos, torneios chancelados, ranking e notícias.'), cta: tk('Conhecer a federação') },
   [D.CONTENT]: { label: tk('Meu conteúdo'), hint: tk('A sua biblioteca de conteúdo.'), cta: tk('Ver conteúdo') },
 });
 
@@ -364,6 +387,9 @@ export const PROMO_DESTINATIONS_BY_ISSUER = Object.freeze({
   ]),
   [PROMO_ISSUER.COACH]: Object.freeze([
     D.DETAILS, D.PROFILE, D.BOOK_LESSON, D.CLINICS, D.STORE, D.CONTENT, D.PROMOS, D.MARKET,
+  ]),
+  [PROMO_ISSUER.FEDERATION]: Object.freeze([
+    D.DETAILS, D.FEDERATION, D.TOURNAMENTS, D.TOURNAMENT, D.STORE, D.PROMOS, D.MARKET,
   ]),
 });
 
@@ -390,7 +416,9 @@ export function normalizePromoDestination(input = {}, issuerType) {
 export function promoDestinationLink(destination, { issuerType, issuerId, campaignId } = {}) {
   const tipo = destination?.type || D.DETAILS;
   const alvo = encodeURIComponent(String(destination?.target_id || '').trim());
-  const perfil = issuerId && issuerType === PROMO_ISSUER.COACH ? `/coaches/${encodeURIComponent(issuerId)}` : null;
+  const federacao = issuerId && issuerType === PROMO_ISSUER.FEDERATION;
+  const perfil = issuerId && issuerType === PROMO_ISSUER.COACH ? `/coaches/${encodeURIComponent(issuerId)}`
+    : federacao ? `/federacoes/${encodeURIComponent(issuerId)}` : null;
   switch (tipo) {
     case D.TOURNAMENTS: return '/torneios';
     case D.TOURNAMENT: return alvo ? `/torneios/${alvo}` : '/torneios';
@@ -404,11 +432,13 @@ export function promoDestinationLink(destination, { issuerType, issuerId, campai
     case D.COMMUNITY: return '/novidades';
     case D.PARTNERS: return '/parceiros';
     case D.PROMOS: return '/promocoes';
-    case D.MARKET: return issuerId && issuerType === PROMO_ISSUER.COACH ? `/mercado/vendedor/coach_${encodeURIComponent(issuerId)}` : '/mercado';
+    case D.MARKET: return issuerId && issuerType === PROMO_ISSUER.COACH ? `/mercado/vendedor/coach_${encodeURIComponent(issuerId)}`
+      : federacao ? `/mercado/vendedor/federation_${encodeURIComponent(issuerId)}` : '/mercado';
     case D.PROFILE: return perfil || '/coaches';
+    case D.FEDERATION: return perfil || '/federacoes';
     case D.BOOK_LESSON: return perfil ? `${perfil}?marcar=1` : '/coaches';
     case D.CLINICS: return perfil ? `${perfil}#professor-clinicas` : '/coaches';
-    case D.STORE: return perfil ? `${perfil}#professor-loja` : '/coaches';
+    case D.STORE: return federacao ? `/mercado/vendedor/federation_${encodeURIComponent(issuerId)}` : perfil ? `${perfil}#professor-loja` : '/coaches';
     case D.CONTENT: return perfil ? `${perfil}#professor-conteudo` : '/coaches';
     case D.DETAILS:
     default:
@@ -484,7 +514,7 @@ export function livePromoBanners(campaigns = [], { today, lugar = 'home' } = {})
 /** "Banner na tela inicial e no seu perfil · leva a: Marcar aula". */
 export function promoPlacementText(campaign) {
   if (!campaign?.banner) return '';
-  const pagina = campaign.issuer_type === PROMO_ISSUER.COACH ? t('no seu perfil') : t('na vitrine de promoções');
+  const pagina = campaign.issuer_type === PROMO_ISSUER.COACH ? t('no seu perfil') : campaign.issuer_type === PROMO_ISSUER.FEDERATION ? t('na página da federação') : t('na vitrine de promoções');
   const onde = [
     campaign.show_home ? t('na tela inicial') : null,
     campaign.show_on_page !== false ? pagina : null,
@@ -525,6 +555,9 @@ export const PROMO_AUDIENCE_META = Object.freeze({
 export const PROMO_AUDIENCES_BY_ISSUER = Object.freeze({
   [PROMO_ISSUER.PLATFORM]: Object.freeze([A.ALL, A.INTEREST, A.STATE, A.CITY, A.COACHES]),
   [PROMO_ISSUER.COACH]: Object.freeze([A.ACTIVE_STUDENTS, A.ALL_STUDENTS]),
+  // A federação não avisa pela campanha (a comunicação não lê a lista de
+  // filiados): o aviso aos filiados é a NOTÍCIA, pelo servidor.
+  [PROMO_ISSUER.FEDERATION]: Object.freeze([]),
 });
 
 const uniq = (lista) => [...new Set((lista || []).filter(Boolean))];
@@ -830,10 +863,11 @@ function fimDoDiaMs(iso) {
  * @returns {Array<{ id: string, promo: 'coupon'|'campaign', doc: object, reach: object, expiresAt: number|null }>}
  */
 export function homePromoItems({
-  coupons = [], campaigns = [], platformOn = false, coachesOn = false, viewer = {}, today, now = Date.now(),
+  coupons = [], campaigns = [], platformOn = false, coachesOn = false, federationsOn = false, viewer = {}, today, now = Date.now(),
 } = {}) {
   const emissorLigado = (d) => (d?.issuer_type === PROMO_ISSUER.PLATFORM ? platformOn
-    : d?.issuer_type === PROMO_ISSUER.COACH ? coachesOn : false);
+    : d?.issuer_type === PROMO_ISSUER.COACH ? coachesOn
+      : d?.issuer_type === PROMO_ISSUER.FEDERATION ? federationsOn : false);
   const pode = (d) => emissorLigado(d) && isVisibleTo(d, viewer);
   const alcance = (d) => normalizeReach(d?.reach || {}).value;
   const cupons = (coupons || [])

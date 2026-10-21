@@ -26,6 +26,7 @@ export const FED_COLLECTIONS = Object.freeze({
   credentials: 'federation_credentials',
   sanctions: 'federation_sanctions',
   reports: 'federation_reports',
+  news: 'federation_news',
 });
 
 /** Id determinístico da inscrição em curso: `{courseId}_{uid}`. */
@@ -145,6 +146,7 @@ export const FED_MODULE = Object.freeze({
   NEWS: 'news',
   SPONSORS: 'sponsors',
   STORE: 'store',
+  PROMOS: 'promos',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -153,9 +155,49 @@ export const FED_MODULE_META = Object.freeze({
   affiliations: { label: tk('Clubes e arenas filiados'), description: tk('Clubes e arenas pedem filiação e aparecem como filiados na página da federação.'), status: 'available' },
   courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'available' },
   discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'available' },
-  news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'planned' },
-  sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'planned' },
-  store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'planned' },
+  news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'available' },
+  sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'available' },
+  store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'available' },
+  promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available' },
+});
+
+/* ---------------------------------------------------- PR 4: notícias -- */
+
+/** Estado da notícia. Só `published` sai da Central. */
+export const NEWS_STATUS = Object.freeze({
+  DRAFT: 'draft',
+  PUBLISHED: 'published',
+  ARCHIVED: 'archived',
+});
+
+export const NEWS_STATUS_LABELS = Object.freeze({
+  draft: tk('Rascunho'),
+  published: tk('Publicada'),
+  archived: tk('Arquivada'),
+});
+
+/** Para quem a notícia é: todo mundo (página pública) ou só os filiados ativos. */
+export const NEWS_AUDIENCE = Object.freeze({
+  PUBLIC: 'public',
+  MEMBERS: 'members',
+});
+
+export const NEWS_AUDIENCE_LABELS = Object.freeze({
+  public: tk('Pública'),
+  members: tk('Só filiados'),
+});
+
+/** Faixa do patrocinador (ordem na página e na carteirinha). */
+export const SPONSOR_TIER = Object.freeze({
+  MAIN: 'main',
+  SUPPORT: 'support',
+  PARTNER: 'partner',
+});
+
+export const SPONSOR_TIER_LABELS = Object.freeze({
+  main: tk('Patrocinador oficial'),
+  support: tk('Apoio'),
+  partner: tk('Parceiro'),
 });
 
 /** Para quem é o plano. */

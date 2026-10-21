@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Pencil, Plus, Puzzle } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { savePlan, setPlanActive, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
+import { savePlan, setPlanActive, updateFederationGovernance, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
+import { BOARD_MAX, MINUTES_MAX, validateGovernance } from '@/modules/federations/domain/governance';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
@@ -255,7 +256,87 @@ function RegrasTab({ federation }) {
   );
 }
 
+/* ------------------------------------------------------------ governança -- */
+
+const vazio = { statute_url: '', bylaws: '', mandate: { start: '', end: '' }, board: [], minutes: [] };
+
+function GovernancaTab({ federation }) {
+  const { user } = useAuth();
+  const g = federation.governance || {};
+  const [f, setF] = useState({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: g.board || [], minutes: g.minutes || [] });
+  const [erros, setErros] = useState({});
+  const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
+  const setItem = (lista, i, patch) => set({ [lista]: f[lista].map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  const tira = (lista, i) => set({ [lista]: f[lista].filter((_, j) => j !== i) });
+  const m = useFederationMutation(() => updateFederationGovernance(federation.id, f, { uid: user?.uid }));
+  const salvar = (e) => {
+    e.preventDefault();
+    const r = validateGovernance(f);
+    if (!r.ok) { setErros(r.errors); return; }
+    m.mutate(undefined, { onSuccess: () => toast.success(t('Governança salva.')), onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
+  };
+  return (
+    <section className="space-y-4" aria-label={t('Governança da federação')} data-dica="federacao-governanca">
+      <div><h2 className="font-display text-xl font-bold text-ink">{t('Governança')}</h2><p className="text-sm text-gray-500">{t('Estatuto, mandato, diretoria e atas. É público: aparece na página da federação, para o filiado saber quem decide e com que regras.')}</p></div>
+      <form onSubmit={salvar} noValidate className="space-y-4">
+        <V2Surface className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <V2Field label={t('Estatuto (link https)')} htmlFor="gv-estatuto" error={erros.statute_url} className="sm:col-span-3"><V2Input id="gv-estatuto" type="url" maxLength={500} placeholder="https://" value={f.statute_url} onChange={(e) => set({ statute_url: e.target.value })} /></V2Field>
+            <V2Field label={t('Início do mandato')} htmlFor="gv-ini" error={erros['mandate.start']}><V2Input id="gv-ini" type="date" value={f.mandate.start} onChange={(e) => set({ mandate: { ...f.mandate, start: e.target.value } })} /></V2Field>
+            <V2Field label={t('Fim do mandato')} htmlFor="gv-fim" error={erros['mandate.end']}><V2Input id="gv-fim" type="date" value={f.mandate.end} onChange={(e) => set({ mandate: { ...f.mandate, end: e.target.value } })} /></V2Field>
+          </div>
+          <V2Field label={t('Regimento ou nota (opcional)')} htmlFor="gv-regimento" hint={t('Até 4000 caracteres.')}><V2Textarea id="gv-regimento" rows={4} maxLength={4000} value={f.bylaws} onChange={(e) => set({ bylaws: e.target.value })} /></V2Field>
+        </V2Surface>
+        <V2Surface className="space-y-3">
+          <h3 className="font-bold text-ink">{t('Diretoria')}</h3>
+          {f.board.map((b, i) => (
+            <div key={i} className="grid gap-3 sm:grid-cols-12">
+              <V2Field label={t('Cargo')} htmlFor={`gv-cargo-${i}`} error={erros[`board.${i}`]} className="sm:col-span-5"><V2Input id={`gv-cargo-${i}`} maxLength={60} value={b.role} onChange={(e) => setItem('board', i, { role: e.target.value })} /></V2Field>
+              <V2Field label={t('Nome')} htmlFor={`gv-nome-${i}`} className="sm:col-span-6"><V2Input id={`gv-nome-${i}`} maxLength={80} value={b.name} onChange={(e) => setItem('board', i, { name: e.target.value })} /></V2Field>
+              <div className="flex items-end sm:col-span-1"><V2Button type="button" size="sm" variant="ghost" onClick={() => tira('board', i)} aria-label={t('Remover {nome}', { nome: b.name || t('membro') })}>×</V2Button></div>
+            </div>
+          ))}
+          <V2Button type="button" variant="secondary" disabled={f.board.length >= BOARD_MAX} onClick={() => set({ board: [...f.board, { role: '', name: '' }] })}><Plus className="h-4 w-4" />{t('Acrescentar cargo')}</V2Button>
+        </V2Surface>
+        <V2Surface className="space-y-3">
+          <h3 className="font-bold text-ink">{t('Atas e documentos')}</h3>
+          {f.minutes.map((a, i) => (
+            <div key={i} className="grid gap-3 sm:grid-cols-12">
+              <V2Field label={t('Título')} htmlFor={`gv-ata-${i}`} error={erros[`minutes.${i}.title`]} className="sm:col-span-5"><V2Input id={`gv-ata-${i}`} maxLength={120} value={a.title} onChange={(e) => setItem('minutes', i, { title: e.target.value })} /></V2Field>
+              <V2Field label={t('Data')} htmlFor={`gv-ata-data-${i}`} error={erros[`minutes.${i}.date`]} className="sm:col-span-2"><V2Input id={`gv-ata-data-${i}`} type="date" value={a.date} onChange={(e) => setItem('minutes', i, { date: e.target.value })} /></V2Field>
+              <V2Field label={t('Link (https)')} htmlFor={`gv-ata-url-${i}`} error={erros[`minutes.${i}.url`]} className="sm:col-span-4"><V2Input id={`gv-ata-url-${i}`} type="url" maxLength={500} placeholder="https://" value={a.url} onChange={(e) => setItem('minutes', i, { url: e.target.value })} /></V2Field>
+              <div className="flex items-end sm:col-span-1"><V2Button type="button" size="sm" variant="ghost" onClick={() => tira('minutes', i)} aria-label={t('Remover {nome}', { nome: a.title || t('ata') })}>×</V2Button></div>
+            </div>
+          ))}
+          <V2Button type="button" variant="secondary" disabled={f.minutes.length >= MINUTES_MAX} onClick={() => set({ minutes: [...f.minutes, { title: '', date: '', url: '' }] })}><Plus className="h-4 w-4" />{t('Acrescentar ata')}</V2Button>
+        </V2Surface>
+        <div className="flex justify-end"><V2Button type="submit" disabled={m.isPending}>{t('Salvar governança')}</V2Button></div>
+      </form>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------- loja -- */
+
+function LojaTab({ federation }) {
+  const chave = `federation_${federation.id}`;
+  return (
+    <section className="space-y-4" aria-label={t('Loja oficial no Mercado')} data-dica="federacao-loja">
+      <div><h2 className="font-display text-xl font-bold text-ink">{t('Loja oficial no Mercado')}</h2><p className="text-sm text-gray-500">{t('A federação vende uniforme, material e inscrições pelo Mercado, como vendedora própria: quem tem "admin" ou "financeiro" na equipe opera a loja. O Pix do pedido vai direto para a conta cadastrada na loja.')}</p></div>
+      <V2Surface className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-700">{t('Anúncios, pedidos e a vitrine ficam no painel do vendedor do Mercado, com a federação escolhida em "Vendendo como".')}</p>
+        <div className="flex flex-wrap gap-2">
+          <V2Button asChild><Link to={`/mercado/vender?como=${chave}`}>{t('Abrir o painel da loja')}</Link></V2Button>
+          <V2Button asChild variant="secondary"><Link to={`/mercado/vendedor/${chave}`}><ExternalLink className="h-4 w-4" />{t('Ver a vitrine')}</Link></V2Button>
+        </div>
+      </V2Surface>
+    </section>
+  );
+}
+
 export default function FedSettingsPanel({ federation, plansQ, tab }) {
+  if (tab === 'governanca') return <GovernancaTab federation={federation} />;
+  if (tab === 'loja') return <LojaTab federation={federation} />;
   if (tab === 'regras') return <RegrasTab federation={federation} />;
   if (tab === 'pix') return <PixTab federation={federation} />;
   if (tab === 'pagina') return <PaginaTab federation={federation} />;

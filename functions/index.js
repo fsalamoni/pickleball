@@ -1321,6 +1321,8 @@ exports.federationTransfer = federationCallable('federationTransfer', federation
 exports.federationCourse = federationCallable('federationCourse', federationCourses.course);
 exports.federationDiscipline = federationCallable('federationDiscipline', federationDiscipline.discipline);
 exports.federationImportMembers = federationCallable('federationImportMembers', federationSecretariat.importMembers);
+const federationNews = require('./federationNews');
+exports.federationNews = federationCallable('federationNews', federationNews.notify);
 exports.federationDocument = federationCallable('federationDocument', (ctx, actor, data) => {
   let bucket = null;
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationDocument: Storage indisponível.', err); }
