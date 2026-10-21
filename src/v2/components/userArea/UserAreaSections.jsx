@@ -47,6 +47,7 @@ import { membershipAction, setCredentialPublic } from '@/modules/federations/ser
 import { FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
 import { FedLogo, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
+import MembershipDeclarationDialog from '@/v2/components/federations/MembershipDeclaration';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import { useFederation, useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -603,9 +604,10 @@ function TrofeusSecao() {
  */
 function FiliacaoRow({ m }) {
   const [cartao, setCartao] = useState(false);
+  const [declaracao, setDeclaracao] = useState(false);
   // O dependente não tem página própria: a renovação dele sai daqui, pelo id da filiação (o servidor confere o responsável).
   const renovar = useFederationMutation(() => membershipAction({ federationId: m.federation_id, action: 'renew', memberId: m.id }));
-  const fq = useFederation(cartao ? m.federation_id : null);
+  const fq = useFederation(cartao || declaracao ? m.federation_id : null);
   const st = membershipState(m);
   const f = { id: m.federation_id, name: m.federation_name || t('Federação'), acronym: m.federation_acronym || '' };
   const temCartao = [MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && m.card_code;
@@ -622,9 +624,11 @@ function FiliacaoRow({ m }) {
         </div>
       </div>
       {temCartao && <V2Button type="button" size="sm" variant="secondary" onClick={() => setCartao(true)} data-dica="minha-area-carteirinha"><IdCard className="h-4 w-4" aria-hidden="true" />{t('Carteirinha')}</V2Button>}
+      {st.status === MEMBER_STATUS.ACTIVE && m.card_code && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDeclaracao(true)} data-dica="minha-area-declaracao"><FileText className="h-4 w-4" aria-hidden="true" />{t('Declaração')}</V2Button>}
       {st.canRenew && m.user_id && <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Renovar')}</Link></V2Button>}
       {st.canRenew && !m.user_id && <V2Button type="button" size="sm" variant="ghost" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: (r) => toast.success(r?.chargeId ? t('Cobrança de renovação criada. Pague o Pix em Cobranças.') : t('Filiação renovada.')), onError: (e) => toast.error(e.message) })}>{t('Renovar')}</V2Button>}
       {cartao && <MemberCardDialog open onOpenChange={setCartao} member={m} federation={fq.data || f} />}
+      {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={m} federationQ={fq} selfService />}
     </li>
   );
 }

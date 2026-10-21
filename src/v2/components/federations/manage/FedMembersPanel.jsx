@@ -6,7 +6,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Ban, CheckCircle2, Eye, IdCard, Inbox, RotateCcw, Users, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, Eye, FileText, IdCard, Inbox, RotateCcw, Users, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { membershipAction, revealMemberPrivate } from '@/modules/federations/services/federationService';
@@ -18,6 +18,7 @@ import { DOC_KIND_LABELS, DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_PERSON_TYPE_LAB
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2SearchInput, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
+import MembershipDeclarationDialog from '../MembershipDeclaration';
 
 const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -95,9 +96,11 @@ function FichaDialog({ member: mb, documentos, onClose }) {
   );
 }
 
-function MemberRow({ member: mb, federationId, documentos, pedido = false }) {
+function MemberRow({ member: mb, federation, documentos, pedido = false }) {
+  const federationId = federation.id;
   const [motivo, setMotivo] = useState(null);
   const [ficha, setFicha] = useState(false);
+  const [declaracao, setDeclaracao] = useState(false);
   const m = useFederationMutation((action) => membershipAction({ federationId, action, memberId: mb.id }));
   const agir = (action, msg) => m.mutate(action, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
   const st = membershipState(mb);
@@ -120,6 +123,7 @@ function MemberRow({ member: mb, federationId, documentos, pedido = false }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <V2Button type="button" size="sm" variant="ghost" onClick={() => setFicha(true)}><IdCard className="h-4 w-4" />{t('Ficha')}</V2Button>
+          {!pedido && st.status === MEMBER_STATUS.ACTIVE && mb.card_code && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDeclaracao(true)}><FileText className="h-4 w-4" />{t('Declaração')}</V2Button>}
           {pedido && (
             <>
               <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('approve', t('Pedido aprovado. A pessoa foi avisada.'))}><CheckCircle2 className="h-4 w-4" />{t('Aprovar')}</V2Button>
@@ -136,6 +140,7 @@ function MemberRow({ member: mb, federationId, documentos, pedido = false }) {
       </V2Surface>
       {motivo && <MotivoDialog acao={motivo} member={mb} federationId={federationId} onClose={() => setMotivo(null)} />}
       {ficha && <FichaDialog member={mb} documentos={documentos} onClose={() => setFicha(false)} />}
+      {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={mb} federation={federation} />}
     </li>
   );
 }
@@ -164,7 +169,7 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, tab 
       <section className="space-y-4" aria-label={t('Pedidos de filiação')} data-dica="federacao-pedidos">
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Pedidos de filiação')}</h2><p className="text-sm text-gray-500">{t('Aprovado, o plano gratuito ativa na hora; o pago gera a cobrança Pix para a pessoa.')}</p></div>
         {!pedidos.length ? <V2EmptyState icon={Inbox} title={t('Nenhum pedido esperando')} description={t('Quando alguém pedir filiação num plano sem aprovação automática, aparece aqui.')} />
-          : <ul className="space-y-3">{pedidos.map((m) => <MemberRow key={m.id} member={m} federationId={federation.id} documentos={documentos} pedido />)}</ul>}
+          : <ul className="space-y-3">{pedidos.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} pedido />)}</ul>}
       </section>
     );
   }
@@ -184,7 +189,7 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, tab 
       </div>
       <div className="flex flex-wrap gap-2">{FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{f.label()}</V2FilterChip>)}</div>
       {!lista.length ? <V2EmptyState icon={Users} title={termo ? t('Ninguém com "{termo}"', { termo: busca.trim() }) : t('Nenhum filiado neste filtro')} />
-        : <ul className="space-y-3">{lista.map((m) => <MemberRow key={m.id} member={m} federationId={federation.id} documentos={documentos} />)}</ul>}
+        : <ul className="space-y-3">{lista.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} />)}</ul>}
     </section>
   );
 }

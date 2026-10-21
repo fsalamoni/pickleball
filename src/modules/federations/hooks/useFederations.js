@@ -35,6 +35,7 @@ export const fedKeys = {
   tournaments: (id) => ['federacoes', 'federacao', id, 'torneios'],
   results: (id) => ['federacoes', 'federacao', id, 'resultados'],
   tournamentResults: (tid) => ['federacoes', 'torneio', tid, 'resultados'],
+  personResults: (uid) => ['federacoes', 'pessoa', uid, 'resultados'],
   ranking: (id, season) => ['federacoes', 'federacao', id, 'ranking', season],
   // PR 3
   myDependents: (uid) => ['federacoes', 'meus-dependentes', uid],
@@ -183,6 +184,11 @@ export function useFederationResults(id, { enabled = true } = {}) {
 export function useTournamentFederationResults(tournamentId, { enabled = true } = {}) {
   const ligado = useFederationsEnabled();
   return useQuery({ queryKey: fedKeys.tournamentResults(tournamentId), queryFn: () => svc.listTournamentFederationResults(tournamentId), enabled: !!tournamentId && ligado && enabled });
+}
+
+/** Os resultados oficiais em que a PESSOA aparece (a declaração de vínculo lista os desta federação). Leitura pública. */
+export function usePersonFederationResults(uid, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.personResults(uid), queryFn: () => svc.listResultsWith(uid), enabled: !!uid && enabled, staleTime: 60_000 });
 }
 
 /** O ranking oficial da temporada (gravado pelo servidor; `null` = ainda não há). */

@@ -33,7 +33,9 @@ O que esta entrega cobre:
 | Pedido de filiação, aprovação, cobrança Pix, "Já paguei", confirmação | `/federacoes/:id/filiar`, Central → Filiados / Financeiro |
 | Carteirinha digital (PNG, imprimir, compartilhar) e verificação pelo QR | Minha área → Federações, página da federação, `/f/verificar/:codigo` |
 | Equipe com 8 papéis e permissões | Central → Equipe |
-| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (nove `available`; os demais `planned`: "em breve") |
+| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os nove do catálogo, todos `available`) |
+| Indicadores dos últimos 12 meses (filiados, renovação, receita, atraso), com CSV | Central → Gerir → Indicadores (§6.8) |
+| Declaração de vínculo imprimível, com QR | página da federação, Minha área → Federações, Central → Filiados (§6.8) |
 | Avisos (sino, e por e-mail/celular quando `external_messaging` estiver ligada) | categoria "Federações" em Configurações → Notificações |
 | Exclusão de conta e exportação de dados | `functions/accountDeletion.js`, `federationExportService.js` |
 | Ajuda, guias com seta, pontos de dica, en/es, termos legais | §9 |
@@ -41,8 +43,8 @@ O que esta entrega cobre:
 Os sub-módulos entregues nos PRs 2 a 4 (torneios chancelados, ranking
 oficial, clubes e arenas filiados, cursos e credenciais, disciplina e
 ouvidoria, notícias, patrocinadores, cupons e campanhas, loja oficial) estão
-`available`; o que ainda não tem tela segue `planned` ("em breve") e
-`FED_MODULE_META[x].status` só muda quando a tela existir.
+`available` — hoje os nove do catálogo. Módulo novo nasce `planned` ("em
+breve") e `FED_MODULE_META[x].status` só muda quando a tela existir.
 
 ## 2. Duas chaves: a flag e os módulos da federação
 
@@ -60,7 +62,7 @@ ouvidoria, notícias, patrocinadores, cupons e campanhas, loja oficial) estão
    **`affiliations`** (clubes e arenas filiados); do PR 3, **`courses`** e
    **`discipline`**; do PR 4, **`news`** (notícias e avisos), **`sponsors`**
    (patrocinadores), **`promos`** (cupons e campanhas) e **`store`** (loja
-   oficial no Mercado). Os demais seguem `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   oficial no Mercado) — os nove do catálogo. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
    (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
    `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
    nem chancela àquela federação. Desligar um módulo não apaga nada: o que
@@ -424,6 +426,35 @@ vira anônima.
   A loja nasce `active`, sem selo nem reputação. O resto (anúncio, pedido,
   Pix direto à federação) é o Mercado de sempre.
 
+### 6.8 Indicadores e declaração de vínculo (PR 6, zero banco)
+
+- **Indicadores** (Central → Gerir → Indicadores; aparece para quem tem
+  `members` ou `finance`): os últimos 12 meses em
+  `domain/indicators.js` — filiados em dia, pedidos por mês, venceram sem
+  renovar, divisão por plano, tipo e categoria (bloco de quem tem `members`);
+  recebido por mês e por origem, renovações pagas e cobranças em atraso
+  (bloco de quem tem `finance`). A **taxa de renovação** é renovações pagas ÷
+  (renovações pagas + vencidas sem renovar) em 12 meses e só existe com as
+  duas fontes; sem uma, a tela diz por quê. "Baixar CSV" leva tudo
+  (`indicatorsCsv`, `;`, células que começam com `=+-@` neutralizadas). Usa as
+  mesmas leituras da Central (`membersQ`, `chargesQ`): nenhuma consulta nova.
+  Fonte que falhou mostra o erro com "Tentar de novo", nunca zero.
+- **Declaração de vínculo** (`domain/declaration.js` +
+  `MembershipDeclaration.jsx`): a folha para Bolsa Atleta, escola, empregador
+  ou patrocinador — dados da federação (nome, sigla, CNPJ mascarado, cidade,
+  logo), o texto "Declaramos… está com a filiação em dia, válida de/até…",
+  o responsável (dependente), os resultados oficiais da pessoa NESTA
+  federação (até 20, sem os recusados, de `federation_results` —
+  `usePersonFederationResults`), a data de emissão e o QR da verificação
+  pública (`/f/verificar/:codigo`). Imprime pela mesma folha do recibo
+  (`cartao-folha-raiz recibo-folha`, `imprimindo-cartao`). Só sai com a
+  filiação **em dia**, **sem suspensão** (de status ou disciplinar) e **com
+  código**; o código gira na renovação/suspensão, então declaração antiga
+  deixa de verificar — o rodapé diz isso. Quem emite: a secretaria sempre
+  (Filiados → "Declaração"); o filiado ou o responsável na página da
+  federação e em Minha área, se a regra `rules.member_declarations` da
+  federação deixar (padrão sim; Configurações → Regras). Nada é gravado.
+
 ## 7. Dados (resumo; esquema completo em `docs/05-DATA-MODEL.md` § Federações)
 
 Dezoito coleções, todas com prefixo `federation` e **zero índice composto**
@@ -640,6 +671,13 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
     "Filiar-se". Toda leitura de documento `{fed}_{uid}` antes de criar precisa
     de uma cláusula assim — prove no emulador, não com banco falso.
 
+33. **Indicador sem fonte é "—" com o motivo, nunca zero** (`federationIndicators`
+    devolve `null` para o bloco sem leitura); a taxa de renovação exige as
+    duas fontes.
+34. **A declaração só sai com a filiação em dia, sem suspensão e com
+    código** (`buildMembershipDeclaration`), e a do próprio filiado obedece a
+    `rules.member_declarations`; a secretaria emite sempre.
+
 ## 11. Pendências e próximas fases
 
 - Flavio: ligar a flag `federations` em Painel admin → Funcionalidades;
@@ -663,6 +701,10 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
   oficial no Mercado (`store`), governança e card no início (§6.7). Fora de
   propósito: notícia agendada (publica-se na hora), aviso de campanha (o canal
   é a notícia) e patrocinador com contrato/valores (só a vitrine).
+- ~~**PR 6**~~ — entregue: Indicadores na Central e declaração de vínculo
+  (§6.8). Fora de propósito: assinatura digital certificada (ICP-Brasil) na
+  declaração — a autenticidade é o QR; gráfico de anos anteriores (12 meses
+  bastam para a prestação de contas anual).
 
 ## 12. Revisão geral (2026-10-21)
 

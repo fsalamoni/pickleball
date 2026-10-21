@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeftRight, ExternalLink, Globe, IdCard, Instagram, Landmark, Mail, Phone, Settings2, Users } from 'lucide-react';
+import { ArrowLeftRight, ExternalLink, FileText, Globe, IdCard, Instagram, Landmark, Mail, Phone, Settings2, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationRole, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { membershipAction } from '@/modules/federations/services/federationService';
@@ -18,6 +18,8 @@ import { V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton, V
 import { PAGE_TITLE } from '@/v2/ui/pageFrame';
 import { FedBadges, FedLogo, FederationGate, MemberStatusBadge, fedManagePath, fedPublicPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
+import MembershipDeclarationDialog from '@/v2/components/federations/MembershipDeclaration';
+import { normalizeFederationRules } from '@/modules/federations/domain/federation';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import PlansList from '@/v2/components/federations/PlansList';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '@/v2/components/federations/FedPublicBlocks';
@@ -36,6 +38,7 @@ function MinhaSituacao({ federation, plans }) {
   const cq = useMyFederationCharges();
   const [cartao, setCartao] = useState(false);
   const [transferindo, setTransferindo] = useState(false);
+  const [declaracao, setDeclaracao] = useState(false);
   const renovar = useFederationMutation(() => membershipAction({ federationId: federation.id, action: 'renew' }));
   if (mq.isError || cq.isError) return <V2ErrorState inline title={t('Não carregou a sua situação nesta federação')} onRetry={() => { if (mq.isError) mq.refetch(); if (cq.isError) cq.refetch(); }} />;
   if (!mq.isSuccess || !cq.isSuccess) return <V2Skeleton lines={3} />;
@@ -83,6 +86,9 @@ function MinhaSituacao({ federation, plans }) {
         {[MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && m.card_code && (
           <V2Button type="button" onClick={() => setCartao(true)} data-dica="federacao-carteirinha"><IdCard className="h-4 w-4" />{t('Carteirinha digital')}</V2Button>
         )}
+        {st.status === MEMBER_STATUS.ACTIVE && m.card_code && normalizeFederationRules(federation.rules).member_declarations && (
+          <V2Button type="button" variant="secondary" onClick={() => setDeclaracao(true)} data-dica="federacao-declaracao"><FileText className="h-4 w-4" />{t('Declaração de vínculo')}</V2Button>
+        )}
         {st.canRenew && cobrancas.length === 0 && (
           <V2Button type="button" variant="secondary" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: () => toast.success(t('Renovação pedida. Pague a cobrança para seguir em dia.')), onError: (e) => toast.error(e.message) })}>
             {st.status === MEMBER_STATUS.EXPIRED ? t('Renovar a filiação') : t('Renovar antes de vencer')}
@@ -93,6 +99,7 @@ function MinhaSituacao({ federation, plans }) {
         <V2Button asChild variant="ghost"><Link to="/perfil?secao=federacoes">{t('Minhas federações')}</Link></V2Button>
       </div>
       {cartao && <MemberCardDialog open onOpenChange={setCartao} member={{ ...m, user_name: m.user_name || user?.displayName }} federation={federation} plan={plano} />}
+      {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={{ ...m, user_name: m.user_name || user?.displayName }} federation={federation} selfService />}
       {transferindo && <FedTransferDialog member={m} federation={federation} onClose={() => setTransferindo(false)} />}
     </V2Surface>
   );

@@ -27,6 +27,7 @@ import { t } from '@/core/i18n';
 const FedHojePanel = lazy(() => import('@/v2/components/federations/manage/FedHojePanel'));
 const FedMembersPanel = lazy(() => import('@/v2/components/federations/manage/FedMembersPanel'));
 const FedFinancePanel = lazy(() => import('@/v2/components/federations/manage/FedFinancePanel'));
+const FedIndicatorsPanel = lazy(() => import('@/v2/components/federations/manage/FedIndicatorsPanel'));
 const FedStaffPanel = lazy(() => import('@/v2/components/federations/manage/FedStaffPanel'));
 const FedSettingsPanel = lazy(() => import('@/v2/components/federations/manage/FedSettingsPanel'));
 const FedAffiliationsPanel = lazy(() => import('@/v2/components/federations/manage/FedAffiliationsPanel'));
@@ -130,6 +131,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'comunicacao' && <FedCommsPanel federation={f} newsQ={newsQ} tab={tab} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
+        {secaoAtiva.id === 'indicadores' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} myRole={papel.role} />}
         {secaoAtiva.id === 'config' && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>

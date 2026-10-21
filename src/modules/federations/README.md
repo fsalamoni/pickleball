@@ -27,7 +27,9 @@ federations/
 │   ├── discipline.js            # PR 3: sanção (validação, efeito, recurso) e ouvidoria (protocolo)
 │   ├── news.js                  # PR 4: validação da notícia, quem a vê (`visibleNews`), o link do aviso
 │   ├── sponsors.js              # PR 4: lista de patrocinadores (≤ 12, cotas, links https)
-│   └── governance.js            # PR 4: estatuto, mandato, diretoria e atas (`validateGovernance`)
+│   ├── governance.js            # PR 4: estatuto, mandato, diretoria e atas (`validateGovernance`)
+│   ├── indicators.js            # PR 6: Indicadores de 12 meses (filiados, renovação, recebido, atraso) e o CSV
+│   └── declaration.js           # PR 6: a declaração de vínculo (quando sai, texto, resultados desta federação)
 ├── services/
 │   ├── federationService.js     # leituras (uma igualdade, ordenação em memória), escritas da regra
 │   │                            # (pedido, página, Pix, módulos, equipe, planos, preferências, "Já paguei")
@@ -151,3 +153,8 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   bater: `isMarketOperator` (regra), `operatorUids` (servidor) e
   `storeFederations` (cliente) — `admin` ou `finance`, só com `store`. O card
   do início exige a flag (`requer: 'federacao'`).
+- **PR 6**: indicador sem fonte é "—" com o motivo, nunca zero (a taxa de
+  renovação pede filiados E financeiro); a declaração de vínculo só sai com a
+  filiação em dia, sem suspensão e com código, e a do próprio filiado obedece
+  a `rules.member_declarations` (a secretaria emite sempre). Ver
+  `docs/50-FEDERACAO.md` §6.8.
