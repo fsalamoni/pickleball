@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Eye, Pencil, Plus, Puzzle } from 'lucide-react';
+import { ExternalLink, Pencil, Plus, Puzzle } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { savePlan, setPlanActive, updateFederationGovernance, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
 import { BOARD_MAX, MINUTES_MAX, validateGovernance, womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
@@ -21,7 +21,6 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Sele
 import FederationPublicFields from '../FederationPublicFields';
 import FedPublicationTab from './FedPublication';
 import { FedLogo, fedPublicPath, publicHost } from '../federationUi';
-import { fedPreviewPath } from '../profile/FedStaffBar';
 import { t } from '@/core/i18n';
 
 const reais = (cents) => (Number(cents) / 100).toFixed(2).replace('.', ',');
@@ -182,9 +181,8 @@ function PaginaTab({ federation }) {
   const previa = { ...federation, name: f.name, acronym: f.acronym, branding: { color: f.color, logo_url: f.logo_url } };
   return (
     <section className="space-y-4" aria-label={t('Página pública')} data-dica="federacao-pagina">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Conteúdo da página pública')}</h2><p className="text-sm text-gray-500">{t('Nome, apresentação, contato e marca: o que qualquer pessoa vê em {url}.', { url: `${publicHost()}${fedPublicPath(federation)}` })}</p></div>
-        <V2Button asChild size="sm" variant="secondary"><Link to={fedPreviewPath(federation)}><Eye className="h-4 w-4" />{t('Ver como visitante')}</Link></V2Button>
       </div>
       <form onSubmit={enviar} noValidate className="space-y-6">
         <FederationPublicFields f={f} set={set} setNome={setNome} erros={erros} />

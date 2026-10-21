@@ -13,7 +13,6 @@
 import React, { useMemo } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { BadgeCheck, BookOpen, CalendarDays, Globe, Home, IdCard, Instagram, Library, Mail, MessageCircle, Newspaper, Phone, Share2, Trophy, Building2, Users } from 'lucide-react';
-import { FEDERATION_LEVEL_LABELS } from '@/modules/federations/domain/constants';
 import { PROFILE_TAB, profileTabs, resolveProfileTab } from '@/modules/federations/domain/profile';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
@@ -84,11 +83,6 @@ export function FedShareButton({ federation }) {
   return <V2Button type="button" variant="ghost" onClick={compartilhar}><Share2 className="h-4 w-4" />{t('Compartilhar')}</V2Button>;
 }
 
-/** "Ver tudo" que troca de aba (mesma página). */
-function VerTudo({ onClick, children }) {
-  return <V2Button type="button" variant="ghost" size="sm" onClick={onClick}>{children}</V2Button>;
-}
-
 function Visao({ federation: f, plansQ, memberOf, irPara, tabs }) {
   const tem = (id) => tabs.some((x) => x.id === id);
   return (
@@ -108,12 +102,7 @@ function Visao({ federation: f, plansQ, memberOf, irPara, tabs }) {
           {plansQ.isError ? <V2ErrorState inline title={t('Não carregaram os planos')} onRetry={() => plansQ.refetch()} /> : plansQ.isLoading ? <V2Skeleton lines={4} /> : <PlansList plans={plansQ.data} federation={f} />}
         </section>
         <FedPromosSection federation={f} />
-        {tem(PROFILE_TAB.NEWS) && (
-          <div className="space-y-2">
-            <FedNewsSection federation={f} memberOf={memberOf} limite={3} />
-            <VerTudo onClick={() => irPara(PROFILE_TAB.NEWS)}>{t('Ver todas as notícias')}</VerTudo>
-          </div>
-        )}
+        {tem(PROFILE_TAB.NEWS) && <FedNewsSection federation={f} memberOf={memberOf} limite={3} onVerTodas={() => irPara(PROFILE_TAB.NEWS)} />}
         {tem(PROFILE_TAB.AGENDA) && <FedAgendaBlock federation={f} limite={3} />}
         <FedSponsorsStrip federation={f} />
       </div>
@@ -147,7 +136,6 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
   const irPara = (id) => {
     setParams((atual) => { const novo = new URLSearchParams(atual); if (id === PROFILE_TAB.OVERVIEW) novo.delete('aba'); else novo.set('aba', id); novo.delete('noticia'); return novo; }, { replace: true });
   };
-  const nivel = t(FEDERATION_LEVEL_LABELS[f.level] || '');
   const lugar = [f.city, f.state].filter(Boolean).join(' / ');
   const secoes = tabs.map((x) => ({ id: x.id, label: t(x.label), icon: ICONE[x.id], dica: x.dica }));
 
@@ -155,16 +143,19 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
     <div className="space-y-6">
       <V2Surface className="p-5 sm:p-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <FedLogo federation={f} size="xl" />
+          <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5">
+          <FedLogo federation={f} size="lg" className="sm:hidden" />
+          <FedLogo federation={f} size="xl" className="hidden sm:flex" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{[nivel, lugar].filter(Boolean).join(' · ')}</p>
+            {lugar && <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{lugar}</p>}
             <h1 className={PAGE_TITLE}>{f.name}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <FedBadges federation={f} />
               <span className="inline-flex items-center gap-1 text-sm text-gray-500"><Users className="h-4 w-4" aria-hidden="true" />{tn(f.member_count || 0, '{n} filiado', '{n} filiados')}</span>
             </div>
           </div>
-          {actions && <div className="flex flex-wrap gap-2 sm:max-w-xs sm:justify-end">{actions}</div>}
+          </div>
+          {actions && <div className="grid gap-2 sm:w-60 sm:shrink-0 [&>*]:w-full">{actions}</div>}
         </div>
       </V2Surface>
 

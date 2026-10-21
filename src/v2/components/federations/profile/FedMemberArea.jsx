@@ -65,7 +65,7 @@ export function FedJoinActions({ federation }) {
     return <p className="text-sm text-gray-500">{isFederationHidden(federation) ? t('A filiação abre quando a federação for publicada pelo admin dela.') : t('A filiação abre quando a federação estiver aprovada e ativa.')}</p>;
   }
   return (
-    <div className="flex flex-wrap gap-2" data-dica="federacao-filiar">
+    <div className="grid gap-2" data-dica="federacao-filiar">
       <V2Button asChild><Link to={`/federacoes/${federation.id}/filiar`}><IdCard className="h-4 w-4" />{t('Filiar-se')}</Link></V2Button>
       <V2Button asChild variant="ghost"><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
     </div>

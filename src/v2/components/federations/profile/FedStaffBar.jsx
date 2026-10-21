@@ -37,7 +37,7 @@ export function FedStaffBar({ federation: f, papel }) {
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid gap-2 sm:flex sm:flex-wrap">
         {oculta && papel.has?.(FED_PERMISSION.ADMIN) && (
           <V2Button asChild size="sm" variant="subtle"><Link to={fedManagePath(f, 'publicacao')}><Globe className="h-4 w-4" />{t('Revisar e publicar')}</Link></V2Button>
         )}

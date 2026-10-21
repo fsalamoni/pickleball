@@ -69,7 +69,7 @@ function Noticia({ n, aberta, onToggle, ancoraRef }) {
 }
 
 /** As notícias publicadas. `memberOf`: a pessoa tem filiação ATIVA (lê também as "só filiados"). */
-export function FedNewsSection({ federation, memberOf = false, limite = 6 }) {
+export function FedNewsSection({ federation, memberOf = false, limite = 6, onVerTodas = null }) {
   const ligado = fedModuleOn(federation, 'news');
   const pub = usePublicNews(federation?.id, { enabled: ligado });
   const mem = useMemberNews(federation?.id, { enabled: ligado && memberOf });
@@ -105,7 +105,7 @@ export function FedNewsSection({ federation, memberOf = false, limite = 6 }) {
           {mostradas.map((n) => <Noticia key={n.id} n={n} aberta={abertas.has(n.id)} onToggle={() => alternar(n.id)} ancoraRef={n.id === pedida ? alvo : undefined} />)}
         </ul>
       )}
-      {lista && lista.length > mostradas.length && <V2Button type="button" variant="ghost" size="sm" onClick={() => setTodas(true)}>{t('Ver todas as {n} notícias', { n: lista.length })}</V2Button>}
+      {lista && lista.length > mostradas.length && <V2Button type="button" variant="ghost" size="sm" onClick={onVerTodas || (() => setTodas(true))}>{t('Ver todas as {n} notícias', { n: lista.length })}</V2Button>}
     </section>
   );
 }
