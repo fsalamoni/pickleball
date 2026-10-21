@@ -2531,7 +2531,7 @@ const GUIAS_BASE = [
         route: '/federacoes/*',
         target: 'federacao-minha-filiacao',
         title: tk('A sua situação'),
-        body: tk('Aqui ficam a cobrança (QR e copia e cola, com "Já paguei"), a renovação e, com a filiação em dia, a carteirinha digital com QR de verificação.'),
+        body: tk('A faixa "Sua filiação", que só você vê, mostra a situação e abre a carteirinha digital. Na aba Minha filiação ficam a cobrança (QR e copia e cola, com "Já paguei"), a renovação, os documentos e a transferência.'),
       },
     ],
   },
@@ -2550,15 +2550,15 @@ const GUIAS_BASE = [
         goTo: '/federacoes',
         target: 'federacoes-minhas',
         advanceOn: { route: '/federacoes/*/gerir' },
-        title: tk('Gerir'),
-        body: tk('Em "Suas federações", quem é da equipe vê "Gerir". O mesmo botão está na página da federação. Cada papel abre só as seções que lhe cabem.'),
+        title: tk('Abrir a Central'),
+        body: tk('Em "Na equipe", toque em "Abrir a Central". Na página da federação, a barra escura do topo, que só a equipe vê, tem o mesmo atalho. Cada papel abre só as seções que lhe cabem.'),
       },
       {
         id: 'secoes',
         route: '/federacoes/*/gerir',
         target: 'federacao-secoes',
         title: tk('As seções'),
-        body: tk('"Atender" é o trabalho do dia (Hoje, Filiados, Financeiro); "Gerir" é como a federação é (Equipe, Configurações).'),
+        body: tk('"Atender" é o trabalho do dia (Hoje, Filiados, Financeiro); "Gerir" é como a federação é (Página pública, Equipe, Configurações).'),
       },
       {
         id: 'config',
@@ -2567,6 +2567,14 @@ const GUIAS_BASE = [
         advanceOn: 'click',
         title: tk('Primeiro, Configurações'),
         body: tk('Crie ao menos um plano e cadastre o Pix que recebe. Sem os dois, ninguém consegue se filiar num plano pago.'),
+      },
+      {
+        id: 'pagina',
+        route: '/federacoes/*/gerir',
+        target: 'federacao-secao-pagina-publica',
+        advanceOn: 'click',
+        title: tk('Depois, a página pública'),
+        body: tk('Tudo o que o público vê fica aqui: Publicação, o Conteúdo da página (apresentação, contato e marca) e a Transparência. "Ver como visitante", no topo da Central, mostra a página como ela fica.'),
       },
       {
         id: 'publicar',
@@ -2614,7 +2622,7 @@ const GUIAS_BASE = [
         target: 'federacoes-minhas',
         advanceOn: { route: '/federacoes/*/gerir' },
         title: tk('Abra a Central'),
-        body: tk('Em "Suas federações", toque em "Gerir".'),
+        body: tk('Em "Na equipe", toque em "Abrir a Central".'),
       },
       {
         id: 'secao',
@@ -2671,7 +2679,7 @@ const GUIAS_BASE = [
         target: 'federacoes-minhas',
         advanceOn: { route: '/federacoes/*/gerir' },
         title: tk('Abra a Central'),
-        body: tk('Em "Suas federações", toque em "Gerir".'),
+        body: tk('Em "Na equipe", toque em "Abrir a Central".'),
       },
       {
         id: 'filiados',
@@ -2721,6 +2729,14 @@ const GUIAS_BASE = [
         body: tk('Toque no cartão da federação para abrir a página dela.'),
       },
       {
+        id: 'aba-cursos',
+        route: '/federacoes/*',
+        target: 'federacao-pub-cursos',
+        advanceOn: 'click',
+        title: tk('Abra Cursos'),
+        body: tk('A página da federação é dividida em abas. Toque em Cursos.'),
+      },
+      {
         id: 'cursos',
         route: '/federacoes/*',
         target: 'federacao-cursos-publicos',
@@ -2760,7 +2776,7 @@ const GUIAS_BASE = [
         target: 'federacoes-minhas',
         advanceOn: { route: '/federacoes/*/gerir' },
         title: tk('Abra a Central'),
-        body: tk('Em "Suas federações", toque em "Gerir" na federação em que você é da equipe.'),
+        body: tk('Em "Na equipe", toque em "Abrir a Central" na federação em que você trabalha.'),
       },
       {
         id: 'secao',
@@ -2803,7 +2819,7 @@ const GUIAS_BASE = [
         target: 'federacoes-minhas',
         advanceOn: { route: '/federacoes/*/gerir' },
         title: tk('Abra a Central'),
-        body: tk('Em "Suas federações", toque em "Gerir" na federação em que você é da equipe.'),
+        body: tk('Em "Na equipe", toque em "Abrir a Central" na federação em que você trabalha.'),
       },
       {
         id: 'secao',
@@ -2846,7 +2862,7 @@ const GUIAS_BASE = [
         target: 'federacoes-minhas',
         advanceOn: { route: '/federacoes/*/gerir' },
         title: tk('Abra a Central'),
-        body: tk('Em "Suas federações", toque em "Gerir" na federação em que você é da equipe.'),
+        body: tk('Em "Na equipe", toque em "Abrir a Central" na federação em que você trabalha.'),
       },
       {
         id: 'secao',
@@ -2904,6 +2920,14 @@ const GUIAS_BASE = [
         target: 'torneio-enviar-resultado',
         title: tk('Envie o resultado'),
         body: tk('Com a categoria encerrada, em Resultados toque em "Enviar ao ranking oficial": vai a colocação do pódio. Corrigiu um placar? Reenvie — substitui o anterior.'),
+      },
+      {
+        id: 'aba-competicoes',
+        route: '/federacoes/*',
+        target: 'federacao-pub-competicoes',
+        advanceOn: 'click',
+        title: tk('Abra Competições'),
+        body: tk('Na página da federação, a aba Competições junta os torneios chancelados e o ranking oficial.'),
       },
       {
         id: 'ranking',

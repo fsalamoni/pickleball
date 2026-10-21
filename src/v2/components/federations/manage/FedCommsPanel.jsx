@@ -159,7 +159,7 @@ function DivulgacaoTab({ federation }) {
         </Suspense>
       ) : (
         // A promoção aparece na tela inicial de todo mundo: só a federação publicada cria.
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Cupons e campanhas abrem depois que a federação for publicada (Configurações → Publicação): eles aparecem para todo mundo.')}</p>
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Cupons e campanhas abrem depois que a federação for publicada (Página pública → Publicação): eles aparecem para todo mundo.')}</p>
       )}
     </section>
   );

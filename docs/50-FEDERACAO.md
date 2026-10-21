@@ -110,7 +110,7 @@ pedido (/federacoes/abrir)  ──►  pending  ──admin aprova──►  app
   módulos pela regra (permissão `admin`), **nunca** os campos travados.
 - Enquanto `pending`, a Central já abre para quem pediu preparar planos, Pix e
   página. Aprovada, a federação **nasce oculta** (`published` ausente) e só
-  abre ao público quando o admin dela publica em Configurações → Publicação;
+  abre ao público quando o admin dela publica em Página pública → Publicação;
   a filiação e os pedidos de fora só abrem publicada (`fedPublic`, §17).
 
 ## 5. Planos, filiação, cobrança e carteirinha
@@ -209,12 +209,12 @@ termina sozinha na data gravada (`discipline_until_ms`, lido pela regra).
 
 | Rota | Tela | O que mostra |
 |---|---|---|
-| `/federacoes` | `V2Federations` | "Suas federações" (filiado ou equipe, com "Gerir"), todas as aprovadas (as da região primeiro, `useRegionalList`; a busca ignora a região), "Abrir uma federação" |
+| `/federacoes` | `V2Federations` | As da pessoa em DOIS grupos (§18): **Na equipe** (cargo + "Abrir a Central") e **Suas filiações** (situação + "Minha filiação", que abre `?aba=minha`); depois todas as publicadas (as da região primeiro, `useRegionalList`; a busca ignora a região) e "Abrir uma federação" |
 | `/federacoes/abrir` | `V2FederationApply` | Formulário (campos públicos em `FederationPublicFields` + dados da entidade), estado do pedido (em análise / aprovada / recusada com motivo) |
-| `/federacoes/:id` | `V2FederationDetail` | Marca, selos, contagem, planos (`PlansList`), sobre, contato e **a situação da pessoa** (`MinhaSituacao`: filiar-se, cobrança Pix, renovar, carteirinha); "Gerir" para a equipe. Com os módulos ligados (`FedPublicBlocks.jsx`): **Torneios chancelados** (`FedSanctionedTournaments`), **Ranking oficial** (`FedRankingBlock`: temporada, classe, paginação, a minha linha em destaque), **Cursos** (`FedCoursesSection`, inscrever-se/cancelar), **Credenciados** (`FedCredentialsDirectory`, só credenciais válidas que a pessoa tornou públicas), **Clubes e arenas filiados** (`FedAffiliatesSection`) e **Ouvidoria** (`FedOmbudsmanBlock`: abrir manifestação, consultar protocolo). Para o filiado (PR 3): aviso de suspensão disciplinar, **Documentos** (`FedMemberDocuments`), **Sanções** (`FedMySanctions`, com recurso), **Transferência** (`FedTransferDialog`) e "Filiar um dependente" |
+| `/federacoes/:id?aba=` | `V2FederationDetail` | **Três camadas separadas (§18)**: a barra escura da equipe (`FedStaffBar`, só quem tem cargo ou o suporte), a página pública em abas (`FederationProfile`, a MESMA do `/f/:slug`) e a área do filiado (faixa `FedMemberStrip` + aba **Minha filiação** `FedMyMembership`, marcadas "Só você vê"). Abas (`profileTabs`, só as dos módulos ligados): Visão geral (sobre, planos, promoções, 3 notícias, 3 eventos, patrocinadores; contato, loja e conferir carteirinha ao lado), Minha filiação, Notícias, Agenda, Competições (torneios chancelados + ranking oficial), Documentos (acervo + governança), Cursos (+ credenciados), Clubes e arenas, Contato (+ ouvidoria com `discipline`). Na aba Minha filiação: aviso de suspensão, cobranças Pix, carteirinha, declaração, renovar, **Documentos**, **Sanções** (com recurso), **Transferência** e "Filiar um dependente". `?visao=publico` = prévia "como visitante" para a equipe |
 | `/federacoes/:id/filiar` | `V2FederationJoin` | 1. tipo de filiação → 2. plano (preço com o desconto da pessoa; faixa de idade exige nascimento no perfil) → 3. preferências, clube, observação, termos → pedido. PR 3: CPF se a federação pede (`federationAsksCpf`), responsável ciente para 12–17, menor de 12 só com `?dependente=1` (nome, nascimento e dados do dependente, na conta do responsável), documentos exigidos listados antes de enviar |
-| `/federacoes/:id/gerir?aba=` | `V2FederationManage` | A Central: **Atender** (Hoje · Filiados: Pedidos, Filiados, **Clubes e arenas** [módulo `affiliations`], **Transferências**, **Documentos**, **Importar** [`FedSecretariatPanel`] · **Competições** [permissão `competitions`; módulos `tournaments`/`ranking`]: Chancelas, Resultados, Ranking · **Cursos** [permissão `courses`; módulo `courses`; `FedCoursesPanel`]: Cursos, Credenciais · **Disciplina** [permissão `discipline`; módulo `discipline`; `FedDisciplinePanel`]: Sanções, Ouvidoria · **Comunicação** [permissão `comms`; PR 4]: **Notícias** [módulo `news`], **Cupons e campanhas** [módulo `promos`], **Patrocinadores** [`admin` + módulo `sponsors`] · Financeiro: Cobranças, Recebidos) e **Gerir** (Equipe · Configurações: Planos, Recebimento, Página, Módulos, **Regras**, **Governança**, **Loja** [`admin`/`finance` + módulo `store`]). A seção só existe para quem tem a permissão e a aba de módulo só com o módulo ligado (`buildFederationSections(perms, federation)`); a aba mora na URL (`?aba=`; `?secao=` abre a primeira). Faixa "Precisa de você" (`FederationPendencias` ← `federationPendingItems`: pedidos, pagamentos, **clubes/arenas pedindo**, **chancelas para analisar**, transferências para responder, documentos para conferir, recursos de sanção, manifestações sem resposta) no topo |
-| `/f/:slug` | `PublicFederation` (V1, fora do V2Layout) | A página pública: marca, planos, chamada para entrar/filiar-se; com os módulos ligados, torneios chancelados, ranking oficial e clubes/arenas filiados (os mesmos blocos do detalhe); do PR 4, notícias públicas, promoções, patrocinadores, governança e o link da loja oficial (`FedCommsBlocks.jsx`) |
+| `/federacoes/:id/gerir?aba=` | `V2FederationManage` | A Central (cabeçalho "Central da federação · área da equipe", com "Ver como visitante" e "Página pública"): **Atender** (Hoje · Filiados: Pedidos, Filiados, **Clubes e arenas** [módulo `affiliations`], **Transferências**, **Documentos**, **Importar** [`FedSecretariatPanel`] · **Competições** [permissão `competitions`; módulos `tournaments`/`ranking`]: Chancelas, Resultados, Ranking · **Cursos** [permissão `courses`; módulo `courses`; `FedCoursesPanel`]: Cursos, Credenciais · **Disciplina** [permissão `discipline`; módulo `discipline`; `FedDisciplinePanel`]: Sanções, Ouvidoria · **Comunicação** [permissão `comms`; PR 4]: **Notícias** [módulo `news`], **Cupons e campanhas** [módulo `promos`], **Patrocinadores** [`admin` + módulo `sponsors`] · Financeiro: Cobranças, Recebidos) e **Gerir** (**Página pública** [`admin`]: Publicação, Conteúdo, Transparência · Equipe · Configurações: Planos, Recebimento, Módulos, **Regras**, **Loja** [`admin`/`finance` + módulo `store`]). A seção só existe para quem tem a permissão e a aba de módulo só com o módulo ligado (`buildFederationSections(perms, federation)`); a aba mora na URL (`?aba=`; `?secao=` abre a primeira). Faixa "Precisa de você" (`FederationPendencias` ← `federationPendingItems`: pedidos, pagamentos, **clubes/arenas pedindo**, **chancelas para analisar**, transferências para responder, documentos para conferir, recursos de sanção, manifestações sem resposta) no topo |
+| `/f/:slug?aba=` | `PublicFederation` (V1, fora do V2Layout) | A página pública para quem não tem conta: cabeçalho do PickleRush ("Abrir no app"/"Entrar") e o MESMO `FederationProfile` do app, com as mesmas abas; sem barra da equipe nem área do filiado (§18) |
 | Início → card **Federação** | `HomeFederationCard` (`home_cards`, opcional, só com a flag) | Até 3 filiações (as que pedem pagar ou renovar primeiro, `homeFederationRows`) e a última notícia de cada federação |
 | Gestão do clube → Federação | `OrgAffiliationCard kind="club"` (`V2ClubAdmin`) | Pedir filiação a uma federação com `affiliations` ligado (mensagem ≤ 500), acompanhar (pendente/aprovada/recusada/suspensa com motivo), retirar o pedido ou desfiliar |
 | Central da arena → Equipe e parceiros → **Federação** (`?aba=federacao`) | `OrgAffiliationCard kind="arena"` (`V2ArenaManage`, aba só com a flag) | O mesmo cartão para a arena |
@@ -231,7 +231,9 @@ Os valores de `?aba=` da Central (`pedidos`, `filiados`, `filiados-orgs`,
 `transferencias`, `documentos`, `importar`, `chancelas`, `resultados`,
 `ranking`, `cursos`, `credenciais`, `sancoes`, `ouvidoria`, `cobrancas`,
 `recebidos`, `equipe`, `planos`, `pix`, `pagina`, `modulos`, `regras`, `hoje`
-e, do PR 4, `noticias`, `divulgacao`, `patrocinadores`, `governanca`, `loja`)
+e, do PR 4, `noticias`, `divulgacao`, `patrocinadores`, `governanca`, `loja`; desde
+§18 `publicacao`, `pagina` e `governanca` moram na seção Página pública, com os
+mesmos valores)
 são **contrato de link**: os avisos levam a eles (pedido de clube/arena →
 `filiados-orgs`; pedido de chancela → `chancelas`; transferência →
 `transferencias`; recurso → `sancoes`; manifestação → `ouvidoria`). Nunca
@@ -1031,7 +1033,7 @@ aparece como "não publicado", com atalho para publicar.
 IX (no mínimo 30% de mulheres nos cargos de direção), calculado por
 `womenQuota` (`domain/governance.js`) a partir da diretoria da Governança e de
 `governance.women_count` — o NÚMERO de mulheres, nunca quem, que o admin
-informa em Configurações → Governança, logo abaixo da diretoria, com o mesmo
+informa em Página pública → Transparência, logo abaixo da diretoria, com o mesmo
 aviso. O mínimo é arredondado para cima (7 cargos ⇒ 3). **Só aviso**: nada
 é barrado. O fim de mandato já avisa desde a Etapa 1 (30, 7 e 1 dia antes,
 `federationStaff`).
@@ -1372,7 +1374,7 @@ publicar de novo (`storeFederations`).
 
 ### 17.3 Quem publica e onde
 
-- **Central → Configurações → Publicação** (aba `?aba=publicacao`, só a
+- **Central → Página pública → Publicação** (aba `?aba=publicacao`, só a
   permissão `admin`): selo Pública/Oculta, o endereço público, **"Tornar
   pública"** / **"Tirar do ar"** (cada um com confirmação) e a lista "Antes de
   publicar, confira" (`publicationChecklist`: página com "Sobre" e cidade,
@@ -1409,3 +1411,42 @@ publicar de novo (`storeFederations`).
 `federationComments.test.js`, `federationAgenda.test.js`,
 `domain/federation.test.js`, `domain/staff.test.js`,
 `core/domain/sidebarNav.test.js`, `core/lib/sidebarNavPreference.test.js`.
+
+## 18. Página pública × filiado × equipe (2026-10-21)
+
+**O defeito:** a página da federação misturava três públicos numa coluna só —
+o que qualquer pessoa vê, a situação de quem é filiado (cobrança, carteirinha,
+transferência) e o botão "Gerir" da equipe —, e a Central escondia o que muda
+a página pública dentro de "Configurações", ao lado de Pix e regras. Quem
+abria não sabia o que era público, o que era só dele e o que era da equipe.
+
+**A separação**, em três camadas que nunca se misturam:
+
+| Camada | Quem vê | Onde | Componente |
+|---|---|---|---|
+| Página pública | todo mundo | `/federacoes/:id` e `/f/:slug`, em abas | `FederationProfile` (`v2/components/federations/profile/`) |
+| Área do filiado | só a própria pessoa | faixa no topo + aba **Minha filiação** (`?aba=minha`), com o selo "Só você vê" | `FedMemberStrip`, `FedMyMembership`, `useMyFederationStanding` (`FedMemberArea.jsx`) |
+| Equipe | quem tem cargo e o suporte da plataforma | barra escura no topo ("Área da equipe", cargo, "Ver como visitante", "Abrir a Central"); toda a gestão na Central | `FedStaffBar` (`FedStaffBar.jsx`) |
+
+- **Abas da página** (`profileTabs`, `domain/profile.js`, testado): Visão
+  geral, Minha filiação (só filiado), Notícias, Agenda, Competições,
+  Documentos, Cursos, Clubes e arenas, Contato — cada uma só com o módulo
+  ligado. A aba mora na URL (`?aba=`); as âncoras antigas (`#fed-cursos`,
+  `?ancora=fed-ouvidoria`, `?noticia=`…) abrem a aba certa
+  (`resolveProfileTab`/`tabForAnchor`) — avisos antigos continuam levando ao
+  lugar. Os valores de `PROFILE_TAB` e as âncoras `federacao-pub-*` das dicas
+  são **contrato**: nunca renomeie.
+- **Uma página só**: o app e o link público montam o MESMO `FederationProfile`;
+  o que muda é a moldura (o link público tem o cabeçalho do PickleRush e
+  "Entrar") e as ações do topo. Corrigir um bloco corrige os dois.
+- **Prévia "como visitante"** (`?visao=publico`, `fedPreviewPath`): a equipe vê
+  a página sem a barra e sem a área do filiado, com uma faixa tracejada "Sair da
+  prévia · Voltar à Central". Oculta, a faixa lembra que ninguém de fora a vê.
+- **Central**: a nova seção **Página pública** (grupo Gerir, só `admin`) junta
+  Publicação, Conteúdo (o antigo "Página") e Transparência (a antiga
+  "Governança"). Os valores `?aba=publicacao|pagina|governanca` não mudaram.
+  Configurações ficou com o que é interno: Planos, Recebimento, Módulos,
+  Regras, Loja.
+- **Diretório**: "Na equipe" leva à Central; "Suas filiações" leva à aba
+  Minha filiação. Antes os dois eram um botão "Gerir"/link genérico.
+- **Zero banco, zero regra, zero função nova.** Só tela, domínio puro e textos.

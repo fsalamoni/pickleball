@@ -108,7 +108,7 @@ function ApplyPage() {
         <ShieldCheck className="h-6 w-6 shrink-0 text-green-600" />
         <div>
           <h2 className="font-display text-xl font-bold text-ink">{t('{nome} está aprovada', { nome: aprovada.name })}</h2>
-          <p className="mt-1 text-sm text-gray-600">{aprovada.published === true ? t('Cadastre os planos e a chave Pix, monte a equipe e divulgue a página pública.') : t('Ela está oculta: só a equipe a vê. Cadastre os planos e a chave Pix, monte a equipe e, quando estiver pronta, publique em Configurações → Publicação.')}</p>
+          <p className="mt-1 text-sm text-gray-600">{aprovada.published === true ? t('Cadastre os planos e a chave Pix, monte a equipe e divulgue a página pública.') : t('Ela está oculta: só a equipe a vê. Cadastre os planos e a chave Pix, monte a equipe e, quando estiver pronta, publique em Página pública → Publicação.')}</p>
           <V2Button asChild className="mt-4"><Link to={fedManagePath(aprovada)}>{t('Abrir a Central da federação')}</Link></V2Button>
         </div>
       </V2Surface>

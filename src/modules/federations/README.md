@@ -42,10 +42,13 @@ federations/
 ```
 
 Telas: `src/v2/pages/V2Federations.jsx` (`/federacoes`), `V2FederationApply`
-(`/federacoes/abrir`), `V2FederationDetail` (`/federacoes/:id`),
+(`/federacoes/abrir`), `V2FederationDetail` (`/federacoes/:id?aba=`: página pública em
+abas `FederationProfile`, área do filiado `FedMemberArea.jsx` e barra da equipe
+`FedStaffBar.jsx`, em `src/v2/components/federations/profile/`; abas em
+`domain/profile.js` — `docs/50-FEDERACAO.md` §18),
 `V2FederationJoin` (`/federacoes/:id/filiar`), `V2FederationManage`
 (`/federacoes/:id/gerir?aba=`, painéis em `src/v2/components/federations/manage/`);
-públicas V1 `src/pages/PublicFederation.jsx` (`/f/:slug`) e
+públicas V1 `src/pages/PublicFederation.jsx` (`/f/:slug`, o mesmo `FederationProfile`) e
 `PublicFederationVerify.jsx` (`/f/verificar/:codigo?`); Minha área → Federações
 (`UserAreaSections.jsx`); Painel admin → Federações
 (`src/v2/components/admin/federations/AdminFederationsPanel.jsx`).
@@ -126,7 +129,7 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da
-  federação publica (Configurações → Publicação, `FedPublicationTab`); oculta,
+  federação publica (Página pública → Publicação, `FedPublicationTab`); oculta,
   a equipe estrutura tudo e ninguém de fora lê nem pede (`docs/50` §17).
 - **Só o servidor** cria filiação e cobrança, aprova, confirma pagamento e
   gira o código da carteirinha (`allow create, delete: if false`). O navegador
