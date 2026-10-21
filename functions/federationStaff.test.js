@@ -19,7 +19,7 @@ const PRES = { uid: 'pres' };
 const GES = { uid: 'ges' };
 const SEC = { uid: 'sec' };
 const ADMIN = { uid: 'admin', email: 'admin@x', isPlatformAdmin: true };
-const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'staff'];
+const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff'];
 
 function cenario() {
   return createFakeDb({
@@ -28,7 +28,7 @@ function cenario() {
     'federations/nova': { name: 'Nova', acronym: 'FN', slug: 'fn', status: 'pending' },
     // presidente antigo (sem `perms`): vale pelo papel e é admin master
     'federation_staff/fpp_pres': { federation_id: 'fpp', user_id: 'pres', user_name: 'Pres', role: 'president' },
-    'federation_staff/fpp_ges': { federation_id: 'fpp', user_id: 'ges', user_name: 'Gestora', role: 'gestao', role_id: 'gestao', perms: ['staff', 'members'], is_master: false, term_end_ms: 0 },
+    'federation_staff/fpp_ges': { federation_id: 'fpp', user_id: 'ges', user_name: 'Gestora', role: 'gestao', role_id: 'gestao', perms: ['staff', 'members', 'docs'], is_master: false, term_end_ms: 0 },
     'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', user_name: 'Sec', role: 'secretary' },
     'users/ana': { full_name: 'Ana Souza', photo_url: 'https://x/ana.png' },
     'users/bia': { full_name: 'Bia Lima' },

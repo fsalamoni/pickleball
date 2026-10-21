@@ -116,6 +116,26 @@ service firebase.storage {
       allow delete: if isAuthed() && request.auth.uid == uid;
     }
 
+    // Acervo oficial da federação (módulo `official_docs`): o RASCUNHO sobe
+    // para a pasta de quem envia (só ela lê); ao publicar, a função
+    // `federationAcervo` copia para `federacao-acervo-oficial/` (fechada à
+    // regra: o documento público ganha link próprio, o restrito é entregue
+    // pela função) e apaga a origem. Tetos iguais a `ACERVO_FILE_FAMILIES`
+    // (`src/modules/federations/domain/acervo.js`). ADITIVO.
+    match /federacao-acervo/{uid}/{fileName} {
+      allow get, list, delete: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid && resource == null && (
+        (request.resource.contentType.matches('application/pdf|text/(plain|csv)|application/msword|application/vnd[.]ms-excel|application/vnd[.]openxmlformats-officedocument[.][a-z.]+|application/vnd[.]oasis[.]opendocument[.][a-z.]+')
+          && request.resource.size < 25 * 1024 * 1024)
+        || (request.resource.contentType.matches('image/(webp|jpeg|png)')
+          && request.resource.size < 10 * 1024 * 1024)
+        || (request.resource.contentType.matches('audio/(mpeg|mp4|ogg|wav|x-m4a|webm)')
+          && request.resource.size < 50 * 1024 * 1024)
+        || (request.resource.contentType.matches('video/(mp4|webm|quicktime)')
+          && request.resource.size < 100 * 1024 * 1024)
+      );
+    }
+
     // Bloqueia qualquer outro caminho por padrão.
     match /{allPaths=**} {
       allow read, write: if false;

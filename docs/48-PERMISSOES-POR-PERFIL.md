@@ -285,6 +285,13 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Nomear, prorrogar mandato, tirar da equipe | ✖ | ✖ | ✖ | ✔ admin master; `staff` só em cargo não master, nunca em si, só com permissões que tem | ✔ com acesso justificado | **Cloud Function** `federationStaff` (nunca fica sem admin master) |
 | Sair da equipe | — | — | — | ✔ o próprio (o último admin master não) | — | **Cloud Function** `federationStaff` |
 | Entrar na Central de uma federação (escrever, ler CPF/sanções) | ✖ | ✖ | ✖ | — | ◐ com motivo e prazo (1–8 h), registrado em `admin_access_logs` | **Cloud Function** `federationAdminAccess` + rules `fedPlat` |
+| Ler documento do acervo publicado e público | ✔ | ✔ | ✔ | ✔ | ✔ | rules |
+| Ler documento do acervo "só filiados" | ✖ | ✖ | ◐ filiação `active` | ✔ qualquer cargo | ◐ com acesso justificado | rules + `file` da **Cloud Function** `federationAcervo` (arquivo restrito ≤ 9 MB) |
+| Ler documento do acervo "só a equipe" | ✖ | ✖ | ✖ | ✔ qualquer cargo | ◐ com acesso justificado | rules |
+| Ler rascunho ou documento retirado do ar | ✖ | ✖ | ✖ | ✔ `docs`/`admin` | ◐ com acesso justificado | rules |
+| Criar/editar/apagar rascunho, publicar, retificar, mudar visibilidade | ✖ | ✖ | ✖ | ✔ `docs`/`admin` | ◐ com acesso justificado | **Cloud Function** `federationAcervo` (rules `write: if false`; `doc_numbers` em `fedLocked()`) |
+| Retirar documento do ar | ✖ | ✖ | ✖ | ✔ `admin` (motivo ≥ 20 letras) | ◐ com acesso justificado | **Cloud Function** `federationAcervo` |
+| Enviar arquivo de rascunho do acervo | ✖ | ✔ só à própria pasta `federacao-acervo/{uid}/` (tipo e teto) | — | — | — | storage.rules (o servidor só aceita do próprio uid) |
 | Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
 | Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
 | Ler filiação | ✖ | ✖ | ✔ a própria (também o `get` dela ainda inexistente, pelo id `{fed}_{uid}`) | ✔ `admin`/`members`/`finance`/`discipline` | ✔ | rules (**nunca pública**) |

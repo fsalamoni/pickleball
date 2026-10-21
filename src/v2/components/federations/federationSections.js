@@ -6,7 +6,7 @@
  * o admin master vê tudo (os cargos são de cada federação). O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
  */
-import { ArrowLeftRight, BadgeCheck, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Eye, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -69,6 +69,13 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         ...(modulo('news') ? [{ value: 'noticias', label: tk('Notícias'), icon: Newspaper }] : []),
         ...(modulo('promos') ? [{ value: 'divulgacao', label: tk('Cupons e campanhas'), icon: Tag }] : []),
         ...(admin && modulo('sponsors') ? [{ value: 'patrocinadores', label: tk('Patrocinadores'), icon: Handshake }] : []),
+      ],
+    },
+    (pode(FED_PERMISSION.DOCS) || admin) && modulo('official_docs') && {
+      id: 'acervo', grupo: 'atender', label: tk('Acervo oficial'), icon: Library, dica: 'federacao-secao-acervo',
+      tabs: [
+        { value: 'acervo', label: tk('Documentos'), icon: ScrollText },
+        { value: 'transparencia', label: tk('Transparência'), icon: Eye },
       ],
     },
     pode(FED_PERMISSION.FINANCE) && {

@@ -7,12 +7,12 @@
  * `federationStaff.parity.test.js`. A regra do Firestore tem a mesma conta
  * em `fedPerms`/`fedRolePerms`.
  */
-const ALL = Object.freeze(['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'staff']);
+const ALL = Object.freeze(['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff']);
 
 /** Papel antigo → permissões (documento sem `perms`). */
 const PERMS = Object.freeze({
   president: ALL, director: ALL,
-  secretary: ['members'], treasurer: ['finance'], competitions: ['competitions'], referees: ['courses'],
+  secretary: ['members', 'docs'], treasurer: ['finance'], competitions: ['competitions'], referees: ['courses'],
   discipline: ['discipline'], communication: ['comms'],
 });
 
@@ -23,7 +23,7 @@ const ROLES_MAX = 30;
 const DEFAULT_ROLES = Object.freeze([
   ['president', 'Presidente', 'Admin master: tudo, inclusive montar os cargos e passar a administração.'],
   ['director', 'Diretor(a)', 'Tudo na Central, menos montar os cargos e mexer nos admins master.'],
-  ['secretary', 'Secretaria', 'Filiados: aprova, recusa, suspende e vê os pedidos.'],
+  ['secretary', 'Secretaria', 'Filiados e acervo: aprova filiações e publica atos, atas e editais.'],
   ['treasurer', 'Financeiro', 'Cobranças: confirma pagamentos e vê o financeiro.'],
   ['competitions', 'Competições', 'Chancela de torneios, calendário e ranking oficial.'],
   ['referees', 'Arbitragem e cursos', 'Cursos, árbitros e credenciais.'],

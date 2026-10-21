@@ -16,7 +16,7 @@ import { httpsCallable } from 'firebase/functions';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, limit, writeBatch,
 } from 'firebase/firestore';
-import { deleteObject, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { deleteObject, ref as storageRef, uploadBytes, uploadBytesResumable } from 'firebase/storage';
 import { db, functions, storage } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
@@ -37,6 +37,7 @@ import { validateReportInput } from '../domain/discipline.js';
 import { validateNewsInput } from '../domain/news.js';
 import { validateSponsors } from '../domain/sponsors.js';
 import { validateGovernance } from '../domain/governance.js';
+import { DOC_STATUS, DOC_VISIBILITY, acervoUploadPath, validateAcervoFile } from '../domain/acervo.js';
 import { validatePlanInput } from '../domain/plans.js';
 import { canDeclarePayment } from '../domain/charges.js';
 
@@ -63,10 +64,10 @@ function mensagemDoServidor(err) {
   return err?.message || t('Não foi possível concluir. Tente de novo.');
 }
 
-async function chamar(nome, payload) {
+async function chamar(nome, payload, { timeout = 60_000 } = {}) {
   if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   try {
-    const { data } = await httpsCallable(functions, nome, { timeout: 60_000 })(payload);
+    const { data } = await httpsCallable(functions, nome, { timeout })(payload);
     return data;
   } catch (err) {
     const e = new Error(mensagemDoServidor(err));
@@ -912,4 +913,55 @@ export async function updateFederationGovernance(id, input, { uid } = {}) {
   await updateDoc(doc(db, C.federations, id), { governance: r.value, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'federation_governance_update', actor: { uid }, details: { federation_id: id, board: r.value.board.length, minutes: r.value.minutes.length } });
   return r.value;
+}
+
+/* ===================================================== Acervo oficial (módulo `official_docs`) ===================================================== */
+
+/** Tudo do acervo, rascunhos inclusive (permissão `docs`/`admin`; a regra confere). */
+export async function listFederationDocsAll(fedId) {
+  if (!fedId) return [];
+  return (await getDocs(query(collection(db, C.officialDocs), where('federation_id', '==', fedId)))).docs.map(toDoc);
+}
+
+/** Os publicados de UMA visibilidade. Três igualdades: a regra prova (público / filiado ativo / equipe) sem índice. */
+export async function listPublishedDocs(fedId, visibility = DOC_VISIBILITY.PUBLIC) {
+  if (!fedId) return [];
+  const q = query(collection(db, C.officialDocs), where('federation_id', '==', fedId), where('status', '==', DOC_STATUS.PUBLISHED), where('visibility', '==', visibility));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+export async function getOfficialDoc(id) {
+  if (!id) return null;
+  const snap = await getDoc(doc(db, C.officialDocs, id));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+/** As ações do acervo são do SERVIDOR (numeração, cópia oficial, SHA-256): prazo longo para vídeo grande. */
+export const acervoAction = (payload) => chamar('federationAcervo', payload, { timeout: 540_000 });
+
+/** O arquivo de um documento sem link público (filiado, equipe, rascunho), em base64. */
+export const fetchAcervoFile = ({ federationId, docId, path }) => acervoAction({ federationId, action: 'file', docId, path });
+
+/** Desfaz um envio que não chegou a entrar num rascunho salvo (só a pasta de quem enviou). */
+export async function discardAcervoUpload(path) {
+  if (!storage || !/^federacao-acervo\//.test(String(path || ''))) return;
+  await deleteObject(storageRef(storage, path)).catch(() => {});
+}
+
+/**
+ * Envia o arquivo do RASCUNHO para `federacao-acervo/{uid}/{id}.{ext}` (só quem
+ * envia lê). Ao publicar, o servidor copia para a pasta oficial e apaga este.
+ */
+export function uploadAcervoFile({ uid, file, onProgress }) {
+  const { error: erro } = validateAcervoFile(file);
+  if (erro) return Promise.reject(new FederationError(erro, { file: erro }));
+  if (!storage || !uid) return Promise.reject(new FederationError(t('Firebase não está configurado neste ambiente.')));
+  const path = acervoUploadPath(uid, doc(collection(db, C.officialDocs)).id, file.type);
+  const tarefa = uploadBytesResumable(storageRef(storage, path), file, { contentType: file.type });
+  return new Promise((resolve, reject) => {
+    tarefa.on('state_changed',
+      (s) => onProgress?.(s.totalBytes ? s.bytesTransferred / s.totalBytes : 0),
+      reject,
+      () => resolve({ name: String(file.name || 'arquivo').slice(0, 120), path, size: Number(file.size) || 0, content_type: file.type }));
+  });
 }

@@ -4634,8 +4634,8 @@ service cloud.firestore {
     // cópia das permissões em `perms` — só o servidor (`federationStaff`).
     function fedRolePerms(role) {
       return role == 'president' || role == 'director'
-        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'staff']
-        : (role == 'secretary' ? ['members']
+        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff']
+        : (role == 'secretary' ? ['members', 'docs']
         : (role == 'treasurer' ? ['finance']
         : (role == 'competitions' ? ['competitions']
         : (role == 'referees' ? ['courses']
@@ -4679,7 +4679,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers'];
     }
 
     match /federations/{fedId} {
@@ -4977,6 +4977,23 @@ service cloud.firestore {
         && nd().audience in ['public', 'members'];
       allow delete: if fedPlat(od().federation_id)
         || (fedOn() && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin')));
+    }
+
+    // ACERVO OFICIAL (módulo `official_docs`): normas, atos, atas, editais,
+    // transparência. Só o SERVIDOR grava (`functions/federationAcervo.js`):
+    // numeração, imutabilidade do publicado e SHA-256 dos arquivos não se
+    // garantem no navegador. Leitura: publicado e público, qualquer um (sem
+    // conta); "só filiados", filiado ativo e a equipe; "só equipe", quem é da equipe; a
+    // equipe do acervo (docs/admin) lê tudo, rascunho e retirado inclusive.
+    // A consulta da tela traz `status` e `visibility` em igualdade, para a
+    // regra ser provável sem índice.
+    match /federation_docs/{docId} {
+      allow read: if (od().status == 'published'
+          && (od().visibility == 'public'
+            || (od().visibility == 'members' && fedMemberActive(od().federation_id))
+            || (od().visibility in ['members', 'staff'] && (fedPlat(od().federation_id) || fedPerms(od().federation_id).size() > 0))))
+        || fedHas(od().federation_id, 'docs') || fedHas(od().federation_id, 'admin');
+      allow write: if false;
     }
 
     match /federation_charges/{chargeId} {

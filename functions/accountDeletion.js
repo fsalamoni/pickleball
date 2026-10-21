@@ -238,6 +238,7 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'federation_imports', field: 'by', label: 'Importações de filiados que fez (como equipe)' },
   // PR 4: a notícia é da federação (quem escreveu é só o uid de equipe).
   { col: 'federation_news', field: 'created_by', label: 'Notícias de federação que escreveu (como equipe)' },
+  { col: 'federation_docs', field: 'created_by', label: 'Documentos do acervo oficial de federação que preparou (como equipe; o ato publicado é registro da federação)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */
@@ -1245,7 +1246,7 @@ async function contaDeLoginExiste(auth, uid) {
  * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
  * (`federacao/`).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {
