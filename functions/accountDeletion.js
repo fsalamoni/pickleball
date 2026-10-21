@@ -244,6 +244,8 @@ const RETAINED_AS_IS = Object.freeze([
  * carteirinha é APAGADO (a carteirinha de uma conta excluída não verifica);
  * os planos (`federation_plans`) são da federação e não citam a pessoa.
  */
+const FED_LIVE = ['pending', 'awaiting_payment', 'active', 'expired', 'suspended'];
+
 async function coletarFederacoes(db, uid) {
   const filiacoes = await consultar(db, 'federation_members', 'user_id', '==', uid);
   const dependentes = await consultar(db, 'federation_members', 'guardian_uid', '==', uid);
@@ -255,18 +257,22 @@ async function coletarFederacoes(db, uid) {
     if (data.card_code) deletes.push(db.collection('federation_card_index').doc(String(data.card_code)));
     // CPF, nascimento e responsável moram em `private/data`: somem com a conta.
     deletes.push(d.ref.collection('private').doc('data'));
-    itens.push({ ref: d.ref, patch: { user_name: REMOVED_ATHLETE, photo_url: null, card_code: null, public_badge: false, show_in_directory: false, note: '' } });
+    // A filiação viva ENCERRA: conta excluída não é filiada (a contagem de filiados e o ranking a tiravam só pelo nome).
+    const encerra = FED_LIVE.includes(data.status) ? { status: 'cancelled', cancelled_at_ms: Date.now(), cancelled_by: 'account_deletion' } : {};
+    itens.push({ ref: d.ref, patch: { ...encerra, user_name: REMOVED_ATHLETE, photo_url: null, card_code: null, public_badge: false, show_in_directory: false, note: '' } });
   });
-  // Dependentes (menores filiados por esta conta): a filiação fica sem o
-  // responsável; o nome do menor fica, porque a filiação é DELE, não da conta.
+  // Dependentes (menores filiados por esta conta): a filiação ENCERRA — ninguém
+  // mais responde por ela; o nome do menor fica, porque a filiação é DELE, não da conta.
   dependentes.docs.forEach((d) => {
     const data = d.data() || {};
     if (data.card_code) deletes.push(db.collection('federation_card_index').doc(String(data.card_code)));
     deletes.push(d.ref.collection('private').doc('data'));
-    itens.push({ ref: d.ref, patch: { guardian_name: REMOVED_USER, card_code: null } });
+    const encerra = FED_LIVE.includes(data.status) ? { status: 'cancelled', cancelled_at_ms: Date.now(), cancelled_by: 'account_deletion' } : {};
+    itens.push({ ref: d.ref, patch: { ...encerra, guardian_name: REMOVED_USER, card_code: null } });
   });
   cobrancas.docs.forEach((d) => {
-    if ((d.data() || {}).payer_name !== REMOVED_ATHLETE) itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE } });
+    const c = d.data() || {};
+    if (c.payer_name !== REMOVED_ATHLETE || c.member_name) itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE, member_name: '' } });
   });
   // Resultados enviados ao ranking oficial: a linha fica como "Atleta removido"
   // e sai de `uids` — o gatilho `federationRankingRecompute` refaz a temporada

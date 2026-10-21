@@ -15,7 +15,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { disciplineAction, updateReport } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { canAppeal, reportProtocol, sanctionInForce, sortReports, sortSanctions, validateSanctionInput } from '@/modules/federations/domain/discipline';
-import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
 import { DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS, DISCIPLINE_STATUS_LABELS, REPORT_KIND_LABELS, REPORT_STATUS, REPORT_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
@@ -23,8 +23,7 @@ import { t } from '@/core/i18n';
 import { quando } from '../federationUi';
 
 const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const reais = (c) => (Number(c || 0) / 100).toFixed(2).replace('.', ',');
-const cents = (txt) => Math.round(Number(String(txt).replace(/\./g, '').replace(',', '.')) * 100);
+const cents = parseBrlCents;
 
 /* ------------------------------------------------------------------ sanções -- */
 

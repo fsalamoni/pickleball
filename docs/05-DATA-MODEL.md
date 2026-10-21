@@ -1593,8 +1593,9 @@ bloco "FEDERAÇÕES" do `firestore.rules` (`fedOn()` lê a flag em
 `platform_settings/global`; `fedHas(fedId, perm)` lê o papel em
 `federation_staff/{fedId}_{uid}`; `fedModuleOn(fedId, m)` lê o sub-módulo;
 `fedMemberOwner(data)` = `user_id` **ou** `guardian_uid` da filiação, PR 3),
-provadas em `tests/rules/federation.rules.test.js`, `federationPr2.rules.test.js`
-e `federationPr3.rules.test.js`. **Storage**: `federacao/{uid}/{arquivo}` —
+provadas em `tests/rules/federation.rules.test.js`, `federationPr2.rules.test.js`,
+`federationPr3.rules.test.js`, `federationPr4.rules.test.js` e
+`federationRevisao.rules.test.js`. **Storage**: `federacao/{uid}/{arquivo}` —
 só o dono lê, lista e apaga; cria imagem (webp/jpeg/png) ou PDF < 5 MB, sem
 sobrescrever (`storage.rules`).
 
@@ -1623,7 +1624,7 @@ transfer_cooldown_days }` (PR 3, opcional; a equipe `admin` grava), `status`
 plataforma); o presidente não se rebaixa sozinho e não sai da equipe.
 
 ### `federation_plans/{id}` (NOVO, público)
-`federation_id`, `name`, `description`, `benefits[]`, `person_type`
+`federation_id`, `name`, `description`, `benefits` (texto, um por linha), `person_type`
 (`athlete|coach|referee`), `tier` (`registered|federated`), `billing`
 (`monthly|annual`), `validity` (`rolling|calendar`), `rollover_mmdd`,
 `calendar_grace_days` (padrão 60), `price_cents` (0 = gratuito, teto
@@ -1653,8 +1654,9 @@ o próprio ou o responsável) só muda `public_badge`, `show_in_directory`,
 equipe com `admin`/`members`/`finance`, o admin.
 - `private/data` (PR 3): `cpf` (só dígitos, ≤ 11, só se
   `federations.rules.ask_cpf`), `birth_date`, `guardian_name`,
-  `guardian_contact`, `guardian_consent` — o dono escreve; leem o dono, `members`, `admin` e o admin da
-  plataforma. Na Central o CPF aparece mascarado; revelar grava `audit_logs`
+  `guardian_contact`, `guardian_consent` — **só o servidor grava** (pedido de
+  filiação, dependente, importação); leem o dono, `members`, `admin` e o admin da
+  plataforma. Entra na exportação de dados (`listMyMembersPrivate`). Na Central o CPF aparece mascarado; revelar grava `audit_logs`
   (`federation_member_private_reveal`).
 
 ### `federation_charges/{id}` (NOVO)

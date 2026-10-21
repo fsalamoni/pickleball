@@ -11,7 +11,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { savePlan, setPlanActive, updateFederationGovernance, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
 import { BOARD_MAX, MINUTES_MAX, validateGovernance } from '@/modules/federations/domain/governance';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
-import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
 import { normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
 import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
@@ -19,11 +19,11 @@ import { PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_
 import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import FederationPublicFields from '../FederationPublicFields';
-import { FedLogo, fedPublicPath } from '../federationUi';
+import { FedLogo, fedPublicPath, publicHost } from '../federationUi';
 import { t } from '@/core/i18n';
 
 const reais = (cents) => (Number(cents) / 100).toFixed(2).replace('.', ',');
-const cents = (txt) => Math.round(Number(String(txt).replace(/\./g, '').replace(',', '.')) * 100);
+const cents = parseBrlCents;
 
 /* ---------------------------------------------------------------- planos -- */
 
@@ -181,7 +181,7 @@ function PaginaTab({ federation }) {
   return (
     <section className="space-y-4" aria-label={t('Página pública')} data-dica="federacao-pagina">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="font-display text-xl font-bold text-ink">{t('Página pública')}</h2><p className="text-sm text-gray-500">{t('O que qualquer pessoa vê em {url}.', { url: `picklerush.web.app${fedPublicPath(federation)}` })}</p></div>
+        <div><h2 className="font-display text-xl font-bold text-ink">{t('Página pública')}</h2><p className="text-sm text-gray-500">{t('O que qualquer pessoa vê em {url}.', { url: `${publicHost()}${fedPublicPath(federation)}` })}</p></div>
         <V2Button asChild size="sm" variant="secondary"><Link to={fedPublicPath(federation)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Ver a página')}</Link></V2Button>
       </div>
       <form onSubmit={enviar} noValidate className="space-y-6">

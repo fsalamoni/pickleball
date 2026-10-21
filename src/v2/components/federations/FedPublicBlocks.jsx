@@ -224,7 +224,7 @@ export function FedCoursesSection({ federation, titulo = true }) {
                     </div>
                   ) : st.open ? (
                     isAuthenticated
-                      ? <V2Button type="button" size="sm" disabled={m.isPending || eq.isLoading} onClick={() => agir({ action: 'enroll', courseId: c.id }, c.price_cents > 0 ? t('Inscrição feita. Pague o Pix em Minha área → Federações.') : t('Inscrição confirmada.'))} data-dica="federacao-curso-inscrever">{t('Inscrever-se')}</V2Button>
+                      ? <V2Button type="button" size="sm" disabled={m.isPending || !eq.isSuccess} onClick={() => agir({ action: 'enroll', courseId: c.id }, c.price_cents > 0 ? t('Inscrição feita. Pague o Pix em Minha área → Federações.') : t('Inscrição confirmada.'))} data-dica="federacao-curso-inscrever">{t('Inscrever-se')}</V2Button>
                       : <V2Button asChild size="sm"><Link to={`/login?next=${encodeURIComponent(`/federacoes/${federation.id}`)}`}>{t('Entrar para se inscrever')}</Link></V2Button>
                   ) : null}
                 </V2Surface>
@@ -302,7 +302,7 @@ export function FedOmbudsmanBlock({ federation, titulo = true }) {
         {consulta && rq.isError && <p className="text-sm text-red-600">{t('Protocolo não encontrado, ou ele não é seu.')}</p>}
         {consulta && rq.isSuccess && !rq.data && <p className="text-sm text-red-600">{t('Protocolo não encontrado.')}</p>}
         {consulta && rq.isSuccess && rq.data && (
-          <p className="text-sm text-gray-700">{t('Protocolo {p}: {estado}, enviada em {data}.', { p: reportProtocol(rq.data.id), estado: t(REPORT_STATUS_LABELS[rq.data.status] || rq.data.status), data: dataCurta(new Date(rq.data.created_at_ms || 0).toISOString().slice(0, 10)) })}</p>
+          <p className="text-sm text-gray-700">{t('Protocolo {p}: {estado}, enviada em {data}.', { p: reportProtocol(rq.data.id), estado: t(REPORT_STATUS_LABELS[rq.data.status] || rq.data.status), data: fmtData(new Date(rq.data.created_at_ms || 0), { day: '2-digit', month: '2-digit', year: 'numeric' }) })}</p>
         )}
       </V2Surface>
       {aberto && <OuvidoriaDialog federation={federation} uid={user?.uid} onClose={() => setAberto(false)} />}

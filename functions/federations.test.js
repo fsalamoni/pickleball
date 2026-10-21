@@ -24,6 +24,9 @@ function cenario({ flag = true } = {}) {
     'platform_settings/global': { feature_flags: { federations: flag } },
     'federations/fpp': { name: 'Federação Paulista de Pickleball', acronym: 'FPP', slug: 'fpp', status: 'approved', member_counter: 0, created_by: 'pres' },
     'federations/nova': { name: 'Federação Nova', acronym: 'FN', slug: 'fn', status: 'pending', created_by: 'bia', created_by_name: 'Bia' },
+    'federations/clone': { name: 'Federação Clone', acronym: 'FC', slug: 'fpp', status: 'pending', created_by: 'bia', created_by_name: 'Bia' },
+    'federations/semdono': { name: 'Federação Sem Dono', acronym: 'FSD', slug: 'fsd', status: 'pending', created_by: 'zed', created_by_name: 'Zed' },
+    'users/bia': { full_name: 'Bia' },
     'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
     'federation_staff/fpp_tes': { federation_id: 'fpp', user_id: 'tes', role: 'treasurer' },
     'federation_plans/anual': { federation_id: 'fpp', name: 'Atleta federado', person_type: 'athlete', tier: 'federated', billing: 'annual', validity: 'rolling', price_cents: 12000, active: true },
@@ -143,5 +146,36 @@ describe('federações no servidor', () => {
     await expect(fed.review(c, ADMIN, { federationId: 'nova', action: 'suspend' })).rejects.toMatchObject({ code: 'invalid-argument' });
     await fed.review(c, ADMIN, { federationId: 'nova', action: 'official' });
     expect(doc(db, 'federations/nova').official).toBe(true);
+  });
+
+  it('revisão: endereço repetido entre as aprovadas não aprova; criador sem conta não vira presidente; flag desligada barra', async () => {
+    const db = cenario();
+    const c = ctx(db);
+    await expect(fed.review(c, ADMIN, { federationId: 'clone', action: 'approve' })).rejects.toMatchObject({ code: 'already-exists' });
+    expect(doc(db, 'federations/clone').status).toBe('pending');
+    await fed.review(c, ADMIN, { federationId: 'semdono', action: 'approve' });
+    expect(doc(db, 'federations/semdono').status).toBe('approved');
+    expect(doc(db, 'federation_staff/semdono_zed')).toBeUndefined();
+    const off = cenario({ flag: false });
+    await expect(fed.review(ctx(off), ADMIN, { federationId: 'nova', action: 'approve' })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(await fed.verify(ctx(off), { code: 'ABCDEFGHJK' })).toEqual({ found: false });
+  });
+
+  it('a varredura vence pela DATA mesmo com sanção em vigor, e não avisa "vence em 0 dias" de quem já venceu', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_members/fpp_ana', { federation_id: 'fpp', user_id: 'ana', status: 'active', valid_until: '2026-10-01', discipline_until_ms: NOW + 86400000, expiry_notified: {} });
+    db.store.docs.set('federation_members/fpp_bia', { federation_id: 'fpp', user_id: 'bia', status: 'active', valid_until: '2026-10-18', expiry_notified: {} });
+    expect(await fed.sweep(ctx(db))).toEqual({ vencidas: 1, avisos: 1 });
+    expect(doc(db, 'federation_members/fpp_ana').status).toBe('expired');
+    expect(avisosPara(db, 'bia')[0].title).toMatch(/vence hoje/);
+  });
+
+  it('cancelar a filiação apaga o código do documento (a carteirinha não mostra código morto)', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_members/fpp_ana', { federation_id: 'fpp', user_id: 'ana', status: 'active', valid_until: '2027-01-01', card_code: 'ABCDEFGHJK' });
+    db.store.docs.set('federation_card_index/ABCDEFGHJK', { member_id: 'fpp_ana', federation_id: 'fpp' });
+    await fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'cancel' });
+    expect(doc(db, 'federation_members/fpp_ana')).toMatchObject({ status: 'cancelled', card_code: null });
+    expect(doc(db, 'federation_card_index/ABCDEFGHJK')).toBeUndefined();
   });
 });

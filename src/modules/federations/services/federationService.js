@@ -14,7 +14,7 @@
  */
 import { httpsCallable } from 'firebase/functions';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, limit,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, limit, writeBatch,
 } from 'firebase/firestore';
 import { deleteObject, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { db, functions, storage } from '@/core/config/firebase';
@@ -22,8 +22,9 @@ import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
-  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, STAFF_ROLE, fedOrgDocId, fedRankingDocId, fedResultDocId, fedUserDocId,
+  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, STAFF_ROLE, fedRankingDocId, fedResultDocId, fedUserDocId,
 } from '../domain/constants.js';
+import { isoDate } from '../domain/membership.js';
 import { affiliationDecision, affiliationState, buildAffiliationRequest } from '../domain/affiliations.js';
 import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sanctionState } from '../domain/sanction.js';
 import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
@@ -144,10 +145,16 @@ export async function getFederationPrivate(id) {
   return snap.exists() ? snap.data() : null;
 }
 
+/**
+ * O endereço já é de uma federação APROVADA? Só as aprovadas são legíveis por
+ * todo mundo, e a consulta precisa ser provável pela regra: sem o filtro de
+ * `status` o Firestore a recusava e a conferência "passava" em silêncio. A
+ * colisão com um pedido ainda pendente é conferida pelo SERVIDOR na aprovação.
+ */
 async function slugEmUso(slug, ignorarId = null) {
-  const q = query(collection(db, C.federations), where('slug', '==', slug), limit(5));
+  const q = query(collection(db, C.federations), where('slug', '==', slug), where('status', '==', FEDERATION_STATUS.APPROVED), limit(5));
   const snap = await getDocs(q);
-  return snap.docs.some((d) => d.id !== ignorarId && d.data().status !== FEDERATION_STATUS.REJECTED);
+  return snap.docs.some((d) => d.id !== ignorarId);
 }
 
 /**
@@ -461,6 +468,13 @@ export async function withdrawSanction(tournament, { uid } = {}) {
 export async function decideSanction(tournament, action, { uid, reason = '', tier = null, requiresMembership = null } = {}) {
   const patch = sanctionDecision(tournament, action, { uid, reason, tier, requiresMembership });
   await updateDoc(doc(db, 'tournaments', tournament.id), { ...patch, updated_at: serverTimestamp() });
+  // Revogada a chancela, o que já foi enviado ao ranking oficial sai dele (o gatilho refaz a temporada).
+  if (action === 'revoke') {
+    const enviados = await getDocs(query(collection(db, C.results), where('federation_id', '==', tournament.federation_id), where('tournament_id', '==', tournament.id)));
+    const lote = writeBatch(db);
+    enviados.docs.filter((d) => d.data().status === RESULT_STATUS.SENT).forEach((d) => lote.update(d.ref, { status: RESULT_STATUS.REJECTED, review: { by: uid, reason: patch.federation_sanction.reason || t('Chancela revogada'), at_ms: Date.now() }, updated_at: serverTimestamp() }));
+    await lote.commit();
+  }
   await createAuditLog({ action: `tournament_sanction_${action}`, actor: { uid }, tournamentId: tournament.id, details: { federation_id: tournament.federation_id, reason: patch.federation_sanction.reason, tier: patch.federation_sanction.tier } });
   const sigla = patch.federation_sanction.federation_acronym || '';
   const textos = {
@@ -514,7 +528,7 @@ export async function sendFederationResult({ tournament, modality, matches, regi
     modality_id: modality.id, modality_name: String(modality.name || '').slice(0, 120),
     gender_category: modality.gender_category || 'open', age_category: modality.age_category || 'open', format: modality.format || 'doubles',
     tier: st.tier, date: tournamentDay(tournament), season: resultSeason(tournament),
-    rows: rows.slice(0, 400), uids: [...new Set(rows.map((r) => r.uid).filter(Boolean))],
+    rows: rows.slice(0, 400), uids: [...new Set(rows.slice(0, 400).map((r) => r.uid).filter(Boolean))],
     status: RESULT_STATUS.SENT, sent_by: uid, sent_at: serverTimestamp(), review: null, updated_at: serverTimestamp(),
   };
   await setDoc(doc(db, C.results, id), data);
@@ -559,6 +573,21 @@ export async function updateRankingConfig(fedId, input, { uid } = {}) {
 export async function listMyDependents(uid) {
   if (!uid) return [];
   return (await getDocs(query(collection(db, C.members), where('guardian_uid', '==', uid)))).docs.map(toDoc);
+}
+
+/**
+ * Os dados PRIVADOS das filiações da pessoa e dos dependentes dela
+ * (`federation_members/{id}/private/data`: CPF, nascimento, responsável) —
+ * para a exportação LGPD. O dono lê; só o servidor grava.
+ */
+export async function listMyMembersPrivate(uid) {
+  if (!uid) return [];
+  const [minhas, deps] = await Promise.all([listMyMemberships(uid), listMyDependents(uid)]);
+  const lidos = await Promise.all([...minhas, ...deps].map(async (m) => {
+    const snap = await getDoc(doc(db, C.members, m.id, 'private', 'data'));
+    return snap.exists() ? { member_id: m.id, federation_id: m.federation_id, ...snap.data() } : null;
+  }));
+  return lidos.filter(Boolean);
 }
 
 /** CPF, responsável — o próprio/responsável e a secretaria (`private/data`). `null` se não há. */
@@ -851,7 +880,7 @@ export async function saveNews(federation, input, { uid, newsId = null } = {}) {
   const r = validateNewsInput(input);
   if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
   const data = { ...r.value, federation_id: federation.id, federation_acronym: federation.acronym || '', updated_at: serverTimestamp(), updated_by: uid || null };
-  if (data.status === NEWS_STATUS.PUBLISHED && !data.published_at) data.published_at = new Date().toISOString().slice(0, 10);
+  if (data.status === NEWS_STATUS.PUBLISHED && !data.published_at) data.published_at = isoDate(); // o dia LOCAL (à noite o UTC já é amanhã)
   if (newsId) {
     await updateDoc(doc(db, C.news, newsId), data);
   } else {

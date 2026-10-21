@@ -95,9 +95,16 @@ function createFakeDb(seed = {}) {
      */
     async runTransaction(fn) {
       const escritas = [];
+      // Como o Admin SDK: toda leitura antes de toda escrita — ler depois de
+      // escrever é "Firestore transactions require all reads to be executed
+      // before all writes" em produção, e o falso tem de reprovar igual.
+      const leitura = (ler) => {
+        if (escritas.length) throw new Error('Firestore transactions require all reads to be executed before all writes.');
+        return ler();
+      };
       const tx = {
-        get: (alvo) => alvo.get(),
-        getAll: (...refs) => Promise.all(refs.map((r) => r.get())),
+        get: (alvo) => leitura(() => alvo.get()),
+        getAll: (...refs) => leitura(() => Promise.all(refs.map((r) => r.get()))),
         update: (ref, data) => escritas.push(() => aplicarUpdate(store, ref, data)),
         set: (ref, data, opts) => escritas.push(() => aplicarSet(store, ref, data, opts)),
         delete: (ref) => escritas.push(() => { store.log.push(['delete', ref.path]); store.docs.delete(ref.path); }),

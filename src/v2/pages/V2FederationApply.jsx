@@ -17,7 +17,7 @@ import { slugifyName, validateFederationInput } from '@/modules/federations/doma
 import { applyFederation } from '@/modules/federations/services/federationService';
 import { useFederationMutation, useMyCreatedFederations } from '@/modules/federations/hooks/useFederations';
 import {
-  V2BackLink, V2Button, V2ErrorState, V2Field, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea,
+  V2BackLink, V2Button, V2ErrorState, V2Field, V2Input, V2Page, V2PageIntro, V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import { FederationGate, fedManagePath } from '@/v2/components/federations/federationUi';

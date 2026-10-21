@@ -23,3 +23,12 @@ describe('CSV', () => {
     expect(parseMembersCsv('').errors.length).toBe(1);
   });
 });
+
+describe('toISODateLoose — data que não existe não é data (revisão geral)', () => {
+  it('31/02 e 2026-02-30 saem vazios', () => {
+    expect(toISODateLoose('31/02/2026')).toBe('');
+    expect(toISODateLoose('2026-02-30')).toBe('');
+    expect(toISODateLoose('29/02/2024')).toBe('2024-02-29');
+    expect(toISODateLoose('5/7/2026')).toBe('2026-07-05');
+  });
+});

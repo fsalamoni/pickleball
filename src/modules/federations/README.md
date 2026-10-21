@@ -120,6 +120,15 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 - Módulo novo da federação: `FED_MODULE` + `FED_MODULE_META` (nasce `planned`,
   que a aba mostra como "Em breve" e não liga); a tela dele pergunta
   `federation.modules[x]`.
+- **Revisão geral (2026-10-21, `docs/50-FEDERACAO.md` §12):** papel →
+  permissões é UM mapa com guarda (`src/core/guards/federacaoPermissoes.test.js`
+  compara `STAFF_ROLE_PERMISSIONS` com `fedRolePerms()` da regra); o admin da
+  plataforma tem toda permissão também na regra (`fedHas`); `private/data` só o
+  servidor grava; valor em reais digitado passa por `parseBrlCents`
+  (`domain/charges.js`), nunca por conta local; `membershipRequirement` usa
+  `membershipState` e vale para a dupla; a exportação leva `private/data`
+  (`listMyMembersPrivate`); o host da página pública vem de `publicHost()`;
+  benefícios do plano só por `planBenefitLines` (texto ou lista, nunca `.split` na tela).
 - **PR 3** — CPF, nascimento e responsável só em `private/data` (nunca no
   documento da filiação; na Central o CPF nasce mascarado e revelar é
   auditado). **Dependente** = filiação com `user_id` nulo e `guardian_uid`:

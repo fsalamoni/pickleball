@@ -12,11 +12,11 @@ import { homeFederationRows } from '@/modules/federations/domain/membership';
 import { MEMBER_STATUS } from '@/modules/federations/domain/constants';
 import { visibleNews } from '@/modules/federations/domain/news';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
-import { t, tk } from '@/core/i18n';
+import { fmtData, t, tk } from '@/core/i18n';
+import { instanteDoDiaEmMs } from '@/core/domain/instant';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from '@/v2/components/home/personal/HomeSection';
 
 const ACAO = { to: '/federacoes', label: tk('Ver as federações') };
-const dataBR = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
 
 function UltimaNoticia({ fedId, filiado }) {
   const publicas = usePublicNews(fedId);
@@ -58,7 +58,7 @@ export default function HomeFederationCard() {
           to={`/federacoes/${member.federation_id}`}
           icon={IdCard}
           title={[member.federation_acronym || member.federation_name, member.user_id ? null : member.user_name].filter(Boolean).join(' · ')}
-          subtitle={estado.validUntil ? t('{estado} · até {data}', { estado: estado.label, data: dataBR(estado.validUntil) }) : estado.label}
+          subtitle={estado.validUntil ? t('{estado} · até {data}', { estado: estado.label, data: fmtData(new Date(instanteDoDiaEmMs(estado.validUntil)), { day: '2-digit', month: '2-digit', year: 'numeric' }) }) : estado.label}
           badge={acao === 'pagar' ? t('Pagar') : acao === 'renovar' ? t('Renovar') : undefined}
           badgeTone="amber"
           highlight={Boolean(acao)}

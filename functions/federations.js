@@ -121,6 +121,7 @@ const REVIEW = Object.freeze({
 
 async function review(ctx, actor, data) {
   if (!actor.isPlatformAdmin) falha('permission-denied', 'Só o admin da plataforma revisa federações.');
+  if (!(await flagLigada(ctx))) falha('failed-precondition', 'As federações não estão ligadas nesta plataforma.');
   const acao = REVIEW[data.action];
   if (!acao) falha('invalid-argument', 'Ação desconhecida.');
   const reason = texto(data.reason, 500);
@@ -128,14 +129,19 @@ async function review(ctx, actor, data) {
   const fed = await federacao(ctx, data.federationId);
   if (!acao.from.includes(fed.status)) falha('failed-precondition', 'A federação já mudou de estado. Atualize a página.');
 
+  if (data.action === 'approve' && fed.slug) {
+    // O endereço público (`/f/:slug`) é único entre as APROVADAS — duas no ar com o mesmo slug é uma página só.
+    const mesmoSlug = await ctx.db.collection(C.federations).where('slug', '==', fed.slug).where('status', '==', 'approved').get();
+    if (mesmoSlug.docs.some((d) => d.id !== fed.id)) falha('already-exists', `Já existe uma federação aprovada com o endereço "${fed.slug}". Peça outro endereço antes de aprovar.`);
+  }
   const batch = ctx.db.batch();
   const ref = ctx.db.collection(C.federations).doc(fed.id);
   batch.update(ref, { ...acao.patch, review: { action: data.action, reason, by: actor.uid, at_ms: ctx.now }, updated_at: ctx.Timestamp.fromMillis(ctx.now) });
-  // Aprovar pela primeira vez cria o presidente: quem pediu a abertura.
+  // Aprovar pela primeira vez cria o presidente: quem pediu a abertura — se a conta ainda existe.
   if (data.action === 'approve' && fed.created_by) {
     const staffRef = ctx.db.collection(C.staff).doc(`${fed.id}_${fed.created_by}`);
-    const atual = await staffRef.get();
-    if (!atual.exists) {
+    const [atual, conta] = await Promise.all([staffRef.get(), ctx.db.collection('users').doc(fed.created_by).get()]);
+    if (!atual.exists && conta.exists) {
       batch.set(staffRef, { federation_id: fed.id, federation_name: fed.name, federation_acronym: fed.acronym || '', user_id: fed.created_by, user_name: fed.created_by_name || '', role: 'president', added_by: actor.uid, created_at: ctx.Timestamp.fromMillis(ctx.now) });
     }
   }
@@ -159,8 +165,15 @@ async function review(ctx, actor, data) {
 
 /* --------------------------------------------------------- membership -- */
 
-/** Ativa (ou renova) numa transação: número sequencial, validade, código novo, índice da carteirinha. */
-async function ativar(ctx, tr, { fed, memberRef, member, plan, hoje }) {
+/**
+ * Ativa (ou renova) numa transação: número sequencial, validade, código novo,
+ * índice da carteirinha. ⚠️ Lê a federação ANTES de qualquer escrita — numa
+ * transação do Admin SDK toda leitura precede toda escrita, e quem gravava o
+ * documento antes de chamar aqui (pedido gratuito, importação) recebia
+ * "Firestore transactions require all reads to be executed before all writes".
+ * `novo: true` CRIA a filiação (`set`) em vez de atualizá-la.
+ */
+async function ativar(ctx, tr, { fed, memberRef, member, plan, hoje, novo = false }) {
   const fedRef = ctx.db.collection(C.federations).doc(fed.id);
   const fedSnap = await tr.get(fedRef);
   const fedNow = fedSnap.data() || {};
@@ -180,7 +193,8 @@ async function ativar(ctx, tr, { fed, memberRef, member, plan, hoje }) {
   if (member.card_code) tr.delete(ctx.db.collection(C.cardIndex).doc(member.card_code));
   tr.set(ctx.db.collection(C.cardIndex).doc(code), { member_id: memberRef.id, federation_id: fed.id, created_at_ms: ctx.now });
   patch.card_code = code;
-  tr.update(memberRef, patch);
+  if (novo) tr.set(memberRef, { ...member, ...patch });
+  else tr.update(memberRef, patch);
   return { ...member, ...patch };
 }
 
@@ -268,6 +282,7 @@ async function membership(ctx, actor, data) {
   if (acao === 'approve') {
     if (member.status !== 'pending') falha('failed-precondition', 'Este pedido já foi decidido.');
     if (!p) falha('failed-precondition', 'O plano deste pedido não existe mais.');
+    await exigeSemOutraFederacao(ctx, member.user_id, fed.id, p);
     const valor = Number(p.price_cents) > 0 ? await valorDoPlano(ctx, fed, member, p, hoje) : 0;
     const gratis = !(valor > 0);
     let charge = null;
@@ -358,7 +373,7 @@ async function membership(ctx, actor, data) {
 
 /** Encerra a filiação (cancelamento, exclusão, liberação por transferência): estado + o código deixa de verificar. */
 function encerrarFiliacao(ctx, batch, memberRef, member, patch) {
-  batch.update(memberRef, { ...patch, updated_at: ctx.Timestamp.fromMillis(ctx.now) });
+  batch.update(memberRef, { ...patch, card_code: null, updated_at: ctx.Timestamp.fromMillis(ctx.now) });
   if (member.card_code) batch.delete(ctx.db.collection(C.cardIndex).doc(member.card_code));
 }
 
@@ -413,11 +428,7 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
       minor_photo_consent: menor ? data.minorPhotoConsent === true : null, member_number: (atual.exists && atual.data().member_number) || null,
     };
     // Quem já é FEDERADO em outra federação só muda por transferência (a antiga libera).
-    if ((p.tier || 'federated') === 'federated') {
-      const outras = await ctx.db.collection(C.members).where('user_id', '==', uid).where('status', '==', 'active').get();
-      const presa = outras.docs.map((d) => d.data()).find((x) => x.federation_id !== fed.id && (x.tier || 'federated') === 'federated');
-      if (presa) falha('failed-precondition', `Você já é federado na ${presa.federation_acronym || presa.federation_name}. Peça a transferência pela Minha área → Federações.`);
-    }
+    await exigeSemOutraFederacao(ctx, uid, fed.id, p);
   }
   if (p.age_min != null && idade != null && idade < p.age_min) falha('failed-precondition', 'Este plano exige idade mínima maior.');
   if (p.age_max != null && idade != null && idade > p.age_max) falha('failed-precondition', 'Este plano tem idade máxima menor.');
@@ -444,9 +455,8 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   if (p.auto_approve) {
     if (!(valor > 0)) {
       await ctx.db.runTransaction(async (tr) => {
-        tr.set(memberRef, doc);
+        await ativar(ctx, tr, { fed, memberRef, member: doc, plan: p, hoje, novo: true });
         gravaPrivado(tr);
-        await ativar(ctx, tr, { fed, memberRef, member: doc, plan: p, hoje });
       });
     } else {
       const batch = ctx.db.batch();
@@ -471,6 +481,18 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   return { ok: true, memberId: memberRef.id, chargeId: charge ? charge.id : null };
 }
 
+/**
+ * D9: quem já é FEDERADO (ativo) em outra federação só muda por transferência.
+ * Conferido no PEDIDO e na APROVAÇÃO — entre um e outro a pessoa pode ter
+ * entrado em outra federação.
+ */
+async function exigeSemOutraFederacao(ctx, uid, fedId, plan) {
+  if (!uid || (plan.tier || 'federated') !== 'federated') return;
+  const outras = await ctx.db.collection(C.members).where('user_id', '==', uid).where('status', '==', 'active').get();
+  const presa = outras.docs.map((d) => d.data()).find((x) => x.federation_id !== fedId && (x.tier || 'federated') === 'federated');
+  if (presa) falha('failed-precondition', `Já é federado na ${presa.federation_acronym || presa.federation_name}. A troca é por transferência (Minha área → Federações).`);
+}
+
 function idadeDe(birth, hoje) {
   const b = String(birth || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(b)) return null;
@@ -491,7 +513,8 @@ async function chargeConfirm(ctx, actor, data) {
   if (!['open', 'declared'].includes(charge.status)) falha('failed-precondition', 'Esta cobrança já foi fechada.');
   const hoje = m.isoDateBR(ctx.now);
   const note = texto(data.note, 300);
-  const memberRef = ctx.db.collection(C.members).doc(charge.member_id);
+  // Cobrança de CURSO de quem não é filiado não tem `member_id` — `doc(null)` derrubava a função.
+  const memberRef = charge.member_id ? ctx.db.collection(C.members).doc(charge.member_id) : null;
   if (!['confirm', 'cancel'].includes(data.action)) falha('invalid-argument', 'Ação desconhecida.');
 
   // Cobrança de CURSO: confirmar inscreve de fato; cancelar devolve a vaga. De MULTA: quita a sanção.
@@ -514,7 +537,7 @@ async function chargeConfirm(ctx, actor, data) {
       if ((await sRef.get()).exists) batch.update(sRef, confirmou ? { fine_paid_at_ms: ctx.now, updated_at_ms: ctx.now } : { fine_charge_cancelled_at_ms: ctx.now, updated_at_ms: ctx.now });
     }
     aviso(ctx, batch, charge.payer_uid, confirmou
-      ? { title: tx('Pagamento confirmado — {sigla}', { sigla: fed.acronym }), message: charge.origin === 'course' ? tx('Sua inscrição no curso {curso} está confirmada.', { curso: charge.plan_name }) : tx('A multa foi quitada.'), link: charge.origin === 'course' ? `/federacoes/${fed.id}#cursos` : '/perfil?secao=federacoes' }
+      ? { title: tx('Pagamento confirmado — {sigla}', { sigla: fed.acronym }), message: charge.origin === 'course' ? tx('Sua inscrição no curso {curso} está confirmada.', { curso: charge.plan_name }) : tx('A multa foi quitada.'), link: charge.origin === 'course' ? `/federacoes/${fed.id}?ancora=fed-cursos` : '/perfil?secao=federacoes' }
       : { title: tx('Cobrança da {sigla} cancelada', { sigla: fed.acronym }), message: note ? tx('Motivo: {motivo}.', { motivo: note }) : tx('A federação cancelou a cobrança.'), link: '/perfil?secao=federacoes' });
     await batch.commit();
     await auditoria(ctx, actor, `federation_charge_${data.action}`, { federation_id: fed.id, charge_id: charge.id, user_id: charge.payer_uid, origin: charge.origin, note });
@@ -524,15 +547,16 @@ async function chargeConfirm(ctx, actor, data) {
   if (data.action === 'cancel') {
     const batch = ctx.db.batch();
     batch.update(snap.ref, { status: 'cancelled', cancelled_at_ms: ctx.now, cancelled_by: actor.uid, cancel_note: note });
-    const ms = await memberRef.get();
+    const ms = memberRef ? await memberRef.get() : null;
     // A filiação que esperava este pagamento volta a "aguardando aprovação" (a secretaria decide de novo) — nunca fica presa.
-    if (ms.exists && ms.data().status === 'awaiting_payment' && charge.origin === 'membership') batch.update(memberRef, { status: 'pending', updated_at: ctx.Timestamp.fromMillis(ctx.now) });
+    if (ms && ms.exists && ms.data().status === 'awaiting_payment' && charge.origin === 'membership') batch.update(memberRef, { status: 'pending', updated_at: ctx.Timestamp.fromMillis(ctx.now) });
     aviso(ctx, batch, charge.payer_uid, { title: tx('Cobrança da {sigla} cancelada', { sigla: fed.acronym }), message: note ? tx('Motivo: {motivo}.', { motivo: note }) : tx('A federação cancelou a cobrança.'), link: '/perfil?secao=federacoes' });
     await batch.commit();
     await auditoria(ctx, actor, 'federation_charge_cancel', { federation_id: fed.id, charge_id: charge.id, user_id: charge.payer_uid, note });
     return { ok: true };
   }
 
+  if (!memberRef) falha('failed-precondition', 'Esta cobrança não está ligada a uma filiação.');
   const p = await plano(ctx, fed.id, charge.plan_id);
   await ctx.db.runTransaction(async (tr) => {
     const ms = await tr.get(memberRef);
@@ -581,7 +605,9 @@ async function sweep(ctx) {
     const mem = d.data();
     const st = m.membershipState(mem, hoje, ctx.now);
     const link = '/perfil?secao=federacoes';
-    if (st.status === 'expired') {
+    // Vence pela DATA: `membershipState` devolve "suspended" para quem tem sanção em vigor,
+    // e a filiação vencida ficaria "active" para sempre enquanto a sanção durasse.
+    if (st.daysLeft != null && st.daysLeft < 0) {
       batch.update(d.ref, { status: 'expired', expired_at_ms: ctx.now });
       // eslint-disable-next-line no-await-in-loop
       aviso(ctx, batch, destinatario(mem), { title: tx('Sua filiação na {sigla} venceu', { sigla: await sigla(mem.federation_id) }), message: tx('Renove para continuar em dia e pontuando. A carteirinha mostra "Vencida" até lá.'), link });
@@ -590,9 +616,10 @@ async function sweep(ctx) {
       porFed[mem.federation_id] = (porFed[mem.federation_id] || 0) + 1;
       const marcos = m.EXPIRY_NOTICE_DAYS.filter((dias) => st.daysLeft != null && st.daysLeft <= dias && !(mem.expiry_notified || {})[String(dias)]);
       if (marcos.length) {
-        const dias = Math.min(...marcos);
         // eslint-disable-next-line no-await-in-loop
-        aviso(ctx, batch, destinatario(mem), { title: tx('Sua filiação na {sigla} vence em {dias} dias', { sigla: await sigla(mem.federation_id), dias: Math.max(0, st.daysLeft) }), message: tx('Renove pela Minha área → Federações para não ficar fora do ranking e dos torneios chancelados.'), link });
+        const s = await sigla(mem.federation_id);
+        const title = st.daysLeft === 0 ? tx('Sua filiação na {sigla} vence hoje', { sigla: s }) : tx('Sua filiação na {sigla} vence em {dias} dias', { sigla: s, dias: st.daysLeft });
+        aviso(ctx, batch, destinatario(mem), { title, message: tx('Renove pela Minha área → Federações para não ficar fora do ranking e dos torneios chancelados.'), link });
         const notified = { ...(mem.expiry_notified || {}) };
         marcos.forEach((x) => { notified[String(x)] = true; });
         batch.update(d.ref, { expiry_notified: notified });
@@ -615,6 +642,7 @@ async function sweep(ctx) {
 
 /** Verificação pública pelo código: carteirinha ou credencial de curso — só o mínimo (D11, LGPD). */
 async function verify(ctx, data) {
+  if (!(await flagLigada(ctx))) return { found: false };
   const code = m.normalizeCardCode(data && data.code);
   if (!code) return { found: false };
   const idx = await ctx.db.collection(C.cardIndex).doc(code).get();
@@ -635,5 +663,5 @@ async function verify(ctx, data) {
 module.exports = {
   FederationError, PERMS, REVIEW, LIVE, C, MINOR_AGE, review, membership, chargeConfirm, sweep, verify, idadeDe,
   // Compartilhado com os módulos do PR 3 (`federationTransfers.js`, `federationCourses.js`, `federationDiscipline.js`, `federationSecretariat.js`).
-  falha, texto, aviso, auditoria, flagLigada, staffPerms, exigePerm, federacao, staffIds, plano, novoCodigo, novoId, novaCobranca, destinatario, encerrarFiliacao, ativar, idadeDoMembro,
+  falha, texto, aviso, auditoria, flagLigada, staffPerms, exigePerm, federacao, staffIds, plano, novoCodigo, novoId, novaCobranca, destinatario, encerrarFiliacao, ativar, idadeDoMembro, exigeSemOutraFederacao,
 };

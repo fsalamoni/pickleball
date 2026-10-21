@@ -243,4 +243,59 @@ test.describe('@emuladores com conta', () => {
     await tocar(solicitar);
     await expect(pedido).toBeHidden();
   });
+
+  // ⭐ Federações (flag `federations`): o diretório, a página da federação, o
+  // formulário de filiação e a página pública sem conta montam de verdade, com
+  // a regra do banco deixando a pessoa ler o que a tela mostra. Pedir a
+  // filiação é do servidor (Cloud Function) e fica fora: aqui o que se prova é
+  // que a leitura e os vínculos (federação → planos → filiar → pública) batem.
+  test('⭐ federação: diretório, página, filiação e página pública abrem com a flag ligada', async ({ page }) => {
+    const fed = `fed_${Date.now()}`;
+    const slug = `fpp-${Date.now().toString(36)}`;
+    await ligarFlag('federations');
+    await semear(`federations/${fed}`, {
+      name: 'Federação de Teste de Pickleball', acronym: 'FTP', slug, level: 'state', state: 'RS', city: 'Porto Alegre',
+      status: 'approved', created_by: 'seed', verified: false, official: false, member_count: 0,
+      about: 'A federação dos testes de ponta a ponta.', modules: { tournaments: true, ranking: true },
+      branding: { color: '#1d4ed8', logo_url: '' }, contact_public: { email: 'contato@ftp.teste' }, sponsors: [],
+      created_at: new Date(), updated_at: new Date(),
+    });
+    await semear(`federation_plans/${fed}_anual`, {
+      federation_id: fed, name: 'Federado anual', description: 'Carteirinha e ranking oficial.', benefits: 'Carteirinha digital\nRanking oficial',
+      person_type: 'athlete', tier: 'federated', billing: 'annual', validity: 'rolling', price_cents: 12000, active: true, sort: 0,
+      created_at: new Date(), updated_at: new Date(),
+    });
+    const errosDaPagina = [];
+    page.on('pageerror', (e) => errosDaPagina.push(`${page.url()}: ${e.message}`));
+
+    // Sem conta: a página pública lê federação e planos pela regra (aprovada ⇒ pública).
+    await page.goto(`/f/${slug}`);
+    await expect(page.getByRole('heading', { name: 'Federação de Teste de Pickleball' })).toBeVisible();
+    await expect(page.getByText('Federado anual').first()).toBeVisible();
+
+    await entrar(page, await criarAtleta());
+    await aceitar(page, page.getByRole('dialog', { name: 'Antes de continuar' }), 'Aceitar e continuar');
+
+    await page.goto('/federacoes');
+    await expect(page.locator('main h1').first()).toBeVisible();
+    await tocar(page.getByRole('link', { name: /Federação de Teste de Pickleball/ }).first());
+    await expect(page).toHaveURL(new RegExp(`/federacoes/${fed}$`));
+    await expect(page.getByRole('heading', { name: 'Federação de Teste de Pickleball' })).toBeVisible();
+    await expect(page.getByText('Federado anual').first()).toBeVisible();
+    // Aprovada ⇒ o botão de filiar é um link de verdade (numa suspensa ele não existe).
+    const filiar = page.getByRole('link', { name: 'Filiar-se' });
+    await expect(filiar).toBeVisible();
+    await tocar(filiar);
+    await expect(page).toHaveURL(new RegExp(`/federacoes/${fed}/filiar`));
+    await expect(page.getByText('Federado anual').first()).toBeVisible();
+    await expect(page.locator('#fj-termos')).toBeVisible();
+
+    for (const tela of ['/perfil?secao=federacoes', `/federacoes/${fed}`]) {
+      await page.goto(tela);
+      await expect(page.locator('main h1').first(), `título de ${tela}`).toBeVisible();
+      await expect(page.locator('[role="alert"]').filter({ hasText: /Tentar de novo|Recarregar/ })).toHaveCount(0);
+      await expect(page.getByText(/Algo deu errado|Não conseguimos abrir/i)).toHaveCount(0);
+    }
+    expect(errosDaPagina).toEqual([]);
+  });
 });

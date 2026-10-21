@@ -12,7 +12,7 @@ import { pendingSanctions, sanctionedTournaments } from '@/modules/federations/d
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { V2Button, V2ErrorState, V2StatCard, V2Surface } from '@/v2/ui/primitives';
-import { fedManagePath, fedPublicPath } from '../federationUi';
+import { fedManagePath, fedPublicPath, publicHost } from '../federationUi';
 import { t, tn } from '@/core/i18n';
 
 function Passo({ feito, children, to, onIr }) {
@@ -98,7 +98,7 @@ export default function FedHojePanel({ federation, membersQ, chargesQ, plansQ, a
         </div>
       )}
       <V2Surface variant="compacto" className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <p className="text-sm text-gray-700">{t('Página pública: {url}', { url: `picklerush.web.app${fedPublicPath(federation)}` })}</p>
+        <p className="text-sm text-gray-700">{t('Página pública: {url}', { url: `${publicHost()}${fedPublicPath(federation)}` })}</p>
         <div className="flex gap-2">
           <V2Button asChild size="sm" variant="secondary"><Link to={fedPublicPath(federation)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Abrir')}</Link></V2Button>
           {admin && <V2Button asChild size="sm" variant="ghost"><Link to={fedManagePath(federation, 'pagina')}>{t('Editar')}</Link></V2Button>}

@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 7 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 7 |
-| Arquivos de teste (`*.test.js(x)`) | 700 |
+| Arquivos de teste (`*.test.js(x)`) | 702 |
 | Workflows do GitHub Actions | 7 |
 | Documentos/pastas em `docs/` | 56 |
 

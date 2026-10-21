@@ -12,6 +12,14 @@ const pct = (v) => Math.min(100, Math.max(0, intOr(v, 0)));
 /**
  * @returns {{ ok: boolean, errors: Record<string,string>, value: object }}
  */
+/** 'MM-DD' de um dia que existe (num ano bissexto: 02-29 vale, 02-30 não). */
+export function isValidMonthDay(mmdd) {
+  const m = /^(\d{2})-(\d{2})$/.exec(String(mmdd || ''));
+  if (!m) return false;
+  const d = new Date(2024, Number(m[1]) - 1, Number(m[2]));
+  return d.getMonth() === Number(m[1]) - 1 && d.getDate() === Number(m[2]);
+}
+
 export function validatePlanInput(input = {}) {
   const errors = {};
   const name = str(input.name, 80);
@@ -23,7 +31,7 @@ export function validatePlanInput(input = {}) {
   const price_cents = intOr(input.price_cents, -1);
   if (price_cents < 0 || price_cents > 1_000_000_00) errors.price_cents = t('Informe o valor (0 para plano gratuito).');
   const rollover = str(input.rollover_mmdd, 5);
-  if (billing === PLAN_BILLING.ANNUAL && validity === PLAN_VALIDITY.CALENDAR && !/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(rollover)) {
+  if (billing === PLAN_BILLING.ANNUAL && validity === PLAN_VALIDITY.CALENDAR && !isValidMonthDay(rollover)) {
     errors.rollover_mmdd = t('Informe a data de virada no formato MM-DD (ex.: 12-31).');
   }
   const age_min = intOr(input.age_min, null);
@@ -89,4 +97,15 @@ export function plansFor(plans = [], { personType = PLAN_PERSON_TYPE.ATHLETE, ag
 export function planPeriodLabel(plan) {
   if (isFreePlan(plan)) return t('Gratuito');
   return plan.billing === PLAN_BILLING.MONTHLY ? t('por mês') : t('por ano');
+}
+
+/**
+ * Os benefícios do plano, um por linha, para a tela. O campo é TEXTO (um
+ * por linha, como o editor grava); uma lista gravada por importação ou à mão
+ * também vale — `.split` num vetor derrubava a página pública inteira.
+ */
+export function planBenefitLines(plan) {
+  const b = plan?.benefits;
+  const linhas = Array.isArray(b) ? b : String(b || '').split('\n');
+  return linhas.map((x) => String(x || '').trim()).filter(Boolean);
 }

@@ -68,9 +68,8 @@ async function importMembers(ctx, actor, data) {
     };
     // eslint-disable-next-line no-await-in-loop
     await ctx.db.runTransaction(async (tr) => {
-      tr.set(memberRef, doc);
-      await f.ativar(ctx, tr, { fed, memberRef, member: doc, plan: p, hoje });
-      if (valid_until) tr.update(memberRef, { valid_until });
+      const ativo = await f.ativar(ctx, tr, { fed, memberRef, member: doc, plan: p, hoje, novo: true });
+      if (valid_until && valid_until !== ativo.valid_until) tr.update(memberRef, { valid_until });
     });
     importados.push({ email, uid });
   }

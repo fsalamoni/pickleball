@@ -120,7 +120,7 @@ export const STAFF_ROLE_DESCRIPTIONS = Object.freeze({
 
 const TODAS = Object.values(FED_PERMISSION);
 
-/** Papel → permissões. Fonte única — a cópia da regra (`fedHas`) tem teste de paridade. */
+/** Papel → permissões. Fonte única — a cópia da regra (`fedRolePerms`) tem teste de paridade: `src/core/guards/federacaoPermissoes.test.js`. */
 export const STAFF_ROLE_PERMISSIONS = Object.freeze({
   president: TODAS,
   director: TODAS,

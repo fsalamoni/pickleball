@@ -1370,9 +1370,14 @@ service cloud.firestore {
           || tournamentArenaOk())
         // A chancela: o organizador só PEDE (pendente) ou retira — nunca se aprova.
         && (!chg().hasAny(['federation_id', 'federation_sanction'])
-          || tournamentFederationOk())
+          || (tournamentFederationOk()
+            // Aprovada, a chancela é decisão da federação: o organizador não a
+            // retira nem a reabre como pendente (só a federação revoga).
+            && (od().get('federation_sanction', null) == null
+              || od().federation_sanction.get('status', '') != 'approved')))
         // A federação (competições) decide a chancela: aprova, recusa, revoga — e só ela.
         || (od().get('federation_id', null) is string
+          && fedOn()
           && fedHas(od().federation_id, 'competitions')
           && chg().hasOnly(['federation_sanction', 'updated_at'])
           && nd().get('federation_id', null) == od().federation_id
@@ -1400,16 +1405,25 @@ service cloud.firestore {
           && nd().federation_sanction.status == 'pending'
           && nd().federation_sanction.requested_by == me());
     }
-    // O torneio exige filiação? Então quem se inscreve está em dia na federação dele.
+    // Filiação ativa e sem suspensão DISCIPLINAR em vigor (PR 3) na federação.
+    function fedMemberOk(fid, uid) {
+      return exists(/databases/$(database)/documents/federation_members/$(fid + '_' + uid))
+        && get(/databases/$(database)/documents/federation_members/$(fid + '_' + uid)).data.status == 'active'
+        && get(/databases/$(database)/documents/federation_members/$(fid + '_' + uid)).data.get('discipline_until_ms', 0) < request.time.toMillis();
+    }
+    // O torneio exige filiação? Então a DUPLA inteira está em dia na federação dele:
+    // quem se inscreve e o parceiro com conta. Parceiro sem conta não se prova
+    // filiado — num torneio "só para filiados" ele não entra pela auto-inscrição
+    // (o organizador inscreve quem quiser).
     function tournamentMembershipOk(tid) {
       let tdoc = get(/databases/$(database)/documents/tournaments/$(tid)).data;
       return tdoc.get('federation_id', null) == null
         || tdoc.get('federation_sanction', {}).get('status', '') != 'approved'
         || tdoc.get('federation_sanction', {}).get('requires_membership', false) != true
-        || (exists(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + me()))
-          && get(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + me())).data.status == 'active'
-          // Suspensão DISCIPLINAR em vigor (PR 3): a filiação está ativa, mas a pessoa não se inscreve.
-          && get(/databases/$(database)/documents/federation_members/$(tdoc.federation_id + '_' + me())).data.get('discipline_until_ms', 0) < request.time.toMillis());
+        || (fedMemberOk(tdoc.federation_id, me())
+          && (nd().get('player_b_user_id', null) == null
+            ? nd().get('player_b_name', '') == ''
+            : (nd().player_b_user_id == me() || fedMemberOk(tdoc.federation_id, nd().player_b_user_id))));
     }
     // Sem sede, sede pendente, ou gerir a arena (o admin da plataforma também).
     function tournamentArenaOk() {
@@ -4626,8 +4640,23 @@ service cloud.firestore {
         : (role == 'discipline' ? ['discipline']
         : (role == 'communication' ? ['comms'] : []))))));
     }
+    // O admin da plataforma tem TODA permissão em toda federação — é o que o
+    // cliente (`useMyFederationRole`) e o servidor (`staffPerms`) já diziam;
+    // a regra discordava e recusava o que a tela oferecia.
     function fedHas(fedId, perm) {
-      return isAuthed() && perm in fedRolePerms(fedRole(fedId));
+      return isAuthed() && (isPlatformAdmin() || perm in fedRolePerms(fedRole(fedId)));
+    }
+    // Nome, sigla, endereço e nível válidos — no pedido de abertura E em toda edição.
+    function fedProfileOk() {
+      return nd().name is string
+        && nd().name.size() >= 5
+        && nd().name.size() <= 120
+        && nd().acronym is string
+        && nd().acronym.size() >= 2
+        && nd().acronym.size() <= 12
+        && nd().slug is string
+        && nd().slug.matches('[a-z0-9][a-z0-9-]{1,58}[a-z0-9]')
+        && nd().level in ['state', 'regional', 'national'];
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
@@ -4646,23 +4675,19 @@ service cloud.firestore {
         && nd().get('verified', false) == false
         && nd().get('official', false) == false
         && !nd().keys().hasAny(['member_counter', 'review'])
-        && nd().name is string
-        && nd().name.size() >= 5
-        && nd().name.size() <= 120
-        && nd().acronym is string
-        && nd().acronym.size() >= 2
-        && nd().acronym.size() <= 12
-        && nd().slug is string
-        && nd().slug.matches('[a-z0-9][a-z0-9-]{1,58}[a-z0-9]')
-        && nd().level in ['state', 'regional', 'national'];
+        && fedProfileOk();
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
       allow update: if isPlatformAdmin() || (fedOn() && fedHas(fedId, 'admin')
         && !chg().hasAny(fedLocked())
+        && (!chg().hasAny(['name', 'acronym', 'slug', 'level']) || fedProfileOk())
         // PR 4: patrocinadores são lista curta (a página e a carteirinha os mostram).
         && (!('sponsors' in chg()) || (nd().sponsors is list && nd().sponsors.size() <= 12)))
         // Competições configura só o ranking oficial.
         || (fedOn() && fedHas(fedId, 'competitions')
-          && chg().hasOnly(['ranking_config', 'updated_at']));
+          && chg().hasOnly(['ranking_config', 'updated_at']))
+        // O financeiro informa o Pix que recebe as filiações (a aba Recebimento é dele).
+        || (fedOn() && fedHas(fedId, 'finance')
+          && chg().hasOnly(['payment', 'updated_at']));
       allow delete: if isPlatformAdmin();
 
       // CNPJ completo, razão social: quem pediu (enquanto pendente), a equipe (admin) e o admin da plataforma.
@@ -4676,9 +4701,12 @@ service cloud.firestore {
     }
 
     match /federation_staff/{staffId} {
-      // A equipe lê a equipe; a pessoa lê o próprio papel.
+      // A equipe de uma federação APROVADA é a diretoria dela: qualquer conta
+      // logada lê (é assim que um clube, um organizador ou um filiado avisa a
+      // equipe de um pedido). Da federação pendente, só quem é dela e o admin.
       allow read: if isPlatformAdmin()
         || (isOwner(od().user_id))
+        || (isAuthed() && fedApproved(od().federation_id))
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'finance');
@@ -4737,7 +4765,14 @@ service cloud.firestore {
         || fedMemberOwner(od())
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'finance');
+        || fedHas(od().federation_id, 'finance')
+        || fedHas(od().federation_id, 'discipline');
+      // 🐞 O `get` da PRÓPRIA filiação ({fed}_{uid}) antes de existir: com o
+      // documento ausente `od()` é nulo e a leitura acima dá erro — era o que
+      // tirava o "Filiar-se" da página para quem ainda não é filiado (a tela
+      // mostrava "não carregou a sua situação"). Mesma lição de
+      // `canGetMissingArenaUserDoc`. Só o id com o próprio uid no fim.
+      allow get: if isAuthed() && resource == null && memberId.matches('.*_' + me());
       // Só o servidor cria (`federationMembership`): número, estado, validade e código.
       allow create, delete: if false;
       // O próprio muda só as próprias preferências; tudo o mais é do servidor.
@@ -4745,18 +4780,17 @@ service cloud.firestore {
       allow update: if fedOn() && fedMemberOwner(od())
         && chg().hasOnly(['public_badge', 'show_in_directory', 'public_photo', 'minor_photo_consent', 'prefs_updated_at']);
 
-      // CPF (se a federação pede), responsável do menor, campos extras (PR 3):
-      // lê o próprio/responsável, a secretaria e o admin; grava o próprio/responsável.
-      // A secretaria REVELA o CPF com auditoria na tela; o servidor não grava aqui.
+      // CPF (se a federação pede), responsável do menor, nascimento do dependente (PR 3):
+      // lê o próprio/responsável, a secretaria e o admin. GRAVA só o servidor
+      // (`federationMembership`, no pedido): o nascimento decide o desconto de
+      // idade e o consentimento do responsável — não é o navegador que os muda.
+      // A secretaria REVELA o CPF com auditoria na tela.
       match /private/{docId} {
         allow read: if docId == 'data' && (isPlatformAdmin()
           || fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
           || fedHas(memberId.split('_')[0], 'members')
           || fedHas(memberId.split('_')[0], 'admin'));
-        allow write: if docId == 'data' && fedOn()
-          && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
-          && nd().get('cpf', '') is string
-          && nd().get('cpf', '').size() <= 11;
+        allow write: if false;
       }
     }
 
@@ -4777,13 +4811,14 @@ service cloud.firestore {
         && nd().kind in ['identidade', 'atestado', 'comprovante_residencia', 'autorizacao_responsavel', 'outro']
         && nd().storage_path is string
         && nd().storage_path.matches('federacao/' + me() + '/[A-Za-z0-9_-]+\\.[a-z]{3,4}')
-        && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data);
+        && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data)
+        && nd().federation_id == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.federation_id;
       // A secretaria aceita ou recusa (com motivo); nada mais muda.
       allow update: if fedOn() && (fedHas(od().federation_id, 'members') || fedHas(od().federation_id, 'admin'))
         && chg().hasOnly(['status', 'review', 'updated_at'])
         && nd().status in ['approved', 'rejected'];
       // Quem enviou apaga enquanto está em análise (e troca o arquivo); o admin sempre.
-      allow delete: if isPlatformAdmin() || fedHas(od().federation_id, 'admin')
+      allow delete: if isPlatformAdmin() || (fedOn() && fedHas(od().federation_id, 'admin'))
         || (fedOn() && isOwner(od().user_id) && od().status == 'pending');
     }
 
@@ -5026,7 +5061,9 @@ service cloud.firestore {
         && nd().rows is list
         && nd().rows.size() <= 400
         && isTournamentAdmin(nd().tournament_id)
-        && fedSanctionedBy(nd().tournament_id, nd().federation_id);
+        && fedSanctionedBy(nd().tournament_id, nd().federation_id)
+        // O peso (tier) é o da chancela — não o que quem envia escolher.
+        && nd().get('tier', null) == get(/databases/$(database)/documents/tournaments/$(nd().tournament_id)).data.federation_sanction.get('tier', 'regional');
       allow update: if fedOn() && isAuthed()
         && nd().federation_id == od().federation_id
         && nd().tournament_id == od().tournament_id
@@ -5043,7 +5080,7 @@ service cloud.firestore {
             && nd().status in ['sent', 'rejected'])
         );
       allow delete: if isPlatformAdmin()
-        || fedHas(od().federation_id, 'admin')
+        || (fedOn() && fedHas(od().federation_id, 'admin'))
         || (fedOn() && isTournamentAdmin(od().tournament_id));
     }
 

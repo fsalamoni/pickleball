@@ -8,6 +8,7 @@
  */
 import { t } from '@/core/i18n';
 import { SANCTION_STATUS, SANCTION_STATUS_LABELS, SANCTION_TIER } from './constants.js';
+import { membershipState } from './membership.js';
 
 const str = (v, max = 500) => String(v ?? '').trim().slice(0, max);
 
@@ -97,14 +98,18 @@ export function sanctionedTournaments(tournaments = []) {
  * carregou, e aí não se afirma nada (`docs/27-FALHA-NAO-E-VAZIO.md`).
  * @returns {{ required: boolean, ok: boolean|null, message: string }}
  */
-export function membershipRequirement(tournament, members, { hoje = '' } = {}) {
+export function membershipRequirement(tournament, members, { hoje = '', doubles = false } = {}) {
   const st = sanctionState(tournament);
-  if (!st.approved || !st.requiresMembership) return { required: false, ok: true, message: '' };
-  if (!Array.isArray(members)) return { required: true, ok: null, message: '' };
-  const emDia = members.some((m) => m.federation_id === st.federationId && m.status === 'active' && (!hoje || !m.valid_until || m.valid_until >= hoje));
+  if (!st.approved || !st.requiresMembership) return { required: false, ok: true, message: '', partnerHint: '' };
+  if (!Array.isArray(members)) return { required: true, ok: null, message: '', partnerHint: '' };
+  // A MESMA conta da carteirinha e da regra do banco: vencida ou com suspensão disciplinar em vigor não está em dia.
+  const emDia = members.some((m) => m.federation_id === st.federationId && membershipState(m, hoje || undefined).status === 'active');
+  const sigla = st.acronym || st.name;
   return {
     required: true,
     ok: emDia,
-    message: emDia ? '' : t('Este torneio é só para filiados em dia da {sigla}. Filie-se antes de se inscrever.', { sigla: st.acronym || st.name }),
+    message: emDia ? '' : t('Este torneio é só para filiados em dia da {sigla}. Filie-se antes de se inscrever.', { sigla }),
+    // A regra vale para a DUPLA inteira: parceiro sem conta ou sem filiação em dia é recusado na gravação.
+    partnerHint: doubles ? t('Vale para a dupla inteira: escolha um parceiro com conta e filiação em dia na {sigla}.', { sigla }) : '',
   };
 }

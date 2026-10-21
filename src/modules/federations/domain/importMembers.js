@@ -39,10 +39,13 @@ const normalizaCabecalho = (s) => String(s || '').normalize('NFD').replace(/[̀-
 /** Converte 'DD/MM/AAAA' ou 'AAAA-MM-DD' em ISO; vazio se não entendeu. */
 export function toISODateLoose(v) {
   const s = String(v || '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, a, d, mo) => `${a}-${mo}-${d}`);
-  return '';
+  const iso = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : (/^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '');
+  if (!iso) return '';
+  // 31/02/2026 tem o formato certo e não existe: `Date` normaliza para março, e a comparação acusa.
+  const [y, mo, d] = iso.split('-').map(Number);
+  const dt = new Date(y, mo - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d ? iso : '';
 }
 
 /**

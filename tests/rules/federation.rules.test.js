@@ -95,6 +95,10 @@ describe('⭐ a federação', () => {
     await assertSucceeds(getDocs(query(collection(como(BIA), 'federations'), where('created_by', '==', BIA))));
     await assertFails(getDocs(collection(como(BIA), 'federations')));
   });
+  it('quem pede a abertura confere o endereço só entre as APROVADAS (sem o status a regra não prova a consulta)', async () => {
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'federations'), where('slug', '==', 'fgp'), where('status', '==', 'approved'))));
+    await assertFails(getDocs(query(collection(como(BIA), 'federations'), where('slug', '==', 'fgp'))));
+  });
   it('a equipe (admin) edita a página, nunca status, verificação ou selo', async () => {
     await assertSucceeds(updateDoc(doc(como(PRES), 'federations', FED), { about: 'Olá', payment: { pix_key: 'x@y.z' } }));
     await assertSucceeds(updateDoc(doc(como(DIR), 'federations', FED), { modules: { ranking: true } }));
@@ -141,10 +145,12 @@ describe('⭐ a equipe', () => {
     await assertSucceeds(deleteDoc(doc(como(DIR), 'federation_staff', `${FED}_${TES}`)));
     await assertFails(deleteDoc(doc(como(ANA), 'federation_staff', `${FED}_${DIR}`)));
   });
-  it('a equipe lê a equipe; a pessoa lê o próprio papel; a lista por uid é provável', async () => {
+  it('a equipe lê a equipe; a pessoa lê o próprio papel; conta logada lê a equipe de federação APROVADA; anônimo não', async () => {
     await assertSucceeds(getDocs(query(collection(como(SEC), 'federation_staff'), where('federation_id', '==', FED))));
     await assertSucceeds(getDocs(query(collection(como(ANA), 'federation_staff'), where('user_id', '==', ANA))));
-    await assertFails(getDocs(query(collection(como(ANA), 'federation_staff'), where('federation_id', '==', FED))));
+    // Revisão 2026-10-21: é assim que o clube, o organizador e o filiado avisam a equipe de um pedido.
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'federation_staff'), where('federation_id', '==', FED))));
+    await assertFails(getDocs(query(collection(anonimo(), 'federation_staff'), where('federation_id', '==', FED))));
   });
 });
 
@@ -186,8 +192,11 @@ describe('⭐ filiados', () => {
     await assertFails(getDocs(query(collection(como(BIA), 'federation_members'), where('federation_id', '==', FED))));
     await assertFails(getDocs(collection(como(ANA), 'federation_members')));
   });
-  it('a parte privada é do próprio e da secretaria', async () => {
-    await assertSucceeds(setDoc(doc(como(ANA), 'federation_members', `${FED}_${ANA}`, 'private', 'data'), { cpf: '1' }));
+  it('a parte privada é lida pelo próprio e pela secretaria; só o servidor grava', async () => {
+    // Revisão 2026-10-21: o navegador nunca gravou aqui (o CPF entra pelo pedido de filiação, no servidor).
+    await assertFails(setDoc(doc(como(ANA), 'federation_members', `${FED}_${ANA}`, 'private', 'data'), { cpf: '1' }));
+    await semRegras((db) => setDoc(doc(db, 'federation_members', `${FED}_${ANA}`, 'private', 'data'), { cpf: '1' }));
+    await assertSucceeds(getDoc(doc(como(ANA), 'federation_members', `${FED}_${ANA}`, 'private', 'data')));
     await assertSucceeds(getDoc(doc(como(SEC), 'federation_members', `${FED}_${ANA}`, 'private', 'data')));
     await assertFails(getDoc(doc(como(TES), 'federation_members', `${FED}_${ANA}`, 'private', 'data')));
     await assertFails(getDoc(doc(como(BIA), 'federation_members', `${FED}_${ANA}`, 'private', 'data')));

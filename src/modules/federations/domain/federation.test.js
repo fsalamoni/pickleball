@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  RESERVED_SLUGS, availableModules, fedModuleOn, federationReviewActions, isValidSlug, normalizeModules, slugifyName, validateFederationInput, validateFederationPayment,
-} from './federation.js';
+  RESERVED_SLUGS, availableModules, fedModuleOn, federationReviewActions, isValidSlug, normalizeModules, slugifyName, validateFederationInput, validateFederationPayment, normalizeFederationBranding } from './federation.js';
 import { FED_MODULE_META } from './constants.js';
 
 const valido = {
@@ -64,5 +63,14 @@ describe('Pix e revisão', () => {
     expect(federationReviewActions({ status: 'pending' })).toEqual(['approve', 'reject']);
     expect(federationReviewActions({ status: 'approved', verified: true })).toContain('unverify');
     expect(federationReviewActions({ status: 'suspended' })).toEqual(['approve']);
+  });
+});
+
+describe('marca: logo só https (revisão geral)', () => {
+  it('http, javascript: e texto solto não viram logo', () => {
+    expect(normalizeFederationBranding({ logo_url: 'https://cdn.x/logo.png' }).logo_url).toBe('https://cdn.x/logo.png');
+    expect(normalizeFederationBranding({ logo_url: 'http://cdn.x/logo.png' }).logo_url).toBe('');
+    expect(normalizeFederationBranding({ logo_url: 'javascript:alert(1)' }).logo_url).toBe('');
+    expect(normalizeFederationBranding({ logo_url: 'https://cdn.x/lo go.png' }).logo_url).toBe('');
   });
 });

@@ -1285,7 +1285,8 @@ function federationCallable(nome, fn) {
   return onCall({ region: REGION, timeoutSeconds: 60 }, async (req) => {
     if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
     const ctx = fedCtx();
-    const actor = { uid: req.auth.uid, isPlatformAdmin: await isPlatformAdminUser(req, ctx.db) };
+    const token = req.auth.token || {};
+    const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '', isPlatformAdmin: await isPlatformAdminUser(req, ctx.db) };
     try {
       return await fn(ctx, actor, req.data || {});
     } catch (err) {
@@ -1332,8 +1333,9 @@ exports.federationDocument = federationCallable('federationDocument', (ctx, acto
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
-    await federations.sweep(fedCtx());
-    await federationTransfers.sweep(fedCtx());
+    // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx())]);
+    resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );
 

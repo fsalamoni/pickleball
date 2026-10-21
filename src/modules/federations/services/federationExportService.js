@@ -5,7 +5,7 @@
  */
 import {
   listAffiliationsRequestedBy, listFederationsCreatedBy, listMyCharges, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
-  listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
+  listMyMembersPrivate, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
 } from './federationService.js';
 
 /** @returns {Promise<{ federations: object, incomplete: string[] }>} */
@@ -18,6 +18,7 @@ export async function collectFederationExport(uid) {
     ['affiliation_requests', 'Pedidos de filiação de clube/arena que você fez', () => listAffiliationsRequestedBy(uid)],
     ['official_results', 'Resultados enviados ao ranking oficial em que você aparece', () => listResultsWith(uid)],
     ['dependents', 'Dependentes que você filiou', () => listMyDependents(uid)],
+    ['members_private', 'Dados pessoais guardados nas filiações (CPF, nascimento, responsável)', () => listMyMembersPrivate(uid)],
     ['documents', 'Documentos que você enviou a federações (registro; o arquivo fica na sua pasta)', () => listMyDocuments(uid)],
     ['transfers', 'Transferências de clube ou federação', () => listMyTransfers(uid)],
     ['course_enrollments', 'Inscrições em cursos de federação', () => listMyEnrollments(uid)],

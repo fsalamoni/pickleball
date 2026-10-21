@@ -8,6 +8,7 @@ import { BR_UFS } from '@/core/domain/ufs';
 import { FEDERATION_LEVEL, FEDERATION_LEVEL_LABELS } from '@/modules/federations/domain/constants';
 import { V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
+import { publicHost } from './federationUi';
 
 export default function FederationPublicFields({ f, set, setNome, erros, setSlugManual = () => {} }) {
   const nacional = f.level === FEDERATION_LEVEL.NATIONAL;
@@ -22,7 +23,7 @@ export default function FederationPublicFields({ f, set, setNome, erros, setSlug
           <V2Field label={t('Sigla')} htmlFor="fd-sigla" error={erros.acronym} required>
             <V2Input id="fd-sigla" maxLength={12} value={f.acronym} onChange={(e) => set({ acronym: e.target.value.toUpperCase() })} />
           </V2Field>
-          <V2Field label={t('Endereço da página pública')} htmlFor="fd-slug" error={erros.slug} hint={t('picklerush.web.app/f/{slug}', { slug: f.slug || 'sua-sigla' })}>
+          <V2Field label={t('Endereço da página pública')} htmlFor="fd-slug" error={erros.slug} hint={t('{host}/f/{slug}', { host: publicHost(), slug: f.slug || 'sua-sigla' })}>
             <V2Input id="fd-slug" maxLength={60} value={f.slug} onChange={(e) => { setSlugManual(true); set({ slug: e.target.value.toLowerCase() }); }} />
           </V2Field>
         </div>

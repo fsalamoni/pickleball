@@ -127,7 +127,7 @@ function planPrice(plan, { age = null, familyIndex = 1 } = {}) {
   else if (age != null && age >= 60 && d.senior_pct > 0) pcts.push(d.senior_pct);
   if (d.family_pct > 0 && familyIndex >= (d.family_from || 2)) pcts.push(d.family_pct);
   const maior = pcts.reduce((m, x) => Math.max(m, x), 0);
-  const total = Math.max(0, Math.round(base * (1 - maior / 100)));
+  const total = Math.max(0, Math.round((base * (100 - maior)) / 100));
   return { base, total, pct: maior };
 }
 
