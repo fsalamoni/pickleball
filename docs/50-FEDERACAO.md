@@ -1018,6 +1018,15 @@ passado para cá), relatório e atos de gestão, calendário e atas das
 assembleias, regulamento de competições, código de ética. O que falta
 aparece como "não publicado", com atalho para publicar.
 
+**Cota de mulheres na direção** (PR 10): no fim da aba, o item do art. 36,
+IX (no mínimo 30% de mulheres nos cargos de direção), calculado por
+`womenQuota` (`domain/governance.js`) a partir da diretoria da Governança e de
+`governance.women_count` — o NÚMERO de mulheres, nunca quem, que o admin
+informa em Configurações → Governança, logo abaixo da diretoria, com o mesmo
+aviso. O mínimo é arredondado para cima (7 cargos ⇒ 3). **Só aviso**: nada
+é barrado. O fim de mandato já avisa desde a Etapa 1 (30, 7 e 1 dia antes,
+`federationStaff`).
+
 ### 14.6 Exclusão de conta e exportação
 
 O documento é ato da federação, não dado da pessoa: fica, guardando só o

@@ -1920,7 +1920,10 @@ Leitura: publicada e pública, qualquer um (até sem conta); `members`, filiaç�
 ### Campos do PR 4 em `federations/{id}` (opcionais)
 `sponsors` (lista ≤ 12 de `{ name, tier, logo_url, url }`, só `admin`, módulo
 `sponsors`) e `governance` (`statute_url`, `bylaws`, `mandate { start, end }`,
-`board` ≤ 12, `minutes` ≤ 24; só `admin`; públicos como o resto da federação).
+`board` ≤ 12, `minutes` ≤ 24, `women_count` — PR 10, opcional: QUANTAS pessoas
+da diretoria são mulheres, nunca quem, para o aviso da cota de 30% do art. 36,
+IX; inteiro de 0 ao tamanho de `board`, ou `null`; a página pública não mostra;
+só `admin`; públicos como o resto da federação).
 A federação também é **emissora** em `promo_coupons`/`promo_campaigns`/
 `promo_settings` (`issuer_type: 'federation'`, `issuer_id` = id da federação;
 equipe `comms`/`admin` com o módulo `promos`) e **vendedora** em

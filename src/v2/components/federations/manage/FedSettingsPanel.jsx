@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { ExternalLink, Pencil, Plus, Puzzle } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { savePlan, setPlanActive, updateFederationGovernance, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
-import { BOARD_MAX, MINUTES_MAX, validateGovernance } from '@/modules/federations/domain/governance';
+import { BOARD_MAX, MINUTES_MAX, validateGovernance, womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
@@ -261,12 +261,13 @@ function RegrasTab({ federation }) {
 
 /* ------------------------------------------------------------ governança -- */
 
-const vazio = { statute_url: '', bylaws: '', mandate: { start: '', end: '' }, board: [], minutes: [] };
+const vazio = { statute_url: '', bylaws: '', mandate: { start: '', end: '' }, board: [], minutes: [], women_count: '' };
 
 function GovernancaTab({ federation }) {
   const { user } = useAuth();
   const g = federation.governance || {};
-  const [f, setF] = useState({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: g.board || [], minutes: g.minutes || [] });
+  const [f, setF] = useState({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: g.board || [], minutes: g.minutes || [], women_count: g.women_count ?? '' });
+  const cota = womenQuota({ board: f.board, women_count: f.women_count === '' ? null : Number(f.women_count) });
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setItem = (lista, i, patch) => set({ [lista]: f[lista].map((x, j) => (j === i ? { ...x, ...patch } : x)) });
@@ -300,6 +301,14 @@ function GovernancaTab({ federation }) {
             </div>
           ))}
           <V2Button type="button" variant="secondary" disabled={f.board.length >= BOARD_MAX} onClick={() => set({ board: [...f.board, { role: '', name: '' }] })}><Plus className="h-4 w-4" />{t('Acrescentar cargo')}</V2Button>
+          {f.board.length > 0 && (
+            <div className="space-y-2 border-t border-gray-100 pt-3" data-dica="federacao-cota-mulheres">
+              <V2Field label={t('Quantas dessas pessoas são mulheres?')} htmlFor="gv-mulheres" error={erros.women_count} hint={t('Só o número, para conferir a cota da lei. Não aparece na página da federação.')}>
+                <V2Input id="gv-mulheres" inputMode="numeric" className="w-24" value={f.women_count} onChange={(e) => set({ women_count: e.target.value })} />
+              </V2Field>
+              <p className={`text-sm ${cota.status === 'ok' ? 'text-green-700' : 'text-amber-800'}`}>{womenQuotaText(cota)}</p>
+            </div>
+          )}
         </V2Surface>
         <V2Surface className="space-y-3">
           <h3 className="font-bold text-ink">{t('Atas e documentos')}</h3>

@@ -2275,3 +2275,9 @@ filiados sobre um regulamento antes de aprová-lo. Tudo passa pelo servidor:
 a coleção só o autor lê (é como a exportação encontra os dele) e a lista da
 página sai de uma função que confere quem pode ler o documento e não entrega
 o uid de ninguém. `docs/50-FEDERACAO.md` §16.
+
+No mesmo PR, o aviso da cota de 30% de mulheres nos cargos de direção (Lei
+Geral do Esporte, art. 36, IX) entrou na aba Transparência e na Governança. A
+federação informa só QUANTAS pessoas da diretoria são mulheres — nunca quem —
+e a página pública não mostra o número. É aviso, não trava: quem responde
+pela composição da diretoria é a federação. `docs/50-FEDERACAO.md` §14.5.
