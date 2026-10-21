@@ -46,7 +46,7 @@ export default function PublicFederation() {
           <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 text-center">
             <Landmark className="mx-auto h-10 w-10 text-gray-500" aria-hidden="true" />
             <h1 className="mt-3 font-display text-2xl font-bold text-ink">{t('Federação não encontrada')}</h1>
-            <p className="mt-2 text-sm text-gray-500">{t('O endereço pode estar errado, ou a federação ainda não foi aprovada pela plataforma.')}</p>
+            <p className="mt-2 text-sm text-gray-500">{t('O endereço pode estar errado, ou a federação ainda não está aberta ao público.')}</p>
             <Link to="/" className="mt-4 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Ir para o PickleRush')}</Link>
           </div>
         ) : (

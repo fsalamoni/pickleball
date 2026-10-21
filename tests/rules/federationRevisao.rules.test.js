@@ -38,7 +38,7 @@ const TID = 'torneio1';
 
 const federacao = (over = {}) => ({
   name: 'Federação Gaúcha de Pickleball', acronym: 'FGP', slug: 'fgp', level: 'state', state: 'RS',
-  status: 'approved', verified: false, official: false, created_by: PRES, modules: { tournaments: true, courses: true, news: true, affiliations: true }, payment: {}, ...over,
+  status: 'approved', published: true, verified: false, official: false, created_by: PRES, modules: { tournaments: true, courses: true, news: true, affiliations: true }, payment: {}, ...over,
 });
 const staff = (uid, role) => ({ federation_id: FED, user_id: uid, role, user_name: uid });
 const plano = (over = {}) => ({ federation_id: FED, name: 'Federado', price_cents: 12000, billing: 'annual', tier: 'federated', person_type: 'athlete', active: true, ...over });

@@ -44,7 +44,7 @@ const ALHEIO = 'federacao-acervo/fin/xyz789.pdf';
 function cenario(mods = { official_docs: true }) {
   const db = createFakeDb({
     'platform_settings/global': { feature_flags: { federations: true } },
-    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', modules: mods },
+    'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, modules: mods },
     'federation_staff/fpp_pres': { federation_id: 'fpp', user_id: 'pres', role: 'president' },
     'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
     'federation_staff/fpp_fin': { federation_id: 'fpp', user_id: 'fin', role: 'treasurer' },

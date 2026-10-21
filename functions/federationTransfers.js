@@ -85,7 +85,7 @@ async function transfer(ctx, actor, data) {
     } else if (kind === 'federation') {
       const nova = await f.federacao(ctx, data.toFederationId);
       if (nova.id === fed.id) f.falha('invalid-argument', 'Escolha outra federação.');
-      if (nova.status !== 'approved') f.falha('failed-precondition', 'A federação de destino não está recebendo filiações.');
+      if (!f.publicada(nova)) f.falha('failed-precondition', 'A federação de destino não está recebendo filiações.');
       Object.assign(doc, { to_federation_id: nova.id, to_federation_name: nova.name, to_federation_acronym: nova.acronym || '', deadline: addDays(hoje, releaseDays(fed)) });
     } else f.falha('invalid-argument', 'Tipo de transferência desconhecido.');
     const ref = ctx.db.collection(f.C.transfers).doc();

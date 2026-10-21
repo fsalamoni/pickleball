@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  RESERVED_SLUGS, availableModules, fedModuleOn, federationReviewActions, isValidSlug, normalizeModules, slugifyName, validateFederationInput, validateFederationPayment, normalizeFederationBranding } from './federation.js';
+  RESERVED_SLUGS, availableModules, fedModuleOn, federationReviewActions, isFederationHidden, isFederationOpen, isFederationPublic, isValidSlug, publicationChecklist, normalizeModules, slugifyName, validateFederationInput, validateFederationPayment, normalizeFederationBranding } from './federation.js';
 import { FED_MODULE_META } from './constants.js';
 
 const valido = {
@@ -72,5 +72,24 @@ describe('marca: logo só https (revisão geral)', () => {
     expect(normalizeFederationBranding({ logo_url: 'http://cdn.x/logo.png' }).logo_url).toBe('');
     expect(normalizeFederationBranding({ logo_url: 'javascript:alert(1)' }).logo_url).toBe('');
     expect(normalizeFederationBranding({ logo_url: 'https://cdn.x/lo go.png' }).logo_url).toBe('');
+  });
+});
+
+describe('publicação: aprovada nasce oculta até o admin publicar', () => {
+  it('pública = aprovada E publicada; campo ausente vale oculta', () => {
+    expect(isFederationPublic({ status: 'approved', published: true })).toBe(true);
+    expect(isFederationPublic({ status: 'approved' })).toBe(false);
+    expect(isFederationPublic({ status: 'suspended', published: true })).toBe(false);
+    expect(isFederationHidden({ status: 'approved' })).toBe(true);
+    expect(isFederationHidden({ status: 'pending' })).toBe(false);
+    expect(isFederationOpen({ status: 'approved', published: false })).toBe(false);
+  });
+  it('a lista de conferência não afirma o que não carregou', () => {
+    const f = { about: 'x', city: 'POA', branding: { logo_url: 'https://a/b.png' }, contact_public: { email: 'a@b.c' }, payment: {} };
+    const ok = (lista) => Object.fromEntries(lista.map((i) => [i.id, i.ok]));
+    expect(ok(publicationChecklist(f, undefined))).toEqual({ pagina: true, logo: true, contato: true, planos: null, pix: null });
+    expect(ok(publicationChecklist(f, [{ active: true, price_cents: 0 }])).pix).toBe(true);
+    expect(ok(publicationChecklist(f, [{ active: true, price_cents: 1000 }])).pix).toBe(false);
+    expect(ok(publicationChecklist({}, [{ active: false }])).planos).toBe(false);
   });
 });

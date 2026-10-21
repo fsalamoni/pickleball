@@ -386,8 +386,11 @@ Lógica em `functions/federations.js`; a conta da validade em
 `federationMembership.parity.test.js`). A regra do Firestore **não deixa o
 navegador** criar filiação nem cobrança, mudar o estado de uma filiação ou
 confirmar pagamento (`allow create, delete: if false`); o servidor confere a
-flag (`flagLigada`), a federação aprovada, o plano, a idade e o papel de quem
-pede. Doc: `docs/50-FEDERACAO.md`.
+flag (`flagLigada`), a federação aprovada **e publicada** (`publicada(fed)`,
+exportada de `federations.js`: `status == 'approved'` e `published == true` —
+vale para a filiação, a transferência para ela, a agenda assinável, que busca o
+endereço só entre as publicadas, e a leitura de comentários de quem é de fora),
+o plano, a idade e o papel de quem pede. Doc: `docs/50-FEDERACAO.md` §17.
 
 **Callables** (via `federationCallable`, 60 s): sem login → `unauthenticated`;
 `actor = { uid, isPlatformAdmin }`; `FederationError` vira `HttpsError` com o

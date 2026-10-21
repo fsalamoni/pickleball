@@ -273,7 +273,10 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 
 | Ação | Visitante | Atl (conta) | Filiado (o próprio) | Equipe | Plat | Onde |
 |---|---|---|---|---|---|---|
-| Ler federação aprovada e planos | ✔ | ✔ | ✔ | ✔ | ✔ | rules |
+| Ler federação aprovada **e publicada** e planos | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`fedPublic`) |
+| Ler federação aprovada e ainda **oculta** (planos, notícias, atos e eventos públicos, cursos, clubes filiados) | ✖ | ✖ | ✔ filiado ativo | ✔ qualquer permissão | ✔ (o documento; o resto com acesso justificado) | rules (`fedSees`) |
+| Publicar / tirar do ar | ✖ | ✖ | ✖ | ✔ `admin`, só aprovada | ✔ com acesso justificado | rules (`published` booleano) |
+| Pedidos de fora com a federação oculta (filiação, transferência, clube/arena, chancela, cupom, campanha, loja, agenda assinável) | ✖ | ✖ | ✖ | ✖ (a equipe segue estruturando) | ✖ | rules (`fedPublic`) + **Cloud Functions** (`publicada`) |
 | Ler federação pendente/recusada/suspensa | ✖ | ◐ só quem pediu | — | ✔ `admin` | ✔ | rules |
 | Pedir a abertura | ✖ | ✔ (`status: 'pending'`, selos falsos, sem campos travados) | — | — | — | rules (flag ligada) |
 | Ler/gravar CNPJ, razão social (`private/data`) | ✖ | ◐ quem pediu, enquanto pendente | ✖ | ✔ `admin` | ✔ | rules |

@@ -13,12 +13,13 @@ import { BOARD_MAX, MINUTES_MAX, validateGovernance, womenQuota, womenQuotaText 
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
-import { normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
+import { isFederationPublic, normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
 import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
 import { PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import FederationPublicFields from '../FederationPublicFields';
+import FedPublicationTab from './FedPublication';
 import { FedLogo, fedPublicPath, publicHost } from '../federationUi';
 import { t } from '@/core/i18n';
 
@@ -335,6 +336,9 @@ function LojaTab({ federation }) {
   return (
     <section className="space-y-4" aria-label={t('Loja oficial no Mercado')} data-dica="federacao-loja">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Loja oficial no Mercado')}</h2><p className="text-sm text-gray-500">{t('A federação vende uniforme, material e inscrições pelo Mercado, como vendedora própria: quem tem "admin" ou "financeiro" na equipe opera a loja. O Pix do pedido vai direto para a conta cadastrada na loja.')}</p></div>
+      {!isFederationPublic(federation) ? (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('A loja oficial abre depois que a federação for publicada (Configurações → Publicação): os anúncios aparecem para todo mundo no Mercado.')}</p>
+      ) : (
       <V2Surface className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-700">{t('Anúncios, pedidos e a vitrine ficam no painel do vendedor do Mercado, com a federação escolhida em "Vendendo como".')}</p>
         <div className="flex flex-wrap gap-2">
@@ -342,11 +346,13 @@ function LojaTab({ federation }) {
           <V2Button asChild variant="secondary"><Link to={`/mercado/vendedor/${chave}`}><ExternalLink className="h-4 w-4" />{t('Ver a vitrine')}</Link></V2Button>
         </div>
       </V2Surface>
+      )}
     </section>
   );
 }
 
 export default function FedSettingsPanel({ federation, plansQ, tab }) {
+  if (tab === 'publicacao') return <FedPublicationTab federation={federation} plansQ={plansQ} />;
   if (tab === 'governanca') return <GovernancaTab federation={federation} />;
   if (tab === 'loja') return <LojaTab federation={federation} />;
   if (tab === 'regras') return <RegrasTab federation={federation} />;

@@ -257,13 +257,14 @@ test.describe('@emuladores com conta', () => {
     // abria a do outro projeto (foi o que reprovou o CI).
     const nome = `Federação de Teste ${slug}`;
     await ligarFlag('federations');
-    await semear(`federations/${fed}`, {
+    const federacao = (published) => ({
       name: nome, acronym: 'FTP', slug, level: 'state', state: 'RS', city: 'Porto Alegre',
       status: 'approved', created_by: 'seed', verified: false, official: false, member_count: 0,
       about: 'A federação dos testes de ponta a ponta.', modules: { tournaments: true, ranking: true },
       branding: { color: '#1d4ed8', logo_url: '' }, contact_public: { email: 'contato@ftp.teste' }, sponsors: [],
-      created_at: new Date(), updated_at: new Date(),
+      created_at: new Date(), updated_at: new Date(), published,
     });
+    await semear(`federations/${fed}`, federacao(false));
     await semear(`federation_plans/${fed}_anual`, {
       federation_id: fed, name: 'Federado anual', description: 'Carteirinha e ranking oficial.', benefits: 'Carteirinha digital\nRanking oficial',
       person_type: 'athlete', tier: 'federated', billing: 'annual', validity: 'rolling', price_cents: 12000, active: true, sort: 0,
@@ -272,7 +273,12 @@ test.describe('@emuladores com conta', () => {
     const errosDaPagina = [];
     page.on('pageerror', (e) => errosDaPagina.push(`${page.url()}: ${e.message}`));
 
-    // Sem conta: a página pública lê federação e planos pela regra (aprovada ⇒ pública).
+    // Aprovada e ainda oculta: a página pública não abre (o admin não publicou).
+    await page.goto(`/f/${slug}`);
+    await expect(page.getByText(/ainda não está aberta ao público/).first()).toBeVisible();
+    await semear(`federations/${fed}`, federacao(true));
+
+    // Sem conta: a página pública lê federação e planos pela regra (aprovada e publicada ⇒ pública).
     await page.goto(`/f/${slug}`);
     await expect(page.getByRole('heading', { name: nome })).toBeVisible();
     await expect(page.getByText('Federado anual').first()).toBeVisible();

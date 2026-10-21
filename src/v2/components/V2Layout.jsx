@@ -276,7 +276,6 @@ function useV2Nav() {
           // Gamificação V2: a temporada do mês, os desafios e o Hall da Fama são competição.
           gamificationOn && { to: '/gamification', label: rotulos.gamificacao, icon: Sparkles },
           gamificationOn && { to: '/hall-da-fama', label: t('Hall da Fama'), icon: Crown },
-          federationsOn && { to: '/federacoes', label: t('Federações'), icon: Landmark },
         ],
       }),
       // Jogar abre no DIA DE JOGO (os seus dias e os com vaga para você) e as
@@ -342,6 +341,12 @@ function useV2Nav() {
           settingsPageOn && { to: '/configuracoes', label: t('Configurações'), icon: Settings },
         ],
       }),
+      // Federações (flag `federations`): hub próprio no menu — o diretório, a
+      // filiação de quem é filiado e a Central de quem gere (pela página dela).
+      federationsOn && hub({
+        id: 'federacoes', dica: 'menu-federacoes', label: t('Federações'), icon: Landmark, to: '/federacoes',
+        children: [{ to: '/federacoes', label: t('Federações'), icon: Landmark }],
+      }),
       // Mercado (flag `marketplace`): comprar e vender, separado do mercado interno das arenas.
       marketplaceOn && hub({
         id: 'mercado', dica: 'menu-mercado', label: t('Mercado'), icon: Store, to: '/mercado',
@@ -370,8 +375,8 @@ function useV2Nav() {
   // → Menu). `hubs` continua completo: é o que a busca indexa e o que diz em
   // que hub a pessoa está, mesmo num hub escondido.
   const papeis = useMemo(() => ({
-    arenas: showMyArenas, professor: isCoach, admin: !!isPlatformAdmin, mercado: marketplaceOn,
-  }), [showMyArenas, isCoach, isPlatformAdmin, marketplaceOn]);
+    arenas: showMyArenas, professor: isCoach, admin: !!isPlatformAdmin, mercado: marketplaceOn, federacoes: federationsOn,
+  }), [showMyArenas, isCoach, isPlatformAdmin, marketplaceOn, federationsOn]);
   const { itens: escolhidos } = useSidebarNav(papeis);
   const hubsVisiveis = useMemo(
     () => escolhidos.map((id) => hubs.find((h) => h.id === id)).filter(Boolean),

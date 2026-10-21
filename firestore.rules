@@ -1402,6 +1402,7 @@ service cloud.firestore {
         || (nd().federation_id is string
           && fedOn()
           && fedModuleOn(nd().federation_id, 'tournaments')
+          && fedPublic(nd().federation_id)
           && nd().federation_sanction.status == 'pending'
           && nd().federation_sanction.requested_by == me());
     }
@@ -3436,14 +3437,16 @@ service cloud.firestore {
     // `promo_settings`, que só o emissor lê. O admin pode pausar/apagar (moderação).
     match /promo_coupons/{couponId} {
       allow read: if isAuthed();
-      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id);
+      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id)
+        && (nd().issuer_type != 'federation' || fedPublic(nd().issuer_id));
       allow update: if (isPromoIssuer(od().issuer_type, od().issuer_id) && promoIssuerKept())
         || isPlatformAdmin();
       allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || isPlatformAdmin();
     }
     match /promo_campaigns/{campaignId} {
       allow read: if isAuthed();
-      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id);
+      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id)
+        && (nd().issuer_type != 'federation' || fedPublic(nd().issuer_id));
       allow update: if (isPromoIssuer(od().issuer_type, od().issuer_id) && promoIssuerKept())
         || isPlatformAdmin();
       allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || isPlatformAdmin();
@@ -4272,6 +4275,7 @@ service cloud.firestore {
     match /market_sellers/{key} {
       allow read: if isAuthed();
       allow create: if marketOn() && isMarketOperator(key)
+        && (!key.matches('federation_[^/]+') || fedPublic(key.replace('^federation_', '')))
         && nd().seller_key == key
         && nd().owner_uid == me()
         && nd().display_name is string
@@ -4665,6 +4669,22 @@ service cloud.firestore {
     function fedHas(fedId, perm) {
       return isAuthed() && (fedPlat(fedId) || perm in fedPerms(fedId));
     }
+    function fedMemberActive(fedId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/federation_members/$(fedId + '_' + me()))
+        && get(/databases/$(database)/documents/federation_members/$(fedId + '_' + me())).data.status == 'active';
+    }
+    // PUBLICADA: aprovada pela plataforma E aberta ao público pelo admin da
+    // federação (`published`, ausente = oculta). Antes disso a equipe estrutura
+    // tudo, e a federação não aparece para mais ninguém.
+    function fedPublic(fedId) {
+      return fedApproved(fedId) && fedDoc(fedId).get('published', false) == true;
+    }
+    // Quem vê a "cara pública" da federação: todos depois de publicada; antes,
+    // a equipe, o admin da plataforma (acesso justificado) e quem já é filiado.
+    function fedSees(fedId) {
+      return fedPublic(fedId) || fedPlat(fedId) || fedPerms(fedId).size() > 0 || fedMemberActive(fedId);
+    }
     // Nome, sigla, endereço e nível válidos — no pedido de abertura E em toda edição.
     function fedProfileOk() {
       return nd().name is string
@@ -4683,21 +4703,26 @@ service cloud.firestore {
     }
 
     match /federations/{fedId} {
-      // Aprovada é pública (diretório, /f/:slug); o resto só quem pediu, a equipe e o admin.
-      allow read: if od().status == 'approved'
+      // Aprovada E publicada pelo admin dela é pública (diretório, /f/:slug); a
+      // consulta pública filtra `status` e `published` em igualdade. Oculta:
+      // quem pediu, a equipe (qualquer cargo), quem é filiado e o admin.
+      allow read: if (od().status == 'approved' && od().published == true)
         || isPlatformAdmin()
         || (isOwner(od().created_by))
-        || fedHas(fedId, 'admin');
+        || fedPerms(fedId).size() > 0
+        || fedMemberActive(fedId);
       allow create: if fedOn() && isAuthed()
         && nd().created_by == me()
         && nd().status == 'pending'
         && nd().get('verified', false) == false
         && nd().get('official', false) == false
-        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles'])
+        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles', 'published'])
         && fedProfileOk();
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
+      // Publicar e tirar do ar: só o admin, e só a federação aprovada.
       allow update: if fedPlat(fedId) || (fedOn() && fedHas(fedId, 'admin')
         && !chg().hasAny(fedLocked())
+        && (!('published' in chg()) || (od().status == 'approved' && nd().published is bool))
         && (!chg().hasAny(['name', 'acronym', 'slug', 'level']) || fedProfileOk())
         // PR 4: patrocinadores são lista curta (a página e a carteirinha os mostram).
         && (!('sponsors' in chg()) || (nd().sponsors is list && nd().sponsors.size() <= 12)))
@@ -4725,7 +4750,7 @@ service cloud.firestore {
       // equipe de um pedido). Da federação pendente, só quem é dela e o admin.
       allow read: if isPlatformAdmin()
         || (isOwner(od().user_id))
-        || (isAuthed() && fedApproved(od().federation_id))
+        || (isAuthed() && fedSees(od().federation_id))
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'finance');
@@ -4743,8 +4768,9 @@ service cloud.firestore {
     }
 
     match /federation_plans/{planId} {
-      // Os planos são públicos (a página da federação os mostra a quem vai se filiar).
-      allow read: if true;
+      // Os planos são públicos (a página da federação os mostra a quem vai se
+      // filiar) — da federação publicada; da oculta, quem a vê (`fedSees`).
+      allow read: if fedSees(od().federation_id);
       allow create: if fedOn() && fedApproved(nd().federation_id)
         && (fedHas(nd().federation_id, 'admin') || fedHas(nd().federation_id, 'finance'))
         && nd().name is string
@@ -4854,7 +4880,7 @@ service cloud.firestore {
     // Curso (PR 3, módulo `courses`): público quando não é rascunho; a equipe
     // (cursos/admin) cria e edita — a inscrição e a credencial são do servidor.
     match /federation_courses/{courseId} {
-      allow read: if od().status != 'draft'
+      allow read: if (od().status != 'draft' && fedSees(od().federation_id))
         || fedHas(od().federation_id, 'courses')
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && fedModuleOn(nd().federation_id, 'courses')
@@ -4888,7 +4914,7 @@ service cloud.firestore {
     // equipe (cursos/admin) revoga. Pública SÓ se a pessoa marcou `public`
     // (diretório de credenciados); a pessoa muda só isso.
     match /federation_credentials/{credId} {
-      allow read: if (od().get('public', false) == true && od().status == 'active')
+      allow read: if (od().get('public', false) == true && od().status == 'active' && fedSees(od().federation_id))
         || (isOwner(od().user_id))
         || fedHas(od().federation_id, 'courses')
         || fedHas(od().federation_id, 'admin');
@@ -4925,6 +4951,7 @@ service cloud.firestore {
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && isAuthed()
         && fedModuleOn(nd().federation_id, 'discipline')
+        && fedSees(nd().federation_id)
         && nd().status == 'open'
         && nd().kind in ['conduct', 'referee', 'organization', 'other']
         && nd().body is string
@@ -4947,14 +4974,9 @@ service cloud.firestore {
     // qualquer um (página fora do app); "só filiados" por quem tem filiação
     // ATIVA nesta federação. O aviso aos filiados é do servidor
     // (`federationNews`): `notified_at`/`notified_count` o cliente não toca.
-    function fedMemberActive(fedId) {
-      return isAuthed()
-        && exists(/databases/$(database)/documents/federation_members/$(fedId + '_' + me()))
-        && get(/databases/$(database)/documents/federation_members/$(fedId + '_' + me())).data.status == 'active';
-    }
     match /federation_news/{newsId} {
       allow read: if (od().status == 'published'
-          && (od().audience == 'public' || (od().audience == 'members' && fedMemberActive(od().federation_id))))
+          && ((od().audience == 'public' && fedSees(od().federation_id)) || (od().audience == 'members' && fedMemberActive(od().federation_id))))
         || fedHas(od().federation_id, 'comms')
         || fedHas(od().federation_id, 'admin');
       allow create: if fedOn() && fedModuleOn(nd().federation_id, 'news')
@@ -4989,7 +5011,7 @@ service cloud.firestore {
     // regra ser provável sem índice.
     match /federation_docs/{docId} {
       allow read: if (od().status == 'published'
-          && (od().visibility == 'public'
+          && ((od().visibility == 'public' && fedSees(od().federation_id))
             || (od().visibility == 'members' && fedMemberActive(od().federation_id))
             || (od().visibility in ['members', 'staff'] && (fedPlat(od().federation_id) || fedPerms(od().federation_id).size() > 0))))
         || fedHas(od().federation_id, 'docs') || fedHas(od().federation_id, 'admin');
@@ -5004,7 +5026,7 @@ service cloud.firestore {
     // qualquer um; "só filiados", filiado ativo e equipe; "só equipe", a
     // equipe. A tela consulta com `visibility` em igualdade (regra provável).
     match /federation_events/{eventId} {
-      allow read: if od().visibility == 'public'
+      allow read: if (od().visibility == 'public' && fedSees(od().federation_id))
         || (od().visibility == 'members' && fedMemberActive(od().federation_id))
         || (od().visibility in ['members', 'staff'] && (fedPlat(od().federation_id) || fedPerms(od().federation_id).size() > 0));
       allow write: if false;
@@ -5036,7 +5058,8 @@ service cloud.firestore {
         && nd().user_id == me()
         && nd().keys().hasOnly(['federation_id', 'user_id', 'created_at'])
         && nd().created_at == request.time
-        && (fedModuleOn(nd().federation_id, 'official_docs') || fedModuleOn(nd().federation_id, 'calendar'));
+        && (fedModuleOn(nd().federation_id, 'official_docs') || fedModuleOn(nd().federation_id, 'calendar'))
+        && fedSees(nd().federation_id);
     }
 
     match /federation_charges/{chargeId} {
@@ -5073,7 +5096,7 @@ service cloud.firestore {
     // (pendente) e retira; a equipe (filiados/admin) aprova, recusa, suspende.
     // Filiado é público (página da federação, selo no clube/arena).
     match /federation_affiliations/{affId} {
-      allow read: if od().status == 'approved'
+      allow read: if (od().status == 'approved' && fedSees(od().federation_id))
         || (isOwner(od().requested_by))
         || fedOrgManager(od().kind, od().org_id)
         || fedHas(od().federation_id, 'admin')
@@ -5088,7 +5111,8 @@ service cloud.firestore {
         && nd().get('message', '') is string
         && nd().get('message', '').size() <= 500
         && fedOrgManager(nd().kind, nd().org_id)
-        && fedModuleOn(nd().federation_id, 'affiliations');
+        && fedModuleOn(nd().federation_id, 'affiliations')
+        && fedPublic(nd().federation_id);
       allow update: if fedOn()
         && (fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'members'))
         && chg().hasOnly(['status', 'review', 'updated_at'])

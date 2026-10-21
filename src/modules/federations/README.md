@@ -123,6 +123,11 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Aprovada não é pública**: pública = `approved` **e** `published == true`
+  (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
+  cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da
+  federação publica (Configurações → Publicação, `FedPublicationTab`); oculta,
+  a equipe estrutura tudo e ninguém de fora lê nem pede (`docs/50` §17).
 - **Só o servidor** cria filiação e cobrança, aprova, confirma pagamento e
   gira o código da carteirinha (`allow create, delete: if false`). O navegador
   só declara "Já paguei" e muda as próprias preferências.

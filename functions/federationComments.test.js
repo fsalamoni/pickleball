@@ -24,7 +24,7 @@ function cenario({ mods = { calendar: true, official_docs: true }, rules } = {})
   return {
     db: createFakeDb({
       'platform_settings/global': { feature_flags: { federations: true } },
-      'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', modules: mods, ...(rules ? { rules } : {}) },
+      'federations/fpp': { name: 'Federação Paulista', acronym: 'FPP', slug: 'fpp', status: 'approved', published: true, modules: mods, ...(rules ? { rules } : {}) },
       'federation_staff/fpp_sec': { federation_id: 'fpp', user_id: 'sec', role: 'secretary' },
       'federation_staff/fpp_fin': { federation_id: 'fpp', user_id: 'fin', role: 'treasurer' },
       'federation_members/fpp_ana': { federation_id: 'fpp', user_id: 'ana', status: 'active' },
@@ -55,6 +55,16 @@ describe('comentários: quem lê e quem comenta', () => {
     expect(sem.comments[0]).not.toHaveProperty('user_id');
     expect(sem.comments[0]).not.toHaveProperty('reports_count');
     expect((await listar(c, ANA, { kind: 'doc', targetId: 'reg' })).comments[0].mine).toBe(true);
+  });
+
+  it('federação OCULTA (ainda não publicada): o documento público é só da equipe e dos filiados', async () => {
+    const c = cenario();
+    c.db.store.docs.set('federations/fpp', { ...c.db.store.docs.get('federations/fpp'), published: false });
+    await expect(listar(c, null, { kind: 'doc', targetId: 'reg' })).rejects.toBeTruthy();
+    await expect(listar(c, BIA, { kind: 'doc', targetId: 'reg' })).rejects.toBeTruthy();
+    await expect(postar(c, BIA)).rejects.toBeTruthy();
+    expect((await listar(c, ANA, { kind: 'doc', targetId: 'reg' })).count).toBe(0);
+    expect((await listar(c, SEC, { kind: 'doc', targetId: 'reg' })).can_moderate).toBe(true);
   });
 
   it('só filiados: quem não é filiado nem lê nem comenta; o filiado e a equipe sim', async () => {

@@ -27,7 +27,7 @@ const resultado = (extra = {}) => ({
 
 function cenario() {
   return createFakeDb({
-    'federations/fpp': { name: 'FPP', status: 'approved', ranking_config: { best_n: 2 } },
+    'federations/fpp': { name: 'FPP', status: 'approved', published: true, ranking_config: { best_n: 2 } },
     'federation_members/fpp_ana': { federation_id: 'fpp', user_id: 'ana', tier: 'federated', status: 'active', valid_from: '2026-01-01', valid_until: '2026-12-31' },
     'federation_members/fpp_bia': { federation_id: 'fpp', user_id: 'bia', tier: 'federated', status: 'expired', valid_from: '2025-09-01', valid_until: '2026-08-31' },
     'federation_members/fpp_caio': { federation_id: 'fpp', user_id: 'caio', tier: 'registered', status: 'active', valid_from: '2026-01-01', valid_until: '2026-12-31' },

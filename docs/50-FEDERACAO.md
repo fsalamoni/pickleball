@@ -109,7 +109,9 @@ pedido (/federacoes/abrir)  ──►  pending  ──admin aprova──►  app
   com `president`, grava `review` e avisa. A equipe edita página, Pix, marca e
   módulos pela regra (permissão `admin`), **nunca** os campos travados.
 - Enquanto `pending`, a Central já abre para quem pediu preparar planos, Pix e
-  página; a filiação só abre em `approved` (regra `fedApproved`).
+  página. Aprovada, a federação **nasce oculta** (`published` ausente) e só
+  abre ao público quando o admin dela publica em Configurações → Publicação;
+  a filiação e os pedidos de fora só abrem publicada (`fedPublic`, §17).
 
 ## 5. Planos, filiação, cobrança e carteirinha
 
@@ -746,6 +748,13 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
     motivo e avisa o autor; consulta pública vai até o fim do dia em Brasília
     (paridade `federationComments.parity.test.js`). Modos e motivos de
     denúncia são gravados — nunca renomeie (§16).
+49. **Aprovada não é pública.** Pública = `approved` **e** `published == true`,
+    com a mesma régua na regra (`fedPublic`/`fedSees`), no cliente
+    (`isFederationPublic`) e no servidor (`publicada`). Campo ausente = oculta.
+    Toda leitura de fora e todo pedido de fora (filiação, transferência,
+    clube/arena, chancela, cupom, campanha, loja, agenda assinável) passam
+    por ela; a equipe estrutura tudo oculta. Consulta do diretório leva as duas
+    igualdades. Só o admin da federação publica (§17).
 
 ## 11. Pendências e próximas fases
 
@@ -1318,3 +1327,85 @@ Fora de propósito: editar comentário (apaga-se e escreve-se de novo, para a
 resposta oficial nunca ficar respondendo a outro texto); curtidas; resposta de
 quem não é da federação a outro comentário (a conversa fica entre a pessoa e
 a federação, e a página oficial não vira fórum). Quando pedirem.
+
+## 17. Publicação: a federação aprovada nasce oculta (2026-10-21)
+
+Pedido do dono: a federação só fica pública quando o **admin dela** a torna
+pública, nas configurações — para montar tudo antes de abrir aos demais.
+
+### 17.1 O campo e a régua
+
+- `federations.published` (opcional, booleano). **Ausente = oculta** — vale
+  também para as federações aprovadas antes desta mudança: elas ficam ocultas
+  até o admin delas publicar. Nenhum dado foi migrado.
+- Pública = `status == 'approved'` **e** `published == true`. Uma régua em três
+  lugares: `fedPublic()` na regra, `isFederationPublic()` no cliente
+  (`domain/federation.js`; `isFederationOpen` é o mesmo) e `publicada(fed)` no
+  servidor (`functions/federations.js`, exportada para as outras funções).
+- Quem vê a federação oculta (`fedSees()` na regra): a equipe (qualquer
+  permissão), o filiado ativo, quem pediu a abertura e o admin da plataforma
+  (o documento da federação; nas outras coleções, com acesso justificado,
+  §13.3). Ninguém mais.
+- O diretório e a página por endereço consultam `status == 'approved'` +
+  `published == true` (duas igualdades: a regra prova a consulta, zero índice).
+  A conferência de endereço repetido no cliente olha só as publicadas; a
+  aprovação no servidor segue conferindo todas as aprovadas.
+
+### 17.2 O que a federação oculta faz e não faz
+
+| | Oculta | Pública |
+|---|---|---|
+| Equipe estrutura tudo (planos, Pix, página, módulos, equipe, acervo, agenda, notícias) | ✅ | ✅ |
+| Aparece no diretório e abre `/f/:slug` (e acervo/agenda públicos) | ❌ | ✅ |
+| Planos, cursos, credenciais, notícias/atos/eventos públicos, clubes filiados para quem é de fora | ❌ | ✅ |
+| Pedir filiação (`federationJoin`), transferência para ela, filiar clube ou arena, pedir chancela | ❌ | ✅ |
+| Criar cupom ou campanha da federação, abrir a loja oficial (`market_sellers`) | ❌ | ✅ |
+| Agenda assinável (`/api/agenda/{slug}.ics`) | ❌ | ✅ |
+| Comentários: quem é de fora não lê nem escreve; filiado e equipe, sim | — | — |
+| Resultados e ranking oficial | seguem públicos: só vêm de torneio chancelado, e a chancela exige federação publicada |
+
+O que já existia segue valendo: tirar do ar **não** desfaz filiações (o
+filiado continua vendo a federação e a carteirinha verifica), não apaga nada e
+não derruba anúncios nem cupons já publicados — o diálogo de "Tirar do ar"
+avisa para pausá-los antes; a loja some do "Vendendo como" da equipe até
+publicar de novo (`storeFederations`).
+
+### 17.3 Quem publica e onde
+
+- **Central → Configurações → Publicação** (aba `?aba=publicacao`, só a
+  permissão `admin`): selo Pública/Oculta, o endereço público, **"Tornar
+  pública"** / **"Tirar do ar"** (cada um com confirmação) e a lista "Antes de
+  publicar, confira" (`publicationChecklist`: página com "Sobre" e cidade,
+  logo, contato público, plano ativo e Pix se houver plano pago). A lista
+  **recomenda, não bloqueia**; plano que não carregou é "não deu para conferir",
+  nunca "falta".
+- A regra: só a permissão `admin` grava `published`, só como booleano e só com
+  a federação **aprovada**; o pedido de abertura não pode nascer com o campo.
+- `setFederationPublished` (serviço) grava `published` + `published_at/by` ou
+  `unpublished_at/by`, confere endereço repetido entre as publicadas e audita
+  (`federation_publish` / `federation_unpublish`).
+- Enquanto oculta, a faixa âmbar `FedHiddenBanner` aparece no topo da Central
+  e na página interna da federação para a equipe ("Revisar e publicar" para o
+  admin). As abas Loja oficial e Divulgação dizem que abrem depois de publicar.
+- Âncoras: `federacao-oculta`, `federacao-publicacao`, `federacao-publicar`,
+  `federacao-aba-publicacao`. O guia `federacao-gerir` ganhou o passo "Por
+  último, publicar" e o artigo do mesmo nome, o parágrafo sobre a publicação.
+
+### 17.4 Federações no menu
+
+- **Federações é um item próprio do menu lateral** (hub `federacoes`, ícone
+  `Landmark`, âncora `menu-federacoes`), com a flag `federations`; saiu de
+  dentro de Competir. Está nos três padrões (atleta, arena, professor), antes
+  do Mercado, e em **Configurações → Menu** (`SidebarSettingsCard`) para ligar,
+  desligar e mover (`papeis.federacoes`).
+- Quem já tinha um menu personalizado salvo ganha o item uma vez, antes da
+  Minha área (`SIDEBAR_ITEMS_ADDED_LATER`), e tira se não quiser. A escolha
+  salva passou a guardar `known` (os itens que a pessoa podia ver): uma
+  funcionalidade ligada depois entra sozinha; item de papel (Minha arena,
+  Painel do professor) não — segue na Minha área (docs/41 §4.1).
+
+**Testes**: `tests/rules/federation.rules.test.js`, `federationPr2` e
+`federationPr4` (blocos "oculta"), `functions/federations.test.js`,
+`federationComments.test.js`, `federationAgenda.test.js`,
+`domain/federation.test.js`, `domain/staff.test.js`,
+`core/domain/sidebarNav.test.js`, `core/lib/sidebarNavPreference.test.js`.

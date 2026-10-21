@@ -21,6 +21,7 @@ import { SPONSORS_MAX, validateSponsors } from '@/modules/federations/domain/spo
 import { NEWS_AUDIENCE, NEWS_AUDIENCE_LABELS, NEWS_STATUS, NEWS_STATUS_LABELS, SPONSOR_TIER, SPONSOR_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
+import { isFederationPublic } from '@/modules/federations/domain/federation';
 import { quando } from '../federationUi';
 import { federationIssuer } from '@/v2/components/promo/promoUi';
 
@@ -152,9 +153,14 @@ function DivulgacaoTab({ federation }) {
   return (
     <section className="space-y-4" aria-label={t('Cupons e campanhas da federação')} data-dica="federacao-divulgacao">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Cupons e campanhas')}</h2><p className="text-sm text-gray-500">{t('Cupons de desconto e vales para os filiados (ou para todos) e banners de campanha na página da federação e na tela inicial. O aviso aos filiados vai pelas Notícias.')}</p></div>
-      <Suspense fallback={<V2Skeleton lines={6} />}>
-        <PromoMarketingConsole issuer={federationIssuer(federation)} />
-      </Suspense>
+      {isFederationPublic(federation) ? (
+        <Suspense fallback={<V2Skeleton lines={6} />}>
+          <PromoMarketingConsole issuer={federationIssuer(federation)} />
+        </Suspense>
+      ) : (
+        // A promoção aparece na tela inicial de todo mundo: só a federação publicada cria.
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Cupons e campanhas abrem depois que a federação for publicada (Configurações → Publicação): eles aparecem para todo mundo.')}</p>
+      )}
     </section>
   );
 }

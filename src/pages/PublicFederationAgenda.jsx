@@ -76,7 +76,7 @@ export default function PublicFederationAgenda() {
         {flagsLoading || fq.isLoading ? <V2Skeleton lines={6} /> : fq.isError ? (
           <V2ErrorState title={t('Não foi possível carregar a federação')} description={t('A conexão falhou no meio do caminho. O link continua valendo.')} onRetry={() => fq.refetch()} />
         ) : !f ? (
-          <Aviso titulo={t('Federação não encontrada')} texto={t('O endereço pode estar errado, ou a federação ainda não foi aprovada pela plataforma.')} acao={<Link to="/" className={botao}>{t('Ir para o PickleRush')}</Link>} />
+          <Aviso titulo={t('Federação não encontrada')} texto={t('O endereço pode estar errado, ou a federação ainda não está aberta ao público.')} acao={<Link to="/" className={botao}>{t('Ir para o PickleRush')}</Link>} />
         ) : !fedModuleOn(f, 'calendar') ? (
           <Aviso icone={CalendarDays} titulo={t('Agenda não disponível')} texto={t('Esta federação não publica o calendário oficial pela plataforma.')} acao={<Link to={fedPublicPath(f)} className={botao}>{t('Ver a federação')}</Link>} />
         ) : (

@@ -13,13 +13,14 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationRole, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { membershipAction } from '@/modules/federations/services/federationService';
 import { canRequestMembership, membershipState } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, FEDERATION_STATUS, MEMBER_STATUS } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, FED_PERMISSION, FEDERATION_STATUS, MEMBER_STATUS } from '@/modules/federations/domain/constants';
 import { V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { PAGE_TITLE } from '@/v2/ui/pageFrame';
 import { FedBadges, FedLogo, FederationGate, MemberStatusBadge, fedManagePath, fedPublicPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
 import MembershipDeclarationDialog from '@/v2/components/federations/MembershipDeclaration';
-import { normalizeFederationRules } from '@/modules/federations/domain/federation';
+import { isFederationHidden, isFederationOpen, isFederationPublic, normalizeFederationRules } from '@/modules/federations/domain/federation';
+import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import PlansList from '@/v2/components/federations/PlansList';
 import { FedAcervoBlock } from '@/v2/components/federations/acervo/AcervoPublic';
@@ -48,7 +49,7 @@ function MinhaSituacao({ federation, plans }) {
   const st = membershipState(m);
   const cobrancas = (cq.data || []).filter((c) => c.federation_id === federation.id && [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
   const plano = (plans || []).find((p) => p.id === m?.plan_id) || null;
-  const aberta = federation.status === FEDERATION_STATUS.APPROVED;
+  const aberta = isFederationOpen(federation);
 
   if (canRequestMembership(m)) {
     return (
@@ -64,7 +65,7 @@ function MinhaSituacao({ federation, plans }) {
           </div>
         ) : (
           // `disabled` num `<Link>` não desliga nada: o link abria a tela de filiar numa federação suspensa.
-          <p className="text-sm text-gray-500">{t('A filiação abre quando a federação estiver aprovada e ativa.')}</p>
+          <p className="text-sm text-gray-500">{isFederationHidden(federation) ? t('A filiação abre quando a federação for publicada pelo admin dela.') : t('A filiação abre quando a federação estiver aprovada e ativa.')}</p>
         )}
       </V2Surface>
     );
@@ -122,7 +123,7 @@ function Detalhe() {
 
   if (fq.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} description={t('Ela continua lá. Confira a conexão e tente de novo.')} onRetry={() => fq.refetch()} /></V2Page>;
   if (fq.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-28" /><V2Skeleton className="h-64" /></V2Page>;
-  if (!f) return <V2Page><V2EmptyState icon={Landmark} title={t('Federação não encontrada')} description={t('O endereço pode estar errado, ou a federação ainda não foi aprovada.')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} /></V2Page>;
+  if (!f) return <V2Page><V2EmptyState icon={Landmark} title={t('Federação não encontrada')} description={t('O endereço pode estar errado, ou a federação ainda não está aberta ao público.')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} /></V2Page>;
 
   const contato = f.contact_public || {};
   return (
@@ -141,9 +142,11 @@ function Detalhe() {
         </div>
         <div className="flex flex-wrap gap-2">
           {(papel.isStaff || papel.needsGrant) && <V2Button asChild variant="secondary" data-dica="federacao-gerir"><Link to={fedManagePath(f)}><Settings2 className="h-4 w-4" />{t('Gerir')}</Link></V2Button>}
-          {f.status === FEDERATION_STATUS.APPROVED && <V2Button asChild variant="ghost"><a href={publica} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</a></V2Button>}
+          {isFederationPublic(f) && <V2Button asChild variant="ghost"><a href={publica} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</a></V2Button>}
         </div>
       </header>
+
+      {papel.isStaff && <FedHiddenBanner federation={f} canPublish={papel.has(FED_PERMISSION.ADMIN)} />}
 
       {f.status === FEDERATION_STATUS.APPROVED && <MinhaSituacao federation={f} plans={pq.data} />}
 

@@ -99,6 +99,16 @@ arena, um para o professor"*.
   perdeu some sozinho; a barra inferior do celular segue `bottomNav.js` (não é
   configurável, de propósito: cinco lugares, e o quarto já é contextual).
   Guarda em `src/core/guards/navV3.test.js`.
+- **Federações** (2026-10-21) é um hub próprio (`federacoes`, `requer:
+  'federacoes'` = a flag `federations`), nos três padrões antes do Mercado e
+  no cartão Menu. Saiu de dentro de Competir.
+- **Item que a pessoa passa a ver entra na barra dela.** A escolha salva grava
+  `known` (os itens que a pessoa podia ver ao salvar); `chosenSidebar` põe antes
+  da Minha área o que ela não via e agora vê (`newSidebarItems`) — uma
+  funcionalidade ligada, um item novo. O que ela já via e tirou continua fora,
+  e item de PAPEL (Minha arena, Painel do professor) nunca entra sozinho.
+  Escolha antiga, sem `known`, ganha só `SIDEBAR_ITEMS_ADDED_LATER`
+  (hoje, as Federações).
 
 ## 5. Ajuda e dicas
 
