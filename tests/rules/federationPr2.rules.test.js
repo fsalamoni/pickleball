@@ -41,7 +41,7 @@ const pedidoFiliacao = (kind, orgId, over = {}) => ({
 });
 const chancela = (status, over = {}) => ({ status, federation_acronym: 'FGP', tier: 'regional', requires_membership: false, requested_by: ORG, ...over });
 const resultado = (over = {}) => ({
-  federation_id: FED, tournament_id: TID, modality_id: 'm1', status: 'sent', sent_by: ORG, season: 2026, rows: [{ uid: ANA, name: 'Ana', position: 1, played: 3 }], uids: [ANA], ...over,
+  federation_id: FED, tournament_id: TID, modality_id: 'm1', status: 'sent', sent_by: ORG, season: 2026, tier: 'regional', rows: [{ uid: ANA, name: 'Ana', position: 1, played: 3 }], uids: [ANA], ...over,
 });
 
 let testEnv;
@@ -185,6 +185,8 @@ describe('⭐ resultados e ranking oficial', () => {
     await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED2}_${TID}_m1`), resultado({ federation_id: FED2 })));
     await assertFails(setDoc(doc(como(ORG), 'federation_results', `errado`), resultado()));
     await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ status: 'rejected' })));
+    // O peso é o da chancela: 'major' dobraria os pontos por conta do organizador.
+    await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ tier: 'major' })));
     await assertSucceeds(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado()));
     await assertSucceeds(getDoc(doc(anonimo(), 'federation_results', `${FED}_${TID}_m1`)));
     // Reenvio pelo organizador: tudo de novo, mas sem mudar de torneio/federação.
@@ -216,6 +218,7 @@ describe('⭐ resultados e ranking oficial', () => {
   it('competições configura o ranking da federação, e só isso', async () => {
     await assertSucceeds(updateDoc(doc(como(COMP), 'federations', FED), { ranking_config: { best_n: 4 } }));
     await assertFails(updateDoc(doc(como(COMP), 'federations', FED), { ranking_config: { best_n: 4 }, name: 'Outro nome' }));
-    await assertFails(updateDoc(doc(como(TES), 'federations', FED), { ranking_config: { best_n: 4 } }));
+    // Valor DIFERENTE do que a linha anterior gravou: update idêntico tem `affectedKeys()` vazio e não prova nada.
+    await assertFails(updateDoc(doc(como(TES), 'federations', FED), { ranking_config: { best_n: 5 } }));
   });
 });

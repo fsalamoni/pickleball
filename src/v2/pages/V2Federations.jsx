@@ -15,7 +15,7 @@ import { STAFF_ROLE_LABELS } from '@/modules/federations/domain/constants';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { V2Button, V2EmptyState, V2ErrorState, V2Page, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
-import { FedBadges, FedLogo, FederationGate, MemberStatusBadge, fedManagePath, fedPath } from '@/v2/components/federations/federationUi';
+import { FedBadges, FedLogo, FederationGate, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
 import { t, tn } from '@/core/i18n';
 
 const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -70,7 +70,7 @@ function MinhasFederacoes({ federacoes }) {
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                     {i.equipe && <span className="inline-flex items-center gap-1 font-semibold text-ink"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{t(STAFF_ROLE_LABELS[i.equipe.role] || '')}</span>}
                     {i.estado && <MemberStatusBadge status={i.estado.status} label={i.estado.label} />}
-                    {i.estado?.validUntil && <span>{t('até {data}', { data: i.estado.validUntil.split('-').reverse().join('/') })}</span>}
+                    {i.estado?.validUntil && <span>{t('até {data}', { data: quando(i.estado.validUntil) })}</span>}
                   </div>
                 </div>
                 {i.equipe ? (

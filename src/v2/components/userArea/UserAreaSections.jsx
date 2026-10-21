@@ -43,7 +43,7 @@ import { membershipState } from '@/modules/federations/domain/membership';
 import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, STAFF_ROLE_LABELS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { credentialState } from '@/modules/federations/domain/courses';
 import { verifyPath } from '@/modules/federations/domain/card';
-import { setCredentialPublic } from '@/modules/federations/services/federationService';
+import { membershipAction, setCredentialPublic } from '@/modules/federations/services/federationService';
 import { FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
 import { FedLogo, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
@@ -603,6 +603,8 @@ function TrofeusSecao() {
  */
 function FiliacaoRow({ m }) {
   const [cartao, setCartao] = useState(false);
+  // O dependente não tem página própria: a renovação dele sai daqui, pelo id da filiação (o servidor confere o responsável).
+  const renovar = useFederationMutation(() => membershipAction({ federationId: m.federation_id, action: 'renew', memberId: m.id }));
   const fq = useFederation(cartao ? m.federation_id : null);
   const st = membershipState(m);
   const f = { id: m.federation_id, name: m.federation_name || t('Federação'), acronym: m.federation_acronym || '' };
@@ -620,7 +622,8 @@ function FiliacaoRow({ m }) {
         </div>
       </div>
       {temCartao && <V2Button type="button" size="sm" variant="secondary" onClick={() => setCartao(true)} data-dica="minha-area-carteirinha"><IdCard className="h-4 w-4" aria-hidden="true" />{t('Carteirinha')}</V2Button>}
-      {st.canRenew && <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Renovar')}</Link></V2Button>}
+      {st.canRenew && m.user_id && <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Renovar')}</Link></V2Button>}
+      {st.canRenew && !m.user_id && <V2Button type="button" size="sm" variant="ghost" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: (r) => toast.success(r?.chargeId ? t('Cobrança de renovação criada. Pague o Pix em Cobranças.') : t('Filiação renovada.')), onError: (e) => toast.error(e.message) })}>{t('Renovar')}</V2Button>}
       {cartao && <MemberCardDialog open onOpenChange={setCartao} member={m} federation={fq.data || f} />}
     </li>
   );
@@ -633,7 +636,7 @@ function CredencialRow({ c }) {
   const alternar = () => m.mutate({ public: !c.public, public_photo: c.public_photo !== false }, { onSuccess: () => toast.success(c.public ? t('Você saiu do diretório público.') : t('Você aparece no diretório público da federação.')), onError: (e) => toast.error(e.message) });
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 p-3">
-      <ShieldCheck className={`h-5 w-5 shrink-0 ${st.valid ? 'text-green-700' : 'text-gray-400'}`} aria-hidden="true" />
+      <ShieldCheck className={`h-5 w-5 shrink-0 ${st.valid ? 'text-green-700' : 'text-gray-500'}`} aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="font-bold text-ink">{t(COURSE_KIND_LABELS[c.kind] || COURSE_KIND_LABELS.clinic)}{c.level ? ` · ${c.level}` : ''} <span className="text-xs font-normal text-gray-500">· {c.federation_acronym || c.federation_name}</span></p>
         <p className="text-xs text-gray-500">{c.course_name}{c.valid_until ? ` · ${t('até {data}', { data: quando(c.valid_until) })}` : ''} · <V2Badge tone={st.valid ? 'green' : 'neutral'}>{st.label}</V2Badge></p>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LogoImg } from '@/v2/ui/BrandMark';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, Mail, Lock, User as UserIcon, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -37,10 +37,14 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Só caminho INTERNO (uma barra, sem `//` nem `\`): o `next` vem da URL, e redirecionamento aberto é defeito real.
+  const next = params.get('next') || '';
+  const destino = /^\/(?![/\\])/.test(next) ? next : '/';
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/');
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) navigate(destino, { replace: true });
+  }, [isAuthenticated, navigate, destino]);
 
   useEffect(() => {
     if (authError?.message) toast.error(authError.message);

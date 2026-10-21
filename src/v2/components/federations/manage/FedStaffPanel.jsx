@@ -27,8 +27,8 @@ function NovoMembro({ federation, myRole, staff }) {
   const [role, setRole] = useState(STAFF_ROLE.SECRETARY);
   const m = useFederationMutation(() => setStaffRole(federation.id, { userId: escolhido.id, userName: nomeDe(escolhido), role, federationName: federation.name, federationAcronym: federation.acronym }, { actor: user, actorRole: myRole, targetRole: null }));
   const termo = normaliza(busca.trim());
-  const jaNaEquipe = new Set((staff || []).map((s) => s.user_id));
-  const sugestoes = useMemo(() => (termo.length < 2 || !atletas.isSuccess ? [] : (atletas.data || []).filter((a) => !jaNaEquipe.has(a.id) && normaliza(nomeDe(a)).includes(termo)).slice(0, 8)), [termo, atletas.isSuccess, atletas.data, staff]);
+  const jaNaEquipe = useMemo(() => new Set((staff || []).map((s) => s.user_id)), [staff]);
+  const sugestoes = useMemo(() => (termo.length < 2 || !atletas.isSuccess ? [] : (atletas.data || []).filter((a) => !jaNaEquipe.has(a.id) && normaliza(nomeDe(a)).includes(termo)).slice(0, 8)), [termo, atletas.isSuccess, atletas.data, jaNaEquipe]);
   const papeis = assignableRoles(myRole);
   return (
     <V2Surface className="space-y-4" data-dica="federacao-equipe-adicionar">

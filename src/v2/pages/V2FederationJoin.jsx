@@ -25,11 +25,11 @@ import { useFederation, useFederationMutation, useFederationPlans, useMyFederati
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { membershipAction } from '@/modules/federations/services/federationService';
 import { canRequestMembership } from '@/modules/federations/domain/membership';
-import { isFreePlan, planPeriodLabel, planPrice, plansFor } from '@/modules/federations/domain/plans';
+import { isFreePlan, planPeriodLabel, planPrice, plansFor, planBenefitLines } from '@/modules/federations/domain/plans';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { ageGroup, ageOn, federationAsksCpf, requiredDocKinds, validateDependentInput, validatePrivateInput } from '@/modules/federations/domain/privateData';
 import { isoDate } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, DOC_KIND_LABELS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, DOC_KIND_LABELS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
 import {
   V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -39,7 +39,7 @@ import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
 function Formulario({ federation, plans, dependente = false, onEnviado }) {
-  const { user, userProfile } = useAuth();
+  const { userProfile } = useAuth();
   const idadeConta = useMemo(() => calculateAge(userProfile?.birth_date), [userProfile?.birth_date]);
   const clubes = useMyClubs();
   const [tipo, setTipo] = useState(PLAN_PERSON_TYPE.ATHLETE);
@@ -149,7 +149,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado }) {
                       {pr.discounts.length > 0 && <span className="ml-2 text-xs font-semibold text-green-700">{pr.discounts[0].label} (−{pr.discounts[0].pct}%)</span>}
                     </p>
                     {p.description && <p className="mt-2 text-sm text-gray-600">{p.description}</p>}
-                    {p.benefits && <ul className="mt-2 space-y-1 text-sm text-gray-700">{p.benefits.split('\n').filter(Boolean).map((b) => <li key={b} className="flex gap-2"><span aria-hidden="true">•</span>{b}</li>)}</ul>}
+                    {planBenefitLines(p).length > 0 && <ul className="mt-2 space-y-1 text-sm text-gray-700">{planBenefitLines(p).map((b) => <li key={b} className="flex gap-2"><span aria-hidden="true">•</span>{b}</li>)}</ul>}
                     {p.auto_approve && <p className="mt-2 text-xs text-gray-500">{t('Aprovação automática')}</p>}
                     {requiredDocKinds(p).length > 0 && <p className="mt-2 text-xs text-gray-500">{t('Exige documentos: {lista}', { lista: requiredDocKinds(p).map((k) => t(DOC_KIND_LABELS[k])).join(', ') })}</p>}
                   </button>
@@ -234,8 +234,8 @@ function Pagina() {
         <div className="flex items-start gap-3">
           <IdCard className="h-6 w-6 shrink-0 text-ink" />
           <div>
-            <h2 className="font-display text-xl font-bold text-ink">{abertas.length ? t('Falta só o pagamento') : mq.data.status === 'pending' ? t('Pedido enviado') : t('Você já tem uma filiação aqui')}</h2>
-            <p className="mt-1 text-sm text-gray-600">{abertas.length ? t('Pague por Pix e informe. O financeiro da federação confirma e libera a carteirinha.') : mq.data.status === 'pending' ? t('A secretaria da federação analisa e avisa pelo sino.') : t('Acompanhe a situação, renove e abra a carteirinha na página da federação.')}</p>
+            <h2 className="font-display text-xl font-bold text-ink">{abertas.length ? t('Falta só o pagamento') : mq.data.status === MEMBER_STATUS.PENDING ? t('Pedido enviado') : t('Você já tem uma filiação aqui')}</h2>
+            <p className="mt-1 text-sm text-gray-600">{abertas.length ? t('Pague por Pix e informe. O financeiro da federação confirma e libera a carteirinha.') : mq.data.status === MEMBER_STATUS.PENDING ? t('A secretaria da federação analisa e avisa pelo sino.') : t('Acompanhe a situação, renove e abra a carteirinha na página da federação.')}</p>
           </div>
         </div>
         {abertas.map((c) => <PixChargeBlock key={c.id} charge={c} federation={f} />)}

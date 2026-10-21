@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canConfirmCharge, canDeclarePayment, chargeDueDate, chargePixPayload, chargeTxid, chargesCsv, financeSummary, isChargeOverdue, sortChargesForStaff } from './charges.js';
+import { canConfirmCharge, canDeclarePayment, chargeDueDate, chargePixPayload, chargeTxid, chargesCsv, financeSummary, isChargeOverdue, parseBrlCents, sortChargesForStaff } from './charges.js';
 
 const fed = { name: 'Federação Gaúcha', acronym: 'FGP', city: 'Porto Alegre', payment: { pix_key: 'a@b.co', receiver_name: 'FGP' } };
 
@@ -43,5 +43,27 @@ describe('financeSummary', () => {
     const csv = chargesCsv([{ id: '1', payer_name: 'Ana "A"', origin: 'membership', amount_cents: 100, status: 'paid' }]);
     expect(csv.split('\n')).toHaveLength(2);
     expect(csv).toContain('"Ana ""A"""');
+  });
+});
+
+describe('parseBrlCents / CSV sem fórmula (revisão geral)', () => {
+  it('lê o valor digitado em reais como gente escreve', () => {
+    expect(parseBrlCents('1.234,56')).toBe(123456);
+    expect(parseBrlCents('1234,56')).toBe(123456);
+    expect(parseBrlCents('10.50')).toBe(1050); // ponto decimal — antes virava R$ 1.000,00
+    expect(parseBrlCents('1.000')).toBe(100000); // ponto de milhar
+    expect(parseBrlCents('R$ 10,5')).toBe(1050);
+    expect(parseBrlCents('10')).toBe(1000);
+    expect(parseBrlCents('0,00')).toBe(0);
+  });
+  it('lixo devolve NaN (a validação acusa), nunca zero', () => {
+    expect(Number.isNaN(parseBrlCents('abc'))).toBe(true);
+    expect(Number.isNaN(parseBrlCents(''))).toBe(true);
+    expect(Number.isNaN(parseBrlCents('10,123'))).toBe(true);
+  });
+  it('célula que começa com = + - @ não vira fórmula na planilha', () => {
+    const csv = chargesCsv([{ id: '1', payer_name: '=HYPERLINK("http://x")', origin: 'membership', amount_cents: 100, status: 'paid' }, { id: '2', payer_name: '-2+3', origin: 'membership', amount_cents: 100, status: 'paid' }]);
+    expect(csv).toContain(`"'=HYPERLINK(""http://x"")"`);
+    expect(csv).toContain(`"'-2+3"`);
   });
 });

@@ -81,9 +81,11 @@ export function validateFederationInput(input = {}) {
 
 /** Marca: cor e logo. Cor inválida cai no padrão. */
 export function normalizeFederationBranding(input = {}) {
+  const logo = str(input.logo_url, 500);
   return {
     color: normalizeHex(input.color) || BRAND_DEFAULT_COLOR,
-    logo_url: str(input.logo_url, 500),
+    // Só https: vai para `<img src>` em toda página e para a imagem da carteirinha.
+    logo_url: /^https:\/\/\S+$/i.test(logo) ? logo : '',
   };
 }
 

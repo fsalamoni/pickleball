@@ -8,6 +8,25 @@ import { addMonthsISO, daysBetween, isoDate, toISODate } from './membership.js';
 
 export { formatBrlCents };
 
+/**
+ * O valor digitado em reais → centavos. Aceita "1.234,56", "1234,56", "10.50",
+ * "10", "R$ 10,5". A vírgula é SEMPRE decimal; o ponto é decimal quando é o
+ * único separador seguido de 1–2 dígitos ("10.50") e milhar nos demais casos
+ * ("1.000"). 🐞 Havia três cópias desta conta nas telas, e todas trocavam o
+ * ponto por nada: "10.00" virava R$ 1.000,00. Lixo devolve NaN (a validação
+ * acusa), nunca zero (zero é "gratuito").
+ * @param {*} txt
+ * @returns {number} centavos inteiros, ou NaN
+ */
+export function parseBrlCents(txt) {
+  let s = String(txt ?? '').replace(/R\$|\s/g, '').trim();
+  if (!s) return NaN;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  return Math.round(Number(s) * 100);
+}
+
 /** Identificador do Pix (≤ 25 alfanuméricos): o id da cobrança, limpo. */
 export function chargeTxid(chargeId) {
   return String(chargeId || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***';
@@ -80,7 +99,8 @@ export function sortChargesForStaff(charges = []) {
 
 /** Linhas do CSV do contador (uma por cobrança), cabeçalho incluso. */
 export function chargesCsv(charges = []) {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  // Célula que começa com = + - @ (ou tab/CR) vira FÓRMULA ao abrir no Excel/Sheets; o apóstrofo a neutraliza.
+  const esc = (v) => { const s = String(v ?? ''); return `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`; };
   const linhas = [['id', 'filiado', 'origem', 'valor_centavos', 'status', 'vencimento', 'informado_em', 'pago_em', 'confirmado_por'].join(';')];
   charges.forEach((c) => linhas.push([
     c.id, c.payer_name, c.origin, c.amount_cents, c.status, toISODate(c.due_date), toISODate(c.declared_at), toISODate(c.paid_at), c.confirmed_by_name,

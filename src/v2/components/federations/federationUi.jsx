@@ -25,6 +25,8 @@ import { fmtData, t } from '@/core/i18n';
 export const fedPath = (f) => `/federacoes/${f?.id || ''}`;
 export const fedManagePath = (f, aba) => `/federacoes/${f?.id || ''}/gerir${aba ? `?aba=${aba}` : ''}`;
 export const fedPublicPath = (f) => `/f/${f?.slug || ''}`;
+/** O host em que a plataforma está aberta (prévia, emulador e produção mostram o endereço CERTO). */
+export const publicHost = () => (typeof window !== 'undefined' && window.location?.host) || 'picklerush.web.app';
 
 /** Flag desligada ⇒ a tela não existe: volta ao início, sem erro. */
 export function FederationGate({ children }) {

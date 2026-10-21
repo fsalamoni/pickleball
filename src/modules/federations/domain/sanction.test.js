@@ -42,3 +42,17 @@ describe('chancela de torneio', () => {
     expect(membershipRequirement(t, [{ federation_id: 'outra', status: 'active' }]).message).toContain('FPP');
   });
 });
+
+describe('membershipRequirement — a MESMA conta da carteirinha (revisão geral)', () => {
+  const torneio = { federation_id: 'fed1', federation_sanction: { status: 'approved', tier: 'regional', requires_membership: true, federation_acronym: 'FPP' } };
+  it('vencida não está em dia; ativa está; suspensão disciplinar em vigor não está', () => {
+    expect(membershipRequirement(torneio, [{ federation_id: 'fed1', status: 'active', valid_until: '2026-01-01' }], { hoje: '2026-06-01' }).ok).toBe(false);
+    expect(membershipRequirement(torneio, [{ federation_id: 'fed1', status: 'active', valid_until: '2027-01-01' }], { hoje: '2026-06-01' }).ok).toBe(true);
+    expect(membershipRequirement(torneio, [{ federation_id: 'fed1', status: 'active', valid_until: '2027-01-01', discipline_until_ms: Date.UTC(2099, 0, 1) }], { hoje: '2026-06-01' }).ok).toBe(false);
+  });
+  it('em duplas avisa que vale para o parceiro', () => {
+    const ok = membershipRequirement(torneio, [{ federation_id: 'fed1', status: 'active', valid_until: '2027-01-01' }], { hoje: '2026-06-01', doubles: true });
+    expect(ok.partnerHint).toContain('FPP');
+    expect(membershipRequirement(torneio, [], { doubles: false }).partnerHint).toBe('');
+  });
+});

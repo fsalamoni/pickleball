@@ -61,7 +61,7 @@ function Central({ federationId }) {
   const podeFiliados = perms.includes(FED_PERMISSION.MEMBERS);
   const podeFinanceiro = perms.includes(FED_PERMISSION.FINANCE);
   const admin = perms.includes(FED_PERMISSION.ADMIN);
-  const membersQ = useFederationMembers(federationId, { enabled: papel.isStaff && podeFiliados });
+  const membersQ = useFederationMembers(federationId, { enabled: papel.isStaff && (podeFiliados || perms.includes(FED_PERMISSION.DISCIPLINE)) }); // a disciplina escolhe o filiado na lista
   const chargesQ = useFederationCharges(federationId, { enabled: papel.isStaff && podeFinanceiro });
   const plansQ = useFederationPlans(federationId, { enabled: papel.isStaff && (admin || podeFinanceiro || podeFiliados) });
   const staffQ = useFederationStaff(federationId, { enabled: papel.isStaff && admin });
@@ -109,7 +109,7 @@ function Central({ federationId }) {
 
       {naoAprovada && (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {f.status === FEDERATION_STATUS.SUSPENDED ? t('A federação está suspensa pela plataforma: a página pública e as filiações ficam fechadas até a revisão.') : t('A federação ainda não foi aprovada pela plataforma. Você já pode preparar planos, Pix e página; a filiação abre depois da aprovação.')}
+          {f.status === FEDERATION_STATUS.SUSPENDED ? t('A federação está suspensa pela plataforma: a página pública e as filiações ficam fechadas até a revisão.') : f.status === FEDERATION_STATUS.REJECTED ? t('O pedido de abertura foi recusado pela plataforma: {motivo}.', { motivo: f.review?.reason || t('sem motivo informado') }) : t('A federação ainda não foi aprovada pela plataforma. Você já pode preparar planos, Pix e página; a filiação abre depois da aprovação.')}
         </p>
       )}
 
@@ -125,7 +125,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'filiados' && tab === 'filiados-orgs' && <FedAffiliationsPanel affiliationsQ={affiliationsQ} />}
         {secaoAtiva.id === 'filiados' && ABAS_SECRETARIA.includes(tab) && <FedSecretariatPanel federation={f} tab={tab} membersQ={membersQ} transfersQ={transfersQ} incomingQ={incomingQ} documentsQ={documentsQ} importsQ={importsQ} plansQ={plansQ} />}
         {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} tab={tab} />}
-        {secaoAtiva.id === 'cursos' && <FedCoursesPanel federation={f} coursesQ={coursesQ} credentialsQ={credentialsQ} tab={tab} />}
+        {secaoAtiva.id === 'cursos' && <FedCoursesPanel federation={f} coursesQ={coursesQ} credentialsQ={credentialsQ} tab={tab} perms={perms} />}
         {secaoAtiva.id === 'disciplina' && <FedDisciplinePanel federation={f} membersQ={membersQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} tab={tab} />}
         {secaoAtiva.id === 'comunicacao' && <FedCommsPanel federation={f} newsQ={newsQ} tab={tab} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}

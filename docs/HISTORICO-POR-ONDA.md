@@ -2162,3 +2162,21 @@
 >   + impressão de grupos.
 > - **Onda Q — V1 Legacy Cleanup** (`0f824b0`): remoção de
 >   páginas V1 mortas em `src/modules/*/pages`.
+
+## Federações — revisão geral (2026-10-21)
+
+Depois dos quatro PRs (#281, #282, #283, #287), uma varredura de regra ×
+servidor × cliente achou e corrigiu, no mesmo PR: a regra recusava ao admin da
+plataforma o que a tela e o servidor lhe davam (`fedHas`); a equipe de uma
+federação aprovada não era legível por quem via a página; `private/data` da
+filiação podia ser gravado pelo dono (agora só o servidor); a filiação gratuita
+com aprovação automática fazia `update` em documento que não existia; a
+confirmação de cobrança de curso de não filiado quebrava por falta de
+`member_id`; três telas liam "10.50" como R$ 1.000,00; a varredura expirava a
+filiação no último dia válido; suspensões sobrepostas e futuras eram ignoradas;
+`disabled` num `<Link>` deixava abrir a filiação de uma federação suspensa; e
+o teste de navegador novo achou dois que só o navegador pega: a regra recusava
+o `get` da própria filiação ainda inexistente (quem não é filiado nunca via o
+"Filiar-se") e a lista de benefícios do plano derrubava a página pública.
+A lição de teste que fica: `affectedKeys()` de um update idêntico é vazio, e um
+`hasOnly` sobre ele passa sem provar nada. Detalhe em `docs/50-FEDERACAO.md` §12.

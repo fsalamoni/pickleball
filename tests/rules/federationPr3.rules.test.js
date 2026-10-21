@@ -104,18 +104,19 @@ describe('⭐ dados privados e dependente', () => {
     await assertFails(getDoc(priv(BIA)));
     await assertFails(getDoc(doc(anonimo(), 'federation_members', `${FED}_${ANA}`, 'private', 'data')));
   });
-  it('grava só o próprio (e com CPF só dígitos); a secretaria não grava', async () => {
-    await assertSucceeds(setDoc(priv(ANA), { cpf: '52998224725', guardian: null }));
-    await assertFails(setDoc(priv(ANA), { cpf: '529.982.247-25' }));
+  it('ninguém grava pelo navegador — nem o próprio: o CPF e o nascimento entram pelo servidor (o nascimento decide o desconto de idade)', async () => {
+    await assertFails(setDoc(priv(ANA), { cpf: '52998224725', guardian: null }));
+    await assertFails(setDoc(priv(ANA), { birth_date: '2020-01-01' }));
     await assertFails(setDoc(priv(SEC), { cpf: '52998224725' }));
     await assertFails(setDoc(priv(BIA), { cpf: '52998224725' }));
+    await assertFails(setDoc(priv(ADMIN), { cpf: '52998224725' }));
   });
-  it('o dependente é do responsável: lê, muda preferências e grava o privado dele', async () => {
+  it('o dependente é do responsável: lê e muda preferências; o privado dele também é só do servidor', async () => {
     await assertSucceeds(getDoc(doc(como(ANA), 'federation_members', DEP)));
     await assertFails(getDoc(doc(como(BIA), 'federation_members', DEP)));
     await assertSucceeds(updateDoc(doc(como(ANA), 'federation_members', DEP), { minor_photo_consent: true }));
     await assertFails(updateDoc(doc(como(ANA), 'federation_members', DEP), { status: 'active', valid_until: '2099-01-01' }));
-    await assertSucceeds(setDoc(priv(ANA, DEP), { cpf: '', guardian: { name: 'Ana', contact: '51 9999' } }));
+    await assertFails(setDoc(priv(ANA, DEP), { cpf: '', guardian: { name: 'Ana', contact: '51 9999' } }));
     await assertFails(setDoc(priv(BIA, DEP), { cpf: '' }));
     // A lista dos dependentes do responsável é consultável.
     await assertSucceeds(getDocs(query(collection(como(ANA), 'federation_members'), where('guardian_uid', '==', ANA))));
@@ -128,6 +129,8 @@ describe('⭐ documentos', () => {
     await assertSucceeds(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd3'), documento(ANA, { member_id: DEP, kind: 'autorizacao_responsavel' })));
     await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd4'), documento(ANA, { status: 'approved' })));
     await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd5'), documento(ANA, { storage_path: `federacao/${BIA}/abc.pdf` })));
+    // Nem para a secretaria de OUTRA federação: o documento é da federação da filiação.
+    await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd6'), documento(ANA, { federation_id: 'outraFed' })));
     await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd6'), documento(ANA, { member_id: `${FED}_${BIA}` })));
     await assertFails(setDoc(doc(como(BIA), 'federation_documents_submitted', 'd7'), documento(ANA)));
     await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd8'), documento(ANA, { kind: 'rg' })));

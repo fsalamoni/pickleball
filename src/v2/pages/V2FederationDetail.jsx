@@ -26,6 +26,8 @@ import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip,
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
 import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
 import { t, tn } from '@/core/i18n';
+import { safeHttpUrl } from '@/core/domain/externalUrl';
+import { useHashScroll } from '@/v2/ui/useHashScroll';
 
 /** A situação da pessoa nesta federação: filiar-se, pagar, renovar, carteirinha. */
 function MinhaSituacao({ federation, plans }) {
@@ -50,10 +52,15 @@ function MinhaSituacao({ federation, plans }) {
           <p className="font-display text-lg font-bold text-ink">{t('Você ainda não é filiado')}</p>
           <p className="text-sm text-gray-600">{m?.status === MEMBER_STATUS.REJECTED ? t('O pedido anterior foi recusado: {motivo}.', { motivo: m.reject_reason || t('sem motivo informado') }) : t('Escolha um plano, pague por Pix e receba a carteirinha digital.')}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <V2Button asChild disabled={!aberta}><Link to={`/federacoes/${federation.id}/filiar`}><IdCard className="h-4 w-4" />{t('Filiar-se')}</Link></V2Button>
-          <V2Button asChild variant="ghost" disabled={!aberta}><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
-        </div>
+        {aberta ? (
+          <div className="flex flex-wrap gap-2">
+            <V2Button asChild><Link to={`/federacoes/${federation.id}/filiar`}><IdCard className="h-4 w-4" />{t('Filiar-se')}</Link></V2Button>
+            <V2Button asChild variant="ghost"><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
+          </div>
+        ) : (
+          // `disabled` num `<Link>` não desliga nada: o link abria a tela de filiar numa federação suspensa.
+          <p className="text-sm text-gray-500">{t('A filiação abre quando a federação estiver aprovada e ativa.')}</p>
+        )}
       </V2Surface>
     );
   }
@@ -93,6 +100,7 @@ function MinhaSituacao({ federation, plans }) {
 
 function Detalhe() {
   const { federationId } = useParams();
+  useHashScroll(); // o aviso leva a `#fed-cursos`, `#fed-ranking`… — a seção só aparece depois da consulta
   const { user } = useAuth();
   const fq = useFederation(federationId);
   const pq = useFederationPlans(federationId);
@@ -164,9 +172,9 @@ function Detalhe() {
             <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Contato')}</p>
             {contato.email && <a href={`mailto:${contato.email}`} className="flex items-center gap-2 text-sm text-ink hover:underline"><Mail className="h-4 w-4" aria-hidden="true" />{contato.email}</a>}
             {contato.phone && <a href={`tel:${contato.phone}`} className="flex items-center gap-2 text-sm text-ink hover:underline"><Phone className="h-4 w-4" aria-hidden="true" />{contato.phone}</a>}
-            {f.site && <a href={f.site} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2 text-sm text-ink hover:underline"><Globe className="h-4 w-4" aria-hidden="true" />{f.site.replace(/^https?:\/\//, '')}</a>}
+            {safeHttpUrl(f.site) && <a href={safeHttpUrl(f.site)} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2 text-sm text-ink hover:underline"><Globe className="h-4 w-4" aria-hidden="true" />{f.site.replace(/^https?:\/\//, '')}</a>}
             {f.instagram && <a href={`https://instagram.com/${f.instagram}`} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2 text-sm text-ink hover:underline"><Instagram className="h-4 w-4" aria-hidden="true" />@{f.instagram}</a>}
-            {f.cnpj_masked && <p className="text-xs text-gray-500">CNPJ {f.cnpj_masked}</p>}
+            {f.cnpj_masked && <p className="text-xs text-gray-500">{t('CNPJ {n}', { n: f.cnpj_masked })}</p>}
           </V2Surface>
         </aside>
       </div>

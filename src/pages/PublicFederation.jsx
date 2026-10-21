@@ -6,6 +6,7 @@
  * login e de lá à federação. Só federação APROVADA aparece (o serviço filtra);
  * flag desligada ⇒ início. Falha de rede não vira "não existe".
  */
+import { safeHttpUrl } from '@/core/domain/externalUrl';
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Globe, Instagram, Landmark, Mail, Phone } from 'lucide-react';
@@ -61,7 +62,7 @@ export default function PublicFederation() {
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-gray-700">
                 {f.contact_public?.email && <a href={`mailto:${f.contact_public.email}`} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1"><Mail className="h-3.5 w-3.5" aria-hidden="true" />{f.contact_public.email}</a>}
                 {f.contact_public?.phone && <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1"><Phone className="h-3.5 w-3.5" aria-hidden="true" />{f.contact_public.phone}</span>}
-                {f.site && <a href={f.site} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1"><Globe className="h-3.5 w-3.5" aria-hidden="true" />{t('Site')}</a>}
+                {safeHttpUrl(f.site) && <a href={safeHttpUrl(f.site)} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1"><Globe className="h-3.5 w-3.5" aria-hidden="true" />{t('Site')}</a>}
                 {f.instagram && <a href={`https://instagram.com/${f.instagram}`} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1"><Instagram className="h-3.5 w-3.5" aria-hidden="true" />@{f.instagram}</a>}
               </div>
               <div className="mt-6">
@@ -82,7 +83,7 @@ export default function PublicFederation() {
             <FedStoreLink federation={f} />
             <FedSponsorsStrip federation={f} />
             <FedGovernanceBlock federation={f} />
-            <p className="text-center text-xs text-gray-500">{t('Carteirinha de filiado? Verifique pelo QR ou em {url}.', { url: 'picklerush.web.app/f/verificar' })}</p>
+            <p className="text-center text-xs text-gray-500">{t('Carteirinha de filiado? Verifique pelo QR ou em {url}.', { url: `${window.location.host}/f/verificar` })}</p>
           </>
         )}
       </div>

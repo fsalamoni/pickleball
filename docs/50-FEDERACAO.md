@@ -33,16 +33,16 @@ O que esta entrega cobre:
 | Pedido de filiação, aprovação, cobrança Pix, "Já paguei", confirmação | `/federacoes/:id/filiar`, Central → Filiados / Financeiro |
 | Carteirinha digital (PNG, imprimir, compartilhar) e verificação pelo QR | Minha área → Federações, página da federação, `/f/verificar/:codigo` |
 | Equipe com 8 papéis e permissões | Central → Equipe |
-| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (todos ainda `planned`: "em breve") |
+| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (nove `available`; os demais `planned`: "em breve") |
 | Avisos (sino, e por e-mail/celular quando `external_messaging` estiver ligada) | categoria "Federações" em Configurações → Notificações |
 | Exclusão de conta e exportação de dados | `functions/accountDeletion.js`, `federationExportService.js` |
 | Ajuda, guias com seta, pontos de dica, en/es, termos legais | §9 |
 
-O que **não** está nesta entrega e aparece como "em breve" na aba Módulos:
-torneios chancelados, ranking oficial, clubes e arenas filiados, cursos e
-credenciais, disciplina e ouvidoria, notícias, patrocinadores, loja oficial.
-São as fases seguintes do plano (PR 2 a PR 4). `FED_MODULE_META[x].status`
-passa de `planned` a `available` quando a tela existir.
+Os sub-módulos entregues nos PRs 2 a 4 (torneios chancelados, ranking
+oficial, clubes e arenas filiados, cursos e credenciais, disciplina e
+ouvidoria, notícias, patrocinadores, cupons e campanhas, loja oficial) estão
+`available`; o que ainda não tem tela segue `planned` ("em breve") e
+`FED_MODULE_META[x].status` só muda quando a tela existir.
 
 ## 2. Duas chaves: a flag e os módulos da federação
 
@@ -624,6 +624,21 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
     `storeFederations` (cliente) — `admin` ou `finance`, só com `store` ligado.
 26. **O card do início só existe com a flag** (`requer: 'federacao'` no
     catálogo de cards); flag desligada, ele some até do seletor.
+27. **O admin da plataforma tem toda permissão também na regra** (`fedHas`);
+    tela, servidor e regra respondem igual. Papel → permissões é UM mapa com
+    guarda (`federacaoPermissoes.test.js`).
+28. **`private/data` da filiação só o servidor grava**; o dono lê. E a
+    exportação de dados leva esses campos.
+29. **Teste de regra grava valor DIFERENTE**: update idêntico tem
+    `affectedKeys()` vazio e `hasOnly` passa à toa.
+30. **"Só filiados" vale para a dupla inteira** (`fedMemberOk` no parceiro) e
+    "em dia" é a conta de `membershipState` (vencida ou suspensa não está).
+31. **Valor em reais digitado passa por `parseBrlCents`**; nunca uma conta
+    local com `replace('.', '')`.
+32. **A própria filiação ainda inexistente é legível** (`allow get` por id em
+    `federation_members`): sem isso ninguém que não é filiado vê o
+    "Filiar-se". Toda leitura de documento `{fed}_{uid}` antes de criar precisa
+    de uma cláusula assim — prove no emulador, não com banco falso.
 
 ## 11. Pendências e próximas fases
 
@@ -648,3 +663,89 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
   oficial no Mercado (`store`), governança e card no início (§6.7). Fora de
   propósito: notícia agendada (publica-se na hora), aviso de campanha (o canal
   é a notícia) e patrocinador com contrato/valores (só a vitrine).
+
+## 12. Revisão geral (2026-10-21)
+
+Uma varredura de ponta a ponta — regra × servidor × cliente, vínculos entre
+coleções, telas, idiomas e exportação — depois dos quatro PRs. O que estava
+errado e foi corrigido no mesmo PR (tudo com teste):
+
+**Regras do Firestore** (`tests/rules/federationRevisao.rules.test.js` +
+ajustes nos quatro arquivos existentes)
+- `fedHas` passou a incluir o admin da plataforma — a tela e o servidor já
+  diziam que ele tem toda permissão, e a regra recusava o que a tela oferecia.
+- A validação do pedido de abertura (`fedProfileOk`) vale também quando o
+  `admin` edita nome, sigla, endereço ou nível; o `finance` só toca o Pix
+  (`payment`).
+- A equipe de uma federação **aprovada** é legível por qualquer conta (a
+  página mostra a diretoria e a tela de chancela precisa saber quem decide);
+  anônimo não lê. A `discipline` lê as filiações (escolhe o filiado na lista).
+- `federation_members/{id}/private/data` **só o servidor grava** (o pedido de
+  filiação e a secretaria gravam pelo servidor; o dono lê).
+- Documento enviado tem de ser da federação da filiação; apagar documento e
+  resultado pelo `admin` exige a flag ligada; a decisão da chancela exige a
+  flag e o organizador não altera uma chancela aprovada.
+- "Só filiados" vale para a **dupla inteira** (`fedMemberOk` para o parceiro)
+  e o resultado enviado tem de ser do `tier` da chancela.
+- 🐞 Armadilha de teste: `chg()` é `affectedKeys()`, e um update com o MESMO
+  valor tem conjunto vazio — `hasOnly([...])` passa à toa. Teste de regra
+  grava um valor DIFERENTE.
+
+**Servidor** (`functions/federations.test.js`, `federationPr3.test.js`)
+- Transação do Admin SDK: toda leitura antes de toda escrita (o banco falso
+  dos testes agora recusa leitura depois de escrita, como o SDK).
+- Filiação gratuita com `auto_approve` nasce num `set`, não num `update` de
+  documento inexistente; `exigeSemOutraFederacao` vale no pedido e na
+  aprovação; preço do plano arredonda igual ao cliente (paridade).
+- `chargeConfirm` aceita cobrança sem filiação (curso de não filiado) e recusa
+  quitar filiação inexistente; o link do curso usa `?ancora=fed-cursos` (a
+  regra de `notifications` recusa `#`).
+- `review` exige a flag, recusa aprovar com slug já usado por outra aprovada
+  e só cria presidente se a conta existir; `verify` responde "não encontrado"
+  com a flag desligada; cancelar filiação apaga `card_code`.
+- Varredura: expira pela DATA (`daysLeft < 0`), avisa "vence hoje", e as três
+  varreduras (filiação, transferência, disciplina) rodam com `allSettled`.
+- Disciplina: suspensões sobrepostas recalculam o fim (`recalcularSuspensao`),
+  suspensão futura entra pela varredura (`sweep`), desfazer exclusão emite
+  código novo de carteirinha, recurso só `uphold|overturn`, sanção só em
+  filiação viva. Exclusão de conta cancela as filiações vivas da pessoa e dos
+  dependentes.
+
+**Cliente**
+- `parseBrlCents` (uma só leitura de "R$": "10.50" era R$ 1.000,00 nas três
+  telas); CSV do financeiro sem célula-fórmula; virada do plano anual só em
+  dia que existe; diretoria/atas acima do teto é erro dito; importação recusa
+  31/02; logo só https; `slugEmUso` consulta só aprovadas (a regra provava
+  só isso); notícia publicada com a data LOCAL; revogar chancela rejeita os
+  resultados já enviados; `membershipRequirement` usa a MESMA conta da
+  carteirinha (vencida ou suspensa não está em dia) e avisa que vale para a
+  dupla.
+- Telas: `disabled` num `<Link>` não desliga nada (federação suspensa escondia
+  o botão e abria a tela) — agora o texto diz; site só https; `CNPJ {n}` por
+  `t()`; `useHashScroll` na página (o aviso leva a `#fed-cursos`); datas por
+  `quando()`/`fmtData`; "Entrar para se inscrever" volta à federação
+  (`/login?next=`, só caminho interno); inscrever em curso só com a lista de
+  inscrições em mãos; "Apagar" curso só para `admin` (a regra); o dependente
+  renova pela Minha área (`memberId`); a disciplina carrega a lista de
+  filiados; federação recusada diz o motivo; `MEMBER_STATUS.PENDING` no lugar
+  do literal; host da página pública vem do navegador; contraste cinza-500.
+- Exportação LGPD leva `private/data` das filiações da pessoa e dos
+  dependentes (`listMyMembersPrivate`).
+- 🐞 Achado pelo teste de navegador: o `get` da PRÓPRIA filiação ainda
+  inexistente (`federation_members/{fed}_{uid}`) era RECUSADO pela regra —
+  documento ausente ⇒ `od()` nulo ⇒ erro — e a página da federação mostrava
+  "Não carregou a sua situação" no lugar do **Filiar-se** para toda pessoa que
+  ainda não é filiada. Nenhum teste de serviço pega isso (o banco falso não
+  recusa); só o emulador e o navegador. Agora `allow get` para o id com o
+  próprio uid no fim (`federationRevisao.rules.test.js` item 9) — a mesma
+  lição de `canGetMissingArenaUserDoc`.
+- 🐞 Achado pelo teste de navegador: `benefits` do plano é TEXTO (um por
+  linha), e as duas listas de planos faziam `.split('\n')` direto — um plano
+  com lista gravada (importação, mão) derrubava a página pública inteira no
+  "Algo deu errado". Agora `planBenefitLines(plan)` (`domain/plans.js`) lê
+  texto ou lista, nos dois lugares.
+- Guarda nova `src/core/guards/federacaoPermissoes.test.js`: papel →
+  permissões igual em `STAFF_ROLE_PERMISSIONS` e em `fedRolePerms()` da regra.
+- Teste de navegador (`tests/e2e/logado.spec.js`, `@emuladores`): página
+  pública sem conta, diretório, página da federação, formulário de filiação e
+  Minha área → Federações montam com a flag ligada.

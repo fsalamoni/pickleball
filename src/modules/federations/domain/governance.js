@@ -25,13 +25,18 @@ export function validateGovernance(input = {}) {
   if (start && !isDate(start)) errors['mandate.start'] = t('Data inválida.');
   if (end && !isDate(end)) errors['mandate.end'] = t('Data inválida.');
   if (start && end && !errors['mandate.start'] && !errors['mandate.end'] && end < start) errors['mandate.end'] = t('O mandato termina depois de começar.');
-  const board = (Array.isArray(input.board) ? input.board : []).slice(0, BOARD_MAX).map((m, i) => {
+  const boardIn = Array.isArray(input.board) ? input.board : [];
+  const minutesIn = Array.isArray(input.minutes) ? input.minutes : [];
+  // Passou do teto é ERRO dito, nunca corte silencioso: a diretoria perderia o 13º nome sem ninguém ver.
+  if (boardIn.length > BOARD_MAX) errors.board = t('A diretoria tem no máximo {n} nomes.', { n: BOARD_MAX });
+  if (minutesIn.length > MINUTES_MAX) errors.minutes = t('No máximo {n} atas. Apague as mais antigas.', { n: MINUTES_MAX });
+  const board = boardIn.slice(0, BOARD_MAX).map((m, i) => {
     const role = str(m?.role, 60);
     const name = str(m?.name, 80);
     if (!role || !name) errors[`board.${i}`] = t('Cargo e nome.');
     return { role, name };
   });
-  const minutes = (Array.isArray(input.minutes) ? input.minutes : []).slice(0, MINUTES_MAX).map((a, i) => {
+  const minutes = minutesIn.slice(0, MINUTES_MAX).map((a, i) => {
     const title = str(a?.title, 120);
     const date = str(a?.date, 10);
     const url = str(a?.url, 500);

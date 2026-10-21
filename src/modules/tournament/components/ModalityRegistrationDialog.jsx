@@ -74,7 +74,7 @@ export default function ModalityRegistrationDialog({
   const fedOn = useFederationsEnabled();
   const sancao = sanctionState(tournament);
   const minhasFiliacoes = useMyMemberships({ enabled: fedOn && !isAdmin && sancao.approved && sancao.requiresMembership });
-  const filiacao = fedOn && !isAdmin ? membershipRequirement(tournament, minhasFiliacoes.isSuccess ? minhasFiliacoes.data : undefined) : { required: false, ok: true, message: '' };
+  const filiacao = fedOn && !isAdmin ? membershipRequirement(tournament, minhasFiliacoes.isSuccess ? minhasFiliacoes.data : undefined, { doubles: modality?.format === MODALITY_FORMAT.DOUBLES }) : { required: false, ok: true, message: '', partnerHint: '' };
   // Seletor de atletas da plataforma: exclusivo do admin da plataforma, atrás
   // da flag, e apenas quando o modal está aberto em modo admin do torneio.
   const canPickAthletes = Boolean(isAdmin && isPlatformAdmin && adminAthleteRegOn);
@@ -369,6 +369,7 @@ export default function ModalityRegistrationDialog({
               <p className="mt-1">{filiacao.message} <Link to={`/federacoes/${sancao.federationId}`} className="font-semibold underline">{t('Ver a federação')}</Link></p>
             </div>
           )}
+          {filiacao.required && filiacao.ok === true && filiacao.partnerHint && <p className="text-sm text-gray-600" data-dica="torneio-so-filiados">{filiacao.partnerHint}</p>}
           {filiacao.required && filiacao.ok === null && !minhasFiliacoes.isError && <p className="text-sm text-gray-500">{t('Conferindo a sua filiação na {sigla}…', { sigla: sancao.acronym })}</p>}
           {filiacao.required && minhasFiliacoes.isError && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">

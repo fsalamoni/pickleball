@@ -164,6 +164,18 @@ describe('PR 3: cursos e credenciais', () => {
     expect(doc(db, 'federation_courses/c2').enrolled_count).toBe(0);
     expect(doc(db, `federation_charges/${e.chargeId}`).status).toBe('cancelled');
   });
+  it('a cobrança de curso de quem NÃO é filiado (sem `member_id`) é confirmada e cancelada sem derrubar a função', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_courses/c3', { federation_id: 'fpp', name: 'Clínica aberta', kind: 'clinic', status: 'open', starts_at: '2026-12-01', seats: 0, enrolled_count: 0, price_cents: 3000, requires_membership: false });
+    const e = await courses.course(ctx(db), { uid: 'caio' }, { action: 'enroll', courseId: 'c3' });
+    expect(doc(db, `federation_charges/${e.chargeId}`).member_id).toBeNull();
+    await confirmar(db, e.chargeId);
+    expect(doc(db, 'federation_course_enrollments/c3_caio').status).toBe('confirmed');
+    expect(avisosPara(db, 'caio').at(-1).link).toBe('/federacoes/fpp?ancora=fed-cursos');
+    const e2 = await courses.course(ctx(db), ANA, { action: 'enroll', courseId: 'c3' });
+    await fed.chargeConfirm(ctx(db), TES, { chargeId: e2.chargeId, action: 'cancel', note: 'Desistiu' });
+    expect(doc(db, 'federation_course_enrollments/c3_ana').status).toBe('cancelled');
+  });
 });
 
 describe('PR 3: disciplina', () => {
@@ -203,7 +215,46 @@ describe('PR 3: disciplina', () => {
     expect(mem.status).toBe('cancelled');
     expect(doc(db, `federation_card_index/${mem.card_code}`)).toBeUndefined();
     await discipline.discipline(ctx(db), DISC, { action: 'end', sanctionId: ex.sanctionId, note: 'Revisto pela diretoria' });
-    expect(doc(db, 'federation_members/fpp_ana').status).toBe('active');
+    const volta = doc(db, 'federation_members/fpp_ana');
+    expect(volta.status).toBe('active');
+    // Desfeita a exclusão, a carteirinha volta a VERIFICAR: código novo, no índice.
+    expect(volta.card_code).toBeTruthy();
+    expect(volta.card_code).not.toBe(mem.card_code);
+    expect((await fed.verify(ctx(db), { code: volta.card_code })).status).toBe('active');
+  });
+  it('duas suspensões sobrepostas: encerrar uma mantém a outra; a futura só vale a partir de `starts_at` (varredura)', async () => {
+    const db = cenario();
+    await filiada(db);
+    const sus = (over) => discipline.discipline(ctx(db), DISC, { action: 'apply', federationId: 'fpp', userId: 'ana', kind: 'suspension', reason: 'Motivo com mais de dez letras', starts_at: '2026-10-18', ends_at: '2026-11-30', ...over });
+    const a = await sus({});
+    const b = await sus({ ends_at: '2026-12-31' });
+    expect(doc(db, 'federation_members/fpp_ana')).toMatchObject({ discipline_until_ms: m.endOfDayBrMs('2026-12-31'), discipline_sanction_id: b.sanctionId });
+    await discipline.discipline(ctx(db), DISC, { action: 'end', sanctionId: b.sanctionId, note: 'x' });
+    // 🐞 Antes: desfazer B zerava o prazo e A, ainda em vigor, deixava de valer.
+    expect(doc(db, 'federation_members/fpp_ana')).toMatchObject({ discipline_until_ms: m.endOfDayBrMs('2026-11-30'), discipline_sanction_id: a.sanctionId });
+    await discipline.discipline(ctx(db), DISC, { action: 'end', sanctionId: a.sanctionId, note: 'x' });
+    expect(doc(db, 'federation_members/fpp_ana').discipline_until_ms).toBe(0);
+    // Futura: nada muda hoje; a varredura do dia aplica.
+    const fut = await sus({ starts_at: '2026-11-01', ends_at: '2026-11-15' });
+    expect(doc(db, 'federation_members/fpp_ana').discipline_until_ms).toBe(0);
+    expect(doc(db, `federation_sanctions/${fut.sanctionId}`).applied_at_ms).toBeNull();
+    expect(await discipline.sweep(ctx(db))).toEqual({ aplicadas: 0 });
+    const dia = Date.UTC(2026, 10, 2, 15, 0, 0); // 2026-11-02
+    expect(await discipline.sweep(ctx(db, dia))).toEqual({ aplicadas: 1 });
+    expect(doc(db, 'federation_members/fpp_ana').discipline_until_ms).toBe(m.endOfDayBrMs('2026-11-15'));
+    expect(doc(db, `federation_sanctions/${fut.sanctionId}`).applied_at_ms).toBe(dia);
+    expect(await discipline.sweep(ctx(db, dia))).toEqual({ aplicadas: 0 });
+  });
+  it('recurso só com uphold/overturn; filiação encerrada não recebe sanção', async () => {
+    const db = cenario();
+    await filiada(db);
+    const s = await discipline.discipline(ctx(db), DISC, { action: 'apply', federationId: 'fpp', userId: 'ana', kind: 'warning', reason: 'Motivo com mais de dez letras' });
+    await discipline.discipline(ctx(db), ANA, { action: 'appeal', sanctionId: s.sanctionId, text: 'Recurso com pelo menos vinte letras.' });
+    await expect(discipline.discipline(ctx(db), DISC, { action: 'decide_appeal', sanctionId: s.sanctionId, decision: 'talvez' })).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(discipline.discipline(ctx(db), DISC, { action: 'decide_appeal', sanctionId: s.sanctionId })).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(doc(db, `federation_sanctions/${s.sanctionId}`).status).toBe('appealed');
+    await fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'cancel' });
+    await expect(discipline.discipline(ctx(db), DISC, { action: 'apply', federationId: 'fpp', userId: 'ana', kind: 'warning', reason: 'Motivo com mais de dez letras' })).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });
 

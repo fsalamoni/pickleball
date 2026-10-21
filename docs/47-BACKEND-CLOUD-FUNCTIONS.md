@@ -395,10 +395,10 @@ mesmo código; erro inesperado vira `internal`.
 
 | Função | Faz | Quem pode (checagem no servidor) |
 |---|---|---|
-| `federationReview` | `approve` (cria o presidente em `federation_staff`, grava `review`), `reject` (motivo), `suspend` (motivo), `verify`/`unverify`, `official`/`unofficial`; avisa quem pediu/a equipe | admin da plataforma |
+| `federationReview` | exige a flag; `approve` (recusa se outra federação **aprovada** já usa o slug; cria o presidente em `federation_staff` só se a conta `created_by` existir; grava `review`), `reject` (motivo), `suspend` (motivo), `verify`/`unverify`, `official`/`unofficial`; avisa quem pediu/a equipe | admin da plataforma |
 | `federationMembership` | `request` (confere plano ativo, idade do perfil, filiação viva; gratuito com `auto_approve` ativa numa transação, pago gera a cobrança; sem `auto_approve` avisa a secretaria), `renew` (nova cobrança; a validade nova começa no fim da atual), `cancel`; `approve` (número por transação sobre `member_counter`; gratuito ativa, pago cobra), `reject`, `suspend` (gira o código), `reinstate` | a própria pessoa (`request`/`renew`/`cancel`) ou permissão `members` |
 | `federationChargeConfirm` | `confirm` (cobrança `paid`; ativa ou renova a filiação, emite/gira o código da carteirinha, avisa) e `cancel` (devolve o pedido ao estado anterior) | permissão `finance` |
-| `federationVerify` | o mínimo da carteirinha pelo código (`publicVerification`): nome, foto se permitida, federação, vínculo, número, validade, em dia ou não; PR 3: o mesmo código responde pela **credencial** de curso (`kind: 'credential'` no índice) | **sem login** (o QR é lido por qualquer um); `onCall` próprio, 30 s |
+| `federationVerify` | com a flag desligada responde `found: false`; o mínimo da carteirinha pelo código (`publicVerification`): nome, foto se permitida, federação, vínculo, número, validade, em dia ou não; PR 3: o mesmo código responde pela **credencial** de curso (`kind: 'credential'` no índice) | **sem login** (o QR é lido por qualquer um); `onCall` próprio, 30 s |
 | `federationTransfer` (PR 3, `functions/federationTransfers.js`) | `request` (troca de clube ou de federação; confere filiação viva, carência `rules.transfer_cooldown_days` e pedido pendente), `cancel`; `approve` (clube → muda `represented_club_id`; federação → **encerra** a filiação atual e apaga o código), `reject` | a pessoa ou o responsável do dependente (`request`/`cancel`); permissão `members` da federação atual |
 | `federationCourse` (PR 3, `functions/federationCourses.js`) | `enroll` (curso `open` com vaga e módulo ligado; filiação ativa se exigida; preço de filiado; pago → `awaiting_payment` + cobrança `origin: 'course'`, grátis → `confirmed`; vaga por transação), `cancel` (antes do início; devolve a vaga, cancela a cobrança); `pass`/`fail` (aprovado em curso que emite credencial ganha `federation_credentials` com código no `federation_card_index`) | a pessoa (`enroll`/`cancel`); permissão `courses` (`pass`/`fail`) |
 | `federationDiscipline` (PR 3, `functions/federationDiscipline.js`) | `apply` (advertência; suspensão grava `discipline_until_ms` na filiação; multa vira cobrança `origin: 'fine'`; exclusão encerra a filiação guardando o estado anterior), `appeal` (uma vez, em vigor), `decide_appeal` (`uphold`/`overturn` — revertida desfaz o efeito), `end` (antes do prazo) | permissão `discipline` (`apply`/`decide_appeal`/`end`); a pessoa ou o responsável (`appeal`) |
@@ -408,23 +408,33 @@ mesmo código; erro inesperado vira `internal`.
 
 `federationChargeConfirm` (PR 3): a `origin` decide o efeito da confirmação —
 `membership|renewal` ativa/renova, `course` confirma a inscrição, `fine` quita a
-sanção; o pagador pode ser o **responsável** do dependente.
+sanção; o pagador pode ser o **responsável** do dependente. Cobrança de curso
+de quem não é filiado não tem `member_id`, e confirmar/cancelar funciona sem
+ele; quitar filiação sem `member_id` é `failed-precondition`.
 
-**Agendada**: `federationMembershipSweep` — todo dia às 06:00 (Brasília):
-`active` → `expired` na data; avisos 30, 7 e 1 dia antes (uma vez cada, em
-`expiry_notified`); recontagem de `member_count`; e `federationTransfers.sweep`
-(PR 3): libera as transferências de federação sem resposta até `deadline`
-(`auto_released: true`, avisa os dois lados). A suspensão disciplinar **não**
-passa pela varredura: termina na data gravada, que a regra compara com
-`request.time`.
+**Agendada**: `federationMembershipSweep` — todo dia às 06:00 (Brasília),
+três varreduras independentes (`Promise.allSettled`: uma falhando não derruba
+as outras, e o erro vai para o log): `federations.sweep` — `active` →
+`expired` quando a validade já PASSOU (`daysLeft < 0`); avisos 30, 7 e 1 dia
+antes e "vence hoje" (uma vez cada, em `expiry_notified`); recontagem de
+`member_count`; `federationTransfers.sweep` (PR 3) — libera as
+transferências de federação sem resposta até `deadline` (`auto_released:
+true`, avisa os dois lados); e `federationDiscipline.sweep` — aplica na data a
+suspensão gravada com início FUTURO (`applied_at_ms` nulo). O FIM da
+suspensão não passa pela varredura: termina na data gravada, que a regra
+compara com `request.time`; suspensões sobrepostas valem até a mais longa
+(`recalcularSuspensao`).
 
 Toda ação grava `audit_logs` (`federation_*`) e avisa por `notifications`
 (`type: 'federation'`, `origin: 'server'`, `essential: true`, textos por
 `tx()` → `functions/i18n/avisos.json`). Testes: `functions/federations.test.js`
 (ciclo com banco falso), `functions/federationPr3.test.js` (transferência,
-curso, disciplina, importação, documento, dependente, cobrança por origem) e
-`tests/rules/federation.rules.test.js` + `federationPr3.rules.test.js`
-(emulador).
+curso, disciplina, importação, documento, dependente, cobrança por origem,
+suspensões sobrepostas e futuras, cobrança sem filiação), `federationPr4.test.js`
+e `tests/rules/federation.rules.test.js` + `federationPr2/3/4.rules.test.js` +
+`federationRevisao.rules.test.js` (emulador). O banco falso dos testes
+(`tests/fakes/fakeFirestore.cjs`) recusa leitura depois de escrita dentro de
+`runTransaction`, como o Admin SDK — leia tudo antes de escrever.
 
 **Gatilhos do ranking oficial** (`functions/federationRanking.js`, PR 2):
 

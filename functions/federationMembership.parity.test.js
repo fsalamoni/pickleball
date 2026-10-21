@@ -78,6 +78,11 @@ describe('paridade: filiação', () => {
       const b = s.planPrice(plano, { age, familyIndex });
       expect([b.base, b.total], `${age} ${familyIndex}`).toEqual([a.base, a.total]);
     });
+    // Meio centavo: `base * (1 - pct/100)` e `base * (100 - pct) / 100` arredondam diferente em ponto flutuante.
+    [1, 3, 5, 7, 99, 101, 1005, 12345, 99999, 123457].forEach((price_cents) => [5, 10, 15, 25, 33, 50, 65].forEach((pct) => {
+      const pl = { price_cents, discounts: { senior_pct: pct } };
+      expect(s.planPrice(pl, { age: 70 }).total, `${price_cents} ${pct}%`).toBe(planPrice(pl, { age: 70 }).total);
+    }));
     ['52998224725', '529.982.247-25', '11111111111', '12345678900', ''].forEach((cpf) => expect(s.isValidCpf(cpf), cpf).toBe(isValidCpf(cpf)));
     ['2026-10-18', '2026-02-29', ''].forEach((d) => expect(s.endOfDayBrMs(d)).toBe(endOfDayBrMs(d)));
     const cred = { user_name: 'Ana', photo_url: 'x', public_photo: false, kind: 'referee', level: 'N1', course_name: 'Curso', issued_at: '2026-01-01', valid_until: '2026-06-30', status: 'active' };

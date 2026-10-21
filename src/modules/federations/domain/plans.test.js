@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isFreePlan, planAcceptsAge, planPrice, plansFor, validatePlanInput } from './plans.js';
+import { isFreePlan, planAcceptsAge, planPrice, plansFor, validatePlanInput, isValidMonthDay, planBenefitLines } from './plans.js';
 
 describe('validatePlanInput', () => {
   it('aceita o plano anual e exige a virada quando é por data fixa', () => {
@@ -44,5 +44,25 @@ describe('plansFor', () => {
     expect(plansFor(planos, { personType: 'athlete', age: null }).map((p) => p.id)).toEqual(['j', 'a']);
     expect(plansFor(planos, { personType: 'coach' }).map((p) => p.id)).toEqual(['p']);
     expect(planAcceptsAge({ age_min: 18 }, 17)).toBe(false);
+  });
+});
+
+describe('isValidMonthDay (revisão geral)', () => {
+  it('só aceita dia que existe', () => {
+    expect(isValidMonthDay('12-31')).toBe(true);
+    expect(isValidMonthDay('02-29')).toBe(true); // ano bissexto existe
+    expect(isValidMonthDay('02-30')).toBe(false);
+    expect(isValidMonthDay('04-31')).toBe(false);
+    expect(isValidMonthDay('13-01')).toBe(false);
+    expect(validatePlanInput({ name: 'X abc', price_cents: 1, billing: 'annual', validity: 'calendar', rollover_mmdd: '02-30' }).errors.rollover_mmdd).toBeTruthy();
+  });
+});
+
+describe('planBenefitLines', () => {
+  it('lê o texto (um por linha) e também uma lista, sem derrubar a tela', () => {
+    expect(planBenefitLines({ benefits: 'Carteirinha\n\n Ranking ' })).toEqual(['Carteirinha', 'Ranking']);
+    expect(planBenefitLines({ benefits: ['Carteirinha', '', 'Ranking'] })).toEqual(['Carteirinha', 'Ranking']);
+    expect(planBenefitLines({})).toEqual([]);
+    expect(planBenefitLines(null)).toEqual([]);
   });
 });

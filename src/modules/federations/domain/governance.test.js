@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hasGovernance, sortMinutes, validateGovernance } from './governance.js';
+import { hasGovernance, sortMinutes, validateGovernance, BOARD_MAX, MINUTES_MAX } from './governance.js';
 
 describe('validateGovernance', () => {
   it('aceita o conjunto completo e normaliza', () => {
@@ -26,5 +26,17 @@ describe('hasGovernance / sortMinutes', () => {
   });
   it('as atas saem da mais recente para a mais antiga', () => {
     expect(sortMinutes([{ date: '2025-01-01' }, { date: '2026-01-01' }, {}]).map((a) => a.date)).toEqual(['2026-01-01', '2025-01-01', undefined]);
+  });
+});
+
+describe('tetos ditos, nunca corte calado (revisão geral)', () => {
+  it('diretoria acima do teto é erro', () => {
+    const board = Array.from({ length: BOARD_MAX + 1 }, (_, i) => ({ name: `Pessoa ${i + 1}`, role: 'Diretor' }));
+    expect(validateGovernance({ board }).errors.board).toBeTruthy();
+    expect(validateGovernance({ board: board.slice(0, BOARD_MAX) }).errors.board).toBeUndefined();
+  });
+  it('atas acima do teto é erro', () => {
+    const minutes = Array.from({ length: MINUTES_MAX + 1 }, (_, i) => ({ title: `Ata ${i + 1} ordinária`, date: '2026-01-01', url: 'https://x.y/a.pdf' }));
+    expect(validateGovernance({ minutes }).errors.minutes).toBeTruthy();
   });
 });

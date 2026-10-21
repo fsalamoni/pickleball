@@ -14,14 +14,14 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { courseAction, deleteCourse, reviewCredential, saveCourse } from '@/modules/federations/services/federationService';
 import { useCourseEnrollments, useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { courseState, credentialState, seatsLeft, sortCourses, validateCourseInput } from '@/modules/federations/domain/courses';
-import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { COURSE_KIND, COURSE_KIND_LABELS, COURSE_STATUS, COURSE_STATUS_LABELS, CREDENTIAL_STATUS, CREDENTIAL_STATUS_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
+import { COURSE_KIND, COURSE_KIND_LABELS, FED_PERMISSION, COURSE_STATUS, COURSE_STATUS_LABELS, CREDENTIAL_STATUS, CREDENTIAL_STATUS_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
 
 const reais = (c) => (Number(c || 0) / 100).toFixed(2).replace('.', ',');
-const cents = (txt) => Math.round(Number(String(txt).replace(/\./g, '').replace(',', '.')) * 100);
+const cents = parseBrlCents;
 const CURSO_VAZIO = { name: '', kind: COURSE_KIND.CLINIC, level: '', description: '', starts_at: '', ends_at: '', place: '', online: false, link: '', seats: '', hours: '', preco: '0,00', preco_filiado: '', instructors: '', requires_membership: false, issues_credential: false, credential_months: '', status: COURSE_STATUS.DRAFT };
 
 function CursoForm({ federation, curso, onFechar }) {
@@ -118,7 +118,7 @@ function InscritosDialog({ curso, federation, onClose }) {
   );
 }
 
-function CursosTab({ federation, coursesQ }) {
+function CursosTab({ federation, coursesQ, podeApagar }) {
   const { user } = useAuth();
   const [editando, setEditando] = useState(null); // null | 'novo' | course
   const [inscritosDe, setInscritosDe] = useState(null);
@@ -147,7 +147,7 @@ function CursosTab({ federation, coursesQ }) {
                   </div>
                   <V2Button type="button" size="sm" variant="secondary" onClick={() => setInscritosDe(c)}><Users className="h-4 w-4" />{t('Inscritos')}</V2Button>
                   <V2Button type="button" size="sm" variant="ghost" aria-label={t('Editar {nome}', { nome: c.name })} onClick={() => setEditando(c)}><Pencil className="h-4 w-4" /></V2Button>
-                  {!(Number(c.enrolled_count) > 0) && <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => apagar.mutate(c, { onSuccess: () => toast.success(t('Curso apagado.')), onError: (e) => toast.error(e.message) })}>{t('Apagar')}</V2Button>}
+                  {podeApagar && !(Number(c.enrolled_count) > 0) && <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => apagar.mutate(c, { onSuccess: () => toast.success(t('Curso apagado.')), onError: (e) => toast.error(e.message) })}>{t('Apagar')}</V2Button>}
                 </V2Surface>
               </li>
             );
@@ -206,7 +206,8 @@ function CredenciaisTab({ credentialsQ }) {
   );
 }
 
-export default function FedCoursesPanel({ federation, coursesQ, credentialsQ, tab }) {
+export default function FedCoursesPanel({ federation, coursesQ, credentialsQ, tab, perms = [] }) {
+  const podeApagar = perms.includes(FED_PERMISSION.ADMIN); // a regra só deixa o admin apagar — botão que a regra recusa é "permissão negada" sem saída
   if (tab === 'credenciais') return <CredenciaisTab credentialsQ={credentialsQ} />;
-  return <CursosTab federation={federation} coursesQ={coursesQ} />;
+  return <CursosTab federation={federation} coursesQ={coursesQ} podeApagar={podeApagar} />;
 }

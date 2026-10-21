@@ -278,13 +278,14 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Pedir a abertura | ✖ | ✔ (`status: 'pending'`, selos falsos, sem campos travados) | — | — | — | rules (flag ligada) |
 | Ler/gravar CNPJ, razão social (`private/data`) | ✖ | ◐ quem pediu, enquanto pendente | ✖ | ✔ `admin` | ✔ | rules |
 | Aprovar, recusar, suspender, selos "Verificada"/"Oficial" | ✖ | ✖ | ✖ | ✖ | ✔ | **Cloud Function** `federationReview` |
-| Editar página, Pix, marca, módulos | ✖ | ✖ | ✖ | ✔ `admin` (nunca `fedLocked()`) | ✔ | rules |
+| Editar página, Pix, marca, módulos | ✖ | ✖ | ✖ | ✔ `admin` (nunca `fedLocked()`; nome/sigla/endereço/nível revalidados); `finance` só o Pix (`payment`) | ✔ | rules |
+| Ler a equipe da federação | ✖ | ◐ federação aprovada | ✔ | ✔ | ✔ | rules (a diretoria é pública na página; anônimo não lê) |
 | Criar/editar plano | ✖ | ✖ | ✖ | ✔ `admin` ou `finance` (federação aprovada) | ✔ | rules; apagar só Plat |
 | Nomear/trocar papel na equipe | ✖ | ✖ | ✖ | ✔ `admin`; `president` só por presidente; o presidente não se rebaixa | ✔ | rules |
 | Sair da equipe | — | — | — | ✔ o próprio (menos o presidente) | ✔ | rules |
 | Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
 | Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
-| Ler filiação | ✖ | ✖ | ✔ a própria | ✔ `admin`/`members`/`finance` | ✔ | rules (**nunca pública**) |
+| Ler filiação | ✖ | ✖ | ✔ a própria (também o `get` dela ainda inexistente, pelo id `{fed}_{uid}`) | ✔ `admin`/`members`/`finance`/`discipline` | ✔ | rules (**nunca pública**) |
 | Mudar preferências da filiação (selo, diretório, foto) | ✖ | ✖ | ✔ só esses campos | ✖ | — | rules |
 | Criar cobrança | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; só o servidor |
 | Declarar "Já paguei" | ✖ | ✖ | ✔ (`open|declared` → `declared`, nota ≤ 300) | ✖ | — | rules |
@@ -297,14 +298,14 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ler filiação de clube/arena | ◐ só aprovada | ◐ aprovada; a própria organização | — | ✔ `admin`/`members` | ✔ | rules |
 | Pedir a chancela do torneio (módulo `tournaments`) | ✖ | ✔ admin do torneio, só `pending` com `requested_by` = ele | — | — | ✔ | rules (`tournamentFederationOk`) |
 | Aprovar/recusar/revogar chancela (tipo, só filiados) | ✖ | ✖ | ✖ | ✔ `competitions` (só `federation_sanction`) | ✔ | rules |
-| Inscrever-se em torneio "só filiados" | ✖ | ◐ só com `federation_members/{fed}_{uid}.status == 'active'` | ✔ | — | — | rules (`tournamentMembershipOk`); o admin do torneio inscreve qualquer pessoa |
+| Inscrever-se em torneio "só filiados" | ✖ | ◐ só com filiação `active` em dia — a do parceiro também (`fedMemberOk`) | ✔ | — | — | rules (`tournamentMembershipOk`); o admin do torneio inscreve qualquer pessoa |
 | Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`) | — | — | ✔ | rules |
 | Recusar/readmitir resultado | ✖ | ✖ | ✖ | ✔ `competitions` | ✔ | rules |
 | Ler resultados e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
 | Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` |
 | Mudar a tabela de pontos (`ranking_config`) | ✖ | ✖ | ✖ | ✔ `competitions` (só essa chave) | ✔ | rules |
 | Regras da federação (`rules`: CPF, prazos de transferência) — PR 3 | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules |
-| Ler/gravar CPF, nascimento e responsável (`federation_members/…/private/data`) | ✖ | ✖ | ✔ o dono (`fedMemberOwner`: o próprio ou o responsável do dependente), `cpf` ≤ 11 dígitos | ✔ `members`/`admin` leem (revelar o CPF: motivo + `audit_logs`) | ✔ | rules |
+| Ler CPF, nascimento e responsável (`federation_members/…/private/data`) | ✖ | ✖ | ✔ o dono (`fedMemberOwner`: o próprio ou o responsável do dependente) | ✔ `members`/`admin` (revelar o CPF: motivo + `audit_logs`) | ✔ | rules; **gravar só o servidor** (`write: if false`) |
 | Filiar um dependente (menor de 12), pagar e mudar as preferências dele | ✖ | ✔ o responsável (`guardian_uid`) | — | — | — | **Cloud Function** `federationMembership`; rules (`fedMemberOwner`) |
 | Enviar documento exigido pelo plano | ✖ | ✖ | ✔ o dono, só `pending`, caminho `federacao/{uid}/…` | ✖ | — | rules + `storage.rules` (só o dono lê a pasta) |
 | Ver o arquivo enviado / aceitar ou recusar o documento | ✖ | ✖ | ✔ o dono (o arquivo) | ✔ `members`/`admin` (arquivo pela **Cloud Function** `federationDocument`; decisão só `status`/`review`) | ✔ | function + rules |
@@ -331,7 +332,8 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Patrocinadores (`sponsors`, ≤ 12) e governança (`governance`) | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules (`federations`) |
 | Cupom/campanha com a federação como emissora (módulo `promos`) | ✖ | ✖ | ✖ | ✔ `comms`/`admin` (o emissor não muda) | ✔ | rules (`isPromoIssuer`); a campanha da federação não manda aviso |
 | Abrir/operar a loja oficial no Mercado (`market_sellers/federation_{id}`, módulo `store`) | ✖ | ✖ | ✖ | ✔ `admin`/`finance` (nasce `active`, sem selo) | ✔ | rules (`isMarketOperator`); servidor `operatorUids` com a mesma resposta |
-| Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ◐ | rules (`fedOn()`) e funções (`flagLigada`) |
+| Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ✖ (apagar documento/resultado também exige a flag) | rules (`fedOn()`) e funções (`flagLigada`, inclusive `federationReview` e `federationVerify`) |
+| Qualquer permissão de equipe em qualquer federação | ✖ | ✖ | ✖ | — | ✔ (`fedHas` inclui o admin da plataforma; guarda `federacaoPermissoes.test.js`) | rules |
 
 ### 4.9 Plataforma (admin e dono)
 
