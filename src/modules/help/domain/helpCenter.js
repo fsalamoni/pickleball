@@ -689,6 +689,30 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-comunicacao',
+      flags: ['federations'],
+      guias: ['federacao-comunicacao'],
+      title: tk('Notícias, patrocínio, cupons e loja da federação'),
+      summary: tk('Avisar os filiados, mostrar patrocinadores, dar desconto aos filiados, vender pelo Mercado e publicar a governança.'),
+      keywords: ['federação', 'notícia', 'aviso', 'comunicado', 'filiados', 'patrocinador', 'patrocínio', 'cupom', 'desconto', 'campanha', 'banner', 'loja', 'mercado', 'uniforme', 'governança', 'diretoria', 'estatuto', 'ata', 'transparência'],
+      blocks: [
+        p(tk('Cada uma destas ferramentas é um módulo que a federação liga em Configurações → Módulos. Desligado, some da Central e da página pública.')),
+        steps(
+          tk('NOTÍCIAS — em Comunicação → Notícias, escreva o aviso e escolha quem lê: todo mundo (página pública da federação) ou só os filiados em dia. "Avisar os filiados" manda o aviso no sino de cada filiado em dia, uma vez por notícia. Notícia fixada fica no topo.'),
+          tk('CUPONS E CAMPANHAS — em Comunicação → Cupons e campanhas, crie cupons de desconto ou vales e banners. "Só para os filiados" esconde de quem não está em dia. O que for público aparece na página da federação, em Promoções e, com a região certa, no início de quem está perto.'),
+          tk('PATROCINADORES — em Comunicação → Patrocinadores (presidência e diretoria), cadastre nome, logo, site e a cota. Eles aparecem no rodapé da página da federação e o nome sai na carteirinha.'),
+          tk('LOJA OFICIAL — em Configurações → Loja, abra o painel do Mercado como "Pela federação". Quem tem admin ou financeiro na equipe anuncia, aceita pedidos e confirma o Pix, que vai direto para a conta cadastrada na loja.'),
+          tk('GOVERNANÇA — em Configurações → Governança, publique a diretoria, o conselho, o estatuto e as atas. Fica numa seção própria da página pública.'),
+        ),
+        list(
+          tk('FILIADO — quem está em dia vê as notícias só para filiados e os cupons só para filiados na página da federação. Na tela inicial, o card "Federação" (Personalizar o início) mostra as filiações, o que falta pagar ou renovar e a última notícia.'),
+          tk('SEM AVISO POR CAMPANHA — a campanha da federação não manda aviso no sino: o aviso aos filiados é sempre a notícia.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+        tip(tk('A loja da federação aparece no Mercado com o selo "Federação" e na página da federação, no botão "Loja oficial".')),
+      ],
+    },
+    {
       id: 'mercado-comprar',
       flags: ['marketplace'],
       guias: ['mercado-comprar'],
@@ -1955,7 +1979,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
   { pattern: '/federacoes/*/gerir', label: tk('a Central da federação'),
-    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-torneios']] },
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao']] },
   { pattern: '/federacoes/*/filiar', label: tk('a filiação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar']] },
   { pattern: '/federacoes/*', label: tk('esta federação'),
@@ -2215,6 +2239,8 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Como me inscrevo num curso da federação e recebo a credencial?'), section: HELP_SECTION.ATHLETE, article: 'federacoes-filiar' },
   { q: tk('Recebi uma sanção da federação. Como recorro?'), section: HELP_SECTION.ATHLETE, article: 'federacoes-filiar' },
   { q: tk('Como a federação importa os filiados que já tem numa planilha?'), section: HELP_SECTION.ATHLETE, article: 'federacao-gerir' },
+  { q: tk('Como a federação avisa os filiados de uma notícia?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comunicacao' },
+  { q: tk('Como a federação vende uniforme e material pelo Mercado?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comunicacao' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: tk('Como a plataforma me mostra onde tocar?'), section: HELP_SECTION.START, article: 'dicas' },
 ]);
