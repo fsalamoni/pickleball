@@ -10,18 +10,19 @@
  */
 import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { Landmark, Settings2 } from 'lucide-react';
+import { ExternalLink, Eye, Landmark, ShieldCheck } from 'lucide-react';
 import {
   useFederation, useFederationAffiliations, useFederationDocsAll, useFederationCharges, useFederationCourses, useFederationCredentials, useFederationDocuments, useFederationImports, useFederationMembers, useFederationNews, useFederationPlans,
   useFederationReports, useFederationResults, useFederationSanctions, useFederationStaff, useFederationTournaments, useFederationTransfers, useIncomingTransfers, useMyFederationRole,
 } from '@/modules/federations/hooks/useFederations';
-import { fedModuleOn, isFederationHidden } from '@/modules/federations/domain/federation';
+import { fedModuleOn, isFederationHidden, isFederationPublic } from '@/modules/federations/domain/federation';
 import { FED_PERMISSION, FEDERATION_STATUS, FEDERATION_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { PAGE_TITLE } from '@/v2/ui/pageFrame';
 import { FED_SECTION_GROUPS, buildFederationSections, sectionOfTab } from '@/v2/components/federations/federationSections';
-import { FedBadges, FedLogo, FederationGate, fedPath } from '@/v2/components/federations/federationUi';
+import { FedBadges, FedLogo, FederationGate, fedPath, fedPublicPath } from '@/v2/components/federations/federationUi';
+import { fedPreviewPath } from '@/v2/components/federations/profile/FedStaffBar';
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
@@ -103,11 +104,11 @@ function Central({ federationId }) {
   const naoAprovada = f.status !== FEDERATION_STATUS.APPROVED;
   return (
     <V2Page className="space-y-6">
-      <V2BackLink to={fedPath(f)}>{f.acronym || f.name}</V2BackLink>
+      <V2BackLink to={fedPath(f)}>{t('Página da federação')}</V2BackLink>
       <header className="flex flex-wrap items-center gap-4">
         <FedLogo federation={f} size="lg" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Central da federação')}</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{t('Central da federação · área da equipe')}</p>
           <h1 className={PAGE_TITLE}>{f.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <FedBadges federation={f} />
@@ -116,7 +117,10 @@ function Central({ federationId }) {
             {isFederationHidden(f) && <V2Badge tone="amber">{t('Oculta')}</V2Badge>}
           </div>
         </div>
-        <Settings2 className="hidden h-6 w-6 text-gray-500 sm:block" aria-hidden="true" />
+        <div className="flex flex-wrap gap-2">
+          <V2Button asChild variant="ghost" size="sm"><Link to={fedPreviewPath(f)}><Eye className="h-4 w-4" />{t('Ver como visitante')}</Link></V2Button>
+          {isFederationPublic(f) && <V2Button asChild variant="ghost" size="sm"><a href={fedPublicPath(f)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</a></V2Button>}
+        </div>
       </header>
 
       {papel.grant && <FedSupportAccessBanner federationId={f.id} grant={papel.grant} onExpired={papel.refetch} />}
@@ -151,7 +155,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {secaoAtiva.id === 'indicadores' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
-        {secaoAtiva.id === 'config' && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
+        {(secaoAtiva.id === 'config' || secaoAtiva.id === 'pagina-publica') && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>
     </V2Page>
   );

@@ -8,7 +8,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Landmark, Plus, Search, ShieldCheck, Users } from 'lucide-react';
+import { IdCard, Landmark, Plus, Search, ShieldCheck, Users } from 'lucide-react';
 import { useMyFederationRoles, useMyMemberships, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { membershipState } from '@/modules/federations/domain/membership';
 import { staffRoleName } from '@/modules/federations/domain/staff';
@@ -55,35 +55,55 @@ function MinhasFederacoes({ federacoes }) {
     itens.push({ id: `filiacao:${m.federation_id}`, fedId: m.federation_id, filiacao: m, estado: st });
   });
   if (!itens.length) return null;
+  const fedDe = (i) => porId.get(i.fedId) || { id: i.fedId, name: i.filiacao?.federation_name || i.equipe?.federation_name || t('Federação'), acronym: '' };
+  const cartao = (i, detalhe, acao) => {
+    const f = fedDe(i);
+    return (
+      <li key={i.id}>
+        <V2Surface variant="compacto" className="flex items-center gap-3 p-4">
+          <FedLogo federation={f} />
+          <div className="min-w-0 flex-1">
+            <Link to={fedPath(f)} className="truncate font-bold text-ink hover:underline">{f.name}</Link>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">{detalhe}</div>
+          </div>
+          {acao(f)}
+        </V2Surface>
+      </li>
+    );
+  };
+  const equipe = itens.filter((i) => i.equipe);
+  const filiacoes = itens.filter((i) => i.filiacao);
+  // Dois grupos, porque são duas coisas: onde a pessoa TRABALHA (abre a Central) e onde ela é FILIADA (abre a filiação).
   return (
-    <section aria-labelledby="minhas-federacoes" className="space-y-3" data-dica="federacoes-minhas">
-      <h2 id="minhas-federacoes" className="font-display text-xl font-bold text-ink">{t('Suas federações')}</h2>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {itens.map((i) => {
-          const f = porId.get(i.fedId) || { id: i.fedId, name: i.filiacao?.federation_name || i.equipe?.federation_name || t('Federação'), acronym: '' };
-          return (
-            <li key={i.id}>
-              <V2Surface variant="compacto" className="flex items-center gap-3 p-4">
-                <FedLogo federation={f} />
-                <div className="min-w-0 flex-1">
-                  <Link to={fedPath(f)} className="truncate font-bold text-ink hover:underline">{f.name}</Link>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                    {i.equipe && <span className="inline-flex items-center gap-1 font-semibold text-ink"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{staffRoleName(i.equipe)}</span>}
-                    {i.estado && <MemberStatusBadge status={i.estado.status} label={i.estado.label} />}
-                    {i.estado?.validUntil && <span>{t('até {data}', { data: quando(i.estado.validUntil) })}</span>}
-                  </div>
-                </div>
-                {i.equipe ? (
-                  <V2Button asChild size="sm" variant="secondary"><Link to={fedManagePath(f)}>{t('Gerir')}</Link></V2Button>
-                ) : (
-                  <V2Button asChild size="sm" variant="ghost"><Link to="/perfil?secao=federacoes">{t('Carteirinha')}</Link></V2Button>
-                )}
-              </V2Surface>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <div className={equipe.length && filiacoes.length ? 'grid gap-6 lg:grid-cols-2' : ''} data-dica="federacoes-minhas">
+      {equipe.length > 0 && (
+        <section aria-labelledby="federacoes-equipe" className="space-y-3">
+          <div>
+            <h2 id="federacoes-equipe" className="flex items-center gap-2 font-display text-xl font-bold text-ink"><ShieldCheck className="h-5 w-5" aria-hidden="true" />{t('Na equipe')}</h2>
+            <p className="text-sm text-gray-500">{t('Federações que você ajuda a administrar.')}</p>
+          </div>
+          <ul className="space-y-3">
+            {equipe.map((i) => cartao(i, <span className="font-semibold text-ink">{staffRoleName(i.equipe)}</span>, (f) => <V2Button asChild size="sm" variant="secondary"><Link to={fedManagePath(f)}>{t('Abrir a Central')}</Link></V2Button>))}
+          </ul>
+        </section>
+      )}
+      {filiacoes.length > 0 && (
+        <section aria-labelledby="federacoes-filiacoes" className="space-y-3">
+          <div>
+            <h2 id="federacoes-filiacoes" className="flex items-center gap-2 font-display text-xl font-bold text-ink"><IdCard className="h-5 w-5" aria-hidden="true" />{t('Suas filiações')}</h2>
+            <p className="text-sm text-gray-500">{t('Situação, cobranças e carteirinha.')}</p>
+          </div>
+          <ul className="space-y-3">
+            {filiacoes.map((i) => cartao(i, (
+              <>
+                <MemberStatusBadge status={i.estado.status} label={i.estado.label} />
+                {i.estado.validUntil && <span>{t('até {data}', { data: quando(i.estado.validUntil) })}</span>}
+              </>
+            ), (f) => <V2Button asChild size="sm" variant="ghost"><Link to={`${fedPath(f)}?aba=minha`}>{t('Minha filiação')}</Link></V2Button>))}
+          </ul>
+        </section>
+      )}
+    </div>
   );
 }
 

@@ -167,7 +167,7 @@ async function review(ctx, actor, data) {
   }
   const link = `/federacoes/${fed.id}/gerir`;
   const avisos = {
-    approve: [tx('{sigla} foi aprovada'), tx('A federação foi aprovada e segue oculta até você publicar. Configure o Pix, os planos e a equipe na Central e, quando estiver pronta, publique em Configurações → Publicação.')],
+    approve: [tx('{sigla} foi aprovada'), tx('A federação foi aprovada e segue oculta até você publicar. Configure o Pix, os planos e a equipe na Central e, quando estiver pronta, publique em Página pública → Publicação.')],
     reject: [tx('O pedido da {sigla} foi recusado'), tx('Motivo: {motivo}. Corrija e peça de novo.')],
     suspend: [tx('{sigla} foi suspensa'), tx('Motivo: {motivo}. A página e as filiações ficam fora do ar até a revisão.')],
     verify: [tx('{sigla} recebeu o selo de verificada'), tx('O CNPJ e o estatuto foram conferidos pela plataforma.')],

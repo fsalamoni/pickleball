@@ -318,9 +318,10 @@ oficial no Mercado, vendedor `federation_{id}`); os demais "em breve". A
 governança (estatuto, mandato, diretoria, atas) não é módulo. A secretaria
 (transferências, documentos, importação, CPF e dependentes) não é módulo: vem
 com a federação. Doc: `docs/50-FEDERACAO.md`.
-- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking,privateData,transfers,importMembers,courses,discipline,news,sponsors,governance}.js`,
+- **Arquivos**: `domain/{constants,federation,staff,plans,membership,charges,card,federationPending,affiliations,sanction,officialRanking,privateData,transfers,importMembers,courses,discipline,news,sponsors,governance,profile}.js`,
   `services/federationService.js`, `hooks/useFederations.js`. README do módulo é a fonte.
-- **Telas**: `/federacoes`, `/federacoes/abrir`, `/federacoes/:id`,
+- **Telas**: `/federacoes`, `/federacoes/abrir`, `/federacoes/:id?aba=` (página
+  pública em abas + área do filiado + barra da equipe, `src/v2/components/federations/profile/` — `docs/50-FEDERACAO.md` §18),
   `/federacoes/:id/filiar`, `/federacoes/:id/gerir?aba=` (a Central:
   `src/v2/components/federations/manage/`); públicas `/f/:slug` e
   `/f/verificar/:codigo?` (V1, `src/pages/PublicFederation*.jsx`); Minha área →

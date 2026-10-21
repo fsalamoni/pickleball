@@ -317,7 +317,7 @@ function CotaDeMulheres({ federation }) {
       <div className="min-w-0 flex-1">
         <p className="font-bold text-ink">{t('Mulheres nos cargos de direção')}</p>
         <p className="text-xs text-gray-500">{t('Lei 14.597/2023, art. 36, IX: no mínimo 30%. Só aviso — a plataforma não barra nada.')}</p>
-        <p className="text-sm text-gray-500">{q.status === 'empty' ? t('A diretoria não está cadastrada (Configurações → Governança).') : womenQuotaText(q)}</p>
+        <p className="text-sm text-gray-500">{q.status === 'empty' ? t('A diretoria não está cadastrada (Página pública → Transparência).') : womenQuotaText(q)}</p>
       </div>
     </V2Surface>
   );

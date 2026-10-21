@@ -1,5 +1,5 @@
 /**
- * Publicação da federação (Central → Configurações → Publicação).
+ * Publicação da federação (Central → Página pública → Publicação).
  *
  * Aprovada pela plataforma, a federação nasce OCULTA (`published` ausente): a
  * equipe estrutura planos, Pix, página, módulos, acervo e agenda sem ninguém
@@ -33,7 +33,7 @@ export function FedHiddenBanner({ federation, canPublish = false, onOpen = null 
         <EyeOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <span>
           {canPublish
-            ? t('A federação ainda não está pública: só a equipe a vê. Estruture planos, Pix, página e módulos e, quando estiver pronta, publique em Configurações → Publicação.')
+            ? t('A federação ainda não está pública: só a equipe a vê. Estruture planos, Pix, página e módulos e, quando estiver pronta, publique em Página pública → Publicação.')
             : t('A federação ainda não está pública: só a equipe a vê. Quem publica é o admin da federação.')}
         </span>
       </p>

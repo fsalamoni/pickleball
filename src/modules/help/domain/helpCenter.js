@@ -600,7 +600,7 @@ const ATLETA = {
       summary: tk('Escolher o plano, pagar por Pix à federação e receber a carteirinha digital com QR de verificação.'),
       keywords: ['federação', 'federar', 'filiação', 'filiar', 'carteirinha', 'anuidade', 'mensalidade', 'pix', 'federado', 'cadastrado', 'qr', 'verificar'],
       blocks: [
-        p(tk('No menu, Federações mostra as federações abertas ao público, perto de você primeiro. A federação aprovada só aparece depois que quem a administra a torna pública, em Configurações → Publicação. Cada uma tem página pública, planos de filiação e, quando a federação liga, torneios chancelados e ranking oficial. A federação é uma entidade própria: a plataforma organiza o pedido, a cobrança e a carteirinha, e o dinheiro vai por Pix direto para a conta dela.')),
+        p(tk('No menu, Federações mostra as federações abertas ao público, perto de você primeiro. A federação aprovada só aparece depois que quem a administra a torna pública, em Página pública → Publicação. Cada uma tem página pública, planos de filiação e, quando a federação liga, torneios chancelados e ranking oficial. A federação é uma entidade própria: a plataforma organiza o pedido, a cobrança e a carteirinha, e o dinheiro vai por Pix direto para a conta dela.')),
         steps(
           tk('Abra a federação e toque em "Filiar-se". Escolha o tipo (atleta, professor ou árbitro) e o plano: mensal ou anual, cadastro gratuito ou federado. O preço mostra o desconto que vale para você (por idade, por exemplo).'),
           tk('Diga se a filiação aparece no seu perfil público e se você entra no diretório de filiados. Se joga por um clube, indique-o. Envie.'),
@@ -617,9 +617,9 @@ const ATLETA = {
           tk('TORNEIO CHANCELADO — o selo "Chancelado · SIGLA" no torneio diz que a federação o reconhece e que o resultado vai para o ranking oficial dela. Quando vem "só filiados", só quem está em dia na federação consegue se inscrever — a tela avisa antes.'),
           tk('RANKING OFICIAL — na página da federação, por temporada e categoria: pontos pela colocação em cada torneio chancelado (peso por tipo de torneio), contando os melhores resultados do ano. Só filiados em dia na data do torneio pontuam, se a federação assim decidir.'),
           tk('CLUBES E ARENAS FILIADOS — também aparecem na página da federação, com o selo "Filiado" na página do clube ou da arena.'),
-          tk('CPF E DOCUMENTOS — a federação pode pedir o CPF (fica guardado à parte, só a secretaria lê, com motivo registrado) e documentos do plano (foto, identidade, atestado médico, comprovante de residência, autorização do responsável). Você envia em "Minha situação" e acompanha a conferência; documento recusado volta com o motivo.'),
+          tk('CPF E DOCUMENTOS — a federação pode pedir o CPF (fica guardado à parte, só a secretaria lê, com motivo registrado) e documentos do plano (foto, identidade, atestado médico, comprovante de residência, autorização do responsável). Você envia na aba Minha filiação e acompanha a conferência; documento recusado volta com o motivo.'),
           tk('MENOR DE IDADE — de 12 a 17 anos a filiação pede nome, contato e consentimento do responsável, e a autorização de foto é separada. Abaixo de 12, só como DEPENDENTE: o responsável filia pela própria conta ("Filiar um dependente"), responde pela cobrança e pelos documentos e vê a carteirinha do menor em Minha área → Federações.'),
-          tk('TRANSFERÊNCIA — trocar de clube dentro da federação ou sair para outra federação se pede em "Minha situação → Transferência". A federação responde; sem resposta no prazo dela, a troca de federação é liberada sozinha. Há carência entre transferências (a federação define).'),
+          tk('TRANSFERÊNCIA — trocar de clube dentro da federação ou sair para outra federação se pede em "Minha filiação → Transferência". A federação responde; sem resposta no prazo dela, a troca de federação é liberada sozinha. Há carência entre transferências (a federação define).'),
           tk('CURSOS E CREDENCIAIS — a federação pode publicar cursos e clínicas (arbitragem, capacitação, formação de professor). Aprovado num curso que emite credencial, você recebe a credencial com código verificável, igual à carteirinha, e escolhe se aparece no diretório público de credenciados.'),
           tk('SANÇÕES E OUVIDORIA — advertência, multa ou suspensão aplicadas pela federação aparecem em Minha área → Federações, com recurso em até 15 dias. Suspenso, você não se inscreve em torneio chancelado "só filiados" até o fim do prazo. A ouvidoria da federação recebe manifestações (anônimas, se quiser) e dá um protocolo para acompanhar.'),
         ),
@@ -640,13 +640,14 @@ const ATLETA = {
         steps(
           tk('Na Central → Configurações → Planos, crie ao menos um plano: para quem (atleta, professor, árbitro), cadastrado ou federado, mensal ou anual, o valor (0 = gratuito), descontos por idade e se aprova na hora.'),
           tk('Em Configurações → Recebimento, cadastre a chave Pix e o nome de quem recebe. Sem Pix, plano pago não gera cobrança.'),
-          tk('Em Configurações → Página, capriche no "Sobre", na cor e no logo: é o que aparece em picklerush.web.app/f/sua-sigla.'),
-          tk('Aprovada, a federação nasce OCULTA: só a equipe e os filiados a veem, para você montar tudo com calma. Quando estiver pronta, Configurações → Publicação → "Tornar pública" (só o admin) abre a página, o diretório e a filiação para todo mundo. "Tirar do ar" volta a esconder, sem apagar nada.'),
+          tk('Em Página pública → Conteúdo, capriche no "Sobre", na cor e no logo: é o que aparece em picklerush.web.app/f/sua-sigla. "Ver como visitante", no topo da Central, mostra a página como o público a vê.'),
+          tk('Aprovada, a federação nasce OCULTA: só a equipe e os filiados a veem, para você montar tudo com calma. Quando estiver pronta, Página pública → Publicação → "Tornar pública" (só o admin) abre a página, o diretório e a filiação para todo mundo. "Tirar do ar" volta a esconder, sem apagar nada.'),
           tk('Em Equipe, nomeie quem vai ajudar, escolhendo a pessoa pela lista de usuários, o cargo e o mandato. Os cargos de modelo (presidente, diretor, secretaria, financeiro, diretor técnico, de arbitragem, de comunicação e conselho) podem ser editados ou trocados por cargos próprios em Equipe → Cargos.'),
           tk('Chegou pedido? Filiados → Pedidos: aprovar ou recusar com motivo. Aprovado em plano pago, a pessoa recebe a cobrança.'),
           tk('A pessoa pagou e informou? Financeiro → Cobranças: confira o Pix na conta e "Confirmar recebimento". Isso ativa a filiação, emite a carteirinha e avisa a pessoa.'),
         ),
         list(
+          tk('PÚBLICO × EQUIPE — a página da federação é a mesma para todo mundo, dividida em abas (Visão geral, Notícias, Agenda, Competições, Documentos, Cursos, Clubes e arenas, Contato). Quem é da equipe vê no topo dela uma barra escura, só da equipe, com "Abrir a Central" e "Ver como visitante". Toda a gestão fica na Central; o que muda a página fica na seção Página pública.'),
           tk('HOJE — os números do dia e o que falta para a federação funcionar (plano, Pix). A faixa "Precisa de você" mostra pedidos e pagamentos esperando.'),
           tk('FILIADOS — em dia, vencendo em 30 dias, vencidos, suspensos. Suspender exige motivo e a carteirinha deixa de verificar; reintegrar devolve.'),
           tk('RECEBIDOS — o que entrou por mês, com CSV. A plataforma não toca no dinheiro: recibo, nota e tributos são da federação.'),
@@ -731,7 +732,7 @@ const ATLETA = {
           tk('CUPONS E CAMPANHAS — em Comunicação → Cupons e campanhas, crie cupons de desconto ou vales e banners. "Só para os filiados" esconde de quem não está em dia. O que for público aparece na página da federação, em Promoções e, com a região certa, no início de quem está perto.'),
           tk('PATROCINADORES — em Comunicação → Patrocinadores (presidência e diretoria), cadastre nome, logo, site e a cota. Eles aparecem no rodapé da página da federação e o nome sai na carteirinha.'),
           tk('LOJA OFICIAL — em Configurações → Loja, abra o painel do Mercado como "Pela federação". Quem tem admin ou financeiro na equipe anuncia, aceita pedidos e confirma o Pix, que vai direto para a conta cadastrada na loja.'),
-          tk('GOVERNANÇA — em Configurações → Governança, publique a diretoria, o conselho, o estatuto e as atas. Fica numa seção própria da página pública.'),
+          tk('GOVERNANÇA — em Página pública → Transparência, publique a diretoria, o conselho, o estatuto e as atas. Fica numa seção própria da página pública.'),
         ),
         list(
           tk('FILIADO — quem está em dia vê as notícias só para filiados e os cupons só para filiados na página da federação. Na tela inicial, o card "Federação" (Personalizar o início) mostra as filiações, o que falta pagar ou renovar e a última notícia.'),

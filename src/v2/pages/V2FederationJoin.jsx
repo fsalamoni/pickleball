@@ -240,7 +240,7 @@ function Pagina() {
         </div>
         {abertas.map((c) => <PixChargeBlock key={c.id} charge={c} federation={f} />)}
         <div className="flex flex-wrap gap-2">
-          <V2Button asChild variant="secondary"><Link to={fedPath(f)}>{t('Voltar à federação')}</Link></V2Button>
+          <V2Button asChild variant="secondary"><Link to={`${fedPath(f)}?aba=minha`}>{t('Ver minha filiação')}</Link></V2Button>
           <V2Button asChild variant="ghost"><Link to={`/federacoes/${f.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
         </div>
       </V2Surface>

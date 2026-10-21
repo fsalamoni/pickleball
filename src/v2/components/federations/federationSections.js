@@ -5,6 +5,10 @@
  * (`FED_PERMISSION`): a secretaria vê Filiados, o financeiro vê Financeiro,
  * o admin master vê tudo (os cargos são de cada federação). O valor de cada aba é ÚNICO e é contrato de
  * link (os avisos levam a `?aba=pedidos`, `?aba=cobrancas`).
+ *
+ * "Página pública" junta o que muda o que o público vê (Publicação, Conteúdo,
+ * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
+ * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
 import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
@@ -100,6 +104,15 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       id: 'indicadores', grupo: 'gerir', label: tk('Indicadores'), icon: BarChart3, dica: 'federacao-secao-indicadores',
       tabs: [{ value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 }],
     },
+    // Tudo o que muda o que o PÚBLICO vê, num lugar só (separado de planos, Pix, módulos e regras).
+    admin && {
+      id: 'pagina-publica', grupo: 'gerir', label: tk('Página pública'), icon: Globe, dica: 'federacao-secao-pagina-publica',
+      tabs: [
+        { value: 'publicacao', label: tk('Publicação'), icon: Globe, dica: 'federacao-aba-publicacao' },
+        { value: 'pagina', label: tk('Conteúdo'), icon: FileText },
+        { value: 'governanca', label: tk('Transparência'), icon: Landmark },
+      ],
+    },
     pode(FED_PERMISSION.STAFF) && {
       id: 'equipe', grupo: 'gerir', label: tk('Equipe'), icon: UserCog, dica: 'federacao-secao-equipe',
       tabs: [
@@ -113,11 +126,8 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'planos', label: tk('Planos'), icon: CreditCard },
         { value: 'pix', label: tk('Recebimento'), icon: Wallet },
         ...(admin ? [
-          { value: 'publicacao', label: tk('Publicação'), icon: Globe, dica: 'federacao-aba-publicacao' },
-          { value: 'pagina', label: tk('Página'), icon: FileText },
           { value: 'modulos', label: tk('Módulos'), icon: Puzzle },
           { value: 'regras', label: tk('Regras'), icon: ClipboardList },
-          { value: 'governanca', label: tk('Governança'), icon: Landmark },
         ] : []),
         ...((admin || pode(FED_PERMISSION.FINANCE)) && modulo('store') ? [{ value: 'loja', label: tk('Loja'), icon: Store }] : []),
       ],
