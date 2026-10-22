@@ -426,6 +426,14 @@ sanção; o pagador pode ser o **responsável** do dependente. Cobrança de curs
 de quem não é filiado não tem `member_id`, e confirmar/cancelar funciona sem
 ele; quitar filiação sem `member_id` é `failed-precondition`.
 
+**Agendada**: `federationNewsPublish` (2026-10-22) — a cada 15 minutos,
+`federationNews.publishDue`: as notícias `status == 'scheduled'` (uma
+igualdade, zero índice) com `publish_at_ms` vencido viram `published`, com
+`published_at` na data de Brasília da hora marcada; com `notify_on_publish` o
+aviso de `notify` sai junto (uma vez, `notified_by: 'system'`). Federação sem
+o módulo `news` ou com a flag desligada: nada muda. Audita
+`federation_news_scheduled_publish`.
+
 **Agendada**: `federationMembershipSweep` — todo dia às 06:00 (Brasília),
 quatro varreduras independentes (`Promise.allSettled`: uma falhando não derruba
 as outras, e o erro vai para o log): `federations.sweep` — `active` →

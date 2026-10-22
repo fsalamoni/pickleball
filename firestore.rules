@@ -4998,7 +4998,8 @@ service cloud.firestore {
         && nd().title.size() <= 140
         && nd().body is string
         && nd().body.size() <= 6000
-        && nd().status in ['draft', 'published', 'archived']
+        && nd().status in ['draft', 'scheduled', 'published', 'archived']
+        && (nd().status != 'scheduled' || nd().publish_at_ms is number)
         && nd().audience in ['public', 'members']
         && !nd().keys().hasAny(['notified_at', 'notified_count']);
       allow update: if fedOn()
@@ -5007,7 +5008,8 @@ service cloud.firestore {
         && nd().title is string
         && nd().title.size() >= 3
         && nd().title.size() <= 140
-        && nd().status in ['draft', 'published', 'archived']
+        && nd().status in ['draft', 'scheduled', 'published', 'archived']
+        && (nd().status != 'scheduled' || nd().publish_at_ms is number)
         && nd().audience in ['public', 'members'];
       allow delete: if fedPlat(od().federation_id)
         || (fedOn() && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin')));

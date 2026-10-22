@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canNotifyNews, newsSummaryLine, sortNews, validateNewsInput, visibleNews } from './news.js';
+import { canNotifyNews, newsSummaryLine, scheduleInputValue, sortNews, validateNewsInput, visibleNews } from './news.js';
 
 describe('validateNewsInput', () => {
   it('exige título e texto; normaliza estado e público', () => {
@@ -15,6 +15,29 @@ describe('validateNewsInput', () => {
     const r = validateNewsInput({ title: 'Título bom', body: 'Texto suficiente aqui.', link: 'javascript:alert(1)', image_url: 'http://x/y.png' });
     expect(r.errors).toHaveProperty('link');
     expect(r.errors).toHaveProperty('image_url');
+  });
+});
+
+describe('notícia agendada', () => {
+  const base = { title: 'Assembleia geral', body: 'Convocação para a assembleia.', status: 'scheduled' };
+  const NOW = new Date('2026-10-22T10:00').getTime();
+  it('exige data e hora no futuro, até um ano; guarda o instante e o aviso', () => {
+    expect(validateNewsInput(base, { now: NOW }).errors).toHaveProperty('publish_at');
+    expect(validateNewsInput({ ...base, publish_at: '2026-10-22T09:00' }, { now: NOW }).errors).toHaveProperty('publish_at');
+    expect(validateNewsInput({ ...base, publish_at: '2028-01-01T09:00' }, { now: NOW }).errors).toHaveProperty('publish_at');
+    const r = validateNewsInput({ ...base, publish_at: '2026-10-23T19:30', notify_on_publish: true, published_at: '2026-10-01' }, { now: NOW });
+    expect(r.ok).toBe(true);
+    expect(r.value).toMatchObject({ status: 'scheduled', publish_at_ms: new Date('2026-10-23T19:30').getTime(), notify_on_publish: true, published_at: '' });
+    expect(scheduleInputValue(r.value.publish_at_ms)).toBe('2026-10-23T19:30');
+    expect(scheduleInputValue(null)).toBe('');
+  });
+  it('fora do agendamento, não leva hora nem aviso; agendada não é visível nem avisável', () => {
+    const r = validateNewsInput({ ...base, status: 'draft', publish_at: '2026-10-23T19:30', notify_on_publish: true }, { now: NOW });
+    expect(r.value).toMatchObject({ publish_at_ms: null, notify_on_publish: false });
+    const ag = { ...base, audience: 'public', publish_at_ms: NOW + 3600000, notify_on_publish: true };
+    expect(visibleNews([ag])).toEqual([]);
+    expect(canNotifyNews(ag)).toBe(false);
+    expect(newsSummaryLine(ag)).toMatch(/publica em .+ · avisa os filiados ao publicar/);
   });
 });
 

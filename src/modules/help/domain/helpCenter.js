@@ -728,7 +728,7 @@ const ATLETA = {
       blocks: [
         p(tk('Cada uma destas ferramentas é um módulo que a federação liga em Configurações → Módulos. Desligado, some da Central e da página pública.')),
         steps(
-          tk('NOTÍCIAS — em Comunicação → Notícias, escreva o aviso e escolha quem lê: todo mundo (página pública da federação) ou só os filiados em dia. "Avisar os filiados" manda o aviso no sino de cada filiado em dia, uma vez por notícia. Notícia fixada fica no topo.'),
+          tk('NOTÍCIAS — em Comunicação → Notícias, escreva o aviso e escolha quem lê: todo mundo (página pública da federação) ou só os filiados em dia. "Avisar os filiados" manda o aviso no sino de cada filiado em dia, uma vez por notícia. Notícia fixada fica no topo. Em "Agendada", escolha a data e a hora: a notícia entra no ar sozinha (e avisa os filiados, se marcado).'),
           tk('CUPONS E CAMPANHAS — em Comunicação → Cupons e campanhas, crie cupons de desconto ou vales e banners. "Só para os filiados" esconde de quem não está em dia. O que for público aparece na página da federação, em Promoções e, com a região certa, no início de quem está perto.'),
           tk('PATROCINADORES — em Comunicação → Patrocinadores (presidência e diretoria), cadastre nome, logo, site e a cota. Eles aparecem no rodapé da página da federação e o nome sai na carteirinha.'),
           tk('LOJA OFICIAL — em Configurações → Loja, abra o painel do Mercado como "Pela federação". Quem tem admin ou financeiro na equipe anuncia, aceita pedidos e confirma o Pix, que vai direto para a conta cadastrada na loja.'),

@@ -1324,6 +1324,17 @@ exports.federationDiscipline = federationCallable('federationDiscipline', federa
 exports.federationImportMembers = federationCallable('federationImportMembers', federationSecretariat.importMembers);
 const federationNews = require('./federationNews');
 exports.federationNews = federationCallable('federationNews', federationNews.notify);
+// Notícia agendada: a cada 15 min publica a que chegou a hora (e avisa, se pedido).
+exports.federationNewsPublish = onSchedule(
+  { schedule: 'every 15 minutes', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 300 },
+  async () => {
+    try {
+      await federationNews.publishDue(fedCtx());
+    } catch (err) {
+      logger.error('federationNewsPublish falhou', err);
+    }
+  },
+);
 // Cargos, mandatos e admins master (só o servidor grava a equipe) — `functions/federationStaff.js`.
 const federationStaff = require('./federationStaff');
 exports.federationStaff = federationCallable('federationStaff', federationStaff.staff);

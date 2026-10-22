@@ -424,7 +424,13 @@ vira anônima.
   dependente avisa o responsável), uma vez só, link
   `/federacoes/{id}?noticia={id}` (a página abre a notícia). Na página: bloco
   Notícias (`FedNewsSection`, âncora `#federacao-noticias`); no card do início,
-  a última de cada federação.
+  a última de cada federação. **Agendada** (2026-10-22): estado `scheduled`
+  com "Publicar em" (data e hora, até um ano; `publish_at_ms`) e, se marcado,
+  "Avisar os filiados quando publicar" (`notify_on_publish`). Até a hora só a
+  equipe lê (a regra só abre `published`); a varredura `federationNewsPublish`
+  (a cada 15 min) publica com a data de Brasília daquele instante e, se pedido,
+  manda o mesmo aviso de "Avisar os filiados", uma vez só. Federação com o
+  módulo desligado deixa a agendada esperando.
 - **Patrocinadores** (módulo `sponsors`): `federations.sponsors` (campo
   opcional, lista de até 12 `{ name, tier, logo_url, url }`), só `admin`
   grava. Aparecem na página (`FedSponsorsStrip`) e, só os nomes, na

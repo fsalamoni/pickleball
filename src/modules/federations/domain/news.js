@@ -7,13 +7,17 @@
  * ATIVA nesta federação (a regra lê `federation_members/{fed}_{uid}`). O
  * AVISO aos filiados (sino, e-mail…) é do SERVIDOR (`federationNews`), porque
  * a comunicação não lê a lista de filiados — e não se repete: `notified_at`.
+ * AGENDADA (`scheduled` + `publish_at_ms`) só a equipe vê; a varredura do
+ * servidor publica na hora e, com `notify_on_publish`, avisa junto.
  */
-import { t } from '@/core/i18n';
+import { fmtData, t } from '@/core/i18n';
 import { NEWS_AUDIENCE, NEWS_STATUS } from './constants.js';
 
 export const NEWS_TITLE_MAX = 140;
 export const NEWS_BODY_MAX = 6000;
 export const NEWS_SUMMARY_MAX = 300;
+/** Até quando dá para agendar (a varredura não guarda fila de anos). */
+export const NEWS_SCHEDULE_MAX_DAYS = 365;
 
 const str = (v, max) => String(v ?? '').replace(/\r\n/g, '\n').trim().slice(0, max);
 const isHttps = (u) => /^https:\/\/\S+$/i.test(u);
@@ -22,7 +26,7 @@ const isHttps = (u) => /^https:\/\/\S+$/i.test(u);
  * @param {object} input
  * @returns {{ ok: boolean, errors: Record<string,string>, value: object }}
  */
-export function validateNewsInput(input = {}) {
+export function validateNewsInput(input = {}, { now = Date.now() } = {}) {
   const errors = {};
   const title = str(input.title, NEWS_TITLE_MAX);
   if (title.length < 3) errors.title = t('Dê um título à notícia (mínimo 3 caracteres).');
@@ -36,11 +40,33 @@ export function validateNewsInput(input = {}) {
   if (image_url && !isHttps(image_url)) errors.image_url = t('A imagem precisa de um endereço https://');
   const published_at = str(input.published_at, 10);
   if (published_at && !/^\d{4}-\d{2}-\d{2}$/.test(published_at)) errors.published_at = t('Data inválida.');
+  // Agendada: `publish_at` é o "data e hora" do formulário (hora do aparelho); vira instante.
+  let publish_at_ms = null;
+  let notify_on_publish = false;
+  if (status === NEWS_STATUS.SCHEDULED) {
+    const ms = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(input.publish_at || '')) ? new Date(input.publish_at).getTime() : NaN;
+    if (!Number.isFinite(ms)) errors.publish_at = t('Escolha a data e a hora de publicar.');
+    else if (ms <= now) errors.publish_at = t('Escolha uma hora no futuro.');
+    else if (ms > now + NEWS_SCHEDULE_MAX_DAYS * 86400000) errors.publish_at = t('Agende para até um ano.');
+    else publish_at_ms = ms;
+    notify_on_publish = input.notify_on_publish === true;
+  }
   return {
     ok: Object.keys(errors).length === 0,
     errors,
-    value: { title, summary: str(input.summary, NEWS_SUMMARY_MAX), body, status, audience, link, image_url, published_at, pinned: input.pinned === true },
+    value: {
+      title, summary: str(input.summary, NEWS_SUMMARY_MAX), body, status, audience, link, image_url,
+      published_at: status === NEWS_STATUS.SCHEDULED ? '' : published_at, pinned: input.pinned === true, publish_at_ms, notify_on_publish,
+    },
   };
+}
+
+/** O valor do campo "data e hora" (hora do aparelho) a partir do instante gravado. */
+export function scheduleInputValue(ms) {
+  if (!(Number(ms) > 0)) return '';
+  const d = new Date(Number(ms));
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 /** Publicada? (o que sai da Central) */
@@ -68,6 +94,10 @@ export function canNotifyNews(n) {
 /** "Publicada · Pública · avisada a 120" — a linha da lista da Central. */
 export function newsSummaryLine(n) {
   const partes = [];
+  if (n?.status === NEWS_STATUS.SCHEDULED && Number(n.publish_at_ms) > 0) {
+    partes.push(t('publica em {quando}', { quando: fmtData(new Date(Number(n.publish_at_ms)), { dateStyle: 'short', timeStyle: 'short' }) }));
+    if (n.notify_on_publish) partes.push(t('avisa os filiados ao publicar'));
+  }
   if (n?.pinned) partes.push(t('Fixada'));
   if (n?.notified_at) partes.push(t('avisada a {n}', { n: Number(n.notified_count) || 0 }));
   return partes.join(' · ');
