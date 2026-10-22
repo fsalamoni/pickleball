@@ -131,7 +131,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   treinosNaoLidos?: number,
  *   duvidasEsperando?: number,
  *   mercado?: ReturnType<typeof marketPendingCounts>,
- *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number },
+ *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number, convites?: number },
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
  */
@@ -217,8 +217,9 @@ export function userAreaPending(fontes = {}) {
     pagar: (n) => tn(n, '{n} cobrança da federação esperando o seu Pix', '{n} cobranças de federação esperando o seu Pix'),
     vencendo: (n) => tn(n, '{n} filiação vencendo em 30 dias', '{n} filiações vencendo em 30 dias'),
     vencida: (n) => tn(n, '{n} filiação vencida para renovar', '{n} filiações vencidas para renovar'),
+    convites: (n) => tn(n, '{n} convite de federação para responder', '{n} convites de federação para responder'),
   };
-  for (const id of ['pagar', 'vencendo', 'vencida']) {
+  for (const id of ['pagar', 'vencendo', 'vencida', 'convites']) {
     const n = numero(fontes.federacoes?.[id]);
     if (n) itens.push({ id: `federacoes:${id}`, count: n, secao: S.FEDERACOES, label: fedRotulo[id](n) });
   }

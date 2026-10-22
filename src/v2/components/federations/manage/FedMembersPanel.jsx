@@ -19,6 +19,7 @@ import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Fil
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
 import MembershipDeclarationDialog from '../MembershipDeclaration';
+import { ConvidarPessoas, ConvitesEnviados } from './FedInvites';
 
 const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -154,7 +155,7 @@ const FILTROS = [
   { id: MEMBER_STATUS.SUSPENDED, label: () => t('Suspensos') },
 ];
 
-export default function FedMembersPanel({ federation, membersQ, documentsQ, tab }) {
+export default function FedMembersPanel({ federation, membersQ, documentsQ, plansQ, tab }) {
   const documentos = documentsQ?.isSuccess ? documentsQ.data : undefined;
   const [filtro, setFiltro] = useState('todos');
   const [busca, setBusca] = useState('');
@@ -170,6 +171,7 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, tab 
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Pedidos de filiação')}</h2><p className="text-sm text-gray-500">{t('Aprovado, o plano gratuito ativa na hora; o pago gera a cobrança Pix para a pessoa.')}</p></div>
         {!pedidos.length ? <V2EmptyState icon={Inbox} title={t('Nenhum pedido esperando')} description={t('Quando alguém pedir filiação num plano sem aprovação automática, aparece aqui.')} />
           : <ul className="space-y-3">{pedidos.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} pedido />)}</ul>}
+        <ConvitesEnviados federation={federation} />
       </section>
     );
   }
@@ -187,6 +189,7 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, tab 
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Filiados')}</h2><p className="text-sm text-gray-500">{tn(contas.active, '{n} em dia', '{n} em dia')} · {tn(contas.expiring, '{n} vencendo em 30 dias', '{n} vencendo em 30 dias')} · {tn(contas.expired, '{n} vencido', '{n} vencidos')}</p></div>
         <V2SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Nome, número ou plano')} aria-label={t('Buscar filiado')} className="sm:w-72" />
       </div>
+      <ConvidarPessoas federation={federation} membros={todos} plansQ={plansQ} />
       <div className="flex flex-wrap gap-2">{FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{f.label()}</V2FilterChip>)}</div>
       {!lista.length ? <V2EmptyState icon={Users} title={termo ? t('Ninguém com "{termo}"', { termo: busca.trim() }) : t('Nenhum filiado neste filtro')} />
         : <ul className="space-y-3">{lista.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} />)}</ul>}

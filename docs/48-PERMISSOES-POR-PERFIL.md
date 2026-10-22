@@ -306,6 +306,8 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Responder oficialmente, ocultar com motivo, reabrir, abrir/fechar/consulta pública, ver a fila | ✖ | ✖ | ✖ | ✔ `docs`/`admin` | ◐ com acesso justificado | **Cloud Function** `federationComments` (auditado); `federation_comment_reports`: ninguém lê nem grava |
 | Pedir filiação, renovar, cancelar | ✖ | ✔ (a própria) | ✔ | — | — | **Cloud Function** `federationMembership` |
 | Aprovar/recusar/suspender/reintegrar filiação | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationMembership` |
+| Convidar pessoas da plataforma para filiar / cancelar convite | ✖ | ✖ | ✖ | ✔ `members` (federação publicada) | ✔ | **Cloud Function** `federationMembership` (`invite`, `invite_cancel`); rules `federation_invites` `write: if false` |
+| Ver / recusar o próprio convite (aceitar = pedir no plano dele, sem aprovação) | ✖ | ✔ (o próprio) | ✔ | ✔ ver: `members`/`admin` | ✔ | rules `federation_invites` (leitura); **Cloud Function** `federationMembership` (`invite_decline`, `request`) |
 | Ler filiação | ✖ | ✖ | ✔ a própria (também o `get` dela ainda inexistente, pelo id `{fed}_{uid}`) | ✔ `admin`/`members`/`finance`/`discipline` | ✔ | rules (**nunca pública**) |
 | Mudar preferências da filiação (selo, diretório, foto) | ✖ | ✖ | ✔ só esses campos | ✖ | — | rules |
 | Criar cobrança | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; só o servidor |

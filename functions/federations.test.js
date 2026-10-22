@@ -188,3 +188,61 @@ describe('federações no servidor', () => {
     expect(doc(db, 'federation_card_index/ABCDEFGHJK')).toBeUndefined();
   });
 });
+
+describe('convite para filiar', () => {
+  it('a secretaria convida; quem já é filiado ou já convidado fica de fora; ninguém vira filiado sem aceitar', async () => {
+    const db = cenario();
+    db.store.docs.set('users/beto', { full_name: 'Beto Lima' });
+    db.store.docs.set('federation_members/fpp_beto', { federation_id: 'fpp', user_id: 'beto', status: 'active' });
+    const c = ctx(db);
+    // Sem a permissão `members`, não convida.
+    await expect(fed.membership(c, TES, { federationId: 'fpp', action: 'invite', userIds: ['ana'], planId: 'anual' })).rejects.toMatchObject({ code: 'permission-denied' });
+    const r = await fed.membership(c, SEC, { federationId: 'fpp', action: 'invite', userIds: ['ana', 'beto', 'fantasma', 'ana'], planId: 'anual', note: 'Venha!' });
+    expect(r.invited).toBe(1);
+    expect(r.skipped.map((s) => s.uid).sort()).toEqual(['beto', 'fantasma']);
+    expect(doc(db, 'federation_invites/fpp_ana')).toMatchObject({ status: 'pending', plan_id: 'anual', user_name: 'Ana Souza', invited_by: 'sec', expires_at_ms: NOW + 30 * 86400000 });
+    expect(doc(db, 'federation_members/fpp_ana')).toBeUndefined();
+    expect(avisosPara(db, 'ana')).toHaveLength(1);
+    expect(avisosPara(db, 'ana')[0].link).toBe('/federacoes/fpp/filiar');
+    // Convite em aberto não se repete.
+    const de2 = await fed.membership(c, SEC, { federationId: 'fpp', action: 'invite', userIds: ['ana'], planId: 'anual' });
+    expect(de2).toMatchObject({ invited: 0, skipped: [{ uid: 'ana', reason: 'Já tem convite em aberto' }] });
+  });
+
+  it('federação oculta não convida', async () => {
+    const db = cenario();
+    db.store.docs.set('federations/fpp', { ...doc(db, 'federations/fpp'), published: false });
+    await expect(fed.membership(ctx(db), SEC, { federationId: 'fpp', action: 'invite', userIds: ['ana'], planId: 'anual' })).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('aceitar = pedir no plano do convite: entra sem esperar a secretaria (pago gera a cobrança)', async () => {
+    const db = cenario();
+    const c = ctx(db);
+    await fed.membership(c, SEC, { federationId: 'fpp', action: 'invite', userIds: ['ana'], planId: 'anual' });
+    const r = await fed.membership(c, ANA, { federationId: 'fpp', action: 'request', planId: 'anual' });
+    expect(r.chargeId).toBeTruthy();
+    expect(doc(db, 'federation_members/fpp_ana')).toMatchObject({ status: 'awaiting_payment', invited: true });
+    expect(doc(db, 'federation_invites/fpp_ana')).toMatchObject({ status: 'accepted', member_id: 'fpp_ana' });
+    expect(avisosPara(db, 'sec')).toHaveLength(0); // não entrou na fila de pedidos
+  });
+
+  it('pedido em OUTRO plano segue o caminho normal; recusar e cancelar fecham o convite', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_plans/outro', { federation_id: 'fpp', name: 'Outro', person_type: 'athlete', tier: 'federated', billing: 'annual', price_cents: 5000, active: true });
+    const c = ctx(db);
+    await fed.membership(c, SEC, { federationId: 'fpp', action: 'invite', userIds: ['ana'], planId: 'anual' });
+    await fed.membership(c, ANA, { federationId: 'fpp', action: 'request', planId: 'outro' });
+    expect(doc(db, 'federation_members/fpp_ana').status).toBe('pending');
+    expect(doc(db, 'federation_invites/fpp_ana').status).toBe('pending');
+    await fed.membership(c, ANA, { federationId: 'fpp', action: 'invite_decline' });
+    expect(doc(db, 'federation_invites/fpp_ana')).toMatchObject({ status: 'declined', decided_by: 'ana' });
+    await expect(fed.membership(c, SEC, { federationId: 'fpp', action: 'invite_cancel', userId: 'ana' })).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('convite vencido não dispensa a aprovação', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_invites/fpp_ana', { federation_id: 'fpp', user_id: 'ana', plan_id: 'anual', status: 'pending', expires_at_ms: NOW - 1 });
+    await fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'anual' });
+    expect(doc(db, 'federation_members/fpp_ana').status).toBe('pending');
+  });
+});

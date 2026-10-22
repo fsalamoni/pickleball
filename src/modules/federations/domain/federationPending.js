@@ -4,7 +4,7 @@
  * (`docs/27-FALHA-NAO-E-VAZIO.md`). As contas são as MESMAS das abas.
  */
 import { tk } from '@/core/i18n';
-import { AFFILIATION_STATUS, CHARGE_STATUS, DISCIPLINE_STATUS, DOC_STATUS, FED_PERMISSION, MEMBER_STATUS, REPORT_STATUS, TRANSFER_STATUS } from './constants.js';
+import { AFFILIATION_STATUS, CHARGE_STATUS, DISCIPLINE_STATUS, DOC_STATUS, FED_PERMISSION, MEMBER_STATUS, REPORT_STATUS, TRANSFER_STATUS, isInvitePending } from './constants.js';
 import { sanctionState } from './sanction.js';
 import { isChargeOverdue } from './charges.js';
 import { isoDate, membershipState } from './membership.js';
@@ -65,9 +65,11 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
  * O que espera a PESSOA filiada (vai para a faixa "Precisa de você" da Minha área).
  * @param {object[]|undefined} members as filiações da pessoa
  * @param {object[]|undefined} charges as cobranças da pessoa
+ * @param {{ hoje?: string, invites?: object[], now?: number }} [opts] `invites`: os convites para filiar recebidos
  */
-export function myFederationPending(members, charges, { hoje = isoDate() } = {}) {
-  const out = { pagar: undefined, vencendo: undefined, vencida: undefined };
+export function myFederationPending(members, charges, { hoje = isoDate(), invites, now = Date.now() } = {}) {
+  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined };
+  if (Array.isArray(invites)) out.convites = invites.filter((inv) => isInvitePending(inv, now)).length;
   if (Array.isArray(charges)) out.pagar = charges.filter((c) => c.status === CHARGE_STATUS.OPEN).length;
   if (Array.isArray(members)) {
     const estados = members.map((m) => membershipState(m, hoje));

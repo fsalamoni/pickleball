@@ -3,12 +3,12 @@
  * recebe, a PÁGINA pública (campos + cor + logo) e os MÓDULOS internos (as
  * sub-flags da federação; os `planned` aparecem como "em breve" e não ligam).
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Pencil, Plus, Puzzle } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { savePlan, setPlanActive, updateFederationGovernance, updateFederationModules, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
+import { savePlan, setPlanActive, setFederationModule, updateFederationGovernance, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
 import { BOARD_MAX, MINUTES_MAX, validateGovernance, womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
@@ -21,7 +21,10 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Sele
 import FederationPublicFields from '../FederationPublicFields';
 import FedPublicationTab from './FedPublication';
 import { FedLogo, fedPublicPath, publicHost } from '../federationUi';
-import { t } from '@/core/i18n';
+import { listIssuerCampaigns, listIssuerCoupons, setPromoCouponActive, updatePromoCampaign } from '@/modules/promo/services/promoService';
+import { listSellerListings, setListingStatus } from '@/modules/marketplace/services/marketService';
+import { federationIssuer } from '@/v2/components/promo/promoUi';
+import { t, tk } from '@/core/i18n';
 
 const reais = (cents) => (Number(cents) / 100).toFixed(2).replace('.', ',');
 const cents = parseBrlCents;
@@ -204,29 +207,108 @@ function PaginaTab({ federation }) {
 
 /* --------------------------------------------------------------- módulos -- */
 
-function ModulosTab({ federation }) {
+/**
+ * Um módulo: o interruptor mostra o estado na hora do toque (otimista) e
+ * volta se o servidor recusar; ligado, diz onde aparece e leva até lá.
+ */
+/** O que desligar faz com o que está no ar (o aviso antes de confirmar). */
+const AO_DESLIGAR = {
+  promos: tk('Os cupons e os banners da federação que estão valendo serão pausados (nada é apagado; dá para reativar depois de religar).'),
+  store: tk('Os anúncios da loja oficial serão pausados. Conclua antes os pedidos em andamento: sem o módulo, a loja sai do painel do Mercado.'),
+  discipline: tk('Não dá mais para aplicar sanção nem receber manifestação na ouvidoria. As sanções em vigor seguem valendo, e os recursos continuam na Central.'),
+  tournaments: tk('Não chegam mais pedidos de chancela. Os torneios já chancelados mantêm o selo, e os pedidos em aberto continuam na Central para você decidir.'),
+};
+
+/**
+ * Antes de desligar, pausa o que ainda está no ar e que a equipe deixaria de
+ * alcançar: sem o módulo, a regra tira dela o poder de mexer em cupom,
+ * banner e anúncio — e eles ficariam valendo sem dono.
+ */
+async function pausarAntesDeDesligar(federation, id, user) {
+  if (id === 'promos') {
+    const issuer = federationIssuer(federation);
+    const [cupons, campanhas] = await Promise.all([listIssuerCoupons(issuer), listIssuerCampaigns(issuer)]);
+    await Promise.all([
+      ...cupons.filter((c) => c.active !== false).map((c) => setPromoCouponActive(issuer, c.id, false, user)),
+      ...campanhas.filter((c) => c.banner_active === true).map((c) => updatePromoCampaign(c.id, { banner_active: false }, user)),
+    ]);
+  }
+  if (id === 'store') {
+    const anuncios = await listSellerListings(`federation_${federation.id}`);
+    await Promise.all(anuncios.filter((l) => l.status === 'active' || l.status === 'sold_out').map((l) => setListingStatus(l, 'paused')));
+  }
+}
+
+function ModuloCard({ federation, id, meta }) {
   const { user } = useAuth();
-  const m = useFederationMutation((modules) => updateFederationModules(federation.id, modules, { uid: user?.uid }));
-  const ligados = federation.modules || {};
+  const ligado = federation.modules?.[id] === true;
+  const [pendente, setPendente] = useState(null);
+  const [confirmar, setConfirmar] = useState(false);
+  const m = useFederationMutation(async (on) => {
+    if (!on) await pausarAntesDeDesligar(federation, id, user);
+    return setFederationModule(federation.id, id, on, { uid: user?.uid });
+  });
+  useEffect(() => { if (pendente !== null && ligado === pendente) setPendente(null); }, [ligado, pendente]);
+  const disponivel = meta.status === 'available';
+  const on = pendente ?? ligado;
+  const depende = meta.requires && federation.modules?.[meta.requires] !== true ? FED_MODULE_META[meta.requires] : null;
+  const aplicar = (v) => {
+    setConfirmar(false);
+    setPendente(v);
+    m.mutate(v, {
+      onSuccess: () => toast.success(v ? t('{modulo} ligado.', { modulo: t(meta.label) }) : t('{modulo} desligado.', { modulo: t(meta.label) })),
+      onError: (e) => { setPendente(null); toast.error(e.message); },
+    });
+  };
+  const mudar = (v) => (v ? aplicar(true) : setConfirmar(true));
+  return (
+    <li>
+      <V2Surface variant="compacto" className={`flex h-full flex-col gap-3 p-4 ${on ? 'ring-2 ring-acid' : ''}`}>
+        <div className="flex items-start gap-3">
+          <Puzzle className={`mt-0.5 h-5 w-5 shrink-0 ${on ? 'text-ink' : 'text-gray-500'}`} aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">
+              {t(meta.label)}
+              {!disponivel ? <V2Badge tone="neutral">{t('Em breve')}</V2Badge> : <V2Badge tone={on ? 'green' : 'neutral'}>{on ? t('Ligado') : t('Desligado')}</V2Badge>}
+            </p>
+            <p className="text-sm text-gray-500">{t(meta.description)}</p>
+          </div>
+          {disponivel && <V2Toggle id={`mod-${id}`} checked={on} disabled={m.isPending} onChange={mudar} ariaLabel={on ? t('Desligar {modulo}', { modulo: t(meta.label) }) : t('Ligar {modulo}', { modulo: t(meta.label) })} />}
+        </div>
+        {disponivel && meta.central && (
+          <dl className="space-y-0.5 border-t border-gray-100 pt-2 text-xs text-gray-500">
+            <div className="flex gap-1"><dt className="font-semibold">{t('Na Central:')}</dt><dd>{t(meta.central)}</dd></div>
+            <div className="flex gap-1"><dt className="font-semibold">{t('Na página:')}</dt><dd>{t(meta.page)}</dd></div>
+          </dl>
+        )}
+        {on && depende && <p className="text-xs text-amber-700">{t('Depende de "{outro}": sem ele, nenhum resultado chega.', { outro: t(depende.label) })}</p>}
+        {confirmar && (
+          <div className="space-y-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900" role="alert">
+            <p>{t('Desligar {modulo}? Some da Central e da página pública na hora.', { modulo: t(meta.label) })} {AO_DESLIGAR[id] ? t(AO_DESLIGAR[id]) : t('O que já foi gravado fica guardado e volta quando você religa.')}</p>
+            <div className="flex flex-wrap gap-2">
+              <V2Button type="button" size="sm" variant="danger" onClick={() => aplicar(false)}>{t('Desligar')}</V2Button>
+              <V2Button type="button" size="sm" variant="ghost" onClick={() => setConfirmar(false)}>{t('Manter ligado')}</V2Button>
+            </div>
+          </div>
+        )}
+        {on && ligado && !confirmar && meta.tab && <Link to={{ search: `?aba=${meta.tab}` }} className="self-start text-sm font-semibold text-ink underline underline-offset-4">{t('Abrir {local}', { local: t(meta.central) })}</Link>}
+      </V2Surface>
+    </li>
+  );
+}
+
+function ModulosTab({ federation }) {
+  const entradas = Object.entries(FED_MODULE_META);
+  const ligados = entradas.filter(([id, meta]) => meta.status === 'available' && federation.modules?.[id] === true).length;
   return (
     <section className="space-y-4" aria-label={t('Módulos da federação')} data-dica="federacao-modulos">
-      <div><h2 className="font-display text-xl font-bold text-ink">{t('Módulos')}</h2><p className="text-sm text-gray-500">{t('O que a sua federação liga para si. O que ainda está em construção aparece como "em breve" e não liga.')}</p></div>
+      <div>
+        <h2 className="font-display text-xl font-bold text-ink">{t('Módulos')}</h2>
+        <p className="text-sm text-gray-500">{t('O que a sua federação liga para si. Ligado, o módulo aparece na hora na Central e na página pública; desligado, some dos dois lugares e ninguém consegue usá-lo. O que já foi gravado fica guardado e volta quando você religa.')}</p>
+        <p className="mt-1 text-sm font-semibold text-ink">{t('{n} de {total} ligados', { n: ligados, total: entradas.filter(([, meta]) => meta.status === 'available').length })}</p>
+      </div>
       <ul className="grid gap-3 sm:grid-cols-2">
-        {Object.entries(FED_MODULE_META).map(([id, meta]) => {
-          const disponivel = meta.status === 'available';
-          return (
-            <li key={id}>
-              <V2Surface variant="compacto" className="flex h-full items-start gap-3 p-4">
-                <Puzzle className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{t(meta.label)}{!disponivel && <V2Badge tone="neutral">{t('Em breve')}</V2Badge>}</p>
-                  <p className="text-sm text-gray-500">{t(meta.description)}</p>
-                </div>
-                {disponivel && <V2Toggle id={`mod-${id}`} checked={ligados[id] === true} onChange={(v) => m.mutate({ ...ligados, [id]: v }, { onError: (e) => toast.error(e.message) })} label={t('Ligado')} />}
-              </V2Surface>
-            </li>
-          );
-        })}
+        {entradas.map(([id, meta]) => <ModuloCard key={id} federation={federation} id={id} meta={meta} />)}
       </ul>
     </section>
   );

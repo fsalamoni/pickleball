@@ -12,8 +12,23 @@
  */
 import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
-import { FED_PERMISSION } from '@/modules/federations/domain/constants';
+import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { sanctionInForce } from '@/modules/federations/domain/discipline';
+import { sanctionState } from '@/modules/federations/domain/sanction';
+
+/**
+ * O que ficou em aberto num módulo DESLIGADO (ver `residual` abaixo). Lista
+ * que não carregou (`undefined`) não abre nada.
+ */
+export function residualModules(federation, { sanctions, tournaments } = {}) {
+  return {
+    discipline: !fedModuleOn(federation, 'discipline') && Array.isArray(sanctions)
+      && sanctions.some((s) => s.status === DISCIPLINE_STATUS.APPEALED || sanctionInForce(s)),
+    tournaments: !fedModuleOn(federation, 'tournaments') && Array.isArray(tournaments)
+      && tournaments.some((x) => sanctionState(x).pending),
+  };
+}
 
 export const FED_SECTION_GROUPS = Object.freeze([
   { id: 'atender', label: tk('Atender') },
@@ -26,7 +41,13 @@ export const FED_SECTION_GROUPS = Object.freeze([
  * @param {{ isMaster?: boolean }} [opts] admin master vê também a aba Cargos
  * @returns {Array<{ id: string, grupo: string, label: string, icon: Function, dica?: string, tabs: Array<{ value: string, label: string, icon: Function }> }>}
  */
-export function buildFederationSections(perms = [], federation = null, { isMaster = false } = {}) {
+/**
+ * `residual`: módulo DESLIGADO com coisa em aberto que precisa de decisão
+ * (`discipline`: sanção em vigor ou recurso; `tournaments`: pedido de
+ * chancela pendente). A seção segue aberta só com o que já existe — desligar
+ * impede o novo, nunca deixa um recurso sem quem decida.
+ */
+export function buildFederationSections(perms = [], federation = null, { isMaster = false, residual = {} } = {}) {
   const pode = (p) => perms.includes(p);
   const admin = pode(FED_PERMISSION.ADMIN);
   const modulo = (id) => fedModuleOn(federation, id);
@@ -53,20 +74,18 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'credenciais', label: tk('Credenciais'), icon: ShieldCheck },
       ],
     },
-    pode(FED_PERMISSION.DISCIPLINE) && modulo('discipline') && {
+    pode(FED_PERMISSION.DISCIPLINE) && (modulo('discipline') || residual.discipline) && {
       id: 'disciplina', grupo: 'atender', label: tk('Disciplina'), icon: Gavel, dica: 'federacao-secao-disciplina',
       tabs: [
         { value: 'sancoes', label: tk('Sanções'), icon: Scale },
-        { value: 'ouvidoria', label: tk('Ouvidoria'), icon: MessageSquareWarning },
+        ...(modulo('discipline') ? [{ value: 'ouvidoria', label: tk('Ouvidoria'), icon: MessageSquareWarning }] : []),
       ],
     },
-    pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking')) && {
+    pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking') || residual.tournaments) && {
       id: 'competicoes', grupo: 'atender', label: tk('Competições'), icon: Trophy, dica: 'federacao-secao-competicoes',
       tabs: [
-        ...(modulo('tournaments') ? [
-          { value: 'chancelas', label: tk('Chancelas'), icon: Trophy },
-          { value: 'resultados', label: tk('Resultados'), icon: ClipboardList },
-        ] : []),
+        ...(modulo('tournaments') || residual.tournaments ? [{ value: 'chancelas', label: tk('Chancelas'), icon: Trophy }] : []),
+        ...(modulo('tournaments') ? [{ value: 'resultados', label: tk('Resultados'), icon: ClipboardList }] : []),
         ...(modulo('ranking') ? [{ value: 'ranking', label: tk('Ranking'), icon: Medal }] : []),
       ],
     },

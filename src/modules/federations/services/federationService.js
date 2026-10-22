@@ -30,7 +30,7 @@ import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sancti
 import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
 import { staffPerms } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
-import { fedModuleOn, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
+import { availableModules, fedModuleOn, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
 import { documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
 import { validateCourseInput } from '../domain/courses.js';
 import { validateReportInput } from '../domain/discipline.js';
@@ -239,12 +239,17 @@ export async function setFederationPublished(federation, published, { uid } = {}
   await createAuditLog({ action: abrir ? 'federation_publish' : 'federation_unpublish', actor: { uid }, details: { federation_id: federation.id, slug: federation.slug || '' } });
 }
 
-/** Os módulos internos que a federação liga para si. */
-export async function updateFederationModules(id, modules, { uid } = {}) {
-  const value = normalizeModules(modules);
-  await updateDoc(doc(db, C.federations, id), { modules: value, updated_at: serverTimestamp() });
-  await createAuditLog({ action: 'federation_modules_update', actor: { uid }, details: { federation_id: id, modules: value } });
-  return value;
+/**
+ * Liga ou desliga UM módulo da federação. Grava só o campo dele
+ * (`modules.<id>`): com o mapa inteiro, dois toques seguidos antes da
+ * releitura faziam o segundo gravar o mapa antigo e desligar o primeiro.
+ */
+export async function setFederationModule(id, moduleId, on, { uid } = {}) {
+  if (!availableModules().includes(moduleId)) throw new Error(t('Este módulo ainda não pode ser ligado.'));
+  const valor = on === true;
+  await updateDoc(doc(db, C.federations, id), { [`modules.${moduleId}`]: valor, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_modules_update', actor: { uid }, details: { federation_id: id, module: moduleId, on: valor } });
+  return valor;
 }
 
 /* -------------------------------------------------------------- equipe -- */
@@ -324,6 +329,19 @@ export async function getMembership(fedId, uid) {
 }
 
 /** As filiações da pessoa, em todas as federações. */
+/** Os convites para filiar desta federação (a secretaria). */
+export async function listFederationInvites(fedId) {
+  const q = query(collection(db, C.invites), where('federation_id', '==', fedId));
+  return (await getDocs(q)).docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
+/** Os convites que a pessoa recebeu (todas as federações). */
+export async function listMyFederationInvites(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.invites), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 export async function listMyMemberships(uid) {
   if (!uid) return [];
   const q = query(collection(db, C.members), where('user_id', '==', uid));

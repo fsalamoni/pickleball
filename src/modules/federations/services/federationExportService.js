@@ -4,7 +4,7 @@
  * O que é da FEDERAÇÃO (planos, equipe, filiados dos outros) fica com ela.
  */
 import {
-  listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
+  listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyFederationInvites, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
   listMyMembersPrivate, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
 } from './federationService.js';
 
@@ -26,6 +26,7 @@ export async function collectFederationExport(uid) {
     ['sanctions', 'Sanções disciplinares (suas e dos dependentes)', () => listMySanctions(uid)],
     ['reports', 'Manifestações identificadas na ouvidoria', () => listMyReports(uid)],
     ['acervo_follows', 'Acervos de federação que você segue', () => listMyAcervoFollows(uid)],
+    ['invites', 'Convites para filiar que você recebeu', () => listMyFederationInvites(uid)],
     ['comments', 'Seus comentários em documentos e eventos de federação', () => listMyFederationComments(uid)],
   ];
   const lidas = await Promise.allSettled(partes.map(([, , ler]) => ler()));

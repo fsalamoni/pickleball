@@ -4877,6 +4877,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Convite para filiar (`{fed}_{uid}`): a secretaria escolhe a pessoa na
+    // lista da plataforma e só o servidor grava (`federationMembership`:
+    // invite, invite_cancel, invite_decline). Lê quem foi convidado e a
+    // secretaria; aceitar é pedir a filiação no plano do convite.
+    match /federation_invites/{invId} {
+      allow read: if isOwner(od().user_id)
+        || fedHas(od().federation_id, 'members')
+        || fedHas(od().federation_id, 'admin');
+      allow write: if false;
+    }
+
     // Curso (PR 3, módulo `courses`): público quando não é rascunho; a equipe
     // (cursos/admin) cria e edita — a inscrição e a credencial são do servidor.
     match /federation_courses/{courseId} {

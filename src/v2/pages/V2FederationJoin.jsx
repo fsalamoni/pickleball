@@ -18,10 +18,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, IdCard, Landmark, Users } from 'lucide-react';
+import { Check, IdCard, Landmark, MailPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { calculateAge } from '@/core/lib/profileValidation';
-import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyMembership } from '@/modules/federations/hooks/useFederations';
+import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationInvites, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { membershipAction } from '@/modules/federations/services/federationService';
 import { canRequestMembership } from '@/modules/federations/domain/membership';
@@ -29,21 +29,38 @@ import { isFreePlan, planPeriodLabel, planPrice, plansFor, planBenefitLines } fr
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { ageGroup, ageOn, federationAsksCpf, requiredDocKinds, validateDependentInput, validatePrivateInput } from '@/modules/federations/domain/privateData';
 import { isoDate } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, DOC_KIND_LABELS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, DOC_KIND_LABELS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import {
   V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
-import { FedLogo, FederationGate, fedPath } from '@/v2/components/federations/federationUi';
+import { FedLogo, FederationGate, fedPath, quando } from '@/v2/components/federations/federationUi';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
-function Formulario({ federation, plans, dependente = false, onEnviado }) {
+/** O convite da secretaria, em cima do formulário: o plano já vem escolhido. */
+function ConviteAviso({ convite }) {
+  const recusar = useFederationMutation(() => membershipAction({ federationId: convite.federation_id, action: 'invite_decline' }));
+  return (
+    <V2Surface className="flex flex-wrap items-start gap-3 border-acid/60 bg-acid/10" role="note">
+      <MailPlus className="mt-0.5 h-5 w-5 shrink-0 text-ink" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-ink">{t('Você foi convidado(a) pela secretaria')}</p>
+        <p className="text-sm text-gray-600">{t('Plano {plano}, já escolhido abaixo. Pedindo neste plano, a filiação entra sem esperar aprovação. O convite vale até {data}.', { plano: convite.plan_name, data: quando(convite.expires_at_ms) })}</p>
+        {convite.note && <p className="mt-1 text-sm text-gray-700">“{convite.note}”</p>}
+      </div>
+      <V2Button type="button" size="sm" variant="ghost" disabled={recusar.isPending} onClick={() => recusar.mutate(undefined, { onSuccess: () => toast.success(t('Convite recusado.')), onError: (e) => toast.error(e.message) })}>{t('Recusar o convite')}</V2Button>
+    </V2Surface>
+  );
+}
+
+function Formulario({ federation, plans, dependente = false, onEnviado, convite = null }) {
   const { userProfile } = useAuth();
   const idadeConta = useMemo(() => calculateAge(userProfile?.birth_date), [userProfile?.birth_date]);
   const clubes = useMyClubs();
-  const [tipo, setTipo] = useState(PLAN_PERSON_TYPE.ATHLETE);
-  const [planId, setPlanId] = useState('');
+  const planoConvite = convite ? (plans || []).find((p) => p.id === convite.plan_id && p.active !== false) : null;
+  const [tipo, setTipo] = useState(planoConvite?.person_type || PLAN_PERSON_TYPE.ATHLETE);
+  const [planId, setPlanId] = useState(planoConvite?.id || '');
   const [opcoes, setOpcoes] = useState({ publicBadge: true, showInDirectory: false, clubId: '', note: '', termos: false });
   const [dep, setDep] = useState({ name: '', birth_date: '' });
   const [privado, setPrivado] = useState({ cpf: '', guardian_name: '', guardian_contact: '', guardian_consent: false, minor_photo_consent: false });
@@ -219,7 +236,10 @@ function Pagina() {
   const pq = useFederationPlans(federationId);
   const mq = useMyMembership(federationId);
   const cq = useMyFederationCharges();
+  // Convite opcional: se a leitura falhar, a página segue sem o aviso.
+  const iq = useMyFederationInvites();
   const f = fq.data;
+  const convite = (iq.data || []).find((inv) => inv.federation_id === federationId && isInvitePending(inv)) || null;
 
   let corpo;
   if (fq.isError || pq.isError || mq.isError || cq.isError) corpo = <V2ErrorState onRetry={() => [fq, pq, mq, cq].filter((q) => q.isError).forEach((q) => q.refetch())} />;
@@ -245,7 +265,12 @@ function Pagina() {
         </div>
       </V2Surface>
     );
-  } else corpo = <Formulario federation={f} plans={pq.data} />;
+  } else corpo = (
+    <div className="space-y-4">
+      {convite && <ConviteAviso convite={convite} />}
+      <Formulario key={convite?.id || 'sem-convite'} federation={f} plans={pq.data} convite={convite} />
+    </div>
+  );
 
   return (
     <V2Page className="space-y-6">

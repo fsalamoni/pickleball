@@ -1677,6 +1677,19 @@ evento marcado, remarcado, adiado ou cancelado (só quem pode ler o ato ou o
 evento). Sai na exclusão de conta e vai na exportação. Zero índice (uma
 igualdade).
 
+### `federation_invites/{fed}_{uid}` (2026-10-22, NOVO — convite para filiar)
+`federation_id`, `federation_name`, `federation_acronym`, `user_id`,
+`user_name`, `photo_url`, `plan_id`, `plan_name`, `note` (≤ 300), `status`
+(`pending` | `accepted` | `declined` | `cancelled`, gravados), `invited_by`,
+`created_at_ms`, `expires_at_ms` (+30 dias), `decided_by`, `decided_at_ms`,
+`member_id` (aceito), `updated_at`. Lê a pessoa convidada e quem tem
+`members`/`admin` na federação; **só o servidor grava** (`federationMembership`:
+`invite`, `invite_cancel`, `invite_decline`; `write: if false`). O convite não
+cria filiação: o pedido no plano do convite entra sem aprovação e marca a
+filiação com `invited: true` (campo opcional novo em `federation_members`).
+Sai na exclusão de conta (apagado) e vai na exportação. Zero índice (uma
+igualdade; ordenação em memória).
+
 ### `federation_events/{id}` (PR 9a, NOVO — calendário oficial)
 `federation_id`, `kind` (14 tipos, gravados: `competition`, `selection`,
 `course`, `sport_other`, `assembly_ordinary`, `assembly_extraordinary`,

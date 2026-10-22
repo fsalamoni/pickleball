@@ -33,7 +33,7 @@ O que esta entrega cobre:
 | Pedido de filiação, aprovação, cobrança Pix, "Já paguei", confirmação | `/federacoes/:id/filiar`, Central → Filiados / Financeiro |
 | Carteirinha digital (PNG, imprimir, compartilhar) e verificação pelo QR | Minha área → Federações, página da federação, `/f/verificar/:codigo` |
 | Equipe com 8 papéis e permissões | Central → Equipe |
-| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os nove do catálogo, todos `available`) |
+| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os onze do catálogo, todos `available`; §19) |
 | Indicadores dos últimos 12 meses (filiados, renovação, receita, atraso), com CSV | Central → Gerir → Indicadores (§6.8) |
 | Declaração de vínculo imprimível, com QR | página da federação, Minha área → Federações, Central → Filiados (§6.8) |
 | Avisos (sino, e por e-mail/celular quando `external_messaging` estiver ligada) | categoria "Federações" em Configurações → Notificações |
@@ -62,7 +62,8 @@ breve") e `FED_MODULE_META[x].status` só muda quando a tela existir.
    **`affiliations`** (clubes e arenas filiados); do PR 3, **`courses`** e
    **`discipline`**; do PR 4, **`news`** (notícias e avisos), **`sponsors`**
    (patrocinadores), **`promos`** (cupons e campanhas) e **`store`** (loja
-   oficial no Mercado) — os nove do catálogo. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   oficial no Mercado); depois, **`official_docs`** (acervo) e **`calendar`**
+   (agenda) — os onze do catálogo. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
    (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
    `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
    nem chancela àquela federação. Desligar um módulo não apaga nada: o que
@@ -1450,3 +1451,62 @@ abria não sabia o que era público, o que era só dele e o que era da equipe.
 - **Diretório**: "Na equipe" leva à Central; "Suas filiações" leva à aba
   Minha filiação. Antes os dois eram um botão "Gerir"/link genérico.
 - **Zero banco, zero regra, zero função nova.** Só tela, domínio puro e textos.
+
+## 19. Módulos que ligam e desligam de verdade, e convites pela lista de usuários (2026-10-22)
+
+### 19.1 O interruptor de cada módulo
+
+- **Configurações → Módulos** (`FedSettingsPanel` → `ModuloCard`): cada cartão diz
+  **Ligado/Desligado** ao lado do interruptor (antes o selo dizia "Ligado"
+  com o interruptor desligado), o que o módulo abre **na Central** e **na
+  página** (`FED_MODULE_META[x].central/page/tab`, com "Abrir …" levando à aba)
+  e o que acontece ao desligar. São os 11 do catálogo, todos `available`.
+- **Grava só o módulo tocado**: `setFederationModule(id, x, on)` faz
+  `updateDoc({ 'modules.x': on })` + auditoria `federation_modules_update`.
+  🐞 Antes a tela regravava o mapa inteiro a partir de uma cópia: dois toques
+  seguidos (ou duas pessoas) desfaziam o primeiro. A regra já deixava o admin
+  mudar `modules` (provado em `tests/rules/federationInvites.rules.test.js`).
+- **Dependência**: `ranking` tem `requires: 'tournaments'`; ligado sem o outro,
+  o cartão avisa que nenhum resultado chega.
+- **Desligar pergunta antes** (confirmação no próprio cartão) e:
+  - `promos`: pausa os cupons ativos e os banners de campanha no ar;
+  - `store`: pausa os anúncios ativos/esgotados da loja oficial;
+  - nada é apagado; religar devolve o que estava gravado.
+- **Decisão em aberto não fica órfã** (`residualModules`, `federationSections.js`):
+  com `discipline` desligado e sanção em vigor/recurso, a aba **Sanções** fica
+  (sem "Aplicar sanção", com aviso); com `tournaments` desligado e pedido de
+  chancela pendente, a aba **Chancelas** fica. As abas de RECEBER coisa nova
+  (Ouvidoria, Resultados) somem. A faixa "Precisa de você" só mostra itens de
+  abas que existem.
+- **Hoje** da Central: com a federação oculta, mostra "Ver como visitante" em
+  vez do link público.
+
+### 19.2 Escolher pessoas na lista de usuários (`FedPersonPicker`)
+
+Nomear para a equipe, passar a administração e convidar para filiar usam o
+mesmo seletor: a lista de usuários (`useAllAthletes`, sem perfil oculto) aparece
+**já aberta**, em ordem alfabética, e a busca (nome ou cidade) só estreita;
+mostra 50 por vez e diz quantos há. Quem não pode ser escolhido aparece com o
+motivo ("Já na equipe", "Já filiado(a)", "Já convidado(a)") e sem clique.
+
+### 19.3 Convite para filiar (`federation_invites/{fed}_{uid}`)
+
+- **Ninguém vira filiado sem querer.** A secretaria (permissão `members`)
+  escolhe pessoas e um plano em **Filiados → Convidar pessoas da plataforma**;
+  o servidor (`federationMembership`, ação `invite`, até 50 por vez) grava o
+  convite (30 dias), avisa cada pessoa e pula quem não tem conta, já tem
+  filiação viva ou já tem convite em aberto. Federação oculta não convida.
+- **Aceitar = pedir a filiação no plano do convite**: o pedido entra **sem
+  esperar a secretaria** (plano pago gera a cobrança; gratuito ativa), a
+  filiação ganha `invited: true` e o convite vira `accepted`. Pedido em outro
+  plano segue o caminho normal; convite vencido não dispensa a aprovação.
+- **Recusar** (`invite_decline`, a própria pessoa) e **cancelar**
+  (`invite_cancel`, a secretaria) fecham o convite.
+- **Onde aparece**: Minha área → Federações ("Convites para filiar", com
+  Aceitar e Recusar, e na faixa "Precisa de você"); a página de filiação
+  (`/federacoes/:id/filiar`) mostra o convite e já escolhe o plano; a
+  secretaria vê "Convites esperando resposta" em Pedidos.
+- **Regra**: lê a convidada e quem tem `members`/`admin` na federação; escrita
+  só do servidor. Entra na exclusão de conta (apagado) e na exportação.
+  Provado em `tests/rules/federationInvites.rules.test.js` e
+  `functions/federations.test.js` ("convite para filiar").

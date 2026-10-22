@@ -203,6 +203,7 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_sanctions: ['listMySanctions'],
   federation_reports: ['listMyReports'],
   federation_followers: ['listMyAcervoFollows'],
+  federation_invites: ['listMyFederationInvites'],
   federation_comments: ['listMyFederationComments'],
 };
 const FEDERACOES_FORA_DA_EXPORTACAO = {
