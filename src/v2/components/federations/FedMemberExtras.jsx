@@ -16,18 +16,58 @@ import { ArrowLeftRight, FileUp, Gavel, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
-import { deleteMyDocument, disciplineAction, transferAction, uploadMemberDocument } from '@/modules/federations/services/federationService';
+import { deleteMyDocument, disciplineAction, membershipAction, transferAction, uploadMemberDocument } from '@/modules/federations/services/federationService';
+import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useFederationMutation, useMyDocuments, useMySanctions, useMyTransfers, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { requiredDocKinds, requiredDocsStatus, validateDocumentFile } from '@/modules/federations/domain/privateData';
 import { canRequestTransfer, isReleaseOverdue, sortTransfers, transferReleaseDays, transferSummary, validateTransferInput } from '@/modules/federations/domain/transfers';
 import { canAppeal, sanctionInForce, sortSanctions } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_KIND_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { MEMBER_STATUS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_KIND_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from './federationUi';
 
 const TOM_DOC = { pending: 'amber', approved: 'green', rejected: 'red', missing: 'neutral' };
+
+/* ---------------------------------------------- desistir / cancelar a filiação -- */
+
+/**
+ * Desistir do pedido (ainda pendente ou esperando o Pix) ou cancelar a
+ * filiação — a pessoa, ou o responsável pelo dependente. O servidor já
+ * aceitava (`membership` → `cancel`); faltava a porta, e quem pediu na
+ * federação errada ficava preso até a secretaria agir.
+ */
+export function FedCancelMembership({ member, size = 'sm', className = '' }) {
+  const [aberto, setAberto] = useState(false);
+  const m = useFederationMutation(() => membershipAction({ federationId: member.federation_id, action: 'cancel', memberId: member.id }));
+  if (!member || !LIVE_MEMBER_STATUSES.includes(member.status)) return null;
+  const pedido = [MEMBER_STATUS.PENDING, MEMBER_STATUS.AWAITING_PAYMENT].includes(member.status);
+  const dependente = !member.user_id && member.user_name;
+  const confirmar = () => m.mutate(undefined, {
+    onSuccess: () => { setAberto(false); toast.success(pedido ? t('Pedido cancelado.') : t('Filiação cancelada.')); },
+    onError: (e) => toast.error(e.message),
+  });
+  return (
+    <>
+      <V2Button type="button" variant="ghost" size={size} className={className} onClick={() => setAberto(true)}>{pedido ? t('Desistir do pedido') : t('Cancelar a filiação')}</V2Button>
+      <ConfirmDialog
+        open={aberto}
+        onOpenChange={setAberto}
+        destructive
+        loading={m.isPending}
+        title={pedido ? t('Desistir do pedido de filiação?') : dependente ? t('Cancelar a filiação de {nome}?', { nome: member.user_name }) : t('Cancelar a sua filiação?')}
+        description={pedido
+          ? t('O pedido sai da fila da secretaria e a cobrança dele, se houver, é cancelada. Você pode pedir de novo depois.')
+          : t('A filiação termina agora: a carteirinha deixa de valer e as cobranças em aberto são canceladas. O que já foi pago fica com a federação; para voltar, é um pedido novo.')}
+        confirmLabel={pedido ? t('Desistir do pedido') : t('Cancelar a filiação')}
+        cancelLabel={t('Voltar')}
+        onConfirm={confirmar}
+      />
+    </>
+  );
+}
 
 /* ------------------------------------------------------------- documentos -- */
 

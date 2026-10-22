@@ -28,7 +28,7 @@ import { MemberStatusBadge, quando } from '../federationUi';
 import MemberCardDialog from '../MemberCard';
 import MembershipDeclarationDialog from '../MembershipDeclaration';
 import PixChargeBlock from '../PixChargeBlock';
-import { FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
+import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
 import { t, tn } from '@/core/i18n';
 
 /** A filiação e as cobranças abertas desta federação (as mesmas consultas nos três). */
@@ -174,6 +174,7 @@ export function FedMyMembership({ federation, plans }) {
           )}
           <V2Button asChild variant="ghost" size="sm" className="w-full justify-start"><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
           <V2Button asChild variant="ghost" size="sm" className="w-full justify-start"><Link to="/perfil?secao=federacoes">{t('Minhas federações')}</Link></V2Button>
+          <FedCancelMembership member={m} className="w-full justify-start text-red-700" />
         </V2Surface>
       </aside>
       {cartao.dialogo}

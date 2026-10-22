@@ -26,6 +26,47 @@ async function curso(ctx, courseId) {
   return { ref: snap.ref, course: { id: snap.id, ...snap.data() } };
 }
 
+/**
+ * A equipe cancela o CURSO inteiro, com motivo: cada inscrição viva vira
+ * cancelada, a cobrança ainda aberta (ou informada) é cancelada e cada
+ * inscrito é avisado — quem já pagou é lembrado de que a devolução é com a
+ * federação (o Pix foi direto para ela). Antes o curso só mudava de situação
+ * pelo cliente, e os inscritos não ficavam sabendo.
+ */
+async function cancelarCurso(ctx, actor, data, { courseRef, c, fed }) {
+  await f.exigePerm(ctx, fed.id, actor, 'courses');
+  const motivo = f.texto(data.reason, 300);
+  if (motivo.length < 3) f.falha('invalid-argument', 'Diga o motivo do cancelamento: ele vai no aviso aos inscritos.');
+  if (['cancelled', 'done'].includes(c.status)) f.falha('failed-precondition', 'Este curso já está encerrado.');
+  const inscricoes = (await ctx.db.collection(f.C.enrollments).where('course_id', '==', c.id).get()).docs
+    .filter((d) => ['awaiting_payment', 'confirmed'].includes(d.data().status));
+  const cobrancas = (await ctx.db.collection(f.C.charges).where('course_id', '==', c.id).get()).docs
+    .filter((d) => ['open', 'declared'].includes(d.data().status));
+  // Lotes de até 400 escritas (o teto do Firestore é 500).
+  let batch = ctx.db.batch();
+  let ops = 0;
+  const conta = async (n) => { ops += n; if (ops >= 400) { await batch.commit(); batch = ctx.db.batch(); ops = 0; } };
+  batch.update(courseRef, { status: 'cancelled', cancelled_reason: motivo, cancelled_at_ms: ctx.now, cancelled_by: actor.uid, updated_at_ms: ctx.now });
+  await conta(1);
+  for (const d of cobrancas) { batch.update(d.ref, { status: 'cancelled', cancelled_at_ms: ctx.now, cancel_note: motivo }); await conta(1); }
+  for (const d of inscricoes) {
+    const e = d.data();
+    batch.update(d.ref, { status: 'cancelled', cancelled_at_ms: ctx.now, cancelled_reason: motivo, updated_at_ms: ctx.now });
+    const pagou = e.status === 'confirmed' && Number(e.amount_cents) > 0;
+    f.aviso(ctx, batch, e.user_id, {
+      title: tx('Curso {curso} cancelado', { curso: c.name }),
+      message: pagou
+        ? tx('A {sigla} cancelou o curso. Motivo: {motivo}. Você já tinha pago: a devolução é com a federação, fale com ela.', { sigla: fed.acronym, motivo })
+        : tx('A {sigla} cancelou o curso. Motivo: {motivo}.', { sigla: fed.acronym, motivo }),
+      link: '/perfil?secao=federacoes',
+    });
+    await conta(2);
+  }
+  if (ops > 0) await batch.commit();
+  await f.auditoria(ctx, actor, 'federation_course_cancel', { federation_id: fed.id, course_id: c.id, reason: motivo, enrollments: inscricoes.length, charges: cobrancas.length });
+  return { ok: true, enrollments: inscricoes.length, charges: cobrancas.length };
+}
+
 const vagasRestam = (c) => { const total = Math.trunc(Number(c.seats) || 0); return total <= 0 ? null : Math.max(0, total - (Math.trunc(Number(c.enrolled_count) || 0))); };
 
 async function course(ctx, actor, data) {
@@ -35,6 +76,7 @@ async function course(ctx, actor, data) {
   const fed = await f.federacao(ctx, c.federation_id);
   if (!(fed.modules && fed.modules.courses === true)) f.falha('failed-precondition', 'Esta federação não tem o módulo de cursos ligado.');
   const hoje = m.isoDateBR(ctx.now);
+  if (acao === 'cancel_course') return cancelarCurso(ctx, actor, data, { courseRef, c, fed });
   const propria = ['enroll', 'cancel'].includes(acao);
   const uid = propria ? actor.uid : f.texto(data.userId, 128);
   if (!uid) f.falha('invalid-argument', 'Diga de quem é a inscrição.');

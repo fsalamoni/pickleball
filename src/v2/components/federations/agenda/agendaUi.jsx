@@ -15,6 +15,7 @@ import { V2Badge } from '@/v2/ui/primitives';
 import { fmtData, t, tk } from '@/core/i18n';
 import { baixarBlob } from '../acervo/acervoFiles';
 import { publicHost } from '../federationUi';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 /** A data do evento ("2026-11-05") como dia LOCAL — meio-dia evita virar o dia anterior em qualquer fuso. */
 const diaLocal = (iso) => new Date(`${String(iso || '').slice(0, 10)}T12:00:00`);
@@ -86,9 +87,10 @@ export function AgendaEventItem({ federation, ev, nowMs = Date.now() }) {
   const kind = eventKind(ev.kind);
   const adiado = ev.status === EVENT_STATUS.POSTPONED;
   const local = placeText(ev.place);
+  const { isAuthenticated } = useAuth(); // sem conta, o torneio abre a página pública (`/p/:id`)
   return (
     <li>
-      <Link to={eventPublicPath(federation, ev)} className={`flex gap-3 rounded-2xl border border-gray-100 bg-paper-pure p-3 transition-colors hover:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${ev.status === EVENT_STATUS.CANCELLED ? 'opacity-75' : ''}`}>
+      <Link to={eventPublicPath(federation, ev, { inApp: Boolean(isAuthenticated) })} className={`flex gap-3 rounded-2xl border border-gray-100 bg-paper-pure p-3 transition-colors hover:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${ev.status === EVENT_STATUS.CANCELLED ? 'opacity-75' : ''}`}>
         <DateBadge ev={ev} adiado={adiado} />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2 text-xs">

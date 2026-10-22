@@ -16,7 +16,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
-import { sanctionedTournaments } from '@/modules/federations/domain/sanction';
+import { splitSanctionedTournaments } from '@/modules/federations/domain/sanction';
+import { tournamentPath } from '@/modules/federations/domain/agenda';
+import { todayISO } from '@/modules/arenas/domain/calendar';
 import { canCancelEnrollment, courseState, credentialState, seatsLeft, sortCourses } from '@/modules/federations/domain/courses';
 import { protocolToId, reportProtocol, validateReportInput } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
@@ -30,18 +32,35 @@ import { fmtData, t, tn } from '@/core/i18n';
 
 /* ------------------------------------------------------- filiados (orgs) -- */
 
-function OrgCard({ aff }) {
-  const to = aff.kind === 'club' ? `/clubes/${aff.org_id}` : `/arenas/${aff.org_id}`;
+/**
+ * Para onde leva o clube/arena filiado. Sem conta, o app inteiro manda para o
+ * login: o clube abre a página pública (`/c/:id`) e a arena, que não tem
+ * página pública, fica só com o nome.
+ */
+export const orgLink = (aff, { logado = false } = {}) => {
+  if (aff.kind === 'club') return logado ? `/clubes/${aff.org_id}` : `/c/${aff.org_id}`;
+  return logado ? `/arenas/${aff.org_id}` : null;
+};
+
+const CARTAO_ORG = 'flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3';
+
+function OrgCard({ aff, logado }) {
+  const to = orgLink(aff, { logado });
   const Icone = aff.kind === 'club' ? Users : Building2;
+  const miolo = (
+    <>
+      {aff.org_logo ? <img src={aff.org_logo} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" loading="lazy" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper text-gray-500"><Icone className="h-5 w-5" aria-hidden="true" /></span>}
+      <span className="min-w-0">
+        <span className="block truncate font-semibold text-ink">{aff.org_name}</span>
+        <span className="block truncate text-xs text-gray-500">{[aff.org_city, aff.org_state].filter(Boolean).join(' · ') || (aff.kind === 'club' ? t('Clube') : t('Arena'))}</span>
+      </span>
+    </>
+  );
   return (
     <li>
-      <Link to={to} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
-        {aff.org_logo ? <img src={aff.org_logo} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" loading="lazy" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper text-gray-500"><Icone className="h-5 w-5" aria-hidden="true" /></span>}
-        <span className="min-w-0">
-          <span className="block truncate font-semibold text-ink">{aff.org_name}</span>
-          <span className="block truncate text-xs text-gray-500">{[aff.org_city, aff.org_state].filter(Boolean).join(' · ') || (aff.kind === 'club' ? t('Clube') : t('Arena'))}</span>
-        </span>
-      </Link>
+      {to
+        ? <Link to={to} className={`${CARTAO_ORG} transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30`}>{miolo}</Link>
+        : <div className={CARTAO_ORG}>{miolo}</div>}
     </li>
   );
 }
@@ -49,6 +68,8 @@ function OrgCard({ aff }) {
 /** Clubes e arenas filiados (só os aprovados — a consulta é pública). */
 export function FedAffiliatesSection({ federation, titulo = true }) {
   const ligado = fedModuleOn(federation, 'affiliations');
+  const { isAuthenticated } = useAuth();
+  const logado = Boolean(isAuthenticated);
   const q = useApprovedAffiliations(federation?.id, { enabled: ligado });
   if (!ligado) return null;
   const grupos = q.isSuccess ? approvedAffiliations(q.data) : null;
@@ -57,17 +78,17 @@ export function FedAffiliatesSection({ federation, titulo = true }) {
       {titulo && <h2 id="fed-filiados-orgs" className="font-display text-xl font-bold text-ink">{t('Clubes e arenas filiados')}</h2>}
       {q.isError && <V2ErrorState inline title={t('Não carregaram os filiados')} onRetry={() => q.refetch()} />}
       {q.isLoading && <V2Skeleton lines={2} />}
-      {grupos && grupos.clubs.length + grupos.arenas.length === 0 && <p className="text-sm text-gray-500">{t('Ainda não há clube ou arena filiado. O clube pede em Gestão do clube → Federação; a arena, na Central → Equipe e parceiros → Federação.')}</p>}
+      {grupos && grupos.clubs.length + grupos.arenas.length === 0 && <p className="text-sm text-gray-500">{t('Ainda não há clube ou arena filiado. Quem administra um clube ou uma arena pede a filiação na gestão dele, na parte Federação.')}</p>}
       {grupos && grupos.clubs.length > 0 && (
         <div>
           <p className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{tn(grupos.clubs.length, '{n} clube', '{n} clubes')}</p>
-          <ul className="grid gap-2 sm:grid-cols-2">{grupos.clubs.map((a) => <OrgCard key={a.id} aff={a} />)}</ul>
+          <ul className="grid gap-2 sm:grid-cols-2">{grupos.clubs.map((a) => <OrgCard key={a.id} aff={a} logado={logado} />)}</ul>
         </div>
       )}
       {grupos && grupos.arenas.length > 0 && (
         <div>
           <p className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{tn(grupos.arenas.length, '{n} arena', '{n} arenas')}</p>
-          <ul className="grid gap-2 sm:grid-cols-2">{grupos.arenas.map((a) => <OrgCard key={a.id} aff={a} />)}</ul>
+          <ul className="grid gap-2 sm:grid-cols-2">{grupos.arenas.map((a) => <OrgCard key={a.id} aff={a} logado={logado} />)}</ul>
         </div>
       )}
     </section>
@@ -76,38 +97,63 @@ export function FedAffiliatesSection({ federation, titulo = true }) {
 
 /* ------------------------------------------------- torneios chancelados -- */
 
+/** "05 nov." — com o ano quando não é o corrente ("05 nov. 2027" numa lista de vários anos é o que evita engano). */
 const dataCurta = (iso) => {
   const d = new Date(String(iso || '').slice(0, 10) + 'T12:00:00');
-  return Number.isNaN(d.getTime()) ? '' : fmtData(d, { day: '2-digit', month: 'short' });
+  if (Number.isNaN(d.getTime())) return '';
+  const outroAno = d.getFullYear() !== new Date().getFullYear();
+  return fmtData(d, outroAno ? { day: '2-digit', month: 'short', year: 'numeric' } : { day: '2-digit', month: 'short' });
 };
 
-/** Os torneios chancelados pela federação, do mais recente ao mais antigo. */
+function TorneioItem({ tt, logado }) {
+  return (
+    <li>
+      <Link to={tournamentPath(tt.id, { inApp: logado })} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper text-gray-500"><Trophy className="h-5 w-5" aria-hidden="true" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold text-ink">{tt.name}</span>
+          <span className="block truncate text-xs text-gray-500">{[dataCurta(tt.starts_at), tt.city || tt.location, t(SANCTION_TIER_LABELS[tt.federation_sanction?.tier] || SANCTION_TIER_LABELS.regional)].filter(Boolean).join(' · ')}</span>
+        </span>
+        {tt.federation_sanction?.requires_membership && <V2Badge tone="amber">{t('Só filiados')}</V2Badge>}
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * Os torneios chancelados: os que vêm (do mais próximo) e, atrás de um botão,
+ * os encerrados. Nada some calado — passou do limite, "Ver todos".
+ */
 export function FedSanctionedTournaments({ federation, limite = 12, titulo = true }) {
   const ligado = fedModuleOn(federation, 'tournaments');
+  const { isAuthenticated } = useAuth();
+  const logado = Boolean(isAuthenticated);
+  const [max, setMax] = useState(limite);
+  const [verEncerrados, setVerEncerrados] = useState(false);
   const q = useFederationTournaments(federation?.id, { enabled: ligado });
   if (!ligado) return null;
-  const lista = q.isSuccess ? sanctionedTournaments(q.data).slice(0, limite) : null;
+  const grupos = q.isSuccess ? splitSanctionedTournaments(q.data, todayISO()) : null;
+  const total = grupos ? grupos.proximos.length + grupos.encerrados.length : 0;
   return (
     <section aria-labelledby="fed-torneios" className="space-y-3" data-dica="federacao-torneios-chancelados">
       {titulo && <h2 id="fed-torneios" className="font-display text-xl font-bold text-ink">{t('Torneios chancelados')}</h2>}
       {q.isError && <V2ErrorState inline title={t('Não carregaram os torneios')} onRetry={() => q.refetch()} />}
       {q.isLoading && <V2Skeleton lines={2} />}
-      {lista && lista.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum torneio chancelado ainda. O organizador pede a chancela em Gestão do torneio → Geral → Federação.')}</p>}
-      {lista && lista.length > 0 && (
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {lista.map((tt) => (
-            <li key={tt.id}>
-              <Link to={`/torneios/${tt.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper text-gray-500"><Trophy className="h-5 w-5" aria-hidden="true" /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-ink">{tt.name}</span>
-                  <span className="block truncate text-xs text-gray-500">{[dataCurta(tt.starts_at), tt.city || tt.location, t(SANCTION_TIER_LABELS[tt.federation_sanction?.tier] || SANCTION_TIER_LABELS.regional)].filter(Boolean).join(' · ')}</span>
-                </span>
-                {tt.federation_sanction?.requires_membership && <V2Badge tone="amber">{t('Só filiados')}</V2Badge>}
-              </Link>
-            </li>
-          ))}
-        </ul>
+      {grupos && total === 0 && <p className="text-sm text-gray-500">{t('Ainda não há torneio chancelado por esta federação.')}</p>}
+      {grupos && total > 0 && grupos.proximos.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum torneio chancelado marcado para os próximos dias.')}</p>}
+      {grupos && grupos.proximos.length > 0 && (
+        <>
+          <ul className="grid gap-2 sm:grid-cols-2">{grupos.proximos.slice(0, max).map((tt) => <TorneioItem key={tt.id} tt={tt} logado={logado} />)}</ul>
+          {grupos.proximos.length > max && <V2Button type="button" variant="ghost" size="sm" onClick={() => setMax(grupos.proximos.length)}>{t('Ver todos ({n})', { n: grupos.proximos.length })}</V2Button>}
+        </>
+      )}
+      {grupos && grupos.encerrados.length > 0 && (
+        verEncerrados ? (
+          <div className="space-y-2">
+            <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Encerrados')}</p>
+            <ul className="grid gap-2 sm:grid-cols-2">{grupos.encerrados.map((tt) => <TorneioItem key={tt.id} tt={tt} logado={logado} />)}</ul>
+          </div>
+        ) : <V2Button type="button" variant="ghost" size="sm" onClick={() => setVerEncerrados(true)} aria-expanded={false}>{tn(grupos.encerrados.length, 'Ver {n} torneio encerrado', 'Ver {n} torneios encerrados')}</V2Button>
       )}
     </section>
   );
@@ -167,7 +213,9 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
           <ol className="space-y-1">{linhas.slice(0, limite).map((l) => <Linha key={l.uid} l={l} destaque={meUid && l.uid === meUid} />)}</ol>
           {linhas.length > limite && <V2Button type="button" variant="ghost" size="sm" onClick={() => setLimite((n) => n + 25)}>{t('Ver mais ({n} de {total})', { n: limite, total: linhas.length })}</V2Button>}
           <p className="text-xs text-gray-500">
-            {t('Atualizado em {data}. Pontuam só os filiados em dia na data do torneio; contam os {n} melhores resultados de cada classe.', { data: dados.updated_at_ms ? fmtData(new Date(dados.updated_at_ms), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—', n: dados.config?.best_n || t('todos os') })}
+            {t('Atualizado em {data}.', { data: dados.updated_at_ms ? fmtData(new Date(dados.updated_at_ms), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—' })}
+            {' '}{dados.config?.members_only === false ? '' : t('Pontuam só os filiados em dia na data do torneio.')}
+            {' '}{dados.config?.best_n ? t('Contam os {n} melhores resultados de cada classe.', { n: dados.config.best_n }) : t('Contam todos os resultados de cada classe.')}
             {dados.config?.members_only === false ? ` ${t('Nesta federação todo mundo pontua, filiado ou não.')}` : ''}
           </p>
         </>

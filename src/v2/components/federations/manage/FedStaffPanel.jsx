@@ -13,6 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarClock, Crown, LogOut, Pencil, Plus, Save, Trash2, UserCog, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import FedPersonPicker from './FedPersonPicker';
 import { staffAction } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
@@ -123,10 +124,10 @@ function Pessoa({ federation, s, ator, lista, roles, uid }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {podeMexer && outrosCargos.length > 0 && <V2Button type="button" size="sm" variant="secondary" aria-expanded={aberto === 'cargo'} onClick={() => setAberto(aberto === 'cargo' ? null : 'cargo')}><UserCog className="h-4 w-4" />{t('Mudar cargo')}</V2Button>}
-            {podeMexer && <V2Button type="button" size="sm" variant="secondary" aria-expanded={aberto === 'prorrogar'} onClick={() => setAberto(aberto === 'prorrogar' ? null : 'prorrogar')}><CalendarClock className="h-4 w-4" />{t('Prorrogar')}</V2Button>}
+            {podeMexer && outrosCargos.length > 0 && <V2Button type="button" size="sm" variant="secondary" aria-expanded={aberto === 'cargo'} onClick={() => { setMotivo(''); setAto(''); setAberto(aberto === 'cargo' ? null : 'cargo'); }}><UserCog className="h-4 w-4" />{t('Mudar cargo')}</V2Button>}
+            {podeMexer && <V2Button type="button" size="sm" variant="secondary" aria-expanded={aberto === 'prorrogar'} onClick={() => { setMotivo(''); setAto(''); setAberto(aberto === 'prorrogar' ? null : 'prorrogar'); }}><CalendarClock className="h-4 w-4" />{t('Prorrogar')}</V2Button>}
             {(podeMexer || euMesmo) && !ultimo && (
-              <V2Button type="button" size="sm" variant="ghost" aria-expanded={aberto === 'tirar'} onClick={() => setAberto(aberto === 'tirar' ? null : 'tirar')}>
+              <V2Button type="button" size="sm" variant="ghost" aria-expanded={aberto === 'tirar'} onClick={() => { setMotivo(''); setAto(''); setAberto(aberto === 'tirar' ? null : 'tirar'); }}>
                 {euMesmo ? <><LogOut className="h-4 w-4" />{t('Sair da equipe')}</> : <><Trash2 className="h-4 w-4" />{t('Tirar')}</>}
               </V2Button>
             )}
@@ -202,6 +203,7 @@ function PassarAdministracao({ federation, lista, roles, uid }) {
   const masters = roles.filter((r) => r.is_master);
   const [roleId, setRoleId] = useState(masters[0]?.id || '');
   const [sair, setSair] = useState(false);
+  const [confirmar, setConfirmar] = useState(false);
   const excluir = useMemo(() => new Map([[uid, t('Você')]]), [uid]);
   const m = useFederationMutation(() => staffAction(federation.id, 'transfer', { userId: pessoa.id, roleId, leave: sair }));
   const naEquipe = lista.filter((s) => s.user_id !== uid && !staffIsMaster(s));
@@ -233,12 +235,25 @@ function PassarAdministracao({ federation, lista, roles, uid }) {
             <span>{t('E sair da administração (você deixa a equipe na mesma hora)')}</span>
           </label>
           <div className="flex justify-end">
-            <V2Button type="button" disabled={!pessoa || !roleId || m.isPending} onClick={() => m.mutate(undefined, ok(t('{nome} agora é admin master.', { nome: nomeDe(pessoa) }), () => { setAberto(false); setPessoa(null); }))}>
+            <V2Button type="button" disabled={!pessoa || !roleId || m.isPending} onClick={() => setConfirmar(true)}>
               <Crown className="h-4 w-4" />{sair ? t('Passar e sair') : t('Passar a administração')}
             </V2Button>
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmar}
+        onOpenChange={setConfirmar}
+        destructive={sair}
+        loading={m.isPending}
+        title={t('Passar a administração para {nome}?', { nome: pessoa ? nomeDe(pessoa) : '' })}
+        description={sair
+          ? t('A pessoa vira admin master e você sai da equipe agora: perde o acesso à Central. Para voltar, alguém da equipe precisa te nomear de novo.')
+          : t('A pessoa vira admin master, com todos os poderes, inclusive o de tirar você da equipe.')}
+        confirmLabel={sair ? t('Passar e sair') : t('Passar a administração')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => m.mutate(undefined, ok(t('{nome} agora é admin master.', { nome: nomeDe(pessoa) }), () => { setConfirmar(false); setAberto(false); setPessoa(null); }))}
+      />
     </V2Surface>
   );
 }

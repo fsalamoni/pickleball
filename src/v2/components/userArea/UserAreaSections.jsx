@@ -45,7 +45,7 @@ import { credentialState } from '@/modules/federations/domain/courses';
 import { staffRoleName } from '@/modules/federations/domain/staff';
 import { verifyPath } from '@/modules/federations/domain/card';
 import { membershipAction, setCredentialPublic } from '@/modules/federations/services/federationService';
-import { FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
+import { FedCancelMembership, FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
 import { FedLogo, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
 import MembershipDeclarationDialog from '@/v2/components/federations/MembershipDeclaration';
@@ -626,8 +626,9 @@ function FiliacaoRow({ m }) {
       </div>
       {temCartao && <V2Button type="button" size="sm" variant="secondary" onClick={() => setCartao(true)} data-dica="minha-area-carteirinha"><IdCard className="h-4 w-4" aria-hidden="true" />{t('Carteirinha')}</V2Button>}
       {st.status === MEMBER_STATUS.ACTIVE && m.card_code && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDeclaracao(true)} data-dica="minha-area-declaracao"><FileText className="h-4 w-4" aria-hidden="true" />{t('Declaração')}</V2Button>}
-      {st.canRenew && m.user_id && <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Renovar')}</Link></V2Button>}
-      {st.canRenew && !m.user_id && <V2Button type="button" size="sm" variant="ghost" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: (r) => toast.success(r?.chargeId ? t('Cobrança de renovação criada. Pague o Pix em Cobranças.') : t('Filiação renovada.')), onError: (e) => toast.error(e.message) })}>{t('Renovar')}</V2Button>}
+      {st.canRenew && m.user_id && <V2Button asChild size="sm" variant="ghost"><Link to={`${fedPath(f)}?aba=minha`}>{t('Renovar')}</Link></V2Button>}
+      {st.canRenew && !m.user_id && <V2Button type="button" size="sm" variant="ghost" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: (r) => toast.success(r?.chargeId ? t('Cobrança de renovação criada. O Pix está em "Pagamentos da federação", nesta página.') : t('Filiação renovada.')), onError: (e) => toast.error(e.message) })}>{t('Renovar')}</V2Button>}
+      {!m.user_id && <FedCancelMembership member={m} />}
       {cartao && <MemberCardDialog open onOpenChange={setCartao} member={m} federation={fq.data || f} />}
       {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={m} federationQ={fq} selfService />}
     </li>
@@ -733,12 +734,16 @@ function ConviteRow({ inv }) {
   );
 }
 
-/** A cobrança precisa da federação (Pix e cor) para montar o QR. */
+/**
+ * A cobrança precisa da federação (Pix e cor) para montar o QR. Completa — QR,
+ * copia e cola e "Já paguei": todo aviso de cobrança leva para cá, então é
+ * aqui que se paga (inclusive o dependente, o curso e a multa).
+ */
 function CobrancaComFederacao({ charge }) {
   const fq = useFederation(charge.federation_id);
   if (fq.isError) return <V2ErrorState inline title={t('Não carregou a federação desta cobrança')} onRetry={() => fq.refetch()} />;
   if (!fq.isSuccess) return <V2Skeleton lines={3} />;
-  return <PixChargeBlock charge={charge} federation={fq.data} compact />;
+  return <PixChargeBlock charge={charge} federation={fq.data} />;
 }
 
 export const SECOES = Object.freeze({

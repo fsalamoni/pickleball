@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanctionState, buildSanctionRequest, sanctionDecision, pendingSanctions, sanctionedTournaments, membershipRequirement, SANCTION_WITHDRAW_PATCH } from './sanction.js';
+import { sanctionState, buildSanctionRequest, sanctionDecision, pendingSanctions, sanctionedTournaments, splitSanctionedTournaments, membershipRequirement, SANCTION_WITHDRAW_PATCH } from './sanction.js';
 
 const FED = { id: 'fpp', name: 'Federação Paulista', acronym: 'FPP' };
 
@@ -32,6 +32,20 @@ describe('chancela de torneio', () => {
     ];
     expect(pendingSanctions(ts).map((x) => x.id)).toEqual(['b', 'a']);
     expect(sanctionedTournaments(ts).map((x) => x.id)).toEqual(['c']);
+  });
+  it('próximos (pelo fim, do mais perto) e encerrados (do mais recente)', () => {
+    const ap = { federation_id: 'f', federation_sanction: { status: 'approved' } };
+    const ts = [
+      { ...ap, id: 'velho', starts_at: '2026-01-10' },
+      { ...ap, id: 'recente', starts_at: '2026-09-01' },
+      { ...ap, id: 'rolando', starts_at: '2026-10-20', ends_at: '2026-10-23' },
+      { ...ap, id: 'longe', starts_at: '2026-12-05' },
+      { ...ap, id: 'perto', starts_at: '2026-11-01' },
+      { ...ap, id: 'sem-data' },
+    ];
+    const { proximos, encerrados } = splitSanctionedTournaments(ts, '2026-10-22');
+    expect(proximos.map((x) => x.id)).toEqual(['rolando', 'perto', 'longe', 'sem-data']);
+    expect(encerrados.map((x) => x.id)).toEqual(['recente', 'velho']);
   });
   it('exigência de filiação: só com chancela aprovada; indefinido não afirma', () => {
     const t = { federation_id: 'fpp', federation_sanction: { status: 'approved', requires_membership: true, federation_acronym: 'FPP' } };

@@ -176,6 +176,26 @@ describe('PR 3: cursos e credenciais', () => {
     await fed.chargeConfirm(ctx(db), TES, { chargeId: e2.chargeId, action: 'cancel', note: 'Desistiu' });
     expect(doc(db, 'federation_course_enrollments/c3_ana').status).toBe('cancelled');
   });
+
+  it('cancelar o CURSO exige motivo e `courses`, cancela inscrições e cobranças abertas e avisa cada inscrito', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_courses/c4', { federation_id: 'fpp', name: 'Clínica de saque', kind: 'clinic', status: 'open', starts_at: '2026-12-01', seats: 0, enrolled_count: 0, price_cents: 3000, requires_membership: false });
+    const pago = await courses.course(ctx(db), ANA, { action: 'enroll', courseId: 'c4' });
+    await confirmar(db, pago.chargeId);
+    const aberto = await courses.course(ctx(db), { uid: 'caio' }, { action: 'enroll', courseId: 'c4' });
+    await expect(courses.course(ctx(db), SEC, { action: 'cancel_course', courseId: 'c4', reason: 'Chuva' })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(courses.course(ctx(db), REF, { action: 'cancel_course', courseId: 'c4', reason: '' })).rejects.toMatchObject({ code: 'invalid-argument' });
+    const r = await courses.course(ctx(db), REF, { action: 'cancel_course', courseId: 'c4', reason: 'Quadra interditada' });
+    expect(r).toMatchObject({ enrollments: 2, charges: 1 });
+    expect(doc(db, 'federation_courses/c4')).toMatchObject({ status: 'cancelled', cancelled_reason: 'Quadra interditada' });
+    expect(doc(db, 'federation_course_enrollments/c4_ana').status).toBe('cancelled');
+    expect(doc(db, 'federation_course_enrollments/c4_caio').status).toBe('cancelled');
+    expect(doc(db, `federation_charges/${aberto.chargeId}`).status).toBe('cancelled');
+    expect(doc(db, `federation_charges/${pago.chargeId}`).status).toBe('paid'); // o pago fica registrado
+    expect(avisosPara(db, 'ana').at(-1).message).toContain('devolução');
+    expect(avisosPara(db, 'caio').at(-1).message).not.toContain('devolução');
+    await expect(courses.course(ctx(db), REF, { action: 'cancel_course', courseId: 'c4', reason: 'De novo' })).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
 });
 
 describe('PR 3: disciplina', () => {

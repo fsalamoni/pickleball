@@ -11,7 +11,7 @@
  */
 import React, { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeftRight, CheckCircle2, Download, Eye, FileUp, Upload, XCircle } from 'lucide-react';
+import { ArrowLeftRight, CheckCircle2, Download, FileUp, Upload, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fetchDocumentContent, importMembers, reviewDocument, transferAction } from '@/modules/federations/services/federationService';
@@ -22,6 +22,7 @@ import { DOC_KIND_LABELS, DOC_STATUS, DOC_STATUS_LABELS, IMPORT_MAX_ROWS, TRANSF
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
+import { baixarBlob } from '../acervo/acervoFiles';
 
 const TOM = { pending: 'amber', approved: 'green', rejected: 'red', cancelled: 'neutral' };
 
@@ -108,13 +109,16 @@ function TransferenciasTab({ federation, transfersQ, incomingQ }) {
 
 /* ------------------------------------------------------------- documentos -- */
 
-/** Abre o arquivo numa aba: o conteúdo vem do servidor (base64), porque a pasta é do dono. */
-async function abrirDocumento(docu) {
+/**
+ * Baixa o arquivo: o conteúdo vem do servidor (base64), porque a pasta é do
+ * dono. Abrir aba DEPOIS da espera o Safari (e o Chrome no celular) bloqueia
+ * como janela não pedida — o botão parecia não fazer nada. Baixar não é bloqueado.
+ */
+async function abrirDocumento(docu, nome) {
   const r = await fetchDocumentContent(docu.id);
   const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
-  const url = URL.createObjectURL(new Blob([bytes], { type: r.contentType }));
-  window.open(url, '_blank', 'noopener,noreferrer');
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  const ext = (r.contentType || '').split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
+  baixarBlob(new Blob([bytes], { type: r.contentType }), docu.file_name || `${t(DOC_KIND_LABELS[docu.kind] || DOC_KIND_LABELS.outro)} - ${nome || ''}.${ext}`);
 }
 
 function DocRow({ docu, nome }) {
@@ -122,7 +126,7 @@ function DocRow({ docu, nome }) {
   const [recusando, setRecusando] = useState(false);
   const [abrindo, setAbrindo] = useState(false);
   const m = useFederationMutation(({ action, reason }) => reviewDocument(docu, action, { uid: user?.uid, reason }));
-  const ver = async () => { setAbrindo(true); try { await abrirDocumento(docu); } catch (e) { toast.error(e.message); } finally { setAbrindo(false); } };
+  const ver = async () => { setAbrindo(true); try { await abrirDocumento(docu, nome); } catch (e) { toast.error(e.message); } finally { setAbrindo(false); } };
   const tom = { pending: 'amber', approved: 'green', rejected: 'red' }[docu.status] || 'neutral';
   return (
     <li>
@@ -133,7 +137,7 @@ function DocRow({ docu, nome }) {
           {docu.review?.reason && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: docu.review.reason })}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <V2Button type="button" size="sm" variant="secondary" disabled={abrindo} onClick={ver}><Eye className="h-4 w-4" />{abrindo ? t('Abrindo…') : t('Ver o arquivo')}</V2Button>
+          <V2Button type="button" size="sm" variant="secondary" disabled={abrindo} onClick={ver}><Download className="h-4 w-4" />{abrindo ? t('Baixando…') : t('Baixar o arquivo')}</V2Button>
           {docu.status === DOC_STATUS.PENDING && (
             <>
               <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => m.mutate({ action: 'approve' }, { onSuccess: () => toast.success(t('Documento aceito.')), onError: (e) => toast.error(e.message) })}><CheckCircle2 className="h-4 w-4" />{t('Aceitar')}</V2Button>

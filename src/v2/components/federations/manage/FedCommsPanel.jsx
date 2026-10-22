@@ -13,6 +13,7 @@ import React, { Suspense, lazy, useState } from 'react';
 import { toast } from 'sonner';
 import { Bell, Newspaper, Pencil, Pin, Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { deleteNews, notifyNews, saveNews, updateFederationSponsors } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
@@ -66,6 +67,7 @@ function NoticiaForm({ federation, noticia, onFechar }) {
 function NoticiasTab({ federation, newsQ }) {
   const { user } = useAuth();
   const [editando, setEditando] = useState(null); // null | 'nova' | noticia
+  const [confirmar, setConfirmar] = useState(null); // null | { tipo: 'avisar'|'apagar', n }
   const avisar = useFederationMutation((id) => notifyNews(id));
   const apagar = useFederationMutation((n) => deleteNews(n, { uid: user?.uid }));
   const lista = newsQ.isSuccess ? sortNews(newsQ.data) : null;
@@ -89,15 +91,33 @@ function NoticiasTab({ federation, newsQ }) {
                   <p className="text-xs text-gray-500">{[n.published_at ? quando(n.published_at) : null, newsSummaryLine(n)].filter(Boolean).join(' · ')}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {canNotifyNews(n) && <V2Button type="button" size="sm" variant="secondary" disabled={avisar.isPending} onClick={() => avisar.mutate(n.id, { onSuccess: (r) => toast.success(tn(r?.count || 0, 'Aviso enviado a {n} filiado.', 'Aviso enviado a {n} filiados.')), onError: (e) => toast.error(e.message) })}><Bell className="h-4 w-4" />{t('Avisar os filiados')}</V2Button>}
+                  {canNotifyNews(n) && <V2Button type="button" size="sm" variant="secondary" disabled={avisar.isPending} onClick={() => setConfirmar({ tipo: 'avisar', n })}><Bell className="h-4 w-4" />{t('Avisar os filiados')}</V2Button>}
                   <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditando(n)} aria-label={t('Editar {titulo}', { titulo: n.title })}><Pencil className="h-4 w-4" /></V2Button>
-                  <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => { if (window.confirm(t('Apagar a notícia "{titulo}"?', { titulo: n.title }))) apagar.mutate(n, { onSuccess: () => toast.success(t('Notícia apagada.')), onError: (e) => toast.error(e.message) }); }} aria-label={t('Apagar {titulo}', { titulo: n.title })}><Trash2 className="h-4 w-4" /></V2Button>
+                  <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => setConfirmar({ tipo: 'apagar', n })} aria-label={t('Apagar {titulo}', { titulo: n.title })}><Trash2 className="h-4 w-4" /></V2Button>
                 </div>
               </V2Surface>
             </li>
           ))}
         </ul>
       )}
+      {/* O aviso não volta atrás (sai uma vez só, para todo filiado ativo): diz para quantos antes de mandar. */}
+      <ConfirmDialog
+        open={Boolean(confirmar)}
+        onOpenChange={(o) => { if (!o) setConfirmar(null); }}
+        destructive={confirmar?.tipo === 'apagar'}
+        loading={avisar.isPending || apagar.isPending}
+        title={confirmar?.tipo === 'avisar' ? t('Avisar os filiados sobre "{titulo}"?', { titulo: confirmar.n.title }) : t('Apagar a notícia "{titulo}"?', { titulo: confirmar?.n.title || '' })}
+        description={confirmar?.tipo === 'avisar'
+          ? `${Number(federation.member_count) > 0 ? tn(federation.member_count, 'O aviso vai para {n} filiado ativo, no sino e nos canais que ele escolheu.', 'O aviso vai para {n} filiados ativos, no sino e nos canais que cada um escolheu.') : t('O aviso vai para todos os filiados ativos, no sino e nos canais que cada um escolheu.')} ${t('Sai uma vez só por notícia e não dá para desfazer.')}`
+          : t('A notícia sai da página da federação. Quem já recebeu o aviso continua com ele no sino.')}
+        confirmLabel={confirmar?.tipo === 'avisar' ? t('Avisar agora') : t('Apagar')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => {
+          const { tipo, n } = confirmar;
+          if (tipo === 'avisar') avisar.mutate(n.id, { onSuccess: (r) => { setConfirmar(null); toast.success(tn(r?.count || 0, 'Aviso enviado a {n} filiado.', 'Aviso enviado a {n} filiados.')); }, onError: (e) => toast.error(e.message) });
+          else apagar.mutate(n, { onSuccess: () => { setConfirmar(null); toast.success(t('Notícia apagada.')); }, onError: (e) => toast.error(e.message) });
+        }}
+      />
       <Dialog open={editando != null} onOpenChange={(o) => { if (!o) setEditando(null); }}>
         <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogTitle>{editando && editando !== 'nova' ? t('Editar notícia') : t('Nova notícia')}</DialogTitle>

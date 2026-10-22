@@ -27,6 +27,9 @@ import { todayISO } from '@/modules/arenas/domain/subscription';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
 import { rolarAte } from '@/v2/ui/rolarAte';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
@@ -114,7 +117,9 @@ export function FedNewsSection({ federation, memberOf = false, limite = 6, onVer
 
 /** Os cupons e banners que a federação divulga na página (só dentro do app). */
 export function FedPromosSection({ federation }) {
-  const ligado = fedModuleOn(federation, 'promos');
+  // Cupons e campanhas só a conta logada lê (`promo_*`): sem conta, nem consulta.
+  const { isAuthenticated } = useAuth();
+  const ligado = fedModuleOn(federation, 'promos') && Boolean(isAuthenticated);
   const q = useFederationPublicPromos(federation?.id, { enabled: ligado });
   const quem = usePromoViewer({ enabled: false, federations: ligado });
   const hoje = todayISO();
@@ -221,7 +226,10 @@ export function FedGovernanceBlock({ federation }) {
 
 /** O atalho para a loja oficial no Mercado (módulo `store`). */
 export function FedStoreLink({ federation }) {
-  if (!fedModuleOn(federation, 'store')) return null;
+  // O Mercado pede conta e a funcionalidade ligada; sem isso o link cai no login ou volta ao início.
+  const { isAuthenticated } = useAuth();
+  const mercado = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  if (!fedModuleOn(federation, 'store') || !isAuthenticated || !mercado) return null;
   return (
     <V2Surface variant="compacto" className="flex flex-wrap items-center justify-between gap-3 p-4" data-dica="federacao-loja-publica">
       <div className="flex items-center gap-3">

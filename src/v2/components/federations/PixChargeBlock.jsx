@@ -24,13 +24,17 @@ export default function PixChargeBlock({ charge, federation, compact = false }) 
   const atrasada = isChargeOverdue(charge);
   const pago = charge.status === CHARGE_STATUS.PAID;
   const semPix = !payload && !pago && charge.status !== CHARGE_STATUS.CANCELLED;
+  // Do dependente: quem paga é o responsável, e a cobrança diz de quem é (senão parece a própria).
+  const para = charge.member_name && charge.member_name !== charge.payer_name ? charge.member_name : '';
+  const instrucoes = String(federation?.payment?.instructions || '').trim();
 
   return (
     <V2Surface variant="compacto" className="space-y-4 p-4" data-dica="federacao-cobranca">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-display text-lg font-bold text-ink">{formatBrlCents(charge.amount_cents)}</p>
-          <p className="text-sm text-gray-600">{t(CHARGE_ORIGIN_LABELS[charge.origin] || CHARGE_ORIGIN_LABELS.membership)} · {charge.plan_name}</p>
+          <p className="text-sm text-gray-600">{[t(CHARGE_ORIGIN_LABELS[charge.origin] || CHARGE_ORIGIN_LABELS.membership), charge.plan_name, federation?.acronym || ''].filter(Boolean).join(' · ')}</p>
+          {para && <p className="text-sm font-semibold text-ink">{t('Para {nome}', { nome: para })}</p>}
           <p className="text-xs text-gray-500">
             {pago ? t('Pago em {data}', { data: quando(charge.paid_at) }) : t('Vence em {data}', { data: quando(charge.due_date) })}
             {atrasada && <span className="ml-1 font-bold text-red-600">· {t('vencida')}</span>}
@@ -41,12 +45,19 @@ export default function PixChargeBlock({ charge, federation, compact = false }) 
 
       {!compact && payload && !pago && charge.status !== CHARGE_STATUS.CANCELLED && (
         <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
-          {qr ? <img src={qr} alt={t('QR Pix da cobrança')} className="mx-auto h-44 w-44 rounded-2xl bg-white p-2 shadow-sm" /> : <span className="mx-auto flex h-44 w-44 items-center justify-center rounded-2xl bg-paper"><QrCode className="h-8 w-8 text-gray-500" aria-hidden="true" /></span>}
-          <div className="space-y-2 text-sm">
-            <p className="text-gray-700">{t('Pague pelo app do seu banco: leia o QR ou copie o código "Pix copia e cola". O valor já vai preenchido.')}</p>
+          {/* No celular o QR vem DEPOIS do copia e cola: ninguém lê o QR com a câmera do próprio aparelho. */}
+          {qr ? <img src={qr} alt={t('QR Pix da cobrança')} className="order-2 mx-auto h-44 w-44 rounded-2xl bg-white p-2 shadow-sm sm:order-1" /> : <span className="order-2 mx-auto flex h-44 w-44 items-center justify-center rounded-2xl bg-paper sm:order-1"><QrCode className="h-8 w-8 text-gray-500" aria-hidden="true" /></span>}
+          <div className="order-1 space-y-2 text-sm sm:order-2">
+            <p className="text-gray-700">{t('Pague pelo app do seu banco: copie o código "Pix copia e cola" ou leia o QR. O valor já vai preenchido.')}</p>
             <CopyCodeButton code={payload} label={t('Copiar o código Pix copia e cola')} successMessage={t('Código Pix copiado. Cole no app do banco.')} className="max-w-full truncate" />
             <p className="text-xs text-gray-500">{t('Recebedor: {nome}', { nome: federation?.payment?.receiver_name || federation?.name })}</p>
           </div>
+        </div>
+      )}
+      {instrucoes && !pago && charge.status !== CHARGE_STATUS.CANCELLED && (
+        <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-700">
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Instruções da federação')}</p>
+          <p className="whitespace-pre-line">{instrucoes}</p>
         </div>
       )}
       {semPix && <p className="text-sm text-amber-700">{t('A federação ainda não cadastrou a chave Pix. Fale com a secretaria para pagar.')}</p>}

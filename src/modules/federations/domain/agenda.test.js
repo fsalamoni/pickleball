@@ -78,7 +78,8 @@ describe('calendário: endereços', () => {
   it('página, evento, torneio derivado e agenda assinável', () => {
     expect(agendaPublicPath(fed)).toBe('/f/fpp/agenda');
     expect(eventPublicPath(fed, { id: 'e1' })).toBe('/f/fpp/agenda/e1');
-    expect(eventPublicPath(fed, { id: 'torneio_t1', derived: true, tournament_id: 't1' })).toBe('/torneios/t1');
+    expect(eventPublicPath(fed, { id: 'torneio_t1', derived: true, tournament_id: 't1' })).toBe('/p/t1');
+    expect(eventPublicPath(fed, { id: 'torneio_t1', derived: true, tournament_id: 't1' }, { inApp: true })).toBe('/torneios/t1');
     expect(agendaFeedPath({ id: 'fed1' })).toBe('/api/agenda/fed1.ics');
   });
 
