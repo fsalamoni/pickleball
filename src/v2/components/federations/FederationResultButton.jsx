@@ -15,6 +15,7 @@ import { isModalityComplete } from '@/modules/tournament/domain/tournamentComple
 import { sendFederationResult } from '@/modules/federations/services/federationService';
 import { useFederationMutation, useTournamentFederationResults } from '@/modules/federations/hooks/useFederations';
 import { sanctionState } from '@/modules/federations/domain/sanction';
+import { resultSeason, seasonClosed, seasonLastDay } from '@/modules/federations/domain/officialRanking';
 import { RESULT_STATUS, fedResultDocId } from '@/modules/federations/domain/constants';
 import { V2Button } from '@/v2/ui/primitives';
 import { quando } from './federationUi';
@@ -33,6 +34,8 @@ export default function FederationResultButton({ tournament, modality, className
   const atual = (enviados.data || []).find((r) => r.id === fedResultDocId(st.federationId, tournament.id, modality.id)) || null;
   const pronto = matches.isSuccess && registrations.isSuccess;
   const recusado = atual?.status === RESULT_STATUS.REJECTED;
+  const season = atual?.season ?? resultSeason(tournament);
+  const fechado = seasonClosed(season);
   const mandar = () => enviar.mutate(undefined, { onSuccess: () => { setReenviando(false); toast.success(t('Resultado enviado ao ranking oficial.')); }, onError: (e) => toast.error(e.message) });
   return (
     <div className={`flex flex-wrap items-center gap-2 rounded-2xl border border-purple-100 bg-purple-50/60 p-3 text-sm ${className || ''}`} data-dica="torneio-enviar-resultado">
@@ -43,8 +46,9 @@ export default function FederationResultButton({ tournament, modality, className
             ? t('Resultado recusado pela {sigla}: {motivo}', { sigla: st.acronym, motivo: atual.review?.reason || '' })
             : <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />{t('No ranking oficial da {sigla} desde {data}.', { sigla: st.acronym, data: quando(atual.sent_at) })}</span>)
           : (completa ? t('Categoria encerrada: envie a colocação ao ranking oficial da {sigla}.', { sigla: st.acronym }) : t('Quando a categoria encerrar, envie a colocação ao ranking oficial da {sigla}.', { sigla: st.acronym }))}
+        {fechado && <span className="block text-xs text-gray-500">{t('A temporada {ano} fechou em {data}: este resultado não entra nem muda mais.', { ano: season, data: seasonLastDay(season).split('-').reverse().join('/') })}</span>}
       </span>
-      {pronto && completa && (
+      {pronto && completa && !fechado && (
         <V2Button type="button" size="sm" variant={atual ? 'ghost' : 'primary'} disabled={enviar.isPending} onClick={() => (atual ? setReenviando(true) : mandar())}>
           <Send className="h-4 w-4" />{atual ? t('Reenviar') : t('Enviar ao ranking oficial')}
         </V2Button>
@@ -55,8 +59,8 @@ export default function FederationResultButton({ tournament, modality, className
         loading={enviar.isPending}
         title={t('Reenviar o resultado de {categoria}?', { categoria: modality?.name || '' })}
         description={recusado
-          ? t('A colocação de agora substitui o envio recusado e volta ao ranking oficial da {sigla}, que é refeito. A federação vê o novo envio e pode recusar de novo.', { sigla: st.acronym })
-          : t('A colocação de agora substitui a que está no ranking oficial da {sigla}, que é refeito. Use quando corrigiu um placar depois de enviar.', { sigla: st.acronym })}
+          ? t('A colocação de agora substitui o envio recusado e os pontos voltam a ser lançados no ranking oficial da {sigla}. A federação vê o novo envio e pode recusar de novo.', { sigla: st.acronym })
+          : t('A colocação de agora substitui a enviada: quem mudou de colocação tem o lançamento de pontos refeito e quem saiu tem o lançamento cancelado. Use quando corrigiu um placar depois de enviar.')}
         confirmLabel={t('Reenviar')}
         cancelLabel={t('Voltar')}
         onConfirm={mandar}

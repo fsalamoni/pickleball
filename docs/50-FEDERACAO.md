@@ -222,7 +222,7 @@ termina sozinha na data gravada (`discipline_until_ms`, lido pela regra).
 | Página do clube / da arena | `OrgAffiliationBadges` (`FedTags.jsx`) | Selo "Filiado · SIGLA" (só filiação **aprovada**), ligando à federação |
 | Gestão do torneio → Geral → **Federação** | `TournamentSanctionCard` (`TournamentAdminTab`) | Pedir a chancela: federação com `tournaments` ligado, tipo proposto (regional/estadual/principal) e "Só filiados em dia se inscrevem"; estado e motivo; retirar o pedido pendente |
 | Torneio (hero, cartão da lista, página pública `/p/:id`) | `TournamentSanctionBadge` | Selo "Chancelado · SIGLA" (+ "só filiados"), só com a chancela **aprovada** |
-| Resultados do torneio (gestão, por categoria) | `FederationResultButton` (ao lado do `PodiumBlock`) | Com a chancela aprovada e a categoria **completa** (`isModalityComplete`): "Enviar ao ranking oficial" / "Reenviar"; mostra "No ranking desde…" ou "recusado: motivo" |
+| Resultados do torneio (gestão, por categoria) | `FederationResultButton` (ao lado do `PodiumBlock`) | Com a chancela aprovada e a categoria **completa** (`isModalityComplete`): "Enviar ao ranking oficial" / "Reenviar"; mostra "No ranking desde…" ou "recusado: motivo"; temporada fechada (depois de 31/01 do ano seguinte) esconde o botão e diz que o resultado não muda mais |
 | Inscrição numa modalidade | `ModalityRegistrationDialog` | Torneio "só filiados": `membershipRequirement(tournament, minhasFiliacoes)` — sem filiação em dia, aviso vermelho com link à federação e **sem botão de inscrever**; consulta falhando ⇒ "não deu para conferir" + tentar de novo (nunca afirma que a pessoa não é filiada). O organizador inscreve qualquer pessoa |
 | `/f/verificar/:codigo?` | `PublicFederationVerify` | Digitar/ler o código → em dia / irregular / não encontrada; o mesmo código verifica a **credencial** de curso (PR 3: nome, foto se permitida, tipo, curso, emissão, validade) |
 | Minha área → Federações | `FederacoesSecao` | Cobranças para pagar, filiações (carteirinha, renovar), equipe; pendências na faixa (`myFederationPending`). PR 3: transferências pendentes, **dependentes** filiados, **credenciais** (tornar pública/privada, verificar) e sanções |
@@ -312,24 +312,53 @@ pontos no ranking.
   de torneio com a chancela daquela federação aprovada (`fedSanctionedBy`);
   reenviar sobrescreve. A equipe `competitions` **recusa** (motivo) ou
   **readmite** (`reviewFederationResult`), só em `status`/`review`.
-  Documento público (é resultado de torneio público).
-- **Ranking** (`federation_rankings/{fed}_{temporada}`, `allow write: if false`):
-  o servidor recalcula a temporada a cada escrita em `federation_results`
-  (`federationRankingRecompute`) e todas as temporadas quando
-  `federations/{id}.ranking_config` muda (`federationRankingConfig`). A conta é
-  `computeOfficialRanking` (`domain/officialRanking.js`) com **cópia** em
-  `functions/federationRanking.js` e paridade
-  (`functions/federationRanking.parity.test.js`): por **classe**
-  (`gender_age_format`) e **geral**; pontos = `points_by_place[position]` (1º–8º)
-  ou `participation` (9º em diante) × `tier_multipliers[tier]`; contam os
-  `best_n` melhores resultados de cada pessoa por classe (0 = todos); empate
-  divide a posição; resultado `rejected` fica de fora; linha sem `uid` (sem
-  conta) fica de fora; com `members_only`, só quem tinha filiação **federada**
-  ativa na **data do torneio** (`memberValidOn`). `DEFAULT_RANKING_CONFIG` em
-  `constants.js`; a equipe `competitions` edita em Competições → Ranking
-  (`updateRankingConfig`, chave `ranking_config` liberada na regra do
-  documento da federação). A tela só **lê** o documento gravado — nunca
-  recalcula no navegador (lição do ranking da plataforma, `docs/18`).
+  Documento público (é resultado de torneio público). **Temporada fechada é
+  imutável na regra** (`fedSeasonOpen(season)`: até 01/02 do ano seguinte,
+  00:00 de Brasília): criar, reenviar, recusar, readmitir e apagar resultado de
+  ano fechado é recusado, e o reenvio não troca o `season` gravado.
+- **Lançamento de pontos** (`federation_points/{resultId}_{uid}`, leitura
+  pública, `allow write: if false`) — 2026-10-22, decisão do dono: **o ranking
+  não é recalculado por janela nem por dia; cada torneio chancelado LANÇA os
+  pontos de quem pontuou, naquela data, no histórico do atleta.** O gatilho
+  `federationRankingRecompute` (`onResultWritten`) compara o envio com os
+  lançamentos que já existem (`ledgerDiff`): quem entrou é lançado com a
+  tabela do dia (`awardPoints`: `points_by_place[position]` 1º–8º ou
+  `participation` × `tier_multipliers[tier]`; com `members_only`, só quem tinha
+  filiação **federada** ativa na **data do torneio**, `memberValidOn`; linha
+  sem `uid` não pontua); quem segue com a mesma colocação **fica como está**
+  (os pontos não são refeitos por a tabela ou a filiação terem mudado
+  depois); quem mudou de colocação tem o lançamento refeito, com o anterior em
+  `previous { position, points }` e `revised_at_ms`; quem saiu, o resultado
+  recusado e o resultado apagado têm o lançamento **cancelado** com
+  `cancel_reason` (`not_in_result`, `result_rejected`, `result_deleted`; a
+  exclusão de conta usa `account_deleted`). O lançamento guarda torneio,
+  modalidade, data, temporada, categoria, colocação, pontos-base, peso e
+  pontos — é o histórico do atleta, que ele vê em Minha filiação → **Meus
+  pontos no ranking** (`FedMyPoints`, `personPointsHistory`, ano a ano + a soma
+  de todos os anos).
+- **Ranking do ano** (`federation_rankings/{fed}_{temporada}`, `allow write:
+  if false`): a soma dos lançamentos `awarded` daquele ano
+  (`aggregateSeason`), por **classe** (`gender_age_format`) e **geral**;
+  contam os `best_n` melhores resultados de cada pessoa por classe (0 =
+  todos; cada resultado leva `counts`); empate divide a posição. O documento
+  guarda `uids` (a exclusão de conta acha o ano por aqui), `entries_count`,
+  `closes_at_ms` e `last_day`. **Cada ano é imutável pelo ano seguinte**: em
+  01/02 o ano fecha (`seasonClosed`, derivado da data — nenhuma tarefa
+  agendada); fechado, o gatilho não muda lançamento nem soma, e a regra recusa
+  mexer nos resultados dele. Mudar `ranking_config` (`federationRankingConfig`)
+  **não é retroativo**: vale para os próximos envios e só reaplica o
+  `best_n` aos anos **abertos** (`openSeasons`). A conta é
+  `domain/officialRanking.js` com **cópia** em `functions/federationRanking.js`
+  e paridade (`functions/federationRanking.parity.test.js`).
+  `DEFAULT_RANKING_CONFIG` em `constants.js`; a equipe `competitions` edita em
+  Competições → Ranking (`updateRankingConfig`). A tela só **lê** — nunca
+  recalcula no navegador (lição do ranking da plataforma, `docs/18`). A página
+  pública oferece os anos desde a criação da federação (`rankingSeasons`), com
+  o selo "aberto até 31/01" ou "encerrado", e cada linha abre os resultados que
+  somaram (e os que não contam). A aposentada `federationRankingRolling`
+  (ranking corrido do PR #308, desfeito) segue publicada como função vazia até
+  ser apagada à mão (`firebase functions:delete federationRankingRolling
+  --region southamerica-east1`), porque o deploy por nome nunca apaga.
 
 ### 6.4 Secretaria: transferências, documentos e importação (PR 3)
 
@@ -502,7 +531,7 @@ Vinte e duas coleções, todas com prefixo `federation` e **zero índice compost
 `federation_staff`, `federation_plans`, `federation_members` (+ `private/data`:
 CPF, nascimento, responsável — PR 3), `federation_charges`,
 `federation_card_index`; do PR 2, `federation_affiliations`,
-`federation_results`, `federation_rankings`; do PR 3,
+`federation_results`, `federation_rankings`, `federation_points` (2026-10-22); do PR 3,
 `federation_documents_submitted`, `federation_transfers`, `federation_imports`,
 `federation_courses`, `federation_course_enrollments`, `federation_credentials`,
 `federation_sanctions`, `federation_reports`, do PR 4, `federation_news`
@@ -534,7 +563,10 @@ está em §5.2.
 (`coletarFederacoes`), os códigos de carteirinha são apagados, os papéis em
 equipe saem, a federação que a pessoa pediu fica com "Usuário removido"; nos
 **resultados oficiais** a linha da pessoa vira "Atleta removido" sem `uid` (o
-ranking refeito a tira; os demais seguem valendo), o pedido de filiação de
+ranking refeito a tira; os demais seguem valendo); os **lançamentos de
+pontos** ficam como histórico do torneio, sem `uid`, nome e foto — no ano
+aberto são cancelados (`account_deleted`), no ano fechado a soma não muda e só
+o nome sai, também do ranking gravado daquele ano; o pedido de filiação de
 clube/arena que ela fez fica sem `requested_by`;
 **presidente de federação não exclui a conta** (bloqueio, como dono de arena —
 passa a presidência antes). PR 3: o `private/data` da filiação **some**; os
@@ -550,8 +582,9 @@ PR 3: dependentes, documentos [registro], transferências, inscrições em
 cursos, credenciais, sanções [suas e dos dependentes], manifestações
 identificadas). PR 4: as notícias que a pessoa escreveu ficam (são da federação;
 guardam só o `created_by`, contado na prévia como retido) e não vão na
-exportação. `federation_rankings` fica fora da exportação de propósito: é
-derivado dos resultados, que já vão.
+exportação. Os **lançamentos de pontos** da pessoa vão na exportação
+(`official_points`, `listMyFederationPoints`). `federation_rankings` fica fora
+de propósito: é a soma anual derivada dos lançamentos, que já vão.
 `exclusaoCobreColecoes.test.js` reprova coleção `federation_*` nova fora dos dois.
 
 ## 8. Servidor (detalhe em `docs/47-BACKEND-CLOUD-FUNCTIONS.md` §8a)
@@ -573,8 +606,9 @@ derivado dos resultados, que já vão.
 | `federationAcervo` | callable (540 s, 1 GiB) | `docs`/`admin` da federação; `file` para quem lê o documento | acervo oficial: rascunho, publicação numerada com SHA-256, retificação, visibilidade, retirada do ar, entrega de arquivo restrito (§14) |
 | `federationAgenda` | callable | `docs`/`admin` da federação; `competitions` só na agenda esportiva | calendário oficial: marcar/editar (motivo e histórico ao remarcar o que já foi divulgado), adiar, cancelar, apagar o nunca divulgado, aviso a quem segue (§15); reunião: convocar (pauta, edital, quórum) e registrar o resultado (presença, decisão por item, ata) (§15.9) |
 | `federationAgendaFeed` | HTTP público (`/api/agenda/{slug}.ics`) | qualquer um | a agenda assinável (ICS) com os eventos públicos e os torneios chancelados (§15.6) |
-| `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
-| `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
+| `federationRankingRecompute` | gatilho `federation_results/{id}` | — | lança, refaz ou cancela os `federation_points` do resultado e soma `federation_rankings/{fed}_{temporada}`; ano fechado não muda (§6.3) |
+| `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ reaplica o `best_n` só aos anos **abertos**; não reescreve lançamento |
+| `federationRankingRolling` | agendada (aposentada) | — | função vazia: o ranking corrido foi desfeito; apagar à mão (§6.3) |
 
 Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 `notifications` (`origin: 'server'`, textos em `tx()` → `functions/i18n/avisos.json`).
@@ -664,8 +698,13 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 8. Coleção `federation_*` nova entra na **exclusão e na exportação** (guarda).
 9. Os valores de `?aba=` da Central e as âncoras `data-dica` são contrato.
 10. **O ranking oficial é derivado e só o servidor grava** (`federation_rankings`
-    `write: if false`); a tela nunca recalcula. A conta tem cópia no servidor
-    com paridade (`functions/federationRanking.parity.test.js`).
+    e `federation_points` `write: if false`); a tela nunca recalcula. A conta
+    tem cópia no servidor com paridade (`functions/federationRanking.parity.test.js`).
+    Cada torneio **lança** os pontos no histórico do atleta (o que foi lançado
+    não é refeito por mudança de tabela ou de filiação); o ano soma os
+    lançamentos e **fecha em 31/01 do ano seguinte** — fechado, não muda
+    (regra `fedSeasonOpen`, servidor e tela). Nunca volte a um ranking por
+    janela móvel nem recalculado por dia.
 11. **A colocação enviada é a do pódio** (`modalityPlacement`): nunca uma
     segunda conta de colocação. Resultado só de categoria **completa**.
 12. **O organizador nunca aprova a própria chancela**: grava só `pending` e

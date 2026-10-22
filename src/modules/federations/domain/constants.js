@@ -19,6 +19,7 @@ export const FED_COLLECTIONS = Object.freeze({
   affiliations: 'federation_affiliations',
   results: 'federation_results',
   rankings: 'federation_rankings',
+  points: 'federation_points',
   transfers: 'federation_transfers',
   documents: 'federation_documents_submitted',
   imports: 'federation_imports',
@@ -58,6 +59,8 @@ export const fedOrgDocId = (fedId, kind, orgId) => `${fedId}_${kind}_${orgId}`;
 export const fedResultDocId = (fedId, tournamentId, modalityId) => `${fedId}_${tournamentId}_${modalityId}`;
 /** Id determinístico do ranking da temporada: `{fedId}_{ano}`. */
 export const fedRankingDocId = (fedId, season) => `${fedId}_${season}`;
+/** Id determinístico do lançamento de pontos: `{resultId}_{uid}` (um por atleta por categoria de torneio). */
+export const fedPointsDocId = (resultId, uid) => `${resultId}_${uid}`;
 
 /** Id determinístico das relações únicas (equipe e filiação): `{fedId}_{uid}`. */
 export const fedUserDocId = (fedId, uid) => `${fedId}_${uid}`;
@@ -429,6 +432,24 @@ export const RESULT_STATUS = Object.freeze({ SENT: 'sent', REJECTED: 'rejected' 
 export const RESULT_STATUS_LABELS = Object.freeze({
   sent: tk('No ranking'),
   rejected: tk('Recusado pela federação'),
+});
+
+/** Lançamento de pontos no histórico do atleta (`federation_points`) — valor gravado. */
+export const POINTS_STATUS = Object.freeze({ AWARDED: 'awarded', CANCELLED: 'cancelled' });
+
+/** Por que um lançamento foi cancelado (valor gravado — nunca renomeie). */
+export const POINTS_CANCEL_REASON = Object.freeze({
+  RESULT_REJECTED: 'result_rejected',
+  RESULT_DELETED: 'result_deleted',
+  NOT_IN_RESULT: 'not_in_result',
+  ACCOUNT_DELETED: 'account_deleted',
+});
+
+export const POINTS_CANCEL_REASON_LABELS = Object.freeze({
+  result_rejected: tk('Resultado recusado pela federação'),
+  result_deleted: tk('Resultado retirado do ranking'),
+  not_in_result: tk('Saiu do resultado reenviado'),
+  account_deleted: tk('Conta excluída'),
 });
 
 /**

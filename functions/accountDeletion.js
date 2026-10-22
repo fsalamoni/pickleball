@@ -301,6 +301,23 @@ async function coletarFederacoes(db, uid) {
     const rows = (data.rows || []).map((r) => (r && r.uid === uid ? { ...r, uid: null, name: REMOVED_ATHLETE, photo_url: null } : r));
     itens.push({ ref: d.ref, patch: { rows, uids: (data.uids || []).filter((u) => u !== uid) } });
   });
+  // Lançamentos de pontos (`federation_points`): ficam como histórico do
+  // torneio, sem uid, nome e foto; no ano ABERTO o lançamento é cancelado
+  // (conta excluída não pontua mais). O ano FECHADO não muda de soma — só perde
+  // o nome, aqui e no ranking gravado daquele ano.
+  const { seasonClosed } = require('./federationRanking.js');
+  const lancamentos = await consultar(db, 'federation_points', 'uid', '==', uid);
+  lancamentos.docs.forEach((d) => {
+    const data = d.data() || {};
+    const cancela = !seasonClosed(data.season) && data.status === 'awarded' ? { status: 'cancelled', cancel_reason: 'account_deleted', cancelled_at_ms: Date.now() } : {};
+    itens.push({ ref: d.ref, patch: { ...cancela, uid: null, name: REMOVED_ATHLETE, photo_url: null } });
+  });
+  const anonimiza = (rows) => (rows || []).map((l) => (l && l.uid === uid ? { ...l, uid: null, name: REMOVED_ATHLETE, photo_url: null } : l));
+  const rankings = await consultar(db, 'federation_rankings', 'uids', 'array-contains', uid);
+  rankings.docs.forEach((d) => {
+    const data = d.data() || {};
+    itens.push({ ref: d.ref, patch: { general: anonimiza(data.general), categories: (data.categories || []).map((c) => ({ ...c, rows: anonimiza(c.rows) })), uids: (data.uids || []).filter((u) => u !== uid) } });
+  });
   // PR 3 — transferências e sanções (da pessoa e dos dependentes), inscrições
   // em curso e credenciais ficam sem o nome; a credencial sai do diretório e o
   // código dela deixa de verificar; a manifestação identificada na ouvidoria
@@ -1181,7 +1198,7 @@ const PSEUDO_SPECS = Object.freeze([
   // a mensalidade da arena), sem o nome; a carteirinha deixa de verificar
   // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
   // pediu para abrir fica, com "Usuário removido" em quem pediu.
-  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted', 'federation_referees', 'federation_assignments'] },
+  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_points', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted', 'federation_referees', 'federation_assignments'] },
   // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
   { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },

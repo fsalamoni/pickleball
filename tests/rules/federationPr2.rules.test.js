@@ -40,8 +40,10 @@ const pedidoFiliacao = (kind, orgId, over = {}) => ({
   federation_id: FED, kind, org_id: orgId, org_name: orgId, status: 'pending', requested_by: kind === 'club' ? CLUBADM : ARENAMAN, message: '', review: null, ...over,
 });
 const chancela = (status, over = {}) => ({ status, federation_acronym: 'FGP', tier: 'regional', requires_membership: false, requested_by: ORG, ...over });
+// A temporada do ano corrente está sempre aberta; a de dois anos atrás, sempre fechada.
+const ANO = new Date().getFullYear();
 const resultado = (over = {}) => ({
-  federation_id: FED, tournament_id: TID, modality_id: 'm1', status: 'sent', sent_by: ORG, season: 2026, tier: 'regional', rows: [{ uid: ANA, name: 'Ana', position: 1, played: 3 }], uids: [ANA], ...over,
+  federation_id: FED, tournament_id: TID, modality_id: 'm1', status: 'sent', sent_by: ORG, season: ANO, tier: 'regional', rows: [{ uid: ANA, name: 'Ana', position: 1, played: 3 }], uids: [ANA], ...over,
 });
 
 let testEnv;
@@ -240,6 +242,33 @@ describe('⭐ resultados e ranking oficial', () => {
     await assertSucceeds(updateDoc(ref(COMP), { status: 'sent', review: null }));
     await assertFails(deleteDoc(ref(ANA)));
     await assertSucceeds(deleteDoc(ref(ORG)));
+  });
+  it('⭐ temporada FECHADA é imutável: nada entra, nada muda, nada sai; e o ano do resultado nunca muda', async () => {
+    const velho = `${FED}_${TID}_m2`;
+    await semRegras(async (db) => {
+      await updateDoc(doc(db, 'tournaments', TID), { federation_id: FED, federation_sanction: chancela('approved') });
+      await setDoc(doc(db, 'federation_results', velho), resultado({ modality_id: 'm2', season: ANO - 2 }));
+      await setDoc(doc(db, 'federation_results', `${FED}_${TID}_m1`), resultado());
+    });
+    // Enviar para um ano fechado (ou sem ano) é recusado.
+    await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m3`), resultado({ modality_id: 'm3', season: ANO - 2 })));
+    await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m3`), resultado({ modality_id: 'm3', season: String(ANO) })));
+    // Reenviar, recusar, readmitir e apagar o resultado de um ano fechado: ninguém.
+    await assertFails(setDoc(doc(como(ORG), 'federation_results', velho), resultado({ modality_id: 'm2', season: ANO - 2, rows: [] })));
+    await assertFails(updateDoc(doc(como(COMP), 'federation_results', velho), { status: 'rejected', review: { by: COMP, reason: 'Tarde demais' } }));
+    await assertFails(deleteDoc(doc(como(ORG), 'federation_results', velho)));
+    await assertFails(deleteDoc(doc(como(PRES), 'federation_results', velho)));
+    // Num ano aberto, o reenvio não pode mudar o ano do resultado.
+    await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ season: ANO + 1 })));
+    await assertSucceeds(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ rows: [] })));
+  });
+  it('os lançamentos de pontos são públicos e só o servidor grava', async () => {
+    const id = `${FED}_${TID}_m1_${ANA}`;
+    await semRegras((db) => setDoc(doc(db, 'federation_points', id), { federation_id: FED, season: ANO, uid: ANA, points: 100, status: 'awarded' }));
+    await assertSucceeds(getDoc(doc(anonimo(), 'federation_points', id)));
+    await assertFails(setDoc(doc(como(ANA), 'federation_points', `${FED}_${TID}_m9_${ANA}`), { federation_id: FED, season: ANO, uid: ANA, points: 999, status: 'awarded' }));
+    await assertFails(updateDoc(doc(como(PRES), 'federation_points', id), { points: 999 }));
+    await assertFails(deleteDoc(doc(como(ADMIN), 'federation_points', id)));
   });
   it('o ranking é público e ninguém grava pelo cliente', async () => {
     await semRegras((db) => setDoc(doc(db, 'federation_rankings', `${FED}_2026`), { federation_id: FED, season: 2026, general: [] }));

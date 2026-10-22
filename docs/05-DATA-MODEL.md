@@ -1879,14 +1879,34 @@ played, won }` (≤ 400, uma por pessoa), `uids[]`, `status` (`sent|rejected`),
 `sent_by`, `sent_at`, `review { by, at_ms, reason }`. Criação/reenvio: admin do
 torneio com a chancela desta federação aprovada (`fedSanctionedBy`). Revisão:
 equipe `competitions`, só `status`/`review`/`updated_at`. Apagar: admin do
-torneio, equipe `admin` ou admin da plataforma.
+torneio, equipe `admin` ou admin da plataforma. **Tudo isso só com a temporada
+aberta** (`fedSeasonOpen(season)`: até 01/02 do ano seguinte, 00:00 de
+Brasília; `season` inteiro e imutável no reenvio).
+
+### `federation_points/{resultId}_{uid}` (2026-10-22, público, `write: if false`)
+O LANÇAMENTO de pontos de um atleta num torneio chancelado — o histórico dele.
+Gravado pelo servidor (`federationRankingRecompute` → `onResultWritten`,
+`functions/federationRanking.js`). `federation_id`, `result_id`,
+`tournament_id`, `tournament_name`, `modality_id`, `modality_name`, `date`,
+`season`, `category`, `gender_category`, `age_category`, `format`, `tier`,
+`uid`, `name`, `photo_url`, `position`, `played`, `base_points`,
+`multiplier`, `points`, `status` (`awarded|cancelled`), `cancel_reason`
+(`result_rejected|result_deleted|not_in_result|account_deleted`),
+`awarded_at_ms`, `revised_at_ms`, `previous { position, points }`,
+`cancelled_at_ms`, `updated_at_ms`. Os pontos ficam como foram lançados: mudar
+a tabela ou a filiação depois não os reescreve. Consultas de uma igualdade
+(`uid`, `result_id`) ou duas (`federation_id` + `season`), sem índice.
 
 ### `federation_rankings/{fedId}_{season}` (PR 2, público, `write: if false`)
-Derivado pelo servidor (`federationRankingRecompute`/`federationRankingConfig`,
-`functions/federationRanking.js`). `federation_id`, `season`, `results_count`,
-`config` (a tabela usada), `categories[] { key, gender_category, age_category,
-format, rows[] }`, `general[]`, `updated_at_ms`; cada linha `{ uid, name,
-photo_url, points, events, titles, position, results[] (≤ 12) }`.
+A soma do ANO, derivada pelo servidor dos lançamentos `awarded` daquela
+temporada (`federationRankingRecompute`/`federationRankingConfig`).
+`federation_id`, `season`, `results_count`, `entries_count`, `config` (a tabela
+usada), `categories[] { key, gender_category, age_category, format, rows[] }`,
+`general[]`, `uids[]` (quem aparece — a exclusão de conta acha o ano por
+aqui), `closes_at_ms`, `last_day`, `updated_at_ms`; cada linha `{ uid, name,
+photo_url, points, events, titles, position, results[] (≤ 12, cada um com
+`entry_id` e `counts`) }`. Ano fechado (a partir de `closes_at_ms`) não é
+regravado.
 
 ### `federations/{id}.ranking_config` (PR 2, opcional)
 `{ points_by_place { 1..8 }, participation, best_n, tier_multipliers

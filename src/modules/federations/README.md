@@ -19,7 +19,7 @@ federations/
 │   ├── federationPending.js     # "Precisa de você" da Central e da Minha área
 │   ├── affiliations.js          # PR 2: pedido e decisão de filiação de clube/arena, contagens
 │   ├── sanction.js              # PR 2: chancela do torneio (pedir, decidir, retirar) e a exigência "só filiados"
-│   ├── officialRanking.js       # PR 2: a CONTA do ranking oficial (cópia em functions/federationRanking.js)
+│   ├── officialRanking.js       # PR 2 (refeito 2026-10-22): lançamento de pontos por torneio, soma do ano, ano fechado em 31/01, histórico do atleta (cópia em functions/federationRanking.js)
 │   ├── privateData.js           # PR 3: CPF (só se a federação pede), idade/faixa, menor e dependente, documentos exigidos
 │   ├── transfers.js             # PR 3: troca de clube / de federação — prazo de liberação, carência, estados
 │   ├── importMembers.js         # PR 3: a lista colada (CSV/linhas) → linhas válidas, erros, prévia
@@ -83,12 +83,18 @@ de `domain/membership.js` com paridade em
 `functions/federationMembership.parity.test.js`; `functions/federationRanking.js`
 (`federationRankingRecompute`, `federationRankingConfig`) — **cópia** de
 `domain/officialRanking.js` com paridade em `federationRanking.parity.test.js`.
+O ranking oficial é um LIVRO: cada torneio chancelado lança os pontos em
+`federation_points/{resultId}_{uid}` (o histórico do atleta, que ele vê em
+Minha filiação → Meus pontos no ranking, `FedMyPoints`); o ano soma os
+lançamentos em `federation_rankings/{fed}_{ano}` e fecha em 31/01 do ano
+seguinte — fechado, não muda (regra `fedSeasonOpen`, servidor e tela). Mudar a
+tabela de pontos não reescreve o que já foi lançado (`docs/50` §6.3).
 
 Coleções (`firestore.rules` § FEDERAÇÕES, provadas em
 `tests/rules/federation.rules.test.js`): `federations` (+ `private/data`),
 `federation_staff`, `federation_admin_grants` (PR 7), `federation_plans`, `federation_members` (+ `private/data`),
 `federation_charges`, `federation_card_index`, `federation_affiliations`,
-`federation_results`, `federation_rankings` (`tests/rules/federationPr2.rules.test.js`);
+`federation_results`, `federation_rankings`, `federation_points` (`tests/rules/federationPr2.rules.test.js`);
 PR 3 (`tests/rules/federationPr3.rules.test.js`): `federation_documents_submitted`,
 `federation_transfers`, `federation_imports`, `federation_courses`,
 `federation_course_enrollments`, `federation_credentials`,

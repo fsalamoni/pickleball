@@ -11,7 +11,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, GraduationCap, Landmark, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
+import { Building2, GraduationCap, Landmark, Lock, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -19,6 +19,7 @@ import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
 import { splitSanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { tournamentPath } from '@/modules/federations/domain/agenda';
+import { rankingSeasons, seasonClosed, seasonLastDay } from '@/modules/federations/domain/officialRanking';
 import { todayISO } from '@/modules/arenas/domain/calendar';
 import { canCancelEnrollment, courseState, credentialState, seatsLeft, sortCourses } from '@/modules/federations/domain/courses';
 import { protocolToId, reportProtocol, validateReportInput } from '@/modules/federations/domain/discipline';
@@ -166,30 +167,59 @@ export function FedSanctionedTournaments({ federation, limite = 12, titulo = tru
 
 export const classeLabel = (c) => [GENDER_CATEGORY_LABELS[c.gender_category] || c.gender_category, AGE_CATEGORY_LABELS[c.age_category] || c.age_category, MODALITY_FORMAT_LABELS[c.format] || c.format].filter(Boolean).join(' · ');
 
+const diaBR = (iso) => (iso ? String(iso).split('-').reverse().join('/') : '—');
+
+/** Uma linha do ranking; tocar em "pontos" abre de onde eles vieram (torneio, data, colocação, se conta). */
 function Linha({ l, destaque, logado }) {
+  const [aberto, setAberto] = useState(false);
+  const detalhes = l.results || [];
   return (
-    <li className={`flex items-center gap-3 rounded-2xl px-3 py-2 ${destaque ? 'bg-acid/15' : 'odd:bg-paper/60'}`}>
-      <span className="w-8 shrink-0 text-center font-display text-lg font-bold text-ink">{l.position}º</span>
-      <V2Avatar name={l.name} photoUrl={l.photo_url} size="sm" />
-      <span className="min-w-0 flex-1">
-        {logado && l.uid
-          ? <Link to={`/atleta/${encodeURIComponent(l.uid)}`} className="block truncate font-semibold text-ink hover:underline">{l.name || t('Atleta')}</Link>
-          : <span className="block truncate font-semibold text-ink">{l.name || t('Atleta')}</span>}
-        <span className="block text-xs text-gray-500">{tn(l.events, '{n} torneio', '{n} torneios')}{l.titles ? ` · ${tn(l.titles, '{n} título', '{n} títulos')}` : ''}</span>
-      </span>
-      <span className="font-display text-lg font-bold text-ink">{l.points}</span>
+    <li className={`rounded-2xl px-3 py-2 ${destaque ? 'bg-acid/15' : 'odd:bg-paper/60'}`}>
+      <div className="flex items-center gap-3">
+        <span className="w-8 shrink-0 text-center font-display text-lg font-bold text-ink">{l.position}º</span>
+        <V2Avatar name={l.name} photoUrl={l.photo_url} size="sm" />
+        <span className="min-w-0 flex-1">
+          {logado && l.uid
+            ? <Link to={`/atleta/${encodeURIComponent(l.uid)}`} className="block truncate font-semibold text-ink hover:underline">{l.name || t('Atleta')}</Link>
+            : <span className="block truncate font-semibold text-ink">{l.name || t('Atleta')}</span>}
+          <span className="block text-xs text-gray-500">{tn(l.events, '{n} torneio', '{n} torneios')}{l.titles ? ` · ${tn(l.titles, '{n} título', '{n} títulos')}` : ''}</span>
+        </span>
+        {detalhes.length > 0
+          ? <button type="button" onClick={() => setAberto((v) => !v)} aria-expanded={aberto} className="rounded-lg px-2 font-display text-lg font-bold text-ink underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30" aria-label={t('{pontos} pontos: ver de onde vieram', { pontos: l.points })}>{l.points}</button>
+          : <span className="font-display text-lg font-bold text-ink">{l.points}</span>}
+      </div>
+      {aberto && (
+        <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2 text-xs">
+          {detalhes.map((r) => (
+            <li key={r.entry_id || `${r.tournament_id}_${r.date}`} className={`flex flex-wrap items-baseline justify-between gap-2 ${r.counts === false ? 'text-gray-500' : 'text-ink'}`}>
+              <span className="min-w-0">{diaBR(r.date)} · {r.tournament_name}{r.modality_name ? ` · ${r.modality_name}` : ''}{r.position ? ` · ${t('{n}º', { n: r.position })}` : ''}</span>
+              <span className="tabular-nums font-semibold">{r.points}{r.counts === false ? ` · ${t('não conta')}` : ''}</span>
+            </li>
+          ))}
+          {l.events > detalhes.length && <li className="text-gray-500">{t('Mostrando os {n} melhores.', { n: detalhes.length })}</li>}
+        </ul>
+      )}
     </li>
   );
 }
 
+/** "Aberta até 31/01" ou "Encerrada: resultado final". */
+function SeasonStatus({ season }) {
+  const fechada = seasonClosed(season);
+  return fechada
+    ? <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t('Temporada {ano} encerrada: resultado final', { ano: season })}</V2Badge>
+    : <V2Badge tone="green">{t('Temporada {ano} aberta: resultados até {data}', { ano: season, data: diaBR(seasonLastDay(season)) })}</V2Badge>;
+}
+
 /**
- * O ranking oficial da temporada. `meUid` destaca a linha da pessoa.
- * `anos`: as temporadas oferecidas (padrão: este ano e o anterior).
+ * O ranking oficial, ano a ano: cada ano é a soma dos pontos LANÇADOS pelos
+ * torneios chancelados daquele ano, e o ano encerrado não muda mais.
+ * `meUid` destaca a linha da pessoa.
  */
 export function FedRankingBlock({ federation, meUid = null, titulo = true, compacto = false }) {
   const ligado = fedModuleOn(federation, 'ranking');
-  const anoAtual = new Date().getFullYear();
-  const [season, setSeason] = useState(anoAtual);
+  const anos = useMemo(() => rankingSeasons(federation), [federation]);
+  const [season, setSeason] = useState(anos[0]);
   const [classe, setClasse] = useState('geral');
   const [limite, setLimite] = useState(compacto ? 10 : 25);
   const [busca, setBusca] = useState('');
@@ -209,13 +239,21 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
       <div className="flex flex-wrap items-end justify-between gap-3">
         {titulo && <h2 id="fed-ranking" className="font-display text-xl font-bold text-ink">{t('Ranking oficial')}</h2>}
         <div className="flex flex-wrap gap-2">
-          <V2Select aria-label={t('Temporada')} className="h-10 w-28" value={season} onChange={(e) => setSeason(Number(e.target.value))} options={[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => ({ value: a, label: String(a) }))} />
+          <V2Select aria-label={t('Temporada')} className="h-10 w-28" value={season} onChange={(e) => { setSeason(Number(e.target.value)); setClasse('geral'); }} options={anos.map((a) => ({ value: a, label: String(a) }))} />
           <V2Select aria-label={t('Classe')} className="h-10 min-w-40" value={classe} onChange={(e) => setClasse(e.target.value)} options={[{ value: 'geral', label: t('Geral') }, ...(dados?.categories || []).map((c) => ({ value: c.key, label: classeLabel(c) }))]} />
         </div>
       </div>
+      <SeasonStatus season={season} />
       {q.isError && <V2ErrorState inline title={t('Não carregou o ranking')} onRetry={() => q.refetch()} />}
       {q.isLoading && <V2Skeleton lines={4} />}
-      {q.isSuccess && !dados && <V2Surface variant="compacto" className="flex items-center gap-3 p-4 text-sm text-gray-600"><Medal className="h-5 w-5 text-gray-500" aria-hidden="true" />{t('A temporada {ano} ainda não tem resultado enviado. O ranking nasce quando o organizador de um torneio chancelado envia o resultado de uma categoria.', { ano: season })}</V2Surface>}
+      {q.isSuccess && !dados && (
+        <V2Surface variant="compacto" className="flex items-center gap-3 p-4 text-sm text-gray-600">
+          <Medal className="h-5 w-5 text-gray-500" aria-hidden="true" />
+          {seasonClosed(season)
+            ? t('A temporada {ano} fechou sem resultado enviado.', { ano: season })
+            : t('A temporada {ano} ainda não tem resultado enviado. O ranking nasce quando o organizador de um torneio chancelado envia o resultado de uma categoria.', { ano: season })}
+        </V2Surface>
+      )}
       {dados && linhas.length === 0 && <p className="text-sm text-gray-500">{t('Ninguém pontuou nesta classe ainda.')}</p>}
       {dados && linhas.length > 0 && (
         <>
@@ -225,6 +263,7 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
           {achadas.length > limite && <V2Button type="button" variant="ghost" size="sm" onClick={() => setLimite((n) => n + 25)}>{t('Ver mais ({n} de {total})', { n: limite, total: achadas.length })}</V2Button>}
           <p className="text-xs text-gray-500">
             {t('Atualizado em {data}.', { data: dados.updated_at_ms ? fmtData(new Date(dados.updated_at_ms), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—' })}
+            {' '}{t('Cada torneio chancelado lança os pontos de quem pontua no histórico do atleta; o ano soma esses pontos.')}
             {' '}{dados.config?.members_only === false ? '' : t('Pontuam só os filiados em dia na data do torneio.')}
             {' '}{dados.config?.best_n ? t('Contam os {n} melhores resultados de cada classe.', { n: dados.config.best_n }) : t('Contam todos os resultados de cada classe.')}
             {dados.config?.members_only === false ? ` ${t('Nesta federação todo mundo pontua, filiado ou não.')}` : ''}

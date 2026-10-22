@@ -79,7 +79,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'tournaments', TID), { id: TID, creator_uid: ORG, archived: false, status: 'registrations_open', name: 'Aberto' });
     await setDoc(doc(db, 'tournament_admins', `${TID}_${ORG}`), { tournament_id: TID, user_id: ORG });
     await setDoc(doc(db, 'tournament_modalities', 'm1'), { tournament_id: TID, entry_fee_cents: 0, format: 'doubles' });
-    await setDoc(doc(db, 'federation_results', `${FED}_${TID}_m1`), { federation_id: FED, tournament_id: TID, modality_id: 'm1', status: 'sent', sent_by: ORG, season: 2026, tier: 'regional', rows: [], uids: [] });
+    await setDoc(doc(db, 'federation_results', `${FED}_${TID}_m1`), { federation_id: FED, tournament_id: TID, modality_id: 'm1', status: 'sent', sent_by: ORG, season: new Date().getFullYear(), tier: 'regional', rows: [], uids: [] });
   });
 });
 

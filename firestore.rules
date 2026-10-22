@@ -5231,9 +5231,19 @@ service cloud.firestore {
         && tdoc.get('federation_sanction', {}).get('status', '') == 'approved';
     }
 
+    // A temporada (ano) do ranking oficial ainda aceita mudança? Fecha em
+    // 1º/fev do ano seguinte, 00:00 de Brasília (03:00 UTC) — o mês de folga é
+    // para o resultado de um torneio de dezembro chegar. Depois disso o ano é
+    // IMUTÁVEL: nenhum resultado dele entra, muda ou sai. Mesma data em
+    // `seasonClosesAtMs` (domínio e servidor).
+    function fedSeasonOpen(s) {
+      return s is int && request.time < timestamp.date(s + 1, 2, 1) + duration.value(3, 'h');
+    }
+
     // RESULTADO de uma categoria de torneio chancelado (`{fed}_{torneio}_{categoria}`):
     // o organizador envia e reenvia (`sent`); competições recusa ou readmite.
-    // Público, como o quadro do torneio — e o ranking que sai dele.
+    // Público, como o quadro do torneio — e o ranking que sai dele. Só na
+    // temporada ABERTA, e a temporada do documento nunca muda.
     match /federation_results/{resId} {
       allow read: if true;
       allow create: if fedOn() && isAuthed()
@@ -5242,6 +5252,7 @@ service cloud.firestore {
         && nd().modality_id is string
         && resId == nd().federation_id + '_' + nd().tournament_id + '_' + nd().modality_id
         && nd().status == 'sent'
+        && fedSeasonOpen(nd().season)
         && nd().sent_by == me()
         && nd().rows is list
         && nd().rows.size() <= 400
@@ -5253,6 +5264,8 @@ service cloud.firestore {
         && nd().federation_id == od().federation_id
         && nd().tournament_id == od().tournament_id
         && nd().modality_id == od().modality_id
+        && nd().get('season', null) == od().get('season', null)
+        && fedSeasonOpen(od().season)
         && (
           (nd().status == 'sent'
             && nd().sent_by == me()
@@ -5264,9 +5277,17 @@ service cloud.firestore {
             && chg().hasOnly(['status', 'review', 'updated_at'])
             && nd().status in ['sent', 'rejected'])
         );
-      allow delete: if fedPlat(od().federation_id)
+      allow delete: if fedSeasonOpen(od().season) && (fedPlat(od().federation_id)
         || (fedOn() && fedHas(od().federation_id, 'admin'))
-        || (fedOn() && isTournamentAdmin(od().tournament_id));
+        || (fedOn() && isTournamentAdmin(od().tournament_id)));
+    }
+
+    // LANÇAMENTOS de pontos no histórico do atleta (`{resultado}_{uid}`): um
+    // por categoria de torneio; o cancelado fica, com o motivo. Público como o
+    // resultado e o ranking; só o servidor grava (`federationRankingRecompute`).
+    match /federation_points/{pointId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // Ranking oficial por temporada (`{fed}_{ano}`): só o servidor grava (`federationRankingRecompute`).

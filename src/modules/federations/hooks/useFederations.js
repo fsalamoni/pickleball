@@ -4,7 +4,7 @@
  * cache).
  */
 import { useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -42,6 +42,7 @@ export const fedKeys = {
   tournamentResults: (tid) => ['federacoes', 'torneio', tid, 'resultados'],
   personResults: (uid) => ['federacoes', 'pessoa', uid, 'resultados'],
   ranking: (id, season) => ['federacoes', 'federacao', id, 'ranking', season],
+  myPoints: (uid) => ['federacoes', 'meus-pontos', uid],
   // PR 3
   myDependents: (uid) => ['federacoes', 'meus-dependentes', uid],
   memberPrivate: (memberId) => ['federacoes', 'filiacao-privado', memberId],
@@ -248,6 +249,26 @@ export function usePersonFederationResults(uid, { enabled = true } = {}) {
 /** O ranking oficial da temporada (gravado pelo servidor; `null` = ainda não há). */
 export function useFederationRanking(id, season, { enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.ranking(id, season), queryFn: () => svc.getFederationRanking(id, season), enabled: !!id && !!season && enabled, staleTime: 60_000 });
+}
+
+/**
+ * Os rankings de VÁRIOS anos (o histórico da pessoa pede a posição e a
+ * configuração gravadas em cada ano). Mesma chave de `useFederationRanking`.
+ * Devolve `{ porAno, isLoading, isError, retry }`.
+ */
+export function useFederationRankings(id, seasons = [], { enabled = true } = {}) {
+  const qs = useQueries({
+    queries: seasons.map((season) => ({ queryKey: fedKeys.ranking(id, season), queryFn: () => svc.getFederationRanking(id, season), enabled: !!id && enabled, staleTime: 60_000 })),
+  });
+  const porAno = {};
+  qs.forEach((q, i) => { if (q.data) porAno[seasons[i]] = q.data; });
+  return { porAno, isLoading: qs.some((q) => q.isLoading), isError: qs.some((q) => q.isError), retry: () => qs.forEach((q) => q.isError && q.refetch()) };
+}
+
+/** Os lançamentos de pontos da pessoa no ranking oficial (todas as federações e anos). */
+export function useMyFederationPoints({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({ queryKey: fedKeys.myPoints(user?.uid), queryFn: () => svc.listMyFederationPoints(user?.uid), enabled: !!user?.uid && enabled, staleTime: 60_000 });
 }
 
 /* ------------------------------------------- PR 3: dependentes, documentos, transferências, cursos, disciplina -- */

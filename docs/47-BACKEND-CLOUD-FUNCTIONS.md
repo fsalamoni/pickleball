@@ -464,14 +464,17 @@ e `tests/rules/federation.rules.test.js` + `federationPr2/3/4.rules.test.js` +
 
 | Função | Gatilho | Faz |
 |---|---|---|
-| `federationRankingRecompute` | `onDocumentWritten federation_results/{resultId}` | Recalcula `federation_rankings/{fed}_{temporada}` da temporada do resultado (e da anterior, se o resultado mudou de temporada). Lê `federations/{fed}.ranking_config`, os `federation_results` da federação e temporada e os `federation_members` da federação (para `members_only`: filiação federada ativa na data do torneio). |
-| `federationRankingConfig` | `onDocumentWritten federations/{fedId}` | Só quando `ranking_config` mudou (comparação por JSON): refaz todas as temporadas com resultado. |
+| `federationRankingRecompute` | `onDocumentWritten federation_results/{resultId}` | `onResultWritten`: temporada fechada ⇒ nada. Senão lê `federations/{fed}.ranking_config`, os `federation_points` do resultado (`result_id`) e as filiações de quem está nele (`federation_members/{fed}_{uid}`, para `members_only`: federada ativa na data do torneio); `ledgerDiff` decide quem é lançado, quem fica como está, quem é refeito (com `previous`) e quem é cancelado (com o motivo); grava em lotes de 400 e soma `federation_rankings/{fed}_{temporada}` (`recomputeSeason`, a partir dos lançamentos). |
+| `federationRankingConfig` | `onDocumentWritten federations/{fedId}` | Só quando `ranking_config` mudou (comparação por JSON): reaplica a soma (o `best_n`) só aos anos **abertos** (`openSeasons`); não reescreve lançamento nem ano fechado. |
+| `federationRankingRolling` | agendada (aposentada) | Função vazia: o ranking corrido (PR #308) foi desfeito em 2026-10-22. Fica publicada porque o deploy por nome não apaga; remover com `firebase functions:delete federationRankingRolling --region southamerica-east1`. |
 
-A conta (`computeOfficialRanking`) é **cópia** de
-`src/modules/federations/domain/officialRanking.js`, com paridade em
-`functions/federationRanking.parity.test.js`; o documento gravado corta os
-`results` de cada linha em 12. `federation_rankings` é `allow write: if false`:
-o navegador só lê. Não avisa ninguém e não grava auditoria (é derivado).
+A conta (`awardPoints`, `aggregateSeason`, `ledgerDiff`, `seasonClosed`) é
+**cópia** de `src/modules/federations/domain/officialRanking.js`, com paridade
+em `functions/federationRanking.parity.test.js`; o documento gravado corta os
+`results` de cada linha em 12. `federation_points` e `federation_rankings` são
+`allow write: if false`: o navegador só lê. O ano fecha em 01/02 do ano
+seguinte (00:00 de Brasília), derivado da data — nenhuma tarefa agendada. Não
+avisa ninguém e não grava auditoria (é derivado).
 
 ## 9. Motores duplicados e testes de paridade
 
