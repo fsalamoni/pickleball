@@ -36,6 +36,7 @@ const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const P = require('./federationStaffPolicy.js');
 const O = require('./federationOrgMembers.js');
 const { resolveMemberType } = require('./federationMemberTypes.js');
+const RG = require('./federationRegularityPolicy.js');
 
 class FederationError extends Error {
   constructor(code, message) { super(message); this.code = code; this.name = 'FederationError'; }
@@ -627,6 +628,9 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
     requested_at: ctx.Timestamp.fromMillis(ctx.now), requested_at_ms: ctx.now, updated_at: ctx.Timestamp.fromMillis(ctx.now),
     member_number: alvo.member_number || null, card_code: null, valid_from: null, valid_until: null, expiry_notified: {},
   };
+  // Consentimentos (LGPD) marcados no pedido: cada um com a hora do servidor e quem marcou.
+  const consentimentos = RG.consentsPatch(fed, null, data.consents, uid, ctx.now);
+  if (consentimentos) Object.assign(doc, { consents: consentimentos.consents, consents_log: consentimentos.consents_log });
   const privRef = memberRef.collection('private').doc('data');
   const gravaPrivado = (w) => {
     if (Object.keys(privado).length) w.set(privRef, { ...privado, updated_at_ms: ctx.now }, { merge: true });

@@ -32,6 +32,7 @@ import { staffPerms } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
 import { availableModules, fedModuleOn, isFederationPublic, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
 import { docLabel, documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
+import { validateValidUntil } from '../domain/regularity.js';
 import { validateCourseInput } from '../domain/courses.js';
 import { validateReportInput } from '../domain/discipline.js';
 import { validateNewsInput } from '../domain/news.js';
@@ -942,11 +943,15 @@ export async function deleteMyDocument(docu) {
 }
 
 /** A secretaria aceita ou recusa (com motivo). Avisa quem enviou. */
-export async function reviewDocument(docu, action, { uid, reason = '' } = {}) {
+export async function reviewDocument(docu, action, { uid, reason = '', validUntil = '' } = {}) {
   const status = action === 'approve' ? 'approved' : 'rejected';
   const motivo = String(reason || '').trim().slice(0, 500);
   if (status === 'rejected' && motivo.length < 3) throw new FederationError(t('Diga o motivo (mínimo 3 caracteres).'));
-  await updateDoc(doc(db, C.documents, docu.id), { status, review: { by: uid || null, at_ms: Date.now(), reason: motivo }, updated_at: serverTimestamp() });
+  // Até quando vale (só ao aceitar; em branco = não vence). O servidor espelha a situação na filiação e avisa antes de vencer.
+  const rv = validateValidUntil(status === 'approved' ? validUntil : '', isoDate());
+  if (!rv.ok) throw new FederationError(rv.error, { valid_until: rv.error });
+  const vale = rv.value || '';
+  await updateDoc(doc(db, C.documents, docu.id), { status, review: { by: uid || null, at_ms: Date.now(), reason: motivo }, valid_until: vale, updated_at: serverTimestamp() });
   await createAuditLog({ action: `federation_document_${action}`, actor: { uid }, userId: docu.user_id, details: { federation_id: docu.federation_id, member_id: docu.member_id, kind: docu.kind, reason: motivo } });
   await notifyUsers([docu.user_id], {
     type: NOTIFICATION_TYPE.FEDERATION, title: status === 'approved' ? t('Documento aceito') : t('Documento recusado'),
@@ -1086,6 +1091,20 @@ export async function reviewCredential(cred, action, { uid, reason = '' } = {}) 
 /* ================================================= PR 3: disciplina e ouvidoria ================================================= */
 
 /** As sanções da pessoa (e dos dependentes) — só ela vê (D11). */
+/**
+ * As ocorrências do seguro da pessoa: as dela e as dos dependentes (consulta
+ * pelo campo que a regra confere — `user_id` ou `guardian_uid`).
+ */
+export async function listMyIncidents(uid) {
+  if (!uid) return [];
+  const [minhas, deps] = await Promise.all([
+    getDocs(query(collection(db, C.incidents), where('user_id', '==', uid))),
+    getDocs(query(collection(db, C.incidents), where('guardian_uid', '==', uid))),
+  ]);
+  const vistos = new Set();
+  return [...minhas.docs, ...deps.docs].filter((d) => !vistos.has(d.id) && vistos.add(d.id)).map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
 export async function listMySanctions(uid) {
   if (!uid) return [];
   const [minhas, deps] = await Promise.all([

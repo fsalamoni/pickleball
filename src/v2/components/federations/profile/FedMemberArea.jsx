@@ -34,6 +34,7 @@ import { CHARGE_ORIGIN_LABELS } from '@/modules/federations/domain/constants';
 import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
 import FedElectionNotice from '../elections/FedElectionNotice';
 import FedMyPoints from './FedMyPoints';
+import { MemberRegularity } from '../FedRegularity';
 import { t, tn } from '@/core/i18n';
 
 /** A filiação e as cobranças abertas desta federação (as mesmas consultas nos três). */
@@ -193,7 +194,9 @@ export function FedMyMembership({ federation, plans }) {
           )}
         </div>
         {renewalOpensOn(m) && <p className="text-sm text-gray-500">{t('A renovação abre em {data}, {n} dias antes de vencer. Você recebe um aviso.', { data: quando(renewalOpensOn(m)), n: RENEWAL_WINDOW_DAYS })}</p>}
+        {m.docs_block && <p className="text-sm font-semibold text-red-600">{t('Documento vencido: inscrição em torneio da federação fica bloqueada até você enviar o novo e a secretaria aceitar.')}</p>}
         <FedMemberDocuments member={m} plan={plano} />
+        <MemberRegularity federation={federation} member={m} />
         <FedPayments charges={(s.cq.data || []).filter((c) => c.federation_id === federation.id && c.status === CHARGE_STATUS.PAID)} onRecibo={setRecibo} />
         <FedMySanctions federationId={federation.id} />
         <FedMyPoints federation={federation} uid={user?.uid} />

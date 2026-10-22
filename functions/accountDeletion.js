@@ -364,7 +364,11 @@ async function coletarFederacoes(db, uid) {
     const encerra = ['invited', 'confirmed'].includes(data.status) ? { status: 'cancelled', cancel_reason: 'Conta excluída.' } : {};
     itens.push({ ref: d.ref, patch: { ...encerra, referee_name: REMOVED_ATHLETE, conflict: null, decline_reason: '' } });
   });
-  const truncated = [filiacoes, dependentes, cobrancas, resultados, transferencias, sancoes, inscricoes, credenciais, manifestacoes, documentos, quadros, escalas].some((r) => r.truncated);
+  // Ocorrências do seguro (lesão, acidente): o registro fica — a federação pode
+  // estar com um sinistro aberto —, mas sem o nome e sem o relato de saúde.
+  const ocorrencias = await consultarUniao(db, 'federation_incidents', [['user_id', '=='], ['guardian_uid', '==']], uid);
+  ocorrencias.docs.forEach((d) => itens.push({ ref: d.ref, patch: { athlete_name: REMOVED_ATHLETE, description: '', body_part: '', history: [] } }));
+  const truncated = [filiacoes, dependentes, cobrancas, resultados, transferencias, sancoes, inscricoes, credenciais, manifestacoes, documentos, quadros, escalas, ocorrencias].some((r) => r.truncated);
   return { itens, deletes, truncated, count: itens.length + documentos.docs.length + quadros.docs.length };
 }
 
@@ -1210,7 +1214,7 @@ const PSEUDO_SPECS = Object.freeze([
   // a mensalidade da arena), sem o nome; a carteirinha deixa de verificar
   // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
   // pediu para abrir fica, com "Usuário removido" em quem pediu.
-  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_points', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted', 'federation_referees', 'federation_assignments'] },
+  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_points', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted', 'federation_referees', 'federation_assignments', 'federation_incidents'] },
   // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
   { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },

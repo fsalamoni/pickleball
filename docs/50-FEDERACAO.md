@@ -2497,3 +2497,100 @@ secretaria, competições e admin — e o que estava torto foi corrigido:
   (`/federacoes/:id/filiar?entidade=…`) ou a "Minha filiação" da federação,
   onde se envia outro; o caminho dos módulos é "Central → Configurações →
   Módulos".
+
+## 30. Regularidade do filiado (Bloco 1 das próximas frentes, 2026-10-22)
+
+Quatro coisas dizem se o filiado está em dia além da anuidade. Tudo o que muda
+a situação de alguém é gravado **pelo servidor**
+(`functions/federationRegularity.js`, função `federationRegularity`), com
+auditoria. A régua tem cópia em `functions/federationRegularityPolicy.js`, com
+paridade contra `src/modules/federations/domain/regularity.js`
+(`federationRegularity.parity.test.js`).
+
+### 30.1 Validade dos documentos
+
+- Em **Configurações → Planos**, cada documento exigido ganha um prazo
+  (`federation_plans.doc_validity = { chave: meses }`, com meses em 3, 6, 12,
+  24, 36 ou 60; ausente = não vence). Ao aceitar, a secretaria confirma a data
+  sugerida (`federation_documents_submitted.valid_until`, texto `AAAA-MM-DD`).
+  É a única chave nova que a regra deixa a secretaria gravar, além de estado e
+  motivo.
+- `requiredDocsStatus(plan, docs, hoje)` passa a dizer `expired`, `expiring`
+  (até 30 dias), `valid_until` e `newer` (envio novo em análise). A pasta, a
+  lista de filiados e "Minha filiação" mostram isso. Documento vencido ou
+  vencendo, sem envio novo, oferece "Enviar o novo".
+- O gatilho `federationDocumentsSync` (escrita em
+  `federation_documents_submitted`) refaz o resumo da filiação
+  (`federation_members.docs_state`) e a trava `docs_block`. Só grava se algo
+  mudou.
+- A varredura diária (dentro de `federationMembershipSweep`) avisa quem enviou
+  aos 30 e aos 7 dias e no próprio dia (`expiry_notified`, um aviso por marco),
+  e aplica o vencimento (`expired_applied`).
+- **Trava opcional**: `rules.block_expired_docs` (Configurações → Regras). Com
+  ela ligada, documento vencido grava `docs_block: true`, e a regra da
+  inscrição em torneio "só filiados" (`fedMemberOk`) recusa. Desligada, todos
+  são avisados e nada trava.
+
+### 30.2 Nível oficial
+
+- A escala é da federação (`rules.levels`, padrão de 2.5 a 5.5+). Na pasta do
+  filiado, "Definir o nível" (`level_set`, permissão `members` ou
+  `competitions`) pede o motivo. Grava `official_level` e
+  `official_level_history` (até 50 entradas) e avisa o atleta ou o responsável.
+  A régua 2.0–8.0 da plataforma aparece só como sugestão (`suggestLevel`).
+- O atleta pede revisão em Minha filiação (`level_review`: um pedido por vez,
+  motivo com pelo menos 10 caracteres). A equipe aceita, definindo o nível, ou
+  mantém, com motivo (`level_review_decide`). Clube e arena não têm nível.
+- `rules.level_public` põe o nível na verificação pública da carteirinha
+  (`official_level` em `publicVerification`, no cliente e no servidor).
+
+### 30.3 Autorizações (LGPD)
+
+- São três padrão: uso de imagem, novidades e compartilhamento com a
+  confederação (`image`, `comms`, `share`). A federação pode criar até cinco
+  próprias (`rules.extra_consents`).
+- A pessoa marca no pedido de filiação (`pedirFiliacao` aplica
+  `consentsPatch`) e muda quando quiser em Minha filiação (`consents`). Só o
+  que MUDOU entra em `consents_log` (até 30 entradas), com a hora do servidor.
+  A pasta do filiado mostra as autorizações em modo leitura.
+
+### 30.4 Seguro e ocorrências (módulo `insurance`, aba `?aba=ocorrencias`)
+
+- A presidência cadastra a apólice em `federations.insurance`: seguradora,
+  apólice, vigência, quem está coberto (`active_members` ou `federated_only`) e
+  como acionar.
+- O filiado vê se está coberto e registra a ocorrência (lesão, acidente, mal
+  súbito, outro). A equipe também registra e acompanha o andamento: `open` →
+  `claim` (número do sinistro obrigatório) → `closed`, tudo em `history[]`.
+- A ocorrência guarda `insured` e uma cópia da apólice do dia. Quando quem
+  registra é o atleta, a equipe é avisada; quando é a equipe, o atleta ou o
+  responsável é avisado.
+- `federation_incidents`: só o servidor grava. Leem o atleta, o responsável,
+  quem registrou e quem tem `members`, `competitions` ou `admin`. O financeiro
+  não lê.
+- Exclusão de conta: a ocorrência fica (pode haver sinistro em andamento), mas
+  sem o nome, o relato e a parte do corpo. Na exportação, ela aparece como
+  "Ocorrências registradas no seguro esportivo".
+
+### 30.5 Não pode regredir
+
+59. `docs_state`, `docs_block`, `official_level*`, `level_review` e
+    `consents*` **só o servidor grava**; a regra recusa a gravação da própria
+    pessoa.
+60. Documento vencido só trava com `rules.block_expired_docs` ligado. O aviso
+    sai sempre, um por marco.
+61. A cobertura do seguro olha se a filiação está **ativa** pelo `status` de
+    `membershipState`. 🐞 A primeira versão lia `.state`, que não existe, e
+    toda ocorrência saía "sem cobertura"; o teste do servidor pegou.
+62. Ocorrência não é lida pelo financeiro, nem por quem não é dono ou equipe.
+    O relato de saúde sai na exclusão de conta.
+
+### 30.6 Âncoras e guia
+
+Âncoras: `federacao-aba-regras`, `federacao-pasta-regularidade`,
+`federacao-minha-nivel`, `federacao-minha-autorizacoes`,
+`federacao-minha-seguro`, `federacao-seguro-apolice`,
+`federacao-seguro-ocorrencias`, `federacao-filiar-autorizacoes`.
+
+Guias: `federacao-regularidade` (equipe) e `federacao-minha-regularidade`
+(filiado). Artigo: `federacao-regularidade`.

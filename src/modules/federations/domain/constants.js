@@ -41,6 +41,7 @@ export const FED_COLLECTIONS = Object.freeze({
   electionVoters: 'federation_election_voters',
   electionEndorsements: 'federation_election_endorsements',
   ballots: 'federation_ballots',
+  incidents: 'federation_incidents',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -208,6 +209,7 @@ export const FED_MODULE = Object.freeze({
   REFEREES: 'referees',
   ACCOUNTS: 'accounts',
   ELECTIONS: 'elections',
+  INSURANCE: 'insurance',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -224,6 +226,7 @@ export const FED_MODULE_META = Object.freeze({
   calendar: { label: tk('Calendário oficial'), description: tk('Agenda esportiva e institucional (assembleias, diretoria, conselho fiscal, prazos e eventos), com torneios chancelados, adiamentos com motivo e agenda para assinar no celular.'), status: 'available', central: tk('Agenda (calendário oficial)'), tab: 'agenda', page: tk('Aba Agenda e a agenda para assinar') },
   elections: { label: tk('Eleições'), description: tk('Edital, colégio eleitoral com pesos, chapas, impugnações, votação secreta pelo app, apuração e resultado publicado.'), status: 'available', central: tk('Eleições'), tab: 'eleicoes', page: tk('Aba Eleições: edital, chapas e resultado') },
   referees: { label: tk('Arbitragem'), description: tk('Quadro de árbitros por nível, disponibilidade, escalas com convocação e confirmação, impedimentos, avaliação, súmulas e diárias.'), status: 'available', central: tk('Arbitragem (quadro e escalas)'), tab: 'arbitragem', page: tk('Aba Competições: o quadro de arbitragem') },
+  insurance: { label: tk('Seguro e ocorrências'), description: tk('A apólice do seguro esportivo dos filiados (seguradora, vigência, como acionar) e o registro de lesões e acidentes em evento, com o acionamento do seguro.'), status: 'available', central: tk('Filiados e cadastrados → Seguro e ocorrências'), tab: 'ocorrencias', page: tk('Minha filiação: o seguro e as ocorrências da pessoa') },
   accounts: { label: tk('Orçamento e prestação de contas'), description: tk('Orçamento anual por categoria, receitas e despesas lançadas, orçado × realizado, parecer do conselho fiscal e contas publicadas na transparência.'), status: 'available', central: tk('Contas (orçamento e prestação de contas)'), tab: 'orcamento', page: tk('Página de transparência: orçamento e contas') },
 });
 

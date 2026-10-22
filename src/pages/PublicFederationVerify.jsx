@@ -81,6 +81,7 @@ function Resultado({ r, consultadoEm }) {
           <p className="font-display text-xl font-bold text-ink">{r.name}</p>
           <p className="text-sm text-gray-700">{personTypeLabel(r)} · {t(PLAN_TIER_LABELS[r.tier] || PLAN_TIER_LABELS.federated)}</p>
           {r.member_number && <p className="text-sm text-gray-700">{t('Nº {numero}', { numero: r.member_number })}</p>}
+          {r.official_level && <p className="text-sm text-gray-700">{t('Nível oficial: {nivel}', { nivel: r.official_level })}</p>}
           {r.valid_until && <p className="text-sm text-gray-700">{t('Válida até {data}', { data: quando(r.valid_until) })}</p>}
         </div>
       </div>

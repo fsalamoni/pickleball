@@ -106,6 +106,7 @@ function publicVerification(member, federation, hoje, nowMs = Date.now()) {
     person_type_label: member.person_type_label || '',
     org_kind: member.org_kind || null,
     member_number: member.member_number || '',
+    official_level: federation.rules?.level_public === true && member.official_level?.label ? member.official_level.label : '',
     status: st.status,
     valid_until: String(member.valid_until || ''),
   };

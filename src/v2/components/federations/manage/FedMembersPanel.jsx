@@ -24,6 +24,7 @@ import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, 
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
+import { DocsStateBadge } from '../FedRegularity';
 import { ConvidarPessoas, ConvitesEnviados } from './FedInvites';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 import { MemberActions } from './memberShared';
@@ -39,7 +40,7 @@ function MemberRow({ member: mb, federation, pedido = false, onAbrirPasta }) {
         <div className="flex flex-wrap items-start gap-3">
           <V2Avatar name={nome} photoUrl={mb.photo_url} />
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{nome}<MemberStatusBadge status={st.status} label={st.label} />{mb.guardian_uid && <V2Badge tone="neutral">{t('dependente')}</V2Badge>}{mb.is_minor && !mb.guardian_uid && <V2Badge tone="neutral">{t('menor')}</V2Badge>}{mb.imported && <V2Badge tone="neutral">{t('importado')}</V2Badge>}{mb.org_kind && <V2Badge tone="blue">{mb.org_kind === 'club' ? t('clube') : t('arena')}</V2Badge>}</p>
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{nome}<MemberStatusBadge status={st.status} label={st.label} />{mb.guardian_uid && <V2Badge tone="neutral">{t('dependente')}</V2Badge>}{mb.is_minor && !mb.guardian_uid && <V2Badge tone="neutral">{t('menor')}</V2Badge>}{mb.imported && <V2Badge tone="neutral">{t('importado')}</V2Badge>}{mb.docs_state?.state === 'expired' && <DocsStateBadge member={mb} />}{mb.org_kind && <V2Badge tone="blue">{mb.org_kind === 'club' ? t('clube') : t('arena')}</V2Badge>}</p>
             {mb.org_kind && <p className="text-xs text-gray-500">{t('Representante: {nome}', { nome: mb.representative_name || '—' })}{mb.org_city ? ` · ${[mb.org_city, mb.org_state].filter(Boolean).join('/')}` : ''}</p>}
             <p className="text-xs text-gray-500">
               {personTypeLabel(mb)} · {t(PLAN_TIER_LABELS[memberBond(mb)])} · {mb.plan_name}

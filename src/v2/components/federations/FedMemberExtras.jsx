@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { deleteMyDocument, disciplineAction, membershipAction, transferAction, uploadMemberDocument } from '@/modules/federations/services/federationService';
-import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
+import { LIVE_MEMBER_STATUSES, isoDate } from '@/modules/federations/domain/membership';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useFederationMutation, useMyDocuments, useMySanctions, useMyTransfers, useOrgDocuments, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { docLabel, requiredDocs, requiredDocsStatus, submittedDocKey, validateDocumentFile } from '@/modules/federations/domain/privateData';
@@ -29,7 +29,7 @@ import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surfa
 import { t } from '@/core/i18n';
 import { quando } from './federationUi';
 
-const TOM_DOC = { pending: 'amber', approved: 'green', rejected: 'red', missing: 'neutral' };
+const TOM_DOC = { pending: 'amber', approved: 'green', rejected: 'red', missing: 'neutral', expired: 'red' };
 
 /* ---------------------------------------------- desistir / cancelar a filiação -- */
 
@@ -106,20 +106,22 @@ export function FedMemberDocuments({ member, plan, compacto = false }) {
   const [apagando, setApagando] = useState(null);
   const apagar = useFederationMutation((docu) => deleteMyDocument(docu));
   const meus = useMemo(() => (dq.data || []).filter((d) => d.member_id === member?.id), [dq.data, member?.id]);
-  const exigidos = useMemo(() => requiredDocsStatus(plan, meus), [plan, meus]);
+  const exigidos = useMemo(() => requiredDocsStatus(plan, meus, isoDate()), [plan, meus]);
   const chaves = requiredDocs(plan).map((x) => x.key);
   const extras = meus.filter((d) => !chaves.includes(submittedDocKey(d)));
   if (!member) return null;
   if (dq.isError) return <V2ErrorState inline title={t('Não carregaram os seus documentos')} onRetry={() => dq.refetch()} />;
   if (dq.isLoading) return <V2Skeleton lines={2} />;
   if (!exigidos.length && !extras.length) return null;
-  const linha = (req, status, docu) => (
+  const linha = (req, status, docu, info = {}) => (
     <li key={docu?.id || req.key} className="flex flex-wrap items-center gap-2 text-sm">
       <span className="font-semibold text-ink">{docLabel(req)}</span>
-      <V2Badge tone={TOM_DOC[status] || 'neutral'}>{status === 'missing' ? t('Falta enviar') : t(DOC_STATUS_LABELS[status] || status)}</V2Badge>
+      <V2Badge tone={info.expiring ? 'amber' : TOM_DOC[status] || 'neutral'}>{status === 'missing' ? t('Falta enviar') : status === 'expired' ? t('Vencido') : info.expiring ? t('Vence em breve') : t(DOC_STATUS_LABELS[status] || status)}</V2Badge>
+      {info.valid_until && <span className="text-xs text-gray-500">{status === 'expired' ? t('venceu em {data}', { data: quando(info.valid_until) }) : t('vale até {data}', { data: quando(info.valid_until) })}</span>}
+      {info.newer?.status === 'pending' && <span className="text-xs text-gray-500">{t('novo envio em análise')}</span>}
       {docu?.review?.reason && status === 'rejected' && <span className="text-xs text-red-600">{docu.review.reason}</span>}
       <span className="ml-auto flex items-center gap-1">
-        {(status === 'missing' || status === 'rejected') && <EnviarDocumento member={member} req={req} rotulo={status === 'rejected' ? t('Enviar outro') : t('Enviar')} />}
+        {(status === 'missing' || status === 'rejected' || ((status === 'expired' || info.expiring) && !info.newer)) && <EnviarDocumento member={member} req={req} rotulo={status === 'missing' ? t('Enviar') : status === 'rejected' ? t('Enviar outro') : t('Enviar o novo')} />}
         {docu && status === 'pending' && docu.user_id === user?.uid && (
           <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar {tipo}', { tipo: docLabel(req) })} disabled={apagar.isPending && apagando === docu.id} onClick={() => { setApagando(docu.id); apagar.mutate(docu, { onSuccess: () => toast.success(t('Documento apagado.')), onError: (e) => toast.error(e.message) }); }}><Trash2 className="h-4 w-4" /></V2Button>
         )}
@@ -130,7 +132,7 @@ export function FedMemberDocuments({ member, plan, compacto = false }) {
     <div className={compacto ? 'space-y-2' : 'space-y-3'} data-dica="federacao-documentos-meus">
       {!compacto && <p className="text-sm font-semibold text-ink">{t('Documentos do plano')}</p>}
       <ul className="space-y-2">
-        {exigidos.map((x) => linha(x, x.status, x.doc))}
+        {exigidos.map((x) => linha(x, x.status, x.doc, x))}
         {extras.map((d) => linha({ key: submittedDocKey(d), kind: d.kind, label: d.label || null }, d.status, d))}
       </ul>
       <p className="text-xs text-gray-500">{org ? t('PDF ou imagem até 5 MB. Os gestores da entidade e a secretaria da federação veem a lista; o arquivo, só quem enviou e a secretaria.') : t('PDF ou imagem até 5 MB. Só você e a secretaria da federação veem o arquivo; ele some quando você exclui a conta.')}</p>

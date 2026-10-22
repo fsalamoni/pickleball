@@ -7,7 +7,8 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Pencil, Plus, Puzzle, Trash2 } from 'lucide-react';
-import { OTHER_DOCS_MAX } from '@/modules/federations/domain/privateData';
+import { OTHER_DOCS_MAX, requiredDocs, docLabel } from '@/modules/federations/domain/privateData';
+import { CONSENT_EXTRA_MAX, DOC_VALIDITY_LABELS, DOC_VALIDITY_MONTHS } from '@/modules/federations/domain/regularity';
 import { docSuggestions } from '@/modules/federations/domain/platformCatalog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { savePlan, setPlanActive, setFederationModule, updateFederationGovernance, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
@@ -164,6 +165,21 @@ function PlanoForm({ federationId, plano, onFechar }) {
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />{s.label}
                 </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {requiredDocs(f).length > 0 && (
+          <div className="space-y-2" data-dica="federacao-plano-validade">
+            <p className="text-xs font-semibold text-gray-600">{t('Validade de cada documento')}</p>
+            <p className="text-xs text-gray-500">{t('Ao aceitar, a secretaria confirma até quando o documento vale. Antes de vencer (30 e 7 dias antes, e no dia) a pessoa é avisada para mandar o novo.')}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {requiredDocs(f).map((d) => (
+                <V2Field key={d.key} label={docLabel(d) || t('Documento')} htmlFor={`pl-val-${d.key}`}>
+                  <V2Select id={`pl-val-${d.key}`} value={String(f.doc_validity?.[d.key] || 0)} onChange={(e) => set({ doc_validity: { ...(f.doc_validity || {}), [d.key]: Number(e.target.value) } })}>
+                    {DOC_VALIDITY_MONTHS.map((n) => <option key={n} value={n}>{t(DOC_VALIDITY_LABELS[n])}</option>)}
+                  </V2Select>
+                </V2Field>
               ))}
             </div>
           </div>
@@ -403,8 +419,12 @@ function ModulosTab({ federation }) {
 function RegrasTab({ federation }) {
   const { user } = useAuth();
   const atual = normalizeFederationRules(federation.rules);
-  const [f, setF, marcarSalvo] = useRascunho({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days), comments: atual.comments });
+  const [f, setF, marcarSalvo] = useRascunho({
+    ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days), comments: atual.comments,
+    block_expired_docs: atual.block_expired_docs, levels: atual.levels.join(', '), level_public: atual.level_public, extra_consents: atual.extra_consents,
+  });
   const m = useFederationMutation(() => updateFederationRules(federation.id, f, { uid: user?.uid }));
+  const setConsent = (i, patch) => setF((x) => ({ ...x, extra_consents: x.extra_consents.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
   return (
     <section className="space-y-4" aria-label={t('Regras da federação')} data-dica="federacao-regras">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Regras')}</h2><p className="text-sm text-gray-500">{t('O que a sua federação pede e como trata transferências. Vale para os pedidos novos.')}</p></div>
@@ -417,6 +437,26 @@ function RegrasTab({ federation }) {
             <V2Field label={t('Carência entre transferências (dias)')} htmlFor="rg-carencia" hint={t('0 = sem carência.')}><V2Input id="rg-carencia" inputMode="numeric" value={f.transfer_cooldown_days} onChange={(e) => setF((x) => ({ ...x, transfer_cooldown_days: e.target.value }))} /></V2Field>
             <V2Field label={t('Prazo para liberar quem sai (dias)')} htmlFor="rg-prazo" hint={t('Sem resposta no prazo, a transferência para outra federação é liberada sozinha.')}><V2Input id="rg-prazo" inputMode="numeric" value={f.transfer_release_days} onChange={(e) => setF((x) => ({ ...x, transfer_release_days: e.target.value }))} /></V2Field>
             <V2Field label={t('Prazo mínimo de convocação (dias)')} htmlFor="rg-convocacao" hint={t('O que o estatuto pede entre o edital e a reunião. Fora do prazo, a agenda avisa (não bloqueia).')}><V2Input id="rg-convocacao" inputMode="numeric" value={f.convocation_min_days} onChange={(e) => setF((x) => ({ ...x, convocation_min_days: e.target.value }))} /></V2Field>
+          </div>
+        </V2Surface>
+        <V2Surface className="space-y-4" data-dica="federacao-regras-regularidade">
+          <h3 className="font-display font-bold text-ink">{t('Regularidade do filiado')}</h3>
+          <V2Toggle id="rg-docs-trava" checked={f.block_expired_docs} onChange={(v) => setF((x) => ({ ...x, block_expired_docs: v }))} label={t('Documento vencido impede a inscrição em torneio só para filiados')} hint={t('Vale para os documentos com validade nos planos (atestado, por exemplo). Desligado, a pessoa e a secretaria são avisadas, mas a inscrição segue liberada.')} />
+          <V2Field label={t('Escala do nível oficial')} htmlFor="rg-niveis" hint={t('Os níveis que a federação atribui, separados por vírgula, do mais baixo ao mais alto. Ex.: 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5+')}><V2Input id="rg-niveis" maxLength={400} value={f.levels} onChange={(e) => setF((x) => ({ ...x, levels: e.target.value }))} /></V2Field>
+          <V2Toggle id="rg-nivel-publico" checked={f.level_public} onChange={(v) => setF((x) => ({ ...x, level_public: v }))} label={t('Mostrar o nível oficial na verificação pública da carteirinha')} hint={t('Desligado, o nível aparece só para o filiado e para a equipe.')} />
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-ink">{t('Autorizações próprias da federação')}</p>
+            <p className="text-xs text-gray-500">{t('Além do uso de imagem, das comunicações e do compartilhamento com a confederação, que toda federação pergunta. A pessoa marca ou não; nada é obrigatório.')}</p>
+            {f.extra_consents.map((c, i) => (
+              <div key={c.id} className="grid gap-2 rounded-xl border border-gray-100 p-3 sm:grid-cols-[1fr_2fr_auto]">
+                <V2Input aria-label={t('Nome da autorização')} maxLength={60} value={c.label} onChange={(e) => setConsent(i, { label: e.target.value })} placeholder={t('Ex.: Pesquisa científica')} />
+                <V2Textarea aria-label={t('Texto que a pessoa lê')} rows={2} maxLength={600} value={c.text} onChange={(e) => setConsent(i, { text: e.target.value })} />
+                <V2Button type="button" variant="ghost" size="sm" aria-label={t('Remover')} onClick={() => setF((x) => ({ ...x, extra_consents: x.extra_consents.filter((_, j) => j !== i) }))}><Trash2 className="h-4 w-4" /></V2Button>
+              </div>
+            ))}
+            {f.extra_consents.length < CONSENT_EXTRA_MAX && (
+              <V2Button type="button" variant="secondary" size="sm" onClick={() => setF((x) => ({ ...x, extra_consents: [...x.extra_consents, { id: `c${Date.now().toString(36)}`, label: '', text: '' }] }))}><Plus className="h-4 w-4" /> {t('Acrescentar autorização')}</V2Button>
+            )}
           </div>
           <div className="flex justify-end"><V2Button type="submit" disabled={m.isPending}>{t('Salvar regras')}</V2Button></div>
         </V2Surface>

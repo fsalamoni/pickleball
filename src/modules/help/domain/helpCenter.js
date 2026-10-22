@@ -871,6 +871,31 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-regularidade',
+      flags: ['federations'],
+      guias: ['federacao-regularidade', 'federacao-minha-regularidade'],
+      title: tk('Regularidade do filiado: documentos com validade, nível oficial, autorizações e seguro'),
+      summary: tk('Atestado que vence, nível atribuído pela federação com pedido de revisão, uso de imagem e o seguro esportivo com o registro de ocorrências.'),
+      keywords: ['federação', 'atestado', 'atestado médico', 'validade', 'documento vencido', 'nível oficial', 'revisão de nível', 'LGPD', 'consentimento', 'uso de imagem', 'seguro', 'apólice', 'ocorrência', 'lesão', 'acidente', 'sinistro'],
+      blocks: [
+        p(tk('Quatro coisas que dizem se o filiado está em dia além da anuidade. Tudo o que muda a situação de alguém (validade, nível, autorizações, ocorrências) é gravado pelo servidor, com registro.')),
+        steps(
+          tk('VALIDADE DOS DOCUMENTOS — em Configurações → Planos, cada documento exigido ganha um prazo (3 meses a 5 anos, ou "não vence"). Ao aceitar, a secretaria confirma a data sugerida. A pessoa recebe aviso 30 e 7 dias antes e no dia; vencido, a pasta e a lista de filiados mostram "Documento vencido" e a pessoa manda o novo em Minha filiação.'),
+          tk('TRAVA OPCIONAL — em Configurações → Regras, "Documento vencido impede a inscrição em torneio só para filiados". Desligada, todo mundo é avisado, mas nada trava.'),
+          tk('NÍVEL OFICIAL — a escala é da federação (Configurações → Regras; padrão 2.5 a 5.5+). Na pasta do filiado, "Definir o nível" pede o motivo, que vai no aviso ao atleta e fica no histórico. A régua da plataforma aparece só como sugestão. O atleta pode pedir revisão em Minha filiação; a equipe aceita (definindo o nível) ou mantém, sempre com motivo.'),
+          tk('AUTORIZAÇÕES — uso de imagem, novidades e compartilhamento com a confederação, mais até cinco próprias da federação. A pessoa marca no pedido de filiação e muda quando quiser em Minha filiação; cada mudança fica registrada com a data. A pasta do filiado mostra o que ela autorizou.'),
+          tk('SEGURO E OCORRÊNCIAS — com o módulo ligado, a presidência cadastra a apólice (seguradora, vigência, quem está coberto, como acionar). O filiado vê se está coberto e registra uma ocorrência (lesão, acidente, mal súbito); a equipe também registra e acompanha: registrada, seguro acionado (com o número do sinistro) e encerrada.'),
+        ),
+        list(
+          tk('NA CARTEIRINHA — o nível oficial só aparece na verificação pública se a federação ligar essa opção nas Regras.'),
+          tk('QUEM VÊ A OCORRÊNCIA — o atleta (ou o responsável), quem registrou e a equipe de filiados, competições e presidência. Ninguém mais.'),
+          tk('EXCLUSÃO DE CONTA — a ocorrência fica para o sinistro em andamento, mas sem o nome e sem o relato de saúde.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+        tip(tk('Para o atestado médico, um prazo de 1 ano costuma bastar: a pessoa é lembrada antes de vencer e manda o novo sem precisar de cobrança.')),
+      ],
+    },
+    {
       id: 'federacao-contas',
       flags: ['federations'],
       guias: ['federacao-contas'],

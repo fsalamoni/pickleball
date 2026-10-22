@@ -144,6 +144,19 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Regularidade do filiado** (`docs/50` §30): validade dos documentos
+  (`doc_validity` no plano, `valid_until` gravado pela secretaria), nível
+  oficial com histórico e pedido de revisão, autorizações (LGPD) e o seguro
+  com ocorrências (módulo `insurance`, `federation_incidents`). `docs_state`,
+  `docs_block`, `official_level*`, `level_review` e `consents*` **só o
+  servidor grava** (`functions/federationRegularity.js`; régua em
+  `domain/regularity.js` com cópia e paridade em
+  `functions/federationRegularityPolicy.js`). A trava de documento vencido só
+  vale com `rules.block_expired_docs`, e vale na regra (`fedMemberOk`). A
+  cobertura olha `membershipState(...).status`. Telas em
+  `v2/components/federations/FedRegularity.jsx` e
+  `manage/FedInsurancePanel.jsx`; regras provadas em
+  `tests/rules/federationRegularity.rules.test.js`.
 - **Arbitragem** (módulo `referees`, `docs/50` §22): `federation_referees` e
   `federation_assignments` **só o servidor grava** (`functions/federationReferees.js`,
   régua em `domain/referees.js` com cópia e paridade em
