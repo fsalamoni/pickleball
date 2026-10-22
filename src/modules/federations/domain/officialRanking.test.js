@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeOfficialRanking, memberValidOn, nextExpiry, normalizeRankingConfig, pointsFor, resultExpiry, resultSeason, tournamentDay, rankingCategoryKey } from './officialRanking.js';
+import { computeOfficialRanking, memberValidOn, normalizeRankingConfig, pointsFor, resultSeason, tournamentDay, rankingCategoryKey } from './officialRanking.js';
 
 const MEMBERS = [
   { user_id: 'ana', tier: 'federated', status: 'active', valid_from: '2026-01-01', valid_until: '2026-12-31' },
@@ -56,33 +56,5 @@ describe('ranking oficial (domínio)', () => {
     expect(resultSeason({ starts_at: '2026-03-01' })).toBe(2026);
     expect(tournamentDay({ starts_at: '2026-03-01T12:00:00Z' })).toBe('2026-03-01');
     expect(rankingCategoryKey({})).toBe('open_open_doubles');
-  });
-});
-
-describe('ranking corrido (validade do resultado)', () => {
-  const res = (date, uid, position, season) => ({ status: 'sent', season, date, tier: 'regional', gender_category: 'male', age_category: 'open', format: 'doubles', tournament_id: date, rows: [{ uid, name: uid, position, played: 3 }] });
-  const RES = [res('2025-10-17', 'ana', 1, 2025), res('2025-10-19', 'bia', 1, 2025), res('2026-03-01', 'ana', 2, 2026), res('2026-11-01', 'ana', 1, 2026)];
-
-  it('o padrão é a temporada; o corrido vem saneado (1 a 36 meses)', () => {
-    expect(normalizeRankingConfig({})).toMatchObject({ period: 'season', validity_months: 12 });
-    expect(normalizeRankingConfig({ period: 'rolling', validity_months: 6.7 })).toMatchObject({ period: 'rolling', validity_months: 6 });
-    expect(normalizeRankingConfig({ period: 'rolling', validity_months: 400 }).validity_months).toBe(36);
-  });
-
-  it('vale da data do torneio por N meses, sem contar o futuro; cada resultado diz quando vence', () => {
-    const r = computeOfficialRanking({ results: RES, config: { members_only: false, period: 'rolling' }, asOf: '2026-10-18' });
-    expect(r).toMatchObject({ season: null, as_of: '2026-10-18' });
-    // Ana: 17/10/2025 venceu, 01/11/2026 ainda não aconteceu — só o 2º lugar de março (70). Bia: 19/10/2025 vale até 19/10/2026.
-    expect(r.general.map((l) => [l.uid, l.points])).toEqual([['bia', 100], ['ana', 70]]);
-    expect(r.general[0].results[0].expires_on).toBe('2026-10-19');
-    expect(computeOfficialRanking({ results: RES, config: { members_only: false }, season: 2026 }).general[0].results[0].expires_on).toBeUndefined();
-  });
-
-  it('a data em que vence e o próximo vencimento da linha', () => {
-    expect(resultExpiry('2026-01-31', 1)).toBe('2026-02-28');
-    expect(resultExpiry('2026-12-15', 1)).toBe('2027-01-15');
-    expect(resultExpiry('', 12)).toBe('');
-    expect(nextExpiry([{ points: 50, expires_on: '2027-03-01' }, { points: 30, expires_on: '2026-11-02' }, { points: 5, expires_on: '2026-11-02' }])).toEqual({ date: '2026-11-02', points: 35 });
-    expect(nextExpiry([{ points: 50 }])).toBeNull();
   });
 });

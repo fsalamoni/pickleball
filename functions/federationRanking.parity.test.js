@@ -36,16 +36,6 @@ describe('paridade: ranking oficial', () => {
         .toEqual(c.computeOfficialRanking({ results: RESULTS, members: MEMBERS, config: cfg, season: 2026 }));
     });
   });
-  it('o ranking corrido (validade em meses) e o vencimento de cada resultado saem iguais', () => {
-    const corridos = [{ period: 'rolling' }, { period: 'rolling', validity_months: 6, best_n: 1 }, { period: 'rolling', validity_months: 99, members_only: false }, { period: 'x', validity_months: -2 }];
-    corridos.forEach((cfg) => expect(s.normalizeRankingConfig(cfg)).toEqual(c.normalizeRankingConfig(cfg)));
-    ['2026-03-01', '2026-09-15', '2026-10-01', '2027-01-01'].forEach((asOf) => corridos.forEach((cfg) => {
-      expect(s.computeOfficialRanking({ results: RESULTS, members: MEMBERS, config: cfg, asOf }))
-        .toEqual(c.computeOfficialRanking({ results: RESULTS, members: MEMBERS, config: cfg, asOf }));
-    }));
-    [['2026-01-31', 1], ['2024-01-31', 1], ['2026-12-15', 1], ['2026-08-10', 18], ['', 12], ['lixo', 3]].forEach(([d, m]) => expect(s.resultExpiry(d, m)).toBe(c.resultExpiry(d, m)));
-  });
-
   it('pontos e filiação em dia batem', () => {
     expect(s.pointsFor({ position: 3 }, 'major', {})).toBe(c.pointsFor({ position: 3 }, 'major', {}));
     expect(s.pointsFor({ position: 20, played: 2 }, 'state', {})).toBe(c.pointsFor({ position: 20, played: 2 }, 'state', {}));

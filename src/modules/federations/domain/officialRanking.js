@@ -11,7 +11,7 @@
  * (`members_only`); pontos por colocação × peso do torneio; os `best_n`
  * melhores resultados da classe somam; a geral soma as classes.
  */
-import { DEFAULT_RANKING_CONFIG, PLAN_TIER, RANKING_PERIOD, RANKING_VALIDITY_MAX, RESULT_STATUS } from './constants.js';
+import { DEFAULT_RANKING_CONFIG, PLAN_TIER, RESULT_STATUS } from './constants.js';
 
 const num = (v, padrao) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : padrao);
 
@@ -28,32 +28,7 @@ export function normalizeRankingConfig(input = {}) {
     best_n: Math.floor(num(input?.best_n, base.best_n)),
     tier_multipliers: pesos,
     members_only: input?.members_only == null ? base.members_only : Boolean(input.members_only),
-    period: input?.period === RANKING_PERIOD.ROLLING ? RANKING_PERIOD.ROLLING : RANKING_PERIOD.SEASON,
-    validity_months: Math.min(RANKING_VALIDITY_MAX, Math.max(1, Math.floor(num(input?.validity_months, base.validity_months)) || base.validity_months)),
   };
-}
-
-/**
- * O dia em que o resultado DEIXA de contar no ranking corrido: a data do
- * torneio mais `meses` (31/01 + 1 mês = 28 ou 29/02). Conta enquanto hoje < esse dia.
- */
-export function resultExpiry(dateISO, meses) {
-  const m = String(dateISO || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return '';
-  const total = Number(m[1]) * 12 + (Number(m[2]) - 1) + Math.floor(Number(meses) || 0);
-  const ano = Math.floor(total / 12);
-  const mes = (total % 12) + 1;
-  const ultimo = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
-  return `${ano}-${String(mes).padStart(2, '0')}-${String(Math.min(Number(m[3]), ultimo)).padStart(2, '0')}`;
-}
-
-/** No ranking corrido, o próximo resultado a vencer de uma linha: `{ date, points }` (somados os do mesmo dia) ou `null`. */
-export function nextExpiry(results = []) {
-  const datas = (results || []).map((r) => r?.expires_on).filter(Boolean).sort();
-  if (!datas.length) return null;
-  const date = datas[0];
-  const points = Math.round((results || []).filter((r) => r?.expires_on === date).reduce((s, r) => s + (Number(r.points) || 0), 0) * 100) / 100;
-  return { date, points };
 }
 
 /** A temporada de um torneio é o ANO em que ele termina (ou começa). */
@@ -113,7 +88,7 @@ function classifica(mapa, bestN) {
  *  `results`: documentos `federation_results` (só `status: 'sent'` da temporada contam);
  *  `members`: `federation_members` da federação (para `members_only`).
  */
-export function computeOfficialRanking({ results = [], members = [], config = {}, season, asOf } = {}) {
+export function computeOfficialRanking({ results = [], members = [], config = {}, season } = {}) {
   const cfg = normalizeRankingConfig(config);
   const porUid = new Map();
   (members || []).forEach((m) => { if (m?.user_id) porUid.set(m.user_id, m); });
@@ -124,13 +99,11 @@ export function computeOfficialRanking({ results = [], members = [], config = {}
     const p = mapa.get(row.uid);
     if (row.name) p.name = row.name;
     if (row.photo_url) p.photo_url = row.photo_url;
-    p.results.push({ points: pontos, position: row.position ?? null, tournament_id: r.tournament_id, tournament_name: r.tournament_name || '', modality_name: r.modality_name || '', date: r.date || '', category: rankingCategoryKey(r), ...(asOf ? { expires_on: resultExpiry(r.date, cfg.validity_months) } : {}) });
+    p.results.push({ points: pontos, position: row.position ?? null, tournament_id: r.tournament_id, tournament_name: r.tournament_name || '', modality_name: r.modality_name || '', date: r.date || '', category: rankingCategoryKey(r) });
   };
   let usados = 0;
   (results || [])
-    .filter((r) => r && r.status === RESULT_STATUS.SENT && (asOf
-      ? Boolean(r.date) && r.date <= asOf && resultExpiry(r.date, cfg.validity_months) > asOf
-      : (season == null || Number(r.season) === Number(season))))
+    .filter((r) => r && r.status === RESULT_STATUS.SENT && (season == null || Number(r.season) === Number(season)))
     .forEach((r) => {
       usados += 1;
       const key = rankingCategoryKey(r);
@@ -159,5 +132,5 @@ export function computeOfficialRanking({ results = [], members = [], config = {}
     });
     return [uid, { ...p, counting: contam }];
   })), 0);
-  return { season: asOf ? null : (season ?? null), as_of: asOf || null, categories: categorias, general: geralLinhas, results_count: usados, config: cfg };
+  return { season: season ?? null, categories: categorias, general: geralLinhas, results_count: usados, config: cfg };
 }

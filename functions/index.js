@@ -1445,15 +1445,6 @@ exports.federationRankingConfig = onDocumentWritten(
     }
   },
 );
-// Ranking CORRIDO (`ranking_config.period == 'rolling'`): resultado vence com o
-// tempo, sem escrita que dispare o gatilho — então a federação que o usa é refeita todo dia.
-exports.federationRankingRolling = onSchedule(
-  { schedule: 'every day 03:20', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
-  async () => {
-    const r = await federationRanking.rollingSweep(fedCtx());
-    logger.info('federationRankingRolling', r);
-  },
-);
 
 // Favorito entra/sai → contador do anúncio (o navegador não escreve o contador).
 exports.marketFavoriteCount = onDocumentWritten(

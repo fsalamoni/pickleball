@@ -712,7 +712,6 @@ const ATLETA = {
           tk('PONTOS — por colocação (1º a 8º), mais participação, multiplicados pelo peso do tipo de torneio. Contam os melhores N resultados da temporada (a federação configura tudo em Competições → Ranking).'),
           tk('REVOGADA — a chancela revogada tira o selo e o torneio deixa de enviar resultados; o que já foi enviado fica até a federação recusar.'),
           tk('SEM CONTA — o inscrito sem conta na plataforma não pontua; vincule a conta no lápis da inscrição antes de enviar.'),
-          tk('RANKING CORRIDO — a federação pode trocar a temporada por "Corrido": cada resultado vale por um número de meses (o comum é 12) a partir da data do torneio e sai sozinho quando vence. A página mostra os últimos meses e diz em cada linha quantos pontos vencem e quando.'),
         ),
         link('/torneios', tk('Meus torneios')),
         link('/federacoes', tk('Ver as federações')),

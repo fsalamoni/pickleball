@@ -465,8 +465,7 @@ e `tests/rules/federation.rules.test.js` + `federationPr2/3/4.rules.test.js` +
 | Função | Gatilho | Faz |
 |---|---|---|
 | `federationRankingRecompute` | `onDocumentWritten federation_results/{resultId}` | Recalcula `federation_rankings/{fed}_{temporada}` da temporada do resultado (e da anterior, se o resultado mudou de temporada). Lê `federations/{fed}.ranking_config`, os `federation_results` da federação e temporada e os `federation_members` da federação (para `members_only`: filiação federada ativa na data do torneio). |
-| `federationRankingConfig` | `onDocumentWritten federations/{fedId}` | Só quando `ranking_config` mudou (comparação por JSON): refaz todas as temporadas com resultado e o ranking corrido (ou o apaga, se o período voltou a ser temporada). |
-| `federationRankingRolling` | `onSchedule every day 03:20` (America/Sao_Paulo) | Para cada federação com `ranking_config.period == 'rolling'`, refaz `federation_rankings/{fed}_rolling` com os resultados dentro da validade na data de hoje — o resultado vence sem nenhuma escrita, então só a varredura o tira. O `federationRankingRecompute` também refaz o corrido da federação tocada. |
+| `federationRankingConfig` | `onDocumentWritten federations/{fedId}` | Só quando `ranking_config` mudou (comparação por JSON): refaz todas as temporadas com resultado. |
 
 A conta (`computeOfficialRanking`) é **cópia** de
 `src/modules/federations/domain/officialRanking.js`, com paridade em
