@@ -79,7 +79,7 @@ function Central({ federationId }) {
   const tab = secaoAtiva?.tabs.some((x) => x.value === tabPedida) ? tabPedida : secaoAtiva?.tabs[0]?.value;
   // `filtro` (opcional) abre a lista já filtrada (`useFiltroNaUrl`); trocar de aba sem ele limpa o da aba anterior.
   const trocarAba = useCallback((value, filtro) => {
-    setParams((atual) => { const novo = new URLSearchParams(atual); novo.set('aba', value); novo.delete('secao'); if (filtro) novo.set('filtro', filtro); else novo.delete('filtro'); return novo; }, { replace: true });
+    setParams((atual) => { const novo = new URLSearchParams(atual); novo.set('aba', value); novo.delete('secao'); ['pasta', 'tipo', 'vinculo'].forEach((k) => novo.delete(k)); if (filtro) novo.set('filtro', filtro); else novo.delete('filtro'); return novo; }, { replace: true });
   }, [setParams]);
   // Formulário com mudança pendente (`useAvisoNaoSalvo`) pergunta antes de a aba trocar e levar o que foi digitado.
   const [saindo, setSaindo] = useState(null);
@@ -180,7 +180,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'hoje' && <FedHojePanel federation={f} membersQ={membersQ} chargesQ={chargesQ} plansQ={plansQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} perms={perms} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'filiados' && tab === 'filiados-orgs' && <FedAffiliationsPanel federation={fq.data} affiliationsQ={affiliationsQ} />}
         {secaoAtiva.id === 'filiados' && ABAS_SECRETARIA.includes(tab) && <FedSecretariatPanel federation={f} tab={tab} membersQ={membersQ} transfersQ={transfersQ} incomingQ={incomingQ} documentsQ={documentsQ} importsQ={importsQ} plansQ={plansQ} />}
-        {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} plansQ={plansQ} tab={tab} />}
+        {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} plansQ={plansQ} transfersQ={transfersQ} perms={perms} tab={tab} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'cursos' && <FedCoursesPanel federation={f} coursesQ={coursesQ} credentialsQ={credentialsQ} tab={tab} perms={perms} />}
         {secaoAtiva.id === 'arbitragem' && <FedRefereesPanel federation={f} tab={tab} />}
         {secaoAtiva.id === 'disciplina' && <FedDisciplinePanel federation={f} membersQ={membersQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} tab={tab} />}

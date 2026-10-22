@@ -23,6 +23,25 @@ export async function listFederationAssignments(fedId) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/**
+ * A ficha da pessoa no quadro de arbitragem (`null` = não está no quadro).
+ * Por CONSULTA, não por `get`: a regra lê `resource.data`, e o `get` de quem
+ * não está no quadro (documento inexistente) seria recusado.
+ */
+export async function getRefereeEntry(fedId, uid) {
+  if (!fedId || !uid) return null;
+  const q = query(collection(db, C.referees), where('federation_id', '==', fedId), where('user_id', '==', uid));
+  const docs = (await getDocs(q)).docs.map(toDoc);
+  return docs[0] || null;
+}
+
+/** As escalas de uma pessoa nesta federação (a pasta do filiado). */
+export async function listPersonAssignments(fedId, uid) {
+  if (!fedId || !uid) return [];
+  const q = query(collection(db, C.assignments), where('federation_id', '==', fedId), where('referee_uid', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 /** As notas internas da equipe sobre um árbitro (o árbitro não lê). */
 export async function getRefereeNotes(fedId, uid) {
   const snap = await getDoc(doc(db, C.referees, `${fedId}_${uid}`, 'private', 'staff'));

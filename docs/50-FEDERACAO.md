@@ -2207,3 +2207,83 @@ pedido simples de antes (`federation_affiliations`, sem cobrança) segue igual.
 ### 26.5 Âncoras
 
 `admin-federacoes-tipos`, `federacao-filiar-entidade`, `federacao-filiar-entidade-situacao`.
+
+
+## 27. Filiados e cadastrados por tipo, a pasta de cada um e o comprovante (Etapa 3 do cadastro estruturado, 2026-10-22)
+
+A seção da Central que se chamava "Filiados" virou **Filiados e cadastrados**.
+Os valores das abas (`pedidos`, `filiados`, `filiados-orgs`, `transferencias`,
+`documentos`, `importar`) **não mudaram** — são contrato de link; só os rótulos:
+`filiados` = **Cadastro**, `filiados-orgs` = **Vínculos de clubes e arenas**
+(o pedido simples de clube/arena, sem plano). Zero coleção, zero índice.
+
+### 27.1 O Cadastro por tipo
+
+`FedMembersPanel` (aba `filiados`) monta uma **aba por tipo** do catálogo da
+plataforma (§26.1), com a contagem, pela regra pura `registryTabs`
+(`domain/registry.js`). Só aparecem os tipos com gente ou com plano, mais
+"Todos"; o pedido pendente fica em Pedidos, fora da contagem.
+
+- **Na URL**: `?tipo=<código>`, `?vinculo=federated|registered` (filiados ×
+  cadastrados — filiado é o vínculo pagante, cadastrado o gratuito), `?filtro=`
+  (os de sempre; `vencendo` é contrato de aviso) e a busca. Trocar de aba da
+  Central limpa `tipo`, `vinculo` e `pasta`.
+- **Configuração do tipo** (`data-dica="federacao-tipo-config"`): os planos
+  daquele tipo, "Editar os planos" (só admin, leva a Configurações → Planos),
+  aviso quando o tipo não tem plano (ninguém consegue pedir) ou foi desligado
+  pela plataforma, e — em clube/arena — o atalho aos vínculos sem plano.
+- Convidar pessoas da plataforma fica na aba "Todos".
+
+### 27.2 A pasta (`?pasta=<id da filiação>`)
+
+"Abrir pasta" (`data-dica="federacao-abrir-pasta"`, em Pedidos e no Cadastro)
+abre `FedMemberFolder` (carregado sob demanda, `data-dica="federacao-pasta"`).
+Abrir empurra uma entrada no histórico (o "voltar" do aparelho fecha a pasta);
+"Voltar à lista" mantém tipo e filtros. Filiação que sumiu da lista diz que
+pode ter sido encerrada ou recusada.
+
+- **Cabeçalho**: nome/logo, situação, tipo · vínculo · plano · número, link ao
+  perfil na plataforma (`/atleta/:uid`, `/clubes/:id`, `/arenas/:id`) e as
+  ações de sempre (declaração, aprovar/recusar, suspender, reintegrar —
+  `memberShared.jsx`, as mesmas da lista).
+- **Partes**, escolhidas por `folderBlocks(tipo)` e pelos módulos ligados:
+  Resumo (contagens, situação, representantes da entidade, dados reservados
+  com motivo), Cobranças e recibos (com o comprovante), Documentos, Cursos e
+  credenciais, Pontos (por ano, `pointsBySeason`), Arbitragem (quadro e
+  escalas, só para árbitro), Pessoas e torneios (entidade: quem é do clube ou
+  gere a arena, com o vínculo de cada um e "Abrir pasta", e os torneios da
+  federação ligados a ela), Sanções e Histórico (transferências +
+  `memberTimeline`).
+- **Cada parte consulta só com a permissão que a regra exige**
+  (`hooks/useMemberFolder.js`): cobranças `finance`/`members`/`fiscal`;
+  sanções `discipline`; inscrições em curso `courses`/`finance`; credenciais
+  `courses`; quadro e escalas `courses` (é o `fedRef` da regra); pontos
+  qualquer pessoa da equipe (são públicos). Sem a permissão a tela não
+  consulta e diz **quem vê aquela parte** — consulta recusada nunca vira "não
+  carregou", e falha de verdade vira `V2ErrorState` com "Tentar de novo". Não
+  há regra nova: a pasta lê as coleções pelas consultas de duas igualdades
+  (`federation_id` + `member_id`/`user_id`), que a regra prova e dispensam
+  índice composto. Provado em `tests/rules/federationRegistry.rules.test.js`.
+
+### 27.3 O comprovante de pagamento
+
+No "Já paguei" (`PixChargeBlock`) a pessoa pode anexar o **comprovante** (PDF,
+JPG, PNG ou WebP até 5 MB, `ChargeProofField`; validado na hora). O arquivo
+sobe para `federacao/{uid}/…` (só o dono lê no Storage) e a cobrança ganha
+`declared_proof { path, name, content_type, size }`. Quem já informou o
+pagamento pode voltar e anexar depois (a regra aceita re-declarar
+`declared` → `declared`). A regra só aceita caminho da **própria** pasta do
+pagador e as quatro extensões.
+
+A equipe abre o comprovante pelo botão "Comprovante" (`ChargeProofButton`) no
+Financeiro e na pasta, pela função `federationDocument` com `{ chargeId }`
+(`chargeProof`): o pagador, ou `finance`/`members`/`fiscal`/`admin` da
+federação da cobrança; cada abertura pela equipe grava
+`federation_charge_proof_view` na auditoria (interna, como todo acesso de suporte).
+O recibo da cobrança paga também sai da pasta.
+
+### 27.4 Âncoras
+
+`federacao-aba-cadastro`, `federacao-tipos`, `federacao-tipo-config`,
+`federacao-vinculo`, `federacao-abrir-pasta`, `federacao-pasta`. Guia
+"A pasta de cada filiado" (`federacao-pasta-filiado`).

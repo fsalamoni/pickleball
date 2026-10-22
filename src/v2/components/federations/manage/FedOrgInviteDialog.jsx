@@ -1,5 +1,5 @@
 /**
- * Convidar um CLUBE ou uma ARENA para se filiar (Central → Filiados → Clubes
+ * Convidar um CLUBE ou uma ARENA para se filiar (Central → Filiados e cadastrados → Vínculos de clubes
  * e arenas). A lista da plataforma aparece já aberta, em ordem alfabética, e a
  * busca (nome ou cidade) só estreita; quem já é filiado, pediu ou tem convite
  * aparece com o motivo, sem botão. O convite não filia: quem gere aceita.

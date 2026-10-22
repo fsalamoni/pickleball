@@ -147,8 +147,37 @@ async function onUserCreated(ctx, uid, user) {
   return { invited };
 }
 
+/**
+ * O COMPROVANTE de pagamento que o pagador anexou ao "Já paguei"
+ * (`declared_proof` na cobrança): o arquivo mora na pasta de quem pagou, e só
+ * ele e a equipe que lê cobranças (financeiro, secretaria, conselho fiscal,
+ * admin) o abrem — pela mesma porta dos documentos, com registro na auditoria.
+ */
+async function chargeProof(ctx, actor, chargeId) {
+  const snap = await ctx.db.collection(f.C.charges).doc(f.texto(chargeId, 80)).get();
+  if (!snap.exists) f.falha('not-found', 'Cobrança não encontrada.');
+  const c = snap.data();
+  const dono = c.payer_uid === actor.uid;
+  if (!dono) {
+    const perms = await f.staffPerms(ctx, c.federation_id, actor);
+    if (!['finance', 'members', 'fiscal', 'admin'].some((p) => perms.includes(p))) f.falha('permission-denied', 'Só o financeiro da federação vê os comprovantes.');
+  }
+  const path = String((c.declared_proof && c.declared_proof.path) || '');
+  if (!path) f.falha('not-found', 'Esta cobrança não tem comprovante anexado.');
+  if (!/^federacao\/[^/]+\/[A-Za-z0-9_-]+\.[a-z]{3,4}$/.test(path)) f.falha('failed-precondition', 'Caminho do comprovante inválido.');
+  if (!ctx.bucket) f.falha('unavailable', 'Arquivos indisponíveis no momento.');
+  const file = ctx.bucket.file(path);
+  const [meta] = await file.getMetadata().catch(() => [null]);
+  if (!meta) f.falha('not-found', 'O arquivo não está mais no servidor.');
+  if (Number(meta.size) > MAX_DOC_BYTES) f.falha('failed-precondition', 'Arquivo maior que o permitido.');
+  const [bytes] = await file.download();
+  if (!dono) await f.auditoria(ctx, actor, 'federation_charge_proof_view', { federation_id: c.federation_id, charge_id: snap.id, payer_uid: c.payer_uid || null });
+  return { ok: true, contentType: meta.contentType || 'application/octet-stream', base64: Buffer.from(bytes).toString('base64'), kind: 'proof', status: c.status };
+}
+
 async function document(ctx, actor, data) {
   if (!(await f.flagLigada(ctx))) f.falha('failed-precondition', 'As federações não estão ligadas nesta plataforma.');
+  if (data.chargeId) return chargeProof(ctx, actor, data.chargeId);
   const snap = await ctx.db.collection(f.C.documents).doc(f.texto(data.documentId, 80)).get();
   if (!snap.exists) f.falha('not-found', 'Documento não encontrado.');
   const d = snap.data();

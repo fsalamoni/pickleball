@@ -12,6 +12,8 @@ import { canDeclarePayment, chargePixPayload, formatBrlCents, isChargeOverdue } 
 import { declarePayment } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { V2Button, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { ChargeProofButton, ChargeProofField, temComprovante } from './ChargeProof';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import { t } from '@/core/i18n';
 import { ChargeStatusBadge, quando, useQrDataUrl } from './federationUi';
@@ -19,8 +21,12 @@ import { ChargeStatusBadge, quando, useQrDataUrl } from './federationUi';
 export default function PixChargeBlock({ charge, federation, compact = false }) {
   const payload = chargePixPayload(charge, federation);
   const qr = useQrDataUrl(payload, { width: 280 });
+  const { user } = useAuth();
   const [nota, setNota] = useState('');
-  const m = useFederationMutation(() => declarePayment(charge, { note: nota }));
+  const [arquivo, setArquivo] = useState(null);
+  // Já informado sem comprovante: anexar depois mantém a observação que a pessoa deu.
+  const declarado = charge.status === CHARGE_STATUS.DECLARED;
+  const m = useFederationMutation(() => declarePayment(charge, { note: declarado ? charge.declared_note : nota, file: arquivo, uid: user?.uid }));
   const atrasada = isChargeOverdue(charge);
   const pago = charge.status === CHARGE_STATUS.PAID;
   const semPix = !payload && !pago && charge.status !== CHARGE_STATUS.CANCELLED;
@@ -68,16 +74,25 @@ export default function PixChargeBlock({ charge, federation, compact = false }) 
           onSubmit={(e) => {
             e.preventDefault();
             m.mutate(undefined, {
-              onSuccess: () => toast.success(t('Pagamento informado. O financeiro da federação confirma e a sua carteirinha é liberada.')),
+              onSuccess: () => { setArquivo(null); toast.success(declarado ? t('Comprovante anexado.') : t('Pagamento informado. O financeiro da federação confirma e a sua carteirinha é liberada.')); },
               onError: (er) => toast.error(er.message),
             });
           }}
         >
-          {charge.status === CHARGE_STATUS.DECLARED ? (
-            <p className="flex items-center gap-2 text-sm text-blue-700"><Clock className="h-4 w-4" aria-hidden="true" />{t('Você informou o pagamento em {data}. Falta o financeiro confirmar.', { data: quando(charge.declared_at) })}</p>
+          {declarado ? (
+            <>
+              <p className="flex items-center gap-2 text-sm text-blue-700"><Clock className="h-4 w-4" aria-hidden="true" />{t('Você informou o pagamento em {data}. Falta o financeiro confirmar.', { data: quando(charge.declared_at) })}</p>
+              {temComprovante(charge) ? <ChargeProofButton charge={charge} /> : (
+                <>
+                  <ChargeProofField file={arquivo} onChange={setArquivo} id={`comprovante-${charge.id}`} />
+                  {arquivo && <V2Button type="submit" size="sm" disabled={m.isPending}>{m.isPending ? t('Enviando…') : t('Anexar comprovante')}</V2Button>}
+                </>
+              )}
+            </>
           ) : (
             <>
               <V2Textarea rows={2} maxLength={200} value={nota} onChange={(e) => setNota(e.target.value)} placeholder={t('Opcional: nome de quem pagou, se for diferente do seu, ou o horário.')} aria-label={t('Observação do pagamento')} />
+              <ChargeProofField file={arquivo} onChange={setArquivo} id={`comprovante-${charge.id}`} />
               <V2Button type="submit" size="sm" disabled={m.isPending}><CheckCircle2 className="h-4 w-4" />{m.isPending ? t('Enviando…') : t('Já paguei')}</V2Button>
             </>
           )}

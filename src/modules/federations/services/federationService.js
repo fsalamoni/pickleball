@@ -421,6 +421,37 @@ export async function listFederationCharges(fedId) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/* ------------------------------------------- a PASTA do filiado (Etapa 3) -- */
+// Cada leitura filtra pela FEDERAÇÃO (é o campo que a regra confere na equipe)
+// e pela pessoa ou filiação — duas igualdades, sem índice composto.
+
+const daFederacao = (col, fedId, campo, valor) => (fedId && valor
+  ? getDocs(query(collection(db, col), where('federation_id', '==', fedId), where(campo, '==', valor))).then((s) => s.docs.map(toDoc))
+  : Promise.resolve([]));
+
+/** As cobranças de uma filiação (filiação, cursos, multas) — financeiro, secretaria, conselho fiscal e admin. */
+export const listMemberCharges = (fedId, memberId) => daFederacao(C.charges, fedId, 'member_id', memberId);
+/** As sanções de uma filiação — disciplina e admin. */
+export const listMemberSanctions = (fedId, memberId) => daFederacao(C.sanctions, fedId, 'member_id', memberId);
+/** As inscrições em curso da pessoa aqui — cursos, financeiro e admin. */
+export const listPersonEnrollments = (fedId, uid) => daFederacao(C.enrollments, fedId, 'user_id', uid);
+/** As credenciais da pessoa aqui — cursos e admin. */
+export const listPersonCredentials = (fedId, uid) => daFederacao(C.credentials, fedId, 'user_id', uid);
+/** Os lançamentos de pontos da pessoa no ranking oficial daqui (leitura pública). */
+export const listPersonPoints = (fedId, uid) => daFederacao(C.points, fedId, 'uid', uid);
+
+/**
+ * As pessoas da entidade: os membros do clube (com o papel) ou os gestores da
+ * arena. As duas coleções têm leitura aberta à conta logada.
+ */
+export async function listOrgPeople(kind, orgId) {
+  if (!orgId || !['club', 'arena'].includes(kind)) return [];
+  const q = kind === 'club'
+    ? query(collection(db, 'club_members'), where('club_id', '==', orgId))
+    : query(collection(db, 'arena_managers'), where('arena_id', '==', orgId));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 export async function getCharge(id) {
   if (!id) return null;
   const snap = await getDoc(doc(db, C.charges, id));
@@ -431,12 +462,23 @@ export async function getCharge(id) {
  * "Já paguei": o pagador só DECLARA (`declared_at` + observação). Confirmar é
  * do financeiro, pelo servidor. Declarado ≠ pago.
  */
-export async function declarePayment(charge, { note = '' } = {}) {
+export async function declarePayment(charge, { note = '', file = null, uid = null } = {}) {
   if (!canDeclarePayment(charge)) throw new FederationError(t('Esta cobrança não está mais em aberto.'));
-  await updateDoc(doc(db, C.charges, charge.id), {
-    status: 'declared', declared_at: serverTimestamp(), declared_note: String(note || '').trim().slice(0, 300),
-  });
+  const dados = { status: 'declared', declared_at: serverTimestamp(), declared_note: String(note || '').trim().slice(0, 300) };
+  // O comprovante (opcional) vai para a pasta de QUEM PAGA — só ele lê no Storage; o financeiro o abre pelo servidor (auditado).
+  if (file) {
+    const erro = validateDocumentFile(file);
+    if (erro) throw new FederationError(erro, { file: erro });
+    if (!storage || !uid) throw new FederationError(t('Firebase não está configurado neste ambiente.'));
+    const path = documentStoragePath(uid, doc(collection(db, C.charges)).id, file.type);
+    await uploadBytes(storageRef(storage, path), file, { contentType: file.type });
+    dados.declared_proof = { path, name: String(file.name || '').slice(0, 120), content_type: file.type, size: Number(file.size) || 0 };
+  }
+  await updateDoc(doc(db, C.charges, charge.id), dados);
 }
+
+/** O comprovante do "Já paguei", pelo servidor (quem paga e o financeiro/secretaria). */
+export const fetchChargeProof = (chargeId) => chamar('federationDocument', { chargeId });
 
 /* ------------------------------------------- avisos à equipe (cliente) -- */
 
@@ -495,7 +537,7 @@ export async function requestAffiliation({ federation, kind, org, uid, message =
   await notifyUsers(equipe, {
     type: NOTIFICATION_TYPE.FEDERATION,
     title: t('Pedido de filiação de {org}', { org: data.org_name }),
-    message: kind === 'club' ? t('O clube {org} pediu filiação à {sigla}. Analise em Filiados → Clubes e arenas.', { org: data.org_name, sigla: data.federation_acronym }) : t('A arena {org} pediu filiação à {sigla}. Analise em Filiados → Clubes e arenas.', { org: data.org_name, sigla: data.federation_acronym }),
+    message: kind === 'club' ? t('O clube {org} pediu filiação à {sigla}. Analise em Filiados e cadastrados → Vínculos de clubes e arenas.', { org: data.org_name, sigla: data.federation_acronym }) : t('A arena {org} pediu filiação à {sigla}. Analise em Filiados e cadastrados → Vínculos de clubes e arenas.', { org: data.org_name, sigla: data.federation_acronym }),
     link: `/federacoes/${federation.id}/gerir?aba=filiados-orgs`,
     actor: { uid },
   }).catch(() => 0);

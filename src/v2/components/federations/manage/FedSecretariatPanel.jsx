@@ -173,7 +173,7 @@ async function abrirDocumento(docu, nome) {
   baixarBlob(new Blob([bytes], { type: r.contentType }), docu.file_name || `${docLabel(docu)} - ${nome || ''}.${ext}`);
 }
 
-function DocRow({ docu, nome }) {
+export function DocRow({ docu, nome }) {
   const { user } = useAuth();
   const [recusando, setRecusando] = useState(false);
   const [abrindo, setAbrindo] = useState(false);

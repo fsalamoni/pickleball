@@ -57,11 +57,12 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
   return [
     { id: 'hoje', grupo: 'atender', label: tk('Hoje'), icon: Sun, tabs: [{ value: 'hoje', label: tk('Hoje'), icon: Sun }] },
     pode(FED_PERMISSION.MEMBERS) && {
-      id: 'filiados', grupo: 'atender', label: tk('Filiados'), icon: Users, dica: 'federacao-secao-filiados',
+      id: 'filiados', grupo: 'atender', label: tk('Filiados e cadastrados'), icon: Users, dica: 'federacao-secao-filiados',
       tabs: [
         { value: 'pedidos', label: tk('Pedidos'), icon: Inbox },
-        { value: 'filiados', label: tk('Filiados'), icon: ListChecks },
-        ...(modulo('affiliations') ? [{ value: 'filiados-orgs', label: tk('Clubes e arenas'), icon: Building2 }] : []),
+        // Uma aba por TIPO lá dentro (`?tipo=`) e a pasta de cada um (`?pasta=`): os valores das abas da Central não mudam.
+        { value: 'filiados', label: tk('Cadastro'), icon: ListChecks, dica: 'federacao-aba-cadastro' },
+        ...(modulo('affiliations') ? [{ value: 'filiados-orgs', label: tk('Vínculos de clubes e arenas'), icon: Building2 }] : []),
         { value: 'transferencias', label: tk('Transferências'), icon: ArrowLeftRight },
         { value: 'documentos', label: tk('Documentos'), icon: FileUp },
         { value: 'importar', label: tk('Importar'), icon: Upload },
