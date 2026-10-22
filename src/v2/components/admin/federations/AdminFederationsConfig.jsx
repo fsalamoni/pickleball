@@ -11,6 +11,7 @@
  * filiações que já existem continuam valendo.
  */
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Tags } from 'lucide-react';
 import { useFederationPlatformSettings, useSaveFederationMemberTypes } from '@/modules/federations/hooks/useFederations';
@@ -18,7 +19,11 @@ import {
   MEMBER_CATEGORY_LABELS, MEMBER_ENTITY_LABELS, MEMBER_TYPES_MAX, PERSON_CATEGORIES, memberTypeName, suggestMemberTypeId, validateMemberTypes,
 } from '@/modules/federations/domain/memberTypes';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import { t, tk } from '@/core/i18n';
+import AdminFedDocKinds from './AdminFedDocKinds';
+import AdminFedTierTemplates from './AdminFedTierTemplates';
+import AdminFedDefaultModules from './AdminFedDefaultModules';
 
 /** O rascunho editável: o nome aparece por extenso (o pronto, traduzido) e volta ao padrão se ficar igual. */
 const paraRascunho = (catalog) => catalog.map((x) => ({ ...x, label: memberTypeName(x), novo: false }));
@@ -78,7 +83,7 @@ function Tipo({ tipo, i, erros, onChange }) {
   );
 }
 
-export default function AdminFederationsConfig() {
+function TiposForm() {
   const q = useFederationPlatformSettings();
   const salvar = useSaveFederationMemberTypes();
   const [lista, setLista] = useState(null);
@@ -122,5 +127,31 @@ export default function AdminFederationsConfig() {
         </div>
       </div>
     </form>
+  );
+}
+
+/**
+ * A configuração geral das federações, em quatro partes: tipos de filiação,
+ * documentos sugeridos, modelos de categorias de torneio e módulos que nascem
+ * ligados. Cada parte salva só a sua chave. A parte aberta fica na URL
+ * (`?parte=`), para o link levar direto a ela.
+ */
+const PARTES = [
+  { value: 'tipos', label: tk('Tipos de filiação'), dica: 'admin-federacoes-parte-tipos', Comp: TiposForm },
+  { value: 'documentos', label: tk('Documentos sugeridos'), dica: 'admin-federacoes-parte-documentos', Comp: AdminFedDocKinds },
+  { value: 'categorias', label: tk('Categorias de torneio'), dica: 'admin-federacoes-parte-categorias', Comp: AdminFedTierTemplates },
+  { value: 'modulos', label: tk('Módulos iniciais'), dica: 'admin-federacoes-parte-modulos', Comp: AdminFedDefaultModules },
+];
+
+export default function AdminFederationsConfig() {
+  const [params, setParams] = useSearchParams();
+  const atual = PARTES.find((p) => p.value === params.get('parte')) || PARTES[0];
+  const ir = (p) => setParams((x) => { const n = new URLSearchParams(x); n.set('parte', p.value); return n; }, { replace: true });
+  const { Comp } = atual;
+  return (
+    <div className="space-y-4">
+      <V2SubTabs tabs={PARTES.map((p) => ({ value: p.value, label: t(p.label), dica: p.dica }))} activeValue={atual.value} onSelect={ir} ariaLabel={t('Partes da configuração das federações')} />
+      <Comp />
+    </div>
   );
 }

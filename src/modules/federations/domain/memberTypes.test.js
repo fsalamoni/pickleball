@@ -28,6 +28,10 @@ describe('catálogo de tipos de filiação', () => {
     expect(personTypeLabel({ person_type: 'antigo', person_type_label: 'Antigo' })).toBe('Antigo');
     expect(personTypeLabel({ person_type: 'coach' })).toBe('Professor(a)');
     expect(personTypeLabel({})).toBe('Atleta');
+    // Com o catálogo, o nome atual do admin vence o gravado no plano.
+    const catalogo = memberTypeCatalog({ member_types: [{ id: 'juiz_linha', label: 'Juiz(a) de linha', entity: 'person', category: 'referee' }] });
+    expect(personTypeLabel({ person_type: 'juiz_linha', person_type_label: 'Juiz de linha' }, catalogo)).toBe('Juiz(a) de linha');
+    expect(personTypeLabel({ person_type: 'antigo', person_type_label: 'Antigo' }, catalogo)).toBe('Antigo');
   });
   it('o plano grava o tipo resolvido', () => {
     expect(planTypeFields(memberTypeCatalog(), 'arena')).toEqual({ person_type: 'arena', entity: 'arena', person_category: 'arena', person_type_label: 'Arena' });

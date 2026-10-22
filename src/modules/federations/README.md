@@ -290,3 +290,18 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   cria o torneio já realizado pela federação (`/torneios/criar?federacao=`,
   `FedTournamentOrigin`). Telas: `FedTiersEditor`, `FedTierRequirements`.
   O `id` da categoria é gravado: nunca renomeie. Ver `docs/50-FEDERACAO.md` §28.
+- **Configuração geral no painel do admin** (Etapa 5, 2026-10-22): Painel
+  admin → Federações → Configuração em quatro abas (`?parte=`): tipos de
+  filiação, documentos sugeridos (`doc_kinds[]`, atalho no plano que copia o
+  nome para `other_docs[]` com id `c_<id>`), modelos de categorias de torneio
+  (`tournament_tier_templates[]`, `{SIGLA}` vira a sigla ao copiar em
+  Competições → Ranking) e módulos que nascem ligados (`default_modules`,
+  aplicados pelo servidor na primeira aprovação em `federationReview`).
+  Domínio em `domain/platformCatalog.js`; gravação por
+  `saveFederationPlatformCatalog`. Mudar a configuração não mexe no que as
+  federações já gravaram. Ver `docs/50-FEDERACAO.md` §29.
+- **Revisão de uso** (2026-10-22): filiado paga e cadastrado é gratuito
+  (`validatePlanInput`); plano por faixa de idade exige o nascimento (cliente e
+  servidor); plano de clube/arena não oferece o botão de pessoa; o espelho de
+  entidade leva `tier` (selo "Cadastrado"/"Filiado"); `personTypeLabel` aceita o
+  catálogo; a pasta lista os documentos exigidos. Ver `docs/50-FEDERACAO.md` §29.6.

@@ -2386,3 +2386,114 @@ sem o campo `archived`").
 Guia "Criar as categorias de torneio e o torneio da federação"
 (`federacao-categorias`), ligado ao artigo "Torneio chancelado por uma
 federação".
+
+## 29. Configuração geral das federações no painel do admin (Etapa 5 do cadastro estruturado, 2026-10-22)
+
+Painel admin → Federações → **Configuração** ganhou quatro partes, numa barra
+de abas (a parte aberta fica em `?parte=tipos|documentos|categorias|modulos`).
+Tudo mora em `platform_settings/federations` (regra que já existia: só o admin
+da plataforma grava, todo mundo lê) e cada parte grava só a sua chave
+(`saveFederationPlatformCatalog`, validada pela mesma régua da tela). Nada
+daqui obriga a federação: são pontos de partida que ela copia e muda — e mudar
+aqui depois **não mexe** em plano, categoria ou federação que já existe.
+Domínio em `domain/platformCatalog.js` (com teste).
+
+### 29.1 Tipos de filiação
+
+A tela da Etapa 2 (§26), agora a primeira aba.
+
+### 29.2 Documentos sugeridos (`doc_kinds[]`)
+
+- O admin mantém a lista (nome, para quem — pessoas, clubes e arenas ou todos —
+  e "Sugerir" ligado/desligado), até 40. Sem nada gravado valem as sugestões
+  padrão: foto 3x4, ficha de filiação assinada, termo de responsabilidade e uso
+  de imagem, exame de vista, registro no CREF, certificado de curso de
+  arbitragem (pessoas); estatuto social, cartão CNPJ, ata de eleição da
+  diretoria, alvará de funcionamento, comprovante de endereço da sede
+  (entidades). "Voltar às sugestões padrão" recoloca essas.
+- No plano (Central → Configurações → Planos), abaixo dos documentos exigidos,
+  aparecem **"Sugestões da plataforma (um toque acrescenta)"**
+  (`data-dica="federacao-plano-sugestoes"`): só as ligadas, do público do plano
+  e que o plano ainda não pede. O toque liga "Outro documento" e copia o nome
+  para `other_docs[]` com id `c_<id>` — daí em diante é um documento próprio do
+  plano, com o nome editável.
+- Os quatro documentos de sempre (identidade, atestado, residência, autorização
+  do responsável) continuam fixos no plano: são valores gravados e conferidos.
+
+### 29.3 Modelos de categorias de torneio (`tournament_tier_templates[]`)
+
+- Cada modelo tem nome, descrição e as categorias no mesmo formato da
+  federação (§28.1), editadas com o mesmo editor (`FedTiersEditor` em modo
+  `modelo`: sem arquivar, com "Tirar"). Até 12 modelos; cada um passa pela
+  régua `validateTiers`.
+- `{SIGLA}` na sigla ou no nome vira a sigla da federação ao copiar ("{SIGLA}
+  1000" → "FGP 1000"; sem sigla, some com o espaço).
+- Padrão: **Circuito em três grupos** ({SIGLA} 1000 · G1, 500 · G2, 250 · G3) e
+  **Campeonato estadual e etapas** (2000 · G1, 1000 · G2, 500 · G3).
+- A federação que ainda não criou categorias vê **"Ou comece de um modelo da
+  plataforma"** em Competições → Ranking (`data-dica="federacao-categorias-modelos"`),
+  com a prévia das siglas; o modelo vira a lista dela e só vale depois de
+  salvar. Torneios que já usavam as três padrão seguem com a conta antiga
+  (categoria desconhecida cai na conta de antes, §28.1).
+
+### 29.4 Módulos iniciais (`default_modules`)
+
+- O admin marca os módulos que já nascem ligados; ligar um que depende de outro
+  leva o outro junto (ranking oficial ⇒ torneios chancelados) e desligar o
+  exigido desliga o dependente (`normalizeDefaultModules`).
+- Quem aplica é o **servidor**, em `federationReview`, na primeira aprovação
+  (pendente ou recusada antes; a suspensa reaprovada mantém os dela): grava
+  `modules.<id> = true` campo a campo, sem desligar o que já estiver ligado.
+  Sem nada gravado, nenhum módulo nasce ligado — como sempre foi. Teste em
+  `functions/federations.test.js`.
+
+### 29.5 Âncoras e guia
+
+`admin-federacoes-documentos`, `admin-federacoes-modelos`,
+`admin-federacoes-modulos`, as abas `admin-federacoes-parte-{tipos,documentos,categorias,modulos}`,
+`federacao-plano-sugestoes` e `federacao-categorias-modelos`. O guia
+`federacoes-admin-tipos` virou "Configuração geral das federações (admin)",
+com um passo por parte.
+
+### 29.6 Revisão de uso das cinco etapas (2026-10-22)
+
+O fluxo inteiro foi refeito por quem usa — filiado, cadastrado, clube, arena,
+secretaria, competições e admin — e o que estava torto foi corrigido:
+
+- **Filiado paga, cadastrado é gratuito** — a régua vale no plano
+  (`validatePlanInput`): vínculo Cadastrado com valor, ou Filiado sem valor, é
+  recusado com o motivo. Escolher "Cadastrado" no editor zera o valor; editar um
+  plano não deixa abrir outro por cima (o formulário perdia o que estava
+  digitado).
+- **Plano de clube/arena não aparece para pessoa**: na lista pública ele diz
+  "Quem administra o clube pede na gestão do clube" em vez de "Filiar-se neste
+  plano", e o formulário de pessoa ignora `?plano=` de entidade. Na gestão do
+  clube e na Central da arena (`OrgAffiliationCard`) entram **todas** as
+  federações publicadas: a que tem plano para a entidade filia por plano mesmo
+  com o módulo `affiliations` desligado; sem plano e sem o módulo, a tela diz
+  que ela ainda não recebe clubes e arenas.
+- **O selo diz o vínculo**: o espelho `federation_affiliations` passa a levar
+  `tier` (servidor, `federationOrgMembers.espelhar`) e o selo do clube/arena é
+  "Cadastrado · SIGLA" no plano gratuito; a filiação simples e a paga seguem
+  "Filiado · SIGLA". Espelho antigo sem `tier` = "Filiado".
+- **Formulário de pessoa**: o primeiro tipo oferecido já vem escolhido; o
+  plano Cadastrado fala em "Pedir cadastro". Sem nascimento no perfil, o plano
+  por **faixa de idade** some da lista com o link "Completar o perfil" — e o
+  **servidor recusa** esse plano sem a idade (antes "idade desconhecida não
+  barra" deixava qualquer conta pegar o Juvenil). Saíram os interruptores "selo
+  no meu perfil" e "aparecer no diretório": nada na plataforma os lia. Os
+  campos `public_badge`/`show_in_directory` seguem gravados com o padrão do
+  servidor, reservados.
+- **Nome do tipo**: `personTypeLabel(fonte, catálogo)` usa o nome ATUAL do
+  catálogo da plataforma (renomear chega aos planos gravados); sem catálogo,
+  vale o gravado no plano.
+- **Pasta → Documentos**: lista o que o plano exige, um por um (falta enviar,
+  em análise, aceito, recusado — `requiredDocsStatus`), com esqueleto enquanto
+  carrega e "Tentar de novo" na falha.
+- **Categorias sem o módulo de ranking**: com só `tournaments` ligado, a aba
+  de Competições vira **Categorias** (mesmo valor `?aba=ranking`), com o editor
+  de categorias e sem o que é só do ranking.
+- **Avisos**: o documento aceito/recusado leva à filiação do clube/arena
+  (`/federacoes/:id/filiar?entidade=…`) ou a "Minha filiação" da federação,
+  onde se envia outro; o caminho dos módulos é "Central → Configurações →
+  Módulos".

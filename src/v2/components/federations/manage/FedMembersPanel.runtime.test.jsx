@@ -16,6 +16,7 @@ let fontes;
 vi.mock('@/modules/federations/hooks/useFederations', () => ({
   useFederationMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useFederationPlatformSettings: () => ({ catalog: memberTypeCatalog({}) }),
+  useFederationPlans: () => ({ isSuccess: true, data: [], isLoading: false, isError: false }),
   useFederationTournaments: () => ({ isSuccess: true, data: [], isLoading: false, isError: false }),
 }));
 vi.mock('@/modules/federations/hooks/useMemberFolder', () => ({ useMemberFolder: () => fontes }));

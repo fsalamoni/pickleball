@@ -21,7 +21,7 @@ function bloqueio(federation, papel) {
   const sigla = federation.acronym || federation.name;
   if (!papel.has(FED_PERMISSION.COMPETITIONS)) return t('Só quem cuida de competições na {sigla} cria torneios em nome dela. O torneio será criado como um torneio comum; a chancela pode ser pedida depois, na página dele.', { sigla });
   if (!isFederationPublic(federation)) return t('A {sigla} ainda não está pública. Torne-a pública em Central → Página pública → Publicação; até lá o torneio será criado como um torneio comum.', { sigla });
-  if (!fedModuleOn(federation, 'tournaments')) return t('O módulo de torneios da {sigla} está desligado. Ligue-o em Central → Módulos; até lá o torneio será criado como um torneio comum.', { sigla });
+  if (!fedModuleOn(federation, 'tournaments')) return t('O módulo de torneios da {sigla} está desligado. Ligue-o em Central → Configurações → Módulos; até lá o torneio será criado como um torneio comum.', { sigla });
   return '';
 }
 

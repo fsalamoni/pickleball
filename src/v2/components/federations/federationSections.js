@@ -98,7 +98,8 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       tabs: [
         ...(modulo('tournaments') || residual.tournaments ? [{ value: 'chancelas', label: tk('Chancelas'), icon: Trophy, dica: 'federacao-tab-chancelas' }] : []),
         ...(modulo('tournaments') ? [{ value: 'resultados', label: tk('Resultados'), icon: ClipboardList, dica: 'federacao-tab-resultados' }] : []),
-        ...(modulo('ranking') ? [{ value: 'ranking', label: tk('Ranking'), icon: Medal, dica: 'federacao-tab-ranking' }] : []),
+        // Sem o módulo de ranking a aba segue existindo como "Categorias": é nela que se criam as categorias (FGP 1000 · G1) dos torneios.
+        ...(modulo('ranking') || modulo('tournaments') ? [{ value: 'ranking', label: modulo('ranking') ? tk('Ranking') : tk('Categorias'), icon: Medal, dica: 'federacao-tab-ranking' }] : []),
       ],
     },
     pode(FED_PERMISSION.COMMS) && (modulo('news') || modulo('promos') || (admin && modulo('sponsors'))) && {

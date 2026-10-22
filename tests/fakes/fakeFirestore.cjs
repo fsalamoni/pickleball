@@ -40,7 +40,17 @@ function aplicarUpdate(store, ref, data) {
   if (atual === undefined) throw new Error(`update em documento ausente: ${ref.path}`);
   const novo = { ...atual };
   Object.entries(data).forEach(([k, v]) => {
-    novo[k] = v && typeof v === 'object' && '__increment' in v ? (Number(atual[k]) || 0) + v.__increment : v;
+    // Caminho com ponto (`modules.ranking`) mexe só no campo aninhado, como no Admin SDK.
+    const partes = k.split('.');
+    let alvo = novo;
+    let antes = atual;
+    partes.slice(0, -1).forEach((p) => {
+      alvo[p] = alvo[p] && typeof alvo[p] === 'object' ? { ...alvo[p] } : {};
+      alvo = alvo[p];
+      antes = antes && typeof antes === 'object' ? antes[p] : undefined;
+    });
+    const ult = partes[partes.length - 1];
+    alvo[ult] = v && typeof v === 'object' && '__increment' in v ? (Number(antes?.[ult]) || 0) + v.__increment : v;
   });
   store.docs.set(ref.path, novo);
 }
@@ -126,16 +136,10 @@ function createFakeDb(seed = {}) {
         delete: (ref) => ops.push(['delete', ref]),
         async commit() {
           ops.forEach(([tipo, ref, data]) => {
+            if (tipo === 'update') { aplicarUpdate(store, ref, data); return; }
             store.log.push([tipo, ref.path]);
             if (tipo === 'delete') { store.docs.delete(ref.path); return; }
-            if (tipo === 'set') { store.docs.set(ref.path, data); return; }
-            const atual = store.docs.get(ref.path);
-            if (atual === undefined) throw new Error(`update em documento ausente: ${ref.path}`);
-            const novo = { ...atual };
-            Object.entries(data).forEach(([k, v]) => {
-              novo[k] = v && typeof v === 'object' && '__increment' in v ? (Number(atual[k]) || 0) + v.__increment : v;
-            });
-            store.docs.set(ref.path, novo);
+            store.docs.set(ref.path, data);
           });
         },
       };

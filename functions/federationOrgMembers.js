@@ -75,7 +75,8 @@ function espelhar(ctx, w, member, memberId, status, { reason = '' } = {}) {
     kind: member.org_kind, org_id: member.org_id, org_name: texto(member.org_name || member.user_name, 120),
     org_city: texto(member.org_city, 80), org_state: texto(member.org_state, 2), org_logo: member.org_logo || null,
     status: alvo, requested_by: member.representative_uid || null, member_id: memberId,
-    plan_id: member.plan_id || null, plan_name: texto(member.plan_name, 80), member_number: member.member_number || null, valid_until: member.valid_until || null,
+    // O vínculo (filiado pago × cadastrado gratuito) vai junto: é o que o selo público diz.
+    plan_id: member.plan_id || null, plan_name: texto(member.plan_name, 80), tier: member.tier || 'federated', member_number: member.member_number || null, valid_until: member.valid_until || null,
     // A data da filiação (colégio eleitoral: "filiado há N meses") não muda a cada renovação.
     review: { by: 'system', at_ms: Number(member.affiliated_since_ms) || ctx.now, reason: alvo === 'approved' ? '' : texto(reason, 300) },
     updated_at: ctx.Timestamp.fromMillis(ctx.now),

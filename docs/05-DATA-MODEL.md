@@ -1820,6 +1820,20 @@ ou arena não tem idade nem descontos e só pede `outro` com nome.
 catálogo de tipos de filiação (até 30). Ausente ⇒ os cinco prontos. Lê
 qualquer pessoa, grava só o admin da plataforma (regra de `platform_settings`).
 
+Etapa 5 (2026-10-22), todos opcionais e só pontos de partida — nada aqui muda
+o que uma federação já gravou:
+- `doc_kinds[] { id ([a-z][a-z0-9_]{1,20}), label, scope (person|org|all), active }`
+  (até 40): documentos que a plataforma SUGERE aos planos. O plano copia o nome
+  para `other_docs[]` com id `c_<id>`. Ausente ⇒ as sugestões padrão
+  (`DEFAULT_DOC_KINDS`); `[]` ⇒ nenhuma sugestão.
+- `tournament_tier_templates[] { id, name, description, tiers[] }` (até 12):
+  modelos de categorias de torneio, cada categoria no formato de
+  `ranking_config.tiers[]`; `{SIGLA}` na sigla ou no nome vira a sigla da
+  federação ao copiar. Ausente ⇒ os dois modelos padrão; `[]` ⇒ nenhum.
+- `default_modules { <módulo>: bool }`: os módulos que já nascem ligados na
+  PRIMEIRA aprovação da federação (aplicados por `federationReview`). Ausente ⇒
+  nenhum, como sempre foi.
+
 ### `federation_members/{fedId}_{uid}` (NOVO, **nunca público**)
 Só o servidor cria e muda o estado (`federationMembership`). `federation_id`,
 `federation_name`, `federation_acronym`, `user_id` (**nulo** no dependente),
@@ -1830,7 +1844,7 @@ Só o servidor cria e muda o estado (`federationMembership`). `federation_id`,
 `member_number` (`SIGLA-ANO-000001`, fixo depois de emitido), `card_code`
 (10 caracteres, gira a cada ativação/renovação/suspensão), `valid_from`,
 `valid_until` (`YYYY-MM-DD`), `activated_at_ms`, `expiry_notified { 30, 7, 1 }`,
-`public_badge`, `show_in_directory`, `public_photo`, `represented_club_id`,
+`public_badge`, `show_in_directory` (reservados: o formulário não os pergunta e nada os lê — §29.6 do doc 50), `public_photo`, `represented_club_id`,
 `note`, `reject_reason`, `suspended_reason`, `requested_at`, `updated_at`;
 PR 3: `discipline_until_ms`/`discipline_sanction_id` (suspensão em vigor —
 lidos por `tournamentMembershipOk`), `excluded_by_sanction_id`,
@@ -1878,7 +1892,8 @@ cobrança já informada só para anexar o comprovante é permitido).
 Clube (`kind: 'club'`) ou arena (`kind: 'arena'`) filiado à federação.
 Etapa 2 (2026-10-22): quando a entidade se filia por PLANO, este documento é o
 ESPELHO da filiação, gravado só pelo servidor, com `member_id`, `plan_id`,
-`plan_name`, `member_number`, `valid_until` (ativa ⇒ `approved`; vencida ou
+`plan_name`, `tier` (`federated|registered`, o vínculo que o selo público
+diz — ausente = filiado), `member_number`, `valid_until` (ativa ⇒ `approved`; vencida ou
 suspensa ⇒ `suspended`; cancelada ⇒ sai). Com `member_id` a regra recusa
 decidir ou apagar pelo navegador.
 `federation_id`, `federation_name`, `federation_acronym`, `kind`, `org_id`,

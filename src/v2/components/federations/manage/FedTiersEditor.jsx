@@ -10,9 +10,10 @@
  * já a usam (nem nos pontos já lançados).
  */
 import React, { useState } from 'react';
-import { Archive, ArchiveRestore, Minus, Pencil, Plus, Sparkles, Tags } from 'lucide-react';
+import { Archive, ArchiveRestore, Minus, Pencil, Plus, Sparkles, Tags, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { TIER_MAX, TIER_MAX_PLACES, newTierId, normalizeTier, tierLabel, tierTableFromChampion, validateTiers } from '@/modules/federations/domain/officialRanking';
+import { TIER_MAX, TIER_MAX_PLACES, newTierId, normalizeTier, tierLabel, tierShortLabel, tierTableFromChampion, validateTiers } from '@/modules/federations/domain/officialRanking';
+import { applyTierTemplate } from '@/modules/federations/domain/platformCatalog';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { fmtNumero, t, tn } from '@/core/i18n';
 
@@ -133,7 +134,7 @@ function TierDialog({ inicial, todas, onSave, onClose }) {
  * @param {{ tiers: object[], explicit: boolean, onChange: (tiers: object[]) => void }} props
  *   `onChange` recebe a lista nova de categorias PRÓPRIAS (nunca as derivadas).
  */
-export default function FedTiersEditor({ tiers, explicit, onChange }) {
+export default function FedTiersEditor({ tiers, explicit, onChange, templates = [], acronym = '', modelo = false }) {
   const [editando, setEditando] = useState(null);
   const proprias = explicit ? tiers : [];
   const novaCategoria = () => setEditando(normalizeTier({ id: newTierId('categoria', proprias.map((x) => x.id)), ...tierTableFromChampion(1000, 32) }));
@@ -146,14 +147,15 @@ export default function FedTiersEditor({ tiers, explicit, onChange }) {
   const partirDasPadrao = () => onChange(tiers.map((x) => ({ ...x, legacy: false })));
   const alternar = (tt) => onChange(proprias.map((x) => (x.id === tt.id ? { ...x, active: !x.active } : x)));
   const ativas = proprias.filter((x) => x.active).length;
+  const deModelo = (m) => onChange(applyTierTemplate(m, { acronym }));
 
   return (
     <div className="space-y-3" data-dica="federacao-categorias">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        {!modelo && <div>
           <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Tags className="h-5 w-5" aria-hidden="true" />{t('Categorias de torneio')}</h3>
           <p className="text-sm text-gray-500">{t('Cada tipo de torneio com sigla, grupo e a própria tabela de pontos — por exemplo FGP 1000 (G1), FGP 500 (G2). A equipe escolhe a categoria ao chancelar, e os pontos do ranking saem da tabela dela.')}</p>
-        </div>
+        </div>}
         {explicit && proprias.length < TIER_MAX && <V2Button type="button" size="sm" onClick={novaCategoria}><Plus className="h-4 w-4" />{t('Nova categoria')}</V2Button>}
       </div>
 
@@ -168,6 +170,23 @@ export default function FedTiersEditor({ tiers, explicit, onChange }) {
             <V2Button type="button" size="sm" variant="secondary" onClick={novaCategoria}><Plus className="h-4 w-4" />{t('Começar do zero')}</V2Button>
           </div>
           <p className="text-xs text-gray-500">{t('Partindo das padrão, os torneios que já usam cada uma continuam ligados a ela.')}</p>
+          {templates.length > 0 && (
+            <div className="space-y-2 border-t border-gray-100 pt-3" data-dica="federacao-categorias-modelos">
+              <p className="text-sm font-semibold text-ink">{t('Ou comece de um modelo da plataforma')}</p>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {templates.map((m) => (
+                  <li key={m.id}>
+                    <button type="button" onClick={() => deModelo(m)} className="h-full w-full rounded-2xl border border-gray-200 p-3 text-left transition-colors hover:border-ink/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+                      <span className="flex items-center gap-2 font-semibold text-ink"><Sparkles className="h-4 w-4" aria-hidden="true" />{m.name}</span>
+                      {m.description && <span className="mt-1 block text-xs text-gray-500">{m.description}</span>}
+                      <span className="mt-1 block text-xs text-gray-600">{applyTierTemplate(m, { acronym }).map((x) => tierShortLabel(x)).join(' · ')}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-gray-500">{t('O modelo é só o ponto de partida: depois de copiar, mude o que quiser antes de salvar.')}</p>
+            </div>
+          )}
         </V2Surface>
       )}
 
@@ -187,9 +206,13 @@ export default function FedTiersEditor({ tiers, explicit, onChange }) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <V2Button type="button" size="sm" variant="secondary" onClick={() => setEditando(tt)}><Pencil className="h-4 w-4" />{t('Editar')}</V2Button>
-                  <V2Button type="button" size="sm" variant="ghost" disabled={tt.active && ativas <= 1} onClick={() => alternar(tt)}>
-                    {tt.active ? <><Archive className="h-4 w-4" />{t('Arquivar')}</> : <><ArchiveRestore className="h-4 w-4" />{t('Reativar')}</>}
-                  </V2Button>
+                  {modelo ? (
+                    <V2Button type="button" size="sm" variant="ghost" disabled={proprias.length <= 1} onClick={() => onChange(proprias.filter((x) => x.id !== tt.id))}><Trash2 className="h-4 w-4" />{t('Tirar')}</V2Button>
+                  ) : (
+                    <V2Button type="button" size="sm" variant="ghost" disabled={tt.active && ativas <= 1} onClick={() => alternar(tt)}>
+                      {tt.active ? <><Archive className="h-4 w-4" />{t('Arquivar')}</> : <><ArchiveRestore className="h-4 w-4" />{t('Reativar')}</>}
+                    </V2Button>
+                  )}
                 </div>
               </V2Surface>
             </li>

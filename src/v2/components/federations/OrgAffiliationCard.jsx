@@ -1,7 +1,7 @@
 /**
  * "Federação" na gestão do CLUBE (`kind="club"`) e na Central da ARENA
- * (`kind="arena"`): pedir filiação a uma federação que recebe clubes e arenas
- * (módulo `affiliations` ligado), acompanhar o pedido, desfazer. Quem gere a
+ * (`kind="arena"`): pedir filiação a uma federação — por PLANO, quando ela tem plano
+ * para a entidade, ou simples (módulo `affiliations`) —, acompanhar, desfazer. Quem gere a
  * organização pede; a federação decide. Flag `federations` desligada ⇒ nada.
  *
  * Federação com PLANO para clubes (ou arenas) — Etapa 2, 2026-10-22: o pedido
@@ -99,9 +99,13 @@ export default function OrgAffiliationCard({ kind, org }) {
     onSuccess: () => toast.success(aceitar ? t('Convite aceito: agora é filiado à {sigla}.', { sigla: aff.federation_acronym || aff.federation_name }) : t('Convite recusado.')),
     onError: (e) => toast.error(e.message),
   });
-  const opcoes = useMemo(() => (feds.data || []).filter((f) => fedModuleOn(f, 'affiliations'))
+  // Toda federação publicada entra na lista: a que tem PLANO para clube/arena filia por plano mesmo com o
+  // módulo de filiação simples desligado; a escolha diz qual caminho vale (os planos só carregam ao escolher).
+  const opcoes = useMemo(() => (feds.data || [])
     .filter((f) => !(minhas.data || []).some((a) => a.federation_id === f.id && !affiliationState(a).canRequest))
     .filter((f) => !(porPlano.data || []).some((m) => m.federation_id === f.id && LIVE_MEMBER_STATUSES.includes(m.status))), [feds.data, minhas.data, porPlano.data]);
+  const escolhida = (feds.data || []).find((f) => f.id === fedId) || null;
+  const aceitaSimples = Boolean(escolhida && fedModuleOn(escolhida, 'affiliations'));
   if (!ligado) return null;
   return (
     <V2Surface className="space-y-4" data-dica={DICA[kind]?.dica}>
@@ -144,7 +148,7 @@ export default function OrgAffiliationCard({ kind, org }) {
       />
       {feds.isError && <V2ErrorState inline title={t('Não carregaram as federações')} onRetry={() => feds.refetch()} />}
       {feds.isSuccess && minhas.isSuccess && porPlano.isSuccess && (opcoes.length === 0
-        ? ((vivas.length + simples.length) === 0 && <p className="text-sm text-gray-500">{t('Nenhuma federação recebe filiação de clubes e arenas ainda.')}</p>)
+        ? ((vivas.length + simples.length) === 0 && <p className="text-sm text-gray-500">{t('Nenhuma federação publicada ainda.')}</p>)
         : (
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!fedId) return; pedir.mutate(undefined, { onSuccess: () => { toast.success(t('Pedido enviado. A federação foi avisada.')); setFedId(''); setMensagem(''); }, onError: (er) => toast.error(er.message) }); }}>
             <V2Field label={t('Pedir filiação a')} htmlFor={`fed-${kind}`}>
@@ -158,7 +162,10 @@ export default function OrgAffiliationCard({ kind, org }) {
                 <div className="flex justify-end"><V2Button asChild size="sm"><Link to={`/federacoes/${fedId}/filiar?entidade=${kind}:${org.id}`}>{t('Ver os planos e filiar')}<ArrowRight className="h-4 w-4" /></Link></V2Button></div>
               </div>
             )}
-            {(!fedId || (planosQ.isSuccess && planosDaEntidade.length === 0)) && (
+            {fedId && planosQ.isSuccess && planosDaEntidade.length === 0 && !aceitaSimples && (
+              <p className="text-sm text-gray-500">{t('A {sigla} ainda não recebe filiação de clubes e arenas.', { sigla: escolhida?.acronym || escolhida?.name || '' })}</p>
+            )}
+            {(!fedId || (planosQ.isSuccess && planosDaEntidade.length === 0 && aceitaSimples)) && (
               <>
                 <V2Field label={t('Mensagem (opcional)')} htmlFor={`fed-msg-${kind}`}>
                   <V2Textarea id={`fed-msg-${kind}`} rows={2} maxLength={500} value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder={t('ex.: somos 40 associados, jogamos às terças e quintas')} />

@@ -14,6 +14,7 @@ import { grantActive, staffIsMaster, staffPerms, staffRoleName } from '../domain
 import { fedModuleOn } from '../domain/federation.js';
 import { mergeDocLists } from '../domain/acervo.js';
 import { memberTypeCatalog } from '../domain/memberTypes.js';
+import { defaultModulesFrom, docKindsCatalog, tierTemplatesCatalog } from '../domain/platformCatalog.js';
 import { mergeEventLists, tournamentAgendaItem } from '../domain/agenda.js';
 
 export const fedKeys = {
@@ -234,7 +235,20 @@ export function useFederationPlatformSettings({ enabled = true } = {}) {
   // Sem a chave da funcionalidade de propósito: o admin configura antes de ligar federações.
   const q = useQuery({ queryKey: fedKeys.platformSettings, queryFn: svc.getFederationPlatformSettings, enabled, staleTime: 10 * 60_000 });
   const catalog = useMemo(() => memberTypeCatalog(q.data || {}), [q.data]);
-  return { ...q, catalog };
+  const docKinds = useMemo(() => docKindsCatalog(q.data || {}), [q.data]);
+  const tierTemplates = useMemo(() => tierTemplatesCatalog(q.data || {}), [q.data]);
+  const defaultModules = useMemo(() => defaultModulesFrom(q.data || {}), [q.data]);
+  return { ...q, catalog, docKinds, tierTemplates, defaultModules };
+}
+
+/** Grava uma parte da configuração geral (`doc_kinds`, `tournament_tier_templates`, `default_modules`). */
+export function useSaveFederationPlatformCatalog(key) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: (input) => svc.saveFederationPlatformCatalog(key, input, { uid: user?.uid }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: fedKeys.platformSettings }),
+  });
 }
 
 export function useSaveFederationMemberTypes() {

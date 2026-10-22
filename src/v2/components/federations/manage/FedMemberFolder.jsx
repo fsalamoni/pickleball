@@ -11,7 +11,8 @@ import React, { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Award, CalendarClock, ExternalLink, FileText, GraduationCap, History, Scale, ShieldAlert, Trophy, Users, Wallet } from 'lucide-react';
 import { useMemberFolder } from '@/modules/federations/hooks/useMemberFolder';
-import { useFederationPlatformSettings, useFederationTournaments } from '@/modules/federations/hooks/useFederations';
+import { useFederationPlans, useFederationPlatformSettings, useFederationTournaments } from '@/modules/federations/hooks/useFederations';
+import { docLabel, requiredDocsStatus } from '@/modules/federations/domain/privateData';
 import { folderBlocks, memberBond, memberTimeline, orgPeopleWithMembership, pointsBySeason } from '@/modules/federations/domain/registry';
 import { memberTypeName, memberTypeOf, isOrgMember } from '@/modules/federations/domain/memberTypes';
 import { membershipState } from '@/modules/federations/domain/membership';
@@ -136,14 +137,35 @@ function Cobrancas({ fonte, perms, federation }) {
   );
 }
 
-function Documentos({ documentos, nome, onIrParaAba }) {
+const EXIGIDO_TOM = { missing: 'amber', pending: 'blue', approved: 'green', rejected: 'red' };
+const EXIGIDO_ROTULO = { missing: tk('Falta enviar'), pending: tk('Em análise'), approved: tk('Aceito'), rejected: tk('Recusado') };
+
+function Documentos({ documentos, documentsQ, plano, nome, onIrParaAba }) {
+  // O que o plano exige, um por um, com a situação do último envio de cada (falta, em análise, aceito, recusado).
+  const exigidos = plano && documentos ? requiredDocsStatus(plano, documentos) : [];
   return (
     <section className="space-y-3">
       <Titulo acao={onIrParaAba && <V2Button type="button" size="sm" variant="ghost" onClick={() => onIrParaAba('documentos')}>{t('Todos os documentos')}</V2Button>}>{t('Documentos')}</Titulo>
       {documentos === null ? <p className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-600">{t('Esta parte da pasta é só para {quem}.', { quem: t('a secretaria') })}</p>
-        : documentos === undefined ? <Vazio>{t('Os documentos não carregaram.')}</Vazio>
-          : !documentos.length ? <Vazio>{t('Nenhum documento enviado.')}</Vazio>
-            : <ul className="space-y-3">{documentos.map((d) => <DocRow key={d.id} docu={d} nome={nome} />)}</ul>}
+        : documentsQ?.isError ? <V2ErrorState inline title={t('Os documentos não carregaram')} onRetry={() => documentsQ.refetch()} />
+          : documentos === undefined ? <V2Skeleton lines={3} />
+            : (
+              <>
+                {exigidos.length > 0 && (
+                  <div className="space-y-2 rounded-2xl border border-gray-100 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">{t('O que o plano exige')}</p>
+                    <ul className="space-y-1.5">{exigidos.map((d) => (
+                      <li key={d.key} className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink">
+                        <span>{docLabel(d)}</span>
+                        <V2Badge tone={EXIGIDO_TOM[d.status]}>{t(EXIGIDO_ROTULO[d.status])}</V2Badge>
+                      </li>
+                    ))}</ul>
+                  </div>
+                )}
+                {!documentos.length ? <Vazio>{t('Nenhum documento enviado.')}</Vazio>
+                  : <ul className="space-y-3">{documentos.map((d) => <DocRow key={d.id} docu={d} nome={nome} />)}</ul>}
+              </>
+            )}
     </section>
   );
 }
@@ -346,6 +368,9 @@ function Historico({ member: mb, fontes, documentos, transfers }) {
  */
 export default function FedMemberFolder({ federation, member: mb, members = [], documentsQ, transfersQ, perms = [], onIrParaAba, onAbrirPasta }) {
   const { catalog } = useFederationPlatformSettings();
+  // O plano dá a lista do que é exigido (os planos são públicos e já vêm do cache da Central).
+  const planosQ = useFederationPlans(federation.id);
+  const plano = (planosQ.data || []).find((p) => p.id === mb.plan_id) || null;
   const type = memberTypeOf(catalog, mb);
   const org = isOrgMember(mb);
   const fontes = useMemberFolder(federation, mb, perms);
@@ -385,7 +410,7 @@ export default function FedMemberFolder({ federation, member: mb, members = [], 
       <V2Surface variant="compacto" className="p-4">
         {ativo === 'resumo' && <Resumo member={mb} type={type} fontes={fontes} documentos={documentos} perms={perms} org={org} />}
         {ativo === 'cobrancas' && <Cobrancas fonte={fontes.cobrancas} perms={perms} federation={federation} />}
-        {ativo === 'documentos' && <Documentos documentos={documentos} nome={nome} onIrParaAba={onIrParaAba} />}
+        {ativo === 'documentos' && <Documentos documentos={documentos} documentsQ={documentsQ} plano={plano} nome={nome} onIrParaAba={onIrParaAba} />}
         {ativo === 'cursos' && <Cursos fontes={fontes} />}
         {ativo === 'pontos' && <Pontos fonte={fontes.pontos} />}
         {ativo === 'arbitragem' && <Arbitragem fontes={fontes} federation={federation} onIrParaAba={onIrParaAba} />}

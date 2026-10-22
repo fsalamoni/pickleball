@@ -120,6 +120,15 @@ describe('federações no servidor', () => {
     await expect(fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'gratis' })).rejects.toMatchObject({ code: 'already-exists' });
   });
 
+  it('plano por faixa de idade recusa quem não tem nascimento no perfil', async () => {
+    const db = cenario();
+    db.store.docs.set('users/ana', { full_name: 'Ana Souza' });
+    db.store.docs.set('federation_plans/juvenil', { federation_id: 'fpp', name: 'Juvenil', person_type: 'athlete', tier: 'registered', price_cents: 0, age_max: 17, active: true });
+    await expect(fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'juvenil' })).rejects.toMatchObject({ code: 'failed-precondition' });
+    // Plano sem faixa segue aberto.
+    await expect(fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'anual' })).resolves.toBeTruthy();
+  });
+
   it('cancelar a cobrança devolve o pedido à secretaria', async () => {
     const db = cenario();
     const c = ctx(db);
@@ -155,6 +164,18 @@ describe('federações no servidor', () => {
     await expect(fed.review(c, ADMIN, { federationId: 'nova', action: 'suspend' })).rejects.toMatchObject({ code: 'invalid-argument' });
     await fed.review(c, ADMIN, { federationId: 'nova', action: 'official' });
     expect(doc(db, 'federations/nova').official).toBe(true);
+  });
+
+  it('a primeira aprovação liga os módulos iniciais da plataforma; reaprovar a suspensa não mexe', async () => {
+    const db = cenario();
+    db.store.docs.set('platform_settings/federations', { default_modules: { tournaments: true, ranking: true, news: false, 'x.y': true } });
+    db.store.docs.set('federations/nova', { ...doc(db, 'federations/nova'), modules: { news: true } });
+    const c = ctx(db);
+    await fed.review(c, ADMIN, { federationId: 'nova', action: 'approve' });
+    expect(doc(db, 'federations/nova').modules).toEqual({ news: true, tournaments: true, ranking: true });
+    db.store.docs.set('federations/nova', { ...doc(db, 'federations/nova'), status: 'suspended', modules: { news: false } });
+    await fed.review(c, ADMIN, { federationId: 'nova', action: 'approve' });
+    expect(doc(db, 'federations/nova').modules).toEqual({ news: false });
   });
 
   it('revisão: endereço repetido entre as aprovadas não aprova; criador sem conta não vira presidente; flag desligada barra', async () => {

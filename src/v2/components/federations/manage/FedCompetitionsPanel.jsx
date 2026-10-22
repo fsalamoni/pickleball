@@ -14,7 +14,7 @@ import { Ban, CheckCircle2, ClipboardList, Lock, Plus, RotateCcw, Trophy, XCircl
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/modules/federations/services/federationService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { useFederationMutation, useFederationPlatformSettings } from '@/modules/federations/hooks/useFederations';
 import { SANCTION_ORIGIN, pendingSanctions, sanctionState, sanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { legacyTiers, normalizeRankingConfig, seasonClosed, tierLabel, tierOptions, validateTiers } from '@/modules/federations/domain/officialRanking';
 import { RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
@@ -26,6 +26,7 @@ import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTo
 import { useAvisoNaoSalvo } from './naoSalvo';
 import FedTiersEditor from './FedTiersEditor';
 import FedTierRequirements from '../FedTierRequirements';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
 
 const TIERS = Object.values(SANCTION_TIER).map((v) => ({ value: v, label: SANCTION_TIER_LABELS[v] }));
 
@@ -81,7 +82,7 @@ function DecisaoDialog({ tournament, federation, acao, onClose }) {
       <div className="space-y-4">
         {aprovar ? (
           <>
-            <V2Field label={t('Categoria do torneio')} htmlFor="ch-tier" hint={t('Os pontos do ranking saem da tabela desta categoria. As categorias se configuram em Competições → Ranking.')}>
+            <V2Field label={t('Categoria do torneio')} htmlFor="ch-tier" hint={fedModuleOn(federation, 'ranking') ? t('Os pontos do ranking saem da tabela desta categoria. As categorias se configuram em Competições → Ranking.') : t('As categorias se configuram em Competições → Categorias.')}>
               <V2Select id="ch-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={opcoes.map((o) => ({ value: o.id, label: tierLabel(o) }))} />
             </V2Field>
             <FedTierRequirements tier={escolhida} />
@@ -260,6 +261,10 @@ function RankingTab({ federation }) {
   const set = (patch) => setCfg((c) => ({ ...c, ...patch }));
   const num = (v) => (v === '' ? 0 : Number(v));
   const proprias = cfg.tiers_explicit;
+  // Só torneios ligados (sem ranking): a aba é "Categorias" — o que pontua no ranking fica guardado e some da tela.
+  const comRanking = fedModuleOn(federation, 'ranking');
+  // Os modelos da plataforma (Painel admin → Federações → Configuração): só um ponto de partida.
+  const { tierTemplates } = useFederationPlatformSettings();
   // Sem categorias próprias, as três padrão saem da tabela e dos pesos que estão na tela (ao vivo).
   const categorias = proprias ? cfg.tiers : legacyTiers(cfg);
   const salvar = () => m.mutate(undefined, { onSuccess: () => { setSalvo(cfg); setConfirmando(false); toast.success(t('Pontuação salva. Vale para os próximos resultados enviados.')); }, onError: (er) => toast.error(er.message) });
@@ -272,14 +277,14 @@ function RankingTab({ federation }) {
     setConfirmando(true);
   };
   return (
-    <section className="space-y-6" aria-label={t('Ranking oficial')} data-dica="federacao-aba-ranking">
+    <section className="space-y-6" aria-label={comRanking ? t('Ranking oficial') : t('Categorias de torneio')} data-dica="federacao-aba-ranking">
       <V2Surface className="space-y-4">
         <div>
-          <h3 className="font-display text-lg font-bold text-ink">{t('Como o ranking pontua')}</h3>
-          <p className="text-sm text-gray-500">{t('Cada resultado enviado lança os pontos no histórico do atleta com a tabela do dia; mudar a tabela vale para os próximos envios e não reescreve o que já foi lançado. O ano soma os lançamentos e fecha em 31/01 do ano seguinte: depois disso não muda mais.')}</p>
+          <h3 className="font-display text-lg font-bold text-ink">{comRanking ? t('Como o ranking pontua') : t('Categorias de torneio')}</h3>
+          <p className="text-sm text-gray-500">{comRanking ? t('Cada resultado enviado lança os pontos no histórico do atleta com a tabela do dia; mudar a tabela vale para os próximos envios e não reescreve o que já foi lançado. O ano soma os lançamentos e fecha em 31/01 do ano seguinte: depois disso não muda mais.') : t('A sigla e o grupo de cada categoria aparecem no selo dos torneios chancelados e realizados pela federação. A tabela de pontos de cada categoria é a do ranking oficial, se o módulo Ranking for ligado.')}</p>
         </div>
         <form className="space-y-6" onSubmit={pedirConfirmacao}>
-          <FedTiersEditor tiers={categorias} explicit={proprias} onChange={(lista) => set({ tiers: lista, tiers_explicit: lista.length > 0 })} />
+          <FedTiersEditor tiers={categorias} explicit={proprias} templates={tierTemplates} acronym={federation.acronym || ''} onChange={(lista) => set({ tiers: lista, tiers_explicit: lista.length > 0 })} />
           {!proprias && <>
           <fieldset>
             <legend className="text-sm font-semibold text-ink">{t('Pontos por colocação')}</legend>
@@ -303,12 +308,14 @@ function RankingTab({ federation }) {
             </div>
           </fieldset>
           </>}
+          {comRanking && <>
           <V2Field label={t('Melhores resultados que somam')} htmlFor="rk-best" hint={t('Por classe e temporada. 0 = todos somam. Mudar recalcula só o ano aberto.')}><V2Input id="rk-best" type="number" min={0} inputMode="numeric" value={cfg.best_n} onChange={(e) => set({ best_n: num(e.target.value) })} className="sm:w-40" /></V2Field>
           <V2Toggle id="rk-members" checked={cfg.members_only} onChange={(v) => set({ members_only: v })} label={t('Só filiados em dia pontuam')} hint={t('Conferido na data do torneio. Desligado, todo mundo que jogou pontua.')} />
+          </>}
           <div className="flex flex-wrap items-center justify-end gap-2">
             {alterado && <span className="text-sm text-gray-500" aria-live="polite">{t('Há mudanças não salvas.')}</span>}
             {alterado && <V2Button type="button" variant="ghost" onClick={() => setCfg(salvo)}>{t('Desfazer mudanças')}</V2Button>}
-            <V2Button type="submit" disabled={m.isPending || !alterado}>{t('Salvar pontuação')}</V2Button>
+            <V2Button type="submit" disabled={m.isPending || !alterado}>{comRanking ? t('Salvar pontuação') : t('Salvar categorias')}</V2Button>
           </div>
         </form>
         <ConfirmDialog
@@ -322,9 +329,11 @@ function RankingTab({ federation }) {
           onConfirm={salvar}
         />
       </V2Surface>
-      <V2Surface>
-        <FedRankingBlock federation={federation} meUid={user?.uid} />
-      </V2Surface>
+      {comRanking && (
+        <V2Surface>
+          <FedRankingBlock federation={federation} meUid={user?.uid} />
+        </V2Surface>
+      )}
     </section>
   );
 }

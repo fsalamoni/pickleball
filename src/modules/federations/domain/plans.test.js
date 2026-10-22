@@ -3,6 +3,13 @@ import { isFreePlan, planAcceptsAge, planPrice, plansFor, validatePlanInput, isV
 import { memberTypeCatalog } from './memberTypes.js';
 
 describe('validatePlanInput', () => {
+  it('filiado paga e cadastrado é gratuito: a combinação contrária é recusada', () => {
+    expect(validatePlanInput({ name: 'Atleta', price_cents: 0, tier: 'federated' }).errors.price_cents).toBeTruthy();
+    expect(validatePlanInput({ name: 'Atleta', price_cents: 5000, tier: 'registered' }).errors.price_cents).toBeTruthy();
+    expect(validatePlanInput({ name: 'Atleta', price_cents: 0, tier: 'registered' }).ok).toBe(true);
+    expect(validatePlanInput({ name: 'Atleta', price_cents: 5000, tier: 'federated' }).ok).toBe(true);
+  });
+
   it('aceita o plano anual e exige a virada quando é por data fixa', () => {
     const r = validatePlanInput({ name: 'Federado 2027', price_cents: 12000, billing: 'annual', validity: 'calendar', rollover_mmdd: '12-31' });
     expect(r.ok).toBe(true);
@@ -10,7 +17,7 @@ describe('validatePlanInput', () => {
     expect(validatePlanInput({ name: 'X abc', price_cents: 1, billing: 'annual', validity: 'calendar', rollover_mmdd: '31-12' }).errors.rollover_mmdd).toBeTruthy();
   });
   it('"Outro documento" exige o nome; nome sem o interruptor liga o "outro" sozinho', () => {
-    const base = { name: 'Atleta filiado', price_cents: 0 };
+    const base = { name: 'Atleta cadastrado', price_cents: 0, tier: 'registered' };
     expect(validatePlanInput({ ...base, requires_docs: ['outro'] }).errors.other_docs).toBeTruthy();
     const r = validatePlanInput({ ...base, requires_docs: ['identidade'], other_docs: [{ id: 'o_1', label: 'Exame de vista' }] });
     expect(r.ok).toBe(true);
@@ -28,7 +35,7 @@ describe('validatePlanInput', () => {
     expect(validatePlanInput({ name: 'Juiz de linha', price_cents: 0, person_type: 'juiz_linha' }, { catalog }).value).toMatchObject({ entity: 'person', person_category: 'referee', person_type_label: 'Juiz de linha' });
     // Desligado: plano novo recusa; o que já era do tipo segue editável.
     expect(validatePlanInput({ name: 'Arena filiada', price_cents: 0, person_type: 'arena' }, { catalog }).errors.person_type).toBeTruthy();
-    expect(validatePlanInput({ name: 'Arena filiada', price_cents: 0, person_type: 'arena' }, { catalog, currentType: 'arena' }).ok).toBe(true);
+    expect(validatePlanInput({ name: 'Arena filiada', price_cents: 30000, person_type: 'arena' }, { catalog, currentType: 'arena' }).ok).toBe(true);
   });
   it('reprova nome curto, preço ausente e idades invertidas', () => {
     const r = validatePlanInput({ name: 'ab', price_cents: '', age_min: 40, age_max: 30 });

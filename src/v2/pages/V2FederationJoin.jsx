@@ -3,7 +3,8 @@
  *
  * Em três passos na mesma tela: quem você é (atleta, professor, árbitro),
  * o plano (os que cabem na sua idade, com o desconto já aplicado), as
- * escolhas (selo público, diretório, clube que representa) e os termos.
+ * escolhas (o clube que representa, observação) e os termos. Plano de vínculo
+ * Cadastrado (gratuito) fala em "cadastro"; plano de clube/arena não aparece aqui.
  * O pedido vai ao SERVIDOR (`federationMembership`), que decide: aprovação
  * automática ou pela secretaria; plano pago gera a cobrança Pix, que já
  * aparece aqui para pagar.
@@ -26,7 +27,7 @@ import { toast } from 'sonner';
 import { Check, IdCard, Landmark, MailPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { calculateAge } from '@/core/lib/profileValidation';
-import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationInvites, useMyMembership } from '@/modules/federations/hooks/useFederations';
+import { useFederation, useFederationMutation, useFederationPlans, useFederationPlatformSettings, useMyFederationCharges, useMyFederationInvites, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { membershipAction, uploadChosenDocuments } from '@/modules/federations/services/federationService';
 import { canRequestMembership } from '@/modules/federations/domain/membership';
@@ -37,7 +38,7 @@ import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import DocumentsUploadList from '@/v2/components/federations/DocumentsUploadList';
 import OrgMembershipJoin from '@/v2/components/federations/OrgMembershipJoin';
 import { isoDate } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import {
   V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -106,12 +107,21 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const [enviandoDocs, setEnviandoDocs] = useState(false);
   const idadeConta = useMemo(() => calculateAge(userProfile?.birth_date), [userProfile?.birth_date]);
   const clubes = useMyClubs();
-  const planoConvite = convite ? (plans || []).find((p) => p.id === convite.plan_id && p.active !== false) : null;
+  const { catalog } = useFederationPlatformSettings();
+  // Só os planos de PESSOA: clube e arena pedem pela gestão deles (`?entidade=`).
+  const planosPessoa = (plans || []).filter((p) => p.active !== false && (p.entity || 'person') === 'person');
+  const planoConvite = convite ? planosPessoa.find((p) => p.id === convite.plan_id) : null;
   // O plano que a pessoa tocou na página da federação (`?plano=`) já vem escolhido; o do convite vence.
-  const planoEscolhido = planoConvite || (planoInicial ? (plans || []).find((p) => p.id === planoInicial && p.active !== false) : null);
-  const [tipo, setTipo] = useState(planoEscolhido?.person_type || PLAN_PERSON_TYPE.ATHLETE);
+  const planoEscolhido = planoConvite || (planoInicial ? planosPessoa.find((p) => p.id === planoInicial) : null);
+  // Os tipos que a federação oferece (os planos ativos dizem quais).
+  const tipos = [];
+  planosPessoa.forEach((p) => {
+    const id = p.person_type || PLAN_PERSON_TYPE.ATHLETE;
+    if (!tipos.some((x) => x.id === id)) tipos.push({ id, label: personTypeLabel(p, catalog) });
+  });
+  const [tipo, setTipo] = useState(planoEscolhido?.person_type || tipos[0]?.id || PLAN_PERSON_TYPE.ATHLETE);
   const [planId, setPlanId] = useState(planoEscolhido?.id || '');
-  const [opcoes, setOpcoes] = useState({ publicBadge: true, showInDirectory: false, clubId: '', note: '', termos: false });
+  const [opcoes, setOpcoes] = useState({ clubId: '', note: '', termos: false });
   const [dep, setDep] = useState({ name: '', birth_date: '' });
   const [privado, setPrivado] = useState({ cpf: '', guardian_name: '', guardian_contact: '', guardian_consent: false, minor_photo_consent: false });
   const [erros, setErros] = useState({});
@@ -129,13 +139,9 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const menorComConta = !dependente && faixa === 'minor';
   const criancaComConta = !dependente && faixa === 'child';
 
-  // Os tipos de PESSOA que a federação oferece (os planos ativos dizem quais); clube e arena pedem pela gestão deles.
-  const tipos = [];
-  (plans || []).filter((p) => p.active !== false && (p.entity || 'person') === 'person').forEach((p) => {
-    const id = p.person_type || PLAN_PERSON_TYPE.ATHLETE;
-    if (!tipos.some((x) => x.id === id)) tipos.push({ id, label: personTypeLabel(p) });
-  });
-  const candidatos = plansFor(plans || [], { personType: tipo, age: idade });
+  // Sem a idade, o plano por faixa fica de fora (o servidor também recusa).
+  const candidatos = plansFor(planosPessoa, { personType: tipo, age: idade }).filter((p) => idade != null || (p.age_min == null && p.age_max == null));
+  const escondidosPorIdade = idade == null && plansFor(planosPessoa, { personType: tipo, age: null }).length > candidatos.length;
   const plano = candidatos.find((p) => p.id === planId) || null;
   const preco = plano ? planPrice(plano, { age: idade }) : null;
   const docsExigidos = requiredDocs(plano);
@@ -143,6 +149,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const pagaDepois = Boolean(plano && !isFreePlan(plano) && !plano.auto_approve && planoConvite?.id !== plano.id);
   // Convite da importação, neste plano: entra ativo sem cobrança (já era filiado fora da plataforma).
   const semCobranca = Boolean(plano && convite?.source === 'import' && planoConvite?.id === plano.id);
+  // Cadastrado é o vínculo gratuito, sem anuidade: a tela fala em "cadastro", não em "filiação".
+  const cadastro = plano?.tier === PLAN_TIER.REGISTERED;
   const estatuto = safeHttpUrl(federation?.governance?.statute_url);
   const setPriv = (patch) => { setPrivado((x) => ({ ...x, ...patch })); setErros({}); };
 
@@ -167,10 +175,10 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
     setErro('');
     m.mutate({
       federationId: federation.id, action: 'request', planId: plano.id,
-      publicBadge: opcoes.publicBadge, showInDirectory: opcoes.showInDirectory, clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
+      clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
     }, {
       onSuccess: async (r) => {
-        toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : t('Pedido de filiação enviado.'));
+        toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : cadastro ? t('Pedido de cadastro enviado.') : t('Pedido de filiação enviado.'));
         // Os arquivos sobem com o pedido já gravado; um que falhe não desfaz o pedido — a tela diz qual falta.
         if (r?.memberId && docsExigidos.some((d) => arquivos[d.key])) {
           setEnviandoDocs(true);
@@ -206,7 +214,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
             <V2FilterChip key={x.id} type="button" role="radio" aria-checked={tipo === x.id} active={tipo === x.id} onClick={() => { setTipo(x.id); setPlanId(''); }}>{x.label}</V2FilterChip>
           ))}
         </div>
-        {idade == null && !dependente && <p className="text-xs text-gray-500">{t('Sem a data de nascimento no seu perfil, os planos por faixa de idade não aparecem. Complete o perfil para vê-los.')}</p>}
+        {escondidosPorIdade && !dependente && <p className="text-xs text-gray-500">{t('Sem a data de nascimento no seu perfil, os planos por faixa de idade não aparecem.')} <Link to="/perfil/editar" className="font-bold text-ink underline">{t('Completar o perfil')}</Link></p>}
+        {escondidosPorIdade && dependente && <p className="text-xs text-gray-500">{t('Informe a data de nascimento do dependente para ver os planos por faixa de idade.')}</p>}
         {criancaComConta && <p className="text-sm font-semibold text-amber-700">{t('Menor de {n} anos não se filia pela própria conta: o responsável filia como dependente, pela conta dele.', { n: GUARDIAN_ONLY_AGE })}</p>}
       </V2Surface>
 
@@ -274,9 +283,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       )}
 
       <V2Surface className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-ink">{dependente ? t('3. Escolhas do dependente') : t('3. Suas escolhas')}</h2>
-        <V2Toggle id="fj-selo" checked={opcoes.publicBadge} onChange={(v) => setOpcoes((o) => ({ ...o, publicBadge: v }))} label={t('Mostrar o selo de filiado no meu perfil')} hint={t('Aparece no perfil público e nas inscrições em torneio.')} />
-        <V2Toggle id="fj-dir" checked={opcoes.showInDirectory} onChange={(v) => setOpcoes((o) => ({ ...o, showInDirectory: v }))} label={t('Aparecer no diretório de filiados da federação')} hint={t('Nome e foto, para outros filiados.')} />
+        <h2 className="font-display text-lg font-bold text-ink">{t('3. Para terminar')}</h2>
         {clubes.isSuccess && (clubes.data || []).length > 0 && (
           <V2Field label={t('Clube que você representa')} htmlFor="fj-clube" hint={t('Opcional. Vale para os torneios por equipes da federação.')}>
             <V2Select id="fj-clube" value={opcoes.clubId} onChange={(e) => setOpcoes((o) => ({ ...o, clubId: e.target.value }))}>
@@ -301,7 +308,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
           <p className="text-sm text-gray-600">{semCobranca ? t('Sem cobrança: você já estava na lista de filiados.') : plano ? (isFreePlan(plano) ? t('Plano gratuito') : t('Total: {valor} {periodo}', { valor: formatBrlCents(preco.total), periodo: planPeriodLabel(plano) })) : t('Escolha um plano')}</p>
           {pagaDepois && <p className="text-xs text-gray-500">{t('Você paga depois que a secretaria aprovar.')}</p>}
         </div>
-        <V2Button type="submit" disabled={m.isPending || enviandoDocs || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{enviandoDocs ? t('Enviando os documentos…') : m.isPending ? t('Enviando…') : semCobranca ? t('Confirmar a filiação') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
+        <V2Button type="submit" disabled={m.isPending || enviandoDocs || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{enviandoDocs ? t('Enviando os documentos…') : m.isPending ? t('Enviando…') : semCobranca ? t('Confirmar a filiação') : cadastro ? t('Pedir cadastro') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
       </div>
     </form>
   );
