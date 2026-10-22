@@ -204,8 +204,10 @@ async function budgetStep(ctx, actor, data, { fed, perms }, acao) {
     patch.history = comHistorico(budget, entrada(ctx, actor, 'approved', { date: v.date }));
   } else {
     patch.status = A.BUDGET_STATUS.PUBLISHED;
-    patch.pub = true;
     patch.published = { lines: budget.lines || {}, notes: budget.notes || '', approved_in: budget.approved_in || null, at_ms: ctx.now };
+    // O público lê só a CÓPIA (`{id}_pub`): o documento de trabalho nunca leva `pub`, então
+    // reformular depois não expõe o rascunho a quem lê a página.
+    await ctx.db.collection(BUDGETS).doc(`${ref.id}_pub`).set({ federation_id: fed.id, year: budget.year, pub: true, copy_of: ref.id, published: patch.published, updated_at_ms: ctx.now });
     patch.history = comHistorico(budget, entrada(ctx, actor, 'published'));
   }
   await ref.update(patch);

@@ -23,7 +23,7 @@ async function porFederacao(col, fedId, soPublicados = false) {
 }
 
 /** Equipe das contas (financeiro, conselho fiscal, admin): tudo. */
-export const listBudgets = (fedId) => porFederacao(C.budgets, fedId);
+export const listBudgets = async (fedId) => (await porFederacao(C.budgets, fedId)).filter((b) => !b.copy_of); // a cópia pública (`{id}_pub`) não é um orçamento
 export const listLedger = (fedId) => porFederacao(C.ledger, fedId);
 export const listAccountReports = (fedId) => porFederacao(C.reports, fedId);
 

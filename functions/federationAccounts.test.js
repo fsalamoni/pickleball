@@ -89,7 +89,9 @@ describe('contas: orçamento', () => {
     await chamar(c, FIN, { action: 'budget_approve', year: 2027, approval: { date: '2027-03-01', event_id: 'ago' } });
     expect(doc(c, 'federation_budgets/fpp_2027')).toMatchObject({ status: 'approved', approved_in: { event_id: 'ago', event_title: 'AGO 2027', date: '2027-03-01' } });
     await chamar(c, PRES, { action: 'budget_publish', year: 2027 });
-    expect(doc(c, 'federation_budgets/fpp_2027')).toMatchObject({ status: 'published', pub: true, published: { lines: { 'income.memberships': 500000, 'expense.travel': 200000 } } });
+    expect(doc(c, 'federation_budgets/fpp_2027')).toMatchObject({ status: 'published', published: { lines: { 'income.memberships': 500000, 'expense.travel': 200000 } } });
+    expect(doc(c, 'federation_budgets/fpp_2027').pub).toBeUndefined();
+    expect(doc(c, 'federation_budgets/fpp_2027_pub')).toMatchObject({ federation_id: 'fpp', year: 2027, pub: true, copy_of: 'fpp_2027', published: { lines: { 'income.memberships': 500000, 'expense.travel': 200000 } } });
   });
 
   it('reformular o publicado pede motivo, volta a rascunho, guarda as linhas e a cópia pública fica', async () => {
@@ -101,7 +103,9 @@ describe('contas: orçamento', () => {
     await expect(chamar(c, FIN, { action: 'budget_save', budget: { year: 2027, lines: { 'expense.travel': 300 } } })).rejects.toMatchObject({ code: 'invalid-argument' });
     await chamar(c, FIN, { action: 'budget_save', budget: { year: 2027, lines: { 'expense.travel': 300 } }, reason: 'Etapa extra aprovada na AGE' });
     const b = doc(c, 'federation_budgets/fpp_2027');
-    expect(b).toMatchObject({ status: 'draft', lines: { 'expense.travel': 300 }, pub: true, published: { lines: { 'expense.travel': 100 } } });
+    expect(b).toMatchObject({ status: 'draft', lines: { 'expense.travel': 300 }, published: { lines: { 'expense.travel': 100 } } });
+    expect(b.pub).toBeUndefined(); // o rascunho reformulado nunca fica legível ao público
+    expect(doc(c, 'federation_budgets/fpp_2027_pub')).toMatchObject({ pub: true, published: { lines: { 'expense.travel': 100 } } });
     expect(b.history.at(-1)).toMatchObject({ kind: 'reformulated', reason: 'Etapa extra aprovada na AGE', previous_status: 'published', previous_lines: { 'expense.travel': 100 } });
   });
 });

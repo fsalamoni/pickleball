@@ -1677,8 +1677,11 @@ publicado.
   `expense.<cat>`, `notes`, `status` `draft → submitted → approved →
   published`, `approved_in { date, event_id, event_title, event_date, note }`
   (a reunião da agenda é opcional e conferida pelo servidor: tem de ser um
-  tipo de reunião da própria federação), `history[]`, e ao publicar `pub:
-  true` + a cópia `published { lines, notes, approved_in, at_ms }`. Mexer no
+  tipo de reunião da própria federação), `history[]` e, ao publicar, a cópia
+  `published { lines, notes, approved_in, at_ms }`. O público lê só o
+  documento-cópia `{fed}_{ano}_pub` (`pub: true`, `copy_of`, `published`):
+  o documento de trabalho **nunca** leva `pub`, então reformular não expõe o
+  rascunho; a lista da equipe ignora as cópias (`copy_of`). Mexer no
   aprovado ou publicado é **reformular**: motivo ≥ 10, volta a rascunho, as
   linhas anteriores vão para o histórico e a cópia `published` continua na
   página até a nova publicação.
@@ -1752,6 +1755,4 @@ parecer, `finance` e `admin` — nunca quem agiu.
 categorias, mapa de origem, períodos, prazo, validações, totais e retrato.
 
 **O que ficou de fora.** Orçamento mensal (só anual); importação de extrato;
-conciliação bancária; o orçamento reformulado em rascunho fica legível no
-documento por quem lê a cópia publicada (risco baixo: só as linhas ainda não
-aprovadas).
+conciliação bancária.
