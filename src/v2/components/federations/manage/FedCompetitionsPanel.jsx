@@ -10,14 +10,14 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Ban, CheckCircle2, ClipboardList, RotateCcw, Trophy, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, ClipboardList, Lock, RotateCcw, Trophy, XCircle } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { pendingSanctions, sanctionState, sanctionedTournaments } from '@/modules/federations/domain/sanction';
-import { normalizeRankingConfig } from '@/modules/federations/domain/officialRanking';
-import { RANKING_PERIOD, RANKING_VALIDITY_MAX, RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { normalizeRankingConfig, seasonClosed } from '@/modules/federations/domain/officialRanking';
+import { RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { FedRankingBlock, classeLabel } from '../FedPublicBlocks';
@@ -177,6 +177,7 @@ function ResultadoRow({ result: r }) {
   const [motivo, setMotivo] = useState('');
   const m = useFederationMutation((acao) => reviewFederationResult(r, acao, { uid: user?.uid, reason: motivo }));
   const recusado = r.status === RESULT_STATUS.REJECTED;
+  const fechado = seasonClosed(r.season);
   const podio = (r.rows || []).filter((x) => x.position && x.position <= 3).map((x) => `${x.position}º ${x.name}`).join(' · ');
   return (
     <li>
@@ -189,7 +190,8 @@ function ResultadoRow({ result: r }) {
         <p className="text-xs text-gray-500">{[classeLabel(r), r.date ? quando(r.date) : '', t(SANCTION_TIER_LABELS[r.tier] || SANCTION_TIER_LABELS.regional), tn((r.rows || []).length, '{n} atleta', '{n} atletas'), t('enviado em {data}', { data: quando(r.sent_at) })].filter(Boolean).join(' · ')}</p>
         {podio && <p className="text-sm text-gray-700">{podio}</p>}
         {recusado && r.review?.reason && <p className="text-sm text-red-600">{t('Motivo: {motivo}', { motivo: r.review.reason })}</p>}
-        <div className="flex flex-wrap items-end gap-2">
+        {fechado && <p className="flex items-center gap-1 text-xs text-gray-500"><Lock className="h-3.5 w-3.5" aria-hidden="true" />{t('Temporada {ano} encerrada: este resultado não muda mais.', { ano: r.season })}</p>}
+        {!fechado && <div className="flex flex-wrap items-end gap-2">
           {!recusado && !recusando && <V2Button type="button" size="sm" variant="danger" onClick={() => setRecusando(true)}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>}
           {!recusado && recusando && (
             <form className="flex w-full flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); m.mutate('reject', { onSuccess: () => { toast.success(t('Resultado recusado. O organizador foi avisado.')); setRecusando(false); }, onError: (er) => toast.error(er.message) }); }}>
@@ -199,7 +201,7 @@ function ResultadoRow({ result: r }) {
             </form>
           )}
           {recusado && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => m.mutate('readmit', { onSuccess: () => toast.success(t('Resultado readmitido no ranking.')), onError: (er) => toast.error(er.message) })}><RotateCcw className="h-4 w-4" />{t('Readmitir')}</V2Button>}
-        </div>
+        </div>}
       </V2Surface>
     </li>
   );
@@ -214,7 +216,7 @@ function ResultadosTab({ resultsQ }) {
   if (!resultsQ.isSuccess) return <V2Skeleton lines={5} />;
   return (
     <section className="space-y-4" aria-label={t('Resultados')} data-dica="federacao-aba-resultados">
-      <p className="text-sm text-gray-600">{t('Cada categoria encerrada de um torneio chancelado chega aqui quando o organizador envia. Recusar tira os pontos do ranking na hora; readmitir devolve.')}</p>
+      <p className="text-sm text-gray-600">{t('Cada categoria encerrada de um torneio chancelado chega aqui quando o organizador envia, e os pontos de quem pontua são lançados no histórico de cada atleta. Recusar cancela esses lançamentos na hora (com o motivo); readmitir lança de novo. Depois de 31/01 do ano seguinte, o ano fecha e nada muda.')}</p>
       {lista.length === 0 ? <V2EmptyState icon={ClipboardList} title={t('Nenhum resultado enviado ainda')} description={t('O organizador envia na tela de resultados do torneio, categoria a categoria.')} /> : (
         <>
           <BuscaLista id="res-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por torneio, categoria ou atleta do pódio')} total={lista.length} achados={busca.filtrados.length} />
@@ -238,13 +240,13 @@ function RankingTab({ federation }) {
   const m = useFederationMutation(() => updateRankingConfig(federation.id, cfg, { uid: user?.uid }));
   const set = (patch) => setCfg((c) => ({ ...c, ...patch }));
   const num = (v) => (v === '' ? 0 : Number(v));
-  const salvar = () => m.mutate(undefined, { onSuccess: () => { setSalvo(cfg); setConfirmando(false); toast.success(t('Pontuação salva. O ranking está sendo refeito.')); }, onError: (er) => toast.error(er.message) });
+  const salvar = () => m.mutate(undefined, { onSuccess: () => { setSalvo(cfg); setConfirmando(false); toast.success(t('Pontuação salva. Vale para os próximos resultados enviados.')); }, onError: (er) => toast.error(er.message) });
   return (
     <section className="space-y-6" aria-label={t('Ranking oficial')} data-dica="federacao-aba-ranking">
       <V2Surface className="space-y-4">
         <div>
           <h3 className="font-display text-lg font-bold text-ink">{t('Como o ranking pontua')}</h3>
-          <p className="text-sm text-gray-500">{t('Mudou? O servidor refaz todas as temporadas na hora. Os valores valem para toda classe.')}</p>
+          <p className="text-sm text-gray-500">{t('Cada resultado enviado lança os pontos no histórico do atleta com a tabela do dia; mudar a tabela vale para os próximos envios e não reescreve o que já foi lançado. O ano soma os lançamentos e fecha em 31/01 do ano seguinte: depois disso não muda mais.')}</p>
         </div>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirmando(true); }}>
           <fieldset>
@@ -259,7 +261,7 @@ function RankingTab({ federation }) {
           </fieldset>
           <div className="grid gap-3 sm:grid-cols-2">
             <V2Field label={t('Participação (fora dos 8)')} htmlFor="rk-part" hint={t('Para quem jogou e ficou do 9º em diante.')}><V2Input id="rk-part" type="number" min={0} inputMode="numeric" value={cfg.participation} onChange={(e) => set({ participation: num(e.target.value) })} /></V2Field>
-            <V2Field label={t('Melhores resultados que somam')} htmlFor="rk-best" hint={t('Por classe e temporada. 0 = todos somam.')}><V2Input id="rk-best" type="number" min={0} inputMode="numeric" value={cfg.best_n} onChange={(e) => set({ best_n: num(e.target.value) })} /></V2Field>
+            <V2Field label={t('Melhores resultados que somam')} htmlFor="rk-best" hint={t('Por classe e temporada. 0 = todos somam. Mudar recalcula só o ano aberto.')}><V2Input id="rk-best" type="number" min={0} inputMode="numeric" value={cfg.best_n} onChange={(e) => set({ best_n: num(e.target.value) })} /></V2Field>
           </div>
           <fieldset>
             <legend className="text-sm font-semibold text-ink">{t('Peso por tipo de torneio')}</legend>
@@ -271,19 +273,6 @@ function RankingTab({ federation }) {
               ))}
             </div>
           </fieldset>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <V2Field label={t('Como o tempo conta')} htmlFor="rk-periodo" hint={cfg.period === RANKING_PERIOD.ROLLING ? t('Cada resultado vale pelos meses ao lado, contados da data do torneio, e sai sozinho quando vence. O servidor refaz o ranking todo dia; as temporadas continuam disponíveis.') : t('O ranking zera a cada ano: vale a temporada do torneio.')}>
-              <V2Select id="rk-periodo" value={cfg.period} onChange={(e) => set({ period: e.target.value })}>
-                <option value={RANKING_PERIOD.SEASON}>{t('Por temporada (o ano do torneio)')}</option>
-                <option value={RANKING_PERIOD.ROLLING}>{t('Corrido (os últimos meses)')}</option>
-              </V2Select>
-            </V2Field>
-            {cfg.period === RANKING_PERIOD.ROLLING && (
-              <V2Field label={t('Validade do resultado (meses)')} htmlFor="rk-validade" hint={t('De 1 a {n}. O comum é 12.', { n: RANKING_VALIDITY_MAX })}>
-                <V2Input id="rk-validade" type="number" min={1} max={RANKING_VALIDITY_MAX} step={1} inputMode="numeric" value={cfg.validity_months} onChange={(e) => set({ validity_months: Math.min(RANKING_VALIDITY_MAX, Math.max(1, num(e.target.value) || 1)) })} />
-              </V2Field>
-            )}
-          </div>
           <V2Toggle id="rk-members" checked={cfg.members_only} onChange={(v) => set({ members_only: v })} label={t('Só filiados em dia pontuam')} hint={t('Conferido na data do torneio. Desligado, todo mundo que jogou pontua.')} />
           <div className="flex flex-wrap items-center justify-end gap-2">
             {alterado && <span className="text-sm text-gray-500" aria-live="polite">{t('Há mudanças não salvas.')}</span>}
@@ -296,7 +285,7 @@ function RankingTab({ federation }) {
           onOpenChange={setConfirmando}
           loading={m.isPending}
           title={t('Salvar a nova pontuação?')}
-          description={t('O servidor refaz o ranking de todas as temporadas com os novos valores, e as posições dos atletas podem mudar na página da federação. Para voltar atrás, salve os valores antigos de novo.')}
+          description={t('Os novos valores valem para os resultados enviados daqui em diante. Os pontos já lançados ficam como estão e os anos encerrados não mudam; só o "melhores resultados que somam" é aplicado de novo ao ano aberto.')}
           confirmLabel={t('Salvar pontuação')}
           cancelLabel={t('Voltar')}
           onConfirm={salvar}

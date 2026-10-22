@@ -338,10 +338,11 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Pedir a chancela do torneio (módulo `tournaments`) | ✖ | ✔ admin do torneio, só `pending` com `requested_by` = ele | — | — | ✔ | rules (`tournamentFederationOk`) |
 | Aprovar/recusar/revogar chancela (tipo, só filiados) | ✖ | ✖ | ✖ | ✔ `competitions` (só `federation_sanction`) | ✔ | rules |
 | Inscrever-se em torneio "só filiados" | ✖ | ◐ só com filiação `active` em dia — a do parceiro também (`fedMemberOk`) | ✔ | — | — | rules (`tournamentMembershipOk`); o admin do torneio inscreve qualquer pessoa |
-| Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`) | — | — | ✔ | rules |
-| Recusar/readmitir resultado | ✖ | ✖ | ✖ | ✔ `competitions` | ✔ | rules |
-| Ler resultados e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
-| Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` e a varredura `federationRankingRolling` |
+| Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`), só com a temporada aberta | — | — | ✔ (temporada aberta) | rules (`fedSeasonOpen`) |
+| Recusar/readmitir resultado | ✖ | ✖ | ✖ | ✔ `competitions`, só com a temporada aberta | ✔ (temporada aberta) | rules (`fedSeasonOpen`) |
+| Mexer em resultado de temporada FECHADA (depois de 31/01 do ano seguinte) | ✖ | ✖ | ✖ | ✖ | ✖ | rules (`fedSeasonOpen`); servidor e tela também recusam |
+| Ler resultados, lançamentos de pontos e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
+| Gravar o ranking oficial e os lançamentos de pontos (`federation_points`) | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` |
 | Mudar a tabela de pontos (`ranking_config`) | ✖ | ✖ | ✖ | ✔ `competitions` (só essa chave) | ✔ | rules |
 | Regras da federação (`rules`: CPF, prazos de transferência, declaração pelo filiado) — PR 3/6 | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules |
 | Ver os Indicadores da Central — PR 6 | ✖ | ✖ | ✖ | ✔ `members` (bloco de filiados) e/ou `finance` (bloco do dinheiro) | ✔ | tela (sem leitura nova: as mesmas de Filiados e Financeiro, já presas pela regra) |

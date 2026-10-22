@@ -33,6 +33,7 @@ import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { CHARGE_ORIGIN_LABELS } from '@/modules/federations/domain/constants';
 import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
 import FedElectionNotice from '../elections/FedElectionNotice';
+import FedMyPoints from './FedMyPoints';
 import { t, tn } from '@/core/i18n';
 
 /** A filiação e as cobranças abertas desta federação (as mesmas consultas nos três). */
@@ -195,6 +196,7 @@ export function FedMyMembership({ federation, plans }) {
         <FedMemberDocuments member={m} plan={plano} />
         <FedPayments charges={(s.cq.data || []).filter((c) => c.federation_id === federation.id && c.status === CHARGE_STATUS.PAID)} onRecibo={setRecibo} />
         <FedMySanctions federationId={federation.id} />
+        <FedMyPoints federation={federation} uid={user?.uid} />
       </V2Surface>
       <aside className="space-y-3 lg:col-span-4">
         <V2Surface variant="compacto" className="space-y-2 p-4">

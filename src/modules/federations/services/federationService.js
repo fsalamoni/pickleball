@@ -27,7 +27,7 @@ import {
 import { isoDate } from '../domain/membership.js';
 import { affiliationAcceptPatch, affiliationDecision, affiliationState, buildAffiliationInvite, buildAffiliationRequest, canInviteOrg } from '../domain/affiliations.js';
 import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sanctionState } from '../domain/sanction.js';
-import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
+import { normalizeRankingConfig, resultSeason, seasonClosed, seasonLastDay, tournamentDay } from '../domain/officialRanking.js';
 import { staffPerms } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
 import { availableModules, fedModuleOn, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
@@ -592,7 +592,8 @@ export async function decideSanction(tournament, action, { uid, reason = '', tie
   if (action === 'revoke') {
     const enviados = await getDocs(query(collection(db, C.results), where('federation_id', '==', tournament.federation_id), where('tournament_id', '==', tournament.id)));
     const lote = writeBatch(db);
-    enviados.docs.filter((d) => d.data().status === RESULT_STATUS.SENT).forEach((d) => lote.update(d.ref, { status: RESULT_STATUS.REJECTED, review: { by: uid, reason: patch.federation_sanction.reason || t('Chancela revogada'), at_ms: Date.now() }, updated_at: serverTimestamp() }));
+    // Ano já fechado é imutável (a regra recusaria e derrubaria o lote inteiro): o ponto daquele ano fica.
+    enviados.docs.filter((d) => d.data().status === RESULT_STATUS.SENT && !seasonClosed(d.data().season)).forEach((d) => lote.update(d.ref, { status: RESULT_STATUS.REJECTED, review: { by: uid, reason: patch.federation_sanction.reason || t('Chancela revogada'), at_ms: Date.now() }, updated_at: serverTimestamp() }));
     await lote.commit();
   }
   await createAuditLog({ action: `tournament_sanction_${action}`, actor: { uid }, tournamentId: tournament.id, details: { federation_id: tournament.federation_id, reason: patch.federation_sanction.reason, tier: patch.federation_sanction.tier } });
@@ -626,6 +627,19 @@ export async function listResultsWith(uid) {
 }
 
 /**
+ * Os LANÇAMENTOS de pontos da pessoa no ranking oficial, em todas as
+ * federações e anos (até os cancelados, com o motivo). Só o servidor grava;
+ * a leitura é pública, como o ranking.
+ */
+export async function listMyFederationPoints(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.points), where('uid', '==', uid)))).docs.map(toDoc);
+}
+
+/** Mensagem para quem tenta mexer num ano que já fechou. */
+const anoFechado = (season) => t('A temporada {ano} do ranking oficial fechou em {data} e não muda mais.', { ano: season, data: seasonLastDay(season).split('-').reverse().join('/') });
+
+/**
  * O organizador ENVIA (ou reenvia) o resultado de uma categoria ao ranking
  * oficial. A colocação sai de `modalityPlacement` — a MESMA conta do pódio e
  * dos cartões (`docs/43`). Só quem tem conta entra em `uids` (quem pontua).
@@ -643,11 +657,18 @@ export async function sendFederationResult({ tournament, modality, matches, regi
   if (!rows.length) throw new FederationError(t('Ainda não há resultado nesta categoria.'));
   rows.sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
   const id = fedResultDocId(st.federationId, tournament.id, modality.id);
+  const season = resultSeason(tournament);
+  if (seasonClosed(season)) throw new FederationError(anoFechado(season));
+  // O ano de um resultado já enviado nunca muda (a regra recusa): mudou a data do torneio de ano, o envio antigo fica onde está.
+  const anterior = await getDoc(doc(db, C.results, id));
+  if (anterior.exists() && Number(anterior.data().season) !== season) {
+    throw new FederationError(t('Este resultado já está no ranking de {ano}. A data do torneio mudou de ano: peça à federação para retirar o envio antes de mandar de novo.', { ano: anterior.data().season }));
+  }
   const data = {
     federation_id: st.federationId, federation_acronym: st.acronym, tournament_id: tournament.id, tournament_name: String(tournament.name || '').slice(0, 120),
     modality_id: modality.id, modality_name: String(modality.name || '').slice(0, 120),
     gender_category: modality.gender_category || 'open', age_category: modality.age_category || 'open', format: modality.format || 'doubles',
-    tier: st.tier, date: tournamentDay(tournament), season: resultSeason(tournament),
+    tier: st.tier, date: tournamentDay(tournament), season,
     rows: rows.slice(0, 400), uids: [...new Set(rows.slice(0, 400).map((r) => r.uid).filter(Boolean))],
     status: RESULT_STATUS.SENT, sent_by: uid, sent_at: serverTimestamp(), review: null, updated_at: serverTimestamp(),
   };
@@ -661,6 +682,7 @@ export async function reviewFederationResult(result, action, { uid, reason = '' 
   const status = action === 'reject' ? RESULT_STATUS.REJECTED : RESULT_STATUS.SENT;
   const motivo = String(reason || '').trim().slice(0, 500);
   if (status === RESULT_STATUS.REJECTED && motivo.length < 3) throw new FederationError(t('Diga o motivo (mínimo 3 caracteres).'));
+  if (seasonClosed(result.season)) throw new FederationError(anoFechado(result.season));
   await updateDoc(doc(db, C.results, result.id), { status, review: status === RESULT_STATUS.REJECTED ? { by: uid || null, at_ms: Date.now(), reason: motivo } : null, updated_at: serverTimestamp() });
   await createAuditLog({ action: `federation_result_${action}`, actor: { uid }, tournamentId: result.tournament_id, details: { federation_id: result.federation_id, modality_id: result.modality_id, reason: motivo } });
   if (status === RESULT_STATUS.REJECTED && result.sent_by) {
@@ -679,7 +701,7 @@ export async function getFederationRanking(fedId, season) {
   return snap.exists() ? toDoc(snap) : null;
 }
 
-/** A configuração do ranking (admin e competições). O servidor refaz as temporadas ao gravar. */
+/** A configuração do ranking (admin e competições). Vale para os próximos lançamentos; o ano aberto é somado de novo (o "melhores N"), o que já foi lançado e os anos fechados não mudam. */
 export async function updateRankingConfig(fedId, input, { uid } = {}) {
   const value = normalizeRankingConfig(input);
   await updateDoc(doc(db, C.federations, fedId), { ranking_config: value, updated_at: serverTimestamp() });

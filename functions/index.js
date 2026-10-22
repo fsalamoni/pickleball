@@ -1421,15 +1421,19 @@ exports.federationMembershipSweep = onSchedule(
   },
 );
 
-// Ranking oficial (PR 2): resultado enviado/recusado → a temporada é refeita;
-// a configuração do ranking da federação mudou → todas as temporadas dela.
-// Só o servidor grava `federation_rankings` (`functions/federationRanking.js`).
+// Ranking oficial: resultado enviado/reenviado/recusado/retirado → os
+// lançamentos daquele resultado no histórico dos atletas são acertados
+// (`federation_points`) e a temporada é somada de novo; a configuração do
+// ranking mudou → só as temporadas ABERTAS são somadas de novo (o ponto já
+// lançado não muda). Temporada fechada (depois de 31/01 do ano seguinte) é
+// imutável. Só o servidor grava `federation_points` e `federation_rankings`
+// (`functions/federationRanking.js`). Nada roda por agenda.
 const federationRanking = require('./federationRanking');
 exports.federationRankingRecompute = onDocumentWritten(
   { document: 'federation_results/{resultId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 120 },
   async (event) => {
     try {
-      await federationRanking.onResultWritten(fedCtx(), antes(event), depois(event));
+      await federationRanking.onResultWritten(fedCtx(), antes(event), depois(event), event.params.resultId);
     } catch (err) {
       logger.error('federationRankingRecompute falhou', err);
     }
@@ -1445,14 +1449,14 @@ exports.federationRankingConfig = onDocumentWritten(
     }
   },
 );
-// Ranking CORRIDO (`ranking_config.period == 'rolling'`): resultado vence com o
-// tempo, sem escrita que dispare o gatilho — então a federação que o usa é refeita todo dia.
+// APOSENTADA (2026-10-22): a varredura diária do ranking "corrido" saiu — o
+// ranking oficial é por lançamento e por ano, sem agenda. Fica como no-op (uma
+// vez por ano) porque o deploy é por nome e não apaga função publicada; remover
+// de vez com `firebase functions:delete federationRankingRolling --region
+// southamerica-east1` e então apagar estas linhas.
 exports.federationRankingRolling = onSchedule(
-  { schedule: 'every day 03:20', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
-  async () => {
-    const r = await federationRanking.rollingSweep(fedCtx());
-    logger.info('federationRankingRolling', r);
-  },
+  { schedule: '0 3 1 1 *', timeZone: 'America/Sao_Paulo', region: REGION },
+  async () => ({ retired: true }),
 );
 
 // Favorito entra/sai → contador do anúncio (o navegador não escreve o contador).

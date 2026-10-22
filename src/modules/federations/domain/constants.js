@@ -19,6 +19,7 @@ export const FED_COLLECTIONS = Object.freeze({
   affiliations: 'federation_affiliations',
   results: 'federation_results',
   rankings: 'federation_rankings',
+  points: 'federation_points',
   transfers: 'federation_transfers',
   documents: 'federation_documents_submitted',
   imports: 'federation_imports',
@@ -58,6 +59,8 @@ export const fedOrgDocId = (fedId, kind, orgId) => `${fedId}_${kind}_${orgId}`;
 export const fedResultDocId = (fedId, tournamentId, modalityId) => `${fedId}_${tournamentId}_${modalityId}`;
 /** Id determinístico do ranking da temporada: `{fedId}_{ano}`. */
 export const fedRankingDocId = (fedId, season) => `${fedId}_${season}`;
+/** Id determinístico do lançamento de pontos: `{resultId}_{uid}` (um por atleta por categoria de torneio). */
+export const fedPointsDocId = (resultId, uid) => `${resultId}_${uid}`;
 
 /** Id determinístico das relações únicas (equipe e filiação): `{fedId}_{uid}`. */
 export const fedUserDocId = (fedId, uid) => `${fedId}_${uid}`;
@@ -431,6 +434,24 @@ export const RESULT_STATUS_LABELS = Object.freeze({
   rejected: tk('Recusado pela federação'),
 });
 
+/** Lançamento de pontos no histórico do atleta (`federation_points`) — valor gravado. */
+export const POINTS_STATUS = Object.freeze({ AWARDED: 'awarded', CANCELLED: 'cancelled' });
+
+/** Por que um lançamento foi cancelado (valor gravado — nunca renomeie). */
+export const POINTS_CANCEL_REASON = Object.freeze({
+  RESULT_REJECTED: 'result_rejected',
+  RESULT_DELETED: 'result_deleted',
+  NOT_IN_RESULT: 'not_in_result',
+  ACCOUNT_DELETED: 'account_deleted',
+});
+
+export const POINTS_CANCEL_REASON_LABELS = Object.freeze({
+  result_rejected: tk('Resultado recusado pela federação'),
+  result_deleted: tk('Resultado retirado do ranking'),
+  not_in_result: tk('Saiu do resultado reenviado'),
+  account_deleted: tk('Conta excluída'),
+});
+
 /**
  * Como o ranking oficial pontua, por padrão. A federação troca tudo em
  * Central → Competições → Ranking (`federations.ranking_config`); a cópia do
@@ -447,17 +468,7 @@ export const DEFAULT_RANKING_CONFIG = Object.freeze({
   tier_multipliers: Object.freeze({ regional: 1, state: 1.5, major: 2 }),
   /** Só o federado em dia na data do torneio pontua (D12). `false` = todo mundo pontua. */
   members_only: true,
-  /** `season` = temporada (o ano do torneio); `rolling` = os resultados dos últimos `validity_months` meses. */
-  period: 'season',
-  /** No ranking corrido, por quantos meses (1–36) o resultado vale a partir da data do torneio. */
-  validity_months: 12,
 });
-
-/** Os dois jeitos de contar o ranking oficial. Gravado em `ranking_config.period`: nunca renomeie. */
-export const RANKING_PERIOD = Object.freeze({ SEASON: 'season', ROLLING: 'rolling' });
-/** O ranking corrido mora em `federation_rankings/{fed}_rolling` (o servidor refaz todo dia). */
-export const ROLLING_RANKING_KEY = 'rolling';
-export const RANKING_VALIDITY_MAX = 36;
 
 /* ------------------------------------------------- PR 3: dados privados -- */
 

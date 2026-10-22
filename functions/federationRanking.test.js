@@ -1,8 +1,9 @@
 /**
  * Ranking oficial da federação no SERVIDOR, contra o Firestore falso: o
- * resultado enviado recalcula a temporada; só o federado em dia na data
- * pontua; recusar um resultado tira os pontos; mudar a configuração da
- * federação refaz a conta.
+ * resultado enviado LANÇA os pontos de cada atleta no histórico
+ * (`federation_points`) e soma o ano; recusar/retirar CANCELA o lançamento
+ * (com o motivo, sem apagar); o ponto lançado não muda quando a tabela muda;
+ * a temporada fechada não se mexe.
  */
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
@@ -12,15 +13,16 @@ const fr = require('./federationRanking.js');
 const { createFakeDb } = require('../tests/fakes/fakeFirestore.cjs');
 
 const NOW = Date.UTC(2026, 9, 18, 15, 0, 0);
-const ctx = (db) => ({ db, now: NOW, logger: { info() {} } });
+const ctx = (db, now = NOW) => ({ db, now, logger: { info() {} } });
+const RID = 'fpp_t1_m1';
 const resultado = (extra = {}) => ({
-  federation_id: 'fpp', season: 2026, status: 'sent', tournament_id: 't1', tournament_name: 'Aberto SP', modality_id: 'm1', modality_name: 'Duplas masc.',
+  federation_id: 'fpp', federation_acronym: 'FPP', season: 2026, status: 'sent', tournament_id: 't1', tournament_name: 'Aberto SP', modality_id: 'm1', modality_name: 'Duplas masc.',
   gender_category: 'male', age_category: 'open', format: 'doubles', tier: 'state', date: '2026-08-10',
   rows: [
     { uid: 'ana', name: 'Ana', position: 1, played: 4, won: 4 },
     { uid: 'bia', name: 'Bia', position: 2, played: 4, won: 3 },
     { uid: 'caio', name: 'Caio', position: 9, played: 2, won: 0 },
-    { uid: 'semconta', name: 'Visitante', position: 3, played: 3, won: 2 },
+    { uid: null, name: 'Visitante', position: 3, played: 3, won: 2 },
   ],
   ...extra,
 });
@@ -31,104 +33,126 @@ function cenario() {
     'federation_members/fpp_ana': { federation_id: 'fpp', user_id: 'ana', tier: 'federated', status: 'active', valid_from: '2026-01-01', valid_until: '2026-12-31' },
     'federation_members/fpp_bia': { federation_id: 'fpp', user_id: 'bia', tier: 'federated', status: 'expired', valid_from: '2025-09-01', valid_until: '2026-08-31' },
     'federation_members/fpp_caio': { federation_id: 'fpp', user_id: 'caio', tier: 'registered', status: 'active', valid_from: '2026-01-01', valid_until: '2026-12-31' },
-    'federation_results/fpp_t1_m1': resultado(),
+    [`federation_results/${RID}`]: resultado(),
   });
 }
 const doc = (db, path) => db.store.docs.get(path);
+const enviar = async (db, id, depois, { antes = null, now = NOW } = {}) => {
+  if (depois) db.store.docs.set(`federation_results/${id}`, depois); else db.store.docs.delete(`federation_results/${id}`);
+  return fr.onResultWritten(ctx(db, now), antes, depois, id);
+};
 
-describe('ranking oficial no servidor', () => {
-  it('a escrita do resultado recalcula a temporada e grava só o servidor', async () => {
+describe('ranking oficial no servidor: lançamento por torneio', () => {
+  it('o resultado enviado lança os pontos no histórico de quem pontua e soma o ano', async () => {
     const db = cenario();
-    await fr.onResultWritten(ctx(db), null, doc(db, 'federation_results/fpp_t1_m1'));
+    await fr.onResultWritten(ctx(db), null, doc(db, `federation_results/${RID}`), RID);
+    // Ana (1º, peso estadual 1,5) = 150; Bia estava em dia em agosto = 105; Caio é só cadastrado; o visitante não tem conta.
+    const ana = doc(db, `federation_points/${RID}_ana`);
+    expect(ana).toMatchObject({ federation_id: 'fpp', season: 2026, result_id: RID, tournament_id: 't1', tournament_name: 'Aberto SP', date: '2026-08-10', category: 'male_open_doubles', uid: 'ana', position: 1, base_points: 100, multiplier: 1.5, points: 150, status: 'awarded', awarded_at_ms: NOW });
+    expect(doc(db, `federation_points/${RID}_bia`).points).toBe(105);
+    expect(doc(db, `federation_points/${RID}_caio`)).toBeUndefined();
     const r = doc(db, 'federation_rankings/fpp_2026');
-    expect(r).toBeTruthy();
     expect(r.season).toBe(2026);
     expect(r.results_count).toBe(1);
-    expect(r.categories).toHaveLength(1);
-    expect(r.categories[0].key).toBe('male_open_doubles');
-    // Ana (1º, peso estadual 1,5) = 150; Bia estava em dia em agosto = 105; Caio é só cadastrado; o visitante não tem conta na federação.
+    expect(r.entries_count).toBe(2);
     expect(r.categories[0].rows.map((l) => [l.uid, l.points, l.position])).toEqual([['ana', 150, 1], ['bia', 105, 2]]);
-    expect(r.general.map((l) => l.uid)).toEqual(['ana', 'bia']);
+    expect(r.uids).toEqual(['ana', 'bia']);
+    expect(r.last_day).toBe('2027-01-31');
+    expect(r.closes_at_ms).toBe(Date.UTC(2027, 1, 1, 3));
     expect(r.updated_at_ms).toBe(NOW);
   });
 
-  it('recusar o resultado tira os pontos; a temporada antiga também é refeita quando o documento muda de ano', async () => {
+  it('recusar CANCELA o lançamento com o motivo (não apaga); readmitir lança de novo', async () => {
     const db = cenario();
-    await fr.onResultWritten(ctx(db), null, doc(db, 'federation_results/fpp_t1_m1'));
-    const antes = doc(db, 'federation_results/fpp_t1_m1');
-    const depois = { ...antes, status: 'rejected' };
-    db.store.docs.set('federation_results/fpp_t1_m1', depois);
-    await fr.onResultWritten(ctx(db), antes, depois);
+    const original = doc(db, `federation_results/${RID}`);
+    await fr.onResultWritten(ctx(db), null, original, RID);
+    const recusado = { ...original, status: 'rejected' };
+    await enviar(db, RID, recusado, { antes: original });
+    expect(doc(db, `federation_points/${RID}_ana`)).toMatchObject({ status: 'cancelled', cancel_reason: 'result_rejected', points: 150, cancelled_at_ms: NOW });
     expect(doc(db, 'federation_rankings/fpp_2026').general).toEqual([]);
-    expect(doc(db, 'federation_rankings/fpp_2026').results_count).toBe(0);
+    await enviar(db, RID, original, { antes: recusado, now: NOW + 1000 });
+    expect(doc(db, `federation_points/${RID}_ana`)).toMatchObject({ status: 'awarded', cancel_reason: null, awarded_at_ms: NOW + 1000 });
+    expect(doc(db, 'federation_rankings/fpp_2026').general.map((l) => l.uid)).toEqual(['ana', 'bia']);
   });
 
-  it('os melhores N da configuração somam; mudar a configuração refaz as temporadas', async () => {
+  it('retirar o resultado cancela; reenviar com outra colocação refaz o lançamento guardando o anterior', async () => {
     const db = cenario();
-    db.store.docs.set('federation_results/fpp_t2_m1', resultado({ tournament_id: 't2', tournament_name: 'Etapa 2', tier: 'regional', date: '2026-09-01', rows: [{ uid: 'ana', name: 'Ana', position: 2, played: 3, won: 2 }] }));
-    db.store.docs.set('federation_results/fpp_t3_m1', resultado({ tournament_id: 't3', tournament_name: 'Etapa 3', tier: 'regional', date: '2026-09-20', rows: [{ uid: 'ana', name: 'Ana', position: 4, played: 3, won: 1 }] }));
-    await fr.recomputeSeason(ctx(db), 'fpp', 2026);
+    const original = doc(db, `federation_results/${RID}`);
+    await fr.onResultWritten(ctx(db), null, original, RID);
+    const revisto = resultado({ rows: [{ uid: 'ana', name: 'Ana', position: 2, played: 4 }, { uid: 'caio', name: 'Caio', position: 1, played: 4 }] });
+    await enviar(db, RID, revisto, { antes: original, now: NOW + 5 });
+    expect(doc(db, `federation_points/${RID}_ana`)).toMatchObject({ status: 'awarded', position: 2, points: 105, previous: { position: 1, points: 150 }, revised_at_ms: NOW + 5, awarded_at_ms: NOW });
+    expect(doc(db, `federation_points/${RID}_bia`)).toMatchObject({ status: 'cancelled', cancel_reason: 'not_in_result' });
+    await enviar(db, RID, null, { antes: revisto, now: NOW + 9 });
+    expect(doc(db, `federation_points/${RID}_ana`)).toMatchObject({ status: 'cancelled', cancel_reason: 'result_deleted' });
+    expect(doc(db, 'federation_rankings/fpp_2026').general).toEqual([]);
+  });
+
+  it('o ponto lançado NÃO muda quando a tabela ou a filiação mudam; o "melhores N" vale só no ano aberto', async () => {
+    const db = cenario();
+    await fr.onResultWritten(ctx(db), null, doc(db, `federation_results/${RID}`), RID);
+    await enviar(db, 'fpp_t2_m1', resultado({ tournament_id: 't2', tournament_name: 'Etapa 2', tier: 'regional', date: '2026-09-01', rows: [{ uid: 'ana', name: 'Ana', position: 2, played: 3 }] }));
+    await enviar(db, 'fpp_t3_m1', resultado({ tournament_id: 't3', tournament_name: 'Etapa 3', tier: 'regional', date: '2026-09-20', rows: [{ uid: 'ana', name: 'Ana', position: 4, played: 3 }] }));
     let ana = doc(db, 'federation_rankings/fpp_2026').general.find((l) => l.uid === 'ana');
-    expect(ana.points).toBe(150 + 70); // best_n = 2: 150 + 70, o 40 fica de fora
+    expect(ana.points).toBe(150 + 70); // best_n = 2: o 40 fica de fora
     expect(ana.events).toBe(3);
+    expect(ana.results.map((r) => r.counts)).toEqual([true, true, false]);
+    // A federação troca a tabela (1º = 500) e o best_n: o lançado fica; o ano aberto soma de novo com o best_n novo.
     const fedAntes = doc(db, 'federations/fpp');
-    const fedDepois = { ...fedAntes, ranking_config: { best_n: 0 } };
+    const fedDepois = { ...fedAntes, ranking_config: { best_n: 0, points_by_place: { 1: 500 } } };
     db.store.docs.set('federations/fpp', fedDepois);
     await fr.onFederationWritten(ctx(db), 'fpp', fedAntes, fedDepois);
     ana = doc(db, 'federation_rankings/fpp_2026').general.find((l) => l.uid === 'ana');
     expect(ana.points).toBe(150 + 70 + 40);
-    // Sem mudança na configuração, nada roda (nem lê).
+    expect(doc(db, `federation_points/${RID}_ana`).points).toBe(150);
+    // Bia perde a filiação depois; um reenvio com a MESMA colocação não tira o ponto dela.
+    db.store.docs.set('federation_members/fpp_bia', { federation_id: 'fpp', user_id: 'bia', tier: 'federated', status: 'cancelled' });
+    const atual = doc(db, `federation_results/${RID}`);
+    await enviar(db, RID, { ...atual }, { antes: atual });
+    expect(doc(db, `federation_points/${RID}_bia`)).toMatchObject({ status: 'awarded', points: 105 });
+    // Sem mudança na configuração, nada roda.
     await fr.onFederationWritten(ctx(db), 'fpp', fedDepois, { ...fedDepois, name: 'Outro' });
   });
 
-  it('members_only desligado pontua todo mundo, até quem não é filiado', async () => {
+  it('⭐ temporada FECHADA é imutável: o gatilho não lança, não cancela e não regrava', async () => {
+    const db = cenario();
+    await fr.onResultWritten(ctx(db), null, doc(db, `federation_results/${RID}`), RID);
+    const congelado = JSON.stringify(doc(db, 'federation_rankings/fpp_2026'));
+    const depoisDoFim = Date.UTC(2027, 1, 1, 3, 0, 0); // 1º/fev/2027, 00:00 em Brasília
+    const original = doc(db, `federation_results/${RID}`);
+    await enviar(db, RID, { ...original, status: 'rejected' }, { antes: original, now: depoisDoFim });
+    expect(doc(db, `federation_points/${RID}_ana`).status).toBe('awarded');
+    await enviar(db, 'fpp_t9_m1', resultado({ tournament_id: 't9' }), { now: depoisDoFim });
+    expect(doc(db, 'federation_points/fpp_t9_m1_ana')).toBeUndefined();
+    const fedAntes = doc(db, 'federations/fpp');
+    await fr.onFederationWritten(ctx(db, depoisDoFim), 'fpp', fedAntes, { ...fedAntes, ranking_config: { best_n: 1 } });
+    expect(await fr.recomputeSeason(ctx(db, depoisDoFim), 'fpp', 2026)).toBeNull();
+    expect(JSON.stringify(doc(db, 'federation_rankings/fpp_2026'))).toBe(congelado);
+    // Até o último minuto de janeiro o ano ainda aceita (resultado de dezembro chegando).
+    expect(fr.seasonClosed(2026, depoisDoFim - 1)).toBe(false);
+    expect(fr.openSeasons(Date.UTC(2027, 0, 15))).toEqual([2026, 2027]);
+    expect(fr.openSeasons(NOW)).toEqual([2026]);
+  });
+
+  it('members_only desligado lança para todo mundo com conta; ano sem lançamento não cria ranking vazio', async () => {
     const db = cenario();
     db.store.docs.set('federations/fpp', { name: 'FPP', status: 'approved', ranking_config: { members_only: false } });
-    await fr.recomputeSeason(ctx(db), 'fpp', 2026);
-    expect(doc(db, 'federation_rankings/fpp_2026').general.map((l) => l.uid)).toEqual(['ana', 'bia', 'semconta', 'caio']);
+    await fr.onResultWritten(ctx(db), null, doc(db, `federation_results/${RID}`), RID);
+    expect(doc(db, 'federation_rankings/fpp_2026').general.map((l) => l.uid)).toEqual(['ana', 'bia', 'caio']);
+    await fr.recomputeSeason(ctx(db, Date.UTC(2027, 0, 10)), 'fpp', 2027);
+    expect(doc(db, 'federation_rankings/fpp_2027')).toBeUndefined();
   });
-});
 
-describe('ranking oficial corrido (resultado com validade)', () => {
-  // Hoje (NOW) é 18/10/2026. Com 12 meses: 17/10/2025 já venceu; 19/10/2025 ainda conta.
-  function corrido(extraCfg = {}) {
+  it('resultado enviado antes do livro de pontos é lançado uma vez na próxima soma do ano aberto', async () => {
     const db = cenario();
-    db.store.docs.set('federations/fpp', { name: 'FPP', status: 'approved', ranking_config: { members_only: false, best_n: 0, period: 'rolling', validity_months: 12, ...extraCfg } });
-    db.store.docs.set('federation_results/fpp_velho', resultado({ season: 2025, tournament_id: 'tv', tournament_name: 'Velho', date: '2025-10-17', rows: [{ uid: 'ana', name: 'Ana', position: 1, played: 3 }] }));
-    db.store.docs.set('federation_results/fpp_vale', resultado({ season: 2025, tournament_id: 'tq', tournament_name: 'Ainda vale', date: '2025-10-19', rows: [{ uid: 'bia', name: 'Bia', position: 1, played: 3 }] }));
-    return db;
-  }
-
-  it('soma só o que está dentro da validade, atravessando a virada do ano, com a data em que cada resultado vence', async () => {
-    const db = corrido();
-    await fr.onResultWritten(ctx(db), null, doc(db, 'federation_results/fpp_t1_m1'));
-    const r = doc(db, 'federation_rankings/fpp_rolling');
-    expect(r).toMatchObject({ federation_id: 'fpp', season: null, period: 'rolling', as_of: '2026-10-18', validity_months: 12 });
-    expect(r.general.map((l) => [l.uid, l.points])).toEqual([['bia', 255], ['ana', 150], ['semconta', 75], ['caio', 15]]);
-    const bia = r.general.find((l) => l.uid === 'bia');
-    expect(bia.results.map((x) => x.expires_on).sort()).toEqual(['2026-10-19', '2027-08-10']);
-    // A temporada de 2026 segue igual, sem o corrido.
-    expect(doc(db, 'federation_rankings/fpp_2026').period).toBeUndefined();
-  });
-
-  it('a varredura diária tira o que venceu; voltar para temporada apaga o corrido', async () => {
-    const db = corrido();
-    await fr.rollingSweep(ctx(db));
-    expect(doc(db, 'federation_rankings/fpp_rolling').general.find((l) => l.uid === 'bia').points).toBe(255);
-    await fr.rollingSweep({ ...ctx(db), now: Date.UTC(2026, 9, 20, 15) });
-    expect(doc(db, 'federation_rankings/fpp_rolling').general.find((l) => l.uid === 'bia').points).toBe(105);
-    const antes = doc(db, 'federations/fpp');
-    const depois = { ...antes, ranking_config: { ...antes.ranking_config, period: 'season' } };
-    db.store.docs.set('federations/fpp', depois);
-    await fr.onFederationWritten(ctx(db), 'fpp', antes, depois);
-    expect(doc(db, 'federation_rankings/fpp_rolling')).toBeUndefined();
-  });
-
-  it('a validade é configurável e o fim do mês não estoura', () => {
-    expect(fr.resultExpiry('2026-01-31', 1)).toBe('2026-02-28');
-    expect(fr.resultExpiry('2024-01-31', 1)).toBe('2024-02-29');
-    expect(fr.resultExpiry('2026-08-10', 18)).toBe('2028-02-10');
-    expect(fr.normalizeRankingConfig({ period: 'rolling', validity_months: 99 })).toMatchObject({ period: 'rolling', validity_months: 36 });
-    expect(fr.normalizeRankingConfig({ period: 'qualquer' })).toMatchObject({ period: 'season', validity_months: 12 });
+    db.store.docs.set('federation_results/fpp_t0_m0', resultado({ tournament_id: 't0', modality_id: 'm0', tournament_name: 'Antigo', rows: [{ uid: 'ana', name: 'Ana', position: 2, played: 3, won: 2 }] }));
+    db.store.docs.set('federation_results/fpp_t9_m9', resultado({ tournament_id: 't9', modality_id: 'm9', status: 'rejected', rows: [{ uid: 'ana', name: 'Ana', position: 1, played: 3, won: 3 }] }));
+    await fr.onResultWritten(ctx(db), null, doc(db, `federation_results/${RID}`), RID);
+    expect(doc(db, 'federation_points/fpp_t0_m0_ana')).toMatchObject({ points: 105, status: 'awarded', tournament_name: 'Antigo' });
+    expect(doc(db, 'federation_points/fpp_t9_m9_ana')).toBeUndefined();
+    expect(doc(db, 'federation_rankings/fpp_2026').results_count).toBe(2);
+    const antes = doc(db, 'federation_points/fpp_t0_m0_ana');
+    await fr.recomputeSeason(ctx(db, NOW + 1000), 'fpp', 2026);
+    expect(doc(db, 'federation_points/fpp_t0_m0_ana')).toEqual(antes);
   });
 });

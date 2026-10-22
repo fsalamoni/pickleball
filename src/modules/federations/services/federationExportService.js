@@ -6,7 +6,7 @@
 import {
   listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyFederationInvites, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
   listMyMembersPrivate, listMyAssignments, listMyRefereeRosters, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
-  listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters,
+  listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters, listMyFederationPoints,
 } from './federationService.js';
 
 /** @returns {Promise<{ federations: object, incomplete: string[] }>} */
@@ -18,6 +18,7 @@ export async function collectFederationExport(uid) {
     ['federations_created', 'Federações que você pediu para abrir', () => listFederationsCreatedBy(uid)],
     ['affiliation_requests', 'Pedidos de filiação de clube/arena que você fez', () => listAffiliationsRequestedBy(uid)],
     ['official_results', 'Resultados enviados ao ranking oficial em que você aparece', () => listResultsWith(uid)],
+    ['official_points', 'Pontos lançados no ranking oficial, torneio a torneio', () => listMyFederationPoints(uid)],
     ['dependents', 'Dependentes que você filiou', () => listMyDependents(uid)],
     ['members_private', 'Dados pessoais guardados nas filiações (CPF, nascimento, responsável)', () => listMyMembersPrivate(uid)],
     ['documents', 'Documentos que você enviou a federações (registro; o arquivo fica na sua pasta)', () => listMyDocuments(uid)],
