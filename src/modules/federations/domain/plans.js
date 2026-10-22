@@ -4,7 +4,8 @@
  */
 import { t } from '@/core/i18n';
 import { DOC_KIND, PLAN_BILLING, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_VALIDITY } from './constants.js';
-import { normalizeOtherDocs } from './privateData.js';
+import { normalizeOtherDocs, requiredDocs } from './privateData.js';
+import { normalizeDocValidity } from './regularity.js';
 import { MEMBER_TYPE_ID_RE, isOrgEntity, memberTypeCatalog, memberTypeOf, planTypeFields } from './memberTypes.js';
 
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
@@ -73,6 +74,8 @@ export function validatePlanInput(input = {}, { catalog = memberTypeCatalog(), c
       // PR 3: documentos que a pessoa precisa enviar (a secretaria confere antes de aprovar).
       requires_docs,
       other_docs,
+      // Bloco 1: quantos meses vale cada documento exigido (sem entrada = não vence).
+      doc_validity: normalizeDocValidity(input.doc_validity, requiredDocs({ requires_docs, other_docs }).map((d) => d.key)),
     },
   };
 }

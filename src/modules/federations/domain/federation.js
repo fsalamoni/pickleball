@@ -8,6 +8,7 @@ import { isValidCnpj, maskCnpj } from '@/modules/marketplace/domain/seller.js';
 import { normalizePixPayment } from '@/modules/arenas/domain/pix_payment.js';
 import { normalizeHex, BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel.js';
 import { FED_MODULE, FED_MODULE_META, FEDERATION_LEVEL, FEDERATION_STATUS } from './constants.js';
+import { normalizeExtraConsents, normalizeLevels } from './regularity.js';
 
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
 
@@ -179,5 +180,13 @@ export function normalizeFederationRules(raw = {}) {
     member_declarations: raw?.member_declarations !== false,
     convocation_min_days: int(raw?.convocation_min_days, 8, 0, 365),
     comments: raw?.comments !== false,
+    // Regularidade (Bloco 1): documento exigido VENCIDO trava a inscrição em
+    // torneio chancelado "só para filiados" (padrão não — só avisa); a escala do
+    // nível oficial e se ele aparece na verificação pública; os consentimentos
+    // próprios da federação. Ver `domain/regularity.js`.
+    block_expired_docs: raw?.block_expired_docs === true,
+    levels: normalizeLevels(typeof raw?.levels === 'string' ? raw.levels.split(',') : raw?.levels),
+    level_public: raw?.level_public === true,
+    extra_consents: normalizeExtraConsents(raw?.extra_consents),
   };
 }

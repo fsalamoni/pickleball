@@ -1407,10 +1407,13 @@ service cloud.firestore {
           && nd().federation_sanction.requested_by == me());
     }
     // Filiação ativa e sem suspensão DISCIPLINAR em vigor (PR 3) na federação.
+    // Ativo, sem suspensão em vigor e — se a federação trava (`rules.block_expired_docs`) —
+    // sem documento exigido vencido (`docs_block`, só o servidor grava).
     function fedMemberOk(fid, uid) {
-      return exists(/databases/$(database)/documents/federation_members/$(fid + '_' + uid))
-        && get(/databases/$(database)/documents/federation_members/$(fid + '_' + uid)).data.status == 'active'
-        && get(/databases/$(database)/documents/federation_members/$(fid + '_' + uid)).data.get('discipline_until_ms', 0) < request.time.toMillis();
+      let p = /databases/$(database)/documents/federation_members/$(fid + '_' + uid);
+      return exists(p) && get(p).data.status == 'active'
+        && get(p).data.get('discipline_until_ms', 0) < request.time.toMillis()
+        && get(p).data.get('docs_block', false) != true;
     }
     // O torneio exige filiação? Então a DUPLA inteira está em dia na federação dele:
     // quem se inscreve e o parceiro com conta. Parceiro sem conta não se prova
@@ -4865,10 +4868,11 @@ service cloud.firestore {
         && nd().federation_id == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.federation_id
         && nd().get('org_kind', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_kind', '')
         && nd().get('org_id', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_id', '');
-      // A secretaria aceita ou recusa (com motivo); nada mais muda.
+      // A secretaria aceita ou recusa (com motivo) e diz até quando vale; nada mais muda.
       allow update: if fedOn() && (fedHas(od().federation_id, 'members') || fedHas(od().federation_id, 'admin'))
-        && chg().hasOnly(['status', 'review', 'updated_at'])
-        && nd().status in ['approved', 'rejected'];
+        && chg().hasOnly(['status', 'review', 'valid_until', 'updated_at'])
+        && nd().status in ['approved', 'rejected']
+        && nd().get('valid_until', '') is string;
       // Quem enviou apaga enquanto está em análise (e troca o arquivo); o admin sempre.
       allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin'))
         || (fedOn() && isOwner(od().user_id) && od().status == 'pending');
@@ -4959,6 +4963,16 @@ service cloud.firestore {
     // Sanção disciplinar (PR 3, módulo `discipline`): SÓ o servidor grava
     // (`federationDiscipline`), inclusive o recurso. ⭐ Só a pessoa, a
     // disciplina/admin da federação e o admin da plataforma leem (D11).
+    // Ocorrências (lesão, acidente) do módulo de seguro: SÓ o servidor grava
+    // (`federationRegularity`). Leem o atleta (ou o responsável), quem registrou
+    // e a equipe que atende (filiados, competições, admin).
+    match /federation_incidents/{incId} {
+      allow read: if fedMemberOwner(od()) || isOwner(od().reported_by)
+        || fedHas(od().federation_id, 'members') || fedHas(od().federation_id, 'competitions')
+        || fedHas(od().federation_id, 'admin');
+      allow write: if false;
+    }
+
     match /federation_sanctions/{sancId} {
       allow read: if fedMemberOwner(od())
         || fedHas(od().federation_id, 'discipline')

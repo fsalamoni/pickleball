@@ -12,6 +12,7 @@
  */
 import { t } from '@/core/i18n';
 import { DOC_KIND, DOC_KIND_LABELS, DOC_MAX_BYTES, DOC_STATUS, GUARDIAN_ONLY_AGE, MINOR_AGE } from './constants.js';
+import { daysBetween } from './membership.js';
 
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 export const onlyDigits = (v) => String(v ?? '').replace(/\D/g, '');
@@ -160,21 +161,33 @@ export const docLabel = (d) => (d?.label ? String(d.label) : t(DOC_KIND_LABELS[d
 export const submittedDocKey = (d) => d?.doc_key || d?.kind || DOC_KIND.OTHER;
 
 /**
- * Cada documento exigido e a situação dele: o mais recente enviado daquele
- * documento decide. `missing` = falta enviar (ou o último foi recusado).
- * @returns {Array<{ key: string, kind: string, label: string|null, status: 'missing'|'pending'|'approved'|'rejected', doc: object|null }>}
+ * Cada documento exigido e a situação dele. Um documento ACEITO e dentro da
+ * validade (`valid_until`, quando `hoje` é dado) decide — o reenvio em análise
+ * não deixa a pessoa irregular; sem válido, um aceito VENCIDO dá `expired`;
+ * sem nenhum aceito, o mais recente enviado decide. `newer` é o envio mais
+ * novo que o documento que decide (a renovação em análise ou recusada).
+ * Cópia no servidor (`federationRegularityPolicy.js`, paridade).
+ * @returns {Array<{ key: string, kind: string, label: string|null, status: 'missing'|'pending'|'approved'|'rejected'|'expired', doc: object|null, newer?: object|null, valid_until?: string|null, days_left?: number|null, expiring?: boolean }>}
  */
-export function requiredDocsStatus(plan, docs = []) {
+export function requiredDocsStatus(plan, docs = [], hoje = null) {
   return requiredDocs(plan).map((req) => {
     const dos = docs.filter((d) => submittedDocKey(d) === req.key).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
     const doc = dos[0] || null;
     if (!doc) return { ...req, status: 'missing', doc: null };
-    return { ...req, status: doc.status === DOC_STATUS.APPROVED ? 'approved' : doc.status === DOC_STATUS.REJECTED ? 'rejected' : 'pending', doc };
+    const aceitos = dos.filter((d) => d.status === DOC_STATUS.APPROVED);
+    const venceu = (d) => Boolean(hoje && d.valid_until && d.valid_until < hoje);
+    const valido = aceitos.find((d) => !venceu(d));
+    if (valido) {
+      const dias = hoje && valido.valid_until ? daysBetween(hoje, valido.valid_until) : null;
+      return { ...req, status: 'approved', doc: valido, newer: doc !== valido ? doc : null, valid_until: valido.valid_until || null, days_left: dias, expiring: dias != null && dias <= 30 };
+    }
+    if (aceitos.length) return { ...req, status: 'expired', doc: aceitos[0], newer: doc !== aceitos[0] ? doc : null, valid_until: aceitos[0].valid_until, days_left: daysBetween(hoje, aceitos[0].valid_until), expiring: false };
+    return { ...req, status: doc.status === DOC_STATUS.REJECTED ? 'rejected' : 'pending', doc };
   });
 }
 
-/** Tudo o que o plano exige está aceito? (plano sem exigência: sim) */
-export const docsComplete = (plan, docs) => requiredDocsStatus(plan, docs).every((d) => d.status === 'approved');
+/** Tudo o que o plano exige está aceito (e válido em `hoje`, quando dado)? Plano sem exigência: sim. */
+export const docsComplete = (plan, docs, hoje = null) => requiredDocsStatus(plan, docs, hoje).every((d) => d.status === 'approved');
 
 /** Caminho do arquivo no Storage: `federacao/{uid}/{id}.{ext}` — o uid de quem envia é a pasta (exclusão de conta apaga). */
 export function documentStoragePath(uid, id, contentType) {

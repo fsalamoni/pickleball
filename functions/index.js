@@ -1412,11 +1412,26 @@ exports.federationRefereesPublic = onCall({ region: REGION, timeoutSeconds: 30 }
   }
 });
 
+// Regularidade do filiado (nível oficial, consentimentos, ocorrências) e a
+// validade dos documentos: só o servidor grava — `functions/federationRegularity.js`.
+const federationRegularity = require('./federationRegularity');
+exports.federationRegularity = federationCallable('federationRegularity', federationRegularity.regularity);
+exports.federationDocumentsSync = onDocumentWritten(
+  { document: 'federation_documents_submitted/{docId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 60 },
+  async (event) => {
+    try {
+      await federationRegularity.onDocumentWritten(fedCtx(), antes(event), depois(event));
+    } catch (err) {
+      logger.error('federationDocumentsSync falhou', err);
+    }
+  },
+);
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

@@ -15,7 +15,7 @@ import { useFederationPlans, useFederationPlatformSettings, useFederationTournam
 import { docLabel, requiredDocsStatus } from '@/modules/federations/domain/privateData';
 import { folderBlocks, memberBond, memberTimeline, orgPeopleWithMembership, pointsBySeason } from '@/modules/federations/domain/registry';
 import { memberTypeName, memberTypeOf, isOrgMember } from '@/modules/federations/domain/memberTypes';
-import { membershipState } from '@/modules/federations/domain/membership';
+import { isoDate, membershipState } from '@/modules/federations/domain/membership';
 import { sortChargesForStaff, formatBrlCents } from '@/modules/federations/domain/charges';
 import { transferSummary } from '@/modules/federations/domain/transfers';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -33,6 +33,7 @@ import { AssignmentBadge, funcao, periodo } from '../referees/refUi';
 import { ChargeRow } from './FedFinancePanel';
 import { DocRow } from './FedSecretariatPanel';
 import { DadosReservados, MemberActions } from './memberShared';
+import { DocsStateBadge, StaffRegularity } from '../FedRegularity';
 
 const BLOCO_META = {
   resumo: { label: tk('Resumo'), icon: Users },
@@ -73,7 +74,7 @@ function Linha({ rotulo, children }) {
 
 /* ------------------------------------------------------------- blocos -- */
 
-function Resumo({ member: mb, type, fontes, documentos, perms, org }) {
+function Resumo({ member: mb, type, fontes, documentos, perms, org, federation }) {
   const st = membershipState(mb);
   const abertas = fontes.cobrancas.permitido && fontes.cobrancas.data ? fontes.cobrancas.data.filter((c) => [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status)).length : null;
   const docsPendentes = documentos ? documentos.filter((d) => d.status === 'pending').length : null;
@@ -109,8 +110,10 @@ function Resumo({ member: mb, type, fontes, documentos, perms, org }) {
           {org && (mb.org_city || mb.org_state) && <Linha rotulo={t('Cidade:')}>{[mb.org_city, mb.org_state].filter(Boolean).join('/')}</Linha>}
           {mb.suspended_reason && mb.status === MEMBER_STATUS.SUSPENDED && <Linha rotulo={t('Motivo da suspensão:')}>{mb.suspended_reason}</Linha>}
           {mb.note && <Linha rotulo={t('Observação do pedido:')}>“{mb.note}”</Linha>}
+          {mb.docs_state && mb.docs_state.state !== 'none' && <Linha rotulo={t('Documentos:')}><DocsStateBadge member={mb} />{mb.docs_block ? ` · ${t('inscrição em torneio da federação bloqueada até regularizar')}` : ''}</Linha>}
         </dl>
       </section>
+      {!org && federation && <StaffRegularity member={mb} federation={federation} perms={perms} />}
       {podeReservado && (
         <section className="space-y-2">
           <Titulo>{t('Dados reservados')}</Titulo>
@@ -137,12 +140,12 @@ function Cobrancas({ fonte, perms, federation }) {
   );
 }
 
-const EXIGIDO_TOM = { missing: 'amber', pending: 'blue', approved: 'green', rejected: 'red' };
-const EXIGIDO_ROTULO = { missing: tk('Falta enviar'), pending: tk('Em análise'), approved: tk('Aceito'), rejected: tk('Recusado') };
+const EXIGIDO_TOM = { missing: 'amber', pending: 'blue', approved: 'green', rejected: 'red', expired: 'red' };
+const EXIGIDO_ROTULO = { missing: tk('Falta enviar'), pending: tk('Em análise'), approved: tk('Aceito'), rejected: tk('Recusado'), expired: tk('Vencido') };
 
 function Documentos({ documentos, documentsQ, plano, nome, onIrParaAba }) {
-  // O que o plano exige, um por um, com a situação do último envio de cada (falta, em análise, aceito, recusado).
-  const exigidos = plano && documentos ? requiredDocsStatus(plano, documentos) : [];
+  // O que o plano exige, um por um, com a situação do último envio de cada (falta, em análise, aceito, vencido, recusado).
+  const exigidos = plano && documentos ? requiredDocsStatus(plano, documentos, isoDate()) : [];
   return (
     <section className="space-y-3">
       <Titulo acao={onIrParaAba && <V2Button type="button" size="sm" variant="ghost" onClick={() => onIrParaAba('documentos')}>{t('Todos os documentos')}</V2Button>}>{t('Documentos')}</Titulo>
@@ -157,13 +160,16 @@ function Documentos({ documentos, documentsQ, plano, nome, onIrParaAba }) {
                     <ul className="space-y-1.5">{exigidos.map((d) => (
                       <li key={d.key} className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink">
                         <span>{docLabel(d)}</span>
-                        <V2Badge tone={EXIGIDO_TOM[d.status]}>{t(EXIGIDO_ROTULO[d.status])}</V2Badge>
+                        <span className="flex flex-wrap items-center gap-2">
+                          {d.valid_until && <span className="text-xs text-gray-500">{d.status === 'expired' ? t('venceu em {data}', { data: quando(d.valid_until) }) : t('vale até {data}', { data: quando(d.valid_until) })}</span>}
+                          <V2Badge tone={d.expiring ? 'amber' : EXIGIDO_TOM[d.status]}>{d.expiring ? t('Vence em breve') : t(EXIGIDO_ROTULO[d.status])}</V2Badge>
+                        </span>
                       </li>
                     ))}</ul>
                   </div>
                 )}
                 {!documentos.length ? <Vazio>{t('Nenhum documento enviado.')}</Vazio>
-                  : <ul className="space-y-3">{documentos.map((d) => <DocRow key={d.id} docu={d} nome={nome} />)}</ul>}
+                  : <ul className="space-y-3">{documentos.map((d) => <DocRow key={d.id} docu={d} nome={nome} plan={plano} />)}</ul>}
               </>
             )}
     </section>
@@ -408,7 +414,7 @@ export default function FedMemberFolder({ federation, member: mb, members = [], 
       </V2Surface>
       <V2SubTabs ariaLabel={t('Partes da pasta')} tabs={blocos.map((b) => ({ value: b, label: t(BLOCO_META[b].label), icon: BLOCO_META[b].icon }))} activeValue={ativo} onSelect={(x) => setBloco(x.value)} />
       <V2Surface variant="compacto" className="p-4">
-        {ativo === 'resumo' && <Resumo member={mb} type={type} fontes={fontes} documentos={documentos} perms={perms} org={org} />}
+        {ativo === 'resumo' && <Resumo member={mb} type={type} fontes={fontes} documentos={documentos} perms={perms} org={org} federation={federation} />}
         {ativo === 'cobrancas' && <Cobrancas fonte={fontes.cobrancas} perms={perms} federation={federation} />}
         {ativo === 'documentos' && <Documentos documentos={documentos} documentsQ={documentsQ} plano={plano} nome={nome} onIrParaAba={onIrParaAba} />}
         {ativo === 'cursos' && <Cursos fontes={fontes} />}

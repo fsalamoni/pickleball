@@ -1999,7 +1999,38 @@ at_ms, reason }`,
 apaga o dono (pendente), `admin` ou o admin da plataforma. Leem: o dono, a
 equipe `members`/`admin`, o admin. Etapa 2: o documento de clube/arena leva
 `org_kind`/`org_id` (iguais aos da filiação, a regra confere) e todos os
-gestores da entidade o leem.
+gestores da entidade o leem. Regularidade (`docs/50` §30): `valid_until`
+(opcional, `AAAA-MM-DD`, a secretaria grava ao aceitar), `expiry_notified`
+(`{30|7|0: true}`) e `expired_applied` (só o servidor, pela varredura).
+
+### Regularidade do filiado em `federation_members` (campos opcionais, só o servidor — `docs/50` §30)
+`docs_state { state: none|ok|expiring|incomplete|expired, next_expiry,
+expired, expiring, missing, pending, updated_at_ms }`, `docs_block` (bool; com
+`rules.block_expired_docs` barra a inscrição "só filiados" em `fedMemberOk`),
+`official_level { label, reason, set_by, set_by_name, set_at_ms }`,
+`official_level_history[]` (≤ 50, `{ label, previous, reason, by, by_name,
+at_ms, origin: staff|review }`), `level_review { status:
+pending|accepted|rejected, reason, wanted, current, requested_by,
+requested_at_ms, decided_by, decided_at_ms, decided_reason }`, `consents {
+id: { granted, at_ms } }` e `consents_log[]` (≤ 30, `{ id, granted, at_ms, by
+}`). Em `federations`: `rules.block_expired_docs`, `rules.levels[]`,
+`rules.level_public`, `rules.extra_consents[] { id, label }` (≤ 5) e
+`insurance { insurer, policy, phone, valid_from, valid_until, covers:
+active_members|federated_only, how_to }`. Em `federation_plans`:
+`doc_validity { chave: meses }`.
+
+### `federation_incidents/{id}` (NOVO — seguro e ocorrências, `docs/50` §30.4)
+`federation_id`, `member_id`, `user_id`, `guardian_uid`, `athlete_name`,
+`member_number`, `date`, `kind` (`injury|accident|illness|other`, gravado),
+`place`, `event_name`, `tournament_id`, `body_part`, `description`,
+`first_aid`, `hospital`, `insured`, `insurance_snapshot { insurer, policy,
+phone }`, `status` (`open|claim|closed`), `claim_number`, `reported_by`,
+`reported_by_name`, `reported_role` (`athlete|staff`), `history[]` (≤ 50),
+`created_at`, `created_at_ms`, `updated_at_ms`. Só o servidor grava
+(`federationRegularity`). Leem: o atleta, o responsável, quem registrou e a
+equipe `members`/`competitions`/`admin`. Zero índice (consultas de uma
+igualdade). Na exclusão de conta fica sem nome, relato e parte do corpo; entra
+na exportação (`listMyIncidents`).
 
 ### `federation_transfers/{id}` (PR 3, só o servidor — `federationTransfer`)
 `federation_id`, `member_id`, `user_id`, `guardian_uid`, `user_name`, `kind`

@@ -166,6 +166,8 @@ export function publicVerification(member, federation, hoje = isoDate(), { nowMs
     person_type_label: member.person_type_label || '',
     org_kind: member.org_kind || null,
     member_number: member.member_number || '',
+    // O nível oficial só sai quando a federação decidiu publicá-lo (`rules.level_public`).
+    official_level: federation.rules?.level_public === true && member.official_level?.label ? member.official_level.label : '',
     status: st.status,
     valid_until: st.validUntil,
   };

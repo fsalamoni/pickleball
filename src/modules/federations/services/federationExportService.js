@@ -5,7 +5,7 @@
  */
 import {
   listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyFederationInvites, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
-  listMyMembersPrivate, listMyAssignments, listMyRefereeRosters, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
+  listMyMembersPrivate, listMyAssignments, listMyIncidents, listMyRefereeRosters, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
   listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters, listMyFederationPoints,
 } from './federationService.js';
 
@@ -26,6 +26,7 @@ export async function collectFederationExport(uid) {
     ['course_enrollments', 'Inscrições em cursos de federação', () => listMyEnrollments(uid)],
     ['credentials', 'Credenciais emitidas por federações', () => listMyCredentials(uid)],
     ['sanctions', 'Sanções disciplinares (suas e dos dependentes)', () => listMySanctions(uid)],
+    ['incidents', 'Ocorrências registradas no seguro esportivo (suas e dos dependentes)', () => listMyIncidents(uid)],
     ['reports', 'Manifestações identificadas na ouvidoria', () => listMyReports(uid)],
     ['acervo_follows', 'Acervos de federação que você segue', () => listMyAcervoFollows(uid)],
     ['invites', 'Convites para filiar que você recebeu', () => listMyFederationInvites(uid)],

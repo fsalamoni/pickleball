@@ -23,6 +23,8 @@ vi.mock('@/modules/federations/hooks/useMemberFolder', () => ({ useMemberFolder:
 vi.mock('@/modules/federations/services/federationService', () => ({}));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'sec' } }) }));
 vi.mock('./FedInvites', () => ({ ConvidarPessoas: () => null, ConvitesEnviados: () => null }));
+vi.mock('@/modules/rating/hooks/useMyUnifiedLevel', () => ({ useUnifiedLevels: () => ({ levels: {} }) }));
+vi.mock('@/modules/federations/services/regularityService', () => ({ regularityAction: vi.fn() }));
 
 const { default: FedMembersPanel } = await import('./FedMembersPanel');
 

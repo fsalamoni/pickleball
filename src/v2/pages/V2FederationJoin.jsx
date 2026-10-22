@@ -35,6 +35,7 @@ import { isFreePlan, planPeriodLabel, planPrice, plansFor, planBenefitLines } fr
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { ageGroup, ageOn, docLabel, federationAsksCpf, requiredDocs, validateDependentInput, validatePrivateInput } from '@/modules/federations/domain/privateData';
 import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
+import { consentItems } from '@/modules/federations/domain/regularity';
 import DocumentsUploadList from '@/v2/components/federations/DocumentsUploadList';
 import OrgMembershipJoin from '@/v2/components/federations/OrgMembershipJoin';
 import { isoDate } from '@/modules/federations/domain/membership';
@@ -122,6 +123,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const [tipo, setTipo] = useState(planoEscolhido?.person_type || tipos[0]?.id || PLAN_PERSON_TYPE.ATHLETE);
   const [planId, setPlanId] = useState(planoEscolhido?.id || '');
   const [opcoes, setOpcoes] = useState({ clubId: '', note: '', termos: false });
+  const [consentes, setConsentes] = useState({});
   const [dep, setDep] = useState({ name: '', birth_date: '' });
   const [privado, setPrivado] = useState({ cpf: '', guardian_name: '', guardian_contact: '', guardian_consent: false, minor_photo_consent: false });
   const [erros, setErros] = useState({});
@@ -176,6 +178,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
     m.mutate({
       federationId: federation.id, action: 'request', planId: plano.id,
       clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
+      consents: Object.fromEntries(consentItems(federation).map((c) => [c.id, Boolean(consentes[c.id])])),
     }, {
       onSuccess: async (r) => {
         toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : cadastro ? t('Pedido de cadastro enviado.') : t('Pedido de filiação enviado.'));
@@ -300,6 +303,10 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
           {/* Termo e estatuto abrem em outra aba: sair daqui desmontaria o formulário já preenchido. */}
           <span>{t('Li e aceito os')} <Link to="/legal/termos-filiacao" target="_blank" rel="noopener noreferrer" className="font-bold text-ink underline">{t('Termos de Filiação')}</Link>{' '}{t('e o')}{' '}{estatuto ? <a href={estatuto} target="_blank" rel="noopener noreferrer nofollow" className="font-bold text-ink underline">{t('estatuto da federação')}</a> : t('estatuto da federação')}.{' '}{t('A federação recebe o meu nome, foto, data de nascimento e cidade para emitir a carteirinha.')}</span>
         </label>
+        <fieldset className="space-y-3" data-dica="federacao-filiar-autorizacoes">
+          <legend className="text-sm font-semibold text-ink">{t('Autorizações (opcionais, você muda quando quiser)')}</legend>
+          {consentItems(federation).map((c) => <V2Toggle key={c.id} id={`fj-cs-${c.id}`} checked={Boolean(consentes[c.id])} onChange={(v) => setConsentes((x) => ({ ...x, [c.id]: v }))} label={c.label} hint={c.text} />)}
+        </fieldset>
         {erro && <p ref={erroRef} role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
       </V2Surface>
 

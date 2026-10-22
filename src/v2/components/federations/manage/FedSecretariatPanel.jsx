@@ -18,9 +18,11 @@ import { fetchDocumentContent, importMembers, reviewDocument, transferAction } f
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { isReleaseOverdue, sortTransfers, transferSummary } from '@/modules/federations/domain/transfers';
 import { parseMembersCsv } from '@/modules/federations/domain/importMembers';
-import { docLabel } from '@/modules/federations/domain/privateData';
+import { docLabel, submittedDocKey } from '@/modules/federations/domain/privateData';
+import { defaultValidUntil } from '@/modules/federations/domain/regularity';
+import { isoDate } from '@/modules/federations/domain/membership';
 import { DOC_STATUS, DOC_STATUS_LABELS, IMPORT_MAX_ROWS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
 import { baixarBlob } from '../acervo/acervoFiles';
@@ -173,25 +175,38 @@ async function abrirDocumento(docu, nome) {
   baixarBlob(new Blob([bytes], { type: r.contentType }), docu.file_name || `${docLabel(docu)} - ${nome || ''}.${ext}`);
 }
 
-export function DocRow({ docu, nome }) {
+/**
+ * Um documento enviado. `plan` (o plano da filiação) sugere a validade ao
+ * aceitar: hoje + o prazo que o plano dá para aquele documento; a secretaria
+ * ajusta para a data do próprio documento ou deixa em branco (não vence).
+ */
+export function DocRow({ docu, nome, plan = null }) {
   const { user } = useAuth();
   const [recusando, setRecusando] = useState(false);
   const [abrindo, setAbrindo] = useState(false);
-  const m = useFederationMutation(({ action, reason }) => reviewDocument(docu, action, { uid: user?.uid, reason }));
+  const [validade, setValidade] = useState(() => defaultValidUntil(plan, submittedDocKey(docu), isoDate()) || '');
+  const m = useFederationMutation(({ action, reason }) => reviewDocument(docu, action, { uid: user?.uid, reason, validUntil: action === 'approve' ? validade : '' }));
+  const venceu = docu.status === DOC_STATUS.APPROVED && docu.valid_until && docu.valid_until < isoDate();
   const ver = async () => { setAbrindo(true); try { await abrirDocumento(docu, nome); } catch (e) { toast.error(e.message); } finally { setAbrindo(false); } };
   const tom = { pending: 'amber', approved: 'green', rejected: 'red' }[docu.status] || 'neutral';
   return (
     <li>
       <V2Surface variant="compacto" className="space-y-3 p-4">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{nome || t('Filiado')}<V2Badge tone={tom}>{t(DOC_STATUS_LABELS[docu.status] || docu.status)}</V2Badge></p>
+          <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{nome || t('Filiado')}<V2Badge tone={venceu ? 'red' : tom}>{venceu ? t('Vencido') : t(DOC_STATUS_LABELS[docu.status] || docu.status)}</V2Badge></p>
           <p className="text-xs text-gray-500">{docLabel(docu)} · {docu.file_name || ''} · {t('enviado em {data}', { data: quando(docu.created_at) })}</p>
+          {docu.status === DOC_STATUS.APPROVED && docu.valid_until && <p className="text-xs text-gray-500">{t('Vale até {data}', { data: quando(docu.valid_until) })}</p>}
           {docu.review?.reason && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: docu.review.reason })}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           <V2Button type="button" size="sm" variant="secondary" disabled={abrindo} onClick={ver}><Download className="h-4 w-4" />{abrindo ? t('Baixando…') : t('Baixar o arquivo')}</V2Button>
           {docu.status === DOC_STATUS.PENDING && (
             <>
+              <label className="flex items-center gap-2 text-xs text-gray-600" htmlFor={`doc-val-${docu.id}`}>
+                {t('Vale até')}
+                <V2Input id={`doc-val-${docu.id}`} type="date" className="w-40" value={validade} onChange={(e) => setValidade(e.target.value)} aria-describedby={`doc-val-dica-${docu.id}`} />
+                <span id={`doc-val-dica-${docu.id}`} className="sr-only">{t('Em branco, o documento não vence.')}</span>
+              </label>
               <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => m.mutate({ action: 'approve' }, { onSuccess: () => toast.success(t('Documento aceito.')), onError: (e) => toast.error(e.message) })}><CheckCircle2 className="h-4 w-4" />{t('Aceitar')}</V2Button>
               <V2Button type="button" size="sm" variant="danger" onClick={() => setRecusando(true)}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>
             </>
@@ -211,9 +226,14 @@ const FILTROS_DOC = [
   { id: 'todos', label: () => t('Todos') },
 ];
 
-function DocumentosTab({ documentsQ, membersQ }) {
+function DocumentosTab({ documentsQ, membersQ, plansQ }) {
   const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'pendentes', FILTROS_DOC.map((f) => f.id));
   const nomes = useMemo(() => Object.fromEntries((membersQ.data || []).map((mb) => [mb.id, mb.user_name])), [membersQ.data]);
+  // O plano de cada filiação: sugere a validade ao aceitar (sem os planos, nada é sugerido).
+  const planos = useMemo(() => {
+    const porId = Object.fromEntries((plansQ?.data || []).map((p) => [p.id, p]));
+    return Object.fromEntries((membersQ.data || []).map((mb) => [mb.id, porId[mb.plan_id] || null]));
+  }, [membersQ.data, plansQ?.data]);
   const todos = useMemo(() => [...(documentsQ.data || [])].sort((a, b) => (a.status === DOC_STATUS.PENDING ? -1 : 1) - (b.status === DOC_STATUS.PENDING ? -1 : 1) || (b.created_at_ms || 0) - (a.created_at_ms || 0)), [documentsQ.data]);
   const opcao = FILTROS_DOC.find((f) => f.id === filtro) || FILTROS_DOC[0];
   const doFiltro = useMemo(() => (opcao.status ? todos.filter((d) => d.status === opcao.status) : todos), [todos, opcao]);
@@ -239,7 +259,7 @@ function DocumentosTab({ documentsQ, membersQ }) {
         />
       ) : (
         <>
-          <ul className="space-y-3">{busca.visiveis.map((d) => <DocRow key={d.id} docu={d} nome={nomes[d.member_id]} />)}</ul>
+          <ul className="space-y-3">{busca.visiveis.map((d) => <DocRow key={d.id} docu={d} nome={nomes[d.member_id]} plan={planos[d.member_id]} />)}</ul>
           <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
         </>
       )}
@@ -336,6 +356,6 @@ function ImportarTab({ federation, plansQ, importsQ }) {
 
 export default function FedSecretariatPanel({ federation, tab, membersQ, transfersQ, incomingQ, documentsQ, importsQ, plansQ }) {
   if (tab === 'transferencias') return <TransferenciasTab federation={federation} transfersQ={transfersQ} incomingQ={incomingQ} />;
-  if (tab === 'documentos') return <DocumentosTab documentsQ={documentsQ} membersQ={membersQ} />;
+  if (tab === 'documentos') return <DocumentosTab documentsQ={documentsQ} membersQ={membersQ} plansQ={plansQ} />;
   return <ImportarTab federation={federation} plansQ={plansQ} importsQ={importsQ} />;
 }
