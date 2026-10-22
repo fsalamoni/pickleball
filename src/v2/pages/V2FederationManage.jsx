@@ -12,7 +12,7 @@ import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Eye, Landmark, ShieldCheck } from 'lucide-react';
 import {
-  useFederation, useFederationAffiliations, useFederationDocsAll, useFederationCharges, useFederationCourses, useFederationCredentials, useFederationDocuments, useFederationImports, useFederationMembers, useFederationNews, useFederationPlans,
+  useFederation, useFederationAffiliations, useFederationDocsAll, useFederationEvents, useFederationCharges, useFederationCourses, useFederationCredentials, useFederationDocuments, useFederationImports, useFederationMembers, useFederationNews, useFederationPlans,
   useFederationReports, useFederationResults, useFederationSanctions, useFederationStaff, useFederationTournaments, useFederationTransfers, useIncomingTransfers, useMyFederationRole,
 } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn, isFederationHidden, isFederationPublic } from '@/modules/federations/domain/federation';
@@ -45,6 +45,7 @@ const FedCommsPanel = lazy(() => import('@/v2/components/federations/manage/FedC
 const FedAcervoPanel = lazy(() => import('@/v2/components/federations/manage/FedAcervoPanel'));
 const FedAgendaPanel = lazy(() => import('@/v2/components/federations/manage/FedAgendaPanel'));
 const FedCommentsPanel = lazy(() => import('@/v2/components/federations/manage/FedCommentsPanel'));
+const FedCompliancePanel = lazy(() => import('@/v2/components/federations/manage/FedCompliancePanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
 
@@ -106,6 +107,8 @@ function Central({ federationId }) {
   // Acervo oficial: a permissão do acervo ou o admin (o admin master antigo não tem `docs` gravado).
   const podeAcervo = (perms.includes(FED_PERMISSION.DOCS) || admin) && fedModuleOn(fq.data, 'official_docs');
   const docsQ = useFederationDocsAll(federationId, { enabled: papel.isStaff && podeAcervo });
+  // Conformidade: a agenda pública só quando a aba abre (as assembleias do ano).
+  const eventsQ = useFederationEvents(federationId, 'public', { enabled: papel.isStaff && admin && tab === 'conformidade' && fedModuleOn(fq.data, 'calendar') });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -166,7 +169,8 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'agenda' && tab !== 'comentarios' && <FedAgendaPanel federation={f} perms={perms} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
-        {secaoAtiva.id === 'indicadores' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
+        {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
+        {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
         {(secaoAtiva.id === 'config' || secaoAtiva.id === 'pagina-publica') && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>

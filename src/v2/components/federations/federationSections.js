@@ -119,9 +119,13 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'recebidos', label: tk('Recebidos'), icon: Wallet },
       ],
     },
-    (pode(FED_PERMISSION.MEMBERS) || pode(FED_PERMISSION.FINANCE)) && {
+    (admin || pode(FED_PERMISSION.MEMBERS) || pode(FED_PERMISSION.FINANCE)) && {
       id: 'indicadores', grupo: 'gerir', label: tk('Indicadores'), icon: BarChart3, dica: 'federacao-secao-indicadores',
-      tabs: [{ value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 }],
+      tabs: [
+        { value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 },
+        // A conformidade com a Lei Geral do Esporte (zero banco): só o admin.
+        ...(admin ? [{ value: 'conformidade', label: tk('Conformidade'), icon: Scale, dica: 'federacao-aba-conformidade' }] : []),
+      ],
     },
     // Tudo o que muda o que o PÚBLICO vê, num lugar só (separado de planos, Pix, módulos e regras).
     admin && {
