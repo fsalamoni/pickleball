@@ -17,7 +17,7 @@ import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/m
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { pendingSanctions, sanctionState, sanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { normalizeRankingConfig } from '@/modules/federations/domain/officialRanking';
-import { RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { RANKING_PERIOD, RANKING_VALIDITY_MAX, RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { FedRankingBlock, classeLabel } from '../FedPublicBlocks';
@@ -271,6 +271,19 @@ function RankingTab({ federation }) {
               ))}
             </div>
           </fieldset>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <V2Field label={t('Como o tempo conta')} htmlFor="rk-periodo" hint={cfg.period === RANKING_PERIOD.ROLLING ? t('Cada resultado vale pelos meses ao lado, contados da data do torneio, e sai sozinho quando vence. O servidor refaz o ranking todo dia; as temporadas continuam disponíveis.') : t('O ranking zera a cada ano: vale a temporada do torneio.')}>
+              <V2Select id="rk-periodo" value={cfg.period} onChange={(e) => set({ period: e.target.value })}>
+                <option value={RANKING_PERIOD.SEASON}>{t('Por temporada (o ano do torneio)')}</option>
+                <option value={RANKING_PERIOD.ROLLING}>{t('Corrido (os últimos meses)')}</option>
+              </V2Select>
+            </V2Field>
+            {cfg.period === RANKING_PERIOD.ROLLING && (
+              <V2Field label={t('Validade do resultado (meses)')} htmlFor="rk-validade" hint={t('De 1 a {n}. O comum é 12.', { n: RANKING_VALIDITY_MAX })}>
+                <V2Input id="rk-validade" type="number" min={1} max={RANKING_VALIDITY_MAX} step={1} inputMode="numeric" value={cfg.validity_months} onChange={(e) => set({ validity_months: Math.min(RANKING_VALIDITY_MAX, Math.max(1, num(e.target.value) || 1)) })} />
+              </V2Field>
+            )}
+          </div>
           <V2Toggle id="rk-members" checked={cfg.members_only} onChange={(v) => set({ members_only: v })} label={t('Só filiados em dia pontuam')} hint={t('Conferido na data do torneio. Desligado, todo mundo que jogou pontua.')} />
           <div className="flex flex-wrap items-center justify-end gap-2">
             {alterado && <span className="text-sm text-gray-500" aria-live="polite">{t('Há mudanças não salvas.')}</span>}

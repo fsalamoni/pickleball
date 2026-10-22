@@ -447,7 +447,17 @@ export const DEFAULT_RANKING_CONFIG = Object.freeze({
   tier_multipliers: Object.freeze({ regional: 1, state: 1.5, major: 2 }),
   /** Só o federado em dia na data do torneio pontua (D12). `false` = todo mundo pontua. */
   members_only: true,
+  /** `season` = temporada (o ano do torneio); `rolling` = os resultados dos últimos `validity_months` meses. */
+  period: 'season',
+  /** No ranking corrido, por quantos meses (1–36) o resultado vale a partir da data do torneio. */
+  validity_months: 12,
 });
+
+/** Os dois jeitos de contar o ranking oficial. Gravado em `ranking_config.period`: nunca renomeie. */
+export const RANKING_PERIOD = Object.freeze({ SEASON: 'season', ROLLING: 'rolling' });
+/** O ranking corrido mora em `federation_rankings/{fed}_rolling` (o servidor refaz todo dia). */
+export const ROLLING_RANKING_KEY = 'rolling';
+export const RANKING_VALIDITY_MAX = 36;
 
 /* ------------------------------------------------- PR 3: dados privados -- */
 

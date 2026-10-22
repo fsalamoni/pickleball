@@ -1887,10 +1887,16 @@ Derivado pelo servidor (`federationRankingRecompute`/`federationRankingConfig`,
 `config` (a tabela usada), `categories[] { key, gender_category, age_category,
 format, rows[] }`, `general[]`, `updated_at_ms`; cada linha `{ uid, name,
 photo_url, points, events, titles, position, results[] (≤ 12) }`.
+Com `ranking_config.period == 'rolling'` existe também
+`federation_rankings/{fedId}_rolling`: `season: null`, `period: 'rolling'`,
+`as_of` (dia da conta, Brasília), `validity_months` e `expires_on` em cada
+resultado; refeito todo dia (`federationRankingRolling`) e apagado quando a
+federação volta para temporada.
 
 ### `federations/{id}.ranking_config` (PR 2, opcional)
 `{ points_by_place { 1..8 }, participation, best_n, tier_multipliers
-{ regional, state, major }, members_only }`; ausente valem
+{ regional, state, major }, members_only, period ('season' | 'rolling'),
+validity_months (1–36) }`; ausente valem
 `DEFAULT_RANKING_CONFIG`. A equipe `competitions` grava só esta chave (cláusula
 própria na regra do documento).
 

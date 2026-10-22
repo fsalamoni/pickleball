@@ -330,6 +330,19 @@ pontos no ranking.
   (`updateRankingConfig`, chave `ranking_config` liberada na regra do
   documento da federação). A tela só **lê** o documento gravado — nunca
   recalcula no navegador (lição do ranking da plataforma, `docs/18`).
+- **Ranking corrido (validade dos resultados)** — `ranking_config.period`:
+  `season` (padrão, o de sempre: zera a cada ano) ou `rolling`, com
+  `validity_months` (1 a 36, padrão 12). No corrido cada resultado vale da
+  **data do torneio** até a mesma data N meses depois (`resultExpiry`, fim de
+  mês ajustado: 31/01 + 1 mês = 28/02) e sai sozinho quando vence — o modelo
+  dos rankings de circuito (52 semanas). O servidor grava um documento a mais,
+  `federation_rankings/{fed}_rolling` (`period`, `as_of`, `validity_months`
+  e `expires_on` em cada resultado), refeito a cada resultado, a cada mudança
+  da configuração e **todo dia às 03:20** (`federationRankingRolling`), porque
+  vencer não escreve nada no banco e nenhum gatilho dispararia. Voltar para
+  temporada apaga o corrido; as temporadas seguem gravadas nos dois modos. Na
+  página, o seletor ganha "Últimos N meses" (padrão quando corrido) e cada
+  linha diz quantos pontos vencem e quando (`nextExpiry`). Zero regra nova.
 
 ### 6.4 Secretaria: transferências, documentos e importação (PR 3)
 
@@ -574,7 +587,8 @@ derivado dos resultados, que já vão.
 | `federationAgenda` | callable | `docs`/`admin` da federação; `competitions` só na agenda esportiva | calendário oficial: marcar/editar (motivo e histórico ao remarcar o que já foi divulgado), adiar, cancelar, apagar o nunca divulgado, aviso a quem segue (§15); reunião: convocar (pauta, edital, quórum) e registrar o resultado (presença, decisão por item, ata) (§15.9) |
 | `federationAgendaFeed` | HTTP público (`/api/agenda/{slug}.ics`) | qualquer um | a agenda assinável (ICS) com os eventos públicos e os torneios chancelados (§15.6) |
 | `federationRankingRecompute` | gatilho `federation_results/{id}` | — | recalcula `federation_rankings/{fed}_{temporada}` (§6.3) |
-| `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação |
+| `federationRankingConfig` | gatilho `federations/{id}` | — | `ranking_config` mudou ⇒ refaz todas as temporadas da federação e o corrido |
+| `federationRankingRolling` | agendada, todo dia 03:20 | — | refaz `federation_rankings/{fed}_rolling` das federações com ranking corrido (§6.3) |
 
 Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 `notifications` (`origin: 'server'`, textos em `tx()` → `functions/i18n/avisos.json`).
@@ -815,7 +829,7 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
 - ~~**PR 2**~~ — entregue: clubes e arenas filiados (`affiliations`),
   chancela de torneios (`tournaments`) e ranking oficial (`ranking`).
   Fora de propósito: ranking por **dupla** (as linhas são por pessoa, como o
-  ranking da plataforma), descarte de resultado por **data** (só `best_n`),
+  ranking da plataforma), descarte de resultado por **data** (entregue depois: ranking corrido, §6.3),
   e a federação **convidar** clube/arena (quem gere pede). Quando pedirem.
 - ~~**PR 3**~~ — entregue: `federation_members/{id}/private/data` (CPF por
   regra da federação, responsável do menor), dependentes, documentos,
