@@ -604,7 +604,7 @@ const ATLETA = {
         steps(
           tk('Abra a federação e toque em "Filiar-se". Escolha o tipo (atleta, professor ou árbitro) e o plano: mensal ou anual, cadastro gratuito ou filiado. O preço mostra o desconto que vale para você (por idade, por exemplo).'),
           tk('Se o plano pede documentos, cada um aparece com o espaço para escolher o arquivo ali mesmo (PDF ou imagem, até 5 MB). Eles sobem junto com o pedido; o que faltar dá para enviar depois, na aba Minha filiação.'),
-          tk('Diga se a filiação aparece no seu perfil público e se você entra no diretório de filiados. Se joga por um clube, indique-o. Envie.'),
+          tk('Se joga por um clube, indique-o; se quiser, deixe uma observação para a secretaria. Aceite os termos e envie. Planos por faixa de idade pedem a data de nascimento no perfil.'),
           tk('Plano gratuito com aprovação automática ativa na hora. Nos outros, a secretaria aprova e o plano pago gera a cobrança: pague o Pix pelo QR ou pelo "copia e cola" e toque em "Já paguei".'),
           tk('Quando a federação confirma o recebimento, a filiação fica em dia e a carteirinha aparece: na página da federação e em Minha área → Federações. Dá para compartilhar, baixar PNG ou imprimir.'),
           tk('Perto do vencimento, o sino avisa. "Renovar" gera a nova cobrança; a validade nova começa no fim da atual, nunca antes.'),

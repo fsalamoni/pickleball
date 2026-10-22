@@ -40,6 +40,7 @@ import { validateGovernance } from '../domain/governance.js';
 import { DOC_STATUS, DOC_VISIBILITY, acervoUploadPath, validateAcervoFile } from '../domain/acervo.js';
 import { validatePlanInput } from '../domain/plans.js';
 import { validateMemberTypes } from '../domain/memberTypes.js';
+import { normalizeDefaultModules, validateDocKinds, validateTierTemplates } from '../domain/platformCatalog.js';
 import { canDeclarePayment } from '../domain/charges.js';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -335,6 +336,27 @@ export async function saveFederationMemberTypes(list, { uid } = {}) {
   if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
   await setDoc(doc(db, 'platform_settings', 'federations'), { member_types: r.value, updated_at: serverTimestamp(), updated_by: uid || null }, { merge: true });
   await createAuditLog({ action: 'federation_member_types_save', actor: { uid }, details: { count: r.value.length } });
+  return r.value;
+}
+
+/**
+ * As outras partes da configuração geral (Etapa 5): documentos sugeridos,
+ * modelos de categorias de torneio e módulos que nascem ligados. Cada uma
+ * grava só a sua chave, validada pela mesma régua da tela.
+ */
+const CATALOGO = {
+  doc_kinds: { validar: validateDocKinds, acao: 'federation_doc_kinds_save' },
+  tournament_tier_templates: { validar: validateTierTemplates, acao: 'federation_tier_templates_save' },
+  default_modules: { validar: (raw) => ({ ok: true, errors: {}, value: normalizeDefaultModules(raw) }), acao: 'federation_default_modules_save' },
+};
+
+export async function saveFederationPlatformCatalog(key, input, { uid } = {}) {
+  const c = CATALOGO[key];
+  if (!c) throw new FederationError(t('Configuração desconhecida.'));
+  const r = c.validar(input);
+  if (!r.ok) throw new FederationError(r.errors.list || t('Confira os campos destacados.'), r.errors);
+  await setDoc(doc(db, 'platform_settings', 'federations'), { [key]: r.value, updated_at: serverTimestamp(), updated_by: uid || null }, { merge: true });
+  await createAuditLog({ action: c.acao, actor: { uid }, details: { count: Array.isArray(r.value) ? r.value.length : Object.values(r.value).filter(Boolean).length } });
   return r.value;
 }
 
@@ -929,7 +951,9 @@ export async function reviewDocument(docu, action, { uid, reason = '' } = {}) {
   await notifyUsers([docu.user_id], {
     type: NOTIFICATION_TYPE.FEDERATION, title: status === 'approved' ? t('Documento aceito') : t('Documento recusado'),
     message: status === 'approved' ? t('A federação aceitou o documento: {doc}.', { doc: docLabel(docu) }) : t('A federação recusou o documento {doc}. Motivo: {motivo}. Envie outro.', { doc: docLabel(docu), motivo }),
-    link: '/perfil?secao=federacoes', actor: { uid },
+    // Leva aonde se envia outro: a filiação do clube/arena (tela da entidade) ou "Minha filiação" na página da federação.
+    link: docu.org_kind ? `/federacoes/${docu.federation_id}/filiar?entidade=${docu.org_kind}:${docu.org_id}` : `/federacoes/${docu.federation_id}?aba=minha`,
+    actor: { uid },
   }).catch(() => 0);
   return status;
 }

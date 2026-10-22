@@ -134,6 +134,17 @@ const REVIEW = Object.freeze({
   unofficial: { from: ['approved'], patch: { official: false } },
 });
 
+/**
+ * `{ 'modules.<id>': true }` para cada módulo marcado em `default_modules`.
+ * A tela do admin já normaliza (só os disponíveis, e o que um exige vai
+ * junto); aqui só se confere o formato da chave — módulo desconhecido ligado
+ * não aparece em lugar nenhum (`fedModuleOn` só lê os disponíveis).
+ */
+function modulosIniciais(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  return Object.fromEntries(Object.keys(raw).filter((k) => /^[a-z_]{2,30}$/.test(k) && raw[k] === true).map((k) => [`modules.${k}`, true]));
+}
+
 async function review(ctx, actor, data) {
   if (!actor.isPlatformAdmin) falha('permission-denied', 'Só o admin da plataforma revisa federações.');
   if (!(await flagLigada(ctx))) falha('failed-precondition', 'As federações não estão ligadas nesta plataforma.');
@@ -151,7 +162,15 @@ async function review(ctx, actor, data) {
   }
   const batch = ctx.db.batch();
   const ref = ctx.db.collection(C.federations).doc(fed.id);
-  batch.update(ref, { ...acao.patch, review: { action: data.action, reason, by: actor.uid, at_ms: ctx.now }, updated_at: ctx.Timestamp.fromMillis(ctx.now) });
+  const patch = { ...acao.patch, review: { action: data.action, reason, by: actor.uid, at_ms: ctx.now }, updated_at: ctx.Timestamp.fromMillis(ctx.now) };
+  // Primeira aprovação (pendente ou recusada antes): os módulos que o admin da
+  // plataforma marcou para nascer ligados (`platform_settings/federations.default_modules`).
+  // Suspensa reaprovada mantém os dela.
+  if (data.action === 'approve' && fed.status !== 'suspended') {
+    const cfg = await ctx.db.collection('platform_settings').doc('federations').get();
+    Object.assign(patch, modulosIniciais(cfg.exists ? cfg.data().default_modules : null));
+  }
+  batch.update(ref, patch);
   // Aprovar pela primeira vez cria o presidente: quem pediu a abertura — se a conta ainda existe.
   if (data.action === 'approve' && fed.created_by) {
     const staffRef = ctx.db.collection(C.staff).doc(`${fed.id}_${fed.created_by}`);
@@ -588,6 +607,8 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
       if (conv.data().source === 'import') importado = conv.data();
     }
   }
+  // Plano por faixa de idade exige a idade conhecida (sem ela, "Juvenil" ficaria ao alcance de qualquer conta).
+  if ((p.age_min != null || p.age_max != null) && idade == null) falha('failed-precondition', 'Este plano é por faixa de idade: informe a data de nascimento no seu perfil.');
   if (p.age_min != null && idade != null && idade < p.age_min) falha('failed-precondition', 'Este plano exige idade mínima maior.');
   if (p.age_max != null && idade != null && idade > p.age_max) falha('failed-precondition', 'Este plano tem idade máxima menor.');
   const cpf = orgPedida ? '' : String(data.cpf == null ? '' : data.cpf).replace(/\D/g, '');

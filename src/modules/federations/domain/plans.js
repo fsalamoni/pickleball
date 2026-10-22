@@ -41,6 +41,9 @@ export function validatePlanInput(input = {}, { catalog = memberTypeCatalog(), c
   const validity = Object.values(PLAN_VALIDITY).includes(input.validity) ? input.validity : PLAN_VALIDITY.ROLLING;
   const price_cents = intOr(input.price_cents, -1);
   if (price_cents < 0 || price_cents > 1_000_000_00) errors.price_cents = t('Informe o valor (0 para plano gratuito).');
+  // Filiado é o vínculo pago (e pontua no ranking oficial); cadastrado é o gratuito.
+  else if (tier === PLAN_TIER.REGISTERED && price_cents > 0) errors.price_cents = t('Cadastro é gratuito: deixe 0,00 ou escolha o vínculo Filiado.');
+  else if (tier === PLAN_TIER.FEDERATED && price_cents === 0) errors.price_cents = t('Filiado paga: informe o valor ou escolha o vínculo Cadastrado.');
   const rollover = str(input.rollover_mmdd, 5);
   if (billing === PLAN_BILLING.ANNUAL && validity === PLAN_VALIDITY.CALENDAR && !isValidMonthDay(rollover)) {
     errors.rollover_mmdd = t('Informe a data de virada no formato MM-DD (ex.: 12-31).');

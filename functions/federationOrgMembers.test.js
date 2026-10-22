@@ -69,7 +69,7 @@ describe('clube filiado por plano', () => {
     await fed.chargeConfirm(c, TES, { chargeId: ap.chargeId, action: 'confirm' });
     m = doc(db, `federation_members/${MID}`);
     expect(m.status).toBe('active');
-    expect(doc(db, `federation_affiliations/${MID}`)).toMatchObject({ status: 'approved', kind: 'club', org_id: 'c1', member_id: MID, requested_by: 'leo', plan_name: 'Clube filiado' });
+    expect(doc(db, `federation_affiliations/${MID}`)).toMatchObject({ status: 'approved', kind: 'club', org_id: 'c1', member_id: MID, requested_by: 'leo', plan_name: 'Clube filiado', tier: 'federated' });
 
     // O certificado verifica com o tipo da entidade.
     const v = await fed.verify(c, { code: m.card_code });

@@ -19,9 +19,16 @@ export function OrgAffiliationBadges({ kind, orgId, className }) {
   return (
     <>
       {q.data.map((a) => (
-        <Link key={a.id} to={`/federacoes/${a.federation_id}`} className={className} title={t('Filiado à {nome}', { nome: a.federation_name || a.federation_acronym })}>
-          <V2Badge tone="purple"><Landmark className="h-3 w-3" aria-hidden="true" /> {t('Filiado · {sigla}', { sigla: a.federation_acronym || a.federation_name })}</V2Badge>
-        </Link>
+        // Filiação por plano gratuito é "Cadastrado"; a simples (sem plano) e a paga são "Filiado".
+        a.tier === 'registered' ? (
+          <Link key={a.id} to={`/federacoes/${a.federation_id}`} className={className} title={t('Cadastrado na {nome}', { nome: a.federation_name || a.federation_acronym })}>
+            <V2Badge tone="neutral"><Landmark className="h-3 w-3" aria-hidden="true" /> {t('Cadastrado · {sigla}', { sigla: a.federation_acronym || a.federation_name })}</V2Badge>
+          </Link>
+        ) : (
+          <Link key={a.id} to={`/federacoes/${a.federation_id}`} className={className} title={t('Filiado à {nome}', { nome: a.federation_name || a.federation_acronym })}>
+            <V2Badge tone="purple"><Landmark className="h-3 w-3" aria-hidden="true" /> {t('Filiado · {sigla}', { sigla: a.federation_acronym || a.federation_name })}</V2Badge>
+          </Link>
+        )
       ))}
     </>
   );

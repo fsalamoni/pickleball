@@ -87,9 +87,12 @@ export function memberTypeOf(catalog, source) {
   return { id, label: texto(doc.person_type_label, 40) || id, custom_label: true, description: '', entity, category: categoryFor(entity, doc.person_category), active: false, builtin: false };
 }
 
-/** O nome do tipo de um plano ou filiação, sem precisar do catálogo carregado. */
-export function personTypeLabel(source) {
+/** O nome do tipo de um plano ou filiação; o catálogo (opcional) dá o nome atual, sem ele vale o gravado. */
+export function personTypeLabel(source, catalog = null) {
   const id = source?.person_type || 'athlete';
+  // Com o catálogo carregado vale o nome ATUAL do admin (renomear o tipo chega aos planos já gravados).
+  const doCatalogo = (catalog || []).find((x) => x.id === id);
+  if (doCatalogo) return memberTypeName(doCatalogo);
   // O nome pronto gravado em português (servidor e plano) é traduzido; o que o admin escreveu, não.
   if (BUILTIN_BY_ID[id] && (!source?.person_type_label || source.person_type_label === BUILTIN_BY_ID[id].label)) return t(BUILTIN_BY_ID[id].label);
   return texto(source?.person_type_label, 40) || (BUILTIN_BY_ID[id] ? t(BUILTIN_BY_ID[id].label) : id);

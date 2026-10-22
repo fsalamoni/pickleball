@@ -6,12 +6,14 @@ import React from 'react';
 import { isFreePlan, planBenefitLines, planPeriodLabel } from '@/modules/federations/domain/plans';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
-import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
+import { isOrgEntity, personTypeLabel } from '@/modules/federations/domain/memberTypes';
+import { useFederationPlatformSettings } from '@/modules/federations/hooks/useFederations';
 import { V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 /** A lista pública de planos (o mesmo bloco da página pública). */
 export default function PlansList({ plans, action }) {
+  const { catalog } = useFederationPlatformSettings();
   const ativos = (plans || []).filter((p) => p.active !== false).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || (a.price_cents ?? 0) - (b.price_cents ?? 0));
   if (!ativos.length) return <p className="text-sm text-gray-500">{t('A federação ainda não publicou planos de filiação.')}</p>;
   return (
@@ -21,14 +23,17 @@ export default function PlansList({ plans, action }) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-display text-lg font-bold text-ink">{p.name}</p>
-              <p className="text-xs uppercase tracking-widest text-gray-500">{personTypeLabel(p)} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)}</p>
+              <p className="text-xs uppercase tracking-widest text-gray-500">{personTypeLabel(p, catalog)} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)}</p>
             </div>
             <p className="text-right"><span className="font-display text-xl font-bold text-ink">{isFreePlan(p) ? t('Grátis') : formatBrlCents(p.price_cents)}</span>{!isFreePlan(p) && <span className="block text-xs text-gray-500">{planPeriodLabel(p)}</span>}</p>
           </div>
           {p.description && <p className="mt-2 text-sm text-gray-600">{p.description}</p>}
           {planBenefitLines(p).length > 0 && <ul className="mt-2 space-y-1 text-sm text-gray-700">{planBenefitLines(p).map((b) => <li key={b} className="flex gap-2"><span aria-hidden="true">•</span>{b}</li>)}</ul>}
           {(p.age_min != null || p.age_max != null) && <p className="mt-2 text-xs text-gray-500">{p.age_min != null && p.age_max != null ? t('De {min} a {max} anos', { min: p.age_min, max: p.age_max }) : p.age_min != null ? t('A partir de {min} anos', { min: p.age_min }) : t('Até {max} anos', { max: p.age_max })}</p>}
-          {action && <div className="mt-auto pt-3">{action(p)}</div>}
+          {/* Plano de clube/arena: quem pede é quem gere a entidade, pela gestão dela — o botão de pessoa levaria ao formulário errado. */}
+          {isOrgEntity(p.entity)
+            ? <p className="mt-auto pt-3 text-xs text-gray-500">{p.entity === 'club' ? t('Quem administra o clube pede na gestão do clube, em Federação.') : t('Quem gere a arena pede na Central da arena, em Federação.')}</p>
+            : action && <div className="mt-auto pt-3">{action(p)}</div>}
         </V2Surface>
       ))}
     </ul>
