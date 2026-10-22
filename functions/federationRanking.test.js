@@ -88,3 +88,47 @@ describe('ranking oficial no servidor', () => {
     expect(doc(db, 'federation_rankings/fpp_2026').general.map((l) => l.uid)).toEqual(['ana', 'bia', 'semconta', 'caio']);
   });
 });
+
+describe('ranking oficial corrido (resultado com validade)', () => {
+  // Hoje (NOW) é 18/10/2026. Com 12 meses: 17/10/2025 já venceu; 19/10/2025 ainda conta.
+  function corrido(extraCfg = {}) {
+    const db = cenario();
+    db.store.docs.set('federations/fpp', { name: 'FPP', status: 'approved', ranking_config: { members_only: false, best_n: 0, period: 'rolling', validity_months: 12, ...extraCfg } });
+    db.store.docs.set('federation_results/fpp_velho', resultado({ season: 2025, tournament_id: 'tv', tournament_name: 'Velho', date: '2025-10-17', rows: [{ uid: 'ana', name: 'Ana', position: 1, played: 3 }] }));
+    db.store.docs.set('federation_results/fpp_vale', resultado({ season: 2025, tournament_id: 'tq', tournament_name: 'Ainda vale', date: '2025-10-19', rows: [{ uid: 'bia', name: 'Bia', position: 1, played: 3 }] }));
+    return db;
+  }
+
+  it('soma só o que está dentro da validade, atravessando a virada do ano, com a data em que cada resultado vence', async () => {
+    const db = corrido();
+    await fr.onResultWritten(ctx(db), null, doc(db, 'federation_results/fpp_t1_m1'));
+    const r = doc(db, 'federation_rankings/fpp_rolling');
+    expect(r).toMatchObject({ federation_id: 'fpp', season: null, period: 'rolling', as_of: '2026-10-18', validity_months: 12 });
+    expect(r.general.map((l) => [l.uid, l.points])).toEqual([['bia', 255], ['ana', 150], ['semconta', 75], ['caio', 15]]);
+    const bia = r.general.find((l) => l.uid === 'bia');
+    expect(bia.results.map((x) => x.expires_on).sort()).toEqual(['2026-10-19', '2027-08-10']);
+    // A temporada de 2026 segue igual, sem o corrido.
+    expect(doc(db, 'federation_rankings/fpp_2026').period).toBeUndefined();
+  });
+
+  it('a varredura diária tira o que venceu; voltar para temporada apaga o corrido', async () => {
+    const db = corrido();
+    await fr.rollingSweep(ctx(db));
+    expect(doc(db, 'federation_rankings/fpp_rolling').general.find((l) => l.uid === 'bia').points).toBe(255);
+    await fr.rollingSweep({ ...ctx(db), now: Date.UTC(2026, 9, 20, 15) });
+    expect(doc(db, 'federation_rankings/fpp_rolling').general.find((l) => l.uid === 'bia').points).toBe(105);
+    const antes = doc(db, 'federations/fpp');
+    const depois = { ...antes, ranking_config: { ...antes.ranking_config, period: 'season' } };
+    db.store.docs.set('federations/fpp', depois);
+    await fr.onFederationWritten(ctx(db), 'fpp', antes, depois);
+    expect(doc(db, 'federation_rankings/fpp_rolling')).toBeUndefined();
+  });
+
+  it('a validade é configurável e o fim do mês não estoura', () => {
+    expect(fr.resultExpiry('2026-01-31', 1)).toBe('2026-02-28');
+    expect(fr.resultExpiry('2024-01-31', 1)).toBe('2024-02-29');
+    expect(fr.resultExpiry('2026-08-10', 18)).toBe('2028-02-10');
+    expect(fr.normalizeRankingConfig({ period: 'rolling', validity_months: 99 })).toMatchObject({ period: 'rolling', validity_months: 36 });
+    expect(fr.normalizeRankingConfig({ period: 'qualquer' })).toMatchObject({ period: 'season', validity_months: 12 });
+  });
+});

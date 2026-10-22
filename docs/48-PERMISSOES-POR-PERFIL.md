@@ -341,7 +341,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`) | — | — | ✔ | rules |
 | Recusar/readmitir resultado | ✖ | ✖ | ✖ | ✔ `competitions` | ✔ | rules |
 | Ler resultados e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
-| Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` |
+| Gravar o ranking oficial | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false`; gatilhos `federationRankingRecompute`/`federationRankingConfig` e a varredura `federationRankingRolling` |
 | Mudar a tabela de pontos (`ranking_config`) | ✖ | ✖ | ✖ | ✔ `competitions` (só essa chave) | ✔ | rules |
 | Regras da federação (`rules`: CPF, prazos de transferência, declaração pelo filiado) — PR 3/6 | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules |
 | Ver os Indicadores da Central — PR 6 | ✖ | ✖ | ✖ | ✔ `members` (bloco de filiados) e/ou `finance` (bloco do dinheiro) | ✔ | tela (sem leitura nova: as mesmas de Filiados e Financeiro, já presas pela regra) |

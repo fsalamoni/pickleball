@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { nextExpiry, normalizeRankingConfig } from '@/modules/federations/domain/officialRanking';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
 import { splitSanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { tournamentPath } from '@/modules/federations/domain/agenda';
@@ -24,7 +25,7 @@ import { canCancelEnrollment, courseState, credentialState, seatsLeft, sortCours
 import { protocolToId, reportProtocol, validateReportInput } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { verifyPath } from '@/modules/federations/domain/card';
-import { COURSE_KIND_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS, REPORT_KIND, REPORT_KIND_LABELS, REPORT_MAX_CHARS, REPORT_STATUS_LABELS, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { COURSE_KIND_LABELS, ENROLLMENT_STATUS, RANKING_PERIOD, ROLLING_RANKING_KEY, ENROLLMENT_STATUS_LABELS, REPORT_KIND, REPORT_KIND_LABELS, REPORT_MAX_CHARS, REPORT_STATUS_LABELS, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { courseAction, createReport } from '@/modules/federations/services/federationService';
 import { useApprovedAffiliations, useFederationMutation, useFederationRanking, useFederationTournaments, useMyEnrollments, usePublicCourses, usePublicCredentials, useReport } from '@/modules/federations/hooks/useFederations';
 import { AGE_CATEGORY_LABELS, GENDER_CATEGORY_LABELS, MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
@@ -167,6 +168,7 @@ export function FedSanctionedTournaments({ federation, limite = 12, titulo = tru
 export const classeLabel = (c) => [GENDER_CATEGORY_LABELS[c.gender_category] || c.gender_category, AGE_CATEGORY_LABELS[c.age_category] || c.age_category, MODALITY_FORMAT_LABELS[c.format] || c.format].filter(Boolean).join(' · ');
 
 function Linha({ l, destaque, logado }) {
+  const vence = nextExpiry(l.results);
   return (
     <li className={`flex items-center gap-3 rounded-2xl px-3 py-2 ${destaque ? 'bg-acid/15' : 'odd:bg-paper/60'}`}>
       <span className="w-8 shrink-0 text-center font-display text-lg font-bold text-ink">{l.position}º</span>
@@ -175,7 +177,7 @@ function Linha({ l, destaque, logado }) {
         {logado && l.uid
           ? <Link to={`/atleta/${encodeURIComponent(l.uid)}`} className="block truncate font-semibold text-ink hover:underline">{l.name || t('Atleta')}</Link>
           : <span className="block truncate font-semibold text-ink">{l.name || t('Atleta')}</span>}
-        <span className="block text-xs text-gray-500">{tn(l.events, '{n} torneio', '{n} torneios')}{l.titles ? ` · ${tn(l.titles, '{n} título', '{n} títulos')}` : ''}</span>
+        <span className="block text-xs text-gray-500">{tn(l.events, '{n} torneio', '{n} torneios')}{l.titles ? ` · ${tn(l.titles, '{n} título', '{n} títulos')}` : ''}{vence ? ` · ${t('{p} pts vencem em {data}', { p: vence.points, data: fmtData(new Date(`${vence.date}T12:00:00`), { day: '2-digit', month: '2-digit', year: 'numeric' }) })}` : ''}</span>
       </span>
       <span className="font-display text-lg font-bold text-ink">{l.points}</span>
     </li>
@@ -189,7 +191,11 @@ function Linha({ l, destaque, logado }) {
 export function FedRankingBlock({ federation, meUid = null, titulo = true, compacto = false }) {
   const ligado = fedModuleOn(federation, 'ranking');
   const anoAtual = new Date().getFullYear();
-  const [season, setSeason] = useState(anoAtual);
+  const cfgRanking = normalizeRankingConfig(federation?.ranking_config);
+  const corrido = cfgRanking.period === RANKING_PERIOD.ROLLING;
+  const [season, setSeason] = useState(corrido ? ROLLING_RANKING_KEY : anoAtual);
+  const ehCorrido = season === ROLLING_RANKING_KEY;
+  const opcoes = [...(corrido ? [{ value: ROLLING_RANKING_KEY, label: t('Últimos {n} meses', { n: cfgRanking.validity_months }) }] : []), ...[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => ({ value: a, label: String(a) }))];
   const [classe, setClasse] = useState('geral');
   const [limite, setLimite] = useState(compacto ? 10 : 25);
   const [busca, setBusca] = useState('');
@@ -209,13 +215,13 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
       <div className="flex flex-wrap items-end justify-between gap-3">
         {titulo && <h2 id="fed-ranking" className="font-display text-xl font-bold text-ink">{t('Ranking oficial')}</h2>}
         <div className="flex flex-wrap gap-2">
-          <V2Select aria-label={t('Temporada')} className="h-10 w-28" value={season} onChange={(e) => setSeason(Number(e.target.value))} options={[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => ({ value: a, label: String(a) }))} />
+          <V2Select aria-label={t('Temporada')} className={`h-10 ${corrido ? 'w-44' : 'w-28'}`} value={season} onChange={(e) => setSeason(e.target.value === ROLLING_RANKING_KEY ? ROLLING_RANKING_KEY : Number(e.target.value))} options={opcoes} />
           <V2Select aria-label={t('Classe')} className="h-10 min-w-40" value={classe} onChange={(e) => setClasse(e.target.value)} options={[{ value: 'geral', label: t('Geral') }, ...(dados?.categories || []).map((c) => ({ value: c.key, label: classeLabel(c) }))]} />
         </div>
       </div>
       {q.isError && <V2ErrorState inline title={t('Não carregou o ranking')} onRetry={() => q.refetch()} />}
       {q.isLoading && <V2Skeleton lines={4} />}
-      {q.isSuccess && !dados && <V2Surface variant="compacto" className="flex items-center gap-3 p-4 text-sm text-gray-600"><Medal className="h-5 w-5 text-gray-500" aria-hidden="true" />{t('A temporada {ano} ainda não tem resultado enviado. O ranking nasce quando o organizador de um torneio chancelado envia o resultado de uma categoria.', { ano: season })}</V2Surface>}
+      {q.isSuccess && !dados && <V2Surface variant="compacto" className="flex items-center gap-3 p-4 text-sm text-gray-600"><Medal className="h-5 w-5 text-gray-500" aria-hidden="true" />{ehCorrido ? t('Nenhum resultado dentro da validade ainda. O ranking nasce quando o organizador de um torneio chancelado envia o resultado de uma categoria.') : t('A temporada {ano} ainda não tem resultado enviado. O ranking nasce quando o organizador de um torneio chancelado envia o resultado de uma categoria.', { ano: season })}</V2Surface>}
       {dados && linhas.length === 0 && <p className="text-sm text-gray-500">{t('Ninguém pontuou nesta classe ainda.')}</p>}
       {dados && linhas.length > 0 && (
         <>
@@ -227,6 +233,7 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
             {t('Atualizado em {data}.', { data: dados.updated_at_ms ? fmtData(new Date(dados.updated_at_ms), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—' })}
             {' '}{dados.config?.members_only === false ? '' : t('Pontuam só os filiados em dia na data do torneio.')}
             {' '}{dados.config?.best_n ? t('Contam os {n} melhores resultados de cada classe.', { n: dados.config.best_n }) : t('Contam todos os resultados de cada classe.')}
+            {dados.period === RANKING_PERIOD.ROLLING ? ` ${t('Cada resultado vale por {n} meses a partir da data do torneio; o ranking é refeito todo dia.', { n: dados.validity_months || cfgRanking.validity_months })}` : ''}
             {dados.config?.members_only === false ? ` ${t('Nesta federação todo mundo pontua, filiado ou não.')}` : ''}
           </p>
         </>

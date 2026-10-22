@@ -81,7 +81,7 @@ Servidor: `functions/federations.js` (`federationReview`,
 (`operatorUids`) — testes em `functions/federationPr4.test.js`; e `functions/federationMembership.js` — **cópia**
 de `domain/membership.js` com paridade em
 `functions/federationMembership.parity.test.js`; `functions/federationRanking.js`
-(`federationRankingRecompute`, `federationRankingConfig`) — **cópia** de
+(`federationRankingRecompute`, `federationRankingConfig`, `federationRankingRolling` — o ranking corrido refeito todo dia) — **cópia** de
 `domain/officialRanking.js` com paridade em `federationRanking.parity.test.js`.
 
 Coleções (`firestore.rules` § FEDERAÇÕES, provadas em
