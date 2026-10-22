@@ -127,7 +127,10 @@ e a fila `manage/FedCommentsPanel.jsx`; convites para filiar
 ações `invite`/`invite_cancel`/`invite_decline` de `federationMembership`;
 aceitar = pedir no plano do convite, sem aprovação), telas
 `manage/FedInvites.jsx` e o seletor `manage/FedPersonPicker.jsx` (lista de
-usuários da plataforma, também na equipe); o interruptor de módulo grava só
+usuários da plataforma, também na equipe); convite a CLUBE ou ARENA = o próprio
+`federation_affiliations` com `status: 'invited'` (`buildAffiliationInvite`,
+`inviteAffiliation`/`answerAffiliationInvite`, tela `manage/FedOrgInviteDialog.jsx`,
+aceite em `OrgAffiliationCard.jsx`; `docs/50` §6.1); o interruptor de módulo grava só
 `modules.x` (`setFederationModule`). Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 

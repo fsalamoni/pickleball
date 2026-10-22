@@ -5194,24 +5194,32 @@ service cloud.firestore {
         || fedOrgManager(od().kind, od().org_id)
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members');
+      // A organização PEDE (`pending`) ou a equipe CONVIDA (`invited`, 2026-10-22).
       allow create: if fedOn() && isAuthed()
-        && nd().requested_by == me()
-        && nd().status == 'pending'
+        && ((nd().status == 'pending' && nd().requested_by == me() && fedOrgManager(nd().kind, nd().org_id))
+          || (nd().status == 'invited' && nd().invited_by == me() && nd().requested_by == null
+            && (fedHas(nd().federation_id, 'admin') || fedHas(nd().federation_id, 'members'))))
         && nd().kind in ['club', 'arena']
         && nd().org_id is string
         && nd().federation_id is string
         && affId == nd().federation_id + '_' + nd().kind + '_' + nd().org_id
         && nd().get('message', '') is string
         && nd().get('message', '').size() <= 500
-        && fedOrgManager(nd().kind, nd().org_id)
         && fedModuleOn(nd().federation_id, 'affiliations')
         && fedPublic(nd().federation_id);
+      // A equipe decide o pedido; quem gere a organização ACEITA o convite (vira filiado).
       allow update: if fedOn()
-        && (fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'members'))
-        && chg().hasOnly(['status', 'review', 'updated_at'])
-        && nd().status in ['approved', 'rejected', 'suspended'];
+        && (((fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'members'))
+            && od().status != 'invited'
+            && chg().hasOnly(['status', 'review', 'updated_at'])
+            && nd().status in ['approved', 'rejected', 'suspended'])
+          || (od().status == 'invited' && fedOrgManager(od().kind, od().org_id)
+            && nd().status == 'approved' && nd().requested_by == me()
+            && chg().hasOnly(['status', 'requested_by', 'accepted_at_ms', 'updated_at'])));
+      // A organização retira/recusa; o admin apaga; quem cuida dos filiados cancela convite ou limpa recusado.
       allow delete: if fedPlat(od().federation_id)
-        || (fedOn() && (fedOrgManager(od().kind, od().org_id) || fedHas(od().federation_id, 'admin')));
+        || (fedOn() && (fedOrgManager(od().kind, od().org_id) || fedHas(od().federation_id, 'admin')))
+        || (fedOn() && fedHas(od().federation_id, 'members') && od().status in ['invited', 'rejected']);
     }
 
     // O torneio tem a chancela APROVADA desta federação?

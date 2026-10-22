@@ -257,6 +257,23 @@ o selo); pendente/recusada só quem pediu, quem gere a organização e a equipe.
 Quem gere a organização pode apagar (retirar o pedido ou desfiliar). Avisos:
 à equipe (`?aba=filiados-orgs`) e a quem pediu (link ao clube/arena).
 
+**A federação também convida** (2026-10-22). Em Filiados → Clubes e arenas,
+"Convidar clube ou arena" (`FedOrgInviteDialog`) abre a lista de clubes e
+arenas da plataforma já aberta, com busca por nome ou cidade; quem já é
+filiado, pediu ou tem convite aparece com o motivo e sem botão
+(`canInviteOrg`: só sem documento ou recusado). O convite é o MESMO documento,
+com `status: 'invited'`, `invited_by` e `requested_by: null`
+(`buildAffiliationInvite`), gravado pela equipe `admin`/`members` de federação
+**pública** — nenhuma coleção nova. Quem gere a organização recebe o aviso
+(administradores do clube por `club_members`, gestores da arena por
+`arena_managers`, com o link para a aba Federação) e **aceita** — vira
+`approved` na hora, com `requested_by` = quem aceitou (é o representante que
+vota nas eleições) e `accepted_at_ms` — ou **recusa** (o documento é apagado;
+dá para convidar de novo). A equipe pode cancelar o convite enquanto não for
+respondido, e é avisada da resposta. A equipe **não** aprova o próprio convite
+(a regra recusa atualização de staff num `invited`). Suspenso volta por
+"Reintegrar", não por convite.
+
 ### 6.2 Chancela de torneio (módulo `tournaments`)
 
 Dois campos **opcionais** em `tournaments/{id}` — os primeiros campos novos

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { affiliationState, buildAffiliationRequest, affiliationDecision, sortAffiliations, approvedAffiliations, affiliationCounts } from './affiliations.js';
+import { affiliationState, buildAffiliationRequest, affiliationDecision, sortAffiliations, approvedAffiliations, affiliationCounts, buildAffiliationInvite, canInviteOrg, affiliationAcceptPatch } from './affiliations.js';
 
 const FED = { id: 'fpp', name: 'Federação Paulista', acronym: 'FPP' };
 
@@ -31,6 +31,22 @@ describe('filiação de clube/arena', () => {
     expect(sortAffiliations(lista).map((a) => a.org_name)).toEqual(['Beta', 'Alfa', 'Zeta', 'Gama']);
     expect(approvedAffiliations(lista).clubs).toHaveLength(1);
     expect(approvedAffiliations(lista).arenas).toHaveLength(1);
-    expect(affiliationCounts(lista)).toEqual({ pending: 1, approved: 2, clubs: 1, arenas: 1 });
+    expect(affiliationCounts(lista)).toEqual({ pending: 1, invited: 0, approved: 2, clubs: 1, arenas: 1 });
+  });
+
+  it('convite da federação: nasce "invited" sem quem pediu, só onde dá para convidar, e o aceite filia', () => {
+    const { id, data } = buildAffiliationInvite({ federation: { id: 'f1', name: 'Fed', acronym: 'FP' }, kind: 'arena', org: { id: 'a1', name: 'Arena', city: 'Porto Alegre', state: 'rs' }, uid: 'sec' });
+    expect(id).toBe('f1_arena_a1');
+    expect(data).toMatchObject({ status: 'invited', invited_by: 'sec', requested_by: null, org_name: 'Arena', org_state: 'RS' });
+    const st = affiliationState(data);
+    expect(st.invited).toBe(true);
+    expect(st.canRequest).toBe(false);
+    expect(st.canWithdraw).toBe(false);
+    expect(canInviteOrg(null)).toBe(true);
+    expect(canInviteOrg({ status: 'rejected' })).toBe(true);
+    ['pending', 'approved', 'suspended', 'invited'].forEach((status) => expect(canInviteOrg({ status })).toBe(false));
+    expect(affiliationAcceptPatch('gestor')).toMatchObject({ status: 'approved', requested_by: 'gestor' });
+    expect(() => affiliationAcceptPatch('')).toThrow();
+    expect(sortAffiliations([{ status: 'approved', org_name: 'A' }, { status: 'invited', org_name: 'B' }])[0].status).toBe('invited');
   });
 });

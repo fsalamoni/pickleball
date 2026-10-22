@@ -123,6 +123,38 @@ describe('⭐ clubes e arenas filiados', () => {
     await assertSucceeds(deleteDoc(doc(como(ARENAMAN), 'federation_affiliations', `${FED}_arena_arena1`)));
     await assertSucceeds(deleteDoc(doc(como(PRES), 'federation_affiliations', `${FED}_club_clube1`)));
   });
+  it('a equipe CONVIDA o clube; quem gere aceita (vira filiado) ou recusa; a equipe não aceita por ele', async () => {
+    const id = `${FED}_club_clube2`;
+    const convite = pedidoFiliacao('club', 'clube2', { status: 'invited', requested_by: null, invited_by: SEC });
+    await semRegras(async (db) => {
+      await setDoc(doc(db, 'clubs', 'clube2'), { name: 'Clube 2', created_by: BIA });
+      await setDoc(doc(db, 'club_members', `clube2_${BIA}`), { club_id: 'clube2', user_id: BIA, role: 'admin' });
+    });
+    // Só a equipe de filiados/admin convida, em nome próprio; o financeiro e um terceiro não.
+    await assertFails(setDoc(doc(como(TES), 'federation_affiliations', id), { ...convite, invited_by: TES }));
+    await assertFails(setDoc(doc(como(ANA), 'federation_affiliations', id), { ...convite, invited_by: ANA }));
+    await assertFails(setDoc(doc(como(SEC), 'federation_affiliations', id), { ...convite, invited_by: PRES }));
+    await assertFails(setDoc(doc(como(SEC), 'federation_affiliations', id), { ...convite, requested_by: SEC }));
+    await assertSucceeds(setDoc(doc(como(SEC), 'federation_affiliations', id), convite));
+    // Convite não é público; quem gere o clube lê.
+    await assertFails(getDoc(doc(anonimo(), 'federation_affiliations', id)));
+    await assertSucceeds(getDoc(doc(como(BIA), 'federation_affiliations', id)));
+    // A equipe não aprova o próprio convite; um terceiro não aceita; quem gere aceita em nome próprio.
+    await assertFails(updateDoc(doc(como(SEC), 'federation_affiliations', id), { status: 'approved', review: null }));
+    await assertFails(updateDoc(doc(como(ANA), 'federation_affiliations', id), { status: 'approved', requested_by: ANA }));
+    await assertFails(updateDoc(doc(como(BIA), 'federation_affiliations', id), { status: 'approved', requested_by: SEC }));
+    await assertFails(updateDoc(doc(como(BIA), 'federation_affiliations', id), { status: 'approved', requested_by: BIA, org_name: 'Outro' }));
+    await assertSucceeds(updateDoc(doc(como(BIA), 'federation_affiliations', id), { status: 'approved', requested_by: BIA, accepted_at_ms: 1 }));
+    await assertSucceeds(getDoc(doc(anonimo(), 'federation_affiliations', id)));
+  });
+  it('a equipe de filiados cancela o convite; quem gere recusa apagando; filiado ela não apaga', async () => {
+    await semRegras((db) => setDoc(doc(db, 'federation_affiliations', `${FED}_arena_arena1`), pedidoFiliacao('arena', 'arena1', { status: 'invited', requested_by: null, invited_by: SEC })));
+    await assertFails(deleteDoc(doc(como(TES), 'federation_affiliations', `${FED}_arena_arena1`)));
+    await assertSucceeds(deleteDoc(doc(como(SEC), 'federation_affiliations', `${FED}_arena_arena1`)));
+    await semRegras((db) => setDoc(doc(db, 'federation_affiliations', `${FED}_arena_arena1`), pedidoFiliacao('arena', 'arena1', { status: 'invited', requested_by: null, invited_by: SEC })));
+    await assertSucceeds(deleteDoc(doc(como(ARENAMAN), 'federation_affiliations', `${FED}_arena_arena1`)));
+    await assertFails(deleteDoc(doc(como(SEC), 'federation_affiliations', `${FED}_club_clube1`)));
+  });
   it('com a flag desligada ninguém pede nem decide', async () => {
     await semRegras((db) => setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: {} }));
     await assertFails(setDoc(doc(como(ARENAMAN), 'federation_affiliations', `${FED}_arena_arena9`), pedidoFiliacao('arena', 'arena1')));
