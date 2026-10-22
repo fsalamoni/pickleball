@@ -3,12 +3,13 @@
  * `members`): os pedidos para aprovar ou recusar e os filiados, com suspender
  * e reintegrar. A decisão grava só estado e motivo (a regra confere).
  */
-import React, { useMemo, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Ban, Building2, CheckCircle2, RotateCcw, Users, XCircle } from 'lucide-react';
+import { Ban, Building2, CheckCircle2, RotateCcw, Send, Users, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { decideAffiliation } from '@/modules/federations/services/federationService';
+import { cancelAffiliationInvite, decideAffiliation } from '@/modules/federations/services/federationService';
+import { fedModuleOn, isFederationPublic } from '@/modules/federations/domain/federation';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { sortAffiliations } from '@/modules/federations/domain/affiliations';
 import { AFFILIATION_STATUS, AFFILIATION_STATUS_LABELS, ORG_KIND_LABELS } from '@/modules/federations/domain/constants';
@@ -19,7 +20,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { quando } from '../federationUi';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 
-const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red' };
+const FedOrgInviteDialog = lazy(() => import('./FedOrgInviteDialog'));
+const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red', invited: 'blue' };
 
 function MotivoDialog({ acao, aff, onClose }) {
   const { user } = useAuth();
@@ -50,7 +52,10 @@ function OrgRow({ aff }) {
   const { user } = useAuth();
   const [motivo, setMotivo] = useState(null);
   const [aprovando, setAprovando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const m = useFederationMutation((action) => decideAffiliation(aff, action, { uid: user?.uid }));
+  const cancelar = useFederationMutation(() => cancelAffiliationInvite(aff, { uid: user?.uid }));
+  const convite = aff.status === AFFILIATION_STATUS.INVITED;
   const Icone = aff.kind === 'club' ? Users : Building2;
   const to = aff.kind === 'club' ? `/clubes/${aff.org_id}` : `/arenas/${aff.org_id}`;
   return (
@@ -64,7 +69,7 @@ function OrgRow({ aff }) {
               <V2Badge tone={TOM[aff.status] || 'neutral'}>{t(AFFILIATION_STATUS_LABELS[aff.status] || aff.status)}</V2Badge>
             </p>
             <p className="text-xs text-gray-500">
-              {t(ORG_KIND_LABELS[aff.kind] || aff.kind)}{aff.org_city ? ` · ${[aff.org_city, aff.org_state].filter(Boolean).join('/')}` : ''} · {t('pedido em {data}', { data: quando(aff.requested_at) })}
+              {t(ORG_KIND_LABELS[aff.kind] || aff.kind)}{aff.org_city ? ` · ${[aff.org_city, aff.org_state].filter(Boolean).join('/')}` : ''} · {convite || (!aff.requested_at && aff.invited_at) ? t('convidado em {data}', { data: quando(aff.invited_at) }) : t('pedido em {data}', { data: quando(aff.requested_at) })}
             </p>
             {aff.message && <p className="mt-1 text-sm text-gray-700">“{aff.message}”</p>}
             {aff.review?.reason && aff.status !== AFFILIATION_STATUS.APPROVED && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: aff.review.reason })}</p>}
@@ -78,6 +83,7 @@ function OrgRow({ aff }) {
             </>
           )}
           {aff.status === AFFILIATION_STATUS.APPROVED && <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('suspend')}><Ban className="h-4 w-4" />{t('Suspender')}</V2Button>}
+          {convite && <V2Button type="button" size="sm" variant="ghost" disabled={cancelar.isPending} onClick={() => setCancelando(true)}><XCircle className="h-4 w-4" />{t('Cancelar convite')}</V2Button>}
           {aff.status === AFFILIATION_STATUS.SUSPENDED && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => m.mutate('approve', { onSuccess: () => toast.success(t('Filiação reintegrada.')), onError: (e) => toast.error(e.message) })}><RotateCcw className="h-4 w-4" />{t('Reintegrar')}</V2Button>}
         </div>
       </V2Surface>
@@ -93,6 +99,16 @@ function OrgRow({ aff }) {
         cancelLabel={t('Voltar')}
         onConfirm={() => m.mutate('approve', { onSuccess: () => { setAprovando(false); toast.success(t('Filiação aprovada. Quem pediu foi avisado.')); }, onError: (e) => toast.error(e.message) })}
       />
+      <ConfirmDialog
+        open={cancelando}
+        onOpenChange={setCancelando}
+        loading={cancelar.isPending}
+        title={t('Cancelar o convite a {nome}?', { nome: aff.org_name || '' })}
+        description={t('O convite some da tela do clube ou da arena. Dá para convidar de novo depois.')}
+        confirmLabel={t('Cancelar convite')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => cancelar.mutate(undefined, { onSuccess: () => { setCancelando(false); toast.success(t('Convite cancelado.')); }, onError: (e) => toast.error(e.message) })}
+      />
       {motivo && <MotivoDialog acao={motivo} aff={aff} onClose={() => setMotivo(null)} />}
     </li>
   );
@@ -101,6 +117,7 @@ function OrgRow({ aff }) {
 /** `pendentes` é contrato: a faixa "Precisa de você" abre `?aba=filiados-orgs&filtro=pendentes`. */
 const FILTROS = [
   { id: 'pendentes', label: () => t('Pedidos'), ok: (a) => a.status === AFFILIATION_STATUS.PENDING },
+  { id: 'convites', label: () => t('Convites'), ok: (a) => a.status === AFFILIATION_STATUS.INVITED },
   { id: 'filiados', label: () => t('Filiados'), ok: (a) => a.status === AFFILIATION_STATUS.APPROVED },
   { id: 'clubes', label: () => t('Clubes'), ok: (a) => a.kind === 'club' && a.status === AFFILIATION_STATUS.APPROVED },
   { id: 'arenas', label: () => t('Arenas'), ok: (a) => a.kind === 'arena' && a.status === AFFILIATION_STATUS.APPROVED },
@@ -108,8 +125,11 @@ const FILTROS = [
 ];
 const BUSCA = (a) => `${a.org_name} ${a.org_city || ''} ${a.org_state || ''}`;
 
-export default function FedAffiliationsPanel({ affiliationsQ }) {
+export default function FedAffiliationsPanel({ federation, affiliationsQ }) {
   const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'pendentes', FILTROS.map((f) => f.id));
+  const [convidando, setConvidando] = useState(false);
+  // Convidar exige a federação pública com o módulo ligado (a regra confere as duas coisas).
+  const podeConvidar = Boolean(federation) && fedModuleOn(federation, 'affiliations') && isFederationPublic(federation);
   const lista = useMemo(() => sortAffiliations(affiliationsQ.data || []), [affiliationsQ.data]);
   const opcao = FILTROS.find((f) => f.id === filtro) || FILTROS[0];
   const doFiltro = useMemo(() => lista.filter(opcao.ok), [lista, opcao]);
@@ -119,7 +139,13 @@ export default function FedAffiliationsPanel({ affiliationsQ }) {
   const termo = busca.termo.trim();
   return (
     <section className="space-y-4" aria-label={t('Clubes e arenas filiados')} data-dica="federacao-aba-filiados-orgs">
-      <p className="text-sm text-gray-600">{t('O clube pede em Gestão do clube → Federação; a arena, na Central → Equipe e parceiros → Federação. Aprovado, o selo "Filiado" aparece na página dele e ele entra na lista pública da federação.')}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="text-sm text-gray-600">{t('O clube pede em Gestão do clube → Federação; a arena, na Central → Equipe e parceiros → Federação. Aprovado, o selo "Filiado" aparece na página dele e ele entra na lista pública da federação. Você também pode convidar: quem gere aceita e vira filiado na hora.')}</p>
+        {podeConvidar
+          ? <V2Button type="button" size="sm" className="shrink-0" onClick={() => setConvidando(true)} data-dica="federacao-convidar-org"><Send className="h-4 w-4" />{t('Convidar clube ou arena')}</V2Button>
+          : federation && <p className="shrink-0 text-xs text-gray-500 sm:max-w-56">{t('Para convidar, a federação precisa estar pública.')}</p>}
+      </div>
+      {convidando && <Suspense fallback={null}><FedOrgInviteDialog federation={federation} affiliations={lista} onClose={() => setConvidando(false)} /></Suspense>}
       {lista.length > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-wrap gap-2" role="group" aria-label={t('Filtro')}>

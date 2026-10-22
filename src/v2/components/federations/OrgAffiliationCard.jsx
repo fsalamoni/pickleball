@@ -7,9 +7,9 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Landmark, Send, Trash2 } from 'lucide-react';
+import { Check, Landmark, Send, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { requestAffiliation, withdrawAffiliation } from '@/modules/federations/services/federationService';
+import { answerAffiliationInvite, requestAffiliation, withdrawAffiliation } from '@/modules/federations/services/federationService';
 import { useFederationMutation, useFederationsEnabled, useOrgAffiliations, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { affiliationState } from '@/modules/federations/domain/affiliations';
@@ -18,12 +18,28 @@ import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surfa
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t } from '@/core/i18n';
 
-const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red' };
+const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red', invited: 'blue' };
 // Âncoras das dicas (literais, para o guarda `dicas.test.js` as encontrar).
 const DICA = { club: { dica: 'clube-federacao' }, arena: { dica: 'arena-federacao' } };
 
-function Linha({ aff, onWithdraw, pending }) {
+function Linha({ aff, onWithdraw, onAnswer, pending }) {
   const st = affiliationState(aff);
+  if (st.invited) {
+    return (
+      <li className="space-y-2 rounded-2xl border border-blue-100 bg-blue-50 p-3">
+        <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
+          <Link to={`/federacoes/${aff.federation_id}`} className="hover:underline">{aff.federation_name || aff.federation_acronym}</Link>
+          <V2Badge tone="blue">{t(AFFILIATION_STATUS_LABELS.invited)}</V2Badge>
+        </p>
+        <p className="text-sm text-gray-700">{t('A federação convidou para se filiar. Aceito, vira filiado na hora e o selo "Filiado" aparece na página.')}</p>
+        {aff.message && <p className="text-sm text-gray-700">“{aff.message}”</p>}
+        <div className="flex flex-wrap gap-2">
+          <V2Button type="button" size="sm" disabled={pending} onClick={() => onAnswer(aff, true)}><Check className="h-4 w-4" />{t('Aceitar o convite')}</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => onAnswer(aff, false)}><X className="h-4 w-4" />{t('Recusar')}</V2Button>
+        </div>
+      </li>
+    );
+  }
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3">
       <div className="min-w-0 flex-1">
@@ -48,6 +64,11 @@ export default function OrgAffiliationCard({ kind, org }) {
   const [confirmar, setConfirmar] = useState(null);
   const pedir = useFederationMutation(() => requestAffiliation({ federation: (feds.data || []).find((f) => f.id === fedId), kind, org, uid: user?.uid, message: mensagem }));
   const retirar = useFederationMutation((aff) => withdrawAffiliation(aff, { uid: user?.uid }));
+  const responder = useFederationMutation(({ aff, aceitar }) => answerAffiliationInvite(aff, aceitar, { uid: user?.uid }));
+  const onAnswer = (aff, aceitar) => responder.mutate({ aff, aceitar }, {
+    onSuccess: () => toast.success(aceitar ? t('Convite aceito: agora é filiado à {sigla}.', { sigla: aff.federation_acronym || aff.federation_name }) : t('Convite recusado.')),
+    onError: (e) => toast.error(e.message),
+  });
   const opcoes = useMemo(() => (feds.data || []).filter((f) => fedModuleOn(f, 'affiliations')).filter((f) => !(minhas.data || []).some((a) => a.federation_id === f.id && !affiliationState(a).canRequest)), [feds.data, minhas.data]);
   if (!ligado) return null;
   return (
@@ -62,7 +83,7 @@ export default function OrgAffiliationCard({ kind, org }) {
       {minhas.isError && <V2ErrorState inline title={t('Não carregaram as filiações')} onRetry={() => minhas.refetch()} />}
       {minhas.isLoading && <V2Skeleton lines={2} />}
       {minhas.isSuccess && minhas.data.length > 0 && (
-        <ul className="space-y-2">{minhas.data.map((a) => <Linha key={a.id} aff={a} pending={retirar.isPending} onWithdraw={setConfirmar} />)}</ul>
+        <ul className="space-y-2">{minhas.data.map((a) => <Linha key={a.id} aff={a} pending={retirar.isPending || responder.isPending} onWithdraw={setConfirmar} onAnswer={onAnswer} />)}</ul>
       )}
       {/* Desfiliar apaga o vínculo: voltar é um pedido novo, com nova aprovação. Por isso pergunta antes. */}
       <ConfirmDialog

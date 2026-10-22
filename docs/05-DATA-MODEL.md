@@ -1853,13 +1853,19 @@ Clube (`kind: 'club'`) ou arena (`kind: 'arena'`) filiado à federação.
 `federation_id`, `federation_name`, `federation_acronym`, `kind`, `org_id`,
 `org_name`, `org_city`, `org_state`, `org_logo` (copiados — a página da
 federação não lê `clubs`/`arenas`), `status`
-(`pending|approved|rejected|suspended`), `message` (≤ 500), `requested_by`,
-`review { by, at_ms, reason }`, `created_at`, `updated_at`. Leitura: aprovada é
-pública; o resto só quem pediu, quem gere a organização (`fedOrgManager`), a
-equipe `admin`/`members` e o admin. Criação: quem gere a organização, só
-`pending`, com a flag e o módulo `affiliations` ligados (`fedModuleOn`).
-Atualização: equipe `admin`/`members`, só `status`/`review`/`updated_at`.
-Apagar: quem gere a organização, equipe `admin` ou admin.
+(`pending|invited|approved|rejected|suspended`), `message` (≤ 500), `requested_by`,
+`review { by, at_ms, reason }`, `created_at`, `updated_at`; no convite da
+federação (2026-10-22, opcionais): `invited_by`, `invited_at`, `accepted_at_ms`.
+Leitura: aprovada é pública; o resto só quem pediu, quem gere a organização
+(`fedOrgManager`), a equipe `admin`/`members` e o admin. Criação: quem gere a
+organização, só `pending` com `requested_by` = si; **ou** a equipe
+`admin`/`members` de federação pública, só `invited` com `invited_by` = si e
+`requested_by` nulo — sempre com a flag e o módulo `affiliations` ligados
+(`fedModuleOn`). Atualização: equipe `admin`/`members`, só
+`status`/`review`/`updated_at` e nunca num convite; quem gere a organização
+aceita o convite (`invited` → `approved`, `requested_by` = si, só
+`status`/`requested_by`/`accepted_at_ms`/`updated_at`). Apagar: quem gere a
+organização, equipe `admin` ou admin; equipe `members` só convite ou recusado.
 
 ### `federation_results/{fedId}_{tournamentId}_{modalityId}` (PR 2, público)
 A colocação de uma categoria de torneio chancelado, enviada pelo organizador.

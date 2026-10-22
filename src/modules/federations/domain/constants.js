@@ -380,6 +380,8 @@ export const AFFILIATION_STATUS = Object.freeze({
   APPROVED: 'approved',
   REJECTED: 'rejected',
   SUSPENDED: 'suspended',
+  /** A FEDERAÇÃO convidou; quem gere o clube/arena aceita (vira filiado) ou recusa. */
+  INVITED: 'invited',
 });
 
 export const AFFILIATION_STATUS_LABELS = Object.freeze({
@@ -387,6 +389,7 @@ export const AFFILIATION_STATUS_LABELS = Object.freeze({
   approved: tk('Filiado'),
   rejected: tk('Recusado'),
   suspended: tk('Suspenso'),
+  invited: tk('Convite da federação'),
 });
 
 /** Chancela de um torneio (módulo `tournaments`): o organizador PEDE, a federação decide. */

@@ -330,7 +330,9 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ler índice de carteirinha | ✖ | ✖ | ✖ | ✖ | ✖ | rules `if false` |
 | Verificar carteirinha pelo código | ✔ | ✔ | ✔ | ✔ | ✔ | **Cloud Function** `federationVerify` (sem login; devolve o mínimo) |
 | Pedir filiação do clube/arena à federação (módulo `affiliations` ligado) | ✖ | ✔ admin do clube / gestor da arena (`fedOrgManager`), só `pending` | — | — | ✔ | rules (`fedModuleOn`) |
-| Aprovar/recusar/suspender filiação de clube/arena | ✖ | ✖ | ✖ | ✔ `members` ou `admin` | ✔ | rules (só `status`/`review`) |
+| Aprovar/recusar/suspender filiação de clube/arena | ✖ | ✖ | ✖ | ✔ `members` ou `admin` | ✔ | rules (só `status`/`review`; nunca num convite) |
+| Convidar clube/arena a se filiar / cancelar o convite | ✖ | ✖ | ✖ | ✔ `members` ou `admin`, federação pública, só `invited` com `requested_by` nulo | ✔ | rules (`fedModuleOn`, `fedPublic`) |
+| Aceitar ou recusar o convite da federação | ✖ | ✔ admin do clube / gestor da arena (`fedOrgManager`); aceitar = `approved` com `requested_by` = si | — | — | ✔ | rules (só `status`/`requested_by`/`accepted_at_ms`) |
 | Retirar pedido / desfiliar clube ou arena | ✖ | ✔ quem gere a organização | — | ✔ `admin` | ✔ | rules |
 | Ler filiação de clube/arena | ◐ só aprovada | ◐ aprovada; a própria organização | — | ✔ `admin`/`members` | ✔ | rules |
 | Pedir a chancela do torneio (módulo `tournaments`) | ✖ | ✔ admin do torneio, só `pending` com `requested_by` = ele | — | — | ✔ | rules (`tournamentFederationOk`) |

@@ -25,7 +25,7 @@ import {
   AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, fedRankingDocId, fedResultDocId, fedUserDocId,
 } from '../domain/constants.js';
 import { isoDate } from '../domain/membership.js';
-import { affiliationDecision, affiliationState, buildAffiliationRequest } from '../domain/affiliations.js';
+import { affiliationAcceptPatch, affiliationDecision, affiliationState, buildAffiliationInvite, buildAffiliationRequest, canInviteOrg } from '../domain/affiliations.js';
 import { SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctionDecision, sanctionState } from '../domain/sanction.js';
 import { normalizeRankingConfig, resultSeason, tournamentDay } from '../domain/officialRanking.js';
 import { staffPerms } from '../domain/staff.js';
@@ -491,6 +491,65 @@ export async function decideAffiliation(affiliation, action, { uid, reason = '' 
     link: affiliation.kind === 'club' ? `/clubes/${affiliation.org_id}` : `/arenas/${affiliation.org_id}`, actor: { uid },
   }).catch(() => 0);
   return patch;
+}
+
+/** Quem gere a organização (para o aviso do convite): admins do clube ou gestores da arena. */
+async function orgManagerUids(kind, orgId) {
+  const q = kind === 'club'
+    ? query(collection(db, 'club_members'), where('club_id', '==', orgId), where('role', '==', 'admin'))
+    : query(collection(db, 'arena_managers'), where('arena_id', '==', orgId));
+  return [...new Set((await getDocs(q)).docs.map((d) => d.data().user_id).filter(Boolean))];
+}
+
+const linkDaOrg = (kind, orgId) => (kind === 'club' ? `/clubes/${orgId}?tab=admin` : `/arenas/${orgId}/gerir?aba=federacao`);
+
+/**
+ * A FEDERAÇÃO convida um clube/arena (equipe com `members` ou `admin`). Não
+ * filia: quem gere a organização aceita ou recusa. Recusado antes pode ser
+ * convidado de novo (o documento antigo sai).
+ */
+export async function inviteAffiliation({ federation, kind, org, uid, message = '' }) {
+  if (!fedModuleOn(federation, 'affiliations')) throw new FederationError(t('Ligue o módulo "Clubes e arenas filiados" para convidar.'));
+  const { id, data } = buildAffiliationInvite({ federation, kind, org, uid, message });
+  const ref = doc(db, C.affiliations, id);
+  const atual = await getDoc(ref);
+  if (atual.exists()) {
+    if (!canInviteOrg(atual.data())) throw new FederationError(t('Esta organização já é filiada, já pediu ou já tem convite.'));
+    await deleteDoc(ref);
+  }
+  await setDoc(ref, { ...data, invited_at: serverTimestamp(), updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'federation_affiliation_invite', actor: { uid }, details: { federation_id: federation.id, kind, org_id: org.id } });
+  const gestores = await orgManagerUids(kind, org.id).catch(() => []);
+  await notifyUsers(gestores, {
+    type: NOTIFICATION_TYPE.FEDERATION,
+    title: t('A {sigla} convidou {org} para se filiar', { sigla: data.federation_acronym || data.federation_name, org: data.org_name }),
+    message: kind === 'club' ? t('Aceite ou recuse em Gestão do clube → Federação. Aceito, o clube vira filiado na hora.') : t('Aceite ou recuse na Central da arena → Equipe e parceiros → Federação. Aceito, a arena vira filiada na hora.'),
+    link: linkDaOrg(kind, org.id),
+    actor: { uid },
+  }).catch(() => 0);
+  return { id, ...data };
+}
+
+/** A equipe cancela o convite ainda não respondido. */
+export async function cancelAffiliationInvite(affiliation, { uid } = {}) {
+  await deleteDoc(doc(db, C.affiliations, affiliation.id));
+  await createAuditLog({ action: 'federation_affiliation_invite_cancel', actor: { uid }, details: { federation_id: affiliation.federation_id, kind: affiliation.kind, org_id: affiliation.org_id } });
+}
+
+/** Quem gere a organização responde ao convite: aceitar filia na hora; recusar apaga o convite. */
+export async function answerAffiliationInvite(affiliation, accept, { uid } = {}) {
+  const ref = doc(db, C.affiliations, affiliation.id);
+  if (accept) await updateDoc(ref, { ...affiliationAcceptPatch(uid), updated_at: serverTimestamp() });
+  else await deleteDoc(ref);
+  await createAuditLog({ action: accept ? 'federation_affiliation_invite_accept' : 'federation_affiliation_invite_decline', actor: { uid }, details: { federation_id: affiliation.federation_id, kind: affiliation.kind, org_id: affiliation.org_id } });
+  const equipe = await staffUidsWith(affiliation.federation_id, FED_PERMISSION.MEMBERS).catch(() => []);
+  await notifyUsers(equipe.filter((x) => x !== uid), {
+    type: NOTIFICATION_TYPE.FEDERATION,
+    title: accept ? t('{org} aceitou o convite', { org: affiliation.org_name }) : t('{org} recusou o convite', { org: affiliation.org_name }),
+    message: accept ? t('{org} agora é filiado à {sigla}. O selo já aparece na página.', { org: affiliation.org_name, sigla: affiliation.federation_acronym }) : t('O convite de filiação foi recusado. Dá para convidar de novo depois.'),
+    link: `/federacoes/${affiliation.federation_id}/gerir?aba=filiados-orgs`,
+    actor: { uid },
+  }).catch(() => 0);
 }
 
 /* ------------------------------------------------- chancela de torneios -- */
