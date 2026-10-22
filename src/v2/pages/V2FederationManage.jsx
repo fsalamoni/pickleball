@@ -24,6 +24,7 @@ import { FED_SECTION_GROUPS, buildFederationSections, residualModules, sectionOf
 import { FedBadges, FedLogo, FederationGate, fedPath, fedPublicPath } from '@/v2/components/federations/federationUi';
 import { fedPreviewPath } from '@/v2/components/federations/profile/FedStaffBar';
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
+import { useFederationAccountReports } from '@/modules/federations/hooks/useAccounts';
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
 import { t } from '@/core/i18n';
@@ -46,6 +47,7 @@ const FedAcervoPanel = lazy(() => import('@/v2/components/federations/manage/Fed
 const FedAgendaPanel = lazy(() => import('@/v2/components/federations/manage/FedAgendaPanel'));
 const FedCommentsPanel = lazy(() => import('@/v2/components/federations/manage/FedCommentsPanel'));
 const FedCompliancePanel = lazy(() => import('@/v2/components/federations/manage/FedCompliancePanel'));
+const FedAccountsPanel = lazy(() => import('@/v2/components/federations/manage/accounts/FedAccountsPanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
 
@@ -109,6 +111,9 @@ function Central({ federationId }) {
   const docsQ = useFederationDocsAll(federationId, { enabled: papel.isStaff && podeAcervo });
   // Conformidade: a agenda pública só quando a aba abre (as assembleias do ano).
   const eventsQ = useFederationEvents(federationId, 'public', { enabled: papel.isStaff && admin && tab === 'conformidade' && fedModuleOn(fq.data, 'calendar') });
+  // Contas: financeiro, conselho fiscal e admin (as prestações alimentam o "Precisa de você").
+  const podeContas = (admin || podeFinanceiro || perms.includes(FED_PERMISSION.FISCAL)) && fedModuleOn(fq.data, 'accounts');
+  const accountReportsQ = useFederationAccountReports(federationId, { enabled: papel.isStaff && podeContas });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -149,7 +154,7 @@ function Central({ federationId }) {
 
       <FedHiddenBanner federation={f} canPublish={admin} onOpen={() => setTab('publicacao')} />
 
-      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
+      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
 
       <div className="space-y-3">
         <V2SectionNav ariaLabel={t('Seções da Central da federação')} dica="federacao-secoes" sections={sections} grupos={FED_SECTION_GROUPS} activeId={secaoAtiva.id} onSelect={(s) => setTab(s.tabs[0].value)} />
@@ -171,6 +176,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
+        {secaoAtiva.id === 'contas' && <FedAccountsPanel federation={f} perms={perms} tab={tab} reportsQ={accountReportsQ} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
         {(secaoAtiva.id === 'config' || secaoAtiva.id === 'pagina-publica') && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>

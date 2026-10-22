@@ -377,6 +377,17 @@ async function file(ctx, actor, data, { fed, perms }) {
 
 const ACOES = { save, delete: remove, publish, rectify, visibility, withdraw };
 
+/**
+ * Cria e publica um ato de uma vez, pela MESMA régua (`save` + `publish`):
+ * usado pela prestação de contas (`federationAccounts.js`), que já conferiu a
+ * permissão dela. Os arquivos têm de estar em `federacao-acervo/{actor}/`.
+ */
+async function publicarAto(ctx, actor, fed, doc) {
+  const { docId } = await save(ctx, actor, { doc }, { fed });
+  const r = await publish(ctx, actor, { docId }, { fed });
+  return { ...r, docId };
+}
+
 async function acervo(ctx, actor, data = {}) {
   const c = await contexto(ctx, actor, data);
   if (data.action === 'file') return file(ctx, actor, data, c);
@@ -386,4 +397,4 @@ async function acervo(ctx, actor, data = {}) {
   return fn(ctx, actor, data, c);
 }
 
-module.exports = { acervo, avisarSeguidores, DOCS, FOLLOWERS, VERSIONS_MAX };
+module.exports = { acervo, avisarSeguidores, DOCS, FOLLOWERS, VERSIONS_MAX, oficializar, publicarAto };

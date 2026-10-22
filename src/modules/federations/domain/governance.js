@@ -36,7 +36,16 @@ export function validateGovernance(input = {}) {
     const role = str(m?.role, 60);
     const name = str(m?.name, 80);
     if (!role || !name) errors[`board.${i}`] = t('Cargo e nome.');
-    return { role, name };
+    // Remuneração do dirigente (Lei 9.615/98, art. 18-A): opcional; 0 = não remunerado; ausente = não informado.
+    const out = { role, name };
+    if (m?.pay_cents != null && m.pay_cents !== '') {
+      const pay = Number(m.pay_cents);
+      if (!Number.isInteger(pay) || pay < 0 || pay > 100_000_000) errors[`board.${i}.pay`] = t('Valor mensal inválido.');
+      else out.pay_cents = pay;
+    }
+    const pay_note = str(m?.pay_note, 120);
+    if (pay_note) out.pay_note = pay_note;
+    return out;
   });
   const minutes = minutesIn.slice(0, MINUTES_MAX).map((a, i) => {
     const title = str(a?.title, 120);

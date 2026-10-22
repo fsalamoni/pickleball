@@ -13,7 +13,7 @@ import { t } from '@/core/i18n';
 
 const dado = (q) => (q?.isSuccess ? q.data : undefined);
 
-export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, perms, abas, onIrParaAba }) {
+export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, accountReportsQ, perms, abas, onIrParaAba }) {
   const members = dado(membersQ);
   const charges = dado(chargesQ);
   const affiliations = dado(affiliationsQ);
@@ -22,7 +22,8 @@ export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ
   const documents = dado(documentsQ);
   const sanctions = dado(sanctionsQ);
   const reports = dado(reportsQ);
-  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports }, perms), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, perms]);
+  const accountReports = dado(accountReportsQ);
+  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports }, perms), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, perms]);
   // A consulta desligada guarda o dado em cache: a pendência de um módulo que
   // acabou de desligar (aba que não existe mais) não vira um botão morto.
   const visiveis = abas ? itens.filter((i) => abas.has(i.aba)) : itens;

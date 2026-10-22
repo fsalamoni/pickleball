@@ -22,6 +22,7 @@ import { useClipboard } from '@/core/lib/useClipboard';
 import PlansList from '../PlansList';
 import { FedAcervoBlock } from '../acervo/AcervoPublic';
 import { FedAgendaBlock } from '../agenda/AgendaPublic';
+import FedAccountsPublic from '../accounts/FedAccountsPublic';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '../FedPublicBlocks';
 import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip, FedStoreLink } from '../FedCommsBlocks';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
@@ -180,6 +181,7 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
         {aba === PROFILE_TAB.DOCUMENTS && (
           <div className="space-y-8">
             <FedAcervoBlock federation={f} limite={10} />
+            <FedAccountsPublic federation={f} />
             <FedGovernanceBlock federation={f} />
           </div>
         )}

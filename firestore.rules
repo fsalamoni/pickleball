@@ -5044,6 +5044,31 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ORÇAMENTO E PRESTAÇÃO DE CONTAS (módulo `accounts`): só o SERVIDOR
+    // grava (`functions/federationAccounts.js`). Lê o financeiro, o conselho
+    // fiscal e o admin; o orçamento e a prestação PUBLICADOS (`pub`, que nunca
+    // volta a falso) leem todos que veem a federação, com o módulo ligado. A
+    // consulta pública traz `pub == true` em igualdade (regra provável). O
+    // lançamento é só da equipe das contas.
+    function fedAcc(fid) {
+      return fedHas(fid, 'finance') || fedHas(fid, 'fiscal') || fedHas(fid, 'admin');
+    }
+    function fedAccPub() {
+      return od().get('pub', false) == true && fedModuleOn(od().federation_id, 'accounts') && fedSees(od().federation_id);
+    }
+    match /federation_budgets/{id} {
+      allow read: if fedAcc(od().federation_id) || fedAccPub();
+      allow write: if false;
+    }
+    match /federation_account_reports/{id} {
+      allow read: if fedAcc(od().federation_id) || fedAccPub();
+      allow write: if false;
+    }
+    match /federation_ledger/{id} {
+      allow read: if fedAcc(od().federation_id);
+      allow write: if false;
+    }
+
     // Quem SEGUE as publicações oficiais — acervo e calendário (id
     // `{fed}_{uid}`): só a própria pessoa lê, segue e deixa de seguir. O aviso
     // é do servidor, e só vai a quem pode ler o ato ou o evento. `get` do
@@ -5078,7 +5103,9 @@ service cloud.firestore {
       allow read: if (isOwner(od().payer_uid))
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'finance')
-        || fedHas(od().federation_id, 'members');
+        || fedHas(od().federation_id, 'members')
+        // O conselho fiscal confere as receitas (a cobrança paga entra nas contas).
+        || fedHas(od().federation_id, 'fiscal');
       // Só o servidor cria; confirmar e cancelar também são dele.
       allow create, delete: if false;
       // "Já paguei": o pagador só DECLARA — aberta/informada → informada, com a observação.

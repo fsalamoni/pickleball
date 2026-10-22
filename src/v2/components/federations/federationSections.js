@@ -10,7 +10,7 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Calculator, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -117,6 +117,16 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       tabs: [
         { value: 'cobrancas', label: tk('Cobranças'), icon: Receipt },
         { value: 'recebidos', label: tk('Recebidos'), icon: Wallet },
+      ],
+    },
+    // Contas (módulo `accounts`): o financeiro prepara; o conselho fiscal lê tudo e dá o parecer.
+    (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL)) && modulo('accounts') && {
+      id: 'contas', grupo: 'gerir', label: tk('Contas'), icon: Calculator, dica: 'federacao-secao-contas',
+      tabs: [
+        { value: 'orcamento', label: tk('Visão geral'), icon: BarChart3 },
+        { value: 'orcamento-anual', label: tk('Orçamento'), icon: Calculator },
+        { value: 'lancamentos', label: tk('Lançamentos'), icon: Receipt },
+        { value: 'prestacao-contas', label: tk('Prestação de contas'), icon: ScrollText },
       ],
     },
     (admin || pode(FED_PERMISSION.MEMBERS) || pode(FED_PERMISSION.FINANCE)) && {

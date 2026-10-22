@@ -204,6 +204,15 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   O link do arquivo existe só enquanto o documento é público (cada troca gera
   token novo); o restrito, até 9 MB, vai pela função (`file`). Arquivo novo só
   da pasta de quem salva. Ver `docs/50-FEDERACAO.md` §14.
+- **Contas** (módulo `accounts`, `docs/50-FEDERACAO.md` §22): orçamento,
+  lançamentos e prestação de contas **só o servidor grava**
+  (`functions/federationAccounts.js`, régua em `federationAccountsPolicy.js`
+  com paridade contra `domain/accounts.js`); a cobrança paga entra sozinha
+  como receita (nunca lance de novo); o retrato da prestação **congela** no
+  envio ao conselho e fecha o período; publicar exige o parecer; o público
+  só lê `pub == true` e o lançamento nunca; categorias e `?aba=`
+  (`orcamento`, `orcamento-anual`, `lancamentos`, `prestacao-contas`) são
+  contrato. `extraExpenses`/`despesasDerivadas()` é onde a arbitragem entra.
 - **Revisão de UX, Entrega 1** (2026-10-22): link público de torneio/clube é
   `tournamentPath(id, { inApp })` e `orgLink` (visitante sem conta nunca cai no
   login); cupons e loja só para quem entrou; torneios chancelados divididos por

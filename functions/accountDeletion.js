@@ -247,6 +247,9 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'federation_news', field: 'created_by', label: 'Notícias de federação que escreveu (como equipe)' },
   { col: 'federation_docs', field: 'created_by', label: 'Documentos do acervo oficial de federação que preparou (como equipe; o ato publicado é registro da federação)' },
   { col: 'federation_events', field: 'created_by', label: 'Eventos do calendário oficial de federação que marcou (como equipe; o evento é da agenda da federação)' },
+  { col: 'federation_budgets', field: 'created_by', label: 'Orçamentos de federação que criou (como equipe; o orçamento é da federação)' },
+  { col: 'federation_ledger', field: 'created_by', label: 'Lançamentos de receita e despesa de federação que fez (como equipe; a conta é da federação)' },
+  { col: 'federation_account_reports', field: 'opened_by', label: 'Prestações de contas de federação que abriu (como equipe; as contas são da federação)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */

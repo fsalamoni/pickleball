@@ -8,18 +8,19 @@ import { AFFILIATION_STATUS, CHARGE_STATUS, DISCIPLINE_STATUS, DOC_STATUS, FED_P
 import { sanctionState } from './sanction.js';
 import { isChargeOverdue } from './charges.js';
 import { isoDate, membershipState } from './membership.js';
+import { accountsPendingItems } from './accounts.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
 /**
- * @param {{ members?: object[], charges?: object[], affiliations?: object[], tournaments?: object[], transfers?: object[], documents?: object[], sanctions?: object[], reports?: object[] }} fontes
+ * @param {{ members?: object[], charges?: object[], affiliations?: object[], tournaments?: object[], transfers?: object[], documents?: object[], sanctions?: object[], reports?: object[], accountReports?: object[] }} fontes
  * @param {string[]} perms permissões de quem vê (só vê o que pode resolver)
  * @param {{ hoje?: string }} quando
  * @returns {Array<{ id: string, count: number, label: string, aba: string, filtro?: string }>} — `filtro` abre a lista da aba já filtrada (`?filtro=`)
  */
 export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate() } = {}) {
   const itens = [];
-  const { members, charges, affiliations, tournaments, transfers, documents, sanctions, reports } = fontes;
+  const { members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports } = fontes;
   const pode = (p) => perms.includes(p);
 
   if (pode(FED_PERMISSION.MEMBERS) && Array.isArray(members)) {
@@ -58,6 +59,8 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
     const atras = charges.filter((c) => isChargeOverdue(c, hoje)).length;
     if (atras) itens.push({ id: 'atrasadas', count: atras, aba: 'cobrancas', filtro: 'vencidas', label: plural(atras, tk('cobrança vencida sem pagamento'), tk('cobranças vencidas sem pagamento')) });
   }
+  // Contas (módulo `accounts`): parecer do conselho, parecer recebido e o prazo de abril.
+  itens.push(...accountsPendingItems(accountReports, perms, { hoje }));
   return itens;
 }
 

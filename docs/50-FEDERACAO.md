@@ -1654,3 +1654,104 @@ nenhuma regra mudou. As peças compartilhadas da Central ficam em
   do vencimento e 7 dias depois, uma vez por marco
   (`federation_charges.overdue_notified`); só cobrança `open` — quem já
   informou o pagamento não é cobrado de novo.
+
+## 22. Orçamento e prestação de contas (módulo `accounts`, 2026-10-22)
+
+A Lei Geral do Esporte (Lei 14.597/2023) e a Lei Pelé (Lei 9.615/98, art.
+18-A) pedem que a entidade que recebe recurso público tenha orçamento,
+conselho fiscal com parecer sobre as contas, contas publicadas e a
+remuneração dos dirigentes à vista. O módulo `accounts` (agora `available`)
+faz isso dentro da Central, com o mesmo desenho do acervo: **só o servidor
+grava**, o navegador lê pela regra.
+
+**Quem faz o quê.** Permissão `finance` (ou `admin`) prepara: orçamento,
+lançamentos, prestação. Permissão `fiscal` (cargo `fiscal_council`) lê tudo
+em leitura e dá o **parecer**; o `admin` também pode, e fica registrado como
+dele (`by_admin`). Secretaria, filiado e visitante não leem nada que não esteja
+publicado.
+
+**Coleções** (bloco depois de `federation_events` no `firestore.rules`,
+`write: if false`, provado em `tests/rules/federationAccounts.rules.test.js`):
+
+- `federation_budgets/{fed}_{ano}` — `lines` em centavos por `income.<cat>` /
+  `expense.<cat>`, `notes`, `status` `draft → submitted → approved →
+  published`, `approved_in { date, event_id, event_title, event_date, note }`
+  (a reunião da agenda é opcional e conferida pelo servidor: tem de ser um
+  tipo de reunião da própria federação), `history[]`, e ao publicar `pub:
+  true` + a cópia `published { lines, notes, approved_in, at_ms }`. Mexer no
+  aprovado ou publicado é **reformular**: motivo ≥ 10, volta a rascunho, as
+  linhas anteriores vão para o histórico e a cópia `published` continua na
+  página até a nova publicação.
+- `federation_ledger/{id}` — lançamento manual: `kind`, `category`, `date`
+  (nunca no futuro), `amount_cents`, `description`, `counterparty`,
+  `document` (anexo copiado para `federacao-contas-oficial/{fed}/ledger/…`,
+  com SHA-256). Não se apaga: **estorna** (`status: 'void'`, motivo). Nunca é
+  público.
+- `federation_account_reports/{fed}_{período}` (o nome evita
+  `federation_reports`, que é a ouvidoria) — período `2026` ou `2026-Q1`,
+  `status` `draft → submitted → opinion → approved|rejected → published`,
+  `statements[]` (balanço, DRE, fluxo de caixa, notas — PDF/imagem ≤ 9 MB,
+  na pasta oficial), `notes`, `snapshot` (os totais **congelados** no envio
+  ao conselho: por categoria, totais, quantos lançamentos manuais e
+  automáticos e, na anual, o orçamento aprovado do ano), `fiscal_opinion
+  { verdict, text, by_name, at_ms, by_admin }`, `assembly { date, result,
+  event_*, note }`, `acervo { statements_doc_id, statements_code,
+  opinion_doc_id }`, `pub`.
+
+**Categorias fixas** (ids gravados — nunca renomeie): receitas `memberships`,
+`courses`, `events`, `sponsorship`, `grants`, `donations`, `store`,
+`other_income`; despesas `staff`, `referees`, `events`, `travel`, `admin`,
+`communication`, `taxes`, `equipment`, `other_expense`.
+
+**Receita derivada, não lançada.** A cobrança **paga** entra sozinha, pela
+origem (`membership`/`renewal` → filiações, `course` → cursos, `fine` →
+outras receitas), na data do pagamento em Brasília. O conselho fiscal ganhou
+leitura de `federation_charges` para conferir. **Ponto de junção da
+arbitragem**: `extraExpenses` em `accountItems` (cliente) e
+`despesasDerivadas()` em `functions/federationAccounts.js` (hoje `[]`) — as
+diárias pagas entram ali como despesa `referees`, marcadas "Diária de
+arbitragem", sem lançar de novo.
+
+**Período fechado.** Com a prestação enviada, lançar ou estornar naquele
+período é recusado (o retrato que o conselho examina não muda por baixo).
+Reabrir (motivo) só antes do parecer; depois, não volta a rascunho.
+
+**Publicar** exige o parecer; a assembleia é opcional. Com o acervo ligado,
+saem **dois atos** (`financial_statements` com as demonstrações e
+`fiscal_opinion` com o texto do parecer, `refers` ao primeiro) — os dois itens
+do checklist de transparência. Sem o acervo, publica só a prestação.
+
+**Na tela.** Central → Gerir → **Contas** (`data-dica="federacao-secao-contas"`):
+Visão geral (`?aba=orcamento`: totais do ano, barras mês a mês em CSS,
+orçado × realizado com alerta "perto do limite" ≥ 90%, "estourou", "sem
+orçamento", e o prazo legal) · Orçamento (`orcamento-anual`: as categorias
+ao lado do orçado e do realizado do ano anterior) · Lançamentos
+(`lancamentos`: busca, filtros, anexo, estorno, planilha; os automáticos
+marcados) · Prestação de contas (`prestacao-contas`: linha do tempo, prévia
+ao vivo até congelar, demonstrações, parecer, assembleia, publicação). Os
+valores de `?aba=` são contrato de link (o aviso ao conselho leva a
+`prestacao-contas`). **Precisa de você** (`accountsPendingItems`): prestação
+esperando parecer (conselho), parecer recebido (financeiro) e, a partir de
+1º de março, a prestação do ano anterior não publicada — o **prazo legal é o
+último dia útil de abril** (`legalDeadline`), e passada a data o texto diz
+"fora do prazo".
+
+**Na página pública** (aba Documentos, âncora `#fed-contas`): os orçamentos
+publicados, as prestações publicadas (totais congelados, parecer, assembleia,
+links aos atos do acervo) e a execução resumida da última anual — sempre do
+retrato congelado, nunca da conta ao vivo. **Remuneração dos dirigentes**:
+`governance.board[].pay_cents` (0 = não remunerado; ausente = não informado)
+e `pay_note`, editados em Página pública → Transparência e mostrados no bloco
+de governança.
+
+**Avisos** (servidor, `tx()`): ao enviar, quem tem `fiscal`; ao chegar o
+parecer, `finance` e `admin` — nunca quem agiu.
+
+**Paridade.** `src/modules/federations/domain/accounts.js` ×
+`functions/federationAccountsPolicy.js` (`functions/federationAccounts.parity.test.js`):
+categorias, mapa de origem, períodos, prazo, validações, totais e retrato.
+
+**O que ficou de fora.** Orçamento mensal (só anual); importação de extrato;
+conciliação bancária; o orçamento reformulado em rascunho fica legível no
+documento por quem lê a cópia publicada (risco baixo: só as linhas ainda não
+aprovadas).

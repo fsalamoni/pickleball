@@ -216,6 +216,9 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_docs: 'O documento do acervo é ato oficial da federação (estatuto, resolução, ata), não dado da pessoa; quem preparou é só o uid de equipe.',
   federation_events: 'O evento é da agenda oficial da federação (data, local, órgão), não dado da pessoa; quem marcou é só o uid de equipe.',
   federation_comment_reports: 'A denúncia é sobre o comentário de outra pessoa e serve à moderação; guarda só o motivo e o uid de quem denunciou.',
+  federation_budgets: 'O orçamento é da federação (valores por categoria, aprovação), não da pessoa; quem criou é só o uid de equipe.',
+  federation_ledger: 'O lançamento é da contabilidade da federação (receita, despesa, comprovante), não dado da pessoa; quem lançou é só o uid de equipe.',
+  federation_account_reports: 'A prestação de contas é da federação (totais, parecer, assembleia), não dado da pessoa; quem abriu é só o uid de equipe.',
   federation_admin_grants: 'Acesso de suporte do admin da plataforma a uma federação: registro interno e temporário (até 8 h), não é dado do titular.',
 };
 

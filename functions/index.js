@@ -1343,6 +1343,13 @@ exports.federationAcervo = federationCallable('federationAcervo', (ctx, actor, d
 // Calendário oficial (agenda esportiva e institucional): só o servidor grava — `functions/federationAgenda.js`.
 const federationAgenda = require('./federationAgenda');
 exports.federationAgenda = federationCallable('federationAgenda', federationAgenda.agenda);
+// Orçamento e prestação de contas (módulo `accounts`): só o servidor grava — `functions/federationAccounts.js`.
+const federationAccounts = require('./federationAccounts');
+exports.federationAccounts = federationCallable('federationAccounts', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationAccounts: Storage indisponível.', err); }
+  return federationAccounts.accounts({ ...ctx, bucket }, actor, data);
+}, { timeoutSeconds: 120, memory: '512MiB' });
 // Comentários nos documentos do acervo e nos eventos da agenda: só o servidor grava; a lista é pública (também sem conta).
 const federationComments = require('./federationComments');
 exports.federationComments = federationCallable('federationComments', federationComments.comments);
