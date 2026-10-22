@@ -65,6 +65,8 @@ export function normalizeTier(input = {}) {
     places,
     participation: centavos(num(input?.participation, 0)),
     requirements: { min_entrants: Math.floor(num(req.min_entrants, 0)), prize: texto(req.prize, 120), notes: texto(req.notes, 500) },
+    // Taxa de chancela desta categoria, em centavos (0 = sem taxa; Bloco 2).
+    sanction_fee_cents: Math.min(100000000, Math.max(0, Math.trunc(num(input?.sanction_fee_cents, 0)))),
     active: input?.active !== false,
     legacy: input?.legacy === true,
   };

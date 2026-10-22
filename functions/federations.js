@@ -716,7 +716,7 @@ async function chargeConfirm(ctx, actor, data) {
   if (!['confirm', 'cancel'].includes(data.action)) falha('invalid-argument', 'Ação desconhecida.');
 
   // Cobrança de CURSO: confirmar inscreve de fato; cancelar devolve a vaga. De MULTA: quita a sanção.
-  if (charge.origin === 'course' || charge.origin === 'fine') {
+  if (charge.origin === 'course' || charge.origin === 'fine' || charge.origin === 'sanction') {
     const batch = ctx.db.batch();
     const confirmou = data.action === 'confirm';
     batch.update(snap.ref, confirmou
@@ -734,8 +734,23 @@ async function chargeConfirm(ctx, actor, data) {
       const sRef = ctx.db.collection(C.sanctions).doc(charge.sanction_id);
       if ((await sRef.get()).exists) batch.update(sRef, confirmou ? { fine_paid_at_ms: ctx.now, updated_at_ms: ctx.now } : { fine_charge_cancelled_at_ms: ctx.now, updated_at_ms: ctx.now });
     }
+    // Taxa de CHANCELA (Bloco 2): o pedido no torneio fica sabendo (paga ou dispensada) e competições é avisada.
+    if (charge.origin === 'sanction' && charge.tournament_id) {
+      const tRef = ctx.db.collection('tournaments').doc(charge.tournament_id);
+      const tSnap = await tRef.get();
+      if (tSnap.exists && tSnap.data().federation_id === fed.id && tSnap.data().federation_sanction) {
+        batch.update(tRef, confirmou ? { 'federation_sanction.fee_paid_at_ms': ctx.now } : { 'federation_sanction.fee_cancelled_at_ms': ctx.now });
+      }
+      if (confirmou) {
+        (await staffIds(ctx, fed.id, 'competitions')).filter((uid) => uid !== actor.uid).forEach((uid) => aviso(ctx, batch, uid, {
+          title: tx('Taxa de chancela paga: {torneio}', { torneio: charge.plan_name }), message: tx('O pedido de chancela já pode ser analisado.'), link: `/federacoes/${fed.id}/gerir?aba=chancelas`,
+        }));
+      }
+    }
+    const mensagemPaga = { course: tx('Sua inscrição no curso {curso} está confirmada.', { curso: charge.plan_name }), sanction: tx('A taxa de chancela foi paga. A federação vai analisar o pedido.') }[charge.origin] || tx('A multa foi quitada.');
+    const linkPago = { course: `/federacoes/${fed.id}?ancora=fed-cursos`, sanction: `/torneios/${charge.tournament_id}/gerenciar` }[charge.origin] || '/perfil?secao=federacoes';
     aviso(ctx, batch, charge.payer_uid, confirmou
-      ? { title: tx('Pagamento confirmado — {sigla}', { sigla: fed.acronym }), message: charge.origin === 'course' ? tx('Sua inscrição no curso {curso} está confirmada.', { curso: charge.plan_name }) : tx('A multa foi quitada.'), link: charge.origin === 'course' ? `/federacoes/${fed.id}?ancora=fed-cursos` : '/perfil?secao=federacoes' }
+      ? { title: tx('Pagamento confirmado — {sigla}', { sigla: fed.acronym }), message: mensagemPaga, link: linkPago }
       : { title: tx('Cobrança da {sigla} cancelada', { sigla: fed.acronym }), message: note ? tx('Motivo: {motivo}.', { motivo: note }) : tx('A federação cancelou a cobrança.'), link: '/perfil?secao=federacoes' });
     await batch.commit();
     await auditoria(ctx, actor, `federation_charge_${data.action}`, { federation_id: fed.id, charge_id: charge.id, user_id: charge.payer_uid, origin: charge.origin, note });

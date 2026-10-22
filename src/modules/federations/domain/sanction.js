@@ -10,6 +10,7 @@ import { t } from '@/core/i18n';
 import { SANCTION_STATUS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from './constants.js';
 import { membershipState } from './membership.js';
 import { tierOptions } from './officialRanking.js';
+import { normalizeDirectorCode, normalizePrize } from './competitions.js';
 
 const str = (v, max = 500) => String(v ?? '').trim().slice(0, max);
 
@@ -70,7 +71,7 @@ export function sanctionState(tournament = null) {
 }
 
 /** O patch que o organizador grava ao PEDIR a chancela (a regra exige `pending`). */
-export function buildSanctionRequest({ federation, uid, tier = SANCTION_TIER.REGIONAL, requiresMembership = false } = {}) {
+export function buildSanctionRequest({ federation, uid, tier = SANCTION_TIER.REGIONAL, requiresMembership = false, uidName = '', directorCode = '', prize = null } = {}) {
   if (!federation?.id || !uid) throw new Error(t('Escolha a federação.'));
   return {
     federation_id: federation.id,
@@ -81,7 +82,11 @@ export function buildSanctionRequest({ federation, uid, tier = SANCTION_TIER.REG
       ...resolveSanctionTier(federation, tier),
       requires_membership: Boolean(requiresMembership),
       requested_by: uid,
+      requested_by_name: str(uidName, 120),
       requested_at_ms: Date.now(),
+      // Bloco 2: o código da credencial de diretor (o servidor confere) e a premiação por gênero.
+      director_code: normalizeDirectorCode(directorCode),
+      prize: normalizePrize(prize),
       decided_by: null,
       decided_at_ms: null,
       reason: '',

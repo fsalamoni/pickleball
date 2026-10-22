@@ -23,7 +23,7 @@ const FILE_TYPES = Object.freeze(['application/pdf', 'image/jpeg', 'image/png', 
 const INCOME = Object.freeze(['memberships', 'courses', 'events', 'sponsorship', 'grants', 'donations', 'store', 'other_income']);
 const EXPENSE = Object.freeze(['staff', 'referees', 'events', 'travel', 'admin', 'communication', 'taxes', 'equipment', 'other_expense']);
 const LINE_KEYS = Object.freeze([...INCOME.map((c) => `income.${c}`), ...EXPENSE.map((c) => `expense.${c}`)]);
-const CHARGE_ORIGIN_CATEGORY = Object.freeze({ membership: 'memberships', renewal: 'memberships', course: 'courses', fine: 'other_income' });
+const CHARGE_ORIGIN_CATEGORY = Object.freeze({ membership: 'memberships', renewal: 'memberships', course: 'courses', fine: 'other_income', sanction: 'events' });
 const BUDGET_STATUS = Object.freeze({ DRAFT: 'draft', SUBMITTED: 'submitted', APPROVED: 'approved', PUBLISHED: 'published' });
 const REPORT_STATUS = Object.freeze({ DRAFT: 'draft', SUBMITTED: 'submitted', OPINION: 'opinion', APPROVED: 'approved', REJECTED: 'rejected', PUBLISHED: 'published' });
 const VERDICTS = Object.freeze(['approve', 'approve_with_reservations', 'reject']);

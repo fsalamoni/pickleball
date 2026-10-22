@@ -42,6 +42,8 @@ export const FED_COLLECTIONS = Object.freeze({
   electionEndorsements: 'federation_election_endorsements',
   ballots: 'federation_ballots',
   incidents: 'federation_incidents',
+  tournamentReports: 'federation_tournament_reports',
+  finalInvites: 'federation_final_invites',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -364,6 +366,7 @@ export const CHARGE_ORIGIN = Object.freeze({
   RENEWAL: 'renewal',
   COURSE: 'course',
   FINE: 'fine',
+  SANCTION: 'sanction',
 });
 
 export const CHARGE_ORIGIN_LABELS = Object.freeze({
@@ -371,6 +374,7 @@ export const CHARGE_ORIGIN_LABELS = Object.freeze({
   renewal: tk('Renovação'),
   course: tk('Curso'),
   fine: tk('Multa'),
+  sanction: tk('Taxa de chancela'),
 });
 
 /** Dias antes do vencimento em que a renovação é oferecida e avisada. */
@@ -526,12 +530,13 @@ export const IMPORT_MAX_ROWS = 500;
 
 /* ----------------------------------------------------------- PR 3: cursos -- */
 
-export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop' });
+export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop', DIRECTOR: 'director' });
 export const COURSE_KIND_LABELS = Object.freeze({
   referee: tk('Arbitragem'),
   coach: tk('Formação de treinador'),
   clinic: tk('Clínica'),
   workshop: tk('Workshop'),
+  director: tk('Diretor de torneio'),
 });
 
 export const COURSE_STATUS = Object.freeze({ DRAFT: 'draft', OPEN: 'open', CLOSED: 'closed', DONE: 'done', CANCELLED: 'cancelled' });
@@ -568,6 +573,7 @@ export const DISCIPLINE_KIND_LABELS = Object.freeze({
   warning: tk('Advertência'),
   suspension: tk('Suspensão'),
   fine: tk('Multa'),
+  sanction: tk('Taxa de chancela'),
   exclusion: tk('Exclusão'),
 });
 

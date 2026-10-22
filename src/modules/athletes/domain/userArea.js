@@ -131,7 +131,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   treinosNaoLidos?: number,
  *   duvidasEsperando?: number,
  *   mercado?: ReturnType<typeof marketPendingCounts>,
- *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number, convites?: number, escalas?: number },
+ *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number, convites?: number, escalas?: number, finais?: number, diretor?: number },
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
  */
@@ -219,8 +219,10 @@ export function userAreaPending(fontes = {}) {
     vencida: (n) => tn(n, '{n} filiação vencida para renovar', '{n} filiações vencidas para renovar'),
     convites: (n) => tn(n, '{n} convite de federação para responder', '{n} convites de federação para responder'),
     escalas: (n) => tn(n, '{n} convocação de arbitragem para responder', '{n} convocações de arbitragem para responder'),
+    finais: (n) => tn(n, '{n} convite para final de circuito para responder', '{n} convites para finais de circuito para responder'),
+    diretor: (n) => tn(n, '{n} torneio que você dirige esperando checklist ou relatório', '{n} torneios que você dirige esperando checklist ou relatório'),
   };
-  for (const id of ['pagar', 'vencendo', 'vencida', 'convites', 'escalas']) {
+  for (const id of ['pagar', 'vencendo', 'vencida', 'convites', 'escalas', 'finais', 'diretor']) {
     const n = numero(fontes.federacoes?.[id]);
     if (n) itens.push({ id: `federacoes:${id}`, count: n, secao: S.FEDERACOES, label: fedRotulo[id](n) });
   }

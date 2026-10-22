@@ -43,6 +43,7 @@ import { validatePlanInput } from '../domain/plans.js';
 import { validateMemberTypes } from '../domain/memberTypes.js';
 import { normalizeDefaultModules, validateDocKinds, validateTierTemplates } from '../domain/platformCatalog.js';
 import { canDeclarePayment } from '../domain/charges.js';
+import { normalizeDirectorCode, sanctionTiming } from '../domain/competitions.js';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
 
@@ -663,13 +664,22 @@ export async function listFederationTournaments(fedId) {
 }
 
 /** O organizador PEDE a chancela (o patch que a regra aceita: pendente, por quem pede). */
-export async function requestSanction(tournament, { federation, uid, tier, requiresMembership, silent = false }) {
+export async function requestSanction(tournament, { federation, uid, uidName = '', tier, requiresMembership, directorCode = '', prize = null, silent = false }) {
   if (!fedModuleOn(federation, 'tournaments')) throw new FederationError(t('Esta federação ainda não chancela torneios.'));
   // A regra só aceita o pedido a federação PÚBLICA (§17): dizer o porquê em vez de "permissão negada".
   if (!isFederationPublic(federation)) throw new FederationError(t('A federação ainda não está pública. Torne-a pública em Página pública → Publicação para receber ou criar torneios.'));
   const st = sanctionState(tournament);
   if (!st.canRequest) throw new FederationError(st.pending ? t('A chancela já foi pedida e aguarda a federação.') : t('Este torneio já é chancelado.'));
-  const patch = buildSanctionRequest({ federation, uid, tier, requiresMembership });
+  // Prazo e diretor: o servidor confere de novo e recusa sozinho; aqui só para dizer antes de pedir.
+  // O torneio da própria federação (`silent`) não passa por prazo, diretor nem taxa.
+  if (!silent) {
+    const rules = normalizeFederationRules(federation.rules);
+    const prazo = sanctionTiming(rules, tournament.starts_at, isoDate());
+    if (prazo.no_date) throw new FederationError(t('A {sigla} pede {dias} dias de antecedência: marque a data de início do torneio antes de pedir.', { sigla: federation.acronym, dias: prazo.min_days }));
+    if (prazo.late) throw new FederationError(t('A {sigla} pede a chancela com pelo menos {dias} dias de antecedência.', { sigla: federation.acronym, dias: prazo.min_days }));
+    if (rules.sanction_requires_director && normalizeDirectorCode(directorCode).length < 6) throw new FederationError(t('A {sigla} exige um diretor de torneio credenciado: informe o código da credencial.', { sigla: federation.acronym }));
+  }
+  const patch = buildSanctionRequest({ federation, uid, uidName, tier, requiresMembership, directorCode, prize });
   await updateDoc(doc(db, 'tournaments', tournament.id), { ...patch, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'tournament_sanction_request', actor: { uid }, tournamentId: tournament.id, details: { federation_id: federation.id, tier: patch.federation_sanction.tier } });
   if (silent) return patch;
@@ -1103,6 +1113,18 @@ export async function listMyIncidents(uid) {
   ]);
   const vistos = new Set();
   return [...minhas.docs, ...deps.docs].filter((d) => !vistos.has(d.id) && vistos.add(d.id)).map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
+/** Os convites da pessoa para finais de circuito (Bloco 2) — mais recentes primeiro. */
+export async function listMyFinalInvites(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.finalInvites), where('user_id', '==', uid)))).docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
+/** Os torneios chancelados que a pessoa dirige (checklist e relatório). */
+export async function listMyDirectedReports(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.tournamentReports), where('director_uid', '==', uid)))).docs.map(toDoc).sort((a, b) => String(b.starts_at || '').localeCompare(String(a.starts_at || '')));
 }
 
 export async function listMySanctions(uid) {
