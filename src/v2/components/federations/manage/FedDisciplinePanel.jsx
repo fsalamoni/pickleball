@@ -12,6 +12,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Gavel, MessageSquareWarning, Plus } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { disciplineAction, updateReport } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -33,6 +34,7 @@ function SancaoForm({ federation, membersQ, onFechar }) {
   const [memberId, setMemberId] = useState('');
   const [f, setF] = useState({ kind: DISCIPLINE_KIND.WARNING, reason: '', starts_at: '', ends_at: '', multa: '0,00', tournament_name: '' });
   const [erros, setErros] = useState({});
+  const [resumo, setResumo] = useState(null);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const m = useFederationMutation((payload) => disciplineAction(payload));
   const termo = normaliza(busca.trim());
@@ -43,8 +45,15 @@ function SancaoForm({ federation, membersQ, onFechar }) {
     if (!alvo) { setErros({ member: t('Escolha o filiado.') }); return; }
     const r = validateSanctionInput({ ...f, fine_cents: cents(f.multa || '0') });
     if (!r.ok) { setErros(r.errors); return; }
-    m.mutate({ action: 'apply', federationId: federation.id, memberId: alvo.id, ...r.value }, { onSuccess: () => { toast.success(t('Sanção aplicada. A pessoa foi avisada e pode recorrer.')); onFechar(); }, onError: (er) => toast.error(er.message) });
+    setResumo(r.value); // aplicar avisa a pessoa e mexe na filiação: pergunta antes, com o resumo
   };
+  const efeito = !resumo ? '' : {
+    [DISCIPLINE_KIND.WARNING]: t('Fica registrada na filiação.'),
+    [DISCIPLINE_KIND.SUSPENSION]: t('Suspensa de {ini} a {fim}: não se inscreve em torneio "só filiados" e a carteirinha mostra "Suspensa".', { ini: resumo.starts_at ? quando(resumo.starts_at) : t('hoje'), fim: quando(resumo.ends_at) }),
+    [DISCIPLINE_KIND.FINE]: t('Uma cobrança de {valor} é criada para a pessoa.', { valor: formatBrlCents(resumo.fine_cents) }),
+    [DISCIPLINE_KIND.EXCLUSION]: t('A filiação é encerrada e as cobranças abertas são canceladas.'),
+  }[resumo.kind] || '';
+  const aplicar = () => m.mutate({ action: 'apply', federationId: federation.id, memberId: alvo.id, ...resumo }, { onSuccess: () => { setResumo(null); toast.success(t('Sanção aplicada. A pessoa foi avisada e pode recorrer.')); onFechar(); }, onError: (er) => toast.error(er.message) });
   return (
     <form onSubmit={enviar} noValidate className="space-y-4" data-dica="federacao-sancao-formulario">
       <V2Field label={t('Filiado')} htmlFor="sa-busca" error={erros.member} required>
@@ -73,6 +82,17 @@ function SancaoForm({ federation, membersQ, onFechar }) {
         <V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" variant="danger" disabled={m.isPending} data-dica="federacao-sancao-aplicar">{t('Aplicar sanção')}</V2Button>
       </div>
+      <ConfirmDialog
+        open={Boolean(resumo)}
+        onOpenChange={(o) => { if (!o) setResumo(null); }}
+        destructive
+        loading={m.isPending}
+        title={t('{tipo} para {nome}?', { tipo: resumo ? t(DISCIPLINE_KIND_LABELS[resumo.kind]) : '', nome: alvo?.user_name || '' })}
+        description={`${efeito} ${t('A pessoa recebe um aviso com o motivo e pode recorrer.')}`}
+        confirmLabel={t('Aplicar sanção')}
+        cancelLabel={t('Voltar')}
+        onConfirm={aplicar}
+      />
     </form>
   );
 }

@@ -15,6 +15,7 @@ import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { affiliationState } from '@/modules/federations/domain/affiliations';
 import { AFFILIATION_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t } from '@/core/i18n';
 
 const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red' };
@@ -44,6 +45,7 @@ export default function OrgAffiliationCard({ kind, org }) {
   const minhas = useOrgAffiliations(kind, org?.id, { enabled: ligado });
   const [fedId, setFedId] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [confirmar, setConfirmar] = useState(null);
   const pedir = useFederationMutation(() => requestAffiliation({ federation: (feds.data || []).find((f) => f.id === fedId), kind, org, uid: user?.uid, message: mensagem }));
   const retirar = useFederationMutation((aff) => withdrawAffiliation(aff, { uid: user?.uid }));
   const opcoes = useMemo(() => (feds.data || []).filter((f) => fedModuleOn(f, 'affiliations')).filter((f) => !(minhas.data || []).some((a) => a.federation_id === f.id && !affiliationState(a).canRequest)), [feds.data, minhas.data]);
@@ -60,8 +62,30 @@ export default function OrgAffiliationCard({ kind, org }) {
       {minhas.isError && <V2ErrorState inline title={t('Não carregaram as filiações')} onRetry={() => minhas.refetch()} />}
       {minhas.isLoading && <V2Skeleton lines={2} />}
       {minhas.isSuccess && minhas.data.length > 0 && (
-        <ul className="space-y-2">{minhas.data.map((a) => <Linha key={a.id} aff={a} pending={retirar.isPending} onWithdraw={(aff) => retirar.mutate(aff, { onSuccess: () => toast.success(t('Pronto.')), onError: (e) => toast.error(e.message) })} />)}</ul>
+        <ul className="space-y-2">{minhas.data.map((a) => <Linha key={a.id} aff={a} pending={retirar.isPending} onWithdraw={setConfirmar} />)}</ul>
       )}
+      {/* Desfiliar apaga o vínculo: voltar é um pedido novo, com nova aprovação. Por isso pergunta antes. */}
+      <ConfirmDialog
+        open={Boolean(confirmar)}
+        onOpenChange={(o) => { if (!o) setConfirmar(null); }}
+        destructive={Boolean(confirmar && affiliationState(confirmar).approved)}
+        loading={retirar.isPending}
+        title={confirmar && affiliationState(confirmar).approved
+          ? t('Desfiliar da {sigla}?', { sigla: confirmar.federation_acronym || confirmar.federation_name })
+          : t('Retirar o pedido à {sigla}?', { sigla: confirmar?.federation_acronym || confirmar?.federation_name || '' })}
+        description={confirmar && affiliationState(confirmar).approved
+          ? t('Sai da página da federação e perde o selo "Filiado" agora. Para voltar, é um pedido novo, que a federação aprova de novo.')
+          : t('O pedido sai da fila da federação. Dá para pedir de novo quando quiser.')}
+        confirmLabel={confirmar && affiliationState(confirmar).approved ? t('Desfiliar') : t('Retirar pedido')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => {
+          const aprovada = affiliationState(confirmar).approved;
+          retirar.mutate(confirmar, {
+            onSuccess: () => { setConfirmar(null); toast.success(aprovada ? t('Desfiliado da federação.') : t('Pedido retirado.')); },
+            onError: (e) => toast.error(e.message),
+          });
+        }}
+      />
       {feds.isError && <V2ErrorState inline title={t('Não carregaram as federações')} onRetry={() => feds.refetch()} />}
       {feds.isSuccess && minhas.isSuccess && (opcoes.length === 0
         ? (minhas.data.length === 0 && <p className="text-sm text-gray-500">{t('Nenhuma federação recebe filiação de clubes e arenas ainda.')}</p>)

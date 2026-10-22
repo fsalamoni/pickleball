@@ -12,14 +12,17 @@ import { chargeAction } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { canConfirmCharge, chargesCsv, financeSummary, formatBrlCents, isChargeOverdue, sortChargesForStaff } from '@/modules/federations/domain/charges';
 import { CHARGE_ORIGIN_LABELS, CHARGE_STATUS } from '@/modules/federations/domain/constants';
-import { V2Button, V2EmptyState, V2ErrorState, V2Input, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t, tn } from '@/core/i18n';
 import { ChargeStatusBadge, quando } from '../federationUi';
 
 function ChargeRow({ charge: c }) {
   const [nota, setNota] = useState('');
-  const m = useFederationMutation((action) => chargeAction({ chargeId: c.id, action, note: nota }));
-  const agir = (action, msg) => m.mutate(action, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
+  const [cancelando, setCancelando] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const m = useFederationMutation(({ action, note }) => chargeAction({ chargeId: c.id, action, note }));
+  const agir = (action, msg, note = nota) => m.mutate({ action, note }, { onSuccess: () => { setCancelando(false); toast.success(msg); }, onError: (e) => toast.error(e.message) });
   const atrasada = isChargeOverdue(c);
   return (
     <li>
@@ -37,9 +40,27 @@ function ChargeRow({ charge: c }) {
           <div className="flex flex-wrap items-center gap-2">
             <V2Input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={200} placeholder={t('Observação (opcional)')} aria-label={t('Observação da confirmação')} className="sm:max-w-xs" />
             <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('confirm', t('Pagamento confirmado. A filiação está em dia e a pessoa foi avisada.'))}><CheckCircle2 className="h-4 w-4" />{t('Confirmar recebimento')}</V2Button>
-            <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir('cancel', t('Cobrança cancelada.'))}><XCircle className="h-4 w-4" />{t('Cancelar cobrança')}</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => { setMotivo(''); setCancelando(true); }}><XCircle className="h-4 w-4" />{t('Cancelar cobrança')}</V2Button>
           </div>
         )}
+        <ConfirmDialog
+          open={cancelando}
+          onOpenChange={setCancelando}
+          destructive
+          loading={m.isPending}
+          title={t('Cancelar a cobrança de {nome}?', { nome: c.payer_name || '' })}
+          description={`${{
+            membership: t('O pedido de filiação volta para a secretaria decidir de novo.'),
+            course: t('A inscrição no curso é cancelada e a vaga volta.'),
+          }[c.origin] || ''} ${t('A pessoa recebe um aviso com o motivo.')}`.trim()}
+          confirmLabel={t('Cancelar cobrança')}
+          cancelLabel={t('Voltar')}
+          onConfirm={() => agir('cancel', t('Cobrança cancelada. A pessoa foi avisada.'), motivo.trim())}
+        >
+          <V2Field label={t('Motivo (opcional)')} htmlFor={`cob-cancel-${c.id}`}>
+            <V2Textarea id={`cob-cancel-${c.id}`} rows={2} maxLength={200} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder={t('ex.: pagamento feito em dinheiro na secretaria')} />
+          </V2Field>
+        </ConfirmDialog>
       </V2Surface>
     </li>
   );

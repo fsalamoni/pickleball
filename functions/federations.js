@@ -511,6 +511,9 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
       user_id: uid, user_name: nomeConta, photo_url: texto(u.photo_url || u.avatar_url, 500), guardian_uid: null, is_minor: menor,
       minor_photo_consent: menor ? data.minorPhotoConsent === true : null, member_number: (atual.exists && atual.data().member_number) || null,
     };
+    // A suspensão disciplinar em vigor atravessa o cancelamento: desistir e pedir de novo não a apaga.
+    const anterior = atual.exists ? atual.data() : {};
+    if (Number(anterior.discipline_until_ms) > ctx.now) Object.assign(alvo, { discipline_until_ms: anterior.discipline_until_ms, discipline_sanction_id: anterior.discipline_sanction_id || null });
     // Quem já é FEDERADO em outra federação só muda por transferência (a antiga libera).
     await exigeSemOutraFederacao(ctx, uid, fed.id, p);
     // Convidado pela secretaria para ESTE plano: o pedido entra sem esperar a aprovação.

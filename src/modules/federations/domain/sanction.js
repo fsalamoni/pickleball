@@ -93,6 +93,22 @@ export function sanctionedTournaments(tournaments = []) {
 }
 
 /**
+ * Os chancelados separados para quem procura onde jogar: os que ainda vêm
+ * (ou estão rolando — vale o FIM, `ends_at`, e na falta dele o início), do
+ * mais próximo ao mais distante, e os encerrados, do mais recente para trás.
+ * Sem data nenhuma conta como "por vir" (o organizador ainda vai marcar).
+ * @param {string} hoje `AAAA-MM-DD` (data local)
+ */
+export function splitSanctionedTournaments(tournaments = [], hoje = '') {
+  const lista = sanctionedTournaments(tournaments);
+  const fim = (tt) => String(tt.ends_at || tt.starts_at || '').slice(0, 10);
+  const proximos = lista.filter((tt) => !fim(tt) || fim(tt) >= hoje)
+    .sort((a, b) => String(a.starts_at || '9999').localeCompare(String(b.starts_at || '9999')));
+  const encerrados = lista.filter((tt) => fim(tt) && fim(tt) < hoje);
+  return { proximos, encerrados };
+}
+
+/**
  * A inscrição num torneio que EXIGE filiação: a pessoa está em dia nesta federação?
  * `members` são as filiações da pessoa (`listMyMemberships`); indefinido = não
  * carregou, e aí não se afirma nada (`docs/27-FALHA-NAO-E-VAZIO.md`).

@@ -204,3 +204,11 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   O link do arquivo existe só enquanto o documento é público (cada troca gera
   token novo); o restrito, até 9 MB, vai pela função (`file`). Arquivo novo só
   da pasta de quem salva. Ver `docs/50-FEDERACAO.md` §14.
+- **Revisão de UX, Entrega 1** (2026-10-22): link público de torneio/clube é
+  `tournamentPath(id, { inApp })` e `orgLink` (visitante sem conta nunca cai no
+  login); cupons e loja só para quem entrou; torneios chancelados divididos por
+  `splitSanctionedTournaments`; cancelar curso é do servidor (`cancel_course`,
+  avisa os inscritos e cancela as cobranças); toda ação irreversível da
+  Central confirma (`ConfirmDialog`, que aceita um campo de motivo); a
+  suspensão disciplinar sobrevive a desistir e pedir de novo. Ver
+  `docs/50-FEDERACAO.md` §20.

@@ -134,7 +134,11 @@ function MemberRow({ member: mb, federation, documentos, pedido = false }) {
           {!pedido && [MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && (
             <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('suspend')}><Ban className="h-4 w-4" />{t('Suspender')}</V2Button>
           )}
-          {!pedido && st.status === MEMBER_STATUS.SUSPENDED && (
+          {/* A suspensão DISCIPLINAR termina sozinha na data (ou pela Disciplina); "Reintegrar" é só da administrativa. */}
+          {!pedido && st.disciplined && mb.status !== MEMBER_STATUS.SUSPENDED && (
+            <p className="self-center text-xs text-gray-500">{t('Suspensão disciplinar até {data}. Encerra na Disciplina.', { data: quando(mb.discipline_until_ms) })}</p>
+          )}
+          {!pedido && mb.status === MEMBER_STATUS.SUSPENDED && (
             <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir('reinstate', t('Filiação reintegrada.'))}><RotateCcw className="h-4 w-4" />{t('Reintegrar')}</V2Button>
           )}
         </div>

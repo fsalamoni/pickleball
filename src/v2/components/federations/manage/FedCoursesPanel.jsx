@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { GraduationCap, Pencil, Plus, ShieldCheck, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { courseAction, deleteCourse, reviewCredential, saveCourse } from '@/modules/federations/services/federationService';
 import { useCourseEnrollments, useFederationMutation } from '@/modules/federations/hooks/useFederations';
@@ -66,7 +67,7 @@ function CursoForm({ federation, curso, onFechar }) {
         <V2Toggle id="cu-cred" checked={f.issues_credential} onChange={(v) => set({ issues_credential: v })} label={t('Aprovado recebe credencial')} hint={t('Com código verificável, como a carteirinha.')} />
       </div>
       {f.issues_credential && <V2Field label={t('Validade da credencial (meses; 0 = sem prazo)')} htmlFor="cu-cred-m"><V2Input id="cu-cred-m" inputMode="numeric" value={f.credential_months} onChange={(e) => set({ credential_months: e.target.value })} className="sm:max-w-xs" /></V2Field>}
-      <V2Field label={t('Situação')} htmlFor="cu-status" hint={t('Rascunho ninguém vê; "Inscrições abertas" publica na página da federação.')}><V2Select id="cu-status" value={f.status} onChange={(e) => set({ status: e.target.value })} className="sm:max-w-xs">{Object.values(COURSE_STATUS).map((v) => <option key={v} value={v}>{t(COURSE_STATUS_LABELS[v])}</option>)}</V2Select></V2Field>
+      <V2Field label={t('Situação')} htmlFor="cu-status" hint={t('Rascunho ninguém vê; "Inscrições abertas" publica na página da federação. Para cancelar, use "Cancelar curso" na lista: os inscritos são avisados.')}><V2Select id="cu-status" value={f.status} onChange={(e) => set({ status: e.target.value })} className="sm:max-w-xs">{Object.values(COURSE_STATUS).filter((v) => v !== COURSE_STATUS.CANCELLED || curso?.status === v).map((v) => <option key={v} value={v}>{t(COURSE_STATUS_LABELS[v])}</option>)}</V2Select></V2Field>
       <div className="flex justify-end gap-2">
         <V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={m.isPending} data-dica="federacao-curso-salvar">{curso ? t('Salvar curso') : t('Criar curso')}</V2Button>
@@ -123,6 +124,10 @@ function CursosTab({ federation, coursesQ, podeApagar }) {
   const [editando, setEditando] = useState(null); // null | 'novo' | course
   const [inscritosDe, setInscritosDe] = useState(null);
   const apagar = useFederationMutation((c) => deleteCourse(c, { uid: user?.uid }));
+  const cancelar = useFederationMutation(({ c, motivo }) => courseAction({ action: 'cancel_course', courseId: c.id, reason: motivo }));
+  const [confirmarApagar, setConfirmarApagar] = useState(null);
+  const [cancelando, setCancelando] = useState(null);
+  const [motivo, setMotivo] = useState('');
   if (coursesQ.isError) return <V2ErrorState title={t('Não carregaram os cursos')} onRetry={() => coursesQ.refetch()} />;
   if (coursesQ.isLoading) return <V2Skeleton lines={5} />;
   const cursos = sortCourses(coursesQ.data || []);
@@ -147,7 +152,8 @@ function CursosTab({ federation, coursesQ, podeApagar }) {
                   </div>
                   <V2Button type="button" size="sm" variant="secondary" onClick={() => setInscritosDe(c)}><Users className="h-4 w-4" />{t('Inscritos')}</V2Button>
                   <V2Button type="button" size="sm" variant="ghost" aria-label={t('Editar {nome}', { nome: c.name })} onClick={() => setEditando(c)}><Pencil className="h-4 w-4" /></V2Button>
-                  {podeApagar && !(Number(c.enrolled_count) > 0) && <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => apagar.mutate(c, { onSuccess: () => toast.success(t('Curso apagado.')), onError: (e) => toast.error(e.message) })}>{t('Apagar')}</V2Button>}
+                  {![COURSE_STATUS.CANCELLED, COURSE_STATUS.DONE, COURSE_STATUS.DRAFT].includes(c.status) && <V2Button type="button" size="sm" variant="ghost" className="text-red-700" onClick={() => { setMotivo(''); setCancelando(c); }}>{t('Cancelar curso')}</V2Button>}
+                  {podeApagar && !(Number(c.enrolled_count) > 0) && <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => setConfirmarApagar(c)}>{t('Apagar')}</V2Button>}
                 </V2Surface>
               </li>
             );
@@ -155,6 +161,39 @@ function CursosTab({ federation, coursesQ, podeApagar }) {
         </ul>
       )}
       {inscritosDe && <InscritosDialog curso={inscritosDe} federation={federation} onClose={() => setInscritosDe(null)} />}
+      <ConfirmDialog
+        open={Boolean(confirmarApagar)}
+        onOpenChange={(o) => { if (!o) setConfirmarApagar(null); }}
+        destructive
+        loading={apagar.isPending}
+        title={t('Apagar o curso {nome}?', { nome: confirmarApagar?.name || '' })}
+        description={t('O curso sai da Central e da página da federação. Não dá para desfazer.')}
+        confirmLabel={t('Apagar')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => apagar.mutate(confirmarApagar, { onSuccess: () => { setConfirmarApagar(null); toast.success(t('Curso apagado.')); }, onError: (e) => toast.error(e.message) })}
+      />
+      {/* Cancelar é do servidor: cancela inscrições e cobranças abertas e avisa cada inscrito com o motivo. */}
+      <ConfirmDialog
+        open={Boolean(cancelando)}
+        onOpenChange={(o) => { if (!o) setCancelando(null); }}
+        destructive
+        loading={cancelar.isPending}
+        confirmDisabled={motivo.trim().length < 3}
+        title={t('Cancelar o curso {nome}?', { nome: cancelando?.name || '' })}
+        description={Number(cancelando?.enrolled_count) > 0
+          ? tn(cancelando.enrolled_count, 'A inscrição é cancelada, a cobrança em aberto também, e a pessoa recebe um aviso com o motivo. Quem já pagou é avisado de que a devolução é com a federação.', 'As {n} inscrições são canceladas, as cobranças em aberto também, e cada inscrito recebe um aviso com o motivo. Quem já pagou é avisado de que a devolução é com a federação.')
+          : t('Ninguém se inscreveu ainda. O curso sai da página da federação.')}
+        confirmLabel={t('Cancelar curso')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => cancelar.mutate({ c: cancelando, motivo: motivo.trim() }, {
+          onSuccess: (r) => { setCancelando(null); toast.success(r?.enrollments ? tn(r.enrollments, 'Curso cancelado. O inscrito foi avisado.', 'Curso cancelado. Os {n} inscritos foram avisados.') : t('Curso cancelado.')); },
+          onError: (e) => toast.error(e.message),
+        })}
+      >
+        <V2Field label={t('Motivo')} htmlFor="cu-cancel-motivo" hint={t('Vai no aviso aos inscritos.')}>
+          <V2Textarea id="cu-cancel-motivo" rows={2} maxLength={300} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder={t('ex.: a quadra foi interditada')} />
+        </V2Field>
+      </ConfirmDialog>
     </section>
   );
 }

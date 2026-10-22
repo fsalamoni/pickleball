@@ -187,6 +187,14 @@ describe('federações no servidor', () => {
     expect(doc(db, 'federation_members/fpp_ana')).toMatchObject({ status: 'cancelled', card_code: null });
     expect(doc(db, 'federation_card_index/ABCDEFGHJK')).toBeUndefined();
   });
+  it('desistir e pedir de novo não apaga a suspensão disciplinar em vigor', async () => {
+    const db = cenario();
+    const ate = NOW + 30 * 86400000;
+    db.store.docs.set('federation_members/fpp_ana', { federation_id: 'fpp', user_id: 'ana', status: 'active', valid_until: '2027-01-01', discipline_until_ms: ate, discipline_sanction_id: 's1' });
+    await fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'cancel' });
+    await fed.membership(ctx(db), ANA, { federationId: 'fpp', action: 'request', planId: 'anual' });
+    expect(doc(db, 'federation_members/fpp_ana')).toMatchObject({ status: 'pending', discipline_until_ms: ate, discipline_sanction_id: 's1' });
+  });
 });
 
 describe('convite para filiar', () => {

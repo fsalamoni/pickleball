@@ -29,6 +29,8 @@ import { t } from '@/core/i18n';
  *    pergunta que tem duas respostas legítimas — "encerrar a partida e já
  *    sortear a próxima nesta quadra" OU "só encerrar, para sortear todas as
  *    quadras juntas". Sem essas props o diálogo é exatamente o de antes.
+ *  - children / confirmDisabled: um campo dentro da pergunta (ex.: o MOTIVO,
+ *    que vai no aviso a quem é afetado) e o botão travado até ele valer.
  */
 export function ConfirmDialog({
   open,
@@ -42,6 +44,8 @@ export function ConfirmDialog({
   loading = false,
   secondaryLabel = null,
   onSecondary = null,
+  children = null,
+  confirmDisabled = false,
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -53,6 +57,7 @@ export function ConfirmDialog({
           </AlertDialogTitle>
           {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
           {secondaryLabel && onSecondary && (
@@ -65,7 +70,7 @@ export function ConfirmDialog({
             </AlertDialogAction>
           )}
           <AlertDialogAction
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             onClick={(e) => {
               e.preventDefault();
               onConfirm?.();

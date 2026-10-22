@@ -15,7 +15,7 @@
  * a cobrança e os avisos são do responsável). O plano que exige documentos
  * avisa aqui; o envio é na página da federação, depois do pedido.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check, IdCard, Landmark, MailPlus, Users } from 'lucide-react';
@@ -36,7 +36,36 @@ import {
 import { FedLogo, FederationGate, fedPath, quando } from '@/v2/components/federations/federationUi';
 import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import { cn } from '@/core/lib/utils';
+import { safeHttpUrl } from '@/core/domain/externalUrl';
+import { rolarAte } from '@/v2/ui/rolarAte';
 import { t } from '@/core/i18n';
+
+/**
+ * Depois do pedido do DEPENDENTE: a confirmação e, quando já nasceu, o Pix
+ * dele. Sem isto, quem não é filiado voltava ao próprio formulário, sem saber
+ * se o pedido tinha ido nem onde pagar.
+ */
+function DependenteEnviado({ federation, enviado, cobrancas, onOutro }) {
+  const ref = useRef(null);
+  useEffect(() => { rolarAte(ref.current); }, []);
+  const minhas = cobrancas.filter((c) => c.member_id === enviado.memberId);
+  return (
+    <V2Surface className="space-y-4" role="status">
+      <div ref={ref} className="flex items-start gap-3">
+        <Check className="mt-0.5 h-6 w-6 shrink-0 text-green-700" aria-hidden="true" />
+        <div>
+          <h2 className="font-display text-xl font-bold text-ink">{enviado.nome ? t('Pedido de {nome} enviado', { nome: enviado.nome }) : t('Pedido do dependente enviado')}</h2>
+          <p className="mt-1 text-sm text-gray-600">{minhas.length ? t('Pague por Pix e informe. O financeiro da federação confirma e libera a carteirinha, que fica com você.') : t('A secretaria da federação analisa e avisa você pelo sino. Se houver valor a pagar, a cobrança aparece em Minha área → Federações.')}</p>
+        </div>
+      </div>
+      {minhas.map((c) => <PixChargeBlock key={c.id} charge={c} federation={federation} />)}
+      <div className="flex flex-wrap gap-2">
+        <V2Button asChild variant="secondary"><Link to="/perfil?secao=federacoes">{t('Ver em Minha área')}</Link></V2Button>
+        <V2Button type="button" variant="ghost" onClick={onOutro}><Users className="h-4 w-4" />{t('Filiar outro dependente')}</V2Button>
+      </div>
+    </V2Surface>
+  );
+}
 
 /** O convite da secretaria, em cima do formulário: o plano já vem escolhido. */
 function ConviteAviso({ convite }) {
@@ -66,7 +95,10 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const [privado, setPrivado] = useState({ cpf: '', guardian_name: '', guardian_contact: '', guardian_consent: false, minor_photo_consent: false });
   const [erros, setErros] = useState({});
   const [erro, setErro] = useState('');
+  const erroRef = useRef(null);
   const m = useFederationMutation((payload) => membershipAction(payload));
+  // A mensagem fica no fim do formulário: ao aparecer, a tela vai até ela (no celular, quem tocou em "Pedir" está lá embaixo, mas o motivo pode estar fora da vista).
+  useEffect(() => { if (erro) rolarAte(erroRef.current, { alinhar: 'centro' }); }, [erro]);
 
   const hoje = isoDate();
   const idadeDep = dependente ? ageOn(dep.birth_date, hoje) : null;
@@ -81,6 +113,9 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const plano = candidatos.find((p) => p.id === planId) || null;
   const preco = plano ? planPrice(plano, { age: idade }) : null;
   const docsExigidos = requiredDocKinds(plano);
+  // O Pix só nasce na hora com aprovação automática ou convite neste plano; senão, depois que a secretaria aprova.
+  const pagaDepois = Boolean(plano && !isFreePlan(plano) && !plano.auto_approve && planoConvite?.id !== plano.id);
+  const estatuto = safeHttpUrl(federation?.governance?.statute_url);
   const setPriv = (patch) => { setPrivado((x) => ({ ...x, ...patch })); setErros({}); };
 
   const enviar = (e) => {
@@ -106,7 +141,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       federationId: federation.id, action: 'request', planId: plano.id,
       publicBadge: opcoes.publicBadge, showInDirectory: opcoes.showInDirectory, clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
     }, {
-      onSuccess: () => { toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : t('Pedido de filiação enviado.')); window.scrollTo?.(0, 0); onEnviado?.(); },
+      onSuccess: (r) => { toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : t('Pedido de filiação enviado.')); onEnviado?.({ ...(r || {}), nome: dependente ? dep.name.trim() : '' }); },
       onError: (er) => { setErro(er.message); toast.error(er.message); },
     });
   };
@@ -190,7 +225,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
                 <V2Field label={t('Telefone ou e-mail do responsável')} htmlFor="fj-resp-contato" error={erros.guardian_contact} required><V2Input id="fj-resp-contato" maxLength={160} value={privado.guardian_contact} onChange={(e) => setPriv({ guardian_contact: e.target.value })} /></V2Field>
               </div>
               <V2Toggle id="fj-resp-ciente" checked={privado.guardian_consent} onChange={(v) => setPriv({ guardian_consent: v })} label={t('Meu responsável está ciente desta filiação')} />
-              {erros.guardian_consent && <p className="text-sm font-medium text-red-500">{erros.guardian_consent}</p>}
+              {erros.guardian_consent && <p className="text-sm font-medium text-red-600">{erros.guardian_consent}</p>}
               <V2Toggle id="fj-foto-menor" checked={privado.minor_photo_consent} onChange={(v) => setPriv({ minor_photo_consent: v })} label={t('O responsável autoriza a foto na verificação pública da carteirinha')} hint={t('Sem autorização, a verificação mostra só nome e situação.')} />
             </>
           )}
@@ -215,14 +250,18 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
         </V2Field>
         <label htmlFor="fj-termos" className="flex items-start gap-3 text-sm text-gray-700">
           <input id="fj-termos" type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={opcoes.termos} onChange={(e) => setOpcoes((o) => ({ ...o, termos: e.target.checked }))} />
-          <span>{t('Li e aceito os')} <Link to="/legal/termos-filiacao" className="font-bold text-ink underline">{t('Termos de Filiação')}</Link>{t(' e o estatuto da federação. A federação recebe o meu nome, foto, data de nascimento e cidade para emitir a carteirinha.')}</span>
+          {/* Termo e estatuto abrem em outra aba: sair daqui desmontaria o formulário já preenchido. */}
+          <span>{t('Li e aceito os')} <Link to="/legal/termos-filiacao" target="_blank" rel="noopener noreferrer" className="font-bold text-ink underline">{t('Termos de Filiação')}</Link>{' '}{t('e o')}{' '}{estatuto ? <a href={estatuto} target="_blank" rel="noopener noreferrer nofollow" className="font-bold text-ink underline">{t('estatuto da federação')}</a> : t('estatuto da federação')}.{' '}{t('A federação recebe o meu nome, foto, data de nascimento e cidade para emitir a carteirinha.')}</span>
         </label>
-        {erro && <p className="text-sm font-medium text-red-500">{erro}</p>}
+        {erro && <p ref={erroRef} role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
       </V2Surface>
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-between gap-3 border-t border-gray-100 bg-paper-pure/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
-        <p className="text-sm text-gray-600">{plano ? (isFreePlan(plano) ? t('Plano gratuito') : t('Total: {valor} {periodo}', { valor: formatBrlCents(preco.total), periodo: planPeriodLabel(plano) })) : t('Escolha um plano')}</p>
-        <V2Button type="submit" disabled={m.isPending || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{m.isPending ? t('Enviando…') : plano && !isFreePlan(plano) ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
+      <div className="sticky bottom-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-gray-200 bg-paper-pure p-3 shadow-organic-sm sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div>
+          <p className="text-sm text-gray-600">{plano ? (isFreePlan(plano) ? t('Plano gratuito') : t('Total: {valor} {periodo}', { valor: formatBrlCents(preco.total), periodo: planPeriodLabel(plano) })) : t('Escolha um plano')}</p>
+          {pagaDepois && <p className="text-xs text-gray-500">{t('Você paga depois que a secretaria aprovar.')}</p>}
+        </div>
+        <V2Button type="submit" disabled={m.isPending || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{m.isPending ? t('Enviando…') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
       </div>
     </form>
   );
@@ -230,7 +269,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
 
 function Pagina() {
   const { federationId } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const dependente = params.get('dependente') === '1';
   const fq = useFederation(federationId);
   const pq = useFederationPlans(federationId);
@@ -240,22 +279,31 @@ function Pagina() {
   const iq = useMyFederationInvites();
   const f = fq.data;
   const convite = (iq.data || []).find((inv) => inv.federation_id === federationId && isInvitePending(inv)) || null;
+  const [depEnviado, setDepEnviado] = useState(null);
+  const topoRef = useRef(null);
+  // Depois do pedido, o resultado (o Pix ou "pedido enviado") nasce no topo: a tela vai até ele. `window.scrollTo` não serve — quem rola é o <main>.
+  const [enviou, setEnviou] = useState(false);
+  useEffect(() => { if (enviou && topoRef.current) rolarAte(topoRef.current); }, [enviou, mq.data]);
+  const abertasDaFed = (cq.data || []).filter((c) => c.federation_id === federationId && [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
 
   let corpo;
   if (fq.isError || pq.isError || mq.isError || cq.isError) corpo = <V2ErrorState onRetry={() => [fq, pq, mq, cq].filter((q) => q.isError).forEach((q) => q.refetch())} />;
   else if (fq.isLoading || pq.isLoading || mq.isLoading || cq.isLoading) corpo = <V2Skeleton className="h-96" />;
   else if (!f) corpo = <V2EmptyState icon={Landmark} title={t('Federação não encontrada')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} />;
   else if (f.status !== FEDERATION_STATUS.APPROVED || f.published !== true) corpo = <V2Surface><p className="text-gray-600">{f.status === FEDERATION_STATUS.APPROVED ? t('A filiação abre quando a federação for publicada pelo admin dela.') : t('Esta federação não está recebendo filiações no momento.')}</p></V2Surface>;
-  else if (dependente) corpo = <Formulario federation={f} plans={pq.data} dependente onEnviado={() => setParams({}, { replace: true })} />;
+  else if (dependente && depEnviado) corpo = <DependenteEnviado federation={f} enviado={depEnviado} cobrancas={abertasDaFed} onOutro={() => setDepEnviado(null)} />;
+  else if (dependente) corpo = <Formulario key="dependente" federation={f} plans={pq.data} dependente onEnviado={(r) => setDepEnviado(r)} />;
   else if (!canRequestMembership(mq.data)) {
-    const abertas = (cq.data || []).filter((c) => c.federation_id === f.id && [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
+    // Só as cobranças DESTA filiação (não as do dependente, curso ou multa) decidem o título.
+    const abertas = abertasDaFed.filter((c) => !c.member_id || c.member_id === mq.data.id);
+    const daFiliacao = abertas.filter((c) => (c.origin || 'membership') === 'membership');
     corpo = (
       <V2Surface className="space-y-4">
-        <div className="flex items-start gap-3">
-          <IdCard className="h-6 w-6 shrink-0 text-ink" />
+        <div ref={topoRef} className="flex items-start gap-3">
+          <IdCard className="h-6 w-6 shrink-0 text-ink" aria-hidden="true" />
           <div>
-            <h2 className="font-display text-xl font-bold text-ink">{abertas.length ? t('Falta só o pagamento') : mq.data.status === MEMBER_STATUS.PENDING ? t('Pedido enviado') : t('Você já tem uma filiação aqui')}</h2>
-            <p className="mt-1 text-sm text-gray-600">{abertas.length ? t('Pague por Pix e informe. O financeiro da federação confirma e libera a carteirinha.') : mq.data.status === MEMBER_STATUS.PENDING ? t('A secretaria da federação analisa e avisa pelo sino.') : t('Acompanhe a situação, renove e abra a carteirinha na página da federação.')}</p>
+            <h2 className="font-display text-xl font-bold text-ink">{daFiliacao.length ? t('Falta só o pagamento') : mq.data.status === MEMBER_STATUS.PENDING ? t('Pedido enviado') : t('Você já tem uma filiação aqui')}</h2>
+            <p className="mt-1 text-sm text-gray-600">{daFiliacao.length ? t('Pague por Pix e informe. O financeiro da federação confirma e libera a carteirinha.') : mq.data.status === MEMBER_STATUS.PENDING ? t('A secretaria da federação analisa e avisa pelo sino.') : t('Acompanhe a situação, renove e abra a carteirinha na página da federação.')}</p>
           </div>
         </div>
         {abertas.map((c) => <PixChargeBlock key={c.id} charge={c} federation={f} />)}
@@ -268,7 +316,7 @@ function Pagina() {
   } else corpo = (
     <div className="space-y-4">
       {convite && <ConviteAviso convite={convite} />}
-      <Formulario key={convite?.id || 'sem-convite'} federation={f} plans={pq.data} convite={convite} />
+      <Formulario key={convite?.id || 'sem-convite'} federation={f} plans={pq.data} convite={convite} onEnviado={() => setEnviou(true)} />
     </div>
   );
 

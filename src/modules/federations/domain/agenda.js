@@ -297,8 +297,10 @@ export function groupByMonth(items = []) {
 
 const slugDe = (federation) => encodeURIComponent(federation?.slug || federation?.id || '');
 export const agendaPublicPath = (federation) => `/f/${slugDe(federation)}/agenda`;
+/** Torneio: a página pública (`/p/:id`, abre sem conta); dentro do app (`inApp`), a do app. */
+export const tournamentPath = (id, { inApp = false } = {}) => `${inApp ? '/torneios' : '/p'}/${encodeURIComponent(id || '')}`;
 /** Página do item: o evento, ou o próprio torneio quando é chancelado. */
-export const eventPublicPath = (federation, ev) => (ev?.derived && ev.tournament_id ? `/torneios/${encodeURIComponent(ev.tournament_id)}` : `${agendaPublicPath(federation)}/${encodeURIComponent(ev?.id || '')}`);
+export const eventPublicPath = (federation, ev, { inApp = false } = {}) => (ev?.derived && ev.tournament_id ? tournamentPath(ev.tournament_id, { inApp }) : `${agendaPublicPath(federation)}/${encodeURIComponent(ev?.id || '')}`);
 /** A agenda assinável (só o que é público), servida pela função `federationAgendaFeed`. */
 export const agendaFeedPath = (federation) => `/api/agenda/${slugDe(federation)}.ics`;
 

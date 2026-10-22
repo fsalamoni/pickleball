@@ -1510,3 +1510,80 @@ motivo ("Já na equipe", "Já filiado(a)", "Já convidado(a)") e sem clique.
   só do servidor. Entra na exclusão de conta (apagado) e na exportação.
   Provado em `tests/rules/federationInvites.rules.test.js` e
   `functions/federations.test.js` ("convite para filiar").
+
+## 20. Revisão de UX — Entrega 1: o que estava errado para quem usa (2026-10-22)
+
+Plano completo da revisão (≈230 pontos, cinco entregas) em
+`/mnt/project-files/federacao/plano-revisao-ux-2026-10-22.md` (fora do
+repositório). A Entrega 1 corrige o que levava a pessoa a errar, perder
+dinheiro ou bater numa porta fechada. Zero coleção, zero índice, zero regra.
+
+### 20.1 Página pública (visitante sem conta)
+
+- **Links que mandavam para o login**: torneio chancelado e evento de torneio
+  na agenda levam a `/p/:id` (página pública do torneio) para quem não entrou e
+  a `/torneios/:id` para quem entrou (`tournamentPath(id, { inApp })`,
+  `domain/agenda.js`). Clube filiado leva a `/c/:id` (visitante) ou
+  `/clubes/:id`; arena não tem página pública, então para o visitante a linha
+  não é link (`orgLink`, `FedPublicBlocks.jsx`).
+- **Cupons e loja só para quem entrou**: o visitante não lê `promo_*` nem o
+  Mercado (a regra exige conta) — o bloco sumia com erro. Agora nem aparece; a
+  loja também respeita a flag `marketplace`.
+- **Torneios chancelados**: próximos primeiro (pela data de FIM, então o
+  torneio de hoje segue em "próximos"), encerrados atrás de "Ver N torneios
+  encerrados" (`splitSanctionedTournaments`, `domain/sanction.js`); data com o
+  ano quando não é o corrente; textos de vazio escritos para o visitante.
+- **Rodapé do ranking**: a frase "contam os N melhores" só aparece quando há
+  limite, e "só filiados em dia" só quando a federação exige.
+
+### 20.2 Filiação, pagamento e dependente
+
+- **Dependente**: depois de enviar, a tela mostra a confirmação e o Pix DELE
+  (antes voltava ao formulário vazio, parecendo que nada aconteceu), com "Ver
+  em Minha área" e "Filiar outro dependente". O Pix diz "Para {nome}" quando
+  quem paga é o responsável.
+- **Pedido que paga depois**: plano pago sem aprovação automática diz "Pedir
+  filiação" e "Você paga depois que a secretaria aprovar" (antes "Pagar" num
+  passo em que não há o que pagar).
+- **Erro do formulário**: a tela rola até ele e o anuncia (`role="alert"`).
+  O estatuto (`governance.statute_url`) vira link no aceite; os Termos abrem em
+  outra aba (o formulário não se perde).
+- **Pix**: o código copia-e-cola vem antes do QR no celular (quem está no
+  celular não lê o próprio QR) e as instruções de pagamento da federação
+  (`payment.instructions`) aparecem junto.
+- **Cancelar a filiação / desistir do pedido** (`FedCancelMembership`): na aba
+  "Minha filiação" e, para dependentes, em Minha área → Federações, sempre com
+  confirmação que diz o que acontece. Usa a ação `cancel` que o servidor já
+  tinha.
+- **Renovar** (Minha área) leva à aba "Minha filiação"; a renovação do
+  dependente diz onde está o Pix. A cobrança em Minha área mostra o bloco Pix
+  completo.
+- 🐞 **Suspensão disciplinar sobrevivia a nada**: desistir e pedir de novo
+  regravava a filiação sem `discipline_until_ms`, apagando a suspensão. O
+  servidor agora carrega a suspensão em vigor para o pedido novo
+  (`pedirFiliacao`, teste em `functions/federations.test.js`).
+
+### 20.3 Central: nada irreversível sem perguntar
+
+- **Cancelar curso** é do servidor (`federationCourse`, ação `cancel_course`,
+  permissão `courses`, motivo obrigatório): cancela as inscrições vivas e as
+  cobranças abertas/informadas do curso e avisa cada inscrito com o motivo;
+  quem já pagou é lembrado de que a devolução é com a federação (o Pix foi
+  direto a ela). 🐞 Antes o curso só mudava de situação pelo seletor, e os
+  inscritos não ficavam sabendo. O seletor não oferece mais "Cancelado".
+- **Apagar curso**, **avisar os filiados sobre uma notícia** (diz para quantos
+  vai e que sai uma vez só), **apagar notícia**, **desfiliar clube/arena** e
+  **cancelar cobrança** (com motivo próprio, que vai no aviso) agora confirmam
+  — saiu o último `window.confirm`.
+- **Aplicar sanção** mostra o resumo do efeito (suspensão de/até, valor da
+  multa, exclusão encerra a filiação) antes de gravar.
+- **Reintegrar** é só da suspensão ADMINISTRATIVA (`member.status ===
+  'suspended'`); na disciplinar a linha diz até quando vai e que se encerra na
+  Disciplina (antes o botão aparecia e o servidor recusava).
+- **Documento do filiado** é BAIXADO (`baixarBlob`): abrir aba depois da
+  espera do servidor o Safari bloqueava, e o botão parecia não fazer nada.
+- **Equipe**: o motivo de "Prorrogar" não vaza mais para "Tirar" (e
+  vice-versa); "Passar a administração" (e "Passar e sair") confirma, dizendo
+  que a pessoa pode tirar você.
+- `ConfirmDialog` ganhou `children` (um campo dentro da pergunta) e
+  `confirmDisabled` — aditivo, os usos antigos não mudam.
