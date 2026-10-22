@@ -8,7 +8,7 @@
  * não vira "não existe".
  */
 import React from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { IdCard, Landmark } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
@@ -17,7 +17,7 @@ import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import { useFederationBySlug, useFederationPlans } from '@/modules/federations/hooks/useFederations';
 import { fedPath } from '@/v2/components/federations/federationUi';
 import FederationProfile, { FedShareButton } from '@/v2/components/federations/profile/FederationProfile';
-import BrandMark from '@/v2/ui/BrandMark';
+import PublicFedTopBar from '@/v2/components/federations/profile/PublicFedTopBar';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -25,6 +25,7 @@ export default function PublicFederation() {
   const { slug } = useParams();
   const { flags, isLoading: flagsLoading } = useFeatureFlags();
   const { isAuthenticated } = useAuth();
+  const { search } = useLocation();
   const ligada = Boolean(flags?.[FEATURE_FLAG.FEDERATIONS]);
   const fq = useFederationBySlug(ligada ? slug : null);
   const f = fq.data;
@@ -32,15 +33,13 @@ export default function PublicFederation() {
   useDocumentMeta({ title: f?.name, description: f?.about || (f ? t('Federação de pickleball: filie-se e receba a carteirinha digital.') : '') }, Boolean(f));
 
   if (!flagsLoading && !ligada) return <Navigate to="/" replace />;
-  const noApp = f ? (isAuthenticated ? fedPath(f) : `/login?next=${encodeURIComponent(fedPath(f))}`) : '/login';
+  // A aba aberta (`?aba=`) vai junto: depois de entrar, a pessoa volta ao mesmo lugar, no app.
+  const comLogin = (destino) => (isAuthenticated ? destino : `/login?next=${encodeURIComponent(destino)}`);
+  const noApp = f ? comLogin(`${fedPath(f)}${search}`) : '/login';
+  const planAction = f ? (p) => <V2Button asChild size="sm" variant="secondary" className="w-full"><Link to={comLogin(`/federacoes/${f.id}/filiar?plano=${encodeURIComponent(p.id)}`)}>{t('Filiar-se neste plano')}</Link></V2Button> : null;
   return (
     <div className="min-h-screen bg-paper">
-      <header className="border-b border-gray-100 bg-paper-pure">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-3">
-          <Link to="/" aria-label={t('PickleRush — início')}><BrandMark className="h-7 w-auto" /></Link>
-          <V2Button asChild size="sm" variant="ghost"><Link to={noApp}>{isAuthenticated ? t('Abrir no app') : t('Entrar')}</Link></V2Button>
-        </div>
-      </header>
+      <PublicFedTopBar appPath={f ? `${fedPath(f)}${search}` : ''} />
       <main className="mx-auto max-w-[1200px] px-4 py-8">
         {flagsLoading || fq.isLoading ? <V2Skeleton lines={6} /> : fq.isError ? (
           <V2ErrorState title={t('Não foi possível carregar a federação')} description={t('A conexão falhou no meio do caminho. O link continua valendo.')} onRetry={() => fq.refetch()} />
@@ -55,6 +54,7 @@ export default function PublicFederation() {
           <FederationProfile
             federation={f}
             plansQ={pq}
+            planAction={planAction}
             actions={(
               <>
                 <V2Button asChild><Link to={noApp}><IdCard className="h-4 w-4" />{isAuthenticated ? t('Ver no app e filiar-se') : t('Entrar para se filiar')}</Link></V2Button>

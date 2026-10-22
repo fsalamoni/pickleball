@@ -480,6 +480,7 @@ export function V2FilterChip({ active = false, className, children, ...props }) 
   return (
     <button
       type="button"
+      aria-pressed={active}
       className={cn(
         'btn-press inline-flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-medium shadow-sm transition-colors',
         active

@@ -3,6 +3,7 @@ import {
   DOC_CATEGORIES, DOC_TYPES, docActions, docCode, docDisplayTitle, docPublicPath, docYears, filterDocs, fileFamilyOf, fileSizeLabel, isDocCurrent,
   sortDocs, transparencyChecklist, typesOfCategory, validateAcervoFile, validateDocInput, videoEmbed, acervoUploadPath,
   acervoPublicPath, fileViewKind, findFileByHash, isDocNew, mergeDocLists, muralDocs,
+  docHasValidity,
 } from './acervo.js';
 
 const arq = { name: 'a.pdf', path: 'federacao-acervo/u1/abc.pdf', size: 1000, content_type: 'application/pdf' };
@@ -157,5 +158,17 @@ describe('acervo: transparência', () => {
     ];
     const r = Object.fromEntries(transparencyChecklist(docs, { nowMs: NOW }).map((x) => [x.id, x.ok]));
     expect(r).toMatchObject({ statute: true, accounts: false, minutes: false, ethics: false });
+  });
+});
+
+describe('docHasValidity', () => {
+  it('norma vigora; registro não', () => {
+    expect(docHasValidity({ type: 'statute' })).toBe(true);
+    expect(docHasValidity({ type: 'resolution' })).toBe(true);
+    expect(docHasValidity({ type: 'competition_rules' })).toBe(true);
+    expect(docHasValidity({ type: 'minutes' })).toBe(false);
+    expect(docHasValidity({ type: 'notice' })).toBe(false);
+    expect(docHasValidity({ type: 'disciplinary_decision' })).toBe(false);
+    expect(docHasValidity({ type: 'desconhecido' })).toBe(false);
   });
 });

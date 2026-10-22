@@ -13,6 +13,7 @@ import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { CHARGE_ORIGIN_LABELS, FED_PERMISSION, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Button, V2ErrorState, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { t, fmtData, fmtNumero } from '@/core/i18n';
+import { baixarCsv } from './naoSalvo';
 
 const mesCurto = (m) => fmtData(new Date(`${m}-15T12:00:00`), { month: 'short' }).replace('.', '');
 const mesLongo = (m) => fmtData(new Date(`${m}-15T12:00:00`), { month: 'long', year: 'numeric' });
@@ -53,12 +54,12 @@ function MonthBars({ titulo, dados, formatar }) {
 }
 
 /** Barras horizontais de uma divisão (rótulo, barra, número). */
-function BarList({ titulo, itens, formatar = (v) => fmtNumero(v) }) {
+function BarList({ titulo, itens, formatar = (v) => fmtNumero(v), vazio }) {
   const max = Math.max(0, ...itens.map((x) => x.v));
   return (
     <V2Surface className="space-y-3">
       <h3 className="font-display text-base font-bold text-ink">{titulo}</h3>
-      {itens.length === 0 ? <p className="text-sm text-gray-500">{t('Ninguém em dia ainda.')}</p> : (
+      {itens.length === 0 ? <p className="text-sm text-gray-500">{vazio || t('Ninguém em dia ainda.')}</p> : (
         <ul className="space-y-2">
           {itens.map((x) => (
             <li key={x.k} className="grid grid-cols-[minmax(0,8rem)_1fr_auto] items-center gap-3 text-sm">
@@ -71,15 +72,6 @@ function BarList({ titulo, itens, formatar = (v) => fmtNumero(v) }) {
       )}
     </V2Surface>
   );
-}
-
-function baixarCsv(ind, acronym) {
-  const blob = new Blob([indicatorsCsv(ind)], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `indicadores-${(acronym || 'federacao').toLowerCase()}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 export default function FedIndicatorsPanel({ federation, membersQ, chargesQ, perms }) {
@@ -103,10 +95,11 @@ export default function FedIndicatorsPanel({ federation, membersQ, chargesQ, per
           <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><BarChart3 className="h-5 w-5" aria-hidden="true" />{t('Indicadores')}</h2>
           <p className="text-sm text-gray-500">{t('Os últimos 12 meses, para a diretoria e a prestação de contas.')}</p>
         </div>
-        <V2Button type="button" size="sm" variant="secondary" disabled={carregando || (!m && !f)} onClick={() => baixarCsv(ind, federation.acronym)}><Download className="h-4 w-4" />{t('Baixar CSV')}</V2Button>
+        <V2Button type="button" size="sm" variant="secondary" disabled={carregando || (!m && !f)} onClick={() => baixarCsv(indicatorsCsv(ind), `indicadores-${(federation.acronym || 'federacao').toLowerCase()}.csv`)}><Download className="h-4 w-4" />{t('Baixar planilha (CSV)')}</V2Button>
       </div>
 
       {carregando && <V2Skeleton lines={6} />}
+      {!veFiliados && !veFinancas && <p className="text-sm text-gray-500">{t('Os indicadores mostram filiados e dinheiro. Para vê-los, peça a quem administra a federação a permissão de secretaria ou de financeiro.')}</p>}
 
       {veFiliados && (membersQ.isError ? <V2ErrorState inline title={t('Não carregaram os filiados')} onRetry={() => membersQ.refetch()} /> : m && (
         <div className="space-y-4">
@@ -135,7 +128,7 @@ export default function FedIndicatorsPanel({ federation, membersQ, chargesQ, per
             <V2StatCard icon={Receipt} label={t('Em atraso')} value={fmtNumero(f.overdue)} hint={f.overdue ? brl(f.overdueCents) : t('Cobranças abertas e vencidas.')} accent={f.overdue ? 'acid' : 'ink'} />
           </div>
           <MonthBars titulo={t('Recebido por mês')} dados={f.paidByMonth.map((x) => ({ m: x.month, v: x.cents }))} formatar={brl} />
-          <BarList titulo={t('Recebido por origem')} itens={f.paidByOrigin.map((x) => ({ k: x.key, label: t(CHARGE_ORIGIN_LABELS[x.key] || x.key), v: x.cents }))} formatar={brl} />
+          <BarList titulo={t('Recebido por origem')} itens={f.paidByOrigin.map((x) => ({ k: x.key, label: t(CHARGE_ORIGIN_LABELS[x.key] || x.key), v: x.cents }))} formatar={brl} vazio={t('Nada recebido nos últimos 12 meses.')} />
         </div>
       ))}
     </section>

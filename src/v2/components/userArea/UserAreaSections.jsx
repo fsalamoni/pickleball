@@ -46,6 +46,7 @@ import { staffRoleName } from '@/modules/federations/domain/staff';
 import { verifyPath } from '@/modules/federations/domain/card';
 import { membershipAction, setCredentialPublic } from '@/modules/federations/services/federationService';
 import { FedCancelMembership, FedMySanctions } from '@/v2/components/federations/FedMemberExtras';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FedLogo, MemberStatusBadge, fedManagePath, fedPath, quando } from '@/v2/components/federations/federationUi';
 import MemberCardDialog from '@/v2/components/federations/MemberCard';
 import MembershipDeclarationDialog from '@/v2/components/federations/MembershipDeclaration';
@@ -720,6 +721,7 @@ function FederacoesSecao({ ctx }) {
 
 /** O convite da secretaria: aceitar = pedir a filiação no plano do convite (entra sem esperar aprovação). */
 function ConviteRow({ inv }) {
+  const [confirmar, setConfirmar] = useState(false);
   const recusar = useFederationMutation(() => membershipAction({ federationId: inv.federation_id, action: 'invite_decline' }));
   return (
     <li className="space-y-2 rounded-2xl border border-gray-100 p-3">
@@ -728,8 +730,19 @@ function ConviteRow({ inv }) {
       {inv.note && <p className="text-sm text-gray-700">“{inv.note}”</p>}
       <div className="flex flex-wrap gap-2">
         <V2Button asChild size="sm"><Link to={`/federacoes/${inv.federation_id}/filiar`}>{t('Aceitar e filiar')}</Link></V2Button>
-        <V2Button type="button" size="sm" variant="ghost" disabled={recusar.isPending} onClick={() => recusar.mutate(undefined, { onSuccess: () => toast.success(t('Convite recusado.')), onError: (e) => toast.error(e.message) })}>{t('Recusar')}</V2Button>
+        <V2Button type="button" size="sm" variant="ghost" disabled={recusar.isPending} onClick={() => setConfirmar(true)}>{t('Recusar')}</V2Button>
       </div>
+      <ConfirmDialog
+        open={confirmar}
+        onOpenChange={setConfirmar}
+        destructive
+        loading={recusar.isPending}
+        title={t('Recusar o convite da {sigla}?', { sigla: inv.federation_acronym || inv.federation_name })}
+        description={t('O convite deixa de valer e some daqui. Para se filiar depois, é um pedido comum, que passa pela aprovação da secretaria.')}
+        confirmLabel={t('Recusar o convite')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => recusar.mutate(undefined, { onSuccess: () => { setConfirmar(false); toast.success(t('Convite recusado.')); }, onError: (e) => toast.error(e.message) })}
+      />
     </li>
   );
 }

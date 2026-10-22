@@ -83,13 +83,15 @@ function ConviteAviso({ convite }) {
   );
 }
 
-function Formulario({ federation, plans, dependente = false, onEnviado, convite = null }) {
+function Formulario({ federation, plans, dependente = false, onEnviado, convite = null, planoInicial = '' }) {
   const { userProfile } = useAuth();
   const idadeConta = useMemo(() => calculateAge(userProfile?.birth_date), [userProfile?.birth_date]);
   const clubes = useMyClubs();
   const planoConvite = convite ? (plans || []).find((p) => p.id === convite.plan_id && p.active !== false) : null;
-  const [tipo, setTipo] = useState(planoConvite?.person_type || PLAN_PERSON_TYPE.ATHLETE);
-  const [planId, setPlanId] = useState(planoConvite?.id || '');
+  // O plano que a pessoa tocou na página da federação (`?plano=`) já vem escolhido; o do convite vence.
+  const planoEscolhido = planoConvite || (planoInicial ? (plans || []).find((p) => p.id === planoInicial && p.active !== false) : null);
+  const [tipo, setTipo] = useState(planoEscolhido?.person_type || PLAN_PERSON_TYPE.ATHLETE);
+  const [planId, setPlanId] = useState(planoEscolhido?.id || '');
   const [opcoes, setOpcoes] = useState({ publicBadge: true, showInDirectory: false, clubId: '', note: '', termos: false });
   const [dep, setDep] = useState({ name: '', birth_date: '' });
   const [privado, setPrivado] = useState({ cpf: '', guardian_name: '', guardian_contact: '', guardian_consent: false, minor_photo_consent: false });
@@ -271,6 +273,7 @@ function Pagina() {
   const { federationId } = useParams();
   const [params] = useSearchParams();
   const dependente = params.get('dependente') === '1';
+  const planoInicial = params.get('plano') || '';
   const fq = useFederation(federationId);
   const pq = useFederationPlans(federationId);
   const mq = useMyMembership(federationId);
@@ -292,7 +295,7 @@ function Pagina() {
   else if (!f) corpo = <V2EmptyState icon={Landmark} title={t('Federação não encontrada')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} />;
   else if (f.status !== FEDERATION_STATUS.APPROVED || f.published !== true) corpo = <V2Surface><p className="text-gray-600">{f.status === FEDERATION_STATUS.APPROVED ? t('A filiação abre quando a federação for publicada pelo admin dela.') : t('Esta federação não está recebendo filiações no momento.')}</p></V2Surface>;
   else if (dependente && depEnviado) corpo = <DependenteEnviado federation={f} enviado={depEnviado} cobrancas={abertasDaFed} onOutro={() => setDepEnviado(null)} />;
-  else if (dependente) corpo = <Formulario key="dependente" federation={f} plans={pq.data} dependente onEnviado={(r) => setDepEnviado(r)} />;
+  else if (dependente) corpo = <Formulario key="dependente" federation={f} plans={pq.data} dependente planoInicial={planoInicial} onEnviado={(r) => setDepEnviado(r)} />;
   else if (!canRequestMembership(mq.data)) {
     // Só as cobranças DESTA filiação (não as do dependente, curso ou multa) decidem o título.
     const abertas = abertasDaFed.filter((c) => !c.member_id || c.member_id === mq.data.id);
@@ -316,7 +319,7 @@ function Pagina() {
   } else corpo = (
     <div className="space-y-4">
       {convite && <ConviteAviso convite={convite} />}
-      <Formulario key={convite?.id || 'sem-convite'} federation={f} plans={pq.data} convite={convite} onEnviado={() => setEnviou(true)} />
+      <Formulario key={convite?.id || 'sem-convite'} federation={f} plans={pq.data} convite={convite} planoInicial={planoInicial} onEnviado={() => setEnviou(true)} />
     </div>
   );
 

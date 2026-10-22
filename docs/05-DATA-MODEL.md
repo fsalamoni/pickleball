@@ -1796,7 +1796,9 @@ Só o servidor cria, confirma e cancela. `federation_id`, `member_id`,
 `enrollment_id` ou `sanction_id` (PR 3), `amount_cents`, `status`
 (`open|declared|paid|cancelled`),
 `due_date` (hoje + 10), `declared_at`, `declared_note` (≤ 300), `paid_at_ms`,
-`confirmed_by`, `confirm_note`, `created_at`, `created_at_ms`. A única escrita
+`confirmed_by`, `confirm_note`, `created_at`, `created_at_ms`,
+`overdue_notified` (opcional, marcos `[0, 7]` do lembrete de vencida já
+enviados — só o servidor). A única escrita
 do pagador: `open|declared` → `declared` com `declared_at`/`declared_note`.
 
 ### `federation_card_index/{code}` (NOVO)

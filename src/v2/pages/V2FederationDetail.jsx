@@ -52,6 +52,10 @@ function Detalhe() {
   const pessoal = aprovada && !previa; // a área do filiado é da pessoa: nunca na prévia
   const filiadoAtivo = pessoal && membershipState(standing.membro).status === MEMBER_STATUS.ACTIVE;
 
+  // Cada plano leva direto ao pedido com ele escolhido — só para quem ainda pode pedir (sem filiação viva).
+  const planAction = pessoal && standing.pronto && !standing.temFiliacao
+    ? (p) => <V2Button asChild size="sm" variant="secondary" className="w-full"><Link to={`/federacoes/${f.id}/filiar?plano=${encodeURIComponent(p.id)}`}>{t('Filiar-se neste plano')}</Link></V2Button>
+    : null;
   const acoes = (
     <>
       {pessoal ? <FedJoinActions federation={f} /> : previa && aprovada && <V2Button type="button" disabled>{t('Filiar-se')}</V2Button>}
@@ -77,6 +81,7 @@ function Detalhe() {
         mine={pessoal && standing.temFiliacao ? <FedMyMembership federation={f} plans={pq.data} /> : null}
         memberOf={filiadoAtivo}
         meUid={user?.uid || null}
+        planAction={planAction}
       />
     </V2Page>
   );

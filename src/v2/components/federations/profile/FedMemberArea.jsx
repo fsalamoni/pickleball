@@ -14,12 +14,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeftRight, ChevronRight, FileText, IdCard, Lock, Users } from 'lucide-react';
+import { ArrowLeftRight, ChevronRight, FileText, IdCard, Lock, ReceiptText, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFederationMutation, useMyFederationCharges, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { membershipAction } from '@/modules/federations/services/federationService';
-import { LIVE_MEMBER_STATUSES, canRequestMembership, membershipState } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, MEMBER_STATUS } from '@/modules/federations/domain/constants';
+import { LIVE_MEMBER_STATUSES, canRequestMembership, membershipState, renewalOpensOn } from '@/modules/federations/domain/membership';
+import { CHARGE_STATUS, MEMBER_STATUS, RENEWAL_WINDOW_DAYS } from '@/modules/federations/domain/constants';
 import { isFederationHidden, isFederationOpen, normalizeFederationRules } from '@/modules/federations/domain/federation';
 import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
 import { PROFILE_TAB } from '@/modules/federations/domain/profile';
@@ -28,6 +28,9 @@ import { MemberStatusBadge, quando } from '../federationUi';
 import MemberCardDialog from '../MemberCard';
 import MembershipDeclarationDialog from '../MembershipDeclaration';
 import PixChargeBlock from '../PixChargeBlock';
+import FedReceiptDialog from '../FedReceipt';
+import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { CHARGE_ORIGIN_LABELS } from '@/modules/federations/domain/constants';
 import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
 import { t, tn } from '@/core/i18n';
 
@@ -125,12 +128,35 @@ export function FedMemberStrip({ federation, plans, aba, irPara }) {
   );
 }
 
+/** O histórico do que a pessoa já pagou aqui (filiação, cursos, multas), cada um com o recibo. */
+function FedPayments({ charges, onRecibo }) {
+  if (!charges.length) return null;
+  const ordenadas = [...charges].sort((a, b) => (b.paid_at_ms || 0) - (a.paid_at_ms || 0));
+  return (
+    <section aria-labelledby="fed-pagamentos" className="space-y-2 border-t border-gray-100 pt-4">
+      <h3 id="fed-pagamentos" className="font-bold text-ink">{t('Pagamentos')}</h3>
+      <ul className="divide-y divide-gray-100">
+        {ordenadas.map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0">
+              <span className="font-semibold text-ink">{[t(CHARGE_ORIGIN_LABELS[c.origin] || CHARGE_ORIGIN_LABELS.membership), c.plan_name].filter(Boolean).join(' · ')}</span>
+              <span className="block text-xs text-gray-500">{[formatBrlCents(c.amount_cents), c.paid_at_ms ? t('pago em {data}', { data: quando(c.paid_at_ms) }) : ''].filter(Boolean).join(' · ')}{c.member_name && c.member_name !== c.payer_name ? ` · ${c.member_name}` : ''}</span>
+            </span>
+            <V2Button type="button" size="sm" variant="ghost" onClick={() => onRecibo(c)}><ReceiptText className="h-4 w-4" />{t('Recibo')}</V2Button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** A aba "Minha filiação": tudo o que é da pessoa nesta federação. */
 export function FedMyMembership({ federation, plans }) {
   const { user } = useAuth();
   const s = useMyFederationStanding(federation.id);
   const [transferindo, setTransferindo] = useState(false);
   const [declaracao, setDeclaracao] = useState(false);
+  const [recibo, setRecibo] = useState(null);
   const renovar = useFederationMutation(() => membershipAction({ federationId: federation.id, action: 'renew' }));
   const m = s.membro;
   const st = membershipState(m);
@@ -163,7 +189,9 @@ export function FedMyMembership({ federation, plans }) {
             </V2Button>
           )}
         </div>
+        {renewalOpensOn(m) && <p className="text-sm text-gray-500">{t('A renovação abre em {data}, {n} dias antes de vencer. Você recebe um aviso.', { data: quando(renewalOpensOn(m)), n: RENEWAL_WINDOW_DAYS })}</p>}
         <FedMemberDocuments member={m} plan={plano} />
+        <FedPayments charges={(s.cq.data || []).filter((c) => c.federation_id === federation.id && c.status === CHARGE_STATUS.PAID)} onRecibo={setRecibo} />
         <FedMySanctions federationId={federation.id} />
       </V2Surface>
       <aside className="space-y-3 lg:col-span-4">
@@ -179,6 +207,7 @@ export function FedMyMembership({ federation, plans }) {
       </aside>
       {cartao.dialogo}
       {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={{ ...m, user_name: m.user_name || user?.displayName }} federation={federation} selfService />}
+      {recibo && <FedReceiptDialog open onOpenChange={(v) => !v && setRecibo(null)} charge={recibo} federation={federation} />}
       {transferindo && <FedTransferDialog member={m} federation={federation} onClose={() => setTransferindo(false)} />}
     </div>
   );

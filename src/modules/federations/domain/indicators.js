@@ -10,9 +10,10 @@
  * hoje VENCIDA cuja validade acabou nos 12 meses. Taxa = renovou ÷ (renovou +
  * não renovou). A tela escreve essa definição ao lado do número.
  */
-import { CHARGE_ORIGIN, CHARGE_STATUS, MEMBER_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
+import { CHARGE_ORIGIN, CHARGE_ORIGIN_LABELS, CHARGE_STATUS, MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from './constants.js';
 import { addMonthsISO, isoDate, membershipState, toISODate } from './membership.js';
-import { isChargeOverdue } from './charges.js';
+import { csvCell, csvReais, isChargeOverdue } from './charges.js';
 
 /** Os 12 meses que terminam no mês de `hoje`, do mais antigo ao atual: ['2025-11', …, '2026-10']. */
 export function monthKeys(hoje = isoDate(), n = 12) {
@@ -102,31 +103,35 @@ export function federationIndicators({ members, charges, hoje = isoDate() } = {}
   return { months: monthKeys(hoje), members: m, finance: f, renewalRate: renewalRate(m, f) };
 }
 
-/** O CSV dos indicadores (separado por ";", seções com linha em branco). Só o que foi medido entra. */
+/**
+ * O CSV dos indicadores (separado por ";", seções com linha em branco), com
+ * rótulos legíveis, valores em reais ("150,00") e meses MM/AAAA. Só o que foi
+ * medido entra.
+ */
 export function indicatorsCsv(ind) {
-  const esc = (v) => { const s = String(v ?? ''); return `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`; };
-  const linha = (cols) => cols.map(esc).join(';');
+  const linha = (cols) => cols.map(csvCell).join(';');
+  const rotulo = (mapa, k) => (mapa[k] ? t(mapa[k]) : k);
   const blocos = [];
-  const cab = ['mes'];
-  if (ind?.members) cab.push('pedidos_de_filiacao');
-  if (ind?.finance) cab.push('recebido_centavos');
+  const cab = [t('Mês')];
+  if (ind?.members) cab.push(t('Pedidos de filiação'));
+  if (ind?.finance) cab.push(t('Recebido (R$)'));
   if (cab.length > 1) {
     blocos.push([linha(cab), ...ind.months.map((mes, i) => linha([
-      mes,
+      mes.split('-').reverse().join('/'),
       ...(ind.members ? [ind.members.requestsByMonth[i].n] : []),
-      ...(ind.finance ? [ind.finance.paidByMonth[i].cents] : []),
+      ...(ind.finance ? [csvReais(ind.finance.paidByMonth[i].cents)] : []),
     ]))]);
   }
   if (ind?.members) {
-    blocos.push([linha(['plano', 'em_dia']), ...ind.members.byPlan.map((x) => linha([x.key, x.n]))]);
-    blocos.push([linha(['tipo', 'em_dia']), ...ind.members.byPersonType.map((x) => linha([x.key, x.n]))]);
-    blocos.push([linha(['categoria', 'em_dia']), ...ind.members.byTier.map((x) => linha([x.key, x.n]))]);
+    blocos.push([linha([t('Plano'), t('Em dia')]), ...ind.members.byPlan.map((x) => linha([x.key || t('Sem plano'), x.n]))]);
+    blocos.push([linha([t('Tipo'), t('Em dia')]), ...ind.members.byPersonType.map((x) => linha([rotulo(PLAN_PERSON_TYPE_LABELS, x.key), x.n]))]);
+    blocos.push([linha([t('Categoria'), t('Em dia')]), ...ind.members.byTier.map((x) => linha([rotulo(PLAN_TIER_LABELS, x.key), x.n]))]);
   }
-  if (ind?.finance) blocos.push([linha(['origem', 'recebido_centavos']), ...ind.finance.paidByOrigin.map((x) => linha([x.key, x.cents]))]);
-  const resumo = [linha(['indicador', 'valor'])];
-  if (ind?.members) resumo.push(linha(['em_dia', ind.members.active]), linha(['pedidos_12_meses', ind.members.requests12]), linha(['nao_renovaram_12_meses', ind.members.notRenewed12]));
-  if (ind?.finance) resumo.push(linha(['recebido_12_meses_centavos', ind.finance.paid12Cents]), linha(['renovacoes_pagas_12_meses', ind.finance.renewalsPaid12]), linha(['cobrancas_em_atraso', ind.finance.overdue]), linha(['em_atraso_centavos', ind.finance.overdueCents]));
-  if (ind?.renewalRate != null) resumo.push(linha(['taxa_de_renovacao_pct', ind.renewalRate]));
+  if (ind?.finance) blocos.push([linha([t('Origem'), t('Recebido (R$)')]), ...ind.finance.paidByOrigin.map((x) => linha([rotulo(CHARGE_ORIGIN_LABELS, x.key), csvReais(x.cents)]))]);
+  const resumo = [linha([t('Indicador'), t('Valor')])];
+  if (ind?.members) resumo.push(linha([t('Em dia'), ind.members.active]), linha([t('Pedidos de filiação em 12 meses'), ind.members.requests12]), linha([t('Venceram sem renovar em 12 meses'), ind.members.notRenewed12]));
+  if (ind?.finance) resumo.push(linha([t('Recebido em 12 meses (R$)'), csvReais(ind.finance.paid12Cents)]), linha([t('Renovações pagas em 12 meses'), ind.finance.renewalsPaid12]), linha([t('Cobranças em atraso'), ind.finance.overdue]), linha([t('Valor em atraso (R$)'), csvReais(ind.finance.overdueCents)]));
+  if (ind?.renewalRate != null) resumo.push(linha([t('Taxa de renovação (%)'), ind.renewalRate]));
   blocos.unshift(resumo);
   return blocos.map((b) => b.join('\n')).join('\n\n');
 }

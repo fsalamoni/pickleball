@@ -22,7 +22,7 @@ import {
 } from '@/modules/federations/domain/staff';
 import { addMonthsISO, isoDate } from '@/modules/federations/domain/membership';
 import { FED_PERMISSION_META, STAFF_TERM_MAX_MONTHS } from '@/modules/federations/domain/constants';
-import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { quando } from '@/v2/components/federations/federationUi';
 import { t, tn } from '@/core/i18n';
 
@@ -95,6 +95,7 @@ function Nomear({ federation, ator, lista, roles }) {
 
 function Pessoa({ federation, s, ator, lista, roles, uid }) {
   const [aberto, setAberto] = useState(null); // 'cargo' | 'prorrogar' | 'tirar'
+  const [confirmarCargo, setConfirmarCargo] = useState(false);
   const role = roles.find((r) => r.id === (s.role_id || s.role)) || null;
   const euMesmo = s.user_id === uid;
   const podeMexer = staffActionAllowed({ actor: ator, target: s, role, staff: lista });
@@ -142,9 +143,23 @@ function Pessoa({ federation, s, ator, lista, roles, uid }) {
                 {outrosCargos.map((r) => <option key={r.id} value={r.id}>{roleLabel(r)}{r.is_master ? ` · ${t('admin master')}` : ''}</option>)}
               </V2Select>
             </V2Field>
-            <V2Button type="button" disabled={!novoCargo || mudar.isPending} onClick={() => mudar.mutate(undefined, ok(t('Cargo atualizado.'), fechar))}>{t('Salvar')}</V2Button>
+            <V2Button type="button" disabled={!novoCargo || mudar.isPending} onClick={() => setConfirmarCargo(true)}>{t('Salvar')}</V2Button>
           </div>
         )}
+        <ConfirmDialog
+          open={confirmarCargo}
+          onOpenChange={setConfirmarCargo}
+          loading={mudar.isPending}
+          title={euMesmo
+            ? t('Mudar o seu cargo para {cargo}?', { cargo: roleLabel(roles.find((r) => r.id === novoCargo)) })
+            : t('Mudar o cargo de {nome} para {cargo}?', { nome: s.user_name, cargo: roleLabel(roles.find((r) => r.id === novoCargo)) })}
+          description={euMesmo
+            ? t('Na hora, você passa a ver só o que o cargo novo abre na Central. O mandato continua com as mesmas datas.')
+            : t('Na hora, {nome} passa a ver só o que o cargo novo abre na Central e recebe um aviso. O mandato continua com as mesmas datas.', { nome: s.user_name })}
+          confirmLabel={t('Mudar o cargo')}
+          cancelLabel={t('Voltar')}
+          onConfirm={() => mudar.mutate(undefined, ok(t('Cargo atualizado.'), () => { setConfirmarCargo(false); fechar(); }))}
+        />
 
         {aberto === 'prorrogar' && (
           <div className="space-y-3 rounded-2xl bg-paper p-3">
@@ -230,10 +245,7 @@ function PassarAdministracao({ federation, lista, roles, uid }) {
               <V2Select id="passar-cargo" value={roleId} onChange={(e) => setRoleId(e.target.value)}>{masters.map((r) => <option key={r.id} value={r.id}>{roleLabel(r)}</option>)}</V2Select>
             </V2Field>
           )}
-          <label className="flex items-start gap-2 text-sm text-ink">
-            <input type="checkbox" className="mt-1 h-4 w-4" checked={sair} onChange={(e) => setSair(e.target.checked)} />
-            <span>{t('E sair da administração (você deixa a equipe na mesma hora)')}</span>
-          </label>
+          <V2Toggle id="passar-sair" checked={sair} onChange={setSair} label={t('E sair da administração')} hint={t('Você deixa a equipe na mesma hora.')} />
           <div className="flex justify-end">
             <V2Button type="button" disabled={!pessoa || !roleId || m.isPending} onClick={() => setConfirmar(true)}>
               <Crown className="h-4 w-4" />{sair ? t('Passar e sair') : t('Passar a administração')}
@@ -295,19 +307,15 @@ function EditorDeCargo({ federation, inicial, onFim }) {
       <V2Field label={t('Atribuições')} htmlFor={`${pre}-desc`} error={v.errors.description}>
         <V2Textarea id={`${pre}-desc`} rows={2} maxLength={300} value={c.description} onChange={(e) => setC({ ...c, description: e.target.value })} />
       </V2Field>
-      <label className="flex items-start gap-2 text-sm text-ink">
-        <input type="checkbox" className="mt-1 h-4 w-4" checked={c.is_master} onChange={(e) => setC({ ...c, is_master: e.target.checked })} />
-        <span><strong>{t('Admin master')}</strong> — {t('todos os poderes: monta os cargos, nomeia e tira qualquer pessoa, passa a administração.')}</span>
-      </label>
+      <V2Toggle id={`${pre}-master`} checked={c.is_master} onChange={(v) => setC({ ...c, is_master: v })} label={t('Admin master')} hint={t('Todos os poderes: monta os cargos, nomeia e tira qualquer pessoa, passa a administração.')} />
       {!c.is_master && (
         <fieldset className="space-y-2">
           <legend className="text-sm font-bold text-ink">{t('O que o cargo abre na Central')}</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {ALL_PERMISSIONS.map((p) => (
-              <label key={p} className="flex items-start gap-2 rounded-xl border border-gray-100 bg-white p-2 text-sm">
-                <input type="checkbox" className="mt-1 h-4 w-4" checked={c.perms.includes(p)} onChange={() => alternar(p)} />
-                <span><span className="font-semibold text-ink">{t(FED_PERMISSION_META[p].label)}</span><span className="block text-xs text-gray-500">{t(FED_PERMISSION_META[p].description)}</span></span>
-              </label>
+              <div key={p} className="rounded-xl border border-gray-100 bg-white p-3">
+                <V2Toggle id={`${pre}-perm-${p}`} checked={c.perms.includes(p)} onChange={() => alternar(p)} label={t(FED_PERMISSION_META[p].label)} hint={t(FED_PERMISSION_META[p].description)} />
+              </div>
             ))}
           </div>
           {v.errors.perms && <p className="text-xs text-red-700">{v.errors.perms}</p>}
@@ -323,6 +331,7 @@ function EditorDeCargo({ federation, inicial, onFim }) {
 
 function Cargos({ federation, lista, roles }) {
   const [editando, setEditando] = useState(null); // id | 'novo'
+  const [apagando, setApagando] = useState(null); // o cargo a confirmar
   const apagar = useFederationMutation((id) => staffAction(federation.id, 'role_delete', { roleId: id }));
   const proprios = Array.isArray(federation.staff_roles) && federation.staff_roles.length > 0;
   return (
@@ -352,7 +361,7 @@ function Cargos({ federation, lista, roles }) {
                   </div>
                   <div className="flex gap-2">
                     <V2Button type="button" size="sm" variant="secondary" aria-label={t('Editar {cargo}', { cargo: roleLabel(r) })} onClick={() => setEditando(editando === r.id ? null : r.id)}><Pencil className="h-4 w-4" /></V2Button>
-                    {ocupantes === 0 && <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar {cargo}', { cargo: roleLabel(r) })} disabled={apagar.isPending} onClick={() => apagar.mutate(r.id, ok(t('Cargo apagado.')))}><Trash2 className="h-4 w-4" /></V2Button>}
+                    {ocupantes === 0 && <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar {cargo}', { cargo: roleLabel(r) })} disabled={apagar.isPending} onClick={() => setApagando(r)}><Trash2 className="h-4 w-4" /></V2Button>}
                   </div>
                 </div>
                 {editando === r.id && <EditorDeCargo federation={federation} inicial={{ ...r, name: roleLabel(r), description: roleDescription(r) }} onFim={() => setEditando(null)} />}
@@ -361,6 +370,17 @@ function Cargos({ federation, lista, roles }) {
           );
         })}
       </ul>
+      <ConfirmDialog
+        open={apagando != null}
+        onOpenChange={(v) => { if (!v) setApagando(null); }}
+        destructive
+        loading={apagar.isPending}
+        title={t('Apagar o cargo {cargo}?', { cargo: roleLabel(apagando) })}
+        description={t('Ninguém ocupa este cargo hoje. Ele sai da lista e não dá para desfazer: para tê-lo de volta, é preciso criar de novo, com as permissões.')}
+        confirmLabel={t('Apagar o cargo')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => apagar.mutate(apagando.id, ok(t('Cargo apagado.'), () => setApagando(null)))}
+      />
     </section>
   );
 }

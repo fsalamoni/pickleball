@@ -293,7 +293,7 @@ test.describe('@emuladores com conta', () => {
     await expect(page.getByRole('heading', { name: nome })).toBeVisible();
     await expect(page.getByText('Federado anual').first()).toBeVisible();
     // Aprovada ⇒ o botão de filiar é um link de verdade (numa suspensa ele não existe).
-    const filiar = page.getByRole('link', { name: 'Filiar-se' });
+    const filiar = page.getByRole('link', { name: 'Filiar-se', exact: true });
     await expect(filiar).toBeVisible();
     await tocar(filiar);
     await expect(page).toHaveURL(new RegExp(`/federacoes/${fed}/filiar`));

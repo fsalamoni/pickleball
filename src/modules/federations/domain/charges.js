@@ -3,7 +3,8 @@
  * resumo financeiro. Lógica pura.
  */
 import { buildPixPayload, formatBrlCents } from '@/modules/tournament/domain/payment.js';
-import { CHARGE_DUE_DAYS, CHARGE_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
+import { CHARGE_DUE_DAYS, CHARGE_ORIGIN_LABELS, CHARGE_STATUS, CHARGE_STATUS_LABELS } from './constants.js';
 import { addMonthsISO, daysBetween, isoDate, toISODate } from './membership.js';
 
 export { formatBrlCents };
@@ -97,13 +98,48 @@ export function sortChargesForStaff(charges = []) {
   return [...charges].sort((a, b) => (peso[a.status] ?? 9) - (peso[b.status] ?? 9) || ms(b) - ms(a));
 }
 
-/** Linhas do CSV do contador (uma por cobrança), cabeçalho incluso. */
+/** Célula de CSV entre aspas. Começando com = + - @ (ou tab/CR) viraria FÓRMULA no Excel/Sheets; o apóstrofo a neutraliza. */
+export const csvCell = (v) => { const s = String(v ?? ''); return `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`; };
+
+/** Centavos → reais como o Excel brasileiro lê um número: "150,00" (sem R$ nem ponto de milhar). */
+export const csvReais = (cents) => (Math.trunc(Number(cents) || 0) / 100).toFixed(2).replace('.', ',');
+
+/** Data → DD/MM/AAAA; vazio sem data. */
+export const csvData = (v) => { const iso = toISODate(v); return iso ? iso.split('-').reverse().join('/') : ''; };
+
+/** O CSV do contador (uma linha por cobrança): cabeçalho e rótulos legíveis, valor em reais, datas DD/MM/AAAA, separado por ";". */
 export function chargesCsv(charges = []) {
-  // Célula que começa com = + - @ (ou tab/CR) vira FÓRMULA ao abrir no Excel/Sheets; o apóstrofo a neutraliza.
-  const esc = (v) => { const s = String(v ?? ''); return `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`; };
-  const linhas = [['id', 'filiado', 'origem', 'valor_centavos', 'status', 'vencimento', 'informado_em', 'pago_em', 'confirmado_por'].join(';')];
+  const linhas = [[t('Filiado'), t('Origem'), t('Valor (R$)'), t('Situação'), t('Vencimento'), t('Informado em'), t('Pago em'), t('Confirmado por')].map(csvCell).join(';')];
   charges.forEach((c) => linhas.push([
-    c.id, c.payer_name, c.origin, c.amount_cents, c.status, toISODate(c.due_date), toISODate(c.declared_at), toISODate(c.paid_at), c.confirmed_by_name,
-  ].map(esc).join(';')));
+    c.payer_name,
+    CHARGE_ORIGIN_LABELS[c.origin] ? t(CHARGE_ORIGIN_LABELS[c.origin]) : c.origin,
+    csvReais(c.amount_cents),
+    CHARGE_STATUS_LABELS[c.status] ? t(CHARGE_STATUS_LABELS[c.status]) : c.status,
+    csvData(c.due_date), csvData(c.declared_at), csvData(c.paid_at), c.confirmed_by_name,
+  ].map(csvCell).join(';')));
   return linhas.join('\n');
+}
+
+/**
+ * O RECIBO de uma cobrança paga: o que a folha mostra (pessoa, o que foi pago,
+ * valor, data, quem confirmou e a federação). Só de cobrança `paid`; as outras
+ * devolvem null — recibo de algo não pago não existe. O número é derivado do
+ * id (nada gravado) e repete igual a cada emissão.
+ * @returns {null|{ number: string, federation: { name: string, acronym: string, cnpj: string, city: string, logo: string }, payer: string, member: string, origin: string, description: string, amount: string, paidOn: string, confirmedBy: string }}
+ */
+export function chargeReceipt(charge, federation = {}) {
+  if (!charge || charge.status !== CHARGE_STATUS.PAID) return null;
+  const pago = toISODate(charge.paid_at || charge.paid_at_ms);
+  const membro = charge.member_name || '';
+  return {
+    number: `REC-${String(charge.id || '').slice(0, 8).toUpperCase()}`,
+    federation: { name: federation.name || '', acronym: federation.acronym || '', cnpj: federation.cnpj_masked || '', city: [federation.city, federation.state].filter(Boolean).join(' / '), logo: federation.branding?.logo_url || '' },
+    payer: charge.payer_name || membro,
+    member: membro && membro !== charge.payer_name ? membro : '',
+    origin: CHARGE_ORIGIN_LABELS[charge.origin] ? t(CHARGE_ORIGIN_LABELS[charge.origin]) : t(CHARGE_ORIGIN_LABELS.membership),
+    description: charge.plan_name || '',
+    amount: formatBrlCents(charge.amount_cents),
+    paidOn: pago ? pago.split('-').reverse().join('/') : '',
+    confirmedBy: charge.confirmed_by_name || '',
+  };
 }

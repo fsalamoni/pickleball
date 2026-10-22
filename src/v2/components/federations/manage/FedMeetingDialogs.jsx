@@ -18,7 +18,9 @@ import {
 } from '@/modules/federations/domain/meeting';
 import { normalizeFederationRules } from '@/modules/federations/domain/federation';
 import { docDisplayTitle } from '@/modules/federations/domain/acervo';
-import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useAvisoNaoSalvo } from './naoSalvo';
 import { t } from '@/core/i18n';
 
 /** Escolha de um documento publicado do acervo (do tipo certo, quando há lista). */
@@ -47,9 +49,12 @@ function Motivo({ id, value, onChange, hint }) {
 
 export function ConveneForm({ federation, ev, onFechar }) {
   const [f, setF] = useState(() => convocationDraft(ev));
+  const [base] = useState(f);
   const [notify, setNotify] = useState(true);
   const [reason, setReason] = useState('');
   const [tentou, setTentou] = useState(false);
+  const [tirando, setTirando] = useState(null); // índice do item a confirmar
+  useAvisoNaoSalvo(Boolean(reason.trim()) || JSON.stringify(f) !== JSON.stringify(base));
   const acervo = useVisibleAcervo(federation);
   const r = validateConvocation(f, { eventDate: ev.date });
   const ja = isMeetingConvened(ev);
@@ -64,6 +69,7 @@ export function ConveneForm({ federation, ev, onFechar }) {
     [items[i], items[i + d]] = [items[i + d], items[i]];
     return { ...x, items };
   });
+  const tirarItem = (i) => { setF((x) => ({ ...x, items: x.items.filter((_, j) => j !== i) })); setTirando(null); };
   const m = useFederationMutation(() => agendaAction({
     federationId: federation.id, action: 'convene', eventId: ev.id, convocation: r.value, notify: divulga && notify, reason: precisaMotivo ? reason : '',
   }));
@@ -116,7 +122,7 @@ export function ConveneForm({ federation, ev, onFechar }) {
                   <div className="flex gap-1 pb-1">
                     <V2Button type="button" size="sm" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('Subir o item {n}', { n: i + 1 })}><ArrowUp className="h-4 w-4" /></V2Button>
                     <V2Button type="button" size="sm" variant="ghost" disabled={i === f.items.length - 1} onClick={() => move(i, 1)} aria-label={t('Descer o item {n}', { n: i + 1 })}><ArrowDown className="h-4 w-4" /></V2Button>
-                    <V2Button type="button" size="sm" variant="ghost" disabled={f.items.length === 1} onClick={() => set('items', f.items.filter((_, j) => j !== i))} aria-label={t('Tirar o item {n}', { n: i + 1 })}><Trash2 className="h-4 w-4" /></V2Button>
+                    <V2Button type="button" size="sm" variant="ghost" disabled={f.items.length === 1} onClick={() => (String(it.title || '').trim() || String(it.description || '').trim() ? setTirando(i) : tirarItem(i))} aria-label={t('Tirar o item {n}', { n: i + 1 })}><Trash2 className="h-4 w-4" /></V2Button>
                   </div>
                 </div>
                 <V2Textarea aria-label={t('Detalhe do item {n}', { n: i + 1 })} rows={2} maxLength={1000} placeholder={t('Detalhe (opcional)')} value={it.description} onChange={(e) => setItem(i, { description: e.target.value })} />
@@ -126,9 +132,19 @@ export function ConveneForm({ federation, ev, onFechar }) {
         </ol>
         {f.items.length < MEETING_ITEMS_MAX && <V2Button type="button" size="sm" variant="secondary" onClick={() => set('items', [...f.items, { title: '', description: '', kind: 'deliberation' }])}><Plus className="h-4 w-4" />{t('Acrescentar item')}</V2Button>}
       </fieldset>
-      {divulga && <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />{t('Avisar quem segue a federação')}</label>}
+      {divulga && <V2Toggle id="cv-avisar" checked={notify} onChange={setNotify} label={t('Avisar quem segue a federação')} hint={t('Quem segue recebe um aviso com a convocação.')} />}
       {precisaMotivo && <Motivo id="cv-motivo" value={reason} onChange={setReason} hint={t('A convocação já foi divulgada: a mudança fica no histórico, com o motivo, e quem segue é avisado.')} />}
       <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar a convocação')}</V2Button></div>
+      <ConfirmDialog
+        open={tirando != null}
+        onOpenChange={(v) => { if (!v) setTirando(null); }}
+        destructive
+        title={t('Tirar o item {n} da pauta?', { n: (tirando ?? 0) + 1 })}
+        description={t('"{item}" sai da pauta e os itens seguintes sobem uma posição. A mudança só vale quando você salvar a convocação.', { item: String(f.items[tirando ?? 0]?.title || '').trim() || t('Item sem título') })}
+        confirmLabel={t('Tirar da pauta')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => tirarItem(tirando)}
+      />
     </form>
   );
 }
@@ -139,7 +155,9 @@ const COM_VOTO = ['approved', 'rejected', 'elected'];
 
 export function RecordForm({ federation, ev, onFechar }) {
   const [f, setF] = useState(() => recordDraft(ev));
+  const [base] = useState(f);
   const [reason, setReason] = useState('');
+  useAvisoNaoSalvo(Boolean(reason.trim()) || JSON.stringify(f) !== JSON.stringify(base));
   const [tentou, setTentou] = useState(false);
   const acervo = useVisibleAcervo(federation);
   const pauta = ev.meeting?.items || [];
@@ -171,7 +189,7 @@ export function RecordForm({ federation, ev, onFechar }) {
         <V2Field label={t('Presentes')} htmlFor="rs-presentes" required error={erro('present')}><V2Input id="rs-presentes" inputMode="numeric" value={f.present} onChange={(e) => set('present', e.target.value)} /></V2Field>
         <V2Field label={t('Aptos a participar')} htmlFor="rs-aptos" error={erro('eligible')} hint={t('Opcional. Quem tinha direito a voto.')}><V2Input id="rs-aptos" inputMode="numeric" value={f.eligible} onChange={(e) => set('eligible', e.target.value)} /></V2Field>
       </div>
-      <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.quorum_reached} onChange={(e) => set('quorum_reached', e.target.checked)} />{t('Houve quórum')}</label>
+      <V2Toggle id="rs-quorum" checked={f.quorum_reached} onChange={(v) => set('quorum_reached', v)} label={t('Houve quórum')} />
       {!f.quorum_reached && <p className="text-sm text-gray-500">{t('Sem quórum nada se decide: cada item fica adiado ou sai da pauta.')}</p>}
       <fieldset className="space-y-3">
         <legend className="text-sm font-semibold text-ink">{t('O que se decidiu')}</legend>

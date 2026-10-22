@@ -364,3 +364,16 @@ export function fileSizeLabel(bytes) {
   if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
   return `${Math.max(1, Math.round(n / 1024))} KB`;
 }
+
+const VIGORAM_CATEGORIAS = new Set(['structure', 'ethics', 'sport_rules']);
+const VIGORAM_TIPOS = new Set(['resolution', 'ordinance', 'deliberation', 'presidential_act']);
+/**
+ * O ato é NORMA (estatuto, código, regulamento, resolução, portaria…) e por isso
+ * faz sentido dizer "Em vigor"? Ata, súmula, edital, nota, decisão e balanço são
+ * REGISTRO: não "vigoram", e o selo verde neles confundia.
+ */
+export function docHasValidity(doc) {
+  const tipo = docType(doc?.type);
+  if (!tipo || tipo.id === 'disciplinary_decision') return false;
+  return VIGORAM_TIPOS.has(tipo.id) || VIGORAM_CATEGORIAS.has(tipo.category);
+}

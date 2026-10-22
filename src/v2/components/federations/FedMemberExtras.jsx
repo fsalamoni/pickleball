@@ -201,8 +201,24 @@ export function FedTransferDialog({ member, federation, onClose }) {
 }
 
 function CancelarTransferencia({ tr }) {
+  const [aberto, setAberto] = useState(false);
   const m = useFederationMutation(() => transferAction({ action: 'cancel', transferId: tr.id }));
-  return <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => m.mutate(undefined, { onSuccess: () => toast.success(t('Transferência cancelada.')), onError: (e) => toast.error(e.message) })}>{t('Cancelar')}</V2Button>;
+  return (
+    <>
+      <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => setAberto(true)}>{t('Cancelar o pedido')}</V2Button>
+      <ConfirmDialog
+        open={aberto}
+        onOpenChange={setAberto}
+        destructive
+        loading={m.isPending}
+        title={t('Cancelar o pedido de transferência?')}
+        description={t('O pedido sai da análise da federação e nada muda na sua filiação. Para trocar depois, é preciso fazer um pedido novo.')}
+        confirmLabel={t('Cancelar o pedido')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => m.mutate(undefined, { onSuccess: () => { setAberto(false); toast.success(t('Transferência cancelada.')); }, onError: (e) => toast.error(e.message) })}
+      />
+    </>
+  );
 }
 
 /* ---------------------------------------------------------------- sanções -- */

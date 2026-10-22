@@ -14,6 +14,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BadgeCheck, EyeOff, Flag, MessageSquare, RotateCcw, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   COMMENT_MODES, COMMENT_REASON_MIN, COMMENT_REPORT_REASONS, COMMENT_TEXT_MAX, commentThreads, commentsStateLabel, validateCommentSettings, validateCommentText,
 } from '@/modules/federations/domain/comments';
@@ -133,6 +134,7 @@ function ReplyForm({ federation, comment, onDone }) {
 
 function Comment({ federation, c, data, onReport, onHide, isReply }) {
   const [respondendo, setRespondendo] = useState(false);
+  const [confirmarApagar, setConfirmarApagar] = useState(false);
   const apagar = useFederationMutation(() => commentAction({ federationId: federation.id, action: 'delete', commentId: c.id }));
   const reabrir = useFederationMutation(() => commentAction({ federationId: federation.id, action: 'restore', commentId: c.id }));
   const oculto = c.status !== 'visible';
@@ -149,7 +151,7 @@ function Comment({ federation, c, data, onReport, onHide, isReply }) {
       {oculto && c.hidden_reason && <p className="text-xs text-gray-500">{t('Motivo: {motivo}', { motivo: c.hidden_reason })}</p>}
       <div className="flex flex-wrap gap-1">
         {c.mine && (
-          <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => apagar.mutate(undefined, { onSuccess: () => toast.success(t('Comentário apagado.')), onError: (e) => toast.error(e.message) })}>
+          <V2Button type="button" size="sm" variant="ghost" disabled={apagar.isPending} onClick={() => setConfirmarApagar(true)}>
             <Trash2 className="h-4 w-4" />{t('Apagar')}
           </V2Button>
         )}
@@ -169,6 +171,17 @@ function Comment({ federation, c, data, onReport, onHide, isReply }) {
         )}
       </div>
       {respondendo && <ReplyForm federation={federation} comment={c} onDone={() => setRespondendo(false)} />}
+      <ConfirmDialog
+        open={confirmarApagar}
+        onOpenChange={setConfirmarApagar}
+        title={t('Apagar o seu comentário?')}
+        description={t('Ele some da página e não dá para recuperar. As respostas a ele também são apagadas.')}
+        confirmLabel={t('Apagar')}
+        cancelLabel={t('Voltar')}
+        destructive
+        loading={apagar.isPending}
+        onConfirm={() => apagar.mutate(undefined, { onSuccess: () => { setConfirmarApagar(false); toast.success(t('Comentário apagado.')); }, onError: (e) => toast.error(e.message) })}
+      />
     </div>
   );
 }

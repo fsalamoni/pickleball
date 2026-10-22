@@ -6,7 +6,7 @@
  * cobrança e credencial são do SERVIDOR (`courseAction`); o curso em si a
  * equipe grava pelo cliente — a regra confere.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { GraduationCap, Pencil, Plus, ShieldCheck, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -20,6 +20,8 @@ import { COURSE_KIND, COURSE_KIND_LABELS, FED_PERMISSION, COURSE_STATUS, COURSE_
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
+import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
+import { useAvisoNaoSalvo } from './naoSalvo';
 
 const reais = (c) => (Number(c || 0) / 100).toFixed(2).replace('.', ',');
 const cents = parseBrlCents;
@@ -27,7 +29,10 @@ const CURSO_VAZIO = { name: '', kind: COURSE_KIND.CLINIC, level: '', description
 
 function CursoForm({ federation, curso, onFechar }) {
   const { user } = useAuth();
-  const [f, setF] = useState(curso ? { ...CURSO_VAZIO, ...curso, preco: reais(curso.price_cents), preco_filiado: curso.member_price_cents != null && curso.member_price_cents !== curso.price_cents ? reais(curso.member_price_cents) : '', seats: curso.seats || '', hours: curso.hours || '', credential_months: curso.credential_months || '' } : CURSO_VAZIO);
+  const [inicial] = useState(() => (curso ? { ...CURSO_VAZIO, ...curso, preco: reais(curso.price_cents), preco_filiado: curso.member_price_cents != null && curso.member_price_cents !== curso.price_cents ? reais(curso.member_price_cents) : '', seats: curso.seats || '', hours: curso.hours || '', credential_months: curso.credential_months || '' } : CURSO_VAZIO));
+  const [f, setF] = useState(inicial);
+  // Formulário mexido: trocar de aba da Central ou fechar o navegador pergunta antes. Salvar fecha o formulário.
+  useAvisoNaoSalvo(f !== inicial && JSON.stringify(f) !== JSON.stringify(inicial));
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const m = useFederationMutation((input) => saveCourse(federation, input, { uid: user?.uid, courseId: curso?.id || null }));
@@ -80,21 +85,27 @@ const TOM_INSC = { awaiting_payment: 'amber', confirmed: 'ink', passed: 'green',
 
 function InscritosDialog({ curso, federation, onClose }) {
   const q = useCourseEnrollments(curso.id, federation.id);
+  // O resultado é de UMA pessoa e não muda depois: pergunta antes, com a observação dela (antes era um campo só para a lista inteira).
+  const [resultado, setResultado] = useState(null); // null | { action: 'pass'|'fail', en }
   const [nota, setNota] = useState('');
-  const m = useFederationMutation(({ action, userId }) => courseAction({ action, courseId: curso.id, userId, note: nota }));
-  const agir = (action, userId) => m.mutate({ action, userId }, { onSuccess: () => toast.success(action === 'pass' ? t('Aprovação registrada.') : t('Resultado registrado.')), onError: (e) => toast.error(e.message) });
+  const m = useFederationMutation(({ action, userId, note }) => courseAction({ action, courseId: curso.id, userId, note }));
+  const abrir = (action, en) => { setNota(''); setResultado({ action, en }); };
+  const confirmar = () => m.mutate({ action: resultado.action, userId: resultado.en.user_id, note: nota.trim() }, {
+    onSuccess: () => { toast.success(resultado.action === 'pass' ? t('Aprovação registrada.') : t('Resultado registrado.')); setResultado(null); },
+    onError: (e) => toast.error(e.message),
+  });
   const lista = [...(q.data || [])].sort((a, b) => String(a.user_name).localeCompare(String(b.user_name)));
+  const aprovando = resultado?.action === 'pass';
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent sheet className="max-w-2xl">
-        <DialogTitle>{t('Inscritos — {curso}', { curso: curso.name })}</DialogTitle>
+        <DialogTitle>{t('Inscritos em {curso}', { curso: curso.name })}</DialogTitle>
         <DialogDescription>{t('Dê o resultado a quem está inscrito e pago. Aprovado em curso que emite credencial recebe a credencial na hora.')}</DialogDescription>
         {q.isError && <V2ErrorState inline title={t('Não carregaram os inscritos')} onRetry={() => q.refetch()} />}
         {q.isLoading && <V2Skeleton lines={4} />}
         {q.isSuccess && !lista.length && <V2EmptyState icon={Users} title={t('Ninguém inscrito ainda')} />}
         {q.isSuccess && lista.length > 0 && (
           <>
-            <V2Input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={300} placeholder={t('Observação do resultado (opcional)')} aria-label={t('Observação do resultado')} />
             <ul className="max-h-[50dvh] space-y-2 overflow-y-auto">
               {lista.map((en) => (
                 <li key={en.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 p-3">
@@ -105,8 +116,8 @@ function InscritosDialog({ curso, federation, onClose }) {
                   </div>
                   {en.status === ENROLLMENT_STATUS.CONFIRMED && (
                     <div className="flex gap-2">
-                      <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('pass', en.user_id)}>{t('Aprovar')}</V2Button>
-                      <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir('fail', en.user_id)}>{t('Não aprovar')}</V2Button>
+                      <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => abrir('pass', en)} aria-label={t('Aprovar {nome}', { nome: en.user_name })}>{t('Aprovar')}</V2Button>
+                      <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => abrir('fail', en)} aria-label={t('Não aprovar {nome}', { nome: en.user_name })}>{t('Não aprovar')}</V2Button>
                     </div>
                   )}
                 </li>
@@ -114,10 +125,30 @@ function InscritosDialog({ curso, federation, onClose }) {
             </ul>
           </>
         )}
+        <ConfirmDialog
+          open={Boolean(resultado)}
+          onOpenChange={(o) => { if (!o) setResultado(null); }}
+          loading={m.isPending}
+          destructive={!aprovando}
+          title={aprovando ? t('Aprovar {nome}?', { nome: resultado?.en.user_name || '' }) : t('Registrar que {nome} não foi aprovado?', { nome: resultado?.en.user_name || '' })}
+          description={`${aprovando
+            ? (curso.issues_credential ? t('A pessoa recebe a credencial do curso na hora, com código verificável, e um aviso.') : t('A pessoa recebe um aviso de que foi aprovada.'))
+            : t('A pessoa recebe um aviso de que não foi aprovada desta vez.')} ${t('O resultado não pode ser trocado depois.')}`}
+          confirmLabel={aprovando ? t('Aprovar') : t('Não aprovar')}
+          cancelLabel={t('Voltar')}
+          onConfirm={confirmar}
+        >
+          <V2Field label={t('Observação (opcional)')} htmlFor="cu-res-nota" hint={t('Fica registrada junto do resultado desta pessoa.')}>
+            <V2Input id="cu-res-nota" value={nota} onChange={(e) => setNota(e.target.value)} maxLength={300} />
+          </V2Field>
+        </ConfirmDialog>
       </DialogContent>
     </Dialog>
   );
 }
+
+const CAMPOS_CURSO = (c) => [c.name, c.level, c.place, c.instructors, t(COURSE_KIND_LABELS[c.kind] || '')].join(' ');
+const CAMPOS_CREDENCIAL = (c) => [c.user_name, c.course_name, c.level, c.code].join(' ');
 
 function CursosTab({ federation, coursesQ, podeApagar }) {
   const { user } = useAuth();
@@ -128,9 +159,10 @@ function CursosTab({ federation, coursesQ, podeApagar }) {
   const [confirmarApagar, setConfirmarApagar] = useState(null);
   const [cancelando, setCancelando] = useState(null);
   const [motivo, setMotivo] = useState('');
+  const cursos = useMemo(() => sortCourses(coursesQ.data || []), [coursesQ.data]);
+  const busca = useBuscaLista(cursos, CAMPOS_CURSO);
   if (coursesQ.isError) return <V2ErrorState title={t('Não carregaram os cursos')} onRetry={() => coursesQ.refetch()} />;
   if (coursesQ.isLoading) return <V2Skeleton lines={5} />;
-  const cursos = sortCourses(coursesQ.data || []);
   return (
     <section className="space-y-4" aria-label={t('Cursos')} data-dica="federacao-cursos">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -138,9 +170,12 @@ function CursosTab({ federation, coursesQ, podeApagar }) {
         {editando == null && <V2Button type="button" size="sm" onClick={() => setEditando('novo')} data-dica="federacao-curso-novo"><Plus className="h-4 w-4" />{t('Novo curso')}</V2Button>}
       </div>
       {editando != null && <V2Surface><CursoForm federation={federation} curso={editando === 'novo' ? null : editando} onFechar={() => setEditando(null)} /></V2Surface>}
-      {!cursos.length && editando == null ? <V2EmptyState icon={GraduationCap} title={t('Nenhum curso ainda')} action={<V2Button type="button" onClick={() => setEditando('novo')}>{t('Criar o primeiro curso')}</V2Button>} /> : (
+      {cursos.length > 0 && <BuscaLista id="cu-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar curso por nome, nível, local ou instrutor')} total={cursos.length} achados={busca.filtrados.length} />}
+      {!cursos.length && editando == null && <V2EmptyState icon={GraduationCap} title={t('Nenhum curso ainda')} description={t('Crie como rascunho e abra as inscrições quando estiver pronto.')} action={<V2Button type="button" onClick={() => setEditando('novo')}>{t('Criar o primeiro curso')}</V2Button>} />}
+      {cursos.length > 0 && !busca.filtrados.length && <V2EmptyState icon={GraduationCap} title={t('Nenhum curso com esse termo')} description={t('Confira a grafia ou limpe a busca.')} />}
+      {busca.visiveis.length > 0 && (
         <ul className="space-y-3">
-          {cursos.map((c) => {
+          {busca.visiveis.map((c) => {
             const st = courseState(c);
             const vagas = seatsLeft(c);
             return (
@@ -160,6 +195,7 @@ function CursosTab({ federation, coursesQ, podeApagar }) {
           })}
         </ul>
       )}
+      <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
       {inscritosDe && <InscritosDialog curso={inscritosDe} federation={federation} onClose={() => setInscritosDe(null)} />}
       <ConfirmDialog
         open={Boolean(confirmarApagar)}
@@ -218,29 +254,54 @@ function CredencialRow({ cred }) {
         </div>
         {st.status === CREDENTIAL_STATUS.REVOKED
           ? <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => m.mutate('restore', { onSuccess: () => toast.success(t('Credencial devolvida.')), onError: (e) => toast.error(e.message) })}>{t('Devolver')}</V2Button>
-          : !revogando ? <V2Button type="button" size="sm" variant="danger" onClick={() => setRevogando(true)}>{t('Revogar')}</V2Button> : (
-            <div className="flex flex-wrap items-center gap-2">
-              <V2Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} placeholder={t('Motivo (a pessoa lê)')} aria-label={t('Motivo da revogação')} className="sm:max-w-xs" autoFocus />
-              <V2Button type="button" size="sm" variant="danger" disabled={m.isPending || motivo.trim().length < 3} onClick={() => m.mutate('revoke', { onSuccess: () => { toast.success(t('Credencial revogada.')); setRevogando(false); }, onError: (e) => toast.error(e.message) })}>{t('Confirmar')}</V2Button>
-              <V2Button type="button" size="sm" variant="ghost" onClick={() => setRevogando(false)}>{t('Voltar')}</V2Button>
-            </div>
-          )}
+          : <V2Button type="button" size="sm" variant="danger" onClick={() => { setMotivo(''); setRevogando(true); }} aria-label={t('Revogar a credencial de {nome}', { nome: cred.user_name })}>{t('Revogar')}</V2Button>}
       </V2Surface>
+      <ConfirmDialog
+        open={revogando}
+        onOpenChange={setRevogando}
+        destructive
+        loading={m.isPending}
+        confirmDisabled={motivo.trim().length < 3}
+        title={t('Revogar a credencial de {nome}?', { nome: cred.user_name })}
+        description={t('A credencial deixa de valer na hora: quem conferir o código vê "Revogada". A pessoa recebe um aviso com o motivo. Dá para devolver depois.')}
+        confirmLabel={t('Revogar')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => m.mutate('revoke', { onSuccess: () => { toast.success(t('Credencial revogada.')); setRevogando(false); }, onError: (e) => toast.error(e.message) })}
+      >
+        <V2Field label={t('Motivo')} htmlFor={`cred-motivo-${cred.id}`} hint={t('A pessoa lê este texto no aviso. Mínimo 3 caracteres.')}>
+          <V2Textarea id={`cred-motivo-${cred.id}`} rows={2} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        </V2Field>
+      </ConfirmDialog>
     </li>
   );
 }
 
+const FILTROS_CREDENCIAL = ['todas', CREDENTIAL_STATUS.ACTIVE, CREDENTIAL_STATUS.EXPIRED, CREDENTIAL_STATUS.REVOKED];
+
 function CredenciaisTab({ credentialsQ }) {
-  const [filtro, setFiltro] = useState('todas');
+  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'todas', FILTROS_CREDENCIAL);
+  const todas = useMemo(() => [...(credentialsQ.data || [])].sort((a, b) => String(b.issued_at).localeCompare(String(a.issued_at))), [credentialsQ.data]);
+  const porEstado = useMemo(() => {
+    const n = { todas: todas.length };
+    todas.forEach((c) => { const s = credentialState(c).status; n[s] = (n[s] || 0) + 1; });
+    return n;
+  }, [todas]);
+  const lista = useMemo(() => (filtro === 'todas' ? todas : todas.filter((c) => credentialState(c).status === filtro)), [todas, filtro]);
+  const busca = useBuscaLista(lista, CAMPOS_CREDENCIAL);
   if (credentialsQ.isError) return <V2ErrorState title={t('Não carregaram as credenciais')} onRetry={() => credentialsQ.refetch()} />;
   if (credentialsQ.isLoading) return <V2Skeleton lines={5} />;
-  const todas = [...(credentialsQ.data || [])].sort((a, b) => String(b.issued_at).localeCompare(String(a.issued_at)));
-  const lista = filtro === 'todas' ? todas : todas.filter((c) => credentialState(c).status === filtro);
+  const rotulos = { todas: t('Todas'), [CREDENTIAL_STATUS.ACTIVE]: t('Válidas'), [CREDENTIAL_STATUS.EXPIRED]: t('Vencidas'), [CREDENTIAL_STATUS.REVOKED]: t('Revogadas') };
   return (
     <section className="space-y-4" aria-label={t('Credenciais')} data-dica="federacao-credenciais">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Credenciais emitidas')}</h2><p className="text-sm text-gray-500">{t('Quem foi aprovado em curso que emite credencial. Cada uma tem código verificável em /f/verificar; a pessoa escolhe se aparece no diretório público.')}</p></div>
-      <div className="flex flex-wrap gap-2">{[['todas', t('Todas')], [CREDENTIAL_STATUS.ACTIVE, t('Válidas')], [CREDENTIAL_STATUS.EXPIRED, t('Vencidas')], [CREDENTIAL_STATUS.REVOKED, t('Revogadas')]].map(([id, label]) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{label}</V2FilterChip>)}</div>
-      {!lista.length ? <V2EmptyState icon={ShieldCheck} title={t('Nenhuma credencial neste filtro')} /> : <ul className="space-y-3">{lista.map((c) => <CredencialRow key={c.id} cred={c} />)}</ul>}
+      {!todas.length ? <V2EmptyState icon={ShieldCheck} title={t('Nenhuma credencial emitida ainda')} description={t('Ela nasce quando você aprova alguém num curso que emite credencial (Cursos → Inscritos).')} /> : (
+        <>
+          <div className="flex flex-wrap gap-2">{FILTROS_CREDENCIAL.map((id) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{`${rotulos[id]} (${porEstado[id] || 0})`}</V2FilterChip>)}</div>
+          <BuscaLista id="cred-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, curso ou código')} total={lista.length} achados={busca.filtrados.length} />
+          {!busca.filtrados.length ? <V2EmptyState icon={ShieldCheck} title={busca.termo.trim() ? t('Nenhuma credencial com esse termo') : t('Nenhuma credencial neste filtro')} /> : <ul className="space-y-3">{busca.visiveis.map((c) => <CredencialRow key={c.id} cred={c} />)}</ul>}
+          <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
+        </>
+      )}
     </section>
   );
 }

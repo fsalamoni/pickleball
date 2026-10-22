@@ -8,9 +8,10 @@
  * Quem grava é o servidor (`federationAcervo`); a tela valida antes por
  * `validateDocInput` (a mesma regra da cópia do servidor).
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { FileUp, Link2, Plus, Trash2, X } from 'lucide-react';
+import { FileUp, Link2, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { acervoAction, discardAcervoUpload, uploadAcervoFile } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
@@ -20,12 +21,16 @@ import {
 } from '@/modules/federations/domain/acervo';
 import { V2Button, V2Field, V2Input, V2Select, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
+import { useAvisoNaoSalvo } from './naoSalvo';
 
 /** Lista de arquivos já enviados + os que estão subindo agora. */
 export function AcervoUploader({ value, onAdd, onRemove, onBusy, max = DOC_FILES_MAX, restricted = false, id = 'acervo-arquivos' }) {
   const { user } = useAuth();
   const input = useRef(null);
   const [subindo, setSubindo] = useState([]); // { key, name, progress }
+  // Envio que termina depois de o formulário fechar não tem mais dono: apaga.
+  const vivo = useRef(true);
+  useEffect(() => { vivo.current = true; return () => { vivo.current = false; }; }, []);
   const atualizar = (fila) => { setSubindo(fila); onBusy?.(fila.length > 0); };
   const escolher = async (e) => {
     const escolhidos = [...(e.target.files || [])];
@@ -42,12 +47,13 @@ export function AcervoUploader({ value, onAdd, onRemove, onBusy, max = DOC_FILES
       atualizar(fila);
       try {
         const enviado = await uploadAcervoFile({ uid: user?.uid, file, onProgress: (p) => setSubindo((f) => f.map((x) => (x.key === key ? { ...x, progress: p } : x))) });
-        onAdd(enviado);
+        if (vivo.current) onAdd(enviado);
+        else discardAcervoUpload(enviado.path);
       } catch (er) {
-        toast.error(`${file.name}: ${er.message || t('não foi possível enviar.')}`);
+        if (vivo.current) toast.error(`${file.name}: ${er.message || t('não foi possível enviar.')}`);
       } finally {
         fila = fila.filter((x) => x.key !== key);
-        atualizar(fila);
+        if (vivo.current) atualizar(fila);
       }
     }
   };
@@ -77,6 +83,33 @@ export function AcervoUploader({ value, onAdd, onRemove, onBusy, max = DOC_FILES
       )}
       <p className="text-xs text-gray-500">{t('PDF, documento, planilha ou apresentação até 25 MB; imagem até 10 MB; áudio até 50 MB; vídeo até 100 MB. Vídeo longo: prefira o link do YouTube ou do Vimeo.')}</p>
     </div>
+  );
+}
+
+/**
+ * O menu "⋯" das linhas com muitas ações (Acervo e Agenda): a ação principal
+ * fica à vista na linha e o resto entra aqui, com o nome escrito.
+ * `itens`: `{ id, icon, label, perigo? }`. Sem itens, não aparece.
+ * `modal={false}`: o item abre um diálogo, e o menu modal deixaria a página
+ * travada para clique depois que o diálogo fecha.
+ */
+export function MaisAcoes({ nome, itens, onEscolher }) {
+  if (!itens.length) return null;
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button type="button" aria-label={t('Mais ações para {nome}', { nome })} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink coarse:h-11 coarse:w-11">
+          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {itens.map(({ id, icon: Icone, label, perigo }) => (
+          <DropdownMenuItem key={id} onSelect={() => onEscolher(id)} className={perigo ? 'text-red-700' : undefined}>
+            {Icone && <Icone className="mr-2 h-4 w-4" aria-hidden="true" />}{label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -111,6 +144,25 @@ export function MediaLinksEditor({ value, onChange, errors = {} }) {
   );
 }
 
+/**
+ * Os arquivos enviados NESTA abertura do formulário que não chegaram a ser
+ * salvos são apagados do Storage quando ele fecha, por qualquer caminho
+ * (Cancelar, o X, Esc, clique fora). Antes só o "Cancelar" limpava, e fechar
+ * o diálogo deixava os arquivos parados na pasta de quem enviou.
+ * Devolve `marcarSalvo`, chamado quando o servidor aceitou.
+ */
+export function useDescarteAoFechar(novos) {
+  const atual = useRef(novos);
+  atual.current = novos;
+  const salvo = useRef(false);
+  useEffect(() => {
+    const lista = atual;
+    salvo.current = false;
+    return () => { if (!salvo.current) lista.current.forEach((x) => discardAcervoUpload(x.path)); };
+  }, []);
+  return () => { salvo.current = true; };
+}
+
 const VAZIO = { type: '', title: '', act_date: '', signed_by: '', summary: '', body: '', visibility: DOC_VISIBILITY.PUBLIC, tags: '', relations: [], files: [], media_links: [] };
 
 /**
@@ -123,26 +175,24 @@ export function DocForm({ federation, doc = null, preset = null, publicados = []
     const base = { ...VAZIO, ...(preset || {}), ...(doc || {}) };
     return { ...base, tags: Array.isArray(base.tags) ? base.tags.join(', ') : base.tags || '', relations: base.relations || [], files: base.files || [], media_links: base.media_links || [] };
   });
+  const [base] = useState(f);
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const m = useFederationMutation((value) => acervoAction({ federationId: federation.id, action: 'save', docId: doc?.id || null, doc: value }));
-  const descartarNovos = (manter = []) => {
-    const ficam = new Set(manter.map((x) => x.path));
-    f.files.filter((x) => !original.current.has(x.path) && !ficam.has(x.path)).forEach((x) => discardAcervoUpload(x.path));
-  };
+  const marcarSalvo = useDescarteAoFechar(f.files.filter((x) => !original.current.has(x.path)));
+  useAvisoNaoSalvo(enviando || JSON.stringify(f) !== JSON.stringify(base));
   const addArquivo = (x) => { setF((s) => ({ ...s, files: [...s.files, x] })); setErros({}); };
   const tirarArquivo = (path) => {
     if (!original.current.has(path)) discardAcervoUpload(path);
     setF((s) => ({ ...s, files: s.files.filter((x) => x.path !== path) }));
   };
-  const cancelar = () => { descartarNovos(); onFechar(); };
   const enviar = (e) => {
     e.preventDefault();
     const r = validateDocInput(f);
     if (!r.ok) { setErros(r.errors); toast.error(Object.values(r.errors)[0]); return; }
     m.mutate(r.value, {
-      onSuccess: () => { toast.success(doc ? t('Rascunho salvo.') : t('Rascunho criado. Confira e publique quando estiver pronto.')); onFechar(); },
+      onSuccess: () => { marcarSalvo(); toast.success(doc ? t('Rascunho salvo.') : t('Rascunho criado. Confira e publique quando estiver pronto.')); onFechar(); },
       onError: (er) => toast.error(er.message),
     });
   };
@@ -187,7 +237,7 @@ export function DocForm({ federation, doc = null, preset = null, publicados = []
       </div>
       <V2Field label={t('Palavras-chave (opcional)')} htmlFor="ac-tags" error={erros.tags} hint={t('Separadas por vírgula. Ajudam na busca.')}><V2Input id="ac-tags" maxLength={320} value={f.tags} onChange={(e) => set({ tags: e.target.value })} /></V2Field>
       <div className="flex flex-wrap justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={cancelar}>{t('Cancelar')}</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={m.isPending || enviando}>{enviando ? t('Aguarde o envio…') : t('Salvar rascunho')}</V2Button>
       </div>
     </form>

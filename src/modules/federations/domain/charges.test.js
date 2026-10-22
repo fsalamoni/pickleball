@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canConfirmCharge, canDeclarePayment, chargeDueDate, chargePixPayload, chargeTxid, chargesCsv, financeSummary, isChargeOverdue, parseBrlCents, sortChargesForStaff } from './charges.js';
+import { chargeReceipt, canConfirmCharge, canDeclarePayment, chargeDueDate, chargePixPayload, chargeTxid, chargesCsv, financeSummary, isChargeOverdue, parseBrlCents, sortChargesForStaff } from './charges.js';
 
 const fed = { name: 'Federação Gaúcha', acronym: 'FGP', city: 'Porto Alegre', payment: { pix_key: 'a@b.co', receiver_name: 'FGP' } };
 
@@ -44,6 +44,11 @@ describe('financeSummary', () => {
     expect(csv.split('\n')).toHaveLength(2);
     expect(csv).toContain('"Ana ""A"""');
   });
+  it('CSV legível no Excel: cabeçalho em português, reais com vírgula, rótulos e datas DD/MM/AAAA', () => {
+    const [cab, linha] = chargesCsv([{ id: '1', payer_name: 'Ana', origin: 'renewal', amount_cents: 15000, status: 'paid', due_date: '2026-10-05', paid_at: '2026-10-03', confirmed_by_name: 'Bia' }]).split('\n');
+    expect(cab).toBe('"Filiado";"Origem";"Valor (R$)";"Situação";"Vencimento";"Informado em";"Pago em";"Confirmado por"');
+    expect(linha).toBe('"Ana";"Renovação";"150,00";"Pago";"05/10/2026";"";"03/10/2026";"Bia"');
+  });
 });
 
 describe('parseBrlCents / CSV sem fórmula (revisão geral)', () => {
@@ -65,5 +70,19 @@ describe('parseBrlCents / CSV sem fórmula (revisão geral)', () => {
     const csv = chargesCsv([{ id: '1', payer_name: '=HYPERLINK("http://x")', origin: 'membership', amount_cents: 100, status: 'paid' }, { id: '2', payer_name: '-2+3', origin: 'membership', amount_cents: 100, status: 'paid' }]);
     expect(csv).toContain(`"'=HYPERLINK(""http://x"")"`);
     expect(csv).toContain(`"'-2+3"`);
+  });
+});
+
+describe('chargeReceipt', () => {
+  it('só cobrança paga tem recibo; número estável e responsável separado do filiado', () => {
+    expect(chargeReceipt({ id: 'abc', status: 'open' })).toBeNull();
+    const r = chargeReceipt({ id: 'abcdefghij', status: 'paid', origin: 'membership', amount_cents: 15000, paid_at: '2026-10-05', payer_name: 'Ana', member_name: 'Bia', plan_name: 'Anual', confirmed_by_name: 'Caio' }, { name: 'Federação X', acronym: 'FX' });
+    expect(r.number).toBe('REC-ABCDEFGH');
+    expect(r.paidOn).toBe('05/10/2026');
+    expect(r.payer).toBe('Ana');
+    expect(r.member).toBe('Bia');
+    expect(r.amount).toMatch(/150,00/);
+    expect(r.confirmedBy).toBe('Caio');
+    expect(chargeReceipt({ id: 'x', status: 'paid', payer_name: 'Ana', member_name: 'Ana' }).member).toBe('');
   });
 });

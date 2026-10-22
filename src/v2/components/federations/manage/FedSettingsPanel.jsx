@@ -25,9 +25,22 @@ import { listIssuerCampaigns, listIssuerCoupons, setPromoCouponActive, updatePro
 import { listSellerListings, setListingStatus } from '@/modules/marketplace/services/marketService';
 import { federationIssuer } from '@/v2/components/promo/promoUi';
 import { t, tk } from '@/core/i18n';
+import { useAvisoNaoSalvo } from './naoSalvo';
 
 const reais = (cents) => (Number(cents) / 100).toFixed(2).replace('.', ',');
 const cents = parseBrlCents;
+
+/**
+ * O formulário e o que está salvo: com diferença, fechar a aba do navegador
+ * ou trocar de aba da Central pergunta antes (`useAvisoNaoSalvo`). O terceiro
+ * valor marca como salvo o que foi ENVIADO, depois que o servidor aceitou.
+ */
+function useRascunho(inicial) {
+  const [f, setF] = useState(inicial);
+  const [base, setBase] = useState(f);
+  useAvisoNaoSalvo(JSON.stringify(f) !== JSON.stringify(base));
+  return [f, setF, setBase];
+}
 
 /* ---------------------------------------------------------------- planos -- */
 
@@ -35,7 +48,7 @@ const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN
 
 function PlanoForm({ federationId, plano, onFechar }) {
   const { user } = useAuth();
-  const [f, setF] = useState(plano ? { ...PLANO_VAZIO, ...plano, preco: reais(plano.price_cents), age_min: plano.age_min ?? '', age_max: plano.age_max ?? '', discounts: { ...PLANO_VAZIO.discounts, ...(plano.discounts || {}) } } : PLANO_VAZIO);
+  const [f, setF] = useRascunho(plano ? { ...PLANO_VAZIO, ...plano, preco: reais(plano.price_cents), age_min: plano.age_min ?? '', age_max: plano.age_max ?? '', discounts: { ...PLANO_VAZIO.discounts, ...(plano.discounts || {}) } } : PLANO_VAZIO);
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setDesc = (patch) => set({ discounts: { ...f.discounts, ...patch } });
@@ -78,12 +91,9 @@ function PlanoForm({ federationId, plano, onFechar }) {
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-ink">{t('Documentos exigidos')}</legend>
         <p className="text-xs text-gray-500">{t('A pessoa envia pela página da federação e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {Object.values(DOC_KIND).map((k) => (
-            <label key={k} className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" className="h-4 w-4 accent-ink" checked={(f.requires_docs || []).includes(k)} onChange={(e) => set({ requires_docs: e.target.checked ? [...(f.requires_docs || []), k] : (f.requires_docs || []).filter((x) => x !== k) })} />
-              {t(DOC_KIND_LABELS[k])}
-            </label>
+            <V2Toggle key={k} id={`pl-doc-${k}`} label={t(DOC_KIND_LABELS[k])} checked={(f.requires_docs || []).includes(k)} onChange={(v) => set({ requires_docs: v ? [...(f.requires_docs || []), k] : (f.requires_docs || []).filter((x) => x !== k) })} />
           ))}
         </div>
       </fieldset>
@@ -138,7 +148,7 @@ function PlanosTab({ federation, plansQ }) {
 function PixTab({ federation }) {
   const { user } = useAuth();
   const p = federation.payment || {};
-  const [f, setF] = useState({ pix_key_type: p.pix_key_type || PIX_KEY_TYPES.CNPJ, pix_key: p.pix_key || '', receiver_name: p.receiver_name || '', instructions: p.instructions || '' });
+  const [f, setF, marcarSalvo] = useRascunho({ pix_key_type: p.pix_key_type || PIX_KEY_TYPES.CNPJ, pix_key: p.pix_key || '', receiver_name: p.receiver_name || '', instructions: p.instructions || '' });
   const [erro, setErro] = useState('');
   const m = useFederationMutation(() => updateFederationPayment(federation.id, f, { uid: user?.uid }));
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErro(''); };
@@ -146,7 +156,8 @@ function PixTab({ federation }) {
     e.preventDefault();
     const r = validateFederationPayment(f);
     if (!r.valid) { setErro(r.error); return; }
-    m.mutate(undefined, { onSuccess: () => toast.success(t('Pix salvo. As próximas cobranças já saem com ele.')), onError: (er) => { setErro(er.message); } });
+    const enviado = f;
+    m.mutate(undefined, { onSuccess: () => { marcarSalvo(enviado); toast.success(t('Pix salvo. As próximas cobranças já saem com ele.')); }, onError: (er) => { setErro(er.message); } });
   };
   return (
     <section className="space-y-4" aria-label={t('Pix da federação')} data-dica="federacao-pix">
@@ -170,7 +181,7 @@ function PixTab({ federation }) {
 
 function PaginaTab({ federation }) {
   const { user } = useAuth();
-  const [f, setF] = useState({ name: federation.name || '', acronym: federation.acronym || '', slug: federation.slug || '', level: federation.level, state: federation.state || '', city: federation.city || '', about: federation.about || '', site: federation.site || '', instagram: federation.instagram || '', contact_email: federation.contact_public?.email || '', contact_phone: federation.contact_public?.phone || '', color: federation.branding?.color || BRAND_DEFAULT_COLOR, logo_url: federation.branding?.logo_url || '' });
+  const [f, setF, marcarSalvo] = useRascunho({ name: federation.name || '', acronym: federation.acronym || '', slug: federation.slug || '', level: federation.level, state: federation.state || '', city: federation.city || '', about: federation.about || '', site: federation.site || '', instagram: federation.instagram || '', contact_email: federation.contact_public?.email || '', contact_phone: federation.contact_public?.phone || '', color: federation.branding?.color || BRAND_DEFAULT_COLOR, logo_url: federation.branding?.logo_url || '' });
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setNome = (name) => set({ name, ...(f.slug ? {} : { slug: slugifyName(name) }) });
@@ -179,7 +190,8 @@ function PaginaTab({ federation }) {
     e.preventDefault();
     const r = validateFederationPublicInput(f);
     if (!r.ok) { setErros(r.errors); return; }
-    m.mutate(undefined, { onSuccess: () => toast.success(t('Página atualizada.')), onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
+    const enviado = f;
+    m.mutate(undefined, { onSuccess: () => { marcarSalvo(enviado); toast.success(t('Página atualizada.')); }, onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
   };
   const previa = { ...federation, name: f.name, acronym: f.acronym, branding: { color: f.color, logo_url: f.logo_url } };
   return (
@@ -319,12 +331,12 @@ function ModulosTab({ federation }) {
 function RegrasTab({ federation }) {
   const { user } = useAuth();
   const atual = normalizeFederationRules(federation.rules);
-  const [f, setF] = useState({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days), comments: atual.comments });
+  const [f, setF, marcarSalvo] = useRascunho({ ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days), comments: atual.comments });
   const m = useFederationMutation(() => updateFederationRules(federation.id, f, { uid: user?.uid }));
   return (
     <section className="space-y-4" aria-label={t('Regras da federação')} data-dica="federacao-regras">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Regras')}</h2><p className="text-sm text-gray-500">{t('O que a sua federação pede e como trata transferências. Vale para os pedidos novos.')}</p></div>
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => toast.success(t('Regras salvas.')), onError: (er) => toast.error(er.message) }); }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); const enviado = f; m.mutate(undefined, { onSuccess: () => { marcarSalvo(enviado); toast.success(t('Regras salvas.')); }, onError: (er) => toast.error(er.message) }); }}>
         <V2Surface className="space-y-4">
           <V2Toggle id="rg-cpf" checked={f.ask_cpf} onChange={(v) => setF((x) => ({ ...x, ask_cpf: v }))} label={t('Pedir o CPF na filiação')} hint={t('Fica reservado (só a secretaria, com motivo registrado). Dependente menor não precisa.')} />
           <V2Toggle id="rg-declaracao" checked={f.member_declarations} onChange={(v) => setF((x) => ({ ...x, member_declarations: v }))} label={t('O filiado emite a própria declaração de vínculo')} hint={t('Só com a filiação em dia, com o QR que confere a validade. Desligado, só a secretaria emite (Filiados → Ficha).')} />
@@ -348,7 +360,7 @@ const vazio = { statute_url: '', bylaws: '', mandate: { start: '', end: '' }, bo
 function GovernancaTab({ federation }) {
   const { user } = useAuth();
   const g = federation.governance || {};
-  const [f, setF] = useState({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: g.board || [], minutes: g.minutes || [], women_count: g.women_count ?? '' });
+  const [f, setF, marcarSalvo] = useRascunho({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: g.board || [], minutes: g.minutes || [], women_count: g.women_count ?? '' });
   const cota = womenQuota({ board: f.board, women_count: f.women_count === '' ? null : Number(f.women_count) });
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
@@ -359,7 +371,8 @@ function GovernancaTab({ federation }) {
     e.preventDefault();
     const r = validateGovernance(f);
     if (!r.ok) { setErros(r.errors); return; }
-    m.mutate(undefined, { onSuccess: () => toast.success(t('Governança salva.')), onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
+    const enviado = f;
+    m.mutate(undefined, { onSuccess: () => { marcarSalvo(enviado); toast.success(t('Governança salva.')); }, onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
   };
   return (
     <section className="space-y-4" aria-label={t('Governança da federação')} data-dica="federacao-governanca">

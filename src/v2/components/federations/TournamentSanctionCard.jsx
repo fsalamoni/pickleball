@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Landmark, Send, Undo2 } from 'lucide-react';
 import { PlatformFormSection } from '@/components/ui/platform-page';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { requestSanction, withdrawSanction } from '@/modules/federations/services/federationService';
 import { useFederationMutation, useFederationsEnabled, usePublicFederations } from '@/modules/federations/hooks/useFederations';
@@ -27,6 +28,7 @@ export default function TournamentSanctionCard({ tournament }) {
   const [fedId, setFedId] = useState('');
   const [tier, setTier] = useState(SANCTION_TIER.REGIONAL);
   const [soFiliados, setSoFiliados] = useState(false);
+  const [retirando, setRetirando] = useState(false);
   const pedir = useFederationMutation(() => requestSanction(tournament, { federation: (feds.data || []).find((f) => f.id === fedId), uid: user?.uid, tier, requiresMembership: soFiliados }));
   const retirar = useFederationMutation(() => withdrawSanction(tournament, { uid: user?.uid }));
   const opcoes = useMemo(() => (feds.data || []).filter((f) => fedModuleOn(f, 'tournaments')), [feds.data]);
@@ -45,9 +47,20 @@ export default function TournamentSanctionCard({ tournament }) {
             </p>
             {s.reason && !st.approved && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: s.reason })}</p>}
             {st.approved && <p className="mt-1 text-sm text-gray-600">{t('Ao encerrar cada categoria, envie o resultado em Resultados → "Enviar ao ranking oficial".')}</p>}
-            {st.canWithdraw && <V2Button type="button" size="sm" variant="ghost" className="mt-2" disabled={retirar.isPending} onClick={() => retirar.mutate(undefined, { onSuccess: () => toast.success(t('Pedido retirado.')), onError: (e) => toast.error(e.message) })}><Undo2 className="h-4 w-4" />{t('Retirar pedido')}</V2Button>}
+            {st.canWithdraw && <V2Button type="button" size="sm" variant="ghost" className="mt-2" disabled={retirar.isPending} onClick={() => setRetirando(true)}><Undo2 className="h-4 w-4" />{t('Retirar pedido')}</V2Button>}
           </div>
         )}
+        <ConfirmDialog
+          open={retirando}
+          onOpenChange={setRetirando}
+          destructive
+          loading={retirar.isPending}
+          title={t('Retirar o pedido de chancela à {sigla}?', { sigla: st.acronym || st.name || '' })}
+          description={t('O pedido sai da fila da federação, que deixa de analisá-lo. Para ter o selo depois, é preciso pedir de novo e esperar uma nova análise.')}
+          confirmLabel={t('Retirar pedido')}
+          cancelLabel={t('Voltar')}
+          onConfirm={() => retirar.mutate(undefined, { onSuccess: () => { setRetirando(false); toast.success(t('Pedido retirado.')); }, onError: (e) => toast.error(e.message) })}
+        />
         {st.canRequest && (
           <>
             {feds.isError && <V2ErrorState inline title={t('Não carregaram as federações')} onRetry={() => feds.refetch()} />}
@@ -62,7 +75,7 @@ export default function TournamentSanctionCard({ tournament }) {
                     <V2Select id="sanc-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={Object.values(SANCTION_TIER).map((v) => ({ value: v, label: t(SANCTION_TIER_LABELS[v]) }))} />
                   </V2Field>
                 </div>
-                <V2Toggle id="sanc-filiados" checked={soFiliados} onChange={setSoFiliados} label={t('Só filiados em dia se inscrevem')} hint={t('A regra do banco recusa a inscrição de quem não está em dia na federação.')} />
+                <V2Toggle id="sanc-filiados" checked={soFiliados} onChange={setSoFiliados} label={t('Só filiados em dia se inscrevem')} hint={t('A inscrição de quem não está em dia na federação é recusada.')} />
                 <div className="flex justify-end"><V2Button type="submit" size="sm" disabled={!fedId || pedir.isPending}><Send className="h-4 w-4" />{t('Pedir a chancela')}</V2Button></div>
               </form>
             ))}

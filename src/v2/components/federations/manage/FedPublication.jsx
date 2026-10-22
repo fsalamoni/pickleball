@@ -106,6 +106,7 @@ export default function FedPublicationTab({ federation, plansQ }) {
         title={t('Tornar a federação pública?')}
         description={t('A federação entra no diretório, a página pública abre e qualquer pessoa pode se filiar, pedir chancela e filiar clube ou arena. Dá para tirar do ar depois.')}
         confirmLabel={t('Publicar')}
+        cancelLabel={t('Voltar')}
         loading={m.isPending}
         onConfirm={executar}
       />
@@ -115,6 +116,7 @@ export default function FedPublicationTab({ federation, plansQ }) {
         title={t('Tirar a federação do ar?')}
         description={t('Ela sai do diretório e a página pública fecha; ninguém novo se filia nem faz pedidos. Quem já é filiado continua vendo a federação e a carteirinha segue válida. A loja oficial sai do Mercado para a equipe até publicar de novo, mas os anúncios e cupons já publicados continuam no ar: pause-os antes, no Mercado e em Divulgação.')}
         confirmLabel={t('Tirar do ar')}
+        cancelLabel={t('Voltar')}
         destructive
         loading={m.isPending}
         onConfirm={executar}

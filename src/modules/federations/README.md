@@ -212,3 +212,10 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   Central confirma (`ConfirmDialog`, que aceita um campo de motivo); a
   suspensão disciplinar sobrevive a desistir e pedir de novo. Ver
   `docs/50-FEDERACAO.md` §20.
+- **Revisão de UX, Entregas 2–4** (2026-10-22): listas da Central com busca,
+  filtros na URL e "Mostrar mais" (`manage/listTools.jsx`); aviso de alteração
+  não salva (`manage/naoSalvo.js`); CSV para o Excel brasileiro; recibo da
+  cobrança paga (`chargeReceipt` + `FedReceipt.jsx`); `renewalOpensOn`;
+  lembrete de cobrança vencida na varredura (`overdue_notified`); "Em vigor" só
+  em norma (`docHasValidity`); `whatsappLink`; "Filiar-se neste plano"
+  (`?plano=`). Ver `docs/50-FEDERACAO.md` §21.

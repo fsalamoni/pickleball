@@ -203,3 +203,15 @@ export function homeFederationRows(memberships = [], hoje = isoDate()) {
     .filter((r) => LIVE_MEMBER_STATUSES.includes(r.estado.status))
     .sort((a, b) => peso[a.acao] - peso[b.acao]);
 }
+
+/**
+ * Quando abre a renovação de uma filiação ATIVA que ainda não está na janela:
+ * `RENEWAL_WINDOW_DAYS` antes do fim da validade. Fora disso (já na janela,
+ * vencida, sem validade) devolve '' — a tela mostra o botão ou nada.
+ */
+export function renewalOpensOn(member, hoje = isoDate()) {
+  const st = membershipState(member, hoje);
+  if (st.status !== MEMBER_STATUS.ACTIVE || st.canRenew || !st.validUntil) return '';
+  const [y, mo, d] = st.validUntil.split('-').map(Number);
+  return isoDate(new Date(Date.UTC(y, mo - 1, d - RENEWAL_WINDOW_DAYS, 12)));
+}
