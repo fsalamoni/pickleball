@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, FileStack, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
@@ -22,6 +22,9 @@ import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
 import { t, tk, fmtData } from '@/core/i18n';
 
+// Só baixa o código da federação quando a tela vem da Central (`?federacao=`).
+const FedTournamentOrigin = lazy(() => import('@/v2/components/federations/FedTournamentOrigin'));
+
 const VISIBILITY_OPTIONS = [
   { value: TOURNAMENT_VISIBILITY.PUBLIC, title: tk('Público'), description: tk('Aparece na lista pública e aceita inscrições diretas.'), icon: Globe },
   { value: TOURNAMENT_VISIBILITY.PRIVATE, title: tk('Privado'), description: tk('Exige código de ingresso compartilhado pelo admin.'), icon: Lock },
@@ -41,7 +44,7 @@ const WIZARD_STEPS = [
 
 export default function V2CreateTournament() {
   const navigate = useNavigate();
-  const { isAuthAvailable } = useAuth();
+  const { isAuthAvailable, user } = useAuth();
   const createMutation = useCreateTournament();
   const wizardOn = true;
   const isPreview = import.meta.env.DEV && !isAuthAvailable;
@@ -56,6 +59,10 @@ export default function V2CreateTournament() {
     arena_id: params.get('arena') || '', // Sprint 4 ARE-14: arena vinculada (opcional)
   }));
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  // `?federacao=<id>`: veio da Central da federação ("Criar torneio da federação").
+  // Pronto (permissão, federação pública, categoria) ⇒ sai já como "Realizado pela".
+  const fedId = params.get('federacao') || '';
+  const [fedChoice, setFedChoice] = useState(null);
   const roleConsent = useRoleConsent('termos-organizador');
 
   const isLastStep = step === WIZARD_STEPS.length - 1;
@@ -73,14 +80,27 @@ export default function V2CreateTournament() {
     if (!form.name.trim()) { setStep(0); return toast.error(t('Informe o nome do torneio.')); }
     if (!roleConsent.guardBeforeSubmit()) return;
     try {
-      const id = await createMutation.mutateAsync({
+      const payload = {
         name: form.name, description: form.description, city: form.city, state: form.state, venue: form.venue,
         visibility: form.visibility, ruleset: form.ruleset,
         starts_at: form.starts_at || null, ends_at: form.ends_at || null, registration_deadline: form.registration_deadline || null,
         scoring: { ruleset: form.ruleset, win_by_two: true },
         arena_id: form.arena_id || null,
-      });
+      };
+      const id = await createMutation.mutateAsync(payload);
       await roleConsent.recordAfterSuccess();
+      if (fedChoice) {
+        // O torneio já existe: falhando a federação, ele segue comum e o pedido (se gravado) fica em Chancelas.
+        try {
+          const { startFederationTournament } = await import('@/modules/federations/services/federationService');
+          await startFederationTournament({ id, ...payload, creator_uid: user?.uid }, { ...fedChoice, uid: user?.uid });
+          toast.success(t('Torneio criado e realizado pela {sigla}.', { sigla: fedChoice.federation.acronym || fedChoice.federation.name }));
+        } catch (err) {
+          toast.error(t('Torneio criado, mas a federação não foi aplicada: {erro}. Confira em Competições → Chancelas.', { erro: err?.message || t('erro desconhecido') }));
+        }
+        navigate(`/torneios/${id}`);
+        return;
+      }
       toast.success(t('Torneio criado!'));
       navigate(`/torneios/${id}`);
     } catch (err) {
@@ -163,6 +183,11 @@ export default function V2CreateTournament() {
             </div>
             <V2Field label={t('Local (quadra/clube)')}><V2Input value={form.venue} onChange={(e) => set('venue', e.target.value)} /></V2Field>
             <ArenaSelectField value={form.arena_id} onChange={(v) => set('arena_id', v)} />
+            {fedId && (
+              <Suspense fallback={null}>
+                <FedTournamentOrigin federationId={fedId} onChange={setFedChoice} />
+              </Suspense>
+            )}
             </>)}
 
             {showStep(1) && (<>

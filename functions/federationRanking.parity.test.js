@@ -22,7 +22,15 @@ const RESULTS = [
   { federation_id: 'f', season: 2026, status: 'sent', tournament_id: 't3', tournament_name: 'T3', modality_name: 'MX', gender_category: 'mixed', age_category: '35plus', format: 'doubles', tier: 'regional', date: '2026-10-01', rows: [{ uid: 'ana', name: 'Ana', position: 2, played: 3 }, { uid: 'zed', name: 'Zed', position: 1, played: 3 }] },
   { federation_id: 'f', season: 2026, status: 'sent', tournament_id: 't4', tournament_name: 'T4', gender_category: 'male', age_category: 'open', format: 'doubles', tier: 'outro', date: '2026-10-02', rows: [{ uid: 'ana', name: 'Ana', position: null, played: 0 }] },
 ];
-const CONFIGS = [{}, { best_n: 1 }, { best_n: 0, members_only: false }, { points_by_place: { 1: 50 }, participation: 0, tier_multipliers: { major: 3 } }, { participation: 'x', best_n: -4 }];
+const CONFIGS = [{}, { best_n: 1 }, { best_n: 0, members_only: false }, { points_by_place: { 1: 50 }, participation: 0, tier_multipliers: { major: 3 } }, { participation: 'x', best_n: -4 },
+  // Categorias da própria federação: tabela com buraco, inválida, repetida, arquivada e as derivadas (legacy) misturadas.
+  { tiers: [
+    { id: 'state', code: 'FGP 1000', group: 'G1', name: 'Estadual', points_by_place: { 1: 1000, 2: 600, 3: '', 4: 360, 9: 90 }, participation: 10, requirements: { min_entrants: 16, prize: 'R$ 2.000' } },
+    { id: 'major', code: 'FGP 500', group: 'G2', points_by_place: { 1: 500, 2: 300 }, participation: 'x', active: false },
+    { id: 'state', code: 'repetida', points_by_place: { 1: 1 } },
+    { id: 'Inválida!', code: 'x', points_by_place: { 1: 1 } },
+    { id: 'regional', legacy: true, points_by_place: { 1: 7 } },
+  ], best_n: 2 }];
 
 /** Os lançamentos como o servidor grava (um por pessoa por resultado), para a soma do ano. */
 const lancamentos = (cfg) => RESULTS.flatMap((r, i) => s.awardPoints({ result: r, members: MEMBERS, config: cfg }).map((a) => ({

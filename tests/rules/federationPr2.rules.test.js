@@ -13,7 +13,7 @@
  *     federação; competições só recusa/readmite; o ranking ninguém grava.
  */
 import { readFileSync } from 'node:fs';
-import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
+import { beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
@@ -191,8 +191,24 @@ describe('⭐ chancela de torneios', () => {
     await assertFails(updateDoc(doc(como(ORG), 'tournaments', TID), { federation_sanction: chancela('approved', { tier: 'major' }) }));
     await assertSucceeds(updateDoc(doc(como(ORG), 'tournaments', TID), { name: 'Segue editando o resto' }));
   });
-  it('a lista de torneios chancelados da federação é consultável', async () => {
-    await assertSucceeds(getDocs(query(collection(anonimo(), 'tournaments'), where('federation_id', '==', FED), where('archived', '==', false))));
+  it('⭐ torneio DA federação: quem é de competições cria, pede e aprova com origem "federation" — sem regra nova', async () => {
+    const db = como(COMP);
+    await assertSucceeds(setDoc(doc(db, 'tournaments', 'tf'), { id: 'tf', creator_uid: COMP, name: 'Etapa FGP 1000', status: 'draft' }));
+    await assertSucceeds(updateDoc(doc(db, 'tournaments', 'tf'), { federation_id: FED, federation_sanction: chancela('pending', { requested_by: COMP, tier: 'g1' }) }));
+    await assertSucceeds(updateDoc(doc(db, 'tournaments', 'tf'), { federation_sanction: chancela('approved', { requested_by: COMP, decided_by: COMP, tier: 'g1', tier_code: 'FGP 1000', tier_group: 'G1', origin: 'federation' }) }));
+    // O organizador comum não se dá a origem da federação: aprovar continua sendo da equipe.
+    await assertSucceeds(setDoc(doc(como(ORG), 'tournaments', 'to'), { id: 'to', creator_uid: ORG, name: 'Meu', federation_id: FED, federation_sanction: chancela('pending') }));
+    await assertFails(updateDoc(doc(como(ORG), 'tournaments', 'to'), { federation_sanction: chancela('approved', { origin: 'federation' }) }));
+  });
+  it('a lista de torneios da federação é consultável só pela federação — e traz o torneio criado sem o campo `archived`', async () => {
+    // 🐞 A consulta antiga pedia também `archived == false`, e torneio novo nasce SEM o campo: nenhum pedido aparecia em Chancelas.
+    await semRegras(async (db) => {
+      await setDoc(doc(db, 'tournaments', 'novo'), { id: 'novo', creator_uid: ORG, name: 'Novo', federation_id: FED, federation_sanction: chancela('pending') });
+      await setDoc(doc(db, 'tournaments', 'velho'), { id: 'velho', creator_uid: ORG, name: 'Arquivado', federation_id: FED, archived: true, federation_sanction: chancela('approved') });
+    });
+    const snap = await assertSucceeds(getDocs(query(collection(anonimo(), 'tournaments'), where('federation_id', '==', FED))));
+    expect(snap.docs.map((d) => d.id)).toContain('novo');
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'tournaments'), where('federation_id', '==', FED))));
   });
 });
 
@@ -226,6 +242,8 @@ describe('⭐ resultados e ranking oficial', () => {
     // Reenvio pelo organizador: tudo de novo, mas sem mudar de torneio/federação.
     await assertSucceeds(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ rows: [] })));
     await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ tournament_id: 'outro' })));
+    // No reenvio a categoria também é a da chancela (antes só o primeiro envio conferia).
+    await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado({ tier: 'major' })));
     // Revogada a chancela, o reenvio para.
     await semRegras((db) => updateDoc(doc(db, 'tournaments', TID), { federation_sanction: chancela('revoked') }));
     await assertFails(setDoc(doc(como(ORG), 'federation_results', `${FED}_${TID}_m1`), resultado()));

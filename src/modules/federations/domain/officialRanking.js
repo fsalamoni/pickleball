@@ -21,10 +21,69 @@
  * melhores resultados da classe somam; a geral soma as classes.
  */
 import { instanteEmMs } from '@/core/domain/instant.js';
-import { DEFAULT_RANKING_CONFIG, PLAN_TIER, POINTS_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
+import { DEFAULT_RANKING_CONFIG, PLAN_TIER, POINTS_STATUS, SANCTION_TIER_LABELS } from './constants.js';
 
 const num = (v, padrao) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : padrao);
 const centavos = (v) => Math.round(v * 100) / 100;
+const texto = (v, max) => String(v ?? '').trim().slice(0, max);
+
+/* ------------------------------------------------ categorias de torneio -- */
+
+/** Quantas colocações uma tabela de pontos pode ter, e quantas categorias uma federação. */
+export const TIER_MAX_PLACES = 64;
+export const TIER_MAX = 30;
+const TIER_ID = /^[a-z0-9_-]{1,40}$/;
+
+/**
+ * Saneia UMA categoria de torneio (`ranking_config.tiers[]`): sigla e valor
+ * (`code`, ex.: "FGP 1000"), grupo (`group`, ex.: "G1"), nome, a tabela de
+ * pontos por colocação (até 64; colocação que falta no meio vale a de cima),
+ * a participação (quem jogou e ficou fora da tabela) e os requisitos.
+ * Id inválido = categoria descartada.
+ */
+export function normalizeTier(input = {}) {
+  const id = String(input?.id || '');
+  if (!TIER_ID.test(id)) return null;
+  const bruto = input?.points_by_place || {};
+  const chaves = Object.keys(bruto).map(Number).filter((k) => Number.isInteger(k) && k >= 1 && k <= TIER_MAX_PLACES && Number.isFinite(Number(bruto[k])) && Number(bruto[k]) >= 0);
+  const places = chaves.length ? Math.max(...chaves) : 0;
+  const tabela = {};
+  let anterior = 0;
+  for (let i = 1; i <= places; i += 1) {
+    const v = bruto[i];
+    anterior = Number.isFinite(Number(v)) && Number(v) >= 0 && v !== '' && v != null ? centavos(Number(v)) : anterior;
+    tabela[i] = anterior;
+  }
+  const req = input?.requirements || {};
+  return {
+    id,
+    code: texto(input?.code, 24),
+    group: texto(input?.group, 12),
+    name: texto(input?.name, 80),
+    points_by_place: tabela,
+    places,
+    participation: centavos(num(input?.participation, 0)),
+    requirements: { min_entrants: Math.floor(num(req.min_entrants, 0)), prize: texto(req.prize, 120), notes: texto(req.notes, 500) },
+    active: input?.active !== false,
+    legacy: input?.legacy === true,
+  };
+}
+
+/**
+ * As três categorias de antes (etapa regional, estadual e principal) como
+ * categorias editáveis: tabela × peso da configuração antiga, com os MESMOS
+ * ids (`regional`, `state`, `major`) — os torneios chancelados seguem achando
+ * a sua. Sem `tiers` gravado, é isso que vale.
+ */
+export function legacyTiers(cfg) {
+  return Object.keys(DEFAULT_RANKING_CONFIG.tier_multipliers).map((id) => {
+    const peso = cfg.tier_multipliers[id] ?? 1;
+    const tabela = {};
+    for (let i = 1; i <= 8; i += 1) tabela[i] = centavos(cfg.points_by_place[i] * peso);
+    return normalizeTier({ id, code: '', group: '', name: SANCTION_TIER_LABELS[id], points_by_place: tabela, participation: centavos(cfg.participation * peso), legacy: true });
+  });
+}
 
 /** Completa e saneia a configuração gravada em `federations.ranking_config`. */
 export function normalizeRankingConfig(input = {}) {
@@ -33,13 +92,92 @@ export function normalizeRankingConfig(input = {}) {
   for (let i = 1; i <= 8; i += 1) pontos[i] = num(input?.points_by_place?.[i], base.points_by_place[i]);
   const pesos = {};
   Object.keys(base.tier_multipliers).forEach((k) => { pesos[k] = num(input?.tier_multipliers?.[k], base.tier_multipliers[k]); });
-  return {
+  const cfg = {
     points_by_place: pontos,
     participation: num(input?.participation, base.participation),
     best_n: Math.floor(num(input?.best_n, base.best_n)),
     tier_multipliers: pesos,
     members_only: input?.members_only == null ? base.members_only : Boolean(input.members_only),
   };
+  const vistos = new Set();
+  const proprias = (Array.isArray(input?.tiers) ? input.tiers : []).filter((tt) => tt && tt.legacy !== true).map(normalizeTier)
+    .filter((tt) => tt && !vistos.has(tt.id) && vistos.add(tt.id)).slice(0, TIER_MAX);
+  cfg.tiers_explicit = proprias.length > 0;
+  cfg.tiers = cfg.tiers_explicit ? proprias : legacyTiers(cfg);
+  return cfg;
+}
+
+/** A categoria de um id (ou `null`). */
+export const tierById = (config, id) => (normalizeRankingConfig(config).tiers.find((tt) => tt.id === id) || null);
+
+/** "FGP 1000 · G1" — o que identifica a categoria num selo (sem sigla, o nome). */
+export function tierShortLabel(tier) {
+  if (!tier) return '';
+  const curto = [tier.code, tier.group].filter(Boolean).join(' · ');
+  return curto || t(tier.name || '');
+}
+
+/** "FGP 1000 · G1 · Etapa estadual" — a categoria por extenso. */
+export function tierLabel(tier) {
+  if (!tier) return '';
+  return [tier.code, tier.group, tier.name ? t(tier.name) : ''].filter(Boolean).join(' · ');
+}
+
+/** As categorias que dá para escolher (ativas), e a atual mesmo que arquivada. */
+export function tierOptions(config, atual = null) {
+  return normalizeRankingConfig(config).tiers.filter((tt) => tt.active || tt.id === atual);
+}
+
+/**
+ * A tabela gerada pelos pontos do CAMPEÃO, no padrão dos circuitos (ATP/WTA e
+ * as federações que os seguem): campeão 100%, vice 60%, semifinal 36%,
+ * quartas 18%, oitavas 9%, 16 avos 4,5% e 32 avos 2,25% — 1000 → 600 → 360 →
+ * 360 → 180… A federação ajusta depois. A participação sugerida é 1%.
+ */
+export function tierTableFromChampion(champion, places = 32) {
+  const c = num(champion, 0);
+  const n = Math.min(TIER_MAX_PLACES, Math.max(1, Math.floor(num(places, 32))));
+  const fator = (p) => (p === 1 ? 1 : p === 2 ? 0.6 : 0.36 / 2 ** Math.max(0, Math.ceil(Math.log2(p)) - 2));
+  const tabela = {};
+  for (let p = 1; p <= n; p += 1) tabela[p] = Math.round(c * fator(p));
+  return { points_by_place: tabela, places: n, participation: Math.round(c * 0.01) };
+}
+
+/** Um id novo de categoria a partir da sigla, sem repetir os que já existem. */
+export function newTierId(code, existentes = []) {
+  const base = String(code || 'categoria').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'categoria';
+  const usados = new Set(existentes);
+  let id = base;
+  for (let i = 2; usados.has(id); i += 1) id = `${base}_${i}`;
+  return id;
+}
+
+/**
+ * Confere as categorias antes de gravar. Erros por categoria (`{ [id]: msg }`)
+ * e um geral: ao menos uma ativa, sigla ou nome, campeão com ponto, e a tabela
+ * nunca SOBE de uma colocação para a seguinte.
+ */
+export function validateTiers(tiers = []) {
+  const erros = {};
+  const lista = (tiers || []).map(normalizeTier).filter(Boolean);
+  if (!lista.length) return { ok: false, geral: t('Crie ao menos uma categoria.'), erros };
+  if (lista.length > TIER_MAX) return { ok: false, geral: t('No máximo {n} categorias.', { n: TIER_MAX }), erros };
+  if (!lista.some((tt) => tt.active)) return { ok: false, geral: t('Deixe ao menos uma categoria ativa.'), erros };
+  const codigos = new Map();
+  lista.forEach((tt) => {
+    if (!tt.code && !tt.name) erros[tt.id] = t('Dê uma sigla ou um nome.');
+    else if (!tt.places || !(tt.points_by_place[1] > 0)) erros[tt.id] = t('O campeão precisa de pontos.');
+    else {
+      for (let i = 2; i <= tt.places; i += 1) {
+        if (tt.points_by_place[i] > tt.points_by_place[i - 1]) { erros[tt.id] = t('Os pontos não podem subir: o {p}º está acima do {a}º.', { p: i, a: i - 1 }); break; }
+      }
+      if (!erros[tt.id] && tt.participation > tt.points_by_place[tt.places]) erros[tt.id] = t('A participação não pode valer mais que a última colocação da tabela.');
+    }
+    const chave = [tt.code, tt.group].join('|').toLowerCase();
+    if (tt.code && codigos.has(chave)) erros[tt.id] = t('Já existe outra categoria com esta sigla e grupo.');
+    codigos.set(chave, tt.id);
+  });
+  return { ok: Object.keys(erros).length === 0, geral: Object.keys(erros).length ? t('Confira as categorias marcadas.') : '', erros };
 }
 
 /** A temporada de um torneio é o ANO em que ele termina (ou começa). */
@@ -121,11 +259,29 @@ function basePoints({ position, played = 0 }, cfg) {
   return played > 0 ? cfg.participation : 0;
 }
 
-/** Pontos de UMA colocação: tabela × peso do torneio; fora dos 8, a participação. */
+/** Os pontos pela tabela PRÓPRIA da categoria: colocação na tabela; fora dela, a participação. */
+function tierTablePoints({ position, played = 0 }, tier) {
+  if (position != null && position >= 1 && position <= tier.places) return tier.points_by_place[position];
+  return played > 0 ? tier.participation : 0;
+}
+
+/**
+ * A conta de UMA colocação numa categoria: com categorias próprias gravadas,
+ * a tabela da categoria (peso 1); sem elas — ou categoria que não existe
+ * mais —, a tabela geral × peso, como sempre foi.
+ * @returns {{ base: number, peso: number, tier: object|null }}
+ */
+function contaDaCategoria(row, tierId, cfg) {
+  const tier = cfg.tiers_explicit ? cfg.tiers.find((tt) => tt.id === tierId) || null : null;
+  if (tier) return { base: tierTablePoints(row, tier), peso: 1, tier };
+  return { base: basePoints(row, cfg), peso: cfg.tier_multipliers[tierId] ?? 1, tier: null };
+}
+
+/** Pontos de UMA colocação na categoria do torneio. */
 export function pointsFor({ position, played = 0 }, tier, config) {
   const cfg = normalizeRankingConfig(config);
-  const peso = cfg.tier_multipliers[tier] ?? 1;
-  return centavos(basePoints({ position, played }, cfg) * peso);
+  const { base, peso } = contaDaCategoria({ position, played }, tier, cfg);
+  return centavos(base * peso);
 }
 
 /**
@@ -140,12 +296,11 @@ export function awardPoints({ result, members = [], config = {} } = {}) {
   const cfg = normalizeRankingConfig(config);
   const porUid = new Map();
   (members || []).forEach((m) => { if (m?.user_id) porUid.set(m.user_id, m); });
-  const peso = cfg.tier_multipliers[result.tier] ?? 1;
   const melhor = new Map();
   (result.rows || []).forEach((row) => {
     if (!row?.uid) return;
     if (cfg.members_only && !memberValidOn(porUid.get(row.uid), result.date)) return;
-    const base = basePoints(row, cfg);
+    const { base, peso, tier } = contaDaCategoria(row, result.tier, cfg);
     const points = centavos(base * peso);
     if (points <= 0) return;
     const atual = melhor.get(row.uid);
@@ -154,6 +309,8 @@ export function awardPoints({ result, members = [], config = {} } = {}) {
       uid: row.uid, name: String(row.name || '').slice(0, 120), photo_url: row.photo_url || null,
       position: row.position ?? null, played: Number(row.played) || 0,
       base_points: base, multiplier: peso, points,
+      // A categoria do dia fica gravada no lançamento: renomear depois não reescreve o histórico.
+      ...(tier ? { tier_code: tier.code, tier_group: tier.group, tier_name: tier.name } : {}),
     });
   });
   return [...melhor.values()];
@@ -194,6 +351,9 @@ function contamPorClasse(results, bestN) {
  * resultado da pessoa diz se `counts` (está entre os `best_n` melhores).
  * @param {{ entries: object[], config?: object, season: number }} p
  */
+/** As regras que o ranking do ano grava (sem as tabelas das categorias, que ficam na federação). */
+const regrasDoAno = (cfg) => ({ points_by_place: cfg.points_by_place, participation: cfg.participation, best_n: cfg.best_n, tier_multipliers: cfg.tier_multipliers, members_only: cfg.members_only });
+
 export function aggregateSeason({ entries = [], config = {}, season } = {}) {
   const cfg = normalizeRankingConfig(config);
   const classes = new Map();
@@ -224,7 +384,7 @@ export function aggregateSeason({ entries = [], config = {}, season } = {}) {
     .sort((a, b) => a.key.localeCompare(b.key));
   // Na geral, os melhores N de CADA classe somam (quem joga duas classes soma as duas).
   const geralLinhas = classifica(new Map([...geral].map(([uid, p]) => [uid, { ...p, counting: contamPorClasse(p.results, cfg.best_n) }])), 0);
-  return { season: season ?? null, categories: categorias, general: geralLinhas, results_count: resultados.size, entries_count: usados, config: cfg };
+  return { season: season ?? null, categories: categorias, general: geralLinhas, results_count: resultados.size, entries_count: usados, config: regrasDoAno(cfg) };
 }
 
 /**

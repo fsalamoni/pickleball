@@ -192,7 +192,7 @@ function Pontos({ fonte }) {
             <p className="font-semibold text-ink">{t('{ano}: {n} pontos', { ano: g.season, n: g.total })}</p>
             <ul className="space-y-1 text-sm">{g.items.map((p) => (
               <li key={p.id} className={`flex flex-wrap items-baseline justify-between gap-2 rounded-xl px-3 py-2 ${p.status === 'cancelled' ? 'bg-paper text-gray-500 line-through' : 'bg-paper'}`}>
-                <span>{[p.tournament_name, p.modality_name, p.position ? t('{n}º lugar', { n: p.position }) : null, p.date ? quando(p.date) : null].filter(Boolean).join(' · ')}</span>
+                <span>{[p.tournament_name, p.modality_name, [p.tier_code, p.tier_group].filter(Boolean).join(' · '), p.position ? t('{n}º lugar', { n: p.position }) : null, p.date ? quando(p.date) : null].filter(Boolean).join(' · ')}</span>
                 <span className="font-bold">{tn(Number(p.points) || 0, '{n} ponto', '{n} pontos')}</span>
                 {p.status === 'cancelled' && <span className="w-full text-xs no-underline">{t('Cancelado: {motivo}', { motivo: t(POINTS_CANCEL_REASON_LABELS[p.cancel_reason] || p.cancel_reason || '') })}</span>}
               </li>

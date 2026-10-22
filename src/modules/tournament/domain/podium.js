@@ -40,10 +40,15 @@ function jogouDeVerdade(m) {
 /**
  * A colocação final de UMA categoria de torneio.
  *
+ * Por padrão o mata-mata só dá 1º a 4º (o pódio). Com `allRounds`, quem caiu
+ * antes ganha a posição da rodada em que caiu, como nos circuitos: quartas
+ * = 5º, oitavas = 9º, 16 avos = 17º (2^k + 1). É o que o ranking oficial da
+ * federação usa para pontuar cada rodada alcançada.
+ *
  * @returns {Map<string, { position: number|null, played: number, won: number }>}
  *   chave = id da inscrição
  */
-export function modalityPlacement({ modality = null, tournament = null, matches = [] } = {}) {
+export function modalityPlacement({ modality = null, tournament = null, matches = [], allRounds = false } = {}) {
   const saida = new Map();
   const garante = (id) => {
     if (!saida.has(id)) saida.set(id, { position: null, played: 0, won: 0 });
@@ -88,6 +93,13 @@ export function modalityPlacement({ modality = null, tournament = null, matches 
         principais
           .filter((m) => (Number(m.round) || 1) === ultimaRodada - 1)
           .forEach((m) => coloca(matchLoserIds(m), 3));
+      }
+      if (allRounds) {
+        for (let k = 2; ultimaRodada - k >= 1; k += 1) {
+          principais
+            .filter((m) => (Number(m.round) || 1) === ultimaRodada - k)
+            .forEach((m) => coloca(matchLoserIds(m), 2 ** k + 1));
+        }
       }
       return saida;
     }

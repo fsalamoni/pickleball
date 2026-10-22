@@ -7,15 +7,45 @@
  * separa os dois lados (`tournamentFederationOk` em `firestore.rules`).
  */
 import { t } from '@/core/i18n';
-import { SANCTION_STATUS, SANCTION_STATUS_LABELS, SANCTION_TIER } from './constants.js';
+import { SANCTION_STATUS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from './constants.js';
 import { membershipState } from './membership.js';
+import { tierOptions } from './officialRanking.js';
 
 const str = (v, max = 500) => String(v ?? '').trim().slice(0, max);
+
+/**
+ * Quem realiza: `sanctioned` = um organizador pediu e a federação AUTORIZOU;
+ * `federation` = a própria federação realiza. Só a equipe de competições
+ * grava (na decisão); o organizador nunca escolhe.
+ */
+export const SANCTION_ORIGIN = Object.freeze({ SANCTIONED: 'sanctioned', FEDERATION: 'federation' });
+
+/**
+ * A categoria escolhida entre as da federação (ativas, ou a que o torneio já
+ * tem). Sem federação carregada, valem as três de antes. Devolve o id e a
+ * CÓPIA de sigla, grupo e nome: o torneio mostra o que valia quando foi
+ * chancelado, mesmo que a federação renomeie a categoria depois.
+ */
+export function resolveSanctionTier(federation, tier, atual = null) {
+  const opcoes = tierOptions(federation?.ranking_config || {}, atual);
+  const escolhida = opcoes.find((tt) => tt.id === tier) || opcoes.find((tt) => tt.id === atual) || opcoes[0] || null;
+  if (!escolhida) return { tier: SANCTION_TIER.REGIONAL, tier_code: '', tier_group: '', tier_name: '' };
+  return { tier: escolhida.id, tier_code: escolhida.code, tier_group: escolhida.group, tier_name: escolhida.name };
+}
+
+/** O rótulo da categoria a partir da cópia gravada no torneio (ou o nome antigo). */
+function rotuloDaCategoria(s = {}) {
+  const curto = [s.tier_code, s.tier_group].filter(Boolean).join(' · ');
+  const nome = s.tier_name ? t(s.tier_name) : (SANCTION_TIER_LABELS[s.tier] ? t(SANCTION_TIER_LABELS[s.tier]) : '');
+  return { curto: curto || nome || s.tier || '', longo: [curto, nome].filter(Boolean).join(' · ') || s.tier || '' };
+}
 
 /** O estado da chancela de um torneio (sem nada = nunca pediu). */
 export function sanctionState(tournament = null) {
   const s = tournament?.federation_sanction || null;
   const status = tournament?.federation_id && s?.status ? s.status : null;
+  const rotulo = rotuloDaCategoria(s || {});
+  const porFederacao = status === SANCTION_STATUS.APPROVED && s?.origin === SANCTION_ORIGIN.FEDERATION;
   return {
     status,
     label: status ? SANCTION_STATUS_LABELS[status] || status : null,
@@ -25,6 +55,12 @@ export function sanctionState(tournament = null) {
     approved: status === SANCTION_STATUS.APPROVED,
     pending: status === SANCTION_STATUS.PENDING,
     tier: s?.tier || SANCTION_TIER.REGIONAL,
+    /** "FGP 1000 · G1" (selo) e "FGP 1000 · G1 · Estadual" (por extenso). */
+    tierShort: rotulo.curto,
+    tierLabel: rotulo.longo,
+    /** Torneio realizado pela própria federação (não só autorizado por ela). */
+    byFederation: porFederacao,
+    origin: status === SANCTION_STATUS.APPROVED ? (porFederacao ? SANCTION_ORIGIN.FEDERATION : SANCTION_ORIGIN.SANCTIONED) : null,
     requiresMembership: Boolean(s?.requires_membership),
     /** O organizador pode pedir: sem pedido, recusado ou revogado. */
     canRequest: !status || status === SANCTION_STATUS.REJECTED || status === SANCTION_STATUS.REVOKED,
@@ -36,14 +72,13 @@ export function sanctionState(tournament = null) {
 /** O patch que o organizador grava ao PEDIR a chancela (a regra exige `pending`). */
 export function buildSanctionRequest({ federation, uid, tier = SANCTION_TIER.REGIONAL, requiresMembership = false } = {}) {
   if (!federation?.id || !uid) throw new Error(t('Escolha a federação.'));
-  const nivel = Object.values(SANCTION_TIER).includes(tier) ? tier : SANCTION_TIER.REGIONAL;
   return {
     federation_id: federation.id,
     federation_sanction: {
       status: SANCTION_STATUS.PENDING,
       federation_name: str(federation.name, 120),
       federation_acronym: str(federation.acronym, 12),
-      tier: nivel,
+      ...resolveSanctionTier(federation, tier),
       requires_membership: Boolean(requiresMembership),
       requested_by: uid,
       requested_at_ms: Date.now(),
@@ -57,8 +92,12 @@ export function buildSanctionRequest({ federation, uid, tier = SANCTION_TIER.REG
 /** O patch que RETIRA o pedido (o organizador) — o torneio volta a ser sem federação. */
 export const SANCTION_WITHDRAW_PATCH = Object.freeze({ federation_id: null, federation_sanction: null });
 
-/** A decisão da equipe de competições: aprovar, recusar ou revogar (motivo). */
-export function sanctionDecision(tournament, action, { uid, reason = '', tier = null, requiresMembership = null } = {}) {
+/**
+ * A decisão da equipe de competições: aprovar, recusar ou revogar (motivo).
+ * Ao aprovar, a equipe escolhe a categoria (entre as da federação) e diz quem
+ * realiza (`origin`: a própria federação, ou um organizador autorizado).
+ */
+export function sanctionDecision(tournament, action, { uid, reason = '', tier = null, requiresMembership = null, federation = null, origin = null } = {}) {
   const atual = tournament?.federation_sanction || {};
   const mapa = { approve: SANCTION_STATUS.APPROVED, reject: SANCTION_STATUS.REJECTED, revoke: SANCTION_STATUS.REVOKED };
   const status = mapa[action];
@@ -69,7 +108,9 @@ export function sanctionDecision(tournament, action, { uid, reason = '', tier = 
     federation_sanction: {
       ...atual,
       status,
-      tier: Object.values(SANCTION_TIER).includes(tier) ? tier : atual.tier || SANCTION_TIER.REGIONAL,
+      // Recusar ou revogar não mexe na categoria (os resultados já enviados apontam para ela).
+      ...(status === SANCTION_STATUS.APPROVED ? resolveSanctionTier(federation, tier || atual.tier, atual.tier || null) : {}),
+      origin: Object.values(SANCTION_ORIGIN).includes(origin) ? origin : atual.origin || SANCTION_ORIGIN.SANCTIONED,
       requires_membership: requiresMembership == null ? Boolean(atual.requires_membership) : Boolean(requiresMembership),
       decided_by: uid || null,
       decided_at_ms: Date.now(),

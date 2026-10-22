@@ -1,8 +1,9 @@
 /**
  * "Federação" na gestão do torneio (Geral): pedir a chancela de uma federação
- * que chancela torneios (módulo `tournaments`), com o peso proposto e se o
- * torneio é só para filiados; acompanhar e retirar o pedido. A federação é
- * quem aprova — e pode mudar peso e exigência ao aprovar. Chancelado, a
+ * que chancela torneios (módulo `tournaments`), com a categoria proposta (as
+ * da federação, com sigla, grupo e requisitos) e se o torneio é só para
+ * filiados; acompanhar e retirar o pedido. A federação é quem aprova — e pode
+ * mudar categoria e exigência ao aprovar. Chancelado, a
  * tela de resultados ganha "Enviar ao ranking oficial" por categoria.
  */
 import React, { useMemo, useState } from 'react';
@@ -16,7 +17,9 @@ import { requestSanction, withdrawSanction } from '@/modules/federations/service
 import { useFederationMutation, useFederationsEnabled, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { sanctionState } from '@/modules/federations/domain/sanction';
-import { SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { SANCTION_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { tierLabel, tierOptions } from '@/modules/federations/domain/officialRanking';
+import FedTierRequirements from './FedTierRequirements';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Toggle } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -26,10 +29,14 @@ export default function TournamentSanctionCard({ tournament }) {
   const feds = usePublicFederations({ enabled: ligado });
   const st = sanctionState(tournament);
   const [fedId, setFedId] = useState('');
-  const [tier, setTier] = useState(SANCTION_TIER.REGIONAL);
+  const [tier, setTier] = useState('');
   const [soFiliados, setSoFiliados] = useState(false);
   const [retirando, setRetirando] = useState(false);
-  const pedir = useFederationMutation(() => requestSanction(tournament, { federation: (feds.data || []).find((f) => f.id === fedId), uid: user?.uid, tier, requiresMembership: soFiliados }));
+  const federacao = (feds.data || []).find((f) => f.id === fedId) || null;
+  // As categorias da federação escolhida (ativas); sem escolha, a primeira.
+  const categorias = federacao ? tierOptions(federacao.ranking_config) : [];
+  const categoria = categorias.find((c) => c.id === tier) || categorias[0] || null;
+  const pedir = useFederationMutation(() => requestSanction(tournament, { federation: federacao, uid: user?.uid, tier: categoria?.id, requiresMembership: soFiliados }));
   const retirar = useFederationMutation(() => withdrawSanction(tournament, { uid: user?.uid }));
   const opcoes = useMemo(() => (feds.data || []).filter((f) => fedModuleOn(f, 'tournaments')), [feds.data]);
   if (!ligado) return null;
@@ -42,7 +49,8 @@ export default function TournamentSanctionCard({ tournament }) {
             <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
               <Link to={`/federacoes/${st.federationId}`} className="hover:underline">{st.name || st.acronym}</Link>
               <V2Badge tone={st.approved ? 'green' : st.pending ? 'amber' : 'red'}>{t(SANCTION_STATUS_LABELS[st.status] || st.status)}</V2Badge>
-              <V2Badge tone="neutral">{t(SANCTION_TIER_LABELS[st.tier] || SANCTION_TIER_LABELS.regional)}</V2Badge>
+              <V2Badge tone="neutral">{st.tierLabel}</V2Badge>
+              {st.byFederation && <V2Badge tone="ink">{t('Realizado pela federação')}</V2Badge>}
               {st.requiresMembership && <V2Badge tone="purple">{t('Só filiados em dia se inscrevem')}</V2Badge>}
             </p>
             {s.reason && !st.approved && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: s.reason })}</p>}
@@ -69,12 +77,13 @@ export default function TournamentSanctionCard({ tournament }) {
               <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!fedId) return; pedir.mutate(undefined, { onSuccess: () => { toast.success(t('Pedido de chancela enviado. A federação foi avisada.')); setFedId(''); }, onError: (er) => toast.error(er.message) }); }}>
                 <div className="grid gap-3 md:grid-cols-2">
                   <V2Field label={t('Pedir a chancela de')} htmlFor="sanc-fed">
-                    <V2Select id="sanc-fed" value={fedId} onChange={(e) => setFedId(e.target.value)} options={[{ value: '', label: t('Escolha a federação') }, ...opcoes.map((f) => ({ value: f.id, label: `${f.acronym} · ${f.name}` }))]} />
+                    <V2Select id="sanc-fed" value={fedId} onChange={(e) => { setFedId(e.target.value); setTier(''); }} options={[{ value: '', label: t('Escolha a federação') }, ...opcoes.map((f) => ({ value: f.id, label: `${f.acronym} · ${f.name}` }))]} />
                   </V2Field>
-                  <V2Field label={t('Tipo de torneio (proposta)')} htmlFor="sanc-tier" hint={t('A federação confirma o peso ao aprovar.')}>
-                    <V2Select id="sanc-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={Object.values(SANCTION_TIER).map((v) => ({ value: v, label: t(SANCTION_TIER_LABELS[v]) }))} />
+                  <V2Field label={t('Categoria do torneio (proposta)')} htmlFor="sanc-tier" hint={t('A federação confirma a categoria ao aprovar.')}>
+                    <V2Select id="sanc-tier" value={categoria?.id || ''} disabled={!federacao} onChange={(e) => setTier(e.target.value)} options={federacao ? categorias.map((c) => ({ value: c.id, label: tierLabel(c) })) : [{ value: '', label: t('Escolha a federação primeiro') }]} />
                   </V2Field>
                 </div>
+                {categoria && <FedTierRequirements tier={categoria} />}
                 <V2Toggle id="sanc-filiados" checked={soFiliados} onChange={setSoFiliados} label={t('Só filiados em dia se inscrevem')} hint={t('A inscrição de quem não está em dia na federação é recusada.')} />
                 <div className="flex justify-end"><V2Button type="submit" size="sm" disabled={!fedId || pedir.isPending}><Send className="h-4 w-4" />{t('Pedir a chancela')}</V2Button></div>
               </form>

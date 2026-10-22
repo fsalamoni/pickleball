@@ -280,3 +280,13 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   sem ela, diz quem vê. O "Já paguei" aceita comprovante (`declared_proof`,
   arquivo na pasta do pagador), que a equipe abre por `federationDocument`
   com `chargeId` (auditado). Ver `docs/50-FEDERACAO.md` §27.
+- **Categorias de torneio e torneio da federação** (Etapa 4, 2026-10-22):
+  `ranking_config.tiers[]` (sigla, grupo, tabela até o 64º, participação,
+  requisitos, ativa) em `domain/officialRanking.js` (`normalizeRankingConfig`,
+  `tierOptions`, `validateTiers`, `tierTableFromChampion`), com cópia e
+  paridade no servidor; sem categorias próprias, as três padrão são derivadas
+  como antes. A chancela grava a categoria (`resolveSanctionTier`) e a origem
+  (`origin: 'federation'` = "Realizado pela"); `startFederationTournament`
+  cria o torneio já realizado pela federação (`/torneios/criar?federacao=`,
+  `FedTournamentOrigin`). Telas: `FedTiersEditor`, `FedTierRequirements`.
+  O `id` da categoria é gravado: nunca renomeie. Ver `docs/50-FEDERACAO.md` §28.

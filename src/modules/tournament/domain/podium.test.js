@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { modalityPodium, registrationAllPeople } from './podium.js';
+import { modalityPlacement, modalityPodium, registrationAllPeople } from './podium.js';
 
 const jogo = (id, round, a, b, winner, extra = {}, position = 1) => ({
   id, round, position, stage_index: 0, stage_type: 'knockout', status: 'finished',
@@ -14,6 +14,41 @@ const regs = [
   { id: 'r3', player_a_name: 'Eva', player_a_user_id: 'ue' },
   { id: 'r4', player_a_name: 'Fê', player_a_user_id: 'uf' },
 ];
+
+describe('modalityPlacement com allRounds (ranking da federação)', () => {
+  // 16 avos não; chave de 16: oitavas (r1), quartas (r2), semi (r3), final (r4).
+  const ids = Array.from({ length: 16 }, (_, i) => `p${i + 1}`);
+  const chave = () => {
+    const out = [];
+    let vivos = ids;
+    for (let r = 1; vivos.length > 1; r += 1) {
+      const prox = [];
+      for (let i = 0; i < vivos.length; i += 2) {
+        out.push(jogo(`r${r}_${i}`, r, vivos[i], vivos[i + 1], 'a', {}, i / 2 + 1));
+        prox.push(vivos[i]);
+      }
+      vivos = prox;
+    }
+    return out;
+  };
+
+  it('quem cai nas quartas é 5º, nas oitavas 9º; o pódio é o de sempre', () => {
+    const pos = modalityPlacement({ modality, matches: chave(), allRounds: true });
+    expect(pos.get('p1').position).toBe(1);
+    expect(pos.get('p9').position).toBe(2);
+    expect(pos.get('p5').position).toBe(3);
+    expect(pos.get('p13').position).toBe(3);
+    expect(pos.get('p3').position).toBe(5);
+    expect(pos.get('p2').position).toBe(9);
+    expect(pos.get('p2').played).toBe(1);
+  });
+
+  it('sem allRounds, quem caiu antes da semi fica sem colocação (o pódio não muda)', () => {
+    const pos = modalityPlacement({ modality, matches: chave() });
+    expect(pos.get('p3').position).toBeNull();
+    expect(pos.get('p2').position).toBeNull();
+  });
+});
 
 describe('modalityPodium', () => {
   it('mata-mata: campeão pela final, vice quem perdeu, 3º pela disputa', () => {
