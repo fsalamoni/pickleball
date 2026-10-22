@@ -10,7 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeftRight, Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
+  ArrowLeftRight, Award, BarChart3, Flag, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
   HandCoins, Heart, HelpCircle, Inbox, MailPlus, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
   Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
@@ -64,6 +64,7 @@ import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCall
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
 import { MyArenaEnrollments, MyTaughtArenaClasses } from '@/v2/components/arenas/classes/MyArenaClasses';
 import { MiniStat } from './ProfileShowcase';
+import MyRefereeAssignments from '@/v2/components/federations/referees/MyRefereeAssignments';
 import { t, tn } from '@/core/i18n';
 
 /* ------------------------------- peças ------------------------------- */
@@ -655,8 +656,9 @@ function CredencialRow({ c }) {
 }
 
 function FederacoesSecao({ ctx }) {
-  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ } = ctx.federacoes;
-  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ].filter((q) => q?.isError);
+  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ } = ctx.federacoes;
+  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ].filter((q) => q?.isError);
+  const arbitra = (rostersQ?.data || []).length > 0 || (assignmentsQ?.data || []).length > 0;
   const convites = (invitesQ?.data || []).filter((inv) => isInvitePending(inv));
   const filiacoes = (membersQ.data || []).filter((m) => !['cancelled', 'rejected'].includes(m.status));
   const abertas = (chargesQ.data || []).filter((c) => [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
@@ -670,6 +672,11 @@ function FederacoesSecao({ ctx }) {
       {convites.length > 0 && (
         <Bloco id="federacoes-convites" icon={MailPlus} title={t('Convites para filiar')}>
           <ul className="space-y-2">{convites.map((inv) => <ConviteRow key={inv.id} inv={inv} />)}</ul>
+        </Bloco>
+      )}
+      {arbitra && (
+        <Bloco id="federacoes-escalas" icon={Flag} title={t('Minhas escalas de arbitragem')}>
+          <MyRefereeAssignments rosters={rostersQ.data || []} assignments={assignmentsQ.data || []} />
         </Bloco>
       )}
       {abertas.length > 0 && (

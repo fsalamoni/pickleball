@@ -136,6 +136,19 @@ service firebase.storage {
       );
     }
 
+    // Contas da federação (módulo `accounts`): a nota, o recibo ou a
+    // demonstração sobe para a pasta de quem envia (só ela lê); ao lançar ou
+    // salvar a prestação, a função `federationAccounts` copia para
+    // `federacao-contas-oficial/` (fechada à regra: a equipe das contas abre
+    // pela função) e apaga a origem. PDF ou imagem até 9 MB, como
+    // `ACCOUNT_FILE_MAX` (`src/modules/federations/domain/accounts.js`). ADITIVO.
+    match /federacao-contas/{uid}/{fileName} {
+      allow get, list, delete: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid && resource == null
+        && request.resource.contentType.matches('application/pdf|image/(webp|jpeg|png)')
+        && request.resource.size <= 9 * 1024 * 1024;
+    }
+
     // Bloqueia qualquer outro caminho por padrão.
     match /{allPaths=**} {
       allow read, write: if false;

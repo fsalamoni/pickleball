@@ -19,7 +19,7 @@ const PRES = { uid: 'pres' };
 const GES = { uid: 'ges' };
 const SEC = { uid: 'sec' };
 const ADMIN = { uid: 'admin', email: 'admin@x', isPlatformAdmin: true };
-const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff'];
+const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal'];
 
 function cenario() {
   return createFakeDb({
@@ -46,7 +46,7 @@ describe('cargos', () => {
     const r = await chamar(db, PRES, { action: 'role_save', role: { name: 'Conselho Fiscal', perms: ['finance'], term_months: 24 } });
     expect(r.roleId).toBe('conselho-fiscal');
     const roles = doc(db, 'federations/fpp').staff_roles;
-    expect(roles).toHaveLength(9); // os oito modelos + o novo
+    expect(roles).toHaveLength(10); // os nove modelos + o novo
     // editar a secretaria muda a cópia de quem está nela
     await chamar(db, PRES, { action: 'role_save', role: { id: 'secretary', name: 'Secretaria-geral', perms: ['members', 'comms'] } });
     expect(doc(db, 'federation_staff/fpp_sec')).toMatchObject({ role_name: 'Secretaria-geral', perms: ['members', 'comms'], is_master: false });

@@ -64,7 +64,7 @@ function mensagemDoServidor(err) {
   return err?.message || t('Não foi possível concluir. Tente de novo.');
 }
 
-async function chamar(nome, payload, { timeout = 60_000 } = {}) {
+export async function chamar(nome, payload, { timeout = 60_000 } = {}) {
   if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   try {
     const { data } = await httpsCallable(functions, nome, { timeout })(payload);
@@ -339,6 +339,20 @@ export async function listFederationInvites(fedId) {
 export async function listMyFederationInvites(uid) {
   if (!uid) return [];
   const q = query(collection(db, C.invites), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** O cadastro da pessoa nos quadros de arbitragem (todas as federações) — Minha área e exportação. */
+export async function listMyRefereeRosters(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.referees), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** As escalas de arbitragem da pessoa (todas as federações) — Minha área e exportação. */
+export async function listMyAssignments(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.assignments), where('referee_uid', '==', uid));
   return (await getDocs(q)).docs.map(toDoc);
 }
 
@@ -1038,6 +1052,29 @@ export const commentAction = (payload) => chamar('federationComments', payload);
 export async function listMyFederationComments(uid) {
   if (!uid) return [];
   return (await getDocs(query(collection(db, C.comments), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
+/* ---- Eleições (módulo `elections`): só o servidor grava — `functions/federationElections.js` ---- */
+
+/** Toda ação da eleição (edital, chapas, voto, apuração), pelo servidor. */
+export const electionAction = (payload) => chamar('federationElections', payload);
+
+/** Onde estou no colégio eleitoral (meu peso, se já votei — nunca em quem). Também exportação de dados. */
+export async function listMyElectionVoters(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.electionVoters), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
+/** As chapas em que estou. */
+export async function listMyCandidacies(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.candidacies), where('member_uids', 'array-contains', uid)))).docs.map(toDoc);
+}
+
+/** Os apoios que dei a chapas. */
+export async function listMyElectionEndorsements(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.electionEndorsements), where('user_id', '==', uid)))).docs.map(toDoc);
 }
 
 /** O arquivo de um documento sem link público (filiado, equipe, rascunho), em base64. */

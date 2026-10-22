@@ -19,6 +19,7 @@ import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { visibleNews } from '@/modules/federations/domain/news';
 import { visibleSponsors } from '@/modules/federations/domain/sponsors';
 import { hasGovernance, sortMinutes } from '@/modules/federations/domain/governance';
+import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { NEWS_AUDIENCE, SPONSOR_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { useMemberNews, usePublicNews } from '@/modules/federations/hooks/useFederations';
 import { isVisibleTo, livePromoBanners, livePromoCoupons } from '@/modules/promo/domain/promo';
@@ -200,7 +201,14 @@ export function FedGovernanceBlock({ federation }) {
         {g.board?.length > 0 && (
           <div>
             <p className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Diretoria')}</p>
-            <ul className="grid gap-1 text-sm sm:grid-cols-2">{g.board.map((m, i) => <li key={i}><span className="text-gray-500">{m.role}:</span> <span className="font-semibold text-ink">{m.name}</span></li>)}</ul>
+            <ul className="grid gap-1 text-sm sm:grid-cols-2">{g.board.map((m, i) => (
+              <li key={i}>
+                <span className="text-gray-500">{m.role}:</span> <span className="font-semibold text-ink">{m.name}</span>
+                {/* Remuneração (Lei 9.615/98, art. 18-A): só quando informada. */}
+                {Number.isInteger(m.pay_cents) && <span className="text-gray-500"> · {m.pay_cents > 0 ? t('{valor} por mês', { valor: formatBrlCents(m.pay_cents) }) : t('não remunerado')}</span>}
+                {m.pay_note && <span className="text-gray-500"> ({m.pay_note})</span>}
+              </li>
+            ))}</ul>
           </div>
         )}
         {g.bylaws && <p className="whitespace-pre-line text-sm text-gray-700">{g.bylaws}</p>}

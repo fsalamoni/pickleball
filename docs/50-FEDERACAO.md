@@ -33,7 +33,7 @@ O que esta entrega cobre:
 | Pedido de filiação, aprovação, cobrança Pix, "Já paguei", confirmação | `/federacoes/:id/filiar`, Central → Filiados / Financeiro |
 | Carteirinha digital (PNG, imprimir, compartilhar) e verificação pelo QR | Minha área → Federações, página da federação, `/f/verificar/:codigo` |
 | Equipe com 8 papéis e permissões | Central → Equipe |
-| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os onze do catálogo, todos `available`; §19) |
+| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os doze disponíveis, com a arbitragem do §22; §19) |
 | Indicadores dos últimos 12 meses (filiados, renovação, receita, atraso), com CSV | Central → Gerir → Indicadores (§6.8) |
 | Declaração de vínculo imprimível, com QR | página da federação, Minha área → Federações, Central → Filiados (§6.8) |
 | Avisos (sino, e por e-mail/celular quando `external_messaging` estiver ligada) | categoria "Federações" em Configurações → Notificações |
@@ -63,7 +63,7 @@ breve") e `FED_MODULE_META[x].status` só muda quando a tela existir.
    **`discipline`**; do PR 4, **`news`** (notícias e avisos), **`sponsors`**
    (patrocinadores), **`promos`** (cupons e campanhas) e **`store`** (loja
    oficial no Mercado); depois, **`official_docs`** (acervo) e **`calendar`**
-   (agenda) — os onze do catálogo. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   (agenda); **`accounts`** (orçamento e prestação de contas, §22), **`referees`** (arbitragem, §23) e **`elections`** (eleições, §24) — os catorze disponíveis. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
    (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
    `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
    nem chancela àquela federação. Desligar um módulo não apaga nada: o que
@@ -1654,3 +1654,340 @@ nenhuma regra mudou. As peças compartilhadas da Central ficam em
   do vencimento e 7 dias depois, uma vez por marco
   (`federation_charges.overdue_notified`); só cobrança `open` — quem já
   informou o pagamento não é cobrado de novo.
+
+## 22. Orçamento e prestação de contas (módulo `accounts`, 2026-10-22)
+
+A Lei Geral do Esporte (Lei 14.597/2023) e a Lei Pelé (Lei 9.615/98, art.
+18-A) pedem que a entidade que recebe recurso público tenha orçamento,
+conselho fiscal com parecer sobre as contas, contas publicadas e a
+remuneração dos dirigentes à vista. O módulo `accounts` (agora `available`)
+faz isso dentro da Central, com o mesmo desenho do acervo: **só o servidor
+grava**, o navegador lê pela regra.
+
+**Quem faz o quê.** Permissão `finance` (ou `admin`) prepara: orçamento,
+lançamentos, prestação. Permissão `fiscal` (cargo `fiscal_council`) lê tudo
+em leitura e dá o **parecer**; o `admin` também pode, e fica registrado como
+dele (`by_admin`). Secretaria, filiado e visitante não leem nada que não esteja
+publicado.
+
+**Coleções** (bloco depois de `federation_events` no `firestore.rules`,
+`write: if false`, provado em `tests/rules/federationAccounts.rules.test.js`):
+
+- `federation_budgets/{fed}_{ano}` — `lines` em centavos por `income.<cat>` /
+  `expense.<cat>`, `notes`, `status` `draft → submitted → approved →
+  published`, `approved_in { date, event_id, event_title, event_date, note }`
+  (a reunião da agenda é opcional e conferida pelo servidor: tem de ser um
+  tipo de reunião da própria federação), `history[]` e, ao publicar, a cópia
+  `published { lines, notes, approved_in, at_ms }`. O público lê só o
+  documento-cópia `{fed}_{ano}_pub` (`pub: true`, `copy_of`, `published`):
+  o documento de trabalho **nunca** leva `pub`, então reformular não expõe o
+  rascunho; a lista da equipe ignora as cópias (`copy_of`). Mexer no
+  aprovado ou publicado é **reformular**: motivo ≥ 10, volta a rascunho, as
+  linhas anteriores vão para o histórico e a cópia `published` continua na
+  página até a nova publicação.
+- `federation_ledger/{id}` — lançamento manual: `kind`, `category`, `date`
+  (nunca no futuro), `amount_cents`, `description`, `counterparty`,
+  `document` (anexo copiado para `federacao-contas-oficial/{fed}/ledger/…`,
+  com SHA-256). Não se apaga: **estorna** (`status: 'void'`, motivo). Nunca é
+  público.
+- `federation_account_reports/{fed}_{período}` (o nome evita
+  `federation_reports`, que é a ouvidoria) — período `2026` ou `2026-Q1`,
+  `status` `draft → submitted → opinion → approved|rejected → published`,
+  `statements[]` (balanço, DRE, fluxo de caixa, notas — PDF/imagem ≤ 9 MB,
+  na pasta oficial), `notes`, `snapshot` (os totais **congelados** no envio
+  ao conselho: por categoria, totais, quantos lançamentos manuais e
+  automáticos e, na anual, o orçamento aprovado do ano), `fiscal_opinion
+  { verdict, text, by_name, at_ms, by_admin }`, `assembly { date, result,
+  event_*, note }`, `acervo { statements_doc_id, statements_code,
+  opinion_doc_id }`, `pub`.
+
+**Categorias fixas** (ids gravados — nunca renomeie): receitas `memberships`,
+`courses`, `events`, `sponsorship`, `grants`, `donations`, `store`,
+`other_income`; despesas `staff`, `referees`, `events`, `travel`, `admin`,
+`communication`, `taxes`, `equipment`, `other_expense`.
+
+**Receita derivada, não lançada.** A cobrança **paga** entra sozinha, pela
+origem (`membership`/`renewal` → filiações, `course` → cursos, `fine` →
+outras receitas), na data do pagamento em Brasília. O conselho fiscal ganhou
+leitura de `federation_charges` para conferir. **Diárias da arbitragem**
+(§23): com o módulo `referees` ligado, as diárias PAGAS (diária +
+deslocamento, na data do pagamento) entram como despesa `referees` sem lançar
+de novo — no servidor por `despesasDerivadas()` (lê `federation_assignments`
+e usa `refereeFeesAsExpenses` da régua, com paridade) e no cliente por
+`extraExpenses`. A prévia da tela só as mostra a quem lê as escalas
+(`courses`/`admin`); para o financeiro e o conselho fiscal sem essa leitura,
+a tela AVISA que a prévia está sem as diárias — o retrato congelado da
+prestação sempre as inclui (a regra não abre as escalas ao financeiro, porque
+elas guardam conflito de interesse declarado).
+
+**Período fechado.** Com a prestação enviada, lançar ou estornar naquele
+período é recusado (o retrato que o conselho examina não muda por baixo).
+Reabrir (motivo) só antes do parecer; depois, não volta a rascunho.
+
+**Publicar** exige o parecer; a assembleia é opcional. Com o acervo ligado,
+saem **dois atos** (`financial_statements` com as demonstrações e
+`fiscal_opinion` com o texto do parecer, `refers` ao primeiro) — os dois itens
+do checklist de transparência. Sem o acervo, publica só a prestação.
+
+**Na tela.** Central → Gerir → **Contas** (`data-dica="federacao-secao-contas"`):
+Visão geral (`?aba=orcamento`: totais do ano, barras mês a mês em CSS,
+orçado × realizado com alerta "perto do limite" ≥ 90%, "estourou", "sem
+orçamento", e o prazo legal) · Orçamento (`orcamento-anual`: as categorias
+ao lado do orçado e do realizado do ano anterior) · Lançamentos
+(`lancamentos`: busca, filtros, anexo, estorno, planilha; os automáticos
+marcados) · Prestação de contas (`prestacao-contas`: linha do tempo, prévia
+ao vivo até congelar, demonstrações, parecer, assembleia, publicação). Os
+valores de `?aba=` são contrato de link (o aviso ao conselho leva a
+`prestacao-contas`). **Precisa de você** (`accountsPendingItems`): prestação
+esperando parecer (conselho), parecer recebido (financeiro) e, a partir de
+1º de março, a prestação do ano anterior não publicada — o **prazo legal é o
+último dia útil de abril** (`legalDeadline`), e passada a data o texto diz
+"fora do prazo".
+
+**Na página pública** (aba Documentos, âncora `#fed-contas`): os orçamentos
+publicados, as prestações publicadas (totais congelados, parecer, assembleia,
+links aos atos do acervo) e a execução resumida da última anual — sempre do
+retrato congelado, nunca da conta ao vivo. **Remuneração dos dirigentes**:
+`governance.board[].pay_cents` (0 = não remunerado; ausente = não informado)
+e `pay_note`, editados em Página pública → Transparência e mostrados no bloco
+de governança.
+
+**Avisos** (servidor, `tx()`): ao enviar, quem tem `fiscal`; ao chegar o
+parecer, `finance` e `admin` — nunca quem agiu.
+
+**Paridade.** `src/modules/federations/domain/accounts.js` ×
+`functions/federationAccountsPolicy.js` (`functions/federationAccounts.parity.test.js`):
+categorias, mapa de origem, períodos, prazo, validações, totais e retrato.
+
+**O que ficou de fora.** Orçamento mensal (só anual); importação de extrato;
+conciliação bancária.
+## 23. Arbitragem (módulo `referees`, 2026-10-22)
+
+A federação mantém o **quadro de árbitros** por nível, **escala** quem apita
+cada evento (convocação → confirmação), recebe a **súmula**, **avalia** a
+atuação e registra o **pagamento das diárias**. Liga em Configurações →
+Módulos (`referees`); a seção da Central é **Arbitragem** (permissão `courses`
+— o cargo `referees` já a tinha — ou `admin`).
+
+**Onde fica**
+
+| Quem | Onde |
+|---|---|
+| Equipe | Central → Arbitragem: `?aba=arbitragem` (Escalas), `arbitragem-quadro`, `arbitragem-avaliacoes`, `arbitragem-diarias`, `arbitragem-regras` (contrato de link). Escalas filtra por `?filtro=proximos`, `sem-cobertura`, `sem-resposta` ou `anteriores` |
+| Árbitro | Minha área → Federações → **Minhas escalas de arbitragem** (âncora `federacoes-escalas`): responder, próximas, histórico com avaliação e diária, súmula, equipe do evento, disponibilidade |
+| Público (também sem conta) | Página da federação → Competições → **Quadro de arbitragem** (`#fed-arbitragem`) e, no torneio chancelado e público, o cartão **Arbitragem** acima das abas |
+
+**Dados** (`docs/05-DATA-MODEL.md`): `federation_referees/{fed}_{uid}` (o
+cadastro no quadro: nível, funções, situação, credenciais, disponibilidade,
+`public_listing`, contadores) + `private/staff` (notas da equipe, que o
+árbitro não lê); `federation_assignments/{id}` (a escala: evento copiado,
+função, situação, prazo, diária, deslocamento, alertas, conflito, súmula,
+avaliação, pagamento, substituição); `federations.referee_rules` (níveis,
+nível mínimo e quantos por função, diária padrão, prazo de resposta,
+`crew_visible`). **Tudo só o servidor grava** (`write: if false`); o árbitro
+lê o próprio cadastro e as próprias escalas; a equipe com `courses`/`admin`
+lê tudo. Zero índice (as consultas são de uma igualdade).
+
+**Funções**: `referee`, `head_referee`, `line_judge`, `technical_delegate`,
+`tournament_director` — gravadas, nunca renomeie. **Situações da escala**:
+`invited` → `confirmed` ou `declined`; `replaced`; `cancelled`; e no
+fechamento `done` (atuou) ou `no_show`. Os ids dos níveis também são
+gravados: o rótulo muda, o código não.
+
+**Eventos que se escalam** (`scalableEvents`, `domain/referees.js`): os
+torneios **chancelados** (aprovados) por esta federação e, com o calendário
+ligado, os eventos da agenda dos tipos `competition`, `selection` e
+`sport_other` ainda marcados. Curso e reunião não. Nada é gravado no evento:
+a escala copia nome, data, cidade e se é público.
+
+**Escalar** (`federationReferees`, `functions/federationReferees.js`):
+`assign` convoca até 20 por vez, mostrando **alertas** sem bloquear — marcou
+que não pode, outra escala no mesmo dia, inscrito como atleta no torneio,
+nível abaixo do mínimo da função. Bloqueia só o que não faz sentido: fora do
+quadro, inativo/suspenso, função que não exerce, já escalado no evento. As
+sugestões vêm sem alerta primeiro, depois por nível e por quem atuou menos
+(`suggestReferees`). O prazo de resposta é o da regra contado da convocação,
+nunca depois da véspera (`defaultRespondBy`). `reassign` troca a pessoa (a
+antiga vira `replaced` e é avisada); `cancel` exige motivo; `close_event`
+marca quem não veio, o resto confirmado vira `done` e as convocações sem
+resposta são canceladas. A cobertura do evento é `referee_rules.needs` por
+função (`eventCoverage`).
+
+**O árbitro**: `respond` confirma ou recusa (motivo; **conflito de
+interesse** declarado com o que é — fica só para a equipe); depois do evento
+`report` envia a súmula (10 a 4.000 letras); `self` grava a disponibilidade
+(dias em que não pode, até 60) e se aparece no quadro público; `crew` mostra
+a equipe do evento (nome e função) só com `crew_visible`.
+
+**Avaliação e diárias**: `evaluate` (cinco critérios de 1 a 5 + comentário
+que o árbitro vê; média gravada) e `mark_paid` (em lote; desfazer é
+`paid: false`). As diárias pagas viram despesa das contas da federação por
+`refereeFeesAsExpenses(assignments)` → `{ date, amount_cents, category:
+'referees', ref }` (só `done` com `paid_at_ms`; diária + deslocamento). CSV
+em `feesCsv` (`;`, reais com vírgula, defesa contra fórmula).
+
+**Lembrete**: a varredura diária (`federationMembershipSweep`) avisa o
+convocado sem resposta na véspera do prazo, uma vez só (`reminded`).
+
+**Precisa de você**: equipe — convocações sem resposta e eventos dos próximos
+7 dias sem cobertura (`refereeStaffPending`, que levam aos filtros); árbitro —
+convocações para responder (`myPendingAssignments`). Fonte que falhou não
+vira zero.
+
+**Privacidade** (não pode regredir): o público vê pela função
+`federationRefereesPublic` (sem login) **só** quem está ativo e aceitou
+aparecer (nome, nível, cidade, foto) e, nos eventos públicos a partir de 30
+dias atrás, quem está **confirmado** (nome e função). Nunca valor, nota,
+conflito, disponibilidade nem uid. Federação oculta (§17) só responde à
+equipe e ao filiado ativo.
+
+**Exclusão e exportação**: a exportação leva o próprio cadastro e as
+próprias escalas; na exclusão de conta o cadastro e as notas saem, e as
+escalas ficam pseudonimizadas ("Atleta removido", sem conflito nem motivo) —
+as abertas são canceladas.
+
+Régua pura em `domain/referees.js`, com cópia em
+`functions/federationRefereesPolicy.js` e paridade em
+`functions/federationReferees.parity.test.js`; regra provada em
+`tests/rules/federationReferees.rules.test.js`; tela em
+`src/v2/components/federations/referees/` + `manage/FedRefereesPanel.jsx`.
+## 24. Eleições (módulo `elections`, 2026-10-22)
+
+A federação conduz a eleição inteira na plataforma: edital, chapas, apoios,
+impugnações com defesa, votação **secreta** pelo aplicativo (com peso por
+categoria), votação presencial, apuração, ata e — se o admin quiser — os
+eleitos indo para a governança da página.
+
+**Onde mora.** Domínio puro em `functions/federationElectionsPolicy.js`
+(servidor) com cópia em `src/modules/federations/domain/elections.js`
+(cliente; paridade em `functions/federationElections.parity.test.js`).
+Função `federationElections` (`functions/federationElections.js`). Telas em
+`src/v2/components/federations/elections/` e Central → **Eleições**
+(`manage/FedElectionsPanel.jsx`). Aba pública `PROFILE_TAB.ELECTIONS`
+(`eleicoes`, âncora `#fed-eleicoes`).
+
+### 22.1 Coleções (todas só o servidor grava)
+
+| Coleção | Id | Quem lê |
+|---|---|---|
+| `federation_elections` | automático | a eleição publicada (`public == true`), quem pode ver a federação; a comissão; o admin |
+| `federation_candidacies` | automático | a chapa aceita (`public == true`), quem vê a federação; quem está nela; quem conduz; o admin |
+| `federation_election_voters` | `{eid}_{uid}` ou `{eid}_{club|arena}_{org}` | o próprio eleitor; quem conduz |
+| `federation_election_endorsements` | `{eid}_{cargo}_{uid}` | só quem apoiou |
+| `federation_ballots` | aleatório (16 bytes) | **ninguém** pelo cliente |
+
+"Quem conduz" na regra é `fedElRun`: a comissão (`commission_uids`) ou, sem
+comissão, o admin da federação. Zero índice composto.
+
+### 22.2 O voto secreto (o que não pode regredir)
+
+- A cédula (`federation_ballots`) leva **só** `election_id`, `choices` e
+  `weight` — nenhum uid, nome, horário ou id de eleitor. O id é aleatório
+  (`crypto.randomBytes`), nunca sequencial.
+- A cédula e o `voted_at_ms` do eleitor são gravados **na mesma transação**:
+  ou os dois entram, ou nenhum. Voto duplo é recusado dentro da transação.
+- A auditoria do voto (`federation_election_vote`) leva só federação e
+  eleição. O comprovante (`receipt`, aleatório) prova que o voto entrou,
+  nunca em quem.
+- Durante a votação a tela mostra só **percentual** de participação; não
+  existe parcial. O resultado mostra **pesos**, nunca número de cédulas.
+- O assistente avisa quando um grupo tem menos de 3 eleitores (o voto dele
+  poderia ser deduzido pela apuração).
+- Limite conhecido: os metadados do Firestore (hora de escrita) são visíveis
+  para quem opera o projeto no console — não para quem usa a plataforma.
+
+### 22.3 Fluxo
+
+1. **Assistente** (admin): cargos (chapa ou individual, órgão, vagas,
+   mínimo de cada sexo) → calendário (edital, registro, impugnação, defesa,
+   votação com hora, resultado, posse; antecedência mínima configurável,
+   padrão 30 dias) → colégio e pesos (meses mínimos de filiação; pesos de
+   atletas, professores, árbitros, clubes e arenas, 0 a 6; **prévia do
+   servidor** com a conta de 1/3 dos atletas e 1:6 entre pesos) → comissão
+   (`FedPersonPicker`, até 7) → revisar e **publicar**.
+2. **Publicar** grava o edital (texto gerado por `noticeText`) e, com o
+   acervo ligado, um **edital numerado no acervo** (`publicarAtoDeTexto` em
+   `federationAcervo.js`); avisa todos os filiados ativos. Depois de
+   publicado, só calendário e colégio mudam, com motivo no histórico.
+3. **Chapas**: o filiado registra no prazo (ele faz parte da chapa; todos
+   com filiação ativa; ninguém da comissão; ninguém em duas chapas vivas).
+   Alertas para a comissão: mulheres abaixo de 30% e recondução do
+   presidente. **Apoio** (`endorsement_pct`, até 5% do colégio): pelo link
+   da chapa (`?aba=eleicoes&eleicao=&apoiar=`), um por cargo, quem está na
+   chapa não apoia a própria.
+4. **Impugnação** só de chapa aceita, com motivo (≥ 20 caracteres); a chapa
+   se defende no prazo; a comissão **julga depois da defesa** (ou do fim do
+   prazo). Procedente ⇒ chapa indeferida.
+5. **Abrir a votação** (quem conduz, a partir da data e hora do edital, sem
+   chapa em análise): o colégio é **congelado** nesse momento
+   (`federation_election_voters`); quem não estiver em dia ali não vota.
+   Clubes e arenas votam pelo representante que pediu a filiação;
+   dependentes não votam. Recusa se os atletas ficarem abaixo de 1/3.
+6. **Votar**: um cargo por tela → revisão → confirmação → comprovante
+   (`VoteFlow`). **Encerrar** depois da hora de fechamento.
+7. **Presencial** (modo `presential`/`mixed`): a comissão marca quem votou
+   na mesa e lança os totais por cargo, em peso; a soma de cada cargo tem de
+   fechar com o peso de quem votou na mesa; lançado uma vez só.
+8. **Apurar** (prévia só da comissão) e **publicar o resultado**: a apuração
+   é refeita no servidor, empate segue a regra do edital (mais velho, chapa
+   registrada primeiro, ou novo turno), o mínimo de cada sexo vale nos
+   cargos individuais; a **ata** vai ao acervo; todos os filiados são
+   avisados. O admin pode **levar os eleitos para a governança**
+   (`governance.board`) junto ou depois (`apply_governance`), com fim de
+   mandato opcional — as permissões da equipe não mudam.
+9. **Cancelar** (admin, com motivo, avisa os filiados).
+
+### 22.4 Telas
+
+- Central → **Eleições** (admin, módulo ligado): lista, "Nova eleição"
+  (assistente) e o painel de cada eleição (`ElectionConductPanel`: próximo
+  passo, linha do tempo, chapas com aceitar/indeferir/julgar, participação,
+  presencial, apuração com gráfico de barras acessível, resultado).
+- Faixa **"Precisa de você"**: chapas para analisar e impugnações prontas
+  para julgar (`federationPending`, itens `chapas` e `impugnacoes`).
+- Página da federação → aba **Eleições** (`ElectionsPublic`): edital e ata
+  (links do acervo), linha do tempo, cargos, chapas aceitas, resultado;
+  logado, **"Sua participação"** (`ElectionMemberCard`: votar com o peso,
+  comprovante, registrar e retirar chapa, defesa, link de apoio); para quem
+  está na comissão, a **área da comissão** com o mesmo painel. Na página
+  pública sem login no app, um botão leva ao app.
+- Minha filiação: aviso **"Eleição em andamento"** (`FedElectionNotice`).
+- Avisos levam a `/federacoes/{id}?aba=eleicoes` (no app, onde se age).
+
+### 22.5 Exclusão e exportação
+
+Entram na exportação: o colégio da pessoa (onde votou, peso, comprovante —
+nunca em quem), as chapas de que participa e os apoios que deu. Na exclusão:
+os apoios são apagados; nome no colégio, nas chapas e na comissão vira
+"Atleta removido". A cédula não tem dono e fica. Limite: o nome de quem
+impugnou fica na chapa impugnada (a lista não é consultável por pessoa).
+
+Âncoras de dica: `federacao-secao-eleicoes`, `federacao-pub-eleicoes`,
+`federacao-eleicao-*` (contrato). Enums gravados (situações, tipos de cargo,
+órgãos, modos, regras de empate, categorias, chaves do calendário) — nunca
+renomeie.
+
+## 25. Conformidade com a Lei Geral do Esporte (Central → Indicadores → Conformidade, 2026-10-22)
+
+Aba só do `admin`, ao lado de Indicadores. Confere, **sem gravar nada**, o que a
+Lei 14.597/2023 e a boa governança pedem a uma entidade de administração do
+esporte contra o que já está na plataforma. Domínio puro em
+`domain/compliance.js` (`complianceChecklist`, `complianceSummary`), tela em
+`manage/FedCompliancePanel.jsx` (anel com o placar e a lista, cada item com o
+fundamento legal e o botão **Resolver**, que leva à aba que resolve).
+
+Itens: estatuto publicado; mulheres na direção (≥ 30%); mandato informado, até
+4 anos e em vigor; **eleição antes do fim do mandato** (com o módulo
+`elections`: a 180 dias do fim, ou depois, precisa haver eleição publicada —
+nem rascunho nem cancelada — com resultado/posse a partir dessa data);
+conselho fiscal nomeado (cargo `fiscal_council`, ou permissão `fiscal` sem
+`admin`); assembleia ordinária do ano convocada com a antecedência do estatuto;
+**contas do ano anterior** (com `accounts` vale a prestação `published`, e o
+texto diz em que fase ela parou; sem o módulo, o documento do acervo);
+**orçamento do ano aprovado** (com `accounts`: `approved`/`published`);
+página de transparência; ouvidoria e disciplina; atletas na direção.
+
+Regras que não podem regredir: fonte que não carregou é `unknown` ("não deu
+para conferir"), **nunca** reprovação — a plataforma não sabe o que a
+federação guarda fora dela; é aviso, não trava. As consultas extras (agenda
+pública, orçamentos) só saem com a aba aberta.

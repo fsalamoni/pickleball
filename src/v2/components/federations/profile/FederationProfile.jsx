@@ -10,9 +10,9 @@
  * EQUIPE (a barra com a Central) chegam de fora, por `above` e `mine`: aqui
  * não há nada de gestão.
  */
-import React, { useMemo } from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { BadgeCheck, BookOpen, CalendarDays, Globe, Home, IdCard, Instagram, Library, Mail, MessageCircle, Newspaper, Phone, Share2, Trophy, Building2, Users } from 'lucide-react';
+import { BadgeCheck, BookOpen, CalendarDays, Globe, Home, IdCard, Instagram, Library, Mail, MessageCircle, Newspaper, Phone, Share2, Trophy, Building2, Users, Vote } from 'lucide-react';
 import { PROFILE_TAB, profileTabs, resolveProfileTab, whatsappLink } from '@/modules/federations/domain/profile';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
@@ -22,11 +22,16 @@ import { useClipboard } from '@/core/lib/useClipboard';
 import PlansList from '../PlansList';
 import { FedAcervoBlock } from '../acervo/AcervoPublic';
 import { FedAgendaBlock } from '../agenda/AgendaPublic';
+import FedAccountsPublic from '../accounts/FedAccountsPublic';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '../FedPublicBlocks';
+import { FedRefereesBoard } from '../referees/RefereesPublic';
 import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip, FedStoreLink } from '../FedCommsBlocks';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import { t, tn } from '@/core/i18n';
+
+// A aba Eleições (edital, chapas, voto e a área da comissão) baixa só quando abre.
+const ElectionsPublic = lazy(() => import('../elections/ElectionsPublic'));
 
 const ICONE = {
   [PROFILE_TAB.OVERVIEW]: Home,
@@ -38,6 +43,7 @@ const ICONE = {
   [PROFILE_TAB.COURSES]: BookOpen,
   [PROFILE_TAB.CLUBS]: Building2,
   [PROFILE_TAB.CONTACT]: MessageCircle,
+  [PROFILE_TAB.ELECTIONS]: Vote,
 };
 
 /** O contato público (e-mail, telefone, site, Instagram, CNPJ mascarado). */
@@ -175,11 +181,13 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
           <div className="space-y-8">
             <FedSanctionedTournaments federation={f} />
             <FedRankingBlock federation={f} meUid={meUid} />
+            <FedRefereesBoard federation={f} />
           </div>
         )}
         {aba === PROFILE_TAB.DOCUMENTS && (
           <div className="space-y-8">
             <FedAcervoBlock federation={f} limite={10} />
+            <FedAccountsPublic federation={f} />
             <FedGovernanceBlock federation={f} />
           </div>
         )}
@@ -190,6 +198,7 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
           </div>
         )}
         {aba === PROFILE_TAB.CLUBS && <FedAffiliatesSection federation={f} />}
+        {aba === PROFILE_TAB.ELECTIONS && <Suspense fallback={<V2Skeleton lines={5} />}><ElectionsPublic federation={f} meUid={meUid} memberOf={memberOf} /></Suspense>}
         {aba === PROFILE_TAB.CONTACT && (
           <div className="grid gap-6 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-8">

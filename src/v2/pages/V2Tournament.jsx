@@ -22,6 +22,7 @@ import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
+import { TournamentRefereeCrew } from '@/v2/components/federations/referees/RefereesPublic';
 
 function parseDate(value) {
   if (!value) return null;
@@ -239,6 +240,8 @@ export default function V2Tournament() {
           ))}
         </div>
       )}
+
+      <TournamentRefereeCrew tournament={tournament} className="mt-6" />
 
       {/* Tabs */}
       <div data-dica="torneio-abas" className="mt-6 inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">

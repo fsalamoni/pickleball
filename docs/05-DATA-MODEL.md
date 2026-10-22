@@ -1725,6 +1725,9 @@ nada gravado. PR 10: campo opcional `comments` `{ mode open|closed|consultation,
 until_date, until_ms, updated_at_ms, updated_by }` (ausente ⇒ aberto) — vale
 também em `federation_docs`; só o servidor grava.
 
+### `federation_budgets/{fed}_{ano}`, `federation_ledger/{id}`, `federation_account_reports/{fed}_{período}` (NOVAS — orçamento e prestação de contas, módulo `accounts`)
+Orçamento: `federation_id`, `year`, `lines` (centavos por `income.<cat>`/`expense.<cat>`, categorias fixas em `domain/accounts.js`), `notes`, `status` (`draft`|`submitted`|`approved`|`published`), `approved_in { date, event_id, event_title, event_date, note }`, `history[]` (até 30: `kind`, `at_ms`, `by_name`, `reason`, `previous_lines`…), `published { lines, notes, approved_in, at_ms }` — o documento de trabalho nunca leva `pub`; o público lê a cópia `{fed}_{ano}_pub` (`pub: true`, `copy_of`, `year`, `published`), `created_by(_name)`, `created_at(_ms)`, `updated_by`, `updated_at_ms`. Lançamento: `federation_id`, `kind` (`income`|`expense`), `category`, `date`, `amount_cents`, `description`, `counterparty`, `document { name, path, size, content_type, sha256 } | null` (pasta `federacao-contas-oficial/`), `status` (`posted`|`void`), `void_reason`, `voided_by(_name)`, `voided_at_ms`, `created_by(_name)`, `created_at(_ms)`. Prestação: `federation_id`, `period` (`2026`|`2026-Q1`), `status` (`draft`|`submitted`|`opinion`|`approved`|`rejected`|`published`), `statements[]` (`kind` balance_sheet|income_statement|cash_flow|notes|other + arquivo), `notes`, `snapshot` (congelado no envio: `from`, `to`, `income{}`, `expense{}`, totais, `entries`, `auto_entries`, `budget_lines`, `frozen_at_ms`), `fiscal_opinion { verdict approve|approve_with_reservations|reject, text, by, by_name, at_ms, by_admin }`, `assembly { date, result approved|rejected, event_*, note, by_name, at_ms }`, `acervo { statements_doc_id, statements_code, opinion_doc_id } | null`, `pub`, `history[]`, `opened_by(_name)`, `opened_at_ms`, `submitted_*`, `published_*`. Leitura: `finance`/`fiscal`/`admin`; o publicado (`pub == true`) por quem vê a federação, com o módulo ligado; o lançamento nunca é público. **Só o servidor grava** (`federationAccounts`). Zero índice (`federation_id`, e `pub == true` para o público). Na exclusão de conta ficam (são da federação; só `created_by`/`opened_by`); fora da exportação. Campo novo opcional em `federations.governance.board[]`: `pay_cents` (0 = não remunerado) e `pay_note`.
+
 ### `federation_comments/{id}` (PR 10, NOVO — comentários no acervo e na agenda)
 `federation_id`, `target_kind` (`doc` | `event`), `target_id`, `target_key`
 (`{kind}_{id}`), `target_title`, `user_id`, `user_name` (copiado do cadastro),
@@ -1743,6 +1746,44 @@ conta sai (por `user_id`); na exportação entra.
 lê nem grava pelo navegador. Na exclusão de conta sai (por `reporter_id`);
 fora da exportação (é sobre o comentário de outra pessoa). `federations.rules`
 ganha `comments` (opcional; `false` desliga os comentários da federação).
+
+### `federation_referees/{fedId}_{uid}` (NOVO — quadro de arbitragem, `docs/50` §22)
+`federation_id`, `federation_acronym`, `federation_name`, `user_id`, `name`,
+`photo_url`, `city`, `state` (copiados do cadastro), `level` (id de
+`federations.referee_rules.levels`, gravado), `functions[]` (`referee` |
+`head_referee` | `line_judge` | `technical_delegate` |
+`tournament_director`), `status` (`active` | `inactive` | `suspended`),
+`credential_ids[]` (credenciais de árbitro dos cursos), `since` (ISO),
+`public_listing` (padrão `false`), `unavailable[]` (ISO, até 60 — dias em
+que não pode), `stats` `{ acts, no_show, evaluations, avg }`, `added_by`,
+`created_at_ms`, `updated_at_ms`. Subcoleção `private/staff` `{ notes }`
+(só a equipe lê). Leitura: o próprio árbitro e a equipe com
+`courses`/`admin`; **só o servidor grava** (`federationReferees`). Zero
+índice. Exclusão de conta: sai (com `private/staff`); exportação: entra.
+
+### `federation_assignments/{id}` (NOVO — escala de arbitragem)
+`federation_id`, `federation_acronym`, `federation_name`, `event` `{ kind
+tournament|agenda, id, name, date, end_date, city, public }` (copiado),
+`event_key` (`{kind}_{id}`), `function`, `referee_uid`, `referee_name`,
+`referee_level`, `status` (`invited` | `confirmed` | `declined` |
+`replaced` | `done` | `no_show` | `cancelled`), `respond_by` (ISO),
+`fee_cents`, `travel_cents`, `warnings[]` (`unavailable` | `same_day` |
+`athlete` | `level_below`), `conflict` `{ declared, reason }` | null,
+`decline_reason`, `report` `{ text, at_ms, first_at_ms }` | null, `evaluation` `{ scores
+{ rules, positioning, communication, punctuality, presentation }, avg,
+comment, at_ms, by, by_name }` | null, `paid_at_ms`, `paid_by`, `replaces`,
+`replaced_by`, `reminded`, `created_by`, `created_at_ms`, `updated_at_ms`.
+Leitura: o árbitro (`referee_uid`) e a equipe com `courses`/`admin`; **só o
+servidor grava**. Zero índice. Exclusão de conta: fica pseudonimizada
+("Atleta removido", sem conflito nem motivo; a aberta é cancelada) —
+histórico do evento e despesa da federação; exportação: entra.
+
+### `federations.referee_rules` (campo opcional, só o servidor grava)
+`{ levels[] { id, label } (até 8; ausente ⇒ Trainee, Nível 1, Nível 2,
+Certificado), min_level_by_function { [função]: id }, needs { [função]: n },
+fee_default_cents { [função]: centavos }, respond_days (1–30, padrão 3),
+crew_visible (padrão false) }`. Gravado pela ação `rules` de
+`federationReferees` (`fedLocked()`).
 
 ### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
 Contador da numeração: `{ "<tipo>_<ano>": n }`. Só o servidor grava, numa
@@ -1927,6 +1968,16 @@ anônima (consulta pelo protocolo — `reportProtocol(id)`), a equipe
 `discipline`/`admin`, o admin; `list`: quem abriu, a equipe, o admin. A equipe
 só muda `status`/`notes`/`handled_by`/`updated_at`; apaga só o admin da
 plataforma.
+
+### `federation_elections`, `federation_candidacies`, `federation_election_voters`, `federation_election_endorsements`, `federation_ballots` (módulo `elections`, só o servidor — `federationElections`)
+
+- `federation_elections/{id}`: `federation_id`, `title`, `description`, `positions[]` (`id` `c1…`, `label`, `kind` slate|individual, `organ`, `seats`, `gender_min`), `calendar` (notice_on, candidacy_from/to, challenge_to, defense_to, voting_from/to + voting_opens/closes, result_on, inauguration_on), `college` (`min_months`, `weights` por categoria), `mode` online|presential|mixed, `tie_rule`, `endorsement_pct`, `commission[]` + `commission_uids`, `status` draft|published|voting|counting|closed|cancelled, `public`, `notice_text`/`notice_doc_id`/`notice_code`, `endorsements_needed`, `college_frozen`, `voted_count`/`voted_weight`, `presential`, `results[]` (só pesos), `minutes_*`, `governance_applied`, `history[]`. Lê: publicada (`public`) quem vê a federação; a comissão; o admin.
+- `federation_candidacies/{id}`: `election_id`, `federation_id`, `position_id`, `name`, `platform`, `members[]` (uid, name, role, gender) + `member_uids`, `status` submitted|accepted|challenged|rejected|withdrawn, `public` (aceita), `endorsement_count`, `challenges[]` (by_uid, by_name, reason, defense, decision), `alerts[]`, `review`. Lê: aceita, quem vê a federação; quem está nela; quem conduz (`fedElRun`); o admin.
+- `federation_election_voters/{eid}_{uid}` (ou `{eid}_{club|arena}_{org}`): o colégio CONGELADO na abertura — `user_id`, `name`, `category`, `weight`, `kind`, `org_id`, `voted_at_ms`, `receipt`, `channel`. Nunca em quem votou. Lê: o próprio e quem conduz.
+- `federation_election_endorsements/{eid}_{cargo}_{uid}`: um apoio por cargo. Lê: só quem apoiou.
+- `federation_ballots/{aleatório}`: `election_id`, `choices` (cargo → chapa|blank|null), `weight` — **sem uid**, gravada na mesma transação que marca o eleitor. Ninguém lê pelo cliente.
+
+Zero índice composto. Exportação e exclusão: ver `docs/50-FEDERACAO.md` §22.5.
 
 ### `federation_news/{id}` (PR 4, módulo `news` — o cliente escreve)
 `federation_id`, `title`, `summary`, `body`, `image_url`, `link`, `pinned`,

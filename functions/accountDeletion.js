@@ -198,6 +198,8 @@ const DELETE_BY_QUERY = Object.freeze([
   // que a pessoa escreveu como equipe também saem) e as denúncias que fez.
   { col: 'federation_comments', field: 'user_id', label: 'Comentários em documentos e eventos de federação' },
   { col: 'federation_comment_reports', field: 'reporter_id', label: 'Denúncias de comentários de federação' },
+  // O apoio a uma chapa eleitoral é da pessoa (a contagem na chapa fica).
+  { col: 'federation_election_endorsements', field: 'user_id', label: 'Apoios a chapas eleitorais de federação' },
   // Acesso de suporte a federações que estava aberto (o registro do motivo
   // fica em `admin_access_logs`, que não é apagado).
   { col: 'federation_admin_grants', field: 'admin_uid', label: 'Acessos de suporte a federações abertos' },
@@ -247,6 +249,9 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'federation_news', field: 'created_by', label: 'Notícias de federação que escreveu (como equipe)' },
   { col: 'federation_docs', field: 'created_by', label: 'Documentos do acervo oficial de federação que preparou (como equipe; o ato publicado é registro da federação)' },
   { col: 'federation_events', field: 'created_by', label: 'Eventos do calendário oficial de federação que marcou (como equipe; o evento é da agenda da federação)' },
+  { col: 'federation_budgets', field: 'created_by', label: 'Orçamentos de federação que criou (como equipe; o orçamento é da federação)' },
+  { col: 'federation_ledger', field: 'created_by', label: 'Lançamentos de receita e despesa de federação que fez (como equipe; a conta é da federação)' },
+  { col: 'federation_account_reports', field: 'opened_by', label: 'Prestações de contas de federação que abriu (como equipe; as contas são da federação)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */
@@ -318,8 +323,20 @@ async function coletarFederacoes(db, uid) {
   manifestacoes.docs.forEach((d) => itens.push({ ref: d.ref, patch: { reporter_uid: null, anonymous: true } }));
   const documentos = await consultar(db, 'federation_documents_submitted', 'user_id', '==', uid);
   documentos.docs.forEach((d) => deletes.push(d.ref));
-  const truncated = [filiacoes, dependentes, cobrancas, resultados, transferencias, sancoes, inscricoes, credenciais, manifestacoes, documentos].some((r) => r.truncated);
-  return { itens, deletes, truncated, count: itens.length + documentos.docs.length };
+  // Arbitragem: o cadastro no quadro (e as notas da equipe) é APAGADO; a
+  // escala fica — é o histórico do evento e a diária paga é despesa da
+  // federação —, sem o nome e sem o conflito declarado; a escala em aberto
+  // é cancelada (conta excluída não apita).
+  const quadros = await consultar(db, 'federation_referees', 'user_id', '==', uid);
+  quadros.docs.forEach((d) => { deletes.push(d.ref.collection('private').doc('staff')); deletes.push(d.ref); });
+  const escalas = await consultar(db, 'federation_assignments', 'referee_uid', '==', uid);
+  escalas.docs.forEach((d) => {
+    const data = d.data() || {};
+    const encerra = ['invited', 'confirmed'].includes(data.status) ? { status: 'cancelled', cancel_reason: 'Conta excluída.' } : {};
+    itens.push({ ref: d.ref, patch: { ...encerra, referee_name: REMOVED_ATHLETE, conflict: null, decline_reason: '' } });
+  });
+  const truncated = [filiacoes, dependentes, cobrancas, resultados, transferencias, sancoes, inscricoes, credenciais, manifestacoes, documentos, quadros, escalas].some((r) => r.truncated);
+  return { itens, deletes, truncated, count: itens.length + documentos.docs.length + quadros.docs.length };
 }
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -492,6 +509,17 @@ function buildReport(f) {
 const campos = (idField, name, clear = [], label = REMOVED_ATHLETE) => (d, uid) => (
   patchFlatFields(d, uid, [{ idField, name, clear }], label)
 );
+
+/** Chapa eleitoral de federação: o nome da pessoa sai da composição, de quem registrou e das impugnações que fez. */
+function patchCandidacy(d, uid) {
+  const patch = {};
+  const members = patchArrayItems(d.members, uid, { name: ['name'], label: REMOVED_USER });
+  if (members) patch.members = members;
+  const challenges = patchArrayItems(d.challenges, uid, { idKeys: ['by_uid'], name: ['by_name'], label: REMOVED_USER });
+  if (challenges) patch.challenges = challenges;
+  if (d.submitted_by === uid && d.submitted_by_name && d.submitted_by_name !== REMOVED_USER) patch.submitted_by_name = REMOVED_USER;
+  return Object.keys(patch).length ? patch : null;
+}
 
 /**
  * Inscrição de torneio. Troca nome, foto e e-mail do LADO da pessoa, os
@@ -1153,10 +1181,16 @@ const PSEUDO_SPECS = Object.freeze([
   // a mensalidade da arena), sem o nome; a carteirinha deixa de verificar
   // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
   // pediu para abrir fica, com "Usuário removido" em quem pediu.
-  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted'] },
+  { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted', 'federation_referees', 'federation_assignments'] },
   // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
   { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },
+  // Eleições de federação: o eleitor do colégio (registro de que votou) e as
+  // chapas FICAM, sem o nome — são parte do resultado oficial. A cédula
+  // (`federation_ballots`) não tem uid nem nome: não há o que tirar dela.
+  { label: 'Eleições de federação em que estava no colégio (ficam, sem o nome)', bucket: 'retained', col: 'federation_election_voters', wheres: [['user_id', '==']], patch: (d) => (d.kind === 'person' && d.name !== REMOVED_USER ? { name: REMOVED_USER } : null), cols: ['federation_ballots'] },
+  { label: 'Chapas eleitorais de federação (ficam, sem o nome)', bucket: 'retained', col: 'federation_candidacies', wheres: [['member_uids', 'array-contains']], patch: patchCandidacy },
+  { label: 'Comissões eleitorais de federação (ficam, sem o nome)', bucket: 'retained', col: 'federation_elections', wheres: [['commission_uids', 'array-contains']], patch: (d, uid) => { const commission = patchArrayItems(d.commission, uid, { name: ['name'], label: REMOVED_USER }); return commission ? { commission } : null; } },
   // Mercado
   { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders', 'market_coupons', 'market_gift_cards'] },
   { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },

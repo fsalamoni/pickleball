@@ -10,7 +10,7 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt, Vote } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -74,6 +74,17 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'credenciais', label: tk('Credenciais'), icon: ShieldCheck },
       ],
     },
+    // Arbitragem: a equipe de arbitragem (`courses`) ou o admin (o admin master antigo não tem `courses` gravado).
+    (pode(FED_PERMISSION.COURSES) || admin) && modulo('referees') && {
+      id: 'arbitragem', grupo: 'atender', label: tk('Arbitragem'), icon: Flag, dica: 'federacao-secao-arbitragem',
+      tabs: [
+        { value: 'arbitragem', label: tk('Escalas'), icon: CalendarCheck },
+        { value: 'arbitragem-quadro', label: tk('Quadro'), icon: Users },
+        { value: 'arbitragem-avaliacoes', label: tk('Avaliações e súmulas'), icon: Star },
+        { value: 'arbitragem-diarias', label: tk('Diárias'), icon: Banknote },
+        { value: 'arbitragem-regras', label: tk('Regras e níveis'), icon: Settings2 },
+      ],
+    },
     pode(FED_PERMISSION.DISCIPLINE) && (modulo('discipline') || residual.discipline) && {
       id: 'disciplina', grupo: 'atender', label: tk('Disciplina'), icon: Gavel, dica: 'federacao-secao-disciplina',
       tabs: [
@@ -112,6 +123,11 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         ...(moderaComentarios && !modulo('official_docs') ? [abaComentarios] : []),
       ],
     },
+    // Eleições: o admin prepara e publica o edital; quem CONDUZ é a comissão eleitoral.
+    admin && modulo('elections') && {
+      id: 'eleicoes', grupo: 'gerir', label: tk('Eleições'), icon: Vote, dica: 'federacao-secao-eleicoes',
+      tabs: [{ value: 'eleicoes', label: tk('Eleições'), icon: Vote }],
+    },
     pode(FED_PERMISSION.FINANCE) && {
       id: 'financeiro', grupo: 'atender', label: tk('Financeiro'), icon: Wallet, dica: 'federacao-secao-financeiro',
       tabs: [
@@ -119,9 +135,23 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'recebidos', label: tk('Recebidos'), icon: Wallet },
       ],
     },
-    (pode(FED_PERMISSION.MEMBERS) || pode(FED_PERMISSION.FINANCE)) && {
+    // Contas (módulo `accounts`): o financeiro prepara; o conselho fiscal lê tudo e dá o parecer.
+    (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL)) && modulo('accounts') && {
+      id: 'contas', grupo: 'gerir', label: tk('Contas'), icon: Calculator, dica: 'federacao-secao-contas',
+      tabs: [
+        { value: 'orcamento', label: tk('Visão geral'), icon: BarChart3 },
+        { value: 'orcamento-anual', label: tk('Orçamento'), icon: Calculator },
+        { value: 'lancamentos', label: tk('Lançamentos'), icon: Receipt },
+        { value: 'prestacao-contas', label: tk('Prestação de contas'), icon: ScrollText },
+      ],
+    },
+    (admin || pode(FED_PERMISSION.MEMBERS) || pode(FED_PERMISSION.FINANCE)) && {
       id: 'indicadores', grupo: 'gerir', label: tk('Indicadores'), icon: BarChart3, dica: 'federacao-secao-indicadores',
-      tabs: [{ value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 }],
+      tabs: [
+        { value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 },
+        // A conformidade com a Lei Geral do Esporte (zero banco): só o admin.
+        ...(admin ? [{ value: 'conformidade', label: tk('Conformidade'), icon: Scale, dica: 'federacao-aba-conformidade' }] : []),
+      ],
     },
     // Tudo o que muda o que o PÚBLICO vê, num lugar só (separado de planos, Pix, módulos e regras).
     admin && {

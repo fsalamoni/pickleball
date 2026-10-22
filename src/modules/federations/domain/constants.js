@@ -33,6 +33,13 @@ export const FED_COLLECTIONS = Object.freeze({
   events: 'federation_events',
   comments: 'federation_comments',
   invites: 'federation_invites',
+  referees: 'federation_referees',
+  assignments: 'federation_assignments',
+  elections: 'federation_elections',
+  candidacies: 'federation_candidacies',
+  electionVoters: 'federation_election_voters',
+  electionEndorsements: 'federation_election_endorsements',
+  ballots: 'federation_ballots',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -99,6 +106,8 @@ export const FED_PERMISSION = Object.freeze({
   DOCS: 'docs',
   /** Pessoas da equipe: nomear, prorrogar mandato, tirar (só o servidor confere — `federationStaff`). */
   STAFF: 'staff',
+  /** Conselho fiscal: lê o orçamento e as contas e registra o parecer; não lança nada. */
+  FISCAL: 'fiscal',
 });
 
 /** O que cada permissão abre — é o que aparece ao montar um cargo. */
@@ -107,11 +116,12 @@ export const FED_PERMISSION_META = Object.freeze({
   members: { label: tk('Filiados'), description: tk('Pedidos de filiação, filiados, transferências, documentos e importação.') },
   finance: { label: tk('Financeiro'), description: tk('Cobranças, recebimentos e a conta Pix.') },
   competitions: { label: tk('Competições'), description: tk('Chancela de torneios, resultados e ranking oficial.') },
-  courses: { label: tk('Cursos e credenciais'), description: tk('Cursos, inscrições, aprovação e credenciais.') },
+  courses: { label: tk('Cursos e arbitragem'), description: tk('Cursos, inscrições, credenciais, quadro de árbitros e escalas.') },
   discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções e manifestações da ouvidoria.') },
   comms: { label: tk('Comunicação'), description: tk('Notícias, avisos, cupons e campanhas.') },
   docs: { label: tk('Acervo oficial'), description: tk('Normas, atos, atas, editais e documentos de transparência: rascunho, publicação, retificação e visibilidade.') },
   staff: { label: tk('Equipe'), description: tk('Nomeia pessoas para cargos sem poder de admin master, prorroga mandatos e tira da equipe.') },
+  fiscal: { label: tk('Conselho fiscal'), description: tk('Lê o orçamento, os lançamentos e as prestações de contas e registra o parecer. Não lança nem aprova pagamento.') },
 });
 
 /** Mandato: o máximo que o cargo pode durar sem alerta (Lei 14.597/2023, art. 36: até 4 anos). */
@@ -131,6 +141,7 @@ export const STAFF_ROLE = Object.freeze({
   REFEREES: 'referees',
   DISCIPLINE: 'discipline',
   COMMUNICATION: 'communication',
+  FISCAL_COUNCIL: 'fiscal_council',
 });
 
 export const STAFF_ROLE_LABELS = Object.freeze({
@@ -142,6 +153,7 @@ export const STAFF_ROLE_LABELS = Object.freeze({
   referees: tk('Arbitragem e cursos'),
   discipline: tk('Disciplina'),
   communication: tk('Comunicação'),
+  fiscal_council: tk('Conselho fiscal'),
 });
 
 export const STAFF_ROLE_DESCRIPTIONS = Object.freeze({
@@ -153,6 +165,7 @@ export const STAFF_ROLE_DESCRIPTIONS = Object.freeze({
   referees: tk('Cursos, árbitros e credenciais.'),
   discipline: tk('Sanções e ouvidoria.'),
   communication: tk('Avisos, notícias, cupons e campanhas.'),
+  fiscal_council: tk('Lê o orçamento e as contas e dá o parecer sobre a prestação de contas.'),
 });
 
 const TODAS = Object.values(FED_PERMISSION);
@@ -167,6 +180,7 @@ export const STAFF_ROLE_PERMISSIONS = Object.freeze({
   referees: [FED_PERMISSION.COURSES],
   discipline: [FED_PERMISSION.DISCIPLINE],
   communication: [FED_PERMISSION.COMMS],
+  fiscal_council: [FED_PERMISSION.FISCAL],
 });
 
 /**
@@ -188,6 +202,9 @@ export const FED_MODULE = Object.freeze({
   PROMOS: 'promos',
   OFFICIAL_DOCS: 'official_docs',
   CALENDAR: 'calendar',
+  REFEREES: 'referees',
+  ACCOUNTS: 'accounts',
+  ELECTIONS: 'elections',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -202,6 +219,9 @@ export const FED_MODULE_META = Object.freeze({
   promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available', central: tk('Comunicação → Cupons e campanhas'), tab: 'divulgacao', page: tk('Visão geral e tela inicial') },
   official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available', central: tk('Acervo oficial (documentos e transparência)'), tab: 'acervo', page: tk('Aba Documentos e a página de transparência') },
   calendar: { label: tk('Calendário oficial'), description: tk('Agenda esportiva e institucional (assembleias, diretoria, conselho fiscal, prazos e eventos), com torneios chancelados, adiamentos com motivo e agenda para assinar no celular.'), status: 'available', central: tk('Agenda (calendário oficial)'), tab: 'agenda', page: tk('Aba Agenda e a agenda para assinar') },
+  elections: { label: tk('Eleições'), description: tk('Edital, colégio eleitoral com pesos, chapas, impugnações, votação secreta pelo app, apuração e resultado publicado.'), status: 'available', central: tk('Eleições'), tab: 'eleicoes', page: tk('Aba Eleições: edital, chapas e resultado') },
+  referees: { label: tk('Arbitragem'), description: tk('Quadro de árbitros por nível, disponibilidade, escalas com convocação e confirmação, impedimentos, avaliação, súmulas e diárias.'), status: 'available', central: tk('Arbitragem (quadro e escalas)'), tab: 'arbitragem', page: tk('Aba Competições: o quadro de arbitragem') },
+  accounts: { label: tk('Orçamento e prestação de contas'), description: tk('Orçamento anual por categoria, receitas e despesas lançadas, orçado × realizado, parecer do conselho fiscal e contas publicadas na transparência.'), status: 'available', central: tk('Contas (orçamento e prestação de contas)'), tab: 'orcamento', page: tk('Página de transparência: orçamento e contas') },
 });
 
 /* ---------------------------------------------------- PR 4: notícias -- */

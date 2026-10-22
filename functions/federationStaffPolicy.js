@@ -7,13 +7,13 @@
  * `federationStaff.parity.test.js`. A regra do Firestore tem a mesma conta
  * em `fedPerms`/`fedRolePerms`.
  */
-const ALL = Object.freeze(['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff']);
+const ALL = Object.freeze(['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal']);
 
 /** Papel antigo → permissões (documento sem `perms`). */
 const PERMS = Object.freeze({
   president: ALL, director: ALL,
   secretary: ['members', 'docs'], treasurer: ['finance'], competitions: ['competitions'], referees: ['courses'],
-  discipline: ['discipline'], communication: ['comms'],
+  discipline: ['discipline'], communication: ['comms'], fiscal_council: ['fiscal'],
 });
 
 const TERM_MAX_MONTHS = 48;
@@ -29,6 +29,7 @@ const DEFAULT_ROLES = Object.freeze([
   ['referees', 'Arbitragem e cursos', 'Cursos, árbitros e credenciais.'],
   ['discipline', 'Disciplina', 'Sanções e ouvidoria.'],
   ['communication', 'Comunicação', 'Avisos, notícias, cupons e campanhas.'],
+  ['fiscal_council', 'Conselho fiscal', 'Lê o orçamento e as contas e dá o parecer sobre a prestação de contas.'],
 ].map(([id, name, description]) => Object.freeze({
   id, name, description, perms: [...PERMS[id]], is_master: id === 'president',
   term_months: id === 'president' || id === 'director' ? TERM_MAX_MONTHS : 0,

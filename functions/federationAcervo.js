@@ -375,7 +375,54 @@ async function file(ctx, actor, data, { fed, perms }) {
   return { ok: true, name: item.name, contentType: meta.contentType || item.content_type || 'application/octet-stream', base64: Buffer.from(bytes).toString('base64') };
 }
 
+/**
+ * Publica DIRETO um ato só de texto, gerado por outro módulo (o edital e a
+ * ata das eleições): mesma régua, mesma numeração e mesmo aviso a quem segue
+ * do `publish`, sem passar por rascunho. Quem chama já conferiu a permissão.
+ */
+async function publicarAtoDeTexto(ctx, actor, fed, input) {
+  const value = exigeValido({ ...input, files: [], media_links: [], relations: [] });
+  const ref = ctx.db.collection(DOCS).doc();
+  const ano = anoBrasil(ctx.now);
+  const fedRef = ctx.db.collection(f.C.federations).doc(fed.id);
+  const resultado = await ctx.db.runTransaction(async (tr) => {
+    const fedSnap = await tr.get(fedRef);
+    const contadores = { ...((fedSnap.data() || {}).doc_numbers || {}) };
+    let number = null;
+    if (A.TYPES[value.type].numbered) {
+      const chave = A.counterKey(value.type, ano);
+      number = (Number(contadores[chave]) || 0) + 1;
+      contadores[chave] = number;
+      tr.update(fedRef, { doc_numbers: contadores });
+    }
+    const code = A.codeOf(value.type, number, ano);
+    const ts = ctx.Timestamp.fromMillis(ctx.now);
+    tr.set(ref, {
+      federation_id: fed.id, ...value, status: A.STATUS.PUBLISHED, number, year: ano, code,
+      version: 1, version_reason: '', version_at_ms: ctx.now, versions: [],
+      created_by: actor.uid, created_by_name: texto(actor.name, 80), created_at: ts, created_at_ms: ctx.now,
+      published_at: ts, published_at_ms: ctx.now, published_by: actor.uid, published_by_name: texto(actor.name, 80),
+      updated_at: ts, updated_at_ms: ctx.now,
+    });
+    return { number, code };
+  });
+  await avisarDoAto(ctx, actor, fed, { ...value, id: ref.id, code: resultado.code }, 'publish');
+  await f.auditoria(ctx, actor, 'federation_doc_publish', { federation_id: fed.id, doc_id: ref.id, code: resultado.code, type: value.type, origin: input.origin || '' });
+  return { docId: ref.id, ...resultado };
+}
+
 const ACOES = { save, delete: remove, publish, rectify, visibility, withdraw };
+
+/**
+ * Cria e publica um ato de uma vez, pela MESMA régua (`save` + `publish`):
+ * usado pela prestação de contas (`federationAccounts.js`), que já conferiu a
+ * permissão dela. Os arquivos têm de estar em `federacao-acervo/{actor}/`.
+ */
+async function publicarAto(ctx, actor, fed, doc) {
+  const { docId } = await save(ctx, actor, { doc }, { fed });
+  const r = await publish(ctx, actor, { docId }, { fed });
+  return { ...r, docId };
+}
 
 async function acervo(ctx, actor, data = {}) {
   const c = await contexto(ctx, actor, data);
@@ -386,4 +433,4 @@ async function acervo(ctx, actor, data = {}) {
   return fn(ctx, actor, data, c);
 }
 
-module.exports = { acervo, avisarSeguidores, DOCS, FOLLOWERS, VERSIONS_MAX };
+module.exports = { acervo, avisarSeguidores, publicarAtoDeTexto, DOCS, FOLLOWERS, VERSIONS_MAX, oficializar, publicarAto };

@@ -133,6 +133,16 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Arbitragem** (módulo `referees`, `docs/50` §22): `federation_referees` e
+  `federation_assignments` **só o servidor grava** (`functions/federationReferees.js`,
+  régua em `domain/referees.js` com cópia e paridade em
+  `functions/federationRefereesPolicy.js`; `federations.referee_rules` em
+  `fedLocked()`). O árbitro lê só o seu, a equipe `courses`/`admin` lê tudo, as
+  notas (`private/staff`) só a equipe. Alerta de impedimento **avisa, não
+  bloqueia**. O público vê só pela função `federationRefereesPublic` (quem
+  aceitou aparecer + confirmados de evento público, nome e função) — nunca
+  valor, nota, conflito nem disponibilidade. Diária paga vira despesa por
+  `refereeFeesAsExpenses`. Funções, situações e ids de nível são gravados.
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da
@@ -204,6 +214,15 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   O link do arquivo existe só enquanto o documento é público (cada troca gera
   token novo); o restrito, até 9 MB, vai pela função (`file`). Arquivo novo só
   da pasta de quem salva. Ver `docs/50-FEDERACAO.md` §14.
+- **Contas** (módulo `accounts`, `docs/50-FEDERACAO.md` §22): orçamento,
+  lançamentos e prestação de contas **só o servidor grava**
+  (`functions/federationAccounts.js`, régua em `federationAccountsPolicy.js`
+  com paridade contra `domain/accounts.js`); a cobrança paga entra sozinha
+  como receita (nunca lance de novo); o retrato da prestação **congela** no
+  envio ao conselho e fecha o período; publicar exige o parecer; o público
+  só lê `pub == true` e o lançamento nunca; categorias e `?aba=`
+  (`orcamento`, `orcamento-anual`, `lancamentos`, `prestacao-contas`) são
+  contrato. `extraExpenses`/`despesasDerivadas()` é onde a arbitragem entra.
 - **Revisão de UX, Entrega 1** (2026-10-22): link público de torneio/clube é
   `tournamentPath(id, { inApp })` e `orgLink` (visitante sem conta nunca cai no
   login); cupons e loja só para quem entrou; torneios chancelados divididos por
@@ -219,3 +238,12 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   lembrete de cobrança vencida na varredura (`overdue_notified`); "Em vigor" só
   em norma (`docHasValidity`); `whatsappLink`; "Filiar-se neste plano"
   (`?plano=`). Ver `docs/50-FEDERACAO.md` §21.
+- **Eleições** (módulo `elections`, 2026-10-22): `domain/elections.js` (cópia
+  de `functions/federationElectionsPolicy.js`, com paridade), função
+  `federationElections`, telas em `v2/components/federations/elections/` e
+  Central → Eleições. **O voto é secreto**: `federation_ballots` sem uid, id
+  aleatório, gravada na mesma transação que marca o eleitor; ninguém lê pelo
+  cliente; a tela mostra só % de participação e o resultado só em pesos. Quem
+  conduz é a comissão (`fedElRun` na regra; sem comissão, o admin). O colégio
+  congela na abertura. Edital e ata vão ao acervo (`publicarAtoDeTexto`). Ver
+  `docs/50-FEDERACAO.md` §22.

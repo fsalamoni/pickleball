@@ -356,20 +356,23 @@ function RegrasTab({ federation }) {
 /* ------------------------------------------------------------ governança -- */
 
 const vazio = { statute_url: '', bylaws: '', mandate: { start: '', end: '' }, board: [], minutes: [], women_count: '' };
+// A remuneração é digitada em reais (`pay_txt`) e vai em centavos; em branco = não informada.
+const reaisDoCentavo = (c) => (c != null ? (c / 100).toFixed(2).replace('.', ',') : '');
+const comRemuneracao = (x) => ({ ...x, board: x.board.map(({ pay_txt, ...b }) => ({ ...b, pay_cents: String(pay_txt ?? '').trim() === '' ? null : parseBrlCents(pay_txt) })) });
 
 function GovernancaTab({ federation }) {
   const { user } = useAuth();
   const g = federation.governance || {};
-  const [f, setF, marcarSalvo] = useRascunho({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: g.board || [], minutes: g.minutes || [], women_count: g.women_count ?? '' });
+  const [f, setF, marcarSalvo] = useRascunho({ ...vazio, ...g, mandate: { ...vazio.mandate, ...(g.mandate || {}) }, board: (g.board || []).map((b) => ({ ...b, pay_txt: reaisDoCentavo(b.pay_cents) })), minutes: g.minutes || [], women_count: g.women_count ?? '' });
   const cota = womenQuota({ board: f.board, women_count: f.women_count === '' ? null : Number(f.women_count) });
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setItem = (lista, i, patch) => set({ [lista]: f[lista].map((x, j) => (j === i ? { ...x, ...patch } : x)) });
   const tira = (lista, i) => set({ [lista]: f[lista].filter((_, j) => j !== i) });
-  const m = useFederationMutation(() => updateFederationGovernance(federation.id, f, { uid: user?.uid }));
+  const m = useFederationMutation(() => updateFederationGovernance(federation.id, comRemuneracao(f), { uid: user?.uid }));
   const salvar = (e) => {
     e.preventDefault();
-    const r = validateGovernance(f);
+    const r = validateGovernance(comRemuneracao(f));
     if (!r.ok) { setErros(r.errors); return; }
     const enviado = f;
     m.mutate(undefined, { onSuccess: () => { marcarSalvo(enviado); toast.success(t('Governança salva.')); }, onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
@@ -390,12 +393,15 @@ function GovernancaTab({ federation }) {
           <h3 className="font-bold text-ink">{t('Diretoria')}</h3>
           {f.board.map((b, i) => (
             <div key={i} className="grid gap-3 sm:grid-cols-12">
-              <V2Field label={t('Cargo')} htmlFor={`gv-cargo-${i}`} error={erros[`board.${i}`]} className="sm:col-span-5"><V2Input id={`gv-cargo-${i}`} maxLength={60} value={b.role} onChange={(e) => setItem('board', i, { role: e.target.value })} /></V2Field>
-              <V2Field label={t('Nome')} htmlFor={`gv-nome-${i}`} className="sm:col-span-6"><V2Input id={`gv-nome-${i}`} maxLength={80} value={b.name} onChange={(e) => setItem('board', i, { name: e.target.value })} /></V2Field>
+              <V2Field label={t('Cargo')} htmlFor={`gv-cargo-${i}`} error={erros[`board.${i}`]} className="sm:col-span-3"><V2Input id={`gv-cargo-${i}`} maxLength={60} value={b.role} onChange={(e) => setItem('board', i, { role: e.target.value })} /></V2Field>
+              <V2Field label={t('Nome')} htmlFor={`gv-nome-${i}`} className="sm:col-span-4"><V2Input id={`gv-nome-${i}`} maxLength={80} value={b.name} onChange={(e) => setItem('board', i, { name: e.target.value })} /></V2Field>
+              <V2Field label={t('Remuneração mensal (R$)')} htmlFor={`gv-pag-${i}`} error={erros[`board.${i}.pay`]} className="sm:col-span-2"><V2Input id={`gv-pag-${i}`} inputMode="decimal" placeholder="—" value={b.pay_txt ?? ''} onChange={(e) => setItem('board', i, { pay_txt: e.target.value })} /></V2Field>
+              <V2Field label={t('Observação')} htmlFor={`gv-pag-nota-${i}`} className="sm:col-span-2"><V2Input id={`gv-pag-nota-${i}`} maxLength={120} value={b.pay_note || ''} onChange={(e) => setItem('board', i, { pay_note: e.target.value })} /></V2Field>
               <div className="flex items-end sm:col-span-1"><V2Button type="button" size="sm" variant="ghost" onClick={() => tira('board', i)} aria-label={t('Remover {nome}', { nome: b.name || t('membro') })}>×</V2Button></div>
             </div>
           ))}
-          <V2Button type="button" variant="secondary" disabled={f.board.length >= BOARD_MAX} onClick={() => set({ board: [...f.board, { role: '', name: '' }] })}><Plus className="h-4 w-4" />{t('Acrescentar cargo')}</V2Button>
+          <V2Button type="button" variant="secondary" disabled={f.board.length >= BOARD_MAX} onClick={() => set({ board: [...f.board, { role: '', name: '', pay_txt: '' }] })}><Plus className="h-4 w-4" />{t('Acrescentar cargo')}</V2Button>
+          {f.board.length > 0 && <p className="text-xs text-gray-500">{t('Remuneração dos dirigentes (Lei 9.615/98, art. 18-A): aparece na página da federação. Em branco = não informada; 0 = não remunerado.')}</p>}
           {f.board.length > 0 && (
             <div className="space-y-2 border-t border-gray-100 pt-3" data-dica="federacao-cota-mulheres">
               <V2Field label={t('Quantas dessas pessoas são mulheres?')} htmlFor="gv-mulheres" error={erros.women_count} hint={t('Só o número, para conferir a cota da lei. Não aparece na página da federação.')}>

@@ -16,6 +16,11 @@ describe('validateGovernance', () => {
     expect(r.ok).toBe(false);
     expect(Object.keys(r.errors).sort()).toEqual(['board.0', 'mandate.end', 'minutes.0.title', 'statute_url']);
   });
+  it('remuneração do dirigente: opcional, zero vale (não remunerado), negativo recusa', () => {
+    const r = validateGovernance({ board: [{ role: 'Presidente', name: 'Ana', pay_cents: 0, pay_note: ' pro bono ' }, { role: 'Tesoureiro', name: 'Bia', pay_cents: 350000 }, { role: 'Vice', name: 'Caio', pay_cents: '' }] });
+    expect(r.value.board).toEqual([{ role: 'Presidente', name: 'Ana', pay_cents: 0, pay_note: 'pro bono' }, { role: 'Tesoureiro', name: 'Bia', pay_cents: 350000 }, { role: 'Vice', name: 'Caio' }]);
+    expect(validateGovernance({ board: [{ role: 'P', name: 'A', pay_cents: -1 }] }).errors['board.0.pay']).toBeTruthy();
+  });
 });
 
 describe('hasGovernance / sortMinutes', () => {
