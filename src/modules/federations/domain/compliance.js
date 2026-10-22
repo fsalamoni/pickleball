@@ -29,12 +29,17 @@ const hojeIso = (nowMs) => new Date(nowMs - 3 * 3600_000).toISOString().slice(0,
 
 const item = (id, label, basis, tab, status, detail) => ({ id, label, basis, tab, status, detail });
 
+/** Com o mandato a menos disto do fim, a eleição já deveria estar marcada. */
+export const ELECTION_LEAD_DAYS = 180;
+const somaDias = (iso, d) => new Date(Date.parse(`${iso}T00:00:00Z`) + d * 86400000).toISOString().slice(0, 10);
+
 /**
- * @param {{ federation: object, staff?: object[], docs?: object[], events?: object[], nowMs?: number }} fontes
- *   `staff`, `docs` e `events` ausentes (undefined) = não carregaram ⇒ o item fica "não deu para conferir".
+ * @param {{ federation: object, staff?: object[], docs?: object[], events?: object[], budgets?: object[], accountReports?: object[], elections?: object[], nowMs?: number }} fontes
+ *   Fonte ausente (undefined) = não carregou ⇒ o item fica "não deu para conferir".
+ *   `budgets`/`accountReports` só valem com o módulo `accounts`; `elections` com `elections`.
  * @returns {Array<{ id, label, basis, tab, status, detail }>}
  */
-export function complianceChecklist({ federation, staff, docs, events, nowMs = Date.now() } = {}) {
+export function complianceChecklist({ federation, staff, docs, events, budgets, accountReports, elections, nowMs = Date.now() } = {}) {
   const f = federation || {};
   const g = f.governance || {};
   const hoje = hojeIso(nowMs);
@@ -68,6 +73,30 @@ export function complianceChecklist({ federation, staff, docs, events, nowMs = D
   else if (fim < hoje) { mStatus = 'attention'; mDetail = t('O mandato terminou em {fim}. Registre a nova diretoria ou a eleição.', { fim: br(fim) }); }
   out.push(item('mandate', tk('Mandato da diretoria'), tk('Lei 14.597/2023, art. 36, I'), 'governanca', mStatus, mDetail));
 
+  // 3a. Eleição marcada antes do fim do mandato (módulo de eleições).
+  if (fedModuleOn(f, 'elections')) {
+    const lb = [tk('Eleição antes do fim do mandato'), tk('Lei 14.597/2023, art. 36, I e X, h')];
+    if (!fim) out.push(item('election', ...lb, 'governanca', 'unknown', t('Informe o fim do mandato em Transparência para conferir a eleição.')));
+    else if (!Array.isArray(elections)) out.push(item('election', ...lb, 'eleicoes', 'unknown', t('Não deu para ler as eleições.')));
+    else {
+      const desde = somaDias(fim, -ELECTION_LEAD_DAYS);
+      const posse = (e) => e.calendar?.inauguration_on || e.calendar?.result_on || '';
+      const valida = elections.filter((e) => !['draft', 'cancelled'].includes(e.status) && posse(e) >= desde)
+        .sort((a, b) => posse(a).localeCompare(posse(b)))[0];
+      if (valida) {
+        out.push(item('election', ...lb, 'eleicoes', 'ok', valida.status === 'closed'
+          ? t('Eleição "{titulo}" concluída. Atualize a diretoria e o novo mandato em Transparência.', { titulo: valida.title })
+          : t('Eleição "{titulo}" publicada, com resultado em {data}.', { titulo: valida.title, data: br(posse(valida)) })));
+      } else if (hoje < desde) {
+        out.push(item('election', ...lb, 'eleicoes', 'ok', t('O mandato vai até {fim}. Publique o edital da eleição a partir de {data}.', { fim: br(fim), data: br(desde) })));
+      } else {
+        out.push(item('election', ...lb, 'eleicoes', 'attention', fim < hoje
+          ? t('O mandato terminou em {fim} e não há eleição publicada para a sucessão.', { fim: br(fim) })
+          : t('O mandato termina em {fim}. Publique o edital da eleição: a sucessão precisa estar resolvida antes.', { fim: br(fim) })));
+      }
+    }
+  }
+
   // 4. Conselho fiscal nomeado (quem tem `fiscal` sem ser admin — o conselho é autônomo da diretoria).
   if (!Array.isArray(staff)) {
     out.push(item('fiscal', tk('Conselho fiscal'), tk('Lei 14.597/2023, art. 36, X, f'), 'equipe', 'unknown', t('Não deu para ler a equipe.')));
@@ -98,16 +127,41 @@ export function complianceChecklist({ federation, staff, docs, events, nowMs = D
   }
 
   // 6. Demonstrações financeiras do ano anterior publicadas até abril.
-  if (!transp) {
+  // Com o módulo de contas, vale a prestação de contas publicada (já passou pelo
+  // conselho fiscal); senão, o documento do acervo.
+  const contasOn = fedModuleOn(f, 'accounts');
+  const atrasado = hoje.slice(5) > '04-30';
+  if (contasOn && Array.isArray(accountReports)) {
+    const rel = accountReports.find((r) => Number(r.year) === ano - 1);
+    const ok = rel?.status === 'published' || Boolean(doc('accounts')?.ok);
+    const fase = rel && !ok ? ({ draft: t('em rascunho'), submitted: t('com o conselho fiscal'), opinion: t('com parecer, esperando a aprovação'), approved: t('aprovada, falta publicar'), rejected: t('reprovada; refaça e envie de novo') }[rel.status] || '') : '';
+    out.push(item('accounts', tk('Contas do ano anterior'), tk('Lei 14.597/2023, art. 63'), 'prestacao-contas', ok ? 'ok' : 'attention',
+      ok ? t('A prestação de contas de {ano} está publicada.', { ano: ano - 1 })
+        : fase ? t('A prestação de contas de {ano} está {fase}.', { ano: ano - 1, fase })
+          : atrasado ? t('As demonstrações de {ano} deviam estar publicadas até o último dia útil de abril.', { ano: ano - 1 })
+            : t('Publique as demonstrações de {ano} até o último dia útil de abril.', { ano: ano - 1 })));
+  } else if (!transp) {
     out.push(item('accounts', tk('Contas do ano anterior'), tk('Lei 14.597/2023, art. 63'), acervoOn ? 'acervo' : 'modulos', 'unknown',
       acervoOn ? t('Não deu para ler o acervo.') : t('Ligue o acervo oficial para publicar as demonstrações financeiras.')));
   } else {
     const ok = Boolean(doc('accounts')?.ok);
-    const atrasado = hoje.slice(5) > '04-30';
     out.push(item('accounts', tk('Contas do ano anterior'), tk('Lei 14.597/2023, art. 63'), 'acervo', ok ? 'ok' : 'attention',
       ok ? t('As demonstrações financeiras estão publicadas.')
         : atrasado ? t('As demonstrações de {ano} deviam estar publicadas até o último dia útil de abril.', { ano: ano - 1 })
           : t('Publique as demonstrações de {ano} até o último dia útil de abril.', { ano: ano - 1 })));
+  }
+
+  // 6a. Orçamento do ano aprovado (módulo de contas).
+  if (contasOn) {
+    const lb = [tk('Orçamento do ano aprovado'), tk('Boa prática (Lei 14.597/2023, art. 36, X, f)')];
+    if (!Array.isArray(budgets)) out.push(item('budget', ...lb, 'orcamento-anual', 'unknown', t('Não deu para ler os orçamentos.')));
+    else {
+      const b = budgets.find((x) => Number(x.year) === ano && !x.copy_of);
+      const ok = b && ['approved', 'published'].includes(b.status);
+      out.push(item('budget', ...lb, 'orcamento-anual', ok ? 'ok' : 'attention',
+        ok ? (b.status === 'published' ? t('O orçamento de {ano} está aprovado e publicado.', { ano }) : t('O orçamento de {ano} está aprovado. Publique-o na transparência.', { ano }))
+          : b ? t('O orçamento de {ano} ainda não foi aprovado.', { ano }) : t('Monte o orçamento de {ano} e leve-o à aprovação.', { ano })));
+    }
   }
 
   // 7. Transparência: o que a lei manda publicar (os itens de "boa prática" não contam aqui).

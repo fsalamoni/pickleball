@@ -20,11 +20,11 @@ const ESTADO = {
 const ORDEM = { attention: 0, unknown: 1, ok: 2 };
 const dados = (q) => (q?.isSuccess ? q.data || [] : undefined);
 
-export default function FedCompliancePanel({ federation, staffQ, docsQ, eventsQ, abas, onIrParaAba }) {
-  const itens = useMemo(() => complianceChecklist({ federation, staff: dados(staffQ), docs: dados(docsQ), events: dados(eventsQ) })
-    .sort((a, b) => ORDEM[a.status] - ORDEM[b.status]), [federation, staffQ?.isSuccess, staffQ?.data, docsQ?.isSuccess, docsQ?.data, eventsQ?.isSuccess, eventsQ?.data]); // eslint-disable-line react-hooks/exhaustive-deps
+export default function FedCompliancePanel({ federation, staffQ, docsQ, eventsQ, budgetsQ, accountReportsQ, electionsQ, abas, onIrParaAba }) {
+  const itens = useMemo(() => complianceChecklist({ federation, staff: dados(staffQ), docs: dados(docsQ), events: dados(eventsQ), budgets: dados(budgetsQ), accountReports: dados(accountReportsQ), elections: dados(electionsQ) })
+    .sort((a, b) => ORDEM[a.status] - ORDEM[b.status]), [federation, staffQ?.isSuccess, staffQ?.data, docsQ?.isSuccess, docsQ?.data, eventsQ?.isSuccess, eventsQ?.data, budgetsQ?.isSuccess, budgetsQ?.data, accountReportsQ?.isSuccess, accountReportsQ?.data, electionsQ?.isSuccess, electionsQ?.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const s = complianceSummary(itens);
-  const carregando = [staffQ, docsQ, eventsQ].some((q) => q?.isLoading);
+  const carregando = [staffQ, docsQ, eventsQ, budgetsQ, accountReportsQ, electionsQ].some((q) => q?.isLoading);
   const pct = s.total ? Math.round((s.ok / s.total) * 100) : 0;
 
   return (

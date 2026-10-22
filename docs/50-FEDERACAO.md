@@ -1966,3 +1966,28 @@ impugnou fica na chapa impugnada (a lista não é consultável por pessoa).
 `federacao-eleicao-*` (contrato). Enums gravados (situações, tipos de cargo,
 órgãos, modos, regras de empate, categorias, chaves do calendário) — nunca
 renomeie.
+
+## 25. Conformidade com a Lei Geral do Esporte (Central → Indicadores → Conformidade, 2026-10-22)
+
+Aba só do `admin`, ao lado de Indicadores. Confere, **sem gravar nada**, o que a
+Lei 14.597/2023 e a boa governança pedem a uma entidade de administração do
+esporte contra o que já está na plataforma. Domínio puro em
+`domain/compliance.js` (`complianceChecklist`, `complianceSummary`), tela em
+`manage/FedCompliancePanel.jsx` (anel com o placar e a lista, cada item com o
+fundamento legal e o botão **Resolver**, que leva à aba que resolve).
+
+Itens: estatuto publicado; mulheres na direção (≥ 30%); mandato informado, até
+4 anos e em vigor; **eleição antes do fim do mandato** (com o módulo
+`elections`: a 180 dias do fim, ou depois, precisa haver eleição publicada —
+nem rascunho nem cancelada — com resultado/posse a partir dessa data);
+conselho fiscal nomeado (cargo `fiscal_council`, ou permissão `fiscal` sem
+`admin`); assembleia ordinária do ano convocada com a antecedência do estatuto;
+**contas do ano anterior** (com `accounts` vale a prestação `published`, e o
+texto diz em que fase ela parou; sem o módulo, o documento do acervo);
+**orçamento do ano aprovado** (com `accounts`: `approved`/`published`);
+página de transparência; ouvidoria e disciplina; atletas na direção.
+
+Regras que não podem regredir: fonte que não carregou é `unknown` ("não deu
+para conferir"), **nunca** reprovação — a plataforma não sabe o que a
+federação guarda fora dela; é aviso, não trava. As consultas extras (agenda
+pública, orçamentos) só saem com a aba aberta.

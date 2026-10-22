@@ -71,6 +71,36 @@ describe('complianceChecklist', () => {
     expect(cheio.transparency.status).toBe('ok');
   });
 
+  it('com o módulo de contas: orçamento do ano e prestação publicada valem', () => {
+    const federation = { modules: { accounts: true } };
+    const semFonte = porId(complianceChecklist({ federation, nowMs: NOW }));
+    expect(semFonte.budget.status).toBe('unknown');
+    const vazio = porId(complianceChecklist({ federation, budgets: [], accountReports: [], nowMs: NOW }));
+    expect(vazio.budget).toMatchObject({ status: 'attention', tab: 'orcamento-anual' });
+    expect(vazio.accounts).toMatchObject({ status: 'attention', tab: 'prestacao-contas' });
+    const emAndamento = porId(complianceChecklist({ federation, budgets: [{ year: 2026, status: 'submitted' }], accountReports: [{ year: 2025, status: 'submitted' }], nowMs: NOW }));
+    expect(emAndamento.budget.status).toBe('attention');
+    expect(emAndamento.accounts.detail).toContain('conselho fiscal');
+    const ok = porId(complianceChecklist({ federation, budgets: [{ year: 2026, status: 'approved' }, { year: 2026, status: 'draft', copy_of: 'x' }], accountReports: [{ year: 2025, status: 'published' }], nowMs: NOW }));
+    expect(ok.budget.status).toBe('ok');
+    expect(ok.accounts.status).toBe('ok');
+    expect(porId(complianceChecklist({ federation: {}, budgets: [], nowMs: NOW })).budget).toBeUndefined();
+  });
+
+  it('com o módulo de eleições: a sucessão tem de estar marcada perto do fim do mandato', () => {
+    const fed = (end) => ({ modules: { elections: true }, governance: { mandate: { start: '2023-01-01', end } } });
+    expect(porId(complianceChecklist({ federation: { modules: { elections: true } }, elections: [], nowMs: NOW })).election.status).toBe('unknown');
+    expect(porId(complianceChecklist({ federation: fed('2026-08-31'), nowMs: NOW })).election.status).toBe('unknown');
+    expect(porId(complianceChecklist({ federation: fed('2027-12-31'), elections: [], nowMs: NOW })).election.status).toBe('ok');
+    expect(porId(complianceChecklist({ federation: fed('2026-08-31'), elections: [], nowMs: NOW })).election).toMatchObject({ status: 'attention', tab: 'eleicoes' });
+    const rascunho = [{ title: 'Eleição 2026', status: 'draft', calendar: { result_on: '2026-08-20' } }];
+    expect(porId(complianceChecklist({ federation: fed('2026-08-31'), elections: rascunho, nowMs: NOW })).election.status).toBe('attention');
+    const publicada = [{ title: 'Eleição 2026', status: 'published', calendar: { result_on: '2026-08-20' } }];
+    expect(porId(complianceChecklist({ federation: fed('2026-08-31'), elections: publicada, nowMs: NOW })).election.status).toBe('ok');
+    const antiga = [{ title: 'Eleição 2022', status: 'closed', calendar: { result_on: '2022-11-20' } }];
+    expect(porId(complianceChecklist({ federation: fed('2026-08-31'), elections: antiga, nowMs: NOW })).election.status).toBe('attention');
+  });
+
   it('resumo conta os estados', () => {
     const s = complianceSummary([{ status: 'ok' }, { status: 'attention' }, { status: 'unknown' }, { status: 'ok' }]);
     expect(s).toEqual({ ok: 2, attention: 1, unknown: 1, total: 4 });

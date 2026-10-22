@@ -24,7 +24,7 @@ import { FED_SECTION_GROUPS, buildFederationSections, residualModules, sectionOf
 import { FedBadges, FedLogo, FederationGate, fedPath, fedPublicPath } from '@/v2/components/federations/federationUi';
 import { fedPreviewPath } from '@/v2/components/federations/profile/FedStaffBar';
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
-import { useFederationAccountReports } from '@/modules/federations/hooks/useAccounts';
+import { useFederationAccountReports, useFederationBudgets } from '@/modules/federations/hooks/useAccounts';
 import { useFederationAssignments, useScalableEvents } from '@/modules/federations/hooks/useReferees';
 import { useFederationCandidacies, useFederationElections } from '@/modules/federations/hooks/useElections';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -127,6 +127,7 @@ function Central({ federationId }) {
   // Eleições: o admin vê todas (a comissão conduz pela página da federação).
   const podeEleicoes = admin && fedModuleOn(fq.data, 'elections');
   const electionsQ = useFederationElections(federationId, { enabled: papel.isStaff && podeEleicoes });
+  const budgetsQ = useFederationBudgets(federationId, { enabled: papel.isStaff && admin && tab === 'conformidade' && fedModuleOn(fq.data, 'accounts') });
   const candidaciesQ = useFederationCandidacies(federationId, { enabled: papel.isStaff && podeEleicoes });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
@@ -190,7 +191,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'eleicoes' && <FedElectionsPanel federation={f} electionsQ={electionsQ} candidaciesQ={candidaciesQ} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
-        {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
+        {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} budgetsQ={budgetsQ} accountReportsQ={accountReportsQ} electionsQ={electionsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'contas' && <FedAccountsPanel federation={f} perms={perms} tab={tab} reportsQ={accountReportsQ} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
