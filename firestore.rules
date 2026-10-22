@@ -4782,7 +4782,12 @@ service cloud.firestore {
         && nd().price_cents <= 100000000
         && nd().billing in ['monthly', 'annual']
         && nd().tier in ['registered', 'federated']
-        && nd().person_type in ['athlete', 'coach', 'referee'];
+        // O tipo vem do catálogo da plataforma (`platform_settings/federations`, Etapa 2 de
+        // 2026-10-22): atleta, professor, árbitro, clube, arena ou um tipo criado pelo admin.
+        // A regra confere o FORMATO do código; quem decide pessoa × clube × arena no pedido é o servidor.
+        && nd().person_type is string
+        && nd().person_type.matches('[a-z][a-z0-9_]{1,23}')
+        && nd().get('entity', 'person') in ['person', 'club', 'arena'];
       allow update: if fedOn() && (fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'finance'))
         && !chg().hasAny(['federation_id'])
         && nd().price_cents is int
@@ -4795,8 +4800,10 @@ service cloud.firestore {
 
     // O dono da filiação: a própria pessoa ou, no DEPENDENTE menor (`user_id`
     // nulo), o responsável que o filiou (`guardian_uid`) — D7.
+    // Filiação de CLUBE/ARENA por plano (Etapa 2, 2026-10-22): o dono é quem gere a entidade.
     function fedMemberOwner(data) {
-      return isAuthed() && (data.get('user_id', null) == me() || data.get('guardian_uid', null) == me());
+      return isAuthed() && (data.get('user_id', null) == me() || data.get('guardian_uid', null) == me()
+        || (data.get('org_kind', '') in ['club', 'arena'] && fedOrgManager(data.org_kind, data.org_id)));
     }
     match /federation_members/{memberId} {
       // ⭐ NUNCA pública. O próprio (ou o responsável), a equipe que atende (filiados, financeiro, admin) e o admin da plataforma.
@@ -4804,7 +4811,9 @@ service cloud.firestore {
         || fedHas(od().federation_id, 'admin')
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'finance')
-        || fedHas(od().federation_id, 'discipline');
+        || fedHas(od().federation_id, 'discipline')
+        // A lista das filiações de UM clube/arena (consulta por `org_kind` + `org_id`).
+        || fedOrgManager(od().get('org_kind', ''), od().get('org_id', ''));
       // 🐞 O `get` da PRÓPRIA filiação ({fed}_{uid}) antes de existir: com o
       // documento ausente `od()` é nulo e a leitura acima dá erro — era o que
       // tirava o "Filiar-se" da página para quem ainda não é filiado (a tela
@@ -4838,7 +4847,9 @@ service cloud.firestore {
     match /federation_documents_submitted/{docId} {
       allow read: if (isOwner(od().user_id))
         || fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'admin');
+        || fedHas(od().federation_id, 'admin')
+        // Documento de clube/arena filiado: todos os gestores da entidade veem (Etapa 2).
+        || fedOrgManager(od().get('org_kind', ''), od().get('org_id', ''));
       allow create: if fedOn() && isAuthed()
         && nd().user_id == me()
         && nd().status == 'pending'
@@ -4851,7 +4862,9 @@ service cloud.firestore {
         && nd().get('doc_key', '').matches('[A-Za-z0-9_-]{0,24}')
         && nd().get('label', '') is string && nd().get('label', '').size() <= 80
         && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data)
-        && nd().federation_id == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.federation_id;
+        && nd().federation_id == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.federation_id
+        && nd().get('org_kind', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_kind', '')
+        && nd().get('org_id', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_id', '');
       // A secretaria aceita ou recusa (com motivo); nada mais muda.
       allow update: if fedOn() && (fedHas(od().federation_id, 'members') || fedHas(od().federation_id, 'admin'))
         && chg().hasOnly(['status', 'review', 'updated_at'])
@@ -5216,6 +5229,8 @@ service cloud.firestore {
       allow update: if fedOn()
         && (((fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'members'))
             && od().status != 'invited'
+            // A filiação POR PLANO (`member_id`) é espelho do servidor: decide-se na filiação.
+            && !('member_id' in od())
             && chg().hasOnly(['status', 'review', 'updated_at'])
             && nd().status in ['approved', 'rejected', 'suspended'])
           || (od().status == 'invited' && fedOrgManager(od().kind, od().org_id)
@@ -5223,7 +5238,7 @@ service cloud.firestore {
             && chg().hasOnly(['status', 'requested_by', 'accepted_at_ms', 'updated_at'])));
       // A organização retira/recusa; o admin apaga; quem cuida dos filiados cancela convite ou limpa recusado.
       allow delete: if fedPlat(od().federation_id)
-        || (fedOn() && (fedOrgManager(od().kind, od().org_id) || fedHas(od().federation_id, 'admin')))
+        || (fedOn() && !('member_id' in od()) && (fedOrgManager(od().kind, od().org_id) || fedHas(od().federation_id, 'admin')))
         || (fedOn() && fedHas(od().federation_id, 'members') && od().status in ['invited', 'rejected']);
     }
 

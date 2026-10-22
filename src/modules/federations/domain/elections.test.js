@@ -95,6 +95,17 @@ describe('colégio eleitoral', () => {
     expect(E.memberEligible(members[1], { hoje: HOJE, nowMs: NOW, minMonths: 6 })).toBe(false);
     expect(E.memberEligible(members[2], { hoje: HOJE, nowMs: NOW })).toBe(false);
   });
+
+  it('tipo do catálogo: vota no grupo gravado; "sem grupo" e clube por plano não entram como pessoa', () => {
+    const extra = [
+      { user_id: 'p1', status: 'active', person_type: 'paratleta', person_category: 'athlete', valid_from: '2025-01-10' },
+      { user_id: 'p2', status: 'active', person_type: 'apoiador', person_category: 'none', valid_from: '2025-01-10' },
+      { user_id: null, org_kind: 'club', org_id: 'k1', representative_uid: 'u9', status: 'active', person_type: 'club', person_category: 'club', valid_from: '2025-01-10' },
+    ];
+    const roll = E.buildVoterRoll({ members: extra, affiliations: [], election, hoje: HOJE, nowMs: NOW });
+    expect(roll.map((v) => v.id)).toEqual(['e1_p1']);
+    expect(E.memberEligible(extra[1], { hoje: HOJE, nowMs: NOW })).toBe(false);
+  });
 });
 
 describe('fases e janelas', () => {

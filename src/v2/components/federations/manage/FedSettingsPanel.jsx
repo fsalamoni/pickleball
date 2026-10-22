@@ -11,11 +11,12 @@ import { OTHER_DOCS_MAX } from '@/modules/federations/domain/privateData';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { savePlan, setPlanActive, setFederationModule, updateFederationGovernance, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
 import { BOARD_MAX, MINUTES_MAX, validateGovernance, womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { useFederationMutation, useFederationPlatformSettings } from '@/modules/federations/hooks/useFederations';
+import { isOrgEntity, memberTypeName, memberTypeOf, personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
 import { isFederationPublic, normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
-import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
+import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
 import { PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
@@ -52,7 +53,7 @@ const outrosIniciais = (plano) => (plano.other_docs?.length ? plano.other_docs :
 const novoOutroDoc = () => ({ id: `o_${Math.random().toString(36).slice(2, 10)}`, label: '' });
 
 /** Os documentos PRÓPRIOS do plano: cada um com o nome que a pessoa vai ler na hora de enviar. */
-function OutrosDocumentos({ lista, erro, onChange }) {
+function OutrosDocumentos({ lista, erro, onChange, entidade = false }) {
   const mudar = (i, label) => onChange(lista.map((x, j) => (j === i ? { ...x, label } : x)));
   return (
     <div className="space-y-2 rounded-2xl border border-gray-100 p-3" data-dica="federacao-plano-outros-docs">
@@ -60,7 +61,7 @@ function OutrosDocumentos({ lista, erro, onChange }) {
       <ul className="space-y-2">
         {lista.map((x, i) => (
           <li key={x.id} className="flex items-center gap-2">
-            <V2Input id={`pl-outro-${x.id}`} aria-label={t('Nome do documento {n}', { n: i + 1 })} maxLength={80} placeholder={t('Ex.: Exame de vista, Ficha de inscrição assinada')} value={x.label} onChange={(e) => mudar(i, e.target.value)} />
+            <V2Input id={`pl-outro-${x.id}`} aria-label={t('Nome do documento {n}', { n: i + 1 })} maxLength={80} placeholder={entidade ? t('Ex.: Estatuto social, Ata de eleição da diretoria, Alvará') : t('Ex.: Exame de vista, Ficha de inscrição assinada')} value={x.label} onChange={(e) => mudar(i, e.target.value)} />
             <V2Button type="button" size="sm" variant="ghost" aria-label={t('Tirar {nome}', { nome: x.label || t('documento {n}', { n: i + 1 }) })} onClick={() => onChange(lista.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></V2Button>
           </li>
         ))}
@@ -77,11 +78,20 @@ function PlanoForm({ federationId, plano, onFechar }) {
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setDesc = (patch) => set({ discounts: { ...f.discounts, ...patch } });
-  const m = useFederationMutation((input) => savePlan(federationId, input, { uid: user?.uid, planId: plano?.id || null }));
+  // O catálogo de tipos da plataforma: só os disponíveis, mais o tipo que o plano já tem (mesmo desligado).
+  const tiposQ = useFederationPlatformSettings();
+  const catalog = tiposQ.catalog;
+  const tipo = memberTypeOf(catalog, f.person_type);
+  const entidade = isOrgEntity(tipo.entity);
+  const opcoes = catalog.filter((x) => x.active || x.id === f.person_type);
+  if (!opcoes.some((x) => x.id === tipo.id)) opcoes.push(tipo);
+  const m = useFederationMutation((input) => savePlan(federationId, input, { uid: user?.uid, planId: plano?.id || null, catalog, currentType: plano?.person_type || null }));
   const enviar = (e) => {
     e.preventDefault();
+    // Sem o catálogo da plataforma não se grava: o tipo do plano sairia com o nome ou o grupo errados.
+    if (!tiposQ.isSuccess) { toast.error(t('Não carregaram os tipos de filiação. Tente de novo.')); tiposQ.refetch(); return; }
     const input = { ...f, price_cents: cents(f.preco), age_min: f.age_min === '' ? null : f.age_min, age_max: f.age_max === '' ? null : f.age_max };
-    const r = validatePlanInput(input);
+    const r = validatePlanInput(input, { catalog, currentType: plano?.person_type || null });
     if (!r.ok) { setErros(r.errors); return; }
     m.mutate(input, { onSuccess: () => { toast.success(plano ? t('Plano atualizado.') : t('Plano criado.')); onFechar(); }, onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
   };
@@ -92,7 +102,11 @@ function PlanoForm({ federationId, plano, onFechar }) {
         <V2Input id="pl-nome" maxLength={80} value={f.name} onChange={(e) => set({ name: e.target.value })} />
       </V2Field>
       <div className="grid gap-4 sm:grid-cols-3">
-        <V2Field label={t('Para quem')} htmlFor="pl-tipo"><V2Select id="pl-tipo" value={f.person_type} onChange={(e) => set({ person_type: e.target.value })}>{Object.values(PLAN_PERSON_TYPE).map((v) => <option key={v} value={v}>{t(PLAN_PERSON_TYPE_LABELS[v])}</option>)}</V2Select></V2Field>
+        <V2Field label={t('Para quem')} htmlFor="pl-tipo" error={erros.person_type} hint={tipo.description || (entidade ? (tipo.entity === 'club' ? t('O clube pede pela gestão do clube.') : t('A arena pede pela Central da arena.')) : undefined)}>
+          <V2Select id="pl-tipo" value={f.person_type} onChange={(e) => { const novo = memberTypeOf(catalog, e.target.value); set(isOrgEntity(novo.entity) ? { person_type: novo.id, age_min: '', age_max: '', discounts: { ...PLANO_VAZIO.discounts }, requires_docs: (f.requires_docs || []).filter((k) => k === DOC_KIND.OTHER) } : { person_type: novo.id }); }}>
+            {opcoes.map((x) => <option key={x.id} value={x.id}>{memberTypeName(x)}{x.active ? '' : ` (${t('desligado')})`}</option>)}
+          </V2Select>
+        </V2Field>
         <V2Field label={t('Vínculo')} htmlFor="pl-tier" hint={t('Filiado paga e pontua no ranking oficial; cadastrado é gratuito e só consta.')}><V2Select id="pl-tier" value={f.tier} onChange={(e) => set({ tier: e.target.value })}>{Object.values(PLAN_TIER).map((v) => <option key={v} value={v}>{t(PLAN_TIER_LABELS[v])}</option>)}</V2Select></V2Field>
         <V2Field label={t('Valor (R$)')} htmlFor="pl-preco" error={erros.price_cents} hint={t('0,00 = gratuito.')} required><V2Input id="pl-preco" inputMode="decimal" value={f.preco} onChange={(e) => set({ preco: e.target.value })} /></V2Field>
       </div>
@@ -105,23 +119,23 @@ function PlanoForm({ federationId, plano, onFechar }) {
           <V2Field label={t('Vira em (MM-DD)')} htmlFor="pl-virada" error={erros.rollover_mmdd} hint={t('Quem paga até {dias} dias antes já vale para a temporada seguinte.', { dias: f.calendar_grace_days })}><V2Input id="pl-virada" maxLength={5} placeholder="12-31" value={f.rollover_mmdd} onChange={(e) => set({ rollover_mmdd: e.target.value })} /></V2Field>
         )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-4">
+      {!entidade && <div className="grid gap-4 sm:grid-cols-4">
         <V2Field label={t('Idade mínima')} htmlFor="pl-imin"><V2Input id="pl-imin" inputMode="numeric" value={f.age_min} onChange={(e) => set({ age_min: e.target.value })} /></V2Field>
         <V2Field label={t('Idade máxima')} htmlFor="pl-imax" error={erros.age_max}><V2Input id="pl-imax" inputMode="numeric" value={f.age_max} onChange={(e) => set({ age_max: e.target.value })} /></V2Field>
         <V2Field label={t('Desconto menor de 18 (%)')} htmlFor="pl-dmenor"><V2Input id="pl-dmenor" inputMode="numeric" value={f.discounts.minor_pct} onChange={(e) => setDesc({ minor_pct: e.target.value })} /></V2Field>
         <V2Field label={t('Desconto 60+ (%)')} htmlFor="pl-dsenior"><V2Input id="pl-dsenior" inputMode="numeric" value={f.discounts.senior_pct} onChange={(e) => setDesc({ senior_pct: e.target.value })} /></V2Field>
-      </div>
+      </div>}
       <V2Field label={t('Descrição')} htmlFor="pl-desc"><V2Textarea id="pl-desc" rows={2} maxLength={600} value={f.description} onChange={(e) => set({ description: e.target.value })} /></V2Field>
       <V2Field label={t('Benefícios (um por linha)')} htmlFor="pl-benef"><V2Textarea id="pl-benef" rows={3} maxLength={1200} value={f.benefits} onChange={(e) => set({ benefits: e.target.value })} /></V2Field>
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-ink">{t('Documentos exigidos')}</legend>
-        <p className="text-xs text-gray-500">{t('A pessoa envia os arquivos no próprio pedido de filiação (ou depois, pela página da federação) e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
+        <p className="text-xs text-gray-500">{entidade ? t('Quem representa a entidade envia os arquivos no próprio pedido (ou depois, pela gestão do clube ou pela Central da arena) e a secretaria confere em Filiados → Documentos.') : t('A pessoa envia os arquivos no próprio pedido de filiação (ou depois, pela página da federação) e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {Object.values(DOC_KIND).map((k) => (
+          {Object.values(DOC_KIND).filter((k) => !entidade || k === DOC_KIND.OTHER).map((k) => (
             <V2Toggle
               key={k}
               id={`pl-doc-${k}`}
-              label={t(DOC_KIND_LABELS[k])}
+              label={entidade ? t('Pedir documentos da entidade') : t(DOC_KIND_LABELS[k])}
               checked={(f.requires_docs || []).includes(k)}
               onChange={(v) => {
                 const requires_docs = v ? [...(f.requires_docs || []), k] : (f.requires_docs || []).filter((x) => x !== k);
@@ -133,7 +147,7 @@ function PlanoForm({ federationId, plano, onFechar }) {
           ))}
         </div>
         {(f.requires_docs || []).includes(DOC_KIND.OTHER) && (
-          <OutrosDocumentos lista={f.other_docs || []} erro={erros.other_docs} onChange={(other_docs) => set({ other_docs })} />
+          <OutrosDocumentos entidade={entidade} lista={f.other_docs || []} erro={erros.other_docs} onChange={(other_docs) => set({ other_docs })} />
         )}
       </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -169,7 +183,7 @@ function PlanosTab({ federation, plansQ }) {
               <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{p.name}{p.active === false && <V2Badge tone="neutral">{t('Desligado')}</V2Badge>}{p.auto_approve && <V2Badge tone="green">{t('Aprova na hora')}</V2Badge>}</p>
-                  <p className="text-xs text-gray-500">{t(PLAN_PERSON_TYPE_LABELS[p.person_type] || PLAN_PERSON_TYPE_LABELS.athlete)} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)} · {p.price_cents > 0 ? `${formatBrlCents(p.price_cents)} ${planPeriodLabel(p)}` : planPeriodLabel(p)}{p.age_min != null || p.age_max != null ? ` · ${t('{min} a {max} anos', { min: p.age_min ?? '0', max: p.age_max ?? '∞' })}` : ''}</p>
+                  <p className="text-xs text-gray-500">{personTypeLabel(p)} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)} · {p.price_cents > 0 ? `${formatBrlCents(p.price_cents)} ${planPeriodLabel(p)}` : planPeriodLabel(p)}{p.age_min != null || p.age_max != null ? ` · ${t('{min} a {max} anos', { min: p.age_min ?? '0', max: p.age_max ?? '∞' })}` : ''}</p>
                 </div>
                 <V2Toggle id={`pl-on-${p.id}`} checked={p.active !== false} onChange={(v) => ativar.mutate({ id: p.id, active: v }, { onError: (e) => toast.error(e.message) })} label={t('Disponível')} />
                 <V2Button type="button" size="sm" variant="ghost" aria-label={t('Editar {nome}', { nome: p.name })} onClick={() => setEditando(p)}><Pencil className="h-4 w-4" /></V2Button>

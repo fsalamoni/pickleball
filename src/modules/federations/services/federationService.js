@@ -39,6 +39,7 @@ import { validateSponsors } from '../domain/sponsors.js';
 import { validateGovernance } from '../domain/governance.js';
 import { DOC_STATUS, DOC_VISIBILITY, acervoUploadPath, validateAcervoFile } from '../domain/acervo.js';
 import { validatePlanInput } from '../domain/plans.js';
+import { validateMemberTypes } from '../domain/memberTypes.js';
 import { canDeclarePayment } from '../domain/charges.js';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -303,8 +304,8 @@ export async function listFederationPlans(fedId) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
-export async function savePlan(fedId, input, { uid, planId = null } = {}) {
-  const r = validatePlanInput(input);
+export async function savePlan(fedId, input, { uid, planId = null, catalog, currentType = null } = {}) {
+  const r = validatePlanInput(input, catalog ? { catalog, currentType } : { currentType });
   if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
   const data = { ...r.value, federation_id: fedId, updated_at: serverTimestamp(), updated_by: uid || null };
   if (planId) {
@@ -320,7 +321,38 @@ export async function savePlan(fedId, input, { uid, planId = null } = {}) {
 /** Plano não se apaga (filiações apontam para ele): desativa. */
 export const setPlanActive = (planId, active, { uid } = {}) => updateDoc(doc(db, C.plans, planId), { active: Boolean(active), updated_at: serverTimestamp(), updated_by: uid || null });
 
+/* ------------------------------------------- configuração da plataforma -- */
+
+/** `platform_settings/federations` (legível por todos): o catálogo de tipos de filiação. */
+export async function getFederationPlatformSettings() {
+  const snap = await getDoc(doc(db, 'platform_settings', 'federations'));
+  return snap.exists() ? snap.data() : {};
+}
+
+/** Só o admin da plataforma grava (regra). O tipo nativo nunca sai; o rótulo vazio volta ao padrão. */
+export async function saveFederationMemberTypes(list, { uid } = {}) {
+  const r = validateMemberTypes(list);
+  if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  await setDoc(doc(db, 'platform_settings', 'federations'), { member_types: r.value, updated_at: serverTimestamp(), updated_by: uid || null }, { merge: true });
+  await createAuditLog({ action: 'federation_member_types_save', actor: { uid }, details: { count: r.value.length } });
+  return r.value;
+}
+
 /* ------------------------------------------------------------ filiados -- */
+
+/** As filiações POR PLANO de um clube/arena, em todas as federações (quem gere a entidade lê). */
+export async function listOrgMemberships(kind, orgId) {
+  if (!kind || !orgId) return [];
+  const q = query(collection(db, C.members), where('org_kind', '==', kind), where('org_id', '==', orgId));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** Os documentos enviados por um clube/arena filiado (todos os gestores veem). */
+export async function listOrgDocuments(kind, orgId) {
+  if (!kind || !orgId) return [];
+  const q = query(collection(db, C.documents), where('org_kind', '==', kind), where('org_id', '==', orgId));
+  return (await getDocs(q)).docs.map(toDoc);
+}
 
 export async function getMembership(fedId, uid) {
   if (!fedId || !uid) return null;
@@ -780,11 +812,29 @@ export async function uploadMemberDocument({ member, kind, file, uid, docKey = n
     // Documento PRÓPRIO do plano ("outro documento" com nome): a chave liga o arquivo ao pedido e o nome vai junto para a secretaria.
     ...(docKey && docKey !== kind ? { doc_key: String(docKey).slice(0, 24) } : {}),
     ...(label ? { label: String(label).trim().slice(0, 80) } : {}),
+    // Clube/arena filiado: o documento é da ENTIDADE (todos os gestores veem); a regra confere contra a filiação.
+    ...(member.org_kind ? { org_kind: member.org_kind, org_id: member.org_id } : {}),
     status: 'pending', review: null, created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
   };
   await setDoc(ref, data);
   await createAuditLog({ action: 'federation_document_upload', actor: { uid }, details: { federation_id: member.federation_id, member_id: member.id, kind, document_id: ref.id } });
   return { id: ref.id, ...data };
+}
+
+/**
+ * Sobe os arquivos escolhidos no pedido para a filiação já gravada (`arquivos`
+ * por chave do documento). Um que falhe não desfaz o pedido: devolve os nomes
+ * que faltaram para a tela dizer.
+ */
+export async function uploadChosenDocuments({ docs, arquivos, member, uid }) {
+  const escolhidos = (docs || []).filter((d) => arquivos?.[d.key]);
+  const falhas = [];
+  for (const d of escolhidos) {
+    try {
+      await uploadMemberDocument({ member, kind: d.kind, docKey: d.key, label: d.label, file: arquivos[d.key], uid });
+    } catch { falhas.push(docLabel(d)); }
+  }
+  return { enviados: escolhidos.length - falhas.length, falhas, total: escolhidos.length };
 }
 
 /** Quem enviou apaga (enquanto em análise): o arquivo e o registro. */

@@ -14,7 +14,8 @@ import { useFederationMutation } from '@/modules/federations/hooks/useFederation
 import { membershipState, memberCounts, sortMembersForStaff } from '@/modules/federations/domain/membership';
 import { docLabel, formatCpf } from '@/modules/federations/domain/privateData';
 import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
-import { DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
@@ -110,9 +111,10 @@ function MemberRow({ member: mb, federation, documentos, pedido = false }) {
         <div className="flex flex-wrap items-start gap-3">
           <V2Avatar name={mb.user_name} photoUrl={mb.photo_url} />
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{mb.user_name}<MemberStatusBadge status={st.status} label={st.label} />{mb.guardian_uid && <V2Badge tone="neutral">{t('dependente')}</V2Badge>}{mb.is_minor && !mb.guardian_uid && <V2Badge tone="neutral">{t('menor')}</V2Badge>}{mb.imported && <V2Badge tone="neutral">{t('importado')}</V2Badge>}</p>
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{mb.user_name}<MemberStatusBadge status={st.status} label={st.label} />{mb.guardian_uid && <V2Badge tone="neutral">{t('dependente')}</V2Badge>}{mb.is_minor && !mb.guardian_uid && <V2Badge tone="neutral">{t('menor')}</V2Badge>}{mb.imported && <V2Badge tone="neutral">{t('importado')}</V2Badge>}{mb.org_kind && <V2Badge tone="blue">{mb.org_kind === 'club' ? t('clube') : t('arena')}</V2Badge>}</p>
+            {mb.org_kind && <p className="text-xs text-gray-500">{t('Representante: {nome}', { nome: mb.representative_name || '—' })}{mb.org_city ? ` · ${[mb.org_city, mb.org_state].filter(Boolean).join('/')}` : ''}</p>}
             <p className="text-xs text-gray-500">
-              {t(PLAN_PERSON_TYPE_LABELS[mb.person_type] || PLAN_PERSON_TYPE_LABELS.athlete)} · {t(PLAN_TIER_LABELS[mb.tier] || PLAN_TIER_LABELS.federated)} · {mb.plan_name}
+              {personTypeLabel(mb)} · {t(PLAN_TIER_LABELS[mb.tier] || PLAN_TIER_LABELS.federated)} · {mb.plan_name}
               {mb.member_number ? ` · ${mb.member_number}` : ''}
               {st.validUntil ? ` · ${t('até {data}', { data: quando(st.validUntil) })}` : ''}
               {pedido ? ` · ${t('pedido em {data}', { data: quando(mb.requested_at) })}` : ''}

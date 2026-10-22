@@ -34,6 +34,8 @@ const crypto = require('node:crypto');
 const m = require('./federationMembership.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const P = require('./federationStaffPolicy.js');
+const O = require('./federationOrgMembers.js');
+const { resolveMemberType } = require('./federationMemberTypes.js');
 
 class FederationError extends Error {
   constructor(code, message) { super(message); this.code = code; this.name = 'FederationError'; }
@@ -208,6 +210,8 @@ async function ativar(ctx, tr, { fed, memberRef, member, plan, hoje, novo = fals
   patch.valid_until = m.computeValidUntil(plan, inicio);
   patch.activated_at_ms = ctx.now;
   patch.expiry_notified = {};
+  // Clube/arena: a data da filiação (colégio eleitoral) é a da PRIMEIRA ativação.
+  if (O.isOrg(member)) patch.affiliated_since_ms = Number(member.affiliated_since_ms) || ctx.now;
   // O código GIRA a cada ativação: carteirinha antiga clonada não continua "em dia".
   const code = novoCodigo();
   if (member.card_code) tr.delete(ctx.db.collection(C.cardIndex).doc(member.card_code));
@@ -215,6 +219,7 @@ async function ativar(ctx, tr, { fed, memberRef, member, plan, hoje, novo = fals
   patch.card_code = code;
   if (novo) tr.set(memberRef, { ...member, ...patch });
   else tr.update(memberRef, patch);
+  O.espelhar(ctx, tr, { ...member, ...patch }, memberRef.id, 'active');
   return { ...member, ...patch };
 }
 
@@ -236,8 +241,8 @@ function novaCobranca(ctx, batchOrTr, { fed, member, memberId, plan, origin, hoj
   return { id: ref.id, ...data };
 }
 
-/** Quem recebe aviso e cobrança da filiação: o responsável do dependente, senão a pessoa. */
-const destinatario = (member) => (member && (member.guardian_uid || member.user_id)) || null;
+/** Quem recebe aviso e cobrança da filiação: o responsável do dependente, o representante do clube/arena, senão a pessoa. */
+const destinatario = (member) => (member && (member.guardian_uid || member.user_id || member.representative_uid)) || null;
 
 /** Id curto para documentos sem id natural (dependente). */
 const novoId = () => crypto.randomBytes(6).toString('base64url').replace(/[^A-Za-z0-9]/g, 'x').slice(0, 8);
@@ -255,7 +260,8 @@ async function idadeDoMembro(ctx, member, hoje) {
 /** Posição desta filiação na FAMÍLIA (quem paga): 1 = a primeira; a 2ª em diante ganha o desconto família. */
 async function indiceFamilia(ctx, fedId, member) {
   const pagador = destinatario(member);
-  if (!pagador) return 1;
+  // Clube e arena não têm família: o representante tem a filiação dele, que não conta aqui.
+  if (!pagador || O.isOrg(member)) return 1;
   const [proprias, dependentes] = await Promise.all([
     ctx.db.collection(C.members).where('federation_id', '==', fedId).where('user_id', '==', pagador).get(),
     ctx.db.collection(C.members).where('federation_id', '==', fedId).where('guardian_uid', '==', pagador).get(),
@@ -281,7 +287,7 @@ async function membership(ctx, actor, data) {
   const fed = await federacao(ctx, data.federationId);
   const hoje = m.isoDateBR(ctx.now);
   const acao = texto(data.action, 30);
-  const propria = ['request', 'renew', 'cancel', 'invite_decline'].includes(acao);
+  const propria = ['request', 'renew', 'cancel', 'invite_decline', 'represent'].includes(acao);
   if (!propria) await exigePerm(ctx, fed.id, actor, 'members');
   const reason = texto(data.reason, 500);
   const link = `/perfil?secao=federacoes`;
@@ -295,10 +301,39 @@ async function membership(ctx, actor, data) {
   const snap = await memberRef.get();
   if (!snap.exists || snap.data().federation_id !== fed.id) falha('not-found', 'Filiação não encontrada.');
   const member = { id: snap.id, ...snap.data() };
-  if (propria && member.user_id !== actor.uid && member.guardian_uid !== actor.uid) falha('permission-denied', 'Esta filiação não é sua.');
+  if (propria && member.user_id !== actor.uid && member.guardian_uid !== actor.uid && !(O.isOrg(member) && (await O.gereOrg(ctx, member.org_kind, member.org_id, actor.uid)))) falha('permission-denied', 'Esta filiação não é sua.');
   const destino = destinatario(member);
   const uid = member.user_id || destino;
   const p = member.plan_id ? await plano(ctx, fed.id, member.plan_id).catch(() => null) : null;
+
+  // Clube/arena: outro gestor da entidade passa a responder pela filiação
+  // (o representante saiu, mudou o cargo ou excluiu a conta). As cobranças em
+  // aberto vão para ele, porque só quem paga declara o pagamento.
+  if (acao === 'represent') {
+    if (!O.isOrg(member)) falha('failed-precondition', 'Só a filiação de clube ou arena tem representante.');
+    if (!LIVE.includes(member.status)) falha('failed-precondition', 'Esta filiação já está encerrada.');
+    if (member.representative_uid === actor.uid) falha('failed-precondition', 'Você já é o representante desta filiação.');
+    const perfil = await ctx.db.collection('users').doc(actor.uid).get();
+    const u = perfil.exists ? perfil.data() : {};
+    const nome = texto(u.platform_name || u.full_name || u.display_name || 'Gestor', 120);
+    const cargo = texto(data.representativeRole, 60);
+    const antes = (Array.isArray(member.representatives) ? member.representatives : []).filter((r) => r && r.uid && r.uid !== actor.uid);
+    const batch = ctx.db.batch();
+    batch.update(memberRef, {
+      representative_uid: actor.uid, representative_name: nome,
+      representatives: [{ uid: actor.uid, name: nome, role: cargo }, ...antes].slice(0, 10),
+      updated_at: ctx.Timestamp.fromMillis(ctx.now),
+    });
+    const abertas = await ctx.db.collection(C.charges).where('member_id', '==', memberRef.id).get();
+    abertas.docs.filter((d) => ['open', 'declared'].includes(d.data().status)).forEach((d) => batch.update(d.ref, { payer_uid: actor.uid }));
+    O.espelhar(ctx, batch, { ...member, representative_uid: actor.uid }, memberRef.id, member.status);
+    if (member.representative_uid) {
+      aviso(ctx, batch, member.representative_uid, { title: tx('{nome} passou a representar {entidade} na {sigla}', { nome, entidade: member.org_name || member.user_name, sigla: fed.acronym }), message: tx('As cobranças e os avisos da filiação vão para essa pessoa daqui em diante.'), link });
+    }
+    await batch.commit();
+    await auditoria(ctx, actor, 'federation_membership_represent', { federation_id: fed.id, member_id: memberRef.id, from: member.representative_uid || null, to: actor.uid });
+    return { ok: true };
+  }
 
   if (acao === 'approve') {
     if (member.status !== 'pending') falha('failed-precondition', 'Este pedido já foi decidido.');
@@ -362,6 +397,7 @@ async function membership(ctx, actor, data) {
     encerrarFiliacao(ctx, batch, memberRef, member, { status: 'cancelled', cancelled_at_ms: ctx.now, cancelled_by: actor.uid });
     const abertas = await ctx.db.collection(C.charges).where('member_id', '==', memberRef.id).get();
     abertas.docs.filter((d) => ['open', 'declared'].includes(d.data().status)).forEach((d) => batch.update(d.ref, { status: 'cancelled', cancelled_at_ms: ctx.now }));
+    await O.tirarEspelho(ctx, batch, member, memberRef.id);
     await batch.commit();
     await auditoria(ctx, actor, 'federation_membership_cancel', { federation_id: fed.id, user_id: uid, member_id: memberRef.id });
     return { ok: true };
@@ -379,6 +415,7 @@ async function membership(ctx, actor, data) {
       if (acao === 'suspend') Object.assign(patch, { status: 'suspended', suspended_reason: reason, suspended_by: actor.uid, suspended_at_ms: ctx.now, status_before_suspension: member.status });
       else Object.assign(patch, { status: member.status_before_suspension || 'active', suspended_reason: null, reinstated_at_ms: ctx.now });
       tr.update(memberRef, patch);
+      O.espelhar(ctx, tr, { ...member, ...patch }, memberRef.id, patch.status, { reason });
     });
     const batch = ctx.db.batch();
     aviso(ctx, batch, destino, acao === 'suspend'
@@ -477,6 +514,13 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   const u = perfil.exists ? perfil.data() : {};
   const nomeConta = texto(u.platform_name || u.full_name || u.display_name || 'Atleta', 120);
   const dependente = data.dependent && typeof data.dependent === 'object' ? data.dependent : null;
+  const orgPedida = data.org && typeof data.org === 'object' ? { kind: texto(data.org.kind, 10), id: texto(data.org.id, 80) } : null;
+  // O tipo do plano decide quem pode pedir: pessoa, clube ou arena (catálogo da plataforma).
+  const cfg = await ctx.db.collection('platform_settings').doc('federations').get().catch(() => null);
+  const tipo = resolveMemberType(cfg && cfg.exists ? cfg.data() : {}, p);
+  if (orgPedida && tipo.entity !== orgPedida.kind) falha('failed-precondition', 'Este plano não é para este tipo de entidade.');
+  if (!orgPedida && tipo.entity !== 'person') falha('failed-precondition', tipo.entity === 'club' ? 'Este plano é para clubes: peça pela gestão do clube.' : 'Este plano é para arenas: peça pela Central da arena.');
+  if (orgPedida && dependente) falha('invalid-argument', 'Pedido inválido.');
   const privado = {};
   let memberRef;
   let idade;
@@ -484,7 +528,26 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   let conviteRef = null;
   let importado = null; // convite nascido da importação: a pessoa já era filiada fora da plataforma
 
-  if (dependente) {
+  if (orgPedida) {
+    if (!(await O.gereOrg(ctx, orgPedida.kind, orgPedida.id, uid))) falha('permission-denied', orgPedida.kind === 'club' ? 'Só quem administra o clube pede a filiação dele.' : 'Só quem gere a arena pede a filiação dela.');
+    const org = await O.dadosDaOrg(ctx, orgPedida.kind, orgPedida.id);
+    if (!org) falha('not-found', 'Clube ou arena não encontrado.');
+    memberRef = ctx.db.collection(C.members).doc(O.orgMemberId(fed.id, orgPedida.kind, orgPedida.id));
+    const atual = await memberRef.get();
+    if (atual.exists && LIVE.includes(atual.data().status)) falha('already-exists', 'Esta entidade já tem uma filiação nesta federação.');
+    const anterior = atual.exists ? atual.data() : {};
+    // Já era filiada pelo pedido sem plano: a data da filiação continua a de antes.
+    const aff = await ctx.db.collection('federation_affiliations').doc(memberRef.id).get();
+    const desde = aff.exists && aff.data().status === 'approved' && !aff.data().member_id ? Number(aff.data().review && aff.data().review.at_ms) || null : null;
+    const cargo = texto(data.representativeRole, 60);
+    idade = null;
+    alvo = {
+      user_id: null, user_name: org.name, photo_url: org.logo || '', guardian_uid: null, is_minor: false, minor_photo_consent: null,
+      org_kind: orgPedida.kind, org_id: orgPedida.id, org_name: org.name, org_city: org.city, org_state: org.state, org_logo: org.logo,
+      representative_uid: uid, representative_name: nomeConta, representatives: [{ uid, name: nomeConta, role: cargo }],
+      affiliated_since_ms: Number(anterior.affiliated_since_ms) || desde || null, member_number: anterior.member_number || null,
+    };
+  } else if (dependente) {
     const nome = texto(dependente.name, 120);
     const nasc = texto(dependente.birth_date, 10);
     idade = idadeDe(nasc, hoje);
@@ -527,8 +590,8 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   }
   if (p.age_min != null && idade != null && idade < p.age_min) falha('failed-precondition', 'Este plano exige idade mínima maior.');
   if (p.age_max != null && idade != null && idade > p.age_max) falha('failed-precondition', 'Este plano tem idade máxima menor.');
-  const cpf = String(data.cpf == null ? '' : data.cpf).replace(/\D/g, '');
-  if (fed.rules && fed.rules.ask_cpf === true) {
+  const cpf = orgPedida ? '' : String(data.cpf == null ? '' : data.cpf).replace(/\D/g, '');
+  if (fed.rules && fed.rules.ask_cpf === true && !orgPedida) {
     if (!cpf && !dependente) falha('invalid-argument', 'Esta federação pede o CPF.');
     if (cpf && !m.isValidCpf(cpf)) falha('invalid-argument', 'CPF inválido.');
   }
@@ -536,10 +599,10 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
 
   const doc = {
     federation_id: fed.id, federation_name: fed.name, federation_acronym: fed.acronym || '', ...alvo,
-    person_type: p.person_type || 'athlete', tier: p.tier || 'federated',
+    person_type: tipo.id, person_type_label: tipo.label, person_category: tipo.category, tier: p.tier || 'federated',
     plan_id: p.id, plan_name: p.name, billing: p.billing || 'annual', status: 'pending',
     public_badge: data.publicBadge !== false, show_in_directory: data.showInDirectory === true, public_photo: true,
-    represented_club_id: texto(data.clubId, 80) || null, note: texto(data.note, 300),
+    represented_club_id: orgPedida ? null : (texto(data.clubId, 80) || null), note: texto(data.note, 300),
     requested_at: ctx.Timestamp.fromMillis(ctx.now), requested_at_ms: ctx.now, updated_at: ctx.Timestamp.fromMillis(ctx.now),
     member_number: alvo.member_number || null, card_code: null, valid_from: null, valid_until: null, expiry_notified: {},
   };
@@ -580,12 +643,14 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
     const secretaria = await staffIds(ctx, fed.id, 'members');
     secretaria.forEach((sid) => aviso(ctx, batch, sid, {
       title: tx('Novo pedido de filiação na {sigla}', { sigla: fed.acronym }),
-      message: tx('{nome} pediu filiação no plano {plano}. Analise na Central da federação.', { nome: doc.user_name, plano: p.name }),
+      message: orgPedida
+        ? tx('{nome} ({tipo}) pediu filiação no plano {plano}. Analise na Central da federação.', { nome: doc.user_name, tipo: orgPedida.kind === 'club' ? tx('clube') : tx('arena'), plano: p.name })
+        : tx('{nome} pediu filiação no plano {plano}. Analise na Central da federação.', { nome: doc.user_name, plano: p.name }),
       link: `/federacoes/${fed.id}/gerir?aba=pedidos`,
     }));
     await batch.commit();
   }
-  await auditoria(ctx, actor, 'federation_membership_request', { federation_id: fed.id, user_id: uid, member_id: memberRef.id, plan_id: p.id, dependent: Boolean(dependente) });
+  await auditoria(ctx, actor, 'federation_membership_request', { federation_id: fed.id, user_id: uid, member_id: memberRef.id, plan_id: p.id, dependent: Boolean(dependente), org_kind: orgPedida ? orgPedida.kind : null, org_id: orgPedida ? orgPedida.id : null });
   return { ok: true, memberId: memberRef.id, chargeId: charge ? charge.id : null };
 }
 
@@ -717,6 +782,7 @@ async function sweep(ctx) {
     // e a filiação vencida ficaria "active" para sempre enquanto a sanção durasse.
     if (st.daysLeft != null && st.daysLeft < 0) {
       batch.update(d.ref, { status: 'expired', expired_at_ms: ctx.now });
+      O.espelhar(ctx, batch, mem, d.id, 'expired', { reason: 'Filiação vencida.' });
       // eslint-disable-next-line no-await-in-loop
       aviso(ctx, batch, destinatario(mem), { title: tx('Sua filiação na {sigla} venceu', { sigla: await sigla(mem.federation_id) }), message: tx('Renove para continuar em dia e pontuando. A carteirinha mostra "Vencida" até lá.'), link });
       vencidas += 1; n += 2;

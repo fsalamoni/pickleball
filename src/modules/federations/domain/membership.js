@@ -163,6 +163,8 @@ export function publicVerification(member, federation, hoje = isoDate(), { nowMs
     federation: { name: federation.name, acronym: federation.acronym, slug: federation.slug },
     tier: member.tier || '',
     person_type: member.person_type || '',
+    person_type_label: member.person_type_label || '',
+    org_kind: member.org_kind || null,
     member_number: member.member_number || '',
     status: st.status,
     valid_until: st.validUntil,

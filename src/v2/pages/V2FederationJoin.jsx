@@ -15,22 +15,29 @@
  * a cobrança e os avisos são do responsável). O plano que exige documentos
  * abre o envio aqui mesmo (os arquivos sobem logo depois do pedido gravado);
  * o que ficar faltando a pessoa envia pela página da federação.
+ *
+ * Etapa 2: os tipos de filiação vêm do catálogo do admin da plataforma (só
+ * os de PESSOA aparecem aqui); `?entidade=club:ID` ou `arena:ID` troca a tela
+ * pela filiação da entidade (`OrgMembershipJoin`).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, FileUp, IdCard, Landmark, MailPlus, Trash2, Users } from 'lucide-react';
+import { Check, IdCard, Landmark, MailPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { calculateAge } from '@/core/lib/profileValidation';
 import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationInvites, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
-import { membershipAction, uploadMemberDocument } from '@/modules/federations/services/federationService';
+import { membershipAction, uploadChosenDocuments } from '@/modules/federations/services/federationService';
 import { canRequestMembership } from '@/modules/federations/domain/membership';
 import { isFreePlan, planPeriodLabel, planPrice, plansFor, planBenefitLines } from '@/modules/federations/domain/plans';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { ageGroup, ageOn, docLabel, federationAsksCpf, requiredDocs, validateDependentInput, validateDocumentFile, validatePrivateInput } from '@/modules/federations/domain/privateData';
+import { ageGroup, ageOn, docLabel, federationAsksCpf, requiredDocs, validateDependentInput, validatePrivateInput } from '@/modules/federations/domain/privateData';
+import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
+import DocumentsUploadList from '@/v2/components/federations/DocumentsUploadList';
+import OrgMembershipJoin from '@/v2/components/federations/OrgMembershipJoin';
 import { isoDate } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import {
   V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -93,48 +100,6 @@ function ConviteAviso({ convite }) {
   );
 }
 
-/**
- * Os documentos que o plano exige, já no pedido: cada um com o seu espaço de
- * envio. O arquivo sobe DEPOIS que o pedido existe (o documento é da filiação);
- * o que não for escolhido aqui a pessoa envia depois, pela página da federação.
- */
-function DocumentosDoPedido({ docs, arquivos, onChange }) {
-  const escolher = (key, file) => {
-    if (!file) return;
-    const erro = validateDocumentFile(file);
-    if (erro) { toast.error(erro); return; }
-    onChange({ ...arquivos, [key]: file });
-  };
-  const tirar = (key) => { const x = { ...arquivos }; delete x[key]; onChange(x); };
-  return (
-    <V2Surface className="space-y-4" data-dica="federacao-filiar-documentos">
-      <div>
-        <h2 className="font-display text-lg font-bold text-ink">{t('Documentos do plano')}</h2>
-        <p className="text-sm text-gray-600">{t('PDF ou imagem, até 5 MB cada. Só você e a secretaria da federação veem os arquivos. O que faltar agora dá para enviar depois, pela página da federação.')}</p>
-      </div>
-      <ul className="space-y-3">
-        {docs.map((d) => {
-          const arq = arquivos[d.key];
-          const id = `fj-doc-${d.key}`;
-          return (
-            <li key={d.key} className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 p-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-ink">{docLabel(d)}</p>
-                <p className="truncate text-xs text-gray-500">{arq ? arq.name : t('Nenhum arquivo escolhido')}</p>
-              </div>
-              {arq && <V2Button type="button" size="sm" variant="ghost" aria-label={t('Tirar o arquivo de {doc}', { doc: docLabel(d) })} onClick={() => tirar(d.key)}><Trash2 className="h-4 w-4" /></V2Button>}
-              <label htmlFor={id} className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm font-semibold text-ink hover:border-ink focus-within:ring-4 focus-within:ring-acid/30 coarse:min-h-11">
-                <FileUp className="h-4 w-4" aria-hidden="true" />{arq ? t('Trocar') : t('Escolher arquivo')}
-                <input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" aria-label={t('Arquivo do documento: {tipo}', { tipo: docLabel(d) })} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; escolher(d.key, file); }} />
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-    </V2Surface>
-  );
-}
-
 function Formulario({ federation, plans, dependente = false, onEnviado, convite = null, planoInicial = '' }) {
   const { user, userProfile } = useAuth();
   const [arquivos, setArquivos] = useState({});
@@ -164,7 +129,12 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const menorComConta = !dependente && faixa === 'minor';
   const criancaComConta = !dependente && faixa === 'child';
 
-  const tipos = Object.values(PLAN_PERSON_TYPE).filter((pt) => (plans || []).some((p) => p.active !== false && (p.person_type || PLAN_PERSON_TYPE.ATHLETE) === pt));
+  // Os tipos de PESSOA que a federação oferece (os planos ativos dizem quais); clube e arena pedem pela gestão deles.
+  const tipos = [];
+  (plans || []).filter((p) => p.active !== false && (p.entity || 'person') === 'person').forEach((p) => {
+    const id = p.person_type || PLAN_PERSON_TYPE.ATHLETE;
+    if (!tipos.some((x) => x.id === id)) tipos.push({ id, label: personTypeLabel(p) });
+  });
   const candidatos = plansFor(plans || [], { personType: tipo, age: idade });
   const plano = candidatos.find((p) => p.id === planId) || null;
   const preco = plano ? planPrice(plano, { age: idade }) : null;
@@ -202,18 +172,12 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       onSuccess: async (r) => {
         toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : t('Pedido de filiação enviado.'));
         // Os arquivos sobem com o pedido já gravado; um que falhe não desfaz o pedido — a tela diz qual falta.
-        const escolhidos = docsExigidos.filter((d) => arquivos[d.key]);
-        if (escolhidos.length && r?.memberId) {
+        if (r?.memberId && docsExigidos.some((d) => arquivos[d.key])) {
           setEnviandoDocs(true);
-          const falhas = [];
-          for (const d of escolhidos) {
-            try {
-              await uploadMemberDocument({ member: { id: r.memberId, federation_id: federation.id }, kind: d.kind, docKey: d.key, label: d.label, file: arquivos[d.key], uid: user?.uid });
-            } catch { falhas.push(docLabel(d)); }
-          }
+          const up = await uploadChosenDocuments({ docs: docsExigidos, arquivos, member: { id: r.memberId, federation_id: federation.id }, uid: user?.uid });
           setEnviandoDocs(false);
-          if (falhas.length) toast.error(t('Não deu para enviar: {lista}. Envie depois em Minha filiação, na página da federação.', { lista: falhas.join(', ') }), { duration: 12000 });
-          else toast.success(tn(escolhidos.length, 'Documento enviado. A secretaria confere.', '{n} documentos enviados. A secretaria confere.'));
+          if (up.falhas.length) toast.error(t('Não deu para enviar: {lista}. Envie depois em Minha filiação, na página da federação.', { lista: up.falhas.join(', ') }), { duration: 12000 });
+          else toast.success(tn(up.total, 'Documento enviado. A secretaria confere.', '{n} documentos enviados. A secretaria confere.'));
         }
         onEnviado?.({ ...(r || {}), nome: dependente ? dep.name.trim() : '' });
       },
@@ -238,8 +202,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       <V2Surface className="space-y-4">
         <h2 className="font-display text-lg font-bold text-ink">{dependente ? t('1. O dependente se filia como') : t('1. Você se filia como')}</h2>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('Tipo de filiação')}>
-          {(tipos.length ? tipos : [PLAN_PERSON_TYPE.ATHLETE]).map((pt) => (
-            <V2FilterChip key={pt} type="button" role="radio" aria-checked={tipo === pt} active={tipo === pt} onClick={() => { setTipo(pt); setPlanId(''); }}>{t(PLAN_PERSON_TYPE_LABELS[pt])}</V2FilterChip>
+          {(tipos.length ? tipos : [{ id: PLAN_PERSON_TYPE.ATHLETE, label: personTypeLabel({}) }]).map((x) => (
+            <V2FilterChip key={x.id} type="button" role="radio" aria-checked={tipo === x.id} active={tipo === x.id} onClick={() => { setTipo(x.id); setPlanId(''); }}>{x.label}</V2FilterChip>
           ))}
         </div>
         {idade == null && !dependente && <p className="text-xs text-gray-500">{t('Sem a data de nascimento no seu perfil, os planos por faixa de idade não aparecem. Complete o perfil para vê-los.')}</p>}
@@ -287,7 +251,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
         )}
       </V2Surface>
 
-      {docsExigidos.length > 0 && <DocumentosDoPedido docs={docsExigidos} arquivos={arquivos} onChange={setArquivos} />}
+      {docsExigidos.length > 0 && <DocumentsUploadList docs={docsExigidos} arquivos={arquivos} onChange={setArquivos} />}
 
       {(pedeCpf || menorComConta) && (
         <V2Surface className="space-y-4" data-dica="federacao-filiar-dados">
@@ -347,6 +311,9 @@ function Pagina() {
   const { federationId } = useParams();
   const [params] = useSearchParams();
   const dependente = params.get('dependente') === '1';
+  // `?entidade=club:ID` ou `arena:ID`: o clube/arena se filia por plano (quem gere a entidade).
+  const [orgKind, orgId] = String(params.get('entidade') || '').split(':');
+  const entidade = ['club', 'arena'].includes(orgKind) && orgId ? { kind: orgKind, id: orgId } : null;
   const planoInicial = params.get('plano') || '';
   const fq = useFederation(federationId);
   const pq = useFederationPlans(federationId);
@@ -368,6 +335,7 @@ function Pagina() {
   else if (fq.isLoading || pq.isLoading || mq.isLoading || cq.isLoading) corpo = <V2Skeleton className="h-96" />;
   else if (!f) corpo = <V2EmptyState icon={Landmark} title={t('Federação não encontrada')} action={<V2Button asChild variant="secondary"><Link to="/federacoes">{t('Ver as federações')}</Link></V2Button>} />;
   else if (f.status !== FEDERATION_STATUS.APPROVED || f.published !== true) corpo = <V2Surface><p className="text-gray-600">{f.status === FEDERATION_STATUS.APPROVED ? t('A filiação abre quando a federação for publicada pelo admin dela.') : t('Esta federação não está recebendo filiações no momento.')}</p></V2Surface>;
+  else if (entidade) corpo = <OrgMembershipJoin federation={f} plans={pq.data} kind={entidade.kind} orgId={entidade.id} charges={cq.data} />;
   else if (dependente && depEnviado) corpo = <DependenteEnviado federation={f} enviado={depEnviado} cobrancas={abertasDaFed} onOutro={() => setDepEnviado(null)} />;
   else if (dependente) corpo = <Formulario key="dependente" federation={f} plans={pq.data} dependente planoInicial={planoInicial} onEnviado={(r) => setDepEnviado(r)} />;
   else if (!canRequestMembership(mq.data)) {
@@ -402,7 +370,7 @@ function Pagina() {
       <V2BackLink to={f ? fedPath(f) : '/federacoes'}>{f?.name || t('Federações')}</V2BackLink>
       <div className="flex items-start gap-4">
         {f && <FedLogo federation={f} size="lg" />}
-        <V2PageIntro className="mb-0" title={dependente ? t('Filiar um dependente') : t('Filiar-se')} subtitle={f ? t('à {nome}', { nome: f.name }) : ''} />
+        <V2PageIntro className="mb-0" title={entidade ? (entidade.kind === 'club' ? t('Filiar o clube') : t('Filiar a arena')) : dependente ? t('Filiar um dependente') : t('Filiar-se')} subtitle={f ? t('à {nome}', { nome: f.name }) : ''} />
       </div>
       {corpo}
     </V2Page>

@@ -17,7 +17,10 @@ const str = (v, max = 160) => String(v ?? '').trim().slice(0, max);
 /** O que a organização pode fazer agora diante do pedido que já existe (ou não). */
 export function affiliationState(aff = null) {
   const status = aff?.status || null;
+  // Filiação POR PLANO (Etapa 2): o documento é espelho do servidor; pedir, sair e renovar são da filiação.
+  const porPlano = Boolean(aff?.member_id);
   return {
+    byPlan: porPlano,
     status,
     label: status ? AFFILIATION_STATUS_LABELS[status] || status : null,
     approved: status === AFFILIATION_STATUS.APPROVED,
@@ -25,9 +28,9 @@ export function affiliationState(aff = null) {
     /** A federação convidou: quem gere a organização aceita ou recusa. */
     invited: status === AFFILIATION_STATUS.INVITED,
     /** Pode pedir (de novo): nunca pediu, foi recusado ou suspenso. */
-    canRequest: !status || status === AFFILIATION_STATUS.REJECTED || status === AFFILIATION_STATUS.SUSPENDED,
+    canRequest: !porPlano && (!status || status === AFFILIATION_STATUS.REJECTED || status === AFFILIATION_STATUS.SUSPENDED),
     /** Pode desfazer: pedido pendente (retira) ou filiação aprovada (desfilia-se). */
-    canWithdraw: status === AFFILIATION_STATUS.PENDING || status === AFFILIATION_STATUS.APPROVED,
+    canWithdraw: !porPlano && (status === AFFILIATION_STATUS.PENDING || status === AFFILIATION_STATUS.APPROVED),
   };
 }
 

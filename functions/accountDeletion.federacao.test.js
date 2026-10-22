@@ -50,4 +50,19 @@ describe('excluir a conta e os pontos do ranking oficial', () => {
     expect(ranking.categories[0].rows[0]).toMatchObject({ uid: null, name: REMOVED_ATHLETE });
     expect(db.store.docs.get('federation_points/r1_bia')).toEqual(bia);
   });
+
+  it('o clube que a conta representava segue filiado, sem representante; a cobrança dele perde só o pagador', async () => {
+    const { db, ctx } = cenario();
+    db.store.docs.set('federation_members/fpp_club_c1', {
+      federation_id: 'fpp', user_id: null, user_name: 'Clube Pinheiros', org_kind: 'club', org_id: 'c1', status: 'active',
+      representative_uid: 'ana', representative_name: 'Ana', representatives: [{ uid: 'ana', name: 'Ana', role: 'Presidente' }, { uid: 'bia', name: 'Bia', role: 'Diretora' }],
+    });
+    db.store.docs.set('federation_charges/k1', { member_id: 'fpp_club_c1', payer_uid: 'ana', payer_name: 'Clube Pinheiros', status: 'open' });
+    const r = await executeAccountDeletion(ctx, 'ana', { actor: { uid: 'admin', name: 'Dono' }, reason: 'pedido', hojeISO: `${ANO}-10-22`, FieldValue: FakeFieldValue });
+    expect(r.status).not.toBe('blocked');
+    const m = db.store.docs.get('federation_members/fpp_club_c1');
+    expect(m).toMatchObject({ status: 'active', user_name: 'Clube Pinheiros', representative_uid: null });
+    expect(m.representatives).toEqual([{ uid: 'bia', name: 'Bia', role: 'Diretora' }]);
+    expect(db.store.docs.get('federation_charges/k1')).toMatchObject({ payer_uid: null, payer_name: 'Clube Pinheiros', status: 'open' });
+  });
 });

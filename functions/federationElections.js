@@ -116,7 +116,7 @@ async function avisar(ctx, uids, msg) {
 }
 async function filiadosAtivos(ctx, fed) {
   const snap = await ctx.db.collection(f.C.members).where('federation_id', '==', fed.id).where('status', '==', 'active').get();
-  return snap.docs.map((d) => d.data().user_id || d.data().guardian_uid);
+  return snap.docs.map((d) => d.data().user_id || d.data().guardian_uid || d.data().representative_uid);
 }
 // No app (não na página pública): é lá que a pessoa vota, registra chapa e se defende.
 const linkDa = (fed) => `/federacoes/${encodeURIComponent(fed.id)}?aba=eleicoes`;

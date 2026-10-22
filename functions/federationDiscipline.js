@@ -20,6 +20,7 @@
  * filiação viva; o recurso só é decidido com `uphold` ou `overturn`.
  */
 const f = require('./federations.js');
+const O = require('./federationOrgMembers.js');
 const m = require('./federationMembership.js');
 const { tx } = require('./avisoI18n.js');
 
@@ -118,6 +119,8 @@ async function discipline(ctx, actor, data) {
       f.encerrarFiliacao(ctx, batch, memberRef, member, { status: 'cancelled', cancelled_at_ms: ctx.now, cancelled_by: actor.uid, excluded_by_sanction_id: ref.id, status_before_exclusion: member.status });
       const abertas = await ctx.db.collection(f.C.charges).where('member_id', '==', member.id).get();
       abertas.docs.filter((d) => ['open', 'declared'].includes(d.data().status)).forEach((d) => batch.update(d.ref, { status: 'cancelled', cancelled_at_ms: ctx.now }));
+      // Clube/arena filiado por plano: o espelho da página pública sai junto.
+      await O.tirarEspelho(ctx, batch, member, member.id);
     }
     if (kind === 'fine') {
       const charge = f.novaCobranca(ctx, batch, { fed, member, memberId: member.id, plan: null, origin: 'fine', hoje, amount: fine_cents, extra: { plan_name: 'Multa disciplinar', sanction_id: ref.id } });

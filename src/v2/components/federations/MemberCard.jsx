@@ -136,7 +136,7 @@ export default function MemberCardDialog({ open, onOpenChange, member, federatio
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg" sheet>
         <DialogHeader>
-          <DialogTitle>{t('Carteirinha digital')}</DialogTitle>
+          <DialogTitle>{member?.org_kind ? t('Certificado de filiação') : t('Carteirinha digital')}</DialogTitle>
           <DialogDescription>{t('Mostre na quadra ou no torneio. O QR abre a verificação pública: nome, federação, categoria e validade — nada mais.')}</DialogDescription>
         </DialogHeader>
         <div ref={cardRef} className="tema-claro cartao-imprimivel">

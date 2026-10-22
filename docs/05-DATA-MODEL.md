@@ -1808,6 +1808,17 @@ family_pct, family_from }`, `requires_docs[]` (PR 3:
 `other_docs[] { id, label }` (opcional, até 5: o nome de cada "outro
 documento"; com ele o `requires_docs` leva `outro`), `auto_approve`, `active`, `sort`, `updated_by`.
 Cria/edita `admin` ou `finance`; apaga só o admin da plataforma (desativa).
+Etapa 2 (2026-10-22): `person_type` é um código do catálogo da plataforma
+(`[a-z][a-z0-9_]{1,23}`: os prontos `athlete|coach|referee|club|arena` ou um tipo
+do admin) e o plano grava o tipo resolvido em `entity` (`person|club|arena`),
+`person_category` (`athlete|coach|referee|none|club|arena`) e
+`person_type_label` (todos opcionais; ausentes = atleta/pessoa). Plano de clube
+ou arena não tem idade nem descontos e só pede `outro` com nome.
+
+### `platform_settings/federations` (Etapa 2, 2026-10-22)
+`member_types[] { id, label, description, active, entity, category }` — o
+catálogo de tipos de filiação (até 30). Ausente ⇒ os cinco prontos. Lê
+qualquer pessoa, grava só o admin da plataforma (regra de `platform_settings`).
 
 ### `federation_members/{fedId}_{uid}` (NOVO, **nunca público**)
 Só o servidor cria e muda o estado (`federationMembership`). `federation_id`,
@@ -1827,6 +1838,13 @@ lidos por `tournamentMembershipOk`), `excluded_by_sanction_id`,
 o próprio ou o responsável) só muda `public_badge`, `show_in_directory`,
 `public_photo`, `minor_photo_consent`, `prefs_updated_at`. Leem: o dono, a
 equipe com `admin`/`members`/`finance`, o admin.
+Etapa 2 (2026-10-22, opcionais): `person_type_label`, `person_category`; e a
+filiação de CLUBE/ARENA por plano, id `{fedId}_{club|arena}_{orgId}`, com
+`user_id` nulo, `org_kind`, `org_id`, `org_name`, `org_city`, `org_state`,
+`org_logo`, `representative_uid`, `representative_name`,
+`representatives[] { uid, name, role }` e `affiliated_since_ms`. O dono
+(`fedMemberOwner`) inclui quem gere a entidade (`fedOrgManager`), que também
+lista por `org_kind` + `org_id`.
 - `private/data` (PR 3): `cpf` (só dígitos, ≤ 11, só se
   `federations.rules.ask_cpf`), `birth_date`, `guardian_name`,
   `guardian_contact`, `guardian_consent` — **só o servidor grava** (pedido de
@@ -1854,6 +1872,11 @@ do pagador: `open|declared` → `declared` com `declared_at`/`declared_note`.
 
 ### `federation_affiliations/{fedId}_{kind}_{orgId}` (PR 2)
 Clube (`kind: 'club'`) ou arena (`kind: 'arena'`) filiado à federação.
+Etapa 2 (2026-10-22): quando a entidade se filia por PLANO, este documento é o
+ESPELHO da filiação, gravado só pelo servidor, com `member_id`, `plan_id`,
+`plan_name`, `member_number`, `valid_until` (ativa ⇒ `approved`; vencida ou
+suspensa ⇒ `suspended`; cancelada ⇒ sai). Com `member_id` a regra recusa
+decidir ou apagar pelo navegador.
 `federation_id`, `federation_name`, `federation_acronym`, `kind`, `org_id`,
 `org_name`, `org_city`, `org_state`, `org_logo` (copiados — a página da
 federação não lê `clubs`/`arenas`), `status`
@@ -1937,7 +1960,9 @@ at_ms, reason }`,
 `created_at`, `updated_at`. Cria o dono da filiação (`fedMemberOwner`), só
 `pending`; a equipe `members`/`admin` só muda `status`/`review`/`updated_at`;
 apaga o dono (pendente), `admin` ou o admin da plataforma. Leem: o dono, a
-equipe `members`/`admin`, o admin.
+equipe `members`/`admin`, o admin. Etapa 2: o documento de clube/arena leva
+`org_kind`/`org_id` (iguais aos da filiação, a regra confere) e todos os
+gestores da entidade o leem.
 
 ### `federation_transfers/{id}` (PR 3, só o servidor — `federationTransfer`)
 `federation_id`, `member_id`, `user_id`, `guardian_uid`, `user_name`, `kind`

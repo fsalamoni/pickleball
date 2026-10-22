@@ -13,12 +13,16 @@ import { FED_PERMISSION } from '../domain/constants.js';
 import { grantActive, staffIsMaster, staffPerms, staffRoleName } from '../domain/staff.js';
 import { fedModuleOn } from '../domain/federation.js';
 import { mergeDocLists } from '../domain/acervo.js';
+import { memberTypeCatalog } from '../domain/memberTypes.js';
 import { mergeEventLists, tournamentAgendaItem } from '../domain/agenda.js';
 
 export const fedKeys = {
   all: ['federacoes'],
   publicList: ['federacoes', 'diretorio'],
   adminList: ['federacoes', 'admin', 'todas'],
+  platformSettings: ['federacoes', 'plataforma', 'configuracao'],
+  orgMemberships: (kind, orgId) => ['federacoes', 'organizacao', kind, orgId, 'filiacoes-por-plano'],
+  orgDocuments: (kind, orgId) => ['federacoes', 'organizacao', kind, orgId, 'documentos'],
   one: (id) => ['federacoes', 'federacao', id],
   bySlug: (slug) => ['federacoes', 'slug', slug],
   priv: (id) => ['federacoes', 'federacao', id, 'privado'],
@@ -221,6 +225,39 @@ export function useApprovedAffiliations(id, { enabled = true } = {}) {
 }
 
 /** As filiações de um clube/arena. `approvedOnly` para quem não gere (o selo público). */
+/**
+ * O catálogo de tipos de filiação da plataforma (`platform_settings/federations`).
+ * `catalog` já vem montado (nativos + criados pelo admin); falha ⇒ `isError`, e
+ * a tela usa o catálogo padrão só para exibir, nunca para gravar.
+ */
+export function useFederationPlatformSettings({ enabled = true } = {}) {
+  // Sem a chave da funcionalidade de propósito: o admin configura antes de ligar federações.
+  const q = useQuery({ queryKey: fedKeys.platformSettings, queryFn: svc.getFederationPlatformSettings, enabled, staleTime: 10 * 60_000 });
+  const catalog = useMemo(() => memberTypeCatalog(q.data || {}), [q.data]);
+  return { ...q, catalog };
+}
+
+export function useSaveFederationMemberTypes() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: (list) => svc.saveFederationMemberTypes(list, { uid: user?.uid }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: fedKeys.platformSettings }),
+  });
+}
+
+/** As filiações POR PLANO de um clube/arena (quem gere a entidade). */
+export function useOrgMemberships(kind, orgId, { enabled = true } = {}) {
+  const ligado = useFederationsEnabled();
+  return useQuery({ queryKey: fedKeys.orgMemberships(kind, orgId), queryFn: () => svc.listOrgMemberships(kind, orgId), enabled: !!kind && !!orgId && ligado && enabled, staleTime: 60_000 });
+}
+
+/** Os documentos enviados por um clube/arena filiado. */
+export function useOrgDocuments(kind, orgId, { enabled = true } = {}) {
+  const ligado = useFederationsEnabled();
+  return useQuery({ queryKey: fedKeys.orgDocuments(kind, orgId), queryFn: () => svc.listOrgDocuments(kind, orgId), enabled: !!kind && !!orgId && ligado && enabled, staleTime: 60_000 });
+}
+
 export function useOrgAffiliations(kind, orgId, { approvedOnly = false, enabled = true } = {}) {
   const ligado = useFederationsEnabled();
   return useQuery({ queryKey: fedKeys.orgAffiliations(kind, orgId, approvedOnly), queryFn: () => svc.listOrgAffiliations(kind, orgId, { approvedOnly }), enabled: !!kind && !!orgId && ligado && enabled, staleTime: 5 * 60_000 });
