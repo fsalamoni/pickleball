@@ -1687,6 +1687,9 @@ igualdade).
 `invite`, `invite_cancel`, `invite_decline`; `write: if false`). O convite não
 cria filiação: o pedido no plano do convite entra sem aprovação e marca a
 filiação com `invited: true` (campo opcional novo em `federation_members`).
+Convite da importação (opcionais): `source: 'import'`, `import_id`,
+`member_number`, `valid_until` (+90 dias) — aceito, a filiação entra ativa sem
+cobrança, com `imported: true`.
 Sai na exclusão de conta (apagado) e vai na exportação. Zero índice (uma
 igualdade; ordenação em memória).
 
@@ -1925,7 +1928,10 @@ varredura), `updated_at_ms`. Leem: o dono, a equipe
 ### `federation_imports/{id}` (PR 3, só o servidor — `federationImportMembers`)
 `federation_id`, `plan_id`, `plan_name`, `by`, `created_at_ms`, `total_rows`,
 `imported_count`, `skipped[]`, `pending[]` (nome, e-mail, número e validade de
-quem **não tem conta** — só a equipe `members`/`admin` lê).
+quem **não tem conta** — só a equipe `members`/`admin` lê); desde 2026-10-22
+(opcionais) `pending_emails[]` (os e-mails ainda sem conta, para o gatilho
+`federationImportInvite` achar por `array-contains`) e `invited_emails[]`
+(quem já recebeu o convite ao criar a conta).
 
 ### `federation_courses/{id}` (PR 3; público quando não é `draft`)
 `federation_id`, `federation_acronym`, `name` (3–120), `description`, `kind`

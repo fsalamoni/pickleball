@@ -353,6 +353,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Pedir/cancelar transferência de clube ou federação | ✖ | ✖ | ✔ o dono (filiação viva, carência) | — | — | **Cloud Function** `federationTransfer` |
 | Aprovar/recusar transferência | ✖ | ✖ | ✖ | ✔ `members` da federação **atual** (a de destino só lê) | ✔ | **Cloud Function** `federationTransfer`; silêncio no prazo = liberada pela varredura |
 | Importar filiados (lista com e-mail) | ✖ | ✖ | ✖ | ✔ `members` | ✔ | **Cloud Function** `federationImportMembers`; `federation_imports` só a equipe lê |
+| Convidar quem estava na importação sem conta, ao criar a conta | ✖ | ✖ | ✖ | ✖ | ✖ | **Cloud Function** `federationImportInvite` (gatilho); aceitar é da própria pessoa (`federationMembership`) |
 | Criar/editar curso (módulo `courses`) | ✖ | ✖ | ✖ | ✔ `courses` ou `admin` (`federation_id`/`enrolled_count` intocáveis) | ✔ | rules (`fedModuleOn`); apagar `admin` sem inscritos ou Plat |
 | Ler curso | ◐ não `draft` | ◐ não `draft` | ◐ não `draft` | ✔ `courses`/`admin` | ✔ | rules |
 | Inscrever-se / cancelar inscrição em curso | ✖ | ✔ (filiação ativa se o curso exige) | ✔ | — | — | **Cloud Function** `federationCourse` |

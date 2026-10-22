@@ -18,7 +18,7 @@
 | Coleções raiz no `firestore.rules` | 205 |
 | Blocos `match` (raiz + subcoleções) | 225 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 80 |
+| Cloud Functions exportadas | 81 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 7 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 9 |
@@ -355,6 +355,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `federationCourse` | federationCallable |  |
 | `federationDiscipline` | federationCallable |  |
 | `federationImportMembers` | federationCallable |  |
+| `federationImportInvite` | gatilho Firestore | `users/{uid}` |
 | `federationNews` | federationCallable |  |
 | `federationNewsPublish` | agendada | `every 15 minutes` |
 | `federationStaff` | federationCallable |  |

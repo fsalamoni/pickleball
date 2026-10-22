@@ -482,6 +482,7 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   let idade;
   let alvo;
   let conviteRef = null;
+  let importado = null; // convite nascido da importação: a pessoa já era filiada fora da plataforma
 
   if (dependente) {
     const nome = texto(dependente.name, 120);
@@ -519,7 +520,10 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
     // Convidado pela secretaria para ESTE plano: o pedido entra sem esperar a aprovação.
     const convRef = ctx.db.collection(C.invites).doc(`${fed.id}_${uid}`);
     const conv = await convRef.get();
-    if (conv.exists && conviteValido(conv.data(), ctx.now) && conv.data().plan_id === p.id) conviteRef = convRef;
+    if (conv.exists && conviteValido(conv.data(), ctx.now) && conv.data().plan_id === p.id) {
+      conviteRef = convRef;
+      if (conv.data().source === 'import') importado = conv.data();
+    }
   }
   if (p.age_min != null && idade != null && idade < p.age_min) falha('failed-precondition', 'Este plano exige idade mínima maior.');
   if (p.age_max != null && idade != null && idade > p.age_max) falha('failed-precondition', 'Este plano tem idade máxima menor.');
@@ -546,7 +550,16 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   };
   const valor = Number(p.price_cents) > 0 ? m.planPrice(p, { age: idade, familyIndex: await indiceFamilia(ctx, fed.id, { id: memberRef.id, ...doc }) }).total : 0;
   let charge = null;
-  if (p.auto_approve || conviteRef) {
+  if (importado) {
+    // Como a importação de quem já tinha conta: ATIVA, sem cobrança, com o número e a validade da lista.
+    Object.assign(doc, { invited: true, imported: true, imported_by: importado.invited_by || null, imported_at_ms: ctx.now });
+    if (importado.member_number) doc.member_number = importado.member_number;
+    await ctx.db.runTransaction(async (tr) => {
+      const ativo = await ativar(ctx, tr, { fed, memberRef, member: doc, plan: p, hoje, novo: true });
+      if (importado.valid_until && importado.valid_until !== ativo.valid_until) tr.update(memberRef, { valid_until: importado.valid_until });
+      gravaPrivado(tr);
+    });
+  } else if (p.auto_approve || conviteRef) {
     if (conviteRef) doc.invited = true;
     if (!(valor > 0)) {
       await ctx.db.runTransaction(async (tr) => {

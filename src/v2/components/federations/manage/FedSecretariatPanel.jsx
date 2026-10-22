@@ -274,7 +274,7 @@ function ImportarTab({ federation, plansQ, importsQ }) {
   const baixarModelo = () => baixarCsv(MODELO_CSV, 'filiados-modelo.csv');
   return (
     <section className="space-y-4" aria-label={t('Importar filiados')} data-dica="federacao-importar">
-      <div><h2 className="font-display text-xl font-bold text-ink">{t('Importar filiados')}</h2><p className="text-sm text-gray-500">{t('Para a federação que já existia: uma planilha CSV com nome, e-mail, número (opcional) e validade (opcional). Quem tem conta com o e-mail vira filiado ativo no plano escolhido; quem não tem fica numa lista para você convidar. Até {n} linhas por vez.', { n: IMPORT_MAX_ROWS })}</p></div>
+      <div><h2 className="font-display text-xl font-bold text-ink">{t('Importar filiados')}</h2><p className="text-sm text-gray-500">{t('Para a federação que já existia: uma planilha CSV com nome, e-mail, número (opcional) e validade (opcional). Quem tem conta com o e-mail vira filiado ativo no plano escolhido; quem não tem recebe o convite sozinho quando criar a conta com aquele e-mail e, confirmando, entra ativo sem cobrança. Até {n} linhas por vez.', { n: IMPORT_MAX_ROWS })}</p></div>
       <form onSubmit={enviar} className="space-y-4" noValidate>
         <V2Surface className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -316,11 +316,11 @@ function ImportarTab({ federation, plansQ, importsQ }) {
             {[...importsQ.data].sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0)).map((imp) => (
               <li key={imp.id}>
                 <V2Surface variant="compacto" className="space-y-2 p-4">
-                  <p className="text-sm text-ink"><span className="font-bold">{quando(imp.created_at_ms)}</span> · {imp.plan_name} · {tn(imp.imported_count, '{n} ativado', '{n} ativados')} · {tn((imp.pending || []).length, '{n} sem conta', '{n} sem conta')} · {tn((imp.skipped || []).length, '{n} pulado', '{n} pulados')}</p>
+                  <p className="text-sm text-ink"><span className="font-bold">{quando(imp.created_at_ms)}</span> · {imp.plan_name} · {tn(imp.imported_count, '{n} ativado', '{n} ativados')} · {tn((imp.pending || []).length - (imp.invited_emails || []).length, '{n} sem conta', '{n} sem conta')} · {(imp.invited_emails || []).length > 0 && `${tn(imp.invited_emails.length, '{n} convidado ao criar a conta', '{n} convidados ao criar a conta')} · `}{tn((imp.skipped || []).length, '{n} pulado', '{n} pulados')}</p>
                   {(imp.pending || []).length > 0 && (
                     <details className="text-xs text-gray-600">
-                      <summary className="cursor-pointer font-semibold">{t('Quem ainda não tem conta (convide por fora; ao criar a conta, importe de novo)')}</summary>
-                      <ul className="mt-1 space-y-0.5">{imp.pending.map((p) => <li key={p.email}>{p.name} · {p.email}{p.member_number ? ` · ${p.member_number}` : ''}</li>)}</ul>
+                      <summary className="cursor-pointer font-semibold">{t('Quem estava sem conta (ao criar a conta na plataforma, recebe o convite sozinho)')}</summary>
+                      <ul className="mt-1 space-y-0.5">{imp.pending.map((p) => <li key={p.email}>{p.name} · {p.email}{p.member_number ? ` · ${p.member_number}` : ''}{(imp.invited_emails || []).includes(p.email) ? ` · ${t('convidado')}` : ''}</li>)}</ul>
                     </details>
                   )}
                 </V2Surface>

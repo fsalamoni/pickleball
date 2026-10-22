@@ -74,8 +74,17 @@ function ConviteAviso({ convite }) {
     <V2Surface className="flex flex-wrap items-start gap-3 border-acid/60 bg-acid/10" role="note">
       <MailPlus className="mt-0.5 h-5 w-5 shrink-0 text-ink" aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="font-bold text-ink">{t('Você foi convidado(a) pela secretaria')}</p>
-        <p className="text-sm text-gray-600">{t('Plano {plano}, já escolhido abaixo. Pedindo neste plano, a filiação entra sem esperar aprovação. O convite vale até {data}.', { plano: convite.plan_name, data: quando(convite.expires_at_ms) })}</p>
+        {convite.source === 'import' ? (
+          <>
+            <p className="font-bold text-ink">{t('A federação já tinha você na lista de filiados')}</p>
+            <p className="text-sm text-gray-600">{t('Plano {plano}, já escolhido abaixo. Confirmando, a filiação entra ativa, sem cobrança, com o número e a validade da lista. O convite vale até {data}.', { plano: convite.plan_name, data: quando(convite.expires_at_ms) })}</p>
+          </>
+        ) : (
+          <>
+            <p className="font-bold text-ink">{t('Você foi convidado(a) pela secretaria')}</p>
+            <p className="text-sm text-gray-600">{t('Plano {plano}, já escolhido abaixo. Pedindo neste plano, a filiação entra sem esperar aprovação. O convite vale até {data}.', { plano: convite.plan_name, data: quando(convite.expires_at_ms) })}</p>
+          </>
+        )}
         {convite.note && <p className="mt-1 text-sm text-gray-700">“{convite.note}”</p>}
       </div>
       <V2Button type="button" size="sm" variant="ghost" disabled={recusar.isPending} onClick={() => recusar.mutate(undefined, { onSuccess: () => toast.success(t('Convite recusado.')), onError: (e) => toast.error(e.message) })}>{t('Recusar o convite')}</V2Button>
@@ -117,6 +126,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const docsExigidos = requiredDocKinds(plano);
   // O Pix só nasce na hora com aprovação automática ou convite neste plano; senão, depois que a secretaria aprova.
   const pagaDepois = Boolean(plano && !isFreePlan(plano) && !plano.auto_approve && planoConvite?.id !== plano.id);
+  // Convite da importação, neste plano: entra ativo sem cobrança (já era filiado fora da plataforma).
+  const semCobranca = Boolean(plano && convite?.source === 'import' && planoConvite?.id === plano.id);
   const estatuto = safeHttpUrl(federation?.governance?.statute_url);
   const setPriv = (patch) => { setPrivado((x) => ({ ...x, ...patch })); setErros({}); };
 
@@ -143,7 +154,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       federationId: federation.id, action: 'request', planId: plano.id,
       publicBadge: opcoes.publicBadge, showInDirectory: opcoes.showInDirectory, clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
     }, {
-      onSuccess: (r) => { toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : t('Pedido de filiação enviado.')); onEnviado?.({ ...(r || {}), nome: dependente ? dep.name.trim() : '' }); },
+      onSuccess: (r) => { toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : t('Pedido de filiação enviado.')); onEnviado?.({ ...(r || {}), nome: dependente ? dep.name.trim() : '' }); },
       onError: (er) => { setErro(er.message); toast.error(er.message); },
     });
   };
@@ -260,10 +271,10 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
 
       <div className="sticky bottom-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-gray-200 bg-paper-pure p-3 shadow-organic-sm sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <div>
-          <p className="text-sm text-gray-600">{plano ? (isFreePlan(plano) ? t('Plano gratuito') : t('Total: {valor} {periodo}', { valor: formatBrlCents(preco.total), periodo: planPeriodLabel(plano) })) : t('Escolha um plano')}</p>
+          <p className="text-sm text-gray-600">{semCobranca ? t('Sem cobrança: você já estava na lista de filiados.') : plano ? (isFreePlan(plano) ? t('Plano gratuito') : t('Total: {valor} {periodo}', { valor: formatBrlCents(preco.total), periodo: planPeriodLabel(plano) })) : t('Escolha um plano')}</p>
           {pagaDepois && <p className="text-xs text-gray-500">{t('Você paga depois que a secretaria aprovar.')}</p>}
         </div>
-        <V2Button type="submit" disabled={m.isPending || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{m.isPending ? t('Enviando…') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
+        <V2Button type="submit" disabled={m.isPending || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{m.isPending ? t('Enviando…') : semCobranca ? t('Confirmar a filiação') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
       </div>
     </form>
   );
