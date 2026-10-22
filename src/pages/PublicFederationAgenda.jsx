@@ -18,7 +18,8 @@ import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import { useFederationBySlug, useFederationEvent } from '@/modules/federations/hooks/useFederations';
 import { agendaPublicPath } from '@/modules/federations/domain/agenda';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
-import { FedLogo, fedPublicPath } from '@/v2/components/federations/federationUi';
+import { FedLogo, fedPath, fedPublicPath } from '@/v2/components/federations/federationUi';
+import PublicFedTopBar from '@/v2/components/federations/profile/PublicFedTopBar';
 import { AgendaBrowser } from '@/v2/components/federations/agenda/AgendaPublic';
 import AgendaEventView from '@/v2/components/federations/agenda/AgendaEventView';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -72,7 +73,9 @@ export default function PublicFederationAgenda() {
   if (!flagsLoading && !ligada) return <Navigate to="/" replace />;
   return (
     <div className="min-h-screen bg-paper print:bg-white">
-      <div className="mx-auto max-w-[880px] space-y-6 px-4 py-10 print:py-0">
+      <PublicFedTopBar appPath={f ? `${fedPath(f)}?aba=agenda` : ''} />
+      {/* A lista usa a moldura das páginas (1200 px); um documento ou evento sozinho fica na largura de leitura. */}
+      <div className={`mx-auto ${eventId ? 'max-w-[880px]' : 'max-w-[1200px]'} space-y-6 px-4 py-8 print:py-0`}>
         {flagsLoading || fq.isLoading ? <V2Skeleton lines={6} /> : fq.isError ? (
           <V2ErrorState title={t('Não foi possível carregar a federação')} description={t('A conexão falhou no meio do caminho. O link continua valendo.')} onRetry={() => fq.refetch()} />
         ) : !f ? (

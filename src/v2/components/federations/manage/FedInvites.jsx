@@ -14,8 +14,10 @@ import { FED_INVITE_DAYS, FED_INVITE_MAX, MEMBER_STATUS, isInvitePending } from 
 import { isFederationPublic } from '@/modules/federations/domain/federation';
 import { V2Avatar, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { quando } from '../federationUi';
 import FedPersonPicker from './FedPersonPicker';
+import { BuscaLista, MostrarMais, useBuscaLista } from './listTools';
 
 const VIVOS = [MEMBER_STATUS.PENDING, MEMBER_STATUS.AWAITING_PAYMENT, MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED, MEMBER_STATUS.SUSPENDED];
 
@@ -88,6 +90,7 @@ export function ConvidarPessoas({ federation, membros, plansQ }) {
 }
 
 function ConviteRow({ federation, inv }) {
+  const [confirmando, setConfirmando] = useState(false);
   const cancelar = useFederationMutation(() => membershipAction({ federationId: federation.id, action: 'invite_cancel', userId: inv.user_id }));
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -96,25 +99,43 @@ function ConviteRow({ federation, inv }) {
         <p className="truncate text-sm font-semibold text-ink">{inv.user_name}</p>
         <p className="text-xs text-gray-500">{t('Plano {plano} · vale até {data}', { plano: inv.plan_name, data: quando(inv.expires_at_ms) })}</p>
       </div>
-      <V2Button type="button" size="sm" variant="ghost" disabled={cancelar.isPending} onClick={() => cancelar.mutate(undefined, { onSuccess: () => toast.success(t('Convite cancelado.')), onError: (e) => toast.error(e.message) })}>
+      <V2Button type="button" size="sm" variant="ghost" disabled={cancelar.isPending} onClick={() => setConfirmando(true)} aria-label={t('Cancelar o convite de {nome}', { nome: inv.user_name || '' })}>
         <X className="h-4 w-4" />{t('Cancelar')}
       </V2Button>
+      <ConfirmDialog
+        open={confirmando}
+        onOpenChange={setConfirmando}
+        destructive
+        loading={cancelar.isPending}
+        title={t('Cancelar o convite de {nome}?', { nome: inv.user_name || '' })}
+        description={t('O convite deixa de valer e a pessoa não consegue mais aceitá-lo. Se mudar de ideia, é só convidar de novo.')}
+        confirmLabel={t('Cancelar convite')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => cancelar.mutate(undefined, { onSuccess: () => { setConfirmando(false); toast.success(t('Convite cancelado.')); }, onError: (e) => toast.error(e.message) })}
+      />
     </li>
   );
 }
 
+const BUSCA_CONVITE = (inv) => `${inv.user_name} ${inv.plan_name}`;
+
 /** Os convites que ainda esperam resposta. Some quando não há nenhum. */
 export function ConvitesEnviados({ federation }) {
   const invitesQ = useFederationInvites(federation.id);
+  const abertos = useMemo(() => (invitesQ.data || []).filter((inv) => isInvitePending(inv)), [invitesQ.data]);
+  const busca = useBuscaLista(abertos, BUSCA_CONVITE);
   if (invitesQ.isError) return <V2ErrorState inline title={t('Não carregaram os convites enviados')} onRetry={() => invitesQ.refetch()} />;
-  const abertos = (invitesQ.data || []).filter((inv) => isInvitePending(inv));
   if (!abertos.length) return null;
   return (
     <section className="space-y-2" aria-label={t('Convites enviados')}>
-      <h3 className="font-display text-lg font-bold text-ink">{t('Convites esperando resposta')}</h3>
-      <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
-        {abertos.map((inv) => <ConviteRow key={inv.id} federation={federation} inv={inv} />)}
-      </ul>
+      <h3 className="font-display text-lg font-bold text-ink">{t('Convites esperando resposta')}{` (${abertos.length})`}</h3>
+      {abertos.length > 5 && <BuscaLista id="fed-convites-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar convite por nome ou plano')} total={abertos.length} achados={busca.filtrados.length} className="sm:max-w-sm" />}
+      {!busca.filtrados.length ? <p className="text-sm text-gray-500">{t('Nenhum convite com "{termo}".', { termo: busca.termo.trim() })}</p> : (
+        <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
+          {busca.visiveis.map((inv) => <ConviteRow key={inv.id} federation={federation} inv={inv} />)}
+        </ul>
+      )}
+      <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
     </section>
   );
 }

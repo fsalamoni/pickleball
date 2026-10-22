@@ -15,6 +15,13 @@ import { tk } from '@/core/i18n';
 import { fedModuleOn } from './federation';
 import { hasGovernance } from './governance';
 
+/** Celular brasileiro (DDD + 9 dígitos, com ou sem 55) vira link do WhatsApp; fixo e número estranho não. */
+export function whatsappLink(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.length === 13 && d.startsWith('55')) d = d.slice(2);
+  return d.length === 11 && d[2] === '9' ? `https://wa.me/55${d}` : null;
+}
+
 export const PROFILE_TAB = Object.freeze({
   OVERVIEW: 'inicio',
   MINE: 'minha',

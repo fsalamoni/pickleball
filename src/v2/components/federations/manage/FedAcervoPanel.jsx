@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, CircleAlert, Copy, Eye, EyeOff, ExternalLink, FilePen, FileText, History, Library, Pencil, Plus, Send, ShieldOff, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { acervoAction } from '@/modules/federations/services/federationService';
+import { acervoAction, discardAcervoUpload } from '@/modules/federations/services/federationService';
 import { abrirArquivoDoAcervo } from '../acervo/acervoFiles';
 import AcervoPosterButton from '../acervo/AcervoPoster';
 import { Link } from 'react-router-dom';
@@ -23,13 +23,17 @@ import {
   DOC_VISIBILITY_LABELS, DOC_WITHDRAW_REASON_MIN, acervoPublicPath, docActions, docCategory, docCode, docDisplayTitle, docPublicPath, docType, docYears, fileSizeLabel, filterDocs,
   isDocCurrent, transparencyChecklist,
 } from '@/modules/federations/domain/acervo';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tk, tn } from '@/core/i18n';
 import { womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
 import { quando } from '../federationUi';
-import { AcervoUploader, DocForm, MediaLinksEditor } from './FedAcervoForm';
+import { AcervoUploader, DocForm, MaisAcoes, MediaLinksEditor, useDescarteAoFechar } from './FedAcervoForm';
+import { haAlteracaoNaoSalva, useAvisoNaoSalvo } from './naoSalvo';
 
 const STATUS_TONE = { draft: 'neutral', published: 'green', withdrawn: 'red' };
+
+/** O endereço público do documento (`/f/:slug/acervo/:docId`), com a origem do site em que a pessoa está. */
+const linkPublico = (federation, doc) => `${window.location.origin}${docPublicPath(federation, doc.id)}`;
 
 /* --------------------------------------------------------------- detalhe -- */
 
@@ -57,7 +61,7 @@ function ArquivosDoDoc({ federation, doc, files }) {
 function DocDetalhe({ federation, doc }) {
   const { copy } = useClipboard();
   const tipo = docType(doc.type);
-  const link = `${window.location.origin}${docPublicPath(federation, doc.id)}`;
+  const link = linkPublico(federation, doc);
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap gap-2">
@@ -98,7 +102,8 @@ function DocDetalhe({ federation, doc }) {
       )}
       {doc.status === DOC_STATUS.PUBLISHED && (
         <div className="flex flex-wrap items-center gap-2">
-          <V2Button type="button" size="sm" variant="ghost" onClick={() => copy(link)}><Copy className="h-4 w-4" />{t('Copiar o link')}</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => copy(link, t('Link do documento copiado.'))}><Copy className="h-4 w-4" />{t('Copiar o link')}</V2Button>
+          <span className="min-w-0 break-all text-xs text-gray-500">{link}</span>
           {doc.visibility !== DOC_VISIBILITY.PUBLIC && <span className="text-xs text-gray-500">{t(DOC_VISIBILITY_HINTS[doc.visibility])}</span>}
         </div>
       )}
@@ -134,6 +139,10 @@ function RetificarDialog({ federation, doc, onFechar }) {
   const [manter, setManter] = useState(() => new Set((doc.files || []).map((x) => x.path)));
   const [novos, setNovos] = useState([]);
   const [enviando, setEnviando] = useState(false);
+  const [base] = useState(f);
+  const marcarSalvo = useDescarteAoFechar(novos);
+  useAvisoNaoSalvo(enviando || novos.length > 0 || JSON.stringify(f) !== JSON.stringify(base) || manter.size !== (doc.files || []).length);
+  const tirarNovo = (p) => { discardAcervoUpload(p); setNovos((l) => l.filter((x) => x.path !== p)); };
   const m = useFederationMutation(() => acervoAction({
     federationId: federation.id, action: 'rectify', docId: doc.id, reason: f.reason, keep_files: [...manter],
     doc: { title: f.title, summary: f.summary, body: f.body, media_links: f.media_links, files: novos },
@@ -141,7 +150,7 @@ function RetificarDialog({ federation, doc, onFechar }) {
   const enviar = (e) => {
     e.preventDefault();
     if (f.reason.trim().length < DOC_REASON_MIN) { toast.error(t('Diga o motivo da retificação (mínimo {n} caracteres).', { n: DOC_REASON_MIN })); return; }
-    m.mutate(undefined, { onSuccess: (r) => { toast.success(t('Versão {n} publicada.', { n: r?.version || '' })); onFechar(); }, onError: (er) => toast.error(er.message) });
+    m.mutate(undefined, { onSuccess: (r) => { marcarSalvo(); toast.success(t('Versão {n} publicada.', { n: r?.version || '' })); onFechar(); }, onError: (er) => toast.error(er.message) });
   };
   return (
     <form onSubmit={enviar} noValidate className="space-y-4">
@@ -153,16 +162,14 @@ function RetificarDialog({ federation, doc, onFechar }) {
       {(doc.files || []).length > 0 && (
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold text-ink">{t('Arquivos que continuam')}</legend>
-          {doc.files.map((x) => (
-            <label key={x.path} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={manter.has(x.path)} onChange={(e) => setManter((s) => { const n = new Set(s); if (e.target.checked) n.add(x.path); else n.delete(x.path); return n; })} />
-              {x.name}
-            </label>
+          {doc.files.map((x, i) => (
+            <V2Toggle key={x.path} id={`rt-manter-${i}`} label={x.name} checked={manter.has(x.path)} onChange={(v) => setManter((s) => { const n = new Set(s); if (v) n.add(x.path); else n.delete(x.path); return n; })} />
           ))}
+          <p className="text-xs text-gray-500">{t('Desligado, o arquivo sai da nova versão e fica só no histórico.')}</p>
         </fieldset>
       )}
       <V2Field label={t('Arquivos novos')} htmlFor="rt-arquivos">
-        <AcervoUploader id="rt-arquivos" value={novos} onAdd={(x) => setNovos((l) => [...l, x])} onRemove={(p) => setNovos((l) => l.filter((x) => x.path !== p))} onBusy={setEnviando} restricted={doc.visibility !== DOC_VISIBILITY.PUBLIC} />
+        <AcervoUploader id="rt-arquivos" value={novos} onAdd={(x) => setNovos((l) => [...l, x])} onRemove={tirarNovo} onBusy={setEnviando} restricted={doc.visibility !== DOC_VISIBILITY.PUBLIC} />
       </V2Field>
       <div className="space-y-2"><p className="text-sm font-semibold text-ink">{t('Vídeos por link')}</p><MediaLinksEditor value={f.media_links} onChange={(media_links) => setF({ ...f, media_links })} /></div>
       <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="submit" disabled={m.isPending || enviando}>{m.isPending ? t('Publicando…') : t('Publicar nova versão')}</V2Button></div>
@@ -199,10 +206,22 @@ function RetirarDialog({ federation, doc, onFechar }) {
 
 /* ------------------------------------------------------------ documentos -- */
 
-function DocRow({ doc, acoes, onAbrir }) {
+function DocRow({ federation, doc, acoes, onAbrir }) {
+  const { copy } = useClipboard();
   const cat = docCategory(doc.category);
   const tipo = docType(doc.type);
   const titulo = docDisplayTitle({ ...doc, code: doc.code || docCode(doc) });
+  // A ação principal fica à vista (publicar o rascunho, retificar o publicado); o resto vai para o "⋯".
+  const menu = [
+    acoes.edit && { id: 'editar', icon: Pencil, label: t('Editar') },
+    acoes.errata && { id: 'errata', icon: FilePen, label: t('Errata') },
+    acoes.revoke && { id: 'revogar', icon: FileText, label: t('Revogar') },
+    acoes.visibility && { id: 'visibilidade', icon: doc.visibility === DOC_VISIBILITY.PUBLIC ? Eye : EyeOff, label: t('Quem vê') },
+    doc.status === DOC_STATUS.PUBLISHED && { id: 'link', icon: Copy, label: t('Copiar o link') },
+    acoes.remove && { id: 'apagar', icon: Trash2, label: t('Apagar'), perigo: true },
+    acoes.withdraw && { id: 'retirar', icon: ShieldOff, label: t('Retirar do ar'), perigo: true },
+  ].filter(Boolean);
+  const escolher = (id) => (id === 'link' ? copy(linkPublico(federation, doc), t('Link do documento copiado.')) : onAbrir(id, doc));
   return (
     <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-4">
       <FileText className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
@@ -216,15 +235,10 @@ function DocRow({ doc, acoes, onAbrir }) {
         </p>
         <p className="text-xs text-gray-500">{[tipo ? t(tipo.label) : null, cat ? t(cat.label) : null, doc.act_date ? quando(doc.act_date) : doc.published_at_ms ? quando(doc.published_at_ms) : null, (doc.files || []).length ? tn(doc.files.length, '{n} arquivo', '{n} arquivos') : null].filter(Boolean).join(' · ')}</p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {acoes.publish && <V2Button type="button" size="sm" onClick={() => onAbrir('publicar', doc)}><Send className="h-4 w-4" />{t('Publicar')}</V2Button>}
-        {acoes.edit && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('editar', doc)} aria-label={t('Editar {titulo}', { titulo: doc.title })}><Pencil className="h-4 w-4" /></V2Button>}
-        {acoes.remove && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('apagar', doc)} aria-label={t('Apagar {titulo}', { titulo: doc.title })}><Trash2 className="h-4 w-4" /></V2Button>}
         {acoes.rectify && <V2Button type="button" size="sm" variant="secondary" onClick={() => onAbrir('retificar', doc)}><FilePen className="h-4 w-4" />{t('Retificar')}</V2Button>}
-        {acoes.errata && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('errata', doc)}>{t('Errata')}</V2Button>}
-        {acoes.revoke && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('revogar', doc)}>{t('Revogar')}</V2Button>}
-        {acoes.visibility && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('visibilidade', doc)} aria-label={t('Quem vê {titulo}', { titulo: doc.title })}>{doc.visibility === DOC_VISIBILITY.PUBLIC ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</V2Button>}
-        {acoes.withdraw && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('retirar', doc)} aria-label={t('Retirar do ar {titulo}', { titulo: doc.title })}><ShieldOff className="h-4 w-4" /></V2Button>}
+        <MaisAcoes nome={doc.title || titulo} itens={menu} onEscolher={escolher} />
       </div>
     </V2Surface>
   );
@@ -286,10 +300,10 @@ function DocumentosTab({ federation, docsQ, isAdmin }) {
       {todos && todos.length === 0 && <V2EmptyState icon={Library} title={t('O acervo está vazio')} description={t('Comece pelo estatuto e pelo regulamento de competições: são os primeiros que filiados e órgãos públicos procuram.')} />}
       {lista && todos.length > 0 && lista.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum documento com esses filtros.')}</p>}
       {lista && lista.length > 0 && (
-        <ul className="space-y-2">{lista.map((d) => <li key={d.id}><DocRow doc={d} acoes={docActions(d, { isAdmin })} onAbrir={abrir} /></li>)}</ul>
+        <ul className="space-y-2">{lista.map((d) => <li key={d.id}><DocRow federation={federation} doc={d} acoes={docActions(d, { isAdmin })} onAbrir={abrir} /></li>)}</ul>
       )}
       <Dialog open={aberto != null} onOpenChange={(o) => { if (!o) fechar(); }}>
-        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto" onInteractOutside={(e) => { if (haAlteracaoNaoSalva()) e.preventDefault(); }}>
           <DialogTitle>{modo ? (modo === 'ver' ? docDisplayTitle({ ...doc, code: doc.code || docCode(doc) }) : t(TITULOS[modo])) : ''}</DialogTitle>
           <DialogDescription>{modo === 'ver' ? t('Arquivos, códigos de integridade, versões e atos ligados.') : modo === 'novo' || modo === 'editar' ? t('Salve como rascunho; publique quando estiver conferido.') : modo === 'errata' || modo === 'revogar' ? t('Um ato novo, ligado ao documento "{titulo}".', { titulo: doc.code || doc.title }) : doc ? docDisplayTitle({ ...doc, code: doc.code || docCode(doc) }) : ''}</DialogDescription>
           {(modo === 'novo' || modo === 'editar' || modo === 'errata' || modo === 'revogar') && <DocForm federation={federation} doc={modo === 'editar' ? doc : null} preset={preset} publicados={publicados} onFechar={fechar} />}

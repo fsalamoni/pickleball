@@ -15,13 +15,12 @@ import { membershipState, memberCounts, sortMembersForStaff } from '@/modules/fe
 import { formatCpf } from '@/modules/federations/domain/privateData';
 import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
 import { DOC_KIND_LABELS, DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
-import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2SearchInput, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
 import MembershipDeclarationDialog from '../MembershipDeclaration';
 import { ConvidarPessoas, ConvitesEnviados } from './FedInvites';
-
-const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 
 /** Recusar / suspender: o motivo é obrigatório, porque a pessoa vai ler. */
 function MotivoDialog({ acao, member, federationId, onClose }) {
@@ -35,12 +34,12 @@ function MotivoDialog({ acao, member, federationId, onClose }) {
         <DialogTitle>{recusar ? t('Recusar o pedido') : t('Suspender a filiação')}</DialogTitle>
         <DialogDescription>{member.user_name}. {recusar ? t('A pessoa lê o motivo e pode pedir de novo.') : t('A carteirinha deixa de verificar até você reintegrar.')}</DialogDescription>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => { toast.success(recusar ? t('Pedido recusado. A pessoa foi avisada.') : t('Filiação suspensa. A pessoa foi avisada.')); onClose(); }, onError: (er) => setErro(er.message) }); }}>
-          <V2Field label={t('Motivo')} htmlFor="motivo-filiacao" error={erro}>
+          <V2Field label={t('Motivo')} htmlFor="motivo-filiacao" error={erro} hint={t('Pelo menos 3 caracteres. A pessoa recebe este texto no aviso.')}>
             <V2Textarea id="motivo-filiacao" rows={3} maxLength={500} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} autoFocus />
           </V2Field>
           <div className="flex justify-end gap-2">
             <V2Button type="button" variant="ghost" onClick={onClose}>{t('Voltar')}</V2Button>
-            <V2Button type="submit" variant="danger" disabled={m.isPending}>{recusar ? t('Recusar') : t('Suspender')}</V2Button>
+            <V2Button type="submit" variant="danger" disabled={m.isPending || motivo.trim().length < 3}>{recusar ? t('Recusar') : t('Suspender')}</V2Button>
           </div>
         </form>
       </DialogContent>
@@ -150,21 +149,28 @@ function MemberRow({ member: mb, federation, documentos, pedido = false }) {
   );
 }
 
+/** `vencendo` é contrato: a faixa "Precisa de você" abre `?aba=filiados&filtro=vencendo`. */
 const FILTROS = [
-  { id: 'todos', label: () => t('Todos') },
-  { id: MEMBER_STATUS.ACTIVE, label: () => t('Em dia') },
-  { id: 'expiring', label: () => t('Vencendo') },
-  { id: MEMBER_STATUS.AWAITING_PAYMENT, label: () => t('Aguardando pagamento') },
-  { id: MEMBER_STATUS.EXPIRED, label: () => t('Vencidos') },
-  { id: MEMBER_STATUS.SUSPENDED, label: () => t('Suspensos') },
+  { id: 'todos', label: () => t('Todos'), conta: (c) => c.active + c.awaiting_payment + c.expired + c.suspended },
+  { id: MEMBER_STATUS.ACTIVE, label: () => t('Em dia'), conta: (c) => c.active },
+  { id: 'vencendo', label: () => t('Vencendo'), conta: (c) => c.expiring },
+  { id: MEMBER_STATUS.AWAITING_PAYMENT, label: () => t('Aguardando pagamento'), conta: (c) => c.awaiting_payment },
+  { id: MEMBER_STATUS.EXPIRED, label: () => t('Vencidos'), conta: (c) => c.expired },
+  { id: MEMBER_STATUS.SUSPENDED, label: () => t('Suspensos'), conta: (c) => c.suspended },
 ];
+const BUSCA = (m) => `${m.user_name} ${m.member_number} ${m.plan_name}`;
 
 export default function FedMembersPanel({ federation, membersQ, documentsQ, plansQ, tab }) {
   const documentos = documentsQ?.isSuccess ? documentsQ.data : undefined;
-  const [filtro, setFiltro] = useState('todos');
-  const [busca, setBusca] = useState('');
+  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'todos', FILTROS.map((f) => f.id));
   const todos = useMemo(() => sortMembersForStaff(membersQ.data || []), [membersQ.data]);
   const contas = useMemo(() => memberCounts(todos), [todos]);
+  const doFiltro = useMemo(() => todos.filter((m) => m.status !== MEMBER_STATUS.PENDING && ![MEMBER_STATUS.CANCELLED, MEMBER_STATUS.REJECTED].includes(m.status)).filter((m) => {
+    const st = membershipState(m);
+    if (filtro === 'vencendo') return st.expiring;
+    return filtro === 'todos' || st.status === filtro;
+  }), [todos, filtro]);
+  const busca = useBuscaLista(doFiltro, BUSCA);
   if (membersQ.isError) return <V2ErrorState title={t('Não carregaram os filiados')} onRetry={() => membersQ.refetch()} />;
   if (membersQ.isLoading) return <V2Skeleton lines={6} />;
 
@@ -180,23 +186,27 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, plan
     );
   }
 
-  const termo = normaliza(busca.trim());
-  const lista = todos.filter((m) => m.status !== MEMBER_STATUS.PENDING && ![MEMBER_STATUS.CANCELLED, MEMBER_STATUS.REJECTED].includes(m.status)).filter((m) => {
-    const st = membershipState(m);
-    if (filtro === 'expiring') return st.expiring;
-    if (filtro !== 'todos' && st.status !== filtro) return false;
-    return !termo || normaliza(`${m.user_name} ${m.member_number} ${m.plan_name}`).includes(termo);
-  });
+  const termo = busca.termo.trim();
   return (
     <section className="space-y-4" aria-label={t('Filiados')} data-dica="federacao-filiados">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Filiados')}</h2><p className="text-sm text-gray-500">{tn(contas.active, '{n} em dia', '{n} em dia')} · {tn(contas.expiring, '{n} vencendo em 30 dias', '{n} vencendo em 30 dias')} · {tn(contas.expired, '{n} vencido', '{n} vencidos')}</p></div>
-        <V2SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Nome, número ou plano')} aria-label={t('Buscar filiado')} className="sm:w-72" />
+        <BuscaLista id="fed-filiados-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, número ou plano')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
       </div>
       <ConvidarPessoas federation={federation} membros={todos} plansQ={plansQ} />
-      <div className="flex flex-wrap gap-2">{FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{f.label()}</V2FilterChip>)}</div>
-      {!lista.length ? <V2EmptyState icon={Users} title={termo ? t('Ninguém com "{termo}"', { termo: busca.trim() }) : t('Nenhum filiado neste filtro')} />
-        : <ul className="space-y-3">{lista.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} />)}</ul>}
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('Filtro')}>{FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{`${f.label()} (${f.conta(contas)})`}</V2FilterChip>)}</div>
+      {!busca.filtrados.length ? (
+        <V2EmptyState
+          icon={Users}
+          title={termo ? t('Ninguém com "{termo}"', { termo }) : t('Nenhum filiado neste filtro')}
+          description={termo ? t('Confira a grafia ou limpe a busca.') : filtro === 'todos' ? t('Convide pessoas acima ou importe uma planilha em Filiados → Importar.') : t('Veja os demais no filtro "Todos".')}
+        />
+      ) : (
+        <>
+          <ul className="space-y-3">{busca.visiveis.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} />)}</ul>
+          <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
+        </>
+      )}
     </section>
   );
 }

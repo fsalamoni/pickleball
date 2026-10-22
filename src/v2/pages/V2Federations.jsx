@@ -12,6 +12,7 @@ import { IdCard, Landmark, Plus, Search, ShieldCheck, Users } from 'lucide-react
 import { useMyFederationRoles, useMyMemberships, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { membershipState } from '@/modules/federations/domain/membership';
 import { staffRoleName } from '@/modules/federations/domain/staff';
+import { FEDERATION_LEVEL } from '@/modules/federations/domain/constants';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { V2Button, V2EmptyState, V2ErrorState, V2Page, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -32,7 +33,7 @@ function FederationRow({ federation: f, extra }) {
           {f.about && <p className="mt-2 line-clamp-2 text-sm text-gray-600">{f.about}</p>}
           {extra}
         </div>
-        <span className="hidden shrink-0 items-center gap-1 text-sm text-gray-500 sm:flex"><Users className="h-4 w-4" aria-hidden="true" />{tn(f.member_count || 0, '{n} filiado', '{n} filiados')}</span>
+        {f.member_count > 0 && <span className="hidden shrink-0 items-center gap-1 text-sm text-gray-500 sm:flex"><Users className="h-4 w-4" aria-hidden="true" />{tn(f.member_count, '{n} filiado', '{n} filiados')}</span>}
       </V2Surface>
     </li>
   );
@@ -112,7 +113,13 @@ function Diretorio() {
   const [busca, setBusca] = useState('');
   const termo = normaliza(busca.trim());
   const filtradas = useMemo(() => (q.data || []).filter((f) => !termo || normaliza(`${f.name} ${f.acronym} ${f.city} ${f.state}`).includes(termo)), [q.data, termo]);
-  const regional = useRegionalList(filtradas, (f) => ({ city: f.city, state: f.state }), { ignorar: Boolean(termo) });
+  // A federação NACIONAL vale para todo o país: aparece em qualquer região, antes das outras.
+  const nacionais = useMemo(() => filtradas.filter((f) => f.level === FEDERATION_LEVEL.NATIONAL), [filtradas]);
+  const locais = useMemo(() => filtradas.filter((f) => f.level !== FEDERATION_LEVEL.NATIONAL), [filtradas]);
+  const regional = useRegionalList(locais, (f) => ({ city: f.city, state: f.state }), { ignorar: Boolean(termo) });
+  const lista = [...nacionais, ...regional.itens];
+  // Há federações fora da região: o aviso da região oferece vê-las, e o vazio não diz "nenhuma por aqui ainda" convidando a abrir outra.
+  const soForaDaRegiao = !termo && regional.ativa && regional.fora > 0;
 
   return (
     <V2Page className="space-y-8">
@@ -134,7 +141,9 @@ function Diretorio() {
           <V2ErrorState title={t('Não carregaram as federações')} description={t('As federações continuam lá. Confira a conexão e tente de novo.')} onRetry={() => q.refetch()} />
         ) : q.isLoading ? (
           <V2Skeleton lines={6} />
-        ) : regional.itens.length === 0 ? (
+        ) : lista.length === 0 && soForaDaRegiao ? (
+          <RegionEmptyHint regional={regional} oque={t('Nenhuma federação')} />
+        ) : lista.length === 0 ? (
           <V2EmptyState
             icon={termo ? Search : Landmark}
             title={termo ? t('Nenhuma federação com "{termo}"', { termo: busca.trim() }) : t('Nenhuma federação por aqui ainda')}
@@ -143,10 +152,9 @@ function Diretorio() {
           />
         ) : (
           <ul className="grid gap-3 lg:grid-cols-2">
-            {regional.itens.map((f) => <FederationRow key={f.id} federation={f} />)}
+            {lista.map((f) => <FederationRow key={f.id} federation={f} />)}
           </ul>
         )}
-        {!q.isError && !q.isLoading && regional.itens.length === 0 && !termo && <RegionEmptyHint regional={regional} oque={t('Nenhuma federação')} />}
       </section>
     </V2Page>
   );

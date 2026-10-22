@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PROFILE_TAB, profileTabs, resolveProfileTab, tabForAnchor } from './profile';
+import { PROFILE_TAB, profileTabs, resolveProfileTab, tabForAnchor, whatsappLink } from './profile';
 
 const fed = (modules = {}, extra = {}) => ({ id: 'f', status: 'approved', published: true, modules, ...extra });
 const ids = (tabs) => tabs.map((x) => x.id);
@@ -60,5 +60,15 @@ describe('tabForAnchor', () => {
     expect(tabForAnchor('#fed-ranking')).toBe('competicoes');
     expect(tabForAnchor('#qualquer')).toBe(null);
     expect(tabForAnchor('')).toBe(null);
+  });
+});
+
+describe('whatsappLink', () => {
+  it('celular vira wa.me; fixo, curto e vazio não', () => {
+    expect(whatsappLink('(51) 99876-5432')).toBe('https://wa.me/5551998765432');
+    expect(whatsappLink('+55 51 99876-5432')).toBe('https://wa.me/5551998765432');
+    expect(whatsappLink('(51) 3333-4444')).toBeNull();
+    expect(whatsappLink('12345')).toBeNull();
+    expect(whatsappLink('')).toBeNull();
   });
 });

@@ -109,3 +109,16 @@ describe('homeFederationRows', () => {
     expect(rows.map((r) => [r.member.id, r.acao])).toEqual([['b', 'pagar'], ['c', 'renovar'], ['a', '']]);
   });
 });
+
+describe('renewalOpensOn', () => {
+  it('ativa longe do fim diz quando abre; na janela ou vencida, nada', async () => {
+    const { renewalOpensOn } = await import('./membership.js');
+    const { RENEWAL_WINDOW_DAYS } = await import('./constants.js');
+    const longe = renewalOpensOn({ status: 'active', valid_until: '2027-06-30' }, '2026-10-22');
+    const esperado = new Date(Date.UTC(2027, 5, 30 - RENEWAL_WINDOW_DAYS, 12)).toISOString().slice(0, 10);
+    expect(longe).toBe(esperado);
+    expect(renewalOpensOn({ status: 'active', valid_until: '2026-10-30' }, '2026-10-22')).toBe('');
+    expect(renewalOpensOn({ status: 'expired', valid_until: '2026-01-01' }, '2026-10-22')).toBe('');
+    expect(renewalOpensOn(null)).toBe('');
+  });
+});

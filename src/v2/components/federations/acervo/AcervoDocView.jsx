@@ -14,8 +14,7 @@ import { useClipboard } from '@/core/lib/useClipboard';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks';
 import {
   DOC_RELATION_INVERSE_LABELS, DOC_RELATION_LABELS, DOC_VISIBILITY, DOC_VISIBILITY_LABELS, acervoPublicPath, docCategory, docCode, docDisplayTitle,
-  docPublicPath, docType, fileSizeLabel, fileViewKind, findFileByHash, videoEmbed,
-} from '@/modules/federations/domain/acervo';
+  docPublicPath, docType, fileSizeLabel, fileViewKind, findFileByHash, videoEmbed, docHasValidity } from '@/modules/federations/domain/acervo';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando, useQrDataUrl } from '../federationUi';
@@ -203,7 +202,7 @@ export default function AcervoDocView({ federation, doc, relacionados = [] }) {
         <div className="flex flex-wrap gap-2">
           {doc.visibility !== DOC_VISIBILITY.PUBLIC && <V2Badge tone="neutral">{t(DOC_VISIBILITY_LABELS[doc.visibility])}</V2Badge>}
           {doc.version > 1 && <V2Badge tone="amber">{t('Versão {n}', { n: doc.version })}</V2Badge>}
-          {doc.revoked_by ? <V2Badge tone="red">{t('Revogado')}</V2Badge> : <V2Badge tone="green">{t('Em vigor')}</V2Badge>}
+          {doc.revoked_by ? <V2Badge tone="red">{t('Revogado')}</V2Badge> : docHasValidity(doc) && <V2Badge tone="green">{t('Em vigor')}</V2Badge>}
         </div>
         {doc.revoked_by && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">

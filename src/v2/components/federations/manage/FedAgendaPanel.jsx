@@ -21,8 +21,10 @@ import { docDisplayTitle } from '@/modules/federations/domain/acervo';
 import { convocationNotice, isMeetingConvened, isMeetingRecorded, meetingActions } from '@/modules/federations/domain/meeting';
 import { normalizeFederationRules } from '@/modules/federations/domain/federation';
 import { ConveneForm, RecordForm } from './FedMeetingDialogs';
+import { MaisAcoes } from './FedAcervoForm';
+import { haAlteracaoNaoSalva, useAvisoNaoSalvo } from './naoSalvo';
 import { BR_UFS } from '@/core/domain/ufs';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 import { DateBadge, StatusBadge, dataDoEvento, horarioDoEvento } from '../agenda/agendaUi';
 
@@ -50,8 +52,10 @@ function deEvento(ev) {
 function EventForm({ federation, perms, ev, onFechar }) {
   const tipos = kindsFor(perms);
   const [f, setF] = useState(() => (ev ? deEvento(ev) : vazio(tipos[0]?.id || '')));
+  const [base] = useState(f);
   const [notify, setNotify] = useState(true);
   const [reason, setReason] = useState('');
+  useAvisoNaoSalvo(Boolean(reason.trim()) || JSON.stringify(f) !== JSON.stringify(base));
   const [tentou, setTentou] = useState(false);
   const acervo = useVisibleAcervo(federation);
   const docs = acervo.docs || [];
@@ -100,7 +104,7 @@ function EventForm({ federation, perms, ev, onFechar }) {
         <V2Field label={t('Data')} htmlFor="ag-data" required error={erro('date')}><V2Input id="ag-data" type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></V2Field>
         <V2Field label={t('Termina em (se durar mais de um dia)')} htmlFor="ag-fim" error={erro('end_date')}><V2Input id="ag-fim" type="date" min={f.date || undefined} value={f.end_date} onChange={(e) => set('end_date', e.target.value)} /></V2Field>
       </div>
-      <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.all_day} onChange={(e) => set('all_day', e.target.checked)} />{t('Dia inteiro (sem horário)')}</label>
+      <V2Toggle id="ag-dia-inteiro" checked={f.all_day} onChange={(v) => set('all_day', v)} label={t('Dia inteiro (sem horário)')} />
       {!f.all_day && (
         <div className="grid gap-3 sm:grid-cols-2">
           <V2Field label={t('Início (horário de Brasília)')} htmlFor="ag-ini" required error={erro('start_time')}><V2Input id="ag-ini" type="time" value={f.start_time} onChange={(e) => set('start_time', e.target.value)} /></V2Field>
@@ -143,7 +147,7 @@ function EventForm({ federation, perms, ev, onFechar }) {
       <V2Field label={t('Quem vê')} htmlFor="ag-vis" hint={t(VIS_HINTS[f.visibility])}>
         <V2Select id="ag-vis" value={f.visibility} onChange={(e) => set('visibility', e.target.value)}>{Object.values(EVENT_VISIBILITY).map((v) => <option key={v} value={v}>{t(EVENT_VISIBILITY_LABELS[v])}</option>)}</V2Select>
       </V2Field>
-      {divulgaAgora && <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />{t('Avisar quem segue a federação')}</label>}
+      {divulgaAgora && <V2Toggle id="ag-avisar" checked={notify} onChange={setNotify} label={t('Avisar quem segue a federação')} hint={t('Quem segue recebe um aviso com o evento.')} />}
       {precisaMotivo && (
         <V2Field label={t('Motivo da mudança')} htmlFor="ag-motivo" required hint={t('O evento já foi divulgado: a mudança de data fica no histórico, com o motivo, e quem segue é avisado.')}>
           <V2Input id="ag-motivo" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -195,6 +199,17 @@ function EventRow({ federation, ev, perms, onAbrir }) {
   const reuniao = !ev.derived && Boolean(kind?.meeting);
   const r = meetingActions(ev, { canManage: canManageKind(perms, ev.kind), isMeeting: reuniao });
   const prazo = reuniao && ev.status === 'scheduled' ? convocationNotice(ev, normalizeFederationRules(federation.rules).convocation_min_days) : null;
+  // À vista, o passo da reunião (resultado ou convocação) ou, fora dela, editar; o resto vai para o "⋯".
+  const acoes = [
+    r.record && { id: 'resultado', icon: ClipboardCheck, label: isMeetingRecorded(ev) ? t('Corrigir o resultado') : t('Registrar o resultado') },
+    r.convene && { id: 'convocar', icon: Megaphone, label: isMeetingConvened(ev) ? t('Convocação') : t('Convocar') },
+    a.edit && { id: 'editar', icon: Pencil, label: t('Editar') },
+    a.postpone && { id: 'postpone', icon: PauseCircle, label: t('Adiar') },
+    a.cancel && { id: 'cancel', icon: Ban, label: t('Cancelar o evento'), perigo: true },
+    a.remove && { id: 'apagar', icon: Trash2, label: t('Apagar'), perigo: true },
+  ].filter(Boolean);
+  const principal = acoes[0] && !acoes[0].perigo ? acoes[0] : null;
+  const resto = principal ? acoes.slice(1) : acoes;
   return (
     <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-3">
       <DateBadge ev={ev} adiado={ev.status === 'postponed'} />
@@ -215,16 +230,12 @@ function EventRow({ federation, ev, perms, onAbrir }) {
           </p>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {r.convene && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('convocar', ev)}><Megaphone className="h-4 w-4" />{isMeetingConvened(ev) ? t('Convocação') : t('Convocar')}</V2Button>}
-        {r.record && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('resultado', ev)}><ClipboardCheck className="h-4 w-4" />{isMeetingRecorded(ev) ? t('Corrigir o resultado') : t('Registrar o resultado')}</V2Button>}
+      <div className="flex flex-wrap items-center gap-2">
         {ev.derived
           ? <V2Button asChild size="sm" variant="ghost"><Link to={`/torneios/${encodeURIComponent(ev.tournament_id)}`}><ExternalLink className="h-4 w-4" />{t('Abrir o torneio')}</Link></V2Button>
           : <V2Button asChild size="sm" variant="ghost"><Link to={`${agendaPublicPath(federation)}/${encodeURIComponent(ev.id)}`} aria-label={t('Ver {titulo}', { titulo: ev.title })}><ExternalLink className="h-4 w-4" /></Link></V2Button>}
-        {a.edit && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('editar', ev)} aria-label={t('Editar {titulo}', { titulo: ev.title })}><Pencil className="h-4 w-4" /></V2Button>}
-        {a.postpone && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('postpone', ev)}><PauseCircle className="h-4 w-4" />{t('Adiar')}</V2Button>}
-        {a.cancel && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('cancel', ev)}><Ban className="h-4 w-4" />{t('Cancelar')}</V2Button>}
-        {a.remove && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('apagar', ev)} aria-label={t('Apagar {titulo}', { titulo: ev.title })}><Trash2 className="h-4 w-4" /></V2Button>}
+        {principal && <V2Button type="button" size="sm" variant="secondary" onClick={() => onAbrir(principal.id, ev)}><principal.icon className="h-4 w-4" aria-hidden="true" />{principal.label}</V2Button>}
+        <MaisAcoes nome={ev.title} itens={resto} onEscolher={(id) => onAbrir(id, ev)} />
       </div>
     </V2Surface>
   );
@@ -272,7 +283,7 @@ export default function FedAgendaPanel({ federation, perms = [] }) {
         </details>
       )}
       <Dialog open={aberto != null} onOpenChange={(o) => { if (!o) fechar(); }}>
-        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto" onInteractOutside={(e) => { if (haAlteracaoNaoSalva()) e.preventDefault(); }}>
           <DialogTitle>{modo ? t(TITULOS[modo]) : ''}</DialogTitle>
           <DialogDescription>{ev ? ev.title : t('Público, só filiados ou só a equipe.')}</DialogDescription>
           {(modo === 'novo' || modo === 'editar') && <EventForm federation={federation} perms={perms} ev={modo === 'editar' ? ev : null} onFechar={fechar} />}

@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Building2, GraduationCap, Landmark, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
@@ -27,8 +28,10 @@ import { COURSE_KIND_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS, REPORT
 import { courseAction, createReport } from '@/modules/federations/services/federationService';
 import { useApprovedAffiliations, useFederationMutation, useFederationRanking, useFederationTournaments, useMyEnrollments, usePublicCourses, usePublicCredentials, useReport } from '@/modules/federations/hooks/useFederations';
 import { AGE_CATEGORY_LABELS, GENDER_CATEGORY_LABELS, MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
-import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { fmtData, t, tn } from '@/core/i18n';
+import CopyCodeButton from '@/v2/ui/CopyCodeButton';
+import { normalizaBusca } from './manage/listTools';
 
 /* ------------------------------------------------------- filiados (orgs) -- */
 
@@ -163,13 +166,15 @@ export function FedSanctionedTournaments({ federation, limite = 12, titulo = tru
 
 export const classeLabel = (c) => [GENDER_CATEGORY_LABELS[c.gender_category] || c.gender_category, AGE_CATEGORY_LABELS[c.age_category] || c.age_category, MODALITY_FORMAT_LABELS[c.format] || c.format].filter(Boolean).join(' · ');
 
-function Linha({ l, destaque }) {
+function Linha({ l, destaque, logado }) {
   return (
     <li className={`flex items-center gap-3 rounded-2xl px-3 py-2 ${destaque ? 'bg-acid/15' : 'odd:bg-paper/60'}`}>
       <span className="w-8 shrink-0 text-center font-display text-lg font-bold text-ink">{l.position}º</span>
       <V2Avatar name={l.name} photoUrl={l.photo_url} size="sm" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-semibold text-ink">{l.name || t('Atleta')}</span>
+        {logado && l.uid
+          ? <Link to={`/atleta/${encodeURIComponent(l.uid)}`} className="block truncate font-semibold text-ink hover:underline">{l.name || t('Atleta')}</Link>
+          : <span className="block truncate font-semibold text-ink">{l.name || t('Atleta')}</span>}
         <span className="block text-xs text-gray-500">{tn(l.events, '{n} torneio', '{n} torneios')}{l.titles ? ` · ${tn(l.titles, '{n} título', '{n} títulos')}` : ''}</span>
       </span>
       <span className="font-display text-lg font-bold text-ink">{l.points}</span>
@@ -187,6 +192,8 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
   const [season, setSeason] = useState(anoAtual);
   const [classe, setClasse] = useState('geral');
   const [limite, setLimite] = useState(compacto ? 10 : 25);
+  const [busca, setBusca] = useState('');
+  const { isAuthenticated } = useAuth();
   const q = useFederationRanking(federation?.id, season, { enabled: ligado });
   const dados = q.isSuccess ? q.data : null;
   const linhas = useMemo(() => {
@@ -194,6 +201,8 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
     if (classe === 'geral') return dados.general || [];
     return (dados.categories || []).find((c) => c.key === classe)?.rows || [];
   }, [dados, classe]);
+  const termo = normalizaBusca(busca);
+  const achadas = termo ? linhas.filter((l) => normalizaBusca(l.name).includes(termo)) : linhas;
   if (!ligado) return null;
   return (
     <section aria-labelledby="fed-ranking" className="space-y-3" data-dica="federacao-ranking-oficial">
@@ -210,8 +219,10 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
       {dados && linhas.length === 0 && <p className="text-sm text-gray-500">{t('Ninguém pontuou nesta classe ainda.')}</p>}
       {dados && linhas.length > 0 && (
         <>
-          <ol className="space-y-1">{linhas.slice(0, limite).map((l) => <Linha key={l.uid} l={l} destaque={meUid && l.uid === meUid} />)}</ol>
-          {linhas.length > limite && <V2Button type="button" variant="ghost" size="sm" onClick={() => setLimite((n) => n + 25)}>{t('Ver mais ({n} de {total})', { n: limite, total: linhas.length })}</V2Button>}
+          {linhas.length > 15 && <V2SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar atleta pelo nome')} aria-label={t('Buscar atleta no ranking')} className="sm:w-80" />}
+          {termo && achadas.length === 0 && <p className="text-sm text-gray-500">{t('Ninguém com esse nome nesta classe.')}</p>}
+          <ol className="space-y-1">{achadas.slice(0, limite).map((l) => <Linha key={l.uid} l={l} destaque={meUid && l.uid === meUid} logado={isAuthenticated} />)}</ol>
+          {achadas.length > limite && <V2Button type="button" variant="ghost" size="sm" onClick={() => setLimite((n) => n + 25)}>{t('Ver mais ({n} de {total})', { n: limite, total: achadas.length })}</V2Button>}
           <p className="text-xs text-gray-500">
             {t('Atualizado em {data}.', { data: dados.updated_at_ms ? fmtData(new Date(dados.updated_at_ms), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—' })}
             {' '}{dados.config?.members_only === false ? '' : t('Pontuam só os filiados em dia na data do torneio.')}
@@ -238,8 +249,11 @@ export function FedCoursesSection({ federation, titulo = true }) {
   const q = usePublicCourses(federation?.id, { enabled: ligado });
   const eq = useMyEnrollments({ enabled: ligado && isAuthenticated });
   const m = useFederationMutation((payload) => courseAction(payload));
+  const [cancelando, setCancelando] = useState(null); // { curso, inscricao }
   if (!ligado) return null;
   const cursos = q.isSuccess ? sortCourses(q.data) : null;
+  // Inscrição confirmada em curso pago = já pagou: a devolução é com a federação.
+  const pago = cancelando && cancelando.inscricao.status === ENROLLMENT_STATUS.CONFIRMED && cancelando.curso.price_cents > 0;
   const minha = (courseId) => (eq.data || []).find((e) => e.course_id === courseId && e.status !== ENROLLMENT_STATUS.CANCELLED) || null;
   const agir = (payload, msg) => m.mutate(payload, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
   return (
@@ -268,7 +282,7 @@ export function FedCoursesSection({ federation, titulo = true }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <V2Badge tone={{ awaiting_payment: 'amber', confirmed: 'green', passed: 'green', failed: 'red' }[en.status] || 'neutral'}>{t(ENROLLMENT_STATUS_LABELS[en.status] || en.status)}</V2Badge>
                       {en.status === ENROLLMENT_STATUS.AWAITING_PAYMENT && <V2Button asChild size="sm" variant="secondary"><Link to="/perfil?secao=federacoes">{t('Pagar')}</Link></V2Button>}
-                      {canCancelEnrollment(en, c) && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir({ action: 'cancel', courseId: c.id }, t('Inscrição cancelada.'))}>{t('Cancelar inscrição')}</V2Button>}
+                      {canCancelEnrollment(en, c) && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => setCancelando({ curso: c, inscricao: en })}>{t('Cancelar inscrição')}</V2Button>}
                     </div>
                   ) : st.open ? (
                     isAuthenticated
@@ -283,6 +297,19 @@ export function FedCoursesSection({ federation, titulo = true }) {
       )}
       {eq.isError && <V2ErrorState inline title={t('Não carregaram as suas inscrições')} onRetry={() => eq.refetch()} />}
       {user && cursos && cursos.length > 0 && <p className="text-xs text-gray-500">{t('Aprovado em curso que emite credencial, você recebe a credencial da federação, com código verificável, na Minha área.')}</p>}
+      <ConfirmDialog
+        open={cancelando != null}
+        onOpenChange={(v) => { if (!v) setCancelando(null); }}
+        destructive
+        loading={m.isPending}
+        title={t('Cancelar a inscrição em {curso}?', { curso: cancelando?.curso.name || '' })}
+        description={pago
+          ? t('Você sai da lista e a vaga fica livre para outra pessoa. O que você já pagou não volta sozinho: a devolução é com a federação. Enquanto houver vaga, dá para se inscrever de novo.')
+          : t('Você sai da lista e a vaga fica livre para outra pessoa. Se havia Pix em aberto, a cobrança é cancelada. Enquanto houver vaga, dá para se inscrever de novo.')}
+        confirmLabel={t('Cancelar a inscrição')}
+        cancelLabel={t('Voltar')}
+        onConfirm={() => m.mutate({ action: 'cancel', courseId: cancelando.curso.id }, { onSuccess: () => { setCancelando(null); toast.success(t('Inscrição cancelada.')); }, onError: (e) => toast.error(e.message) })}
+      />
     </section>
   );
 }
@@ -339,7 +366,7 @@ export function FedOmbudsmanBlock({ federation, titulo = true }) {
         <div className="flex flex-wrap items-center gap-2">
           {isAuthenticated
             ? <V2Button type="button" size="sm" onClick={() => setAberto(true)} data-dica="federacao-ouvidoria-abrir"><MessageSquareWarning className="h-4 w-4" />{t('Enviar manifestação')}</V2Button>
-            : <V2Button asChild size="sm"><Link to={`/login?next=${encodeURIComponent(`/federacoes/${federation.id}`)}`}>{t('Entrar para enviar')}</Link></V2Button>}
+            : <V2Button asChild size="sm"><Link to={`/login?next=${encodeURIComponent(`/federacoes/${federation.id}?aba=contato`)}`}>{t('Entrar para enviar')}</Link></V2Button>}
           {isAuthenticated && (
             <form className="flex items-center gap-2" onSubmit={buscar}>
               <V2Input value={protocolo} onChange={(e) => setProtocolo(e.target.value.toUpperCase())} placeholder={t('Protocolo')} aria-label={t('Protocolo da manifestação')} className="h-10 w-48 font-mono uppercase" maxLength={48} />
@@ -347,6 +374,7 @@ export function FedOmbudsmanBlock({ federation, titulo = true }) {
             </form>
           )}
         </div>
+        {!isAuthenticated && <p className="text-xs text-gray-500">{t('A conta evita mensagens falsas em massa. Mesmo entrando, você pode enviar anônimo: a manifestação não guarda quem enviou.')}</p>}
         {consulta && rq.isError && <p className="text-sm text-red-600">{t('Protocolo não encontrado, ou ele não é seu.')}</p>}
         {consulta && rq.isSuccess && !rq.data && <p className="text-sm text-red-600">{t('Protocolo não encontrado.')}</p>}
         {consulta && rq.isSuccess && rq.data && (
@@ -377,7 +405,7 @@ function OuvidoriaDialog({ federation, uid, onClose }) {
         {enviada ? (
           <div className="space-y-3">
             <p className="text-sm text-gray-700">{t('Enviada. Seu protocolo:')}</p>
-            <p className="font-mono text-lg font-bold text-ink">{reportProtocol(enviada.id)}</p>
+            <CopyCodeButton code={reportProtocol(enviada.id)} successMessage={t('Protocolo copiado.')} label={t('Copiar o protocolo')} />
             <p className="text-xs text-gray-500">{enviada.anonymous ? t('Anônima: só com o protocolo dá para acompanhar — anote.') : t('Identificada: ela também aparece na sua Minha área → Federações.')}</p>
             <div className="flex justify-end"><V2Button type="button" onClick={onClose}>{t('Fechar')}</V2Button></div>
           </div>

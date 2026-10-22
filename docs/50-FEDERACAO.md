@@ -1587,3 +1587,70 @@ dinheiro ou bater numa porta fechada. Zero coleção, zero índice, zero regra.
   que a pessoa pode tirar você.
 - `ConfirmDialog` ganhou `children` (um campo dentro da pergunta) e
   `confirmDisabled` — aditivo, os usos antigos não mudam.
+
+## 21. Revisão de UX — Entregas 2 a 4: a Central, as páginas públicas e a área do filiado (2026-10-22)
+
+Nada de banco novo além de um campo opcional (`federation_charges.overdue_notified`);
+nenhuma regra mudou. As peças compartilhadas da Central ficam em
+`src/v2/components/federations/manage/listTools.jsx` (`useBuscaLista`,
+`useFiltroNaUrl`, `BuscaLista`, `MostrarMais` — 30 por vez) e
+`manage/naoSalvo.js` (`useAvisoNaoSalvo`, `haAlteracaoNaoSalva`,
+`descartarAlteracoes`, `baixarCsv`).
+
+### 21.1 Central da equipe (Entrega 2)
+
+- **Toda lista longa** (filiados, convites, secretaria, cobranças, clubes e
+  arenas, cursos, disciplina, chancelas, notícias, comentários, acervo,
+  agenda) tem busca por nome, "Mostrar mais" de 30 em 30 e filtros com a
+  contagem ao lado; o filtro escolhido mora na URL (recarregar não perde, o
+  link leva à mesma visão). `V2FilterChip` diz `aria-pressed`.
+- **Alteração não salva** (configurações, regras, conteúdo, ranking, formulário
+  do acervo e da agenda): trocar de aba ou fechar o diálogo pergunta "Sair sem
+  salvar?"; o Ranking ganhou "Desfazer mudanças". Upload de arquivo
+  descartado é apagado do Storage.
+- **Toda ação irreversível confirma** (desfiliar, cancelar convite, tirar da
+  equipe, retirar documento do ar, cancelar evento…), com o efeito escrito.
+- **CSV** abre certo no Excel brasileiro (`;`, BOM, reais com vírgula, datas
+  dd/mm/aaaa) — `chargesCsv`, `indicatorsCsv` e a lista de filiados.
+- A faixa "Precisa de você" leva à aba **já filtrada** no que pede ação.
+
+### 21.2 Páginas públicas, verificação e diretório (Entrega 3)
+
+- As páginas `/f/:slug`, `/f/:slug/acervo` e `/f/:slug/agenda` usam a mesma
+  barra (`PublicFedTopBar`: marca + "Entrar" / "Abrir no app") e a moldura de
+  1200 px; documento e evento sozinhos ficam em 880 px.
+- **"Filiar-se neste plano"** em cada plano: no app vai direto ao formulário
+  com o plano escolhido (`/federacoes/:id/filiar?plano=`); no `/f/:slug` passa
+  pelo login antes. Só aparece para quem pode pedir (sem filiação).
+- O contato mostra **WhatsApp** quando o telefone é celular brasileiro
+  (`whatsappLink`, `domain/profile.js`).
+- "0 filiados" não aparece (capa e diretório). No diretório as federações
+  **nacionais** passam por cima do filtro de região e vêm primeiro; lista
+  vazia só por causa da região mostra a dica de ampliar, não "nenhuma
+  federação".
+- Acervo e agenda públicos paginam de 30 em 30 e têm "Limpar filtros"; o selo
+  **"Em vigor"** só aparece em norma (`docHasValidity`: estatuto, regimentos,
+  resoluções, portarias, deliberações, atos — não em edital nem ata).
+- **Verificação** (`/f/verificar/:codigo`): diz "Código não encontrado" ou
+  "Código inválido" com o que fazer, separa Carteirinha de Credencial e
+  termina com "Consultado agora" + link para a página da federação.
+- **Ouvidoria**: quem não entrou lê por que se pede conta (e que continua
+  podendo ser anônimo); o login volta para a aba Contato; o protocolo tem
+  botão de copiar (`CopyCodeButton`).
+- **Ranking**: busca por nome com mais de 15 linhas; o nome leva ao perfil do
+  atleta para quem entrou.
+- Apagar o próprio comentário confirma.
+
+### 21.3 Área do filiado e cobranças (Entrega 4)
+
+- **Recibo** de cada cobrança paga (Minha filiação → Pagamentos → Recibo):
+  `chargeReceipt` (`domain/charges.js`) monta número `REC-…`, federação com
+  CNPJ mascarado, quem pagou, referente a, valor, data e quem confirmou;
+  `FedReceipt.jsx` imprime/salva em PDF pelo mesmo caminho da declaração.
+  Cobrança não paga não tem recibo.
+- Filiação ativa fora da janela de renovação diz **quando a renovação abre**
+  (`renewalOpensOn`, `domain/membership.js`).
+- **Lembrete de cobrança vencida**: a varredura diária avisa quem paga no dia
+  do vencimento e 7 dias depois, uma vez por marco
+  (`federation_charges.overdue_notified`); só cobrança `open` — quem já
+  informou o pagamento não é cobrado de novo.

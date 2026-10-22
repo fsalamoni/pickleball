@@ -426,8 +426,9 @@ ele; quitar filiação sem `member_id` é `failed-precondition`.
 quatro varreduras independentes (`Promise.allSettled`: uma falhando não derruba
 as outras, e o erro vai para o log): `federations.sweep` — `active` →
 `expired` quando a validade já PASSOU (`daysLeft < 0`); avisos 30, 7 e 1 dia
-antes e "vence hoje" (uma vez cada, em `expiry_notified`); recontagem de
-`member_count`; `federationTransfers.sweep` (PR 3) — libera as
+antes e "vence hoje" (uma vez cada, em `expiry_notified`); lembrete da
+cobrança ainda `open` no vencimento e 7 dias depois, a `payer_uid` (uma vez
+cada, em `overdue_notified`); recontagem de `member_count`; `federationTransfers.sweep` (PR 3) — libera as
 transferências de federação sem resposta até `deadline` (`auto_released:
 true`, avisa os dois lados); e `federationDiscipline.sweep` — aplica na data a
 suspensão gravada com início FUTURO (`applied_at_ms` nulo). O FIM da

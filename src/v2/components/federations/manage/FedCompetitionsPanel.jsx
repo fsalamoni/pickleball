@@ -11,17 +11,19 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Ban, CheckCircle2, ClipboardList, RotateCcw, Trophy, XCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { pendingSanctions, sanctionState, sanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { normalizeRankingConfig } from '@/modules/federations/domain/officialRanking';
 import { RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { FedRankingBlock, classeLabel } from '../FedPublicBlocks';
 import { quando } from '../federationUi';
+import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
+import { useAvisoNaoSalvo } from './naoSalvo';
 
 const TIERS = Object.values(SANCTION_TIER).map((v) => ({ value: v, label: SANCTION_TIER_LABELS[v] }));
 
@@ -36,34 +38,53 @@ function DecisaoDialog({ tournament, acao, onClose }) {
   const [erro, setErro] = useState('');
   const m = useFederationMutation(() => decideSanction(tournament, acao, { uid: user?.uid, reason: motivo, tier, requiresMembership: soFiliados }));
   const aprovar = acao === 'approve';
-  const titulos = { approve: t('Chancelar o torneio'), reject: t('Recusar a chancela'), revoke: t('Revogar a chancela') };
+  const nome = tournament.name || '';
+  const textos = {
+    approve: {
+      title: t('Chancelar {torneio}?', { torneio: nome }),
+      description: t('O torneio ganha o selo da federação e passa a enviar resultados ao ranking oficial. Quem organiza recebe um aviso.'),
+      confirmLabel: t('Chancelar'),
+    },
+    reject: {
+      title: t('Recusar a chancela de {torneio}?', { torneio: nome }),
+      description: t('Quem organiza recebe um aviso com o motivo e pode pedir a chancela de novo depois.'),
+      confirmLabel: t('Recusar'),
+    },
+    revoke: {
+      title: t('Revogar a chancela de {torneio}?', { torneio: nome }),
+      description: t('O torneio perde o selo da federação e os resultados que ele já enviou saem do ranking oficial, que é refeito na hora. Quem organiza recebe um aviso com o motivo. Para voltar, é preciso pedir a chancela de novo.'),
+      confirmLabel: t('Revogar'),
+    },
+  }[acao];
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent sheet className="max-w-md">
-        <DialogTitle>{titulos[acao]}</DialogTitle>
-        <DialogDescription>{tournament.name}. {aprovar ? t('O torneio ganha o selo da federação e passa a enviar resultados ao ranking oficial.') : t('Quem organiza lê o motivo.')}</DialogDescription>
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => { toast.success(aprovar ? t('Torneio chancelado. O organizador foi avisado.') : t('Decisão gravada. O organizador foi avisado.')); onClose(); }, onError: (er) => setErro(er.message) }); }}>
-          {aprovar && (
-            <>
-              <V2Field label={t('Peso no ranking')} htmlFor="ch-tier" hint={t('Multiplica os pontos da tabela: regional ×1, estadual ×1,5, principal ×2 (ajustável em Ranking).')}>
-                <V2Select id="ch-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={TIERS.map((o) => ({ value: o.value, label: t(o.label) }))} />
-              </V2Field>
-              <V2Toggle id="ch-filiados" checked={soFiliados} onChange={setSoFiliados} label={t('Só filiados em dia se inscrevem')} hint={t('A regra do banco recusa a inscrição de quem não está em dia nesta federação.')} />
-            </>
-          )}
-          {!aprovar && (
-            <V2Field label={t('Motivo')} htmlFor="ch-motivo" error={erro}>
-              <V2Textarea id="ch-motivo" rows={3} maxLength={500} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} autoFocus />
+    <ConfirmDialog
+      open
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      destructive={!aprovar}
+      loading={m.isPending}
+      confirmDisabled={!aprovar && motivo.trim().length < 3}
+      title={textos.title}
+      description={textos.description}
+      confirmLabel={textos.confirmLabel}
+      cancelLabel={t('Voltar')}
+      onConfirm={() => m.mutate(undefined, { onSuccess: () => { toast.success(aprovar ? t('Torneio chancelado. O organizador foi avisado.') : t('Decisão gravada. O organizador foi avisado.')); onClose(); }, onError: (er) => setErro(er.message) })}
+    >
+      <div className="space-y-4">
+        {aprovar ? (
+          <>
+            <V2Field label={t('Peso no ranking')} htmlFor="ch-tier" hint={t('Multiplica os pontos da tabela: regional ×1, estadual ×1,5, principal ×2 (ajustável em Ranking).')}>
+              <V2Select id="ch-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={TIERS.map((o) => ({ value: o.value, label: t(o.label) }))} />
             </V2Field>
-          )}
-          {aprovar && erro && <p className="text-sm text-red-600">{erro}</p>}
-          <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={onClose}>{t('Voltar')}</V2Button>
-            <V2Button type="submit" variant={aprovar ? 'primary' : 'danger'} disabled={m.isPending}>{aprovar ? t('Chancelar') : acao === 'reject' ? t('Recusar') : t('Revogar')}</V2Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <V2Toggle id="ch-filiados" checked={soFiliados} onChange={setSoFiliados} label={t('Só filiados em dia se inscrevem')} hint={t('A inscrição de quem não está em dia nesta federação é recusada.')} />
+            {erro && <p className="text-sm text-red-600" role="alert">{erro}</p>}
+          </>
+        ) : (
+          <V2Field label={t('Motivo')} htmlFor="ch-motivo" error={erro} hint={t('Quem organiza lê este texto. Mínimo 3 caracteres.')}>
+            <V2Textarea id="ch-motivo" rows={3} maxLength={500} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} />
+          </V2Field>
+        )}
+      </div>
+    </ConfirmDialog>
   );
 }
 
@@ -104,22 +125,46 @@ function TorneioRow({ tournament: tt }) {
   );
 }
 
+const FILTROS_CHANCELA = ['todos', 'pendentes', 'chancelados'];
+const CAMPOS_TORNEIO = (tt) => [tt.name, tt.city, tt.location].join(' ');
+
 function ChancelasTab({ tournamentsQ }) {
+  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'todos', FILTROS_CHANCELA);
   const pendentes = useMemo(() => pendingSanctions(tournamentsQ.data || []), [tournamentsQ.data]);
   const chancelados = useMemo(() => sanctionedTournaments(tournamentsQ.data || []), [tournamentsQ.data]);
+  const lista = useMemo(() => (filtro === 'pendentes' ? pendentes : filtro === 'chancelados' ? chancelados : [...pendentes, ...chancelados]), [filtro, pendentes, chancelados]);
+  const busca = useBuscaLista(lista, CAMPOS_TORNEIO);
   if (tournamentsQ.isError) return <V2ErrorState title={t('Não carregaram os torneios')} onRetry={() => tournamentsQ.refetch()} />;
   if (!tournamentsQ.isSuccess) return <V2Skeleton lines={5} />;
+  // A busca e o "Mostrar mais" valem sobre a lista inteira; os grupos saem do que está visível.
+  const visPendentes = busca.visiveis.filter((tt) => sanctionState(tt).pending);
+  const visChancelados = busca.visiveis.filter((tt) => !sanctionState(tt).pending);
+  const achPendentes = busca.filtrados.filter((tt) => sanctionState(tt).pending).length;
+  const achChancelados = busca.filtrados.length - achPendentes;
+  const buscando = Boolean(busca.termo.trim());
+  const rotulos = { todos: t('Todos'), pendentes: t('Pendentes'), chancelados: t('Chancelados') };
+  const contagem = { todos: pendentes.length + chancelados.length, pendentes: pendentes.length, chancelados: chancelados.length };
   return (
     <section className="space-y-6" aria-label={t('Chancelas')} data-dica="federacao-aba-chancelas">
       <p className="text-sm text-gray-600">{t('O organizador pede a chancela em Gestão do torneio → Geral → Federação. Chancelado, o torneio ganha o selo, pode exigir filiação na inscrição e envia resultados ao ranking oficial.')}</p>
-      <div>
-        <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(pendentes.length, '{n} pedido aguardando', '{n} pedidos aguardando')}</h3>
-        {pendentes.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum pedido de chancela aguardando.')}</p> : <ul className="space-y-3">{pendentes.map((tt) => <TorneioRow key={tt.id} tournament={tt} />)}</ul>}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">{FILTROS_CHANCELA.map((id) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{`${rotulos[id]} (${contagem[id]})`}</V2FilterChip>)}</div>
+        {lista.length > 0 && <BuscaLista id="ch-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar torneio por nome ou cidade')} total={lista.length} achados={busca.filtrados.length} />}
       </div>
-      <div>
-        <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(chancelados.length, '{n} torneio chancelado', '{n} torneios chancelados')}</h3>
-        {chancelados.length === 0 ? <V2EmptyState icon={Trophy} title={t('Nenhum torneio chancelado ainda')} /> : <ul className="space-y-3">{chancelados.map((tt) => <TorneioRow key={tt.id} tournament={tt} />)}</ul>}
-      </div>
+      {buscando && lista.length > 0 && !busca.filtrados.length && <V2EmptyState icon={Trophy} title={t('Nenhum torneio com esse termo')} />}
+      {filtro !== 'chancelados' && !(buscando && !achPendentes) && (
+        <div>
+          <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(buscando ? achPendentes : pendentes.length, '{n} pedido aguardando', '{n} pedidos aguardando')}</h3>
+          {pendentes.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum pedido de chancela aguardando.')}</p> : <ul className="space-y-3">{visPendentes.map((tt) => <TorneioRow key={tt.id} tournament={tt} />)}</ul>}
+        </div>
+      )}
+      {filtro !== 'pendentes' && !(buscando && !achChancelados) && (visChancelados.length > 0 || chancelados.length === 0) && (
+        <div>
+          <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(buscando ? achChancelados : chancelados.length, '{n} torneio chancelado', '{n} torneios chancelados')}</h3>
+          {chancelados.length === 0 ? <V2EmptyState icon={Trophy} title={t('Nenhum torneio chancelado ainda')} description={t('Os pedidos aprovados aparecem aqui.')} /> : <ul className="space-y-3">{visChancelados.map((tt) => <TorneioRow key={tt.id} tournament={tt} />)}</ul>}
+        </div>
+      )}
+      <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
     </section>
   );
 }
@@ -148,8 +193,8 @@ function ResultadoRow({ result: r }) {
           {!recusado && !recusando && <V2Button type="button" size="sm" variant="danger" onClick={() => setRecusando(true)}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>}
           {!recusado && recusando && (
             <form className="flex w-full flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); m.mutate('reject', { onSuccess: () => { toast.success(t('Resultado recusado. O organizador foi avisado.')); setRecusando(false); }, onError: (er) => toast.error(er.message) }); }}>
-              <V2Field label={t('Motivo')} htmlFor={`res-motivo-${r.id}`} className="flex-1"><V2Input id={`res-motivo-${r.id}`} value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} autoFocus /></V2Field>
-              <V2Button type="submit" size="sm" variant="danger" disabled={m.isPending}>{t('Confirmar')}</V2Button>
+              <V2Field label={t('Motivo')} htmlFor={`res-motivo-${r.id}`} hint={t('Quem organiza lê este texto. Os pontos saem do ranking na hora.')} className="flex-1"><V2Input id={`res-motivo-${r.id}`} value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} autoFocus /></V2Field>
+              <V2Button type="submit" size="sm" variant="danger" disabled={m.isPending || motivo.trim().length < 3}>{t('Recusar resultado')}</V2Button>
               <V2Button type="button" size="sm" variant="ghost" onClick={() => setRecusando(false)}>{t('Voltar')}</V2Button>
             </form>
           )}
@@ -160,14 +205,23 @@ function ResultadoRow({ result: r }) {
   );
 }
 
+const CAMPOS_RESULTADO = (r) => [r.tournament_name, r.modality_name, ...(r.rows || []).filter((x) => x.position && x.position <= 3).map((x) => x.name)].join(' ');
+
 function ResultadosTab({ resultsQ }) {
+  const lista = useMemo(() => [...(resultsQ.data || [])].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))), [resultsQ.data]);
+  const busca = useBuscaLista(lista, CAMPOS_RESULTADO);
   if (resultsQ.isError) return <V2ErrorState title={t('Não carregaram os resultados')} onRetry={() => resultsQ.refetch()} />;
   if (!resultsQ.isSuccess) return <V2Skeleton lines={5} />;
-  const lista = [...(resultsQ.data || [])].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   return (
     <section className="space-y-4" aria-label={t('Resultados')} data-dica="federacao-aba-resultados">
       <p className="text-sm text-gray-600">{t('Cada categoria encerrada de um torneio chancelado chega aqui quando o organizador envia. Recusar tira os pontos do ranking na hora; readmitir devolve.')}</p>
-      {lista.length === 0 ? <V2EmptyState icon={ClipboardList} title={t('Nenhum resultado enviado ainda')} description={t('O organizador envia na tela de resultados do torneio, categoria a categoria.')} /> : <ul className="space-y-3">{lista.map((r) => <ResultadoRow key={r.id} result={r} />)}</ul>}
+      {lista.length === 0 ? <V2EmptyState icon={ClipboardList} title={t('Nenhum resultado enviado ainda')} description={t('O organizador envia na tela de resultados do torneio, categoria a categoria.')} /> : (
+        <>
+          <BuscaLista id="res-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por torneio, categoria ou atleta do pódio')} total={lista.length} achados={busca.filtrados.length} />
+          {!busca.filtrados.length ? <V2EmptyState icon={ClipboardList} title={t('Nenhum resultado com esse termo')} /> : <ul className="space-y-3">{busca.visiveis.map((r) => <ResultadoRow key={r.id} result={r} />)}</ul>}
+          <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
+        </>
+      )}
     </section>
   );
 }
@@ -176,10 +230,15 @@ function ResultadosTab({ resultsQ }) {
 
 function RankingTab({ federation }) {
   const { user } = useAuth();
-  const [cfg, setCfg] = useState(() => normalizeRankingConfig(federation.ranking_config));
+  const [salvo, setSalvo] = useState(() => normalizeRankingConfig(federation.ranking_config));
+  const [cfg, setCfg] = useState(salvo);
+  const [confirmando, setConfirmando] = useState(false);
+  const alterado = JSON.stringify(cfg) !== JSON.stringify(salvo);
+  useAvisoNaoSalvo(alterado);
   const m = useFederationMutation(() => updateRankingConfig(federation.id, cfg, { uid: user?.uid }));
   const set = (patch) => setCfg((c) => ({ ...c, ...patch }));
   const num = (v) => (v === '' ? 0 : Number(v));
+  const salvar = () => m.mutate(undefined, { onSuccess: () => { setSalvo(cfg); setConfirmando(false); toast.success(t('Pontuação salva. O ranking está sendo refeito.')); }, onError: (er) => toast.error(er.message) });
   return (
     <section className="space-y-6" aria-label={t('Ranking oficial')} data-dica="federacao-aba-ranking">
       <V2Surface className="space-y-4">
@@ -187,7 +246,7 @@ function RankingTab({ federation }) {
           <h3 className="font-display text-lg font-bold text-ink">{t('Como o ranking pontua')}</h3>
           <p className="text-sm text-gray-500">{t('Mudou? O servidor refaz todas as temporadas na hora. Os valores valem para toda classe.')}</p>
         </div>
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => toast.success(t('Pontuação salva. O ranking está sendo refeito.')), onError: (er) => toast.error(er.message) }); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirmando(true); }}>
           <fieldset>
             <legend className="text-sm font-semibold text-ink">{t('Pontos por colocação')}</legend>
             <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
@@ -213,8 +272,22 @@ function RankingTab({ federation }) {
             </div>
           </fieldset>
           <V2Toggle id="rk-members" checked={cfg.members_only} onChange={(v) => set({ members_only: v })} label={t('Só filiados em dia pontuam')} hint={t('Conferido na data do torneio. Desligado, todo mundo que jogou pontua.')} />
-          <div className="flex justify-end"><V2Button type="submit" disabled={m.isPending}>{t('Salvar pontuação')}</V2Button></div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {alterado && <span className="text-sm text-gray-500" aria-live="polite">{t('Há mudanças não salvas.')}</span>}
+            {alterado && <V2Button type="button" variant="ghost" onClick={() => setCfg(salvo)}>{t('Desfazer mudanças')}</V2Button>}
+            <V2Button type="submit" disabled={m.isPending || !alterado}>{t('Salvar pontuação')}</V2Button>
+          </div>
         </form>
+        <ConfirmDialog
+          open={confirmando}
+          onOpenChange={setConfirmando}
+          loading={m.isPending}
+          title={t('Salvar a nova pontuação?')}
+          description={t('O servidor refaz o ranking de todas as temporadas com os novos valores, e as posições dos atletas podem mudar na página da federação. Para voltar atrás, salve os valores antigos de novo.')}
+          confirmLabel={t('Salvar pontuação')}
+          cancelLabel={t('Voltar')}
+          onConfirm={salvar}
+        />
       </V2Surface>
       <V2Surface>
         <FedRankingBlock federation={federation} meUid={user?.uid} />

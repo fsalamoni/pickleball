@@ -9,7 +9,7 @@
  *    servidor, relatório do que entrou, do que foi pulado e de quem ainda não
  *    tem conta.
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeftRight, CheckCircle2, Download, FileUp, Upload, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -23,6 +23,9 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
 import { baixarBlob } from '../acervo/acervoFiles';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
+import { baixarCsv } from './naoSalvo';
 
 const TOM = { pending: 'amber', approved: 'green', rejected: 'red', cancelled: 'neutral' };
 
@@ -47,9 +50,11 @@ function MotivoRecusa({ titulo, descricao, onConfirmar, onClose, pendente }) {
 
 function TransferRow({ tr, federation, chegando = false }) {
   const [recusando, setRecusando] = useState(false);
+  const [aprovando, setAprovando] = useState(false);
   const m = useFederationMutation((payload) => transferAction(payload));
   const atrasada = isReleaseOverdue(tr);
-  const aprovar = () => m.mutate({ action: 'approve', transferId: tr.id }, { onSuccess: () => toast.success(t('Transferência aprovada. A pessoa foi avisada.')), onError: (e) => toast.error(e.message) });
+  const deFederacao = tr.kind === TRANSFER_KIND.FEDERATION;
+  const aprovar = () => m.mutate({ action: 'approve', transferId: tr.id }, { onSuccess: () => { setAprovando(false); toast.success(deFederacao ? t('Transferência liberada. A pessoa foi avisada.') : t('Transferência aprovada. A pessoa foi avisada.')); }, onError: (e) => toast.error(e.message) });
   return (
     <li>
       <V2Surface variant="compacto" className="space-y-3 p-4">
@@ -67,12 +72,24 @@ function TransferRow({ tr, federation, chegando = false }) {
         </div>
         {!chegando && tr.status === TRANSFER_STATUS.PENDING && (
           <div className="flex flex-wrap gap-2">
-            <V2Button type="button" size="sm" disabled={m.isPending} onClick={aprovar}><CheckCircle2 className="h-4 w-4" />{tr.kind === TRANSFER_KIND.FEDERATION ? t('Liberar') : t('Aprovar')}</V2Button>
+            <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => setAprovando(true)}><CheckCircle2 className="h-4 w-4" />{deFederacao ? t('Liberar') : t('Aprovar')}</V2Button>
             <V2Button type="button" size="sm" variant="danger" onClick={() => setRecusando(true)}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>
           </div>
         )}
         {chegando && tr.status === TRANSFER_STATUS.PENDING && <p className="text-xs text-gray-500">{t('Quem libera é a federação de origem. Liberada, a pessoa pede a filiação na {sigla} normalmente.', { sigla: federation.acronym || '' })}</p>}
       </V2Surface>
+      <ConfirmDialog
+        open={aprovando}
+        onOpenChange={setAprovando}
+        loading={m.isPending}
+        title={deFederacao ? t('Liberar a transferência de {nome}?', { nome: tr.user_name || '' }) : t('Aprovar a troca de clube de {nome}?', { nome: tr.user_name || '' })}
+        description={deFederacao
+          ? t('A filiação aqui é encerrada e a pessoa fica livre para se filiar na outra federação. Os pontos do ranking não vão junto. Não dá para desfazer.')
+          : t('O clube representado muda na filiação e a pessoa é avisada.')}
+        confirmLabel={deFederacao ? t('Liberar') : t('Aprovar')}
+        cancelLabel={t('Voltar')}
+        onConfirm={aprovar}
+      />
       {recusando && (
         <MotivoRecusa titulo={t('Recusar a transferência')} descricao={t('{nome} lê o motivo. Transferência de federação recusada sem motivo justo pode ser levada à plataforma.', { nome: tr.user_name })} pendente={m.isPending} onClose={() => setRecusando(false)}
           onConfirmar={(motivo) => m.mutate({ action: 'reject', transferId: tr.id, reason: motivo }, { onSuccess: () => { toast.success(t('Transferência recusada.')); setRecusando(false); }, onError: (e) => toast.error(e.message) })} />
@@ -81,21 +98,55 @@ function TransferRow({ tr, federation, chegando = false }) {
   );
 }
 
+/** `pendentes` é contrato: a faixa "Precisa de você" abre `?aba=transferencias&filtro=pendentes`. */
+const FILTROS_TRANSF = [
+  { id: 'pendentes', status: TRANSFER_STATUS.PENDING, label: () => t('Aguardando') },
+  { id: 'aprovadas', status: TRANSFER_STATUS.APPROVED, label: () => t('Aprovadas') },
+  { id: 'recusadas', status: TRANSFER_STATUS.REJECTED, label: () => t('Recusadas') },
+  { id: 'todas', label: () => t('Todas') },
+];
+const BUSCA_TRANSF = (x) => `${x.user_name} ${transferSummary(x)}`;
+
+/** Os chips de filtro com a contagem no rótulo. */
+function Filtros({ opcoes, ativo, onChange, contar }) {
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t('Filtro')}>
+      {opcoes.map((f) => <V2FilterChip key={f.id} active={ativo === f.id} onClick={() => onChange(f.id)}>{`${f.label()} (${contar(f)})`}</V2FilterChip>)}
+    </div>
+  );
+}
+
 function TransferenciasTab({ federation, transfersQ, incomingQ }) {
-  const [filtro, setFiltro] = useState('pending');
+  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'pendentes', FILTROS_TRANSF.map((f) => f.id));
+  const todas = useMemo(() => sortTransfers(transfersQ.data || []), [transfersQ.data]);
+  const opcao = FILTROS_TRANSF.find((f) => f.id === filtro) || FILTROS_TRANSF[0];
+  const doFiltro = useMemo(() => (opcao.status ? todas.filter((x) => x.status === opcao.status) : todas), [todas, opcao]);
+  const busca = useBuscaLista(doFiltro, BUSCA_TRANSF);
   if (transfersQ.isError) return <V2ErrorState title={t('Não carregaram as transferências')} onRetry={() => transfersQ.refetch()} />;
   if (transfersQ.isLoading) return <V2Skeleton lines={5} />;
-  const todas = sortTransfers(transfersQ.data || []);
-  const lista = filtro === 'todas' ? todas : todas.filter((x) => x.status === filtro);
   const chegando = sortTransfers((incomingQ.data || []).filter((x) => x.status === TRANSFER_STATUS.PENDING));
+  const termo = busca.termo.trim();
   return (
     <section className="space-y-4" aria-label={t('Transferências')} data-dica="federacao-transferencias">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Transferências')}</h2><p className="text-sm text-gray-500">{t('Troca de clube representado (você decide) e saída para outra federação (você libera; sem resposta em {dias} dias, libera sozinha).', { dias: federation?.rules?.transfer_release_days || 15 })}</p></div>
-      <div className="flex flex-wrap gap-2">
-        {[['pending', t('Aguardando')], ['approved', t('Aprovadas')], ['rejected', t('Recusadas')], ['todas', t('Todas')]].map(([id, label]) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{label}</V2FilterChip>)}
-      </div>
-      {!lista.length ? <V2EmptyState icon={ArrowLeftRight} title={t('Nenhuma transferência neste filtro')} description={filtro === 'pending' ? t('Quando um filiado pedir troca de clube ou de federação, aparece aqui.') : undefined} />
-        : <ul className="space-y-3">{lista.map((x) => <TransferRow key={x.id} tr={x} federation={federation} />)}</ul>}
+      {todas.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <Filtros opcoes={FILTROS_TRANSF} ativo={filtro} onChange={setFiltro} contar={(f) => (f.status ? todas.filter((x) => x.status === f.status).length : todas.length)} />
+          <BuscaLista id="fed-transf-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
+        </div>
+      )}
+      {!busca.filtrados.length ? (
+        <V2EmptyState
+          icon={ArrowLeftRight}
+          title={termo ? t('Nenhuma transferência com "{termo}"', { termo }) : !todas.length ? t('Nenhuma transferência pedida ainda') : t('Nenhuma transferência neste filtro')}
+          description={termo ? t('Confira a grafia ou limpe a busca.') : !todas.length || filtro === 'pendentes' ? t('Quando um filiado pedir troca de clube ou de federação, aparece aqui.') : t('Veja as demais no filtro "Todas".')}
+        />
+      ) : (
+        <>
+          <ul className="space-y-3">{busca.visiveis.map((x) => <TransferRow key={x.id} tr={x} federation={federation} />)}</ul>
+          <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
+        </>
+      )}
       {incomingQ.isError && <V2ErrorState inline title={t('Não carregaram as transferências que estão chegando')} onRetry={() => incomingQ.refetch()} />}
       {chegando.length > 0 && (
         <div className="space-y-3">
@@ -151,20 +202,46 @@ function DocRow({ docu, nome }) {
   );
 }
 
+/** `pendentes` é contrato: a faixa "Precisa de você" abre `?aba=documentos&filtro=pendentes`. */
+const FILTROS_DOC = [
+  { id: 'pendentes', status: DOC_STATUS.PENDING, label: () => t('Em análise') },
+  { id: 'aceitos', status: DOC_STATUS.APPROVED, label: () => t('Aceitos') },
+  { id: 'recusados', status: DOC_STATUS.REJECTED, label: () => t('Recusados') },
+  { id: 'todos', label: () => t('Todos') },
+];
+
 function DocumentosTab({ documentsQ, membersQ }) {
-  const [filtro, setFiltro] = useState(DOC_STATUS.PENDING);
+  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'pendentes', FILTROS_DOC.map((f) => f.id));
   const nomes = useMemo(() => Object.fromEntries((membersQ.data || []).map((mb) => [mb.id, mb.user_name])), [membersQ.data]);
+  const todos = useMemo(() => [...(documentsQ.data || [])].sort((a, b) => (a.status === DOC_STATUS.PENDING ? -1 : 1) - (b.status === DOC_STATUS.PENDING ? -1 : 1) || (b.created_at_ms || 0) - (a.created_at_ms || 0)), [documentsQ.data]);
+  const opcao = FILTROS_DOC.find((f) => f.id === filtro) || FILTROS_DOC[0];
+  const doFiltro = useMemo(() => (opcao.status ? todos.filter((d) => d.status === opcao.status) : todos), [todos, opcao]);
+  const campos = useCallback((d) => `${nomes[d.member_id] || ''} ${t(DOC_KIND_LABELS[d.kind] || DOC_KIND_LABELS.outro)} ${d.file_name || ''}`, [nomes]);
+  const busca = useBuscaLista(doFiltro, campos);
   if (documentsQ.isError) return <V2ErrorState title={t('Não carregaram os documentos')} onRetry={() => documentsQ.refetch()} />;
   if (documentsQ.isLoading) return <V2Skeleton lines={5} />;
-  const todos = [...(documentsQ.data || [])].sort((a, b) => (a.status === DOC_STATUS.PENDING ? -1 : 1) - (b.status === DOC_STATUS.PENDING ? -1 : 1) || (b.created_at_ms || 0) - (a.created_at_ms || 0));
-  const lista = filtro === 'todos' ? todos : todos.filter((d) => d.status === filtro);
+  const termo = busca.termo.trim();
   return (
     <section className="space-y-4" aria-label={t('Documentos enviados')} data-dica="federacao-documentos">
-      <div><h2 className="font-display text-xl font-bold text-ink">{t('Documentos enviados')}</h2><p className="text-sm text-gray-500">{t('O que os filiados enviaram para os planos que exigem documento. Ver um arquivo fica registrado na auditoria.')}</p></div>
-      <div className="flex flex-wrap gap-2">
-        {[[DOC_STATUS.PENDING, t('Em análise')], [DOC_STATUS.APPROVED, t('Aceitos')], [DOC_STATUS.REJECTED, t('Recusados')], ['todos', t('Todos')]].map(([id, label]) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{label}</V2FilterChip>)}
-      </div>
-      {!lista.length ? <V2EmptyState icon={FileUp} title={t('Nenhum documento neste filtro')} /> : <ul className="space-y-3">{lista.map((d) => <DocRow key={d.id} docu={d} nome={nomes[d.member_id]} />)}</ul>}
+      <div><h2 className="font-display text-xl font-bold text-ink">{t('Documentos enviados')}</h2><p className="text-sm text-gray-500">{t('O que os filiados enviaram para os planos que exigem documento. Baixar um arquivo fica registrado na auditoria.')}</p></div>
+      {todos.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <Filtros opcoes={FILTROS_DOC} ativo={filtro} onChange={setFiltro} contar={(f) => (f.status ? todos.filter((d) => d.status === f.status).length : todos.length)} />
+          <BuscaLista id="fed-docs-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, tipo ou arquivo')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
+        </div>
+      )}
+      {!busca.filtrados.length ? (
+        <V2EmptyState
+          icon={FileUp}
+          title={termo ? t('Nenhum documento com "{termo}"', { termo }) : !todos.length ? t('Nenhum documento enviado ainda') : t('Nenhum documento neste filtro')}
+          description={termo ? t('Confira a grafia ou limpe a busca.') : !todos.length || filtro === 'pendentes' ? t('Quando um filiado enviar um documento pedido pelo plano, ele aparece aqui para você conferir.') : t('Veja os demais no filtro "Todos".')}
+        />
+      ) : (
+        <>
+          <ul className="space-y-3">{busca.visiveis.map((d) => <DocRow key={d.id} docu={d} nome={nomes[d.member_id]} />)}</ul>
+          <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
+        </>
+      )}
     </section>
   );
 }
@@ -194,11 +271,7 @@ function ImportarTab({ federation, plansQ, importsQ }) {
     if (!previa.rows.length) { toast.error(t('Nada para importar.')); return; }
     m.mutate(undefined, { onSuccess: (r) => { setResultado(r); setTexto(''); toast.success(tn(r.imported, '{n} filiado importado.', '{n} filiados importados.')); }, onError: (er) => toast.error(er.message) });
   };
-  const baixarModelo = () => {
-    const url = URL.createObjectURL(new Blob([MODELO_CSV], { type: 'text/csv;charset=utf-8' }));
-    const a = document.createElement('a'); a.href = url; a.download = 'filiados-modelo.csv'; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  };
+  const baixarModelo = () => baixarCsv(MODELO_CSV, 'filiados-modelo.csv');
   return (
     <section className="space-y-4" aria-label={t('Importar filiados')} data-dica="federacao-importar">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Importar filiados')}</h2><p className="text-sm text-gray-500">{t('Para a federação que já existia: uma planilha CSV com nome, e-mail, número (opcional) e validade (opcional). Quem tem conta com o e-mail vira filiado ativo no plano escolhido; quem não tem fica numa lista para você convidar. Até {n} linhas por vez.', { n: IMPORT_MAX_ROWS })}</p></div>

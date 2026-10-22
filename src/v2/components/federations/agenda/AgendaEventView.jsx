@@ -50,7 +50,7 @@ export default function AgendaEventView({ federation, ev }) {
           <StatusBadge ev={ev} />
           {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(EVENT_VISIBILITY_LABELS[ev.visibility])}</V2Badge>}
         </div>
-        <h1 className={`font-display text-3xl font-bold text-ink ${cancelado ? 'line-through' : ''}`}>{ev.title}</h1>
+        <h1 className={`font-display text-2xl font-bold text-ink break-words sm:text-3xl ${cancelado ? 'line-through' : ''}`}>{ev.title}</h1>
       </header>
       <StatusBanner ev={ev} />
       <section className="space-y-2 rounded-2xl border border-gray-100 bg-paper-pure p-4">

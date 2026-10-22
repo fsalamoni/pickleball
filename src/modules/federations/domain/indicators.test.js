@@ -101,14 +101,20 @@ describe('indicatorsCsv', () => {
   it('só o que foi medido entra; célula-fórmula neutralizada', () => {
     const ind = federationIndicators({ members: [{ status: 'active', valid_until: '2027-01-01', plan_name: '=HYPERLINK("x")', requested_at: '2026-10-01' }], hoje: HOJE });
     const csv = indicatorsCsv(ind);
-    expect(csv).toContain('"em_dia";"1"');
-    expect(csv).toContain('"pedidos_de_filiacao"');
-    expect(csv).not.toContain('recebido_centavos');
+    expect(csv).toContain('"Em dia";"1"');
+    expect(csv).toContain('"Mês";"Pedidos de filiação"');
+    expect(csv).toContain('"10/2026";"1"');
+    expect(csv).toContain('"Atleta";"1"');
+    expect(csv).toContain('"Federado";"1"');
+    expect(csv).not.toContain('Recebido');
     expect(csv).toContain(`"'=HYPERLINK(""x"")"`);
   });
-  it('com as duas fontes traz a taxa de renovação', () => {
-    const ind = federationIndicators({ members: [{ status: 'expired', valid_until: '2026-05-01' }], charges: [{ status: 'paid', origin: 'renewal', amount_cents: 100, paid_at: '2026-10-01' }], hoje: HOJE });
+  it('com as duas fontes traz a taxa de renovação e o dinheiro em reais', () => {
+    const ind = federationIndicators({ members: [{ status: 'expired', valid_until: '2026-05-01' }], charges: [{ status: 'paid', origin: 'renewal', amount_cents: 15000, paid_at: '2026-10-01' }], hoje: HOJE });
     expect(ind.renewalRate).toBe(50);
-    expect(indicatorsCsv(ind)).toContain('"taxa_de_renovacao_pct";"50"');
+    const csv = indicatorsCsv(ind);
+    expect(csv).toContain('"Taxa de renovação (%)";"50"');
+    expect(csv).toContain('"Recebido em 12 meses (R$)";"150,00"');
+    expect(csv).toContain('"Renovação";"150,00"');
   });
 });

@@ -725,12 +725,37 @@ async function sweep(ctx) {
     if (n >= 400) await flush();
   }
   await flush();
+  // Cobrança em ABERTO que venceu: um aviso no vencimento e outro 7 dias depois, a quem paga
+  // (`payer_uid`: o responsável, no dependente). "Já paguei" (declared) não é cobrado de novo.
+  let lembretes = 0;
+  const abertas = await ctx.db.collection(C.charges).where('status', '==', 'open').get();
+  for (const d of abertas.docs) {
+    const c = d.data();
+    if (!c.due_date || !c.payer_uid) continue;
+    const atraso = m.daysBetween(c.due_date, hoje);
+    const feitos = c.overdue_notified || {};
+    const marco = [7, 0].find((x) => atraso >= x && !feitos[String(x)]);
+    if (marco == null) continue;
+    // eslint-disable-next-line no-await-in-loop
+    const s = await sigla(c.federation_id);
+    aviso(ctx, batch, c.payer_uid, {
+      title: marco === 0 ? tx('Cobrança da {sigla} vence hoje', { sigla: s }) : tx('Cobrança da {sigla} vencida há {dias} dias', { sigla: s, dias: atraso }),
+      message: tx('{oque}: pague pelo Pix e toque em "Já paguei". O financeiro da federação confirma.', { oque: c.plan_name || tx('Filiação') }),
+      link: '/perfil?secao=federacoes',
+    });
+    // Os dois marcos de uma vez quando o primeiro já passou (varredura parada): um aviso só.
+    batch.update(d.ref, { overdue_notified: { ...feitos, 0: true, ...(marco === 7 ? { 7: true } : {}) } });
+    lembretes += 1; n += 2;
+    // eslint-disable-next-line no-await-in-loop
+    if (n >= 400) await flush();
+  }
+  await flush();
   const feds = await ctx.db.collection(C.federations).where('status', '==', 'approved').get();
   const contagem = ctx.db.batch();
   feds.docs.forEach((f) => contagem.update(f.ref, { member_count: porFed[f.id] || 0 }));
   if (feds.size) await contagem.commit();
-  if (ctx.logger) ctx.logger.info('Federações: varredura diária.', { vencidas, avisos, federacoes: feds.size });
-  return { vencidas, avisos };
+  if (ctx.logger) ctx.logger.info('Federações: varredura diária.', { vencidas, avisos, lembretes, federacoes: feds.size });
+  return { vencidas, avisos, lembretes };
 }
 
 /* ------------------------------------------------------------- verify -- */

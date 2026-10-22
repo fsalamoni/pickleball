@@ -8,7 +8,7 @@
  * plataforma entra só com o acesso justificado (`FedSupportAccessGate`:
  * motivo + prazo, no registro interno). Sem cargo, a pessoa volta à página.
  */
-import React, { Suspense, lazy, useCallback, useMemo } from 'react';
+import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Eye, Landmark, ShieldCheck } from 'lucide-react';
 import {
@@ -27,6 +27,8 @@ import FederationPendencias from '@/v2/components/federations/FederationPendenci
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
 import { t } from '@/core/i18n';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { descartarAlteracoes, haAlteracaoNaoSalva } from '@/v2/components/federations/manage/naoSalvo';
 
 const FedHojePanel = lazy(() => import('@/v2/components/federations/manage/FedHojePanel'));
 const FedMembersPanel = lazy(() => import('@/v2/components/federations/manage/FedMembersPanel'));
@@ -66,10 +68,17 @@ function Central({ federationId }) {
     return sectionOfTab(sections, tabPedida);
   }, [sections, tabPedida, secaoPedida]);
   const tab = secaoAtiva?.tabs.some((x) => x.value === tabPedida) ? tabPedida : secaoAtiva?.tabs[0]?.value;
-  const setTab = useCallback((value) => {
-    setParams((atual) => { const novo = new URLSearchParams(atual); novo.set('aba', value); novo.delete('secao'); return novo; }, { replace: true });
+  // `filtro` (opcional) abre a lista já filtrada (`useFiltroNaUrl`); trocar de aba sem ele limpa o da aba anterior.
+  const trocarAba = useCallback((value, filtro) => {
+    setParams((atual) => { const novo = new URLSearchParams(atual); novo.set('aba', value); novo.delete('secao'); if (filtro) novo.set('filtro', filtro); else novo.delete('filtro'); return novo; }, { replace: true });
   }, [setParams]);
-  const irParaAba = (aba) => { if (sections.some((s) => s.tabs.some((x) => x.value === aba))) setTab(aba); };
+  // Formulário com mudança pendente (`useAvisoNaoSalvo`) pergunta antes de a aba trocar e levar o que foi digitado.
+  const [saindo, setSaindo] = useState(null);
+  const setTab = useCallback((value, filtro) => {
+    if (value !== tab && haAlteracaoNaoSalva()) { setSaindo({ value, filtro }); return; }
+    trocarAba(value, filtro);
+  }, [tab, trocarAba]);
+  const irParaAba = (aba, filtro) => { if (sections.some((s) => s.tabs.some((x) => x.value === aba))) setTab(aba, filtro); };
 
   // Só quem tem a permissão consulta: a regra recusaria a leitura, e a falha
   // viraria "não carregou" numa seção que a pessoa nem vê.
@@ -161,6 +170,16 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
         {(secaoAtiva.id === 'config' || secaoAtiva.id === 'pagina-publica') && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>
+      <ConfirmDialog
+        open={Boolean(saindo)}
+        onOpenChange={(o) => { if (!o) setSaindo(null); }}
+        destructive
+        title={t('Sair sem salvar?')}
+        description={t('O que você mudou nesta aba ainda não foi salvo e vai se perder.')}
+        confirmLabel={t('Sair sem salvar')}
+        cancelLabel={t('Continuar editando')}
+        onConfirm={() => { descartarAlteracoes(); trocarAba(saindo.value, saindo.filtro); setSaindo(null); }}
+      />
     </V2Page>
   );
 }

@@ -34,7 +34,7 @@ export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ
         {visiveis.map((i) => (
           <li key={i.id}>
             <button type="button"
-              onClick={() => onIrParaAba(i.aba)}
+              onClick={() => onIrParaAba(i.aba, i.filtro)}
               className="inline-flex items-center gap-2 rounded-full bg-acid/25 px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-acid/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
             >
               <span className="font-display text-base">{i.count}</span> {t(i.label)}

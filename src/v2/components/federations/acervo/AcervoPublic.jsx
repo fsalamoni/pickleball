@@ -25,6 +25,7 @@ import { V2Badge, V2Button, V2ErrorState, V2Input, V2Select, V2Skeleton } from '
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
+import { MostrarMais, POR_VEZ } from '../manage/listTools';
 
 /* ------------------------------------------------------------------ item -- */
 
@@ -123,6 +124,7 @@ function Transparencia({ federation, docs }) {
 }
 
 const ABAS = ['mural', 'documentos', 'transparencia'];
+const FILTRO_VAZIO = { q: '', category: '', year: '', onlyCurrent: false };
 
 export function AcervoBrowser({ federation }) {
   const a = useVisibleAcervo(federation);
@@ -131,7 +133,11 @@ export function AcervoBrowser({ federation }) {
     const pedida = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('aba') : '';
     return ABAS.includes(pedida) ? pedida : 'mural';
   });
-  const [filtro, setFiltro] = useState({ q: '', category: '', year: '', onlyCurrent: false });
+  const [filtro, setFiltroCru] = useState(FILTRO_VAZIO);
+  const [quantos, setQuantos] = useState(POR_VEZ);
+  // Mudou o filtro, a lista volta aos primeiros.
+  const setFiltro = (fn) => { setFiltroCru(fn); setQuantos(POR_VEZ); };
+  const algumFiltro = Boolean(filtro.q || filtro.category || filtro.year || filtro.onlyCurrent);
   const docs = useMemo(() => a.docs || [], [a.docs]);
   const filtrados = useMemo(() => sortDocs(filterDocs(docs, filtro)), [docs, filtro]);
   const anos = useMemo(() => docYears(docs), [docs]);
@@ -193,10 +199,18 @@ export function AcervoBrowser({ federation }) {
             <input type="checkbox" checked={filtro.onlyCurrent} onChange={(e) => setFiltro((f) => ({ ...f, onlyCurrent: e.target.checked }))} />
             {t('Só o que está em vigor (sem os revogados)')}
           </label>
-          <p className="text-xs text-gray-500" aria-live="polite">{tn(filtrados.length, '{n} documento', '{n} documentos')}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-gray-500" aria-live="polite">{tn(filtrados.length, '{n} documento', '{n} documentos')}</p>
+            {algumFiltro && <button type="button" onClick={() => setFiltro(() => FILTRO_VAZIO)} className="text-xs font-semibold text-ink underline">{t('Limpar filtros')}</button>}
+          </div>
           {docs.length === 0 ? <p className="text-sm text-gray-500">{t('A federação ainda não publicou documentos oficiais.')}</p>
             : filtrados.length === 0 ? <p className="text-sm text-gray-500">{t('Nada com esses filtros.')}</p>
-              : <ul className="space-y-2">{filtrados.map((d) => <AcervoDocItem key={d.id} federation={federation} doc={d} />)}</ul>}
+              : (
+                <>
+                  <ul className="space-y-2">{filtrados.slice(0, quantos).map((d) => <AcervoDocItem key={d.id} federation={federation} doc={d} />)}</ul>
+                  <MostrarMais restam={filtrados.length - quantos} onClick={() => setQuantos((n) => n + POR_VEZ)} />
+                </>
+              )}
         </section>
       )}
       {a.docs && aba === 'transparencia' && <Transparencia federation={federation} docs={docs.filter(isDocCurrent)} />}

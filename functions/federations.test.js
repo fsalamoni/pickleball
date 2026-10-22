@@ -13,7 +13,7 @@ const fed = require('./federations.js');
 const { createFakeDb } = require('../tests/fakes/fakeFirestore.cjs');
 
 const NOW = Date.UTC(2026, 9, 18, 15, 0, 0); // 2026-10-18 12:00 em Brasília
-const ctx = (db) => ({ db, now: NOW, Timestamp: { fromMillis: (ms) => ({ ms }) }, logger: { info() {} } });
+const ctx = (db, now = NOW) => ({ db, now, Timestamp: { fromMillis: (ms) => ({ ms }) }, logger: { info() {} } });
 const ANA = { uid: 'ana' };
 const SEC = { uid: 'sec' };
 const TES = { uid: 'tes' };
@@ -135,11 +135,11 @@ describe('federações no servidor', () => {
     db.store.docs.set('federation_members/fpp_ana', { federation_id: 'fpp', user_id: 'ana', status: 'active', valid_until: '2026-10-01', expiry_notified: {} });
     db.store.docs.set('federation_members/fpp_bia', { federation_id: 'fpp', user_id: 'bia', status: 'active', valid_until: '2026-11-10', expiry_notified: {} });
     const c = ctx(db);
-    expect(await fed.sweep(c)).toEqual({ vencidas: 1, avisos: 1 });
+    expect(await fed.sweep(c)).toEqual({ vencidas: 1, avisos: 1, lembretes: 0 });
     expect(doc(db, 'federation_members/fpp_ana').status).toBe('expired');
     expect(doc(db, 'federation_members/fpp_bia').expiry_notified).toEqual({ '30': true });
     expect(doc(db, 'federations/fpp').member_count).toBe(1);
-    expect(await fed.sweep(c)).toEqual({ vencidas: 0, avisos: 0 }); // o mesmo marco não avisa duas vezes
+    expect(await fed.sweep(c)).toEqual({ vencidas: 0, avisos: 0, lembretes: 0 }); // o mesmo marco não avisa duas vezes
   });
 
   it('só o admin da plataforma revisa; aprovar cria o presidente', async () => {
@@ -170,11 +170,26 @@ describe('federações no servidor', () => {
     expect(await fed.verify(ctx(off), { code: 'ABCDEFGHJK' })).toEqual({ found: false });
   });
 
+  it('a varredura lembra a cobrança vencida no vencimento e 7 dias depois, a quem paga, uma vez por marco', async () => {
+    const db = cenario();
+    const DIA = 86400000;
+    db.store.docs.set('federation_charges/c1', { federation_id: 'fpp', payer_uid: 'mae', status: 'open', due_date: '2026-10-18', plan_name: 'Anual' });
+    db.store.docs.set('federation_charges/c2', { federation_id: 'fpp', payer_uid: 'bia', status: 'declared', due_date: '2026-10-01' });
+    db.store.docs.set('federation_charges/c3', { federation_id: 'fpp', payer_uid: 'zed', status: 'open', due_date: '2026-11-30' });
+    expect((await fed.sweep(ctx(db))).lembretes).toBe(1);
+    expect(avisosPara(db, 'mae')[0].title).toMatch(/vence hoje/);
+    expect(avisosPara(db, 'bia')).toHaveLength(0);
+    expect((await fed.sweep(ctx(db))).lembretes).toBe(0);
+    expect((await fed.sweep(ctx(db, NOW + 7 * DIA))).lembretes).toBe(1);
+    expect(avisosPara(db, 'mae')[1].title).toMatch(/vencida há 7 dias/);
+    expect((await fed.sweep(ctx(db, NOW + 9 * DIA))).lembretes).toBe(0);
+  });
+
   it('a varredura vence pela DATA mesmo com sanção em vigor, e não avisa "vence em 0 dias" de quem já venceu', async () => {
     const db = cenario();
     db.store.docs.set('federation_members/fpp_ana', { federation_id: 'fpp', user_id: 'ana', status: 'active', valid_until: '2026-10-01', discipline_until_ms: NOW + 86400000, expiry_notified: {} });
     db.store.docs.set('federation_members/fpp_bia', { federation_id: 'fpp', user_id: 'bia', status: 'active', valid_until: '2026-10-18', expiry_notified: {} });
-    expect(await fed.sweep(ctx(db))).toEqual({ vencidas: 1, avisos: 1 });
+    expect(await fed.sweep(ctx(db))).toEqual({ vencidas: 1, avisos: 1, lembretes: 0 });
     expect(doc(db, 'federation_members/fpp_ana').status).toBe('expired');
     expect(avisosPara(db, 'bia')[0].title).toMatch(/vence hoje/);
   });

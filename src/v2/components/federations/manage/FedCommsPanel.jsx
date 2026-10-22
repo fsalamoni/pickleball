@@ -9,7 +9,7 @@
  *    plataforma e dos professores (`PromoMarketingConsole`), com a federação
  *    como emissora.
  */
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Bell, Newspaper, Pencil, Pin, Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -25,6 +25,8 @@ import { t, tn } from '@/core/i18n';
 import { isFederationPublic } from '@/modules/federations/domain/federation';
 import { quando } from '../federationUi';
 import { federationIssuer } from '@/v2/components/promo/promoUi';
+import { BuscaLista, MostrarMais, useBuscaLista } from './listTools';
+import { useAvisoNaoSalvo } from './naoSalvo';
 
 const PromoMarketingConsole = lazy(() => import('@/v2/components/promo/PromoMarketingConsole'));
 
@@ -34,7 +36,10 @@ const NOTICIA_VAZIA = { title: '', summary: '', body: '', status: NEWS_STATUS.DR
 
 function NoticiaForm({ federation, noticia, onFechar }) {
   const { user } = useAuth();
-  const [f, setF] = useState(noticia ? { ...NOTICIA_VAZIA, ...noticia } : NOTICIA_VAZIA);
+  const [inicial] = useState(() => (noticia ? { ...NOTICIA_VAZIA, ...noticia } : NOTICIA_VAZIA));
+  const [f, setF] = useState(inicial);
+  // Texto mexido: trocar de aba da Central ou fechar o navegador pergunta antes. Salvar fecha o formulário.
+  useAvisoNaoSalvo(f !== inicial && JSON.stringify(f) !== JSON.stringify(inicial));
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const m = useFederationMutation((input) => saveNews(federation, input, { uid: user?.uid, newsId: noticia?.id || null }));
@@ -64,25 +69,30 @@ function NoticiaForm({ federation, noticia, onFechar }) {
   );
 }
 
+const CAMPOS_NOTICIA = ['title', 'summary', 'body'];
+
 function NoticiasTab({ federation, newsQ }) {
   const { user } = useAuth();
   const [editando, setEditando] = useState(null); // null | 'nova' | noticia
   const [confirmar, setConfirmar] = useState(null); // null | { tipo: 'avisar'|'apagar', n }
   const avisar = useFederationMutation((id) => notifyNews(id));
   const apagar = useFederationMutation((n) => deleteNews(n, { uid: user?.uid }));
-  const lista = newsQ.isSuccess ? sortNews(newsQ.data) : null;
+  const lista = useMemo(() => (newsQ.isSuccess ? sortNews(newsQ.data) : null), [newsQ.isSuccess, newsQ.data]);
+  const busca = useBuscaLista(lista || [], CAMPOS_NOTICIA);
   return (
     <section className="space-y-4" aria-label={t('Notícias da federação')} data-dica="federacao-noticias">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="font-display text-xl font-bold text-ink">{t('Notícias e avisos')}</h2><p className="text-sm text-gray-500">{t('Publicada e pública, sai na página da federação. "Só filiados" só aparece a quem tem filiação ativa. "Avisar os filiados" manda um aviso (sino, e-mail…) a cada filiado ativo — uma vez por notícia.')}</p></div>
+        <div><h2 className="font-display text-xl font-bold text-ink">{t('Notícias e avisos')}</h2><p className="text-sm text-gray-500">{t('Publicada e pública, sai na página da federação. "Só filiados" só aparece a quem tem filiação ativa. "Avisar os filiados" manda um aviso (sino, e-mail…) a cada filiado ativo, uma vez só por notícia.')}</p></div>
         <V2Button type="button" onClick={() => setEditando('nova')} data-dica="federacao-noticia-nova"><Plus className="h-4 w-4" />{t('Nova notícia')}</V2Button>
       </div>
       {newsQ.isError && <V2ErrorState inline title={t('Não carregaram as notícias')} onRetry={() => newsQ.refetch()} />}
       {newsQ.isLoading && <V2Skeleton lines={3} />}
       {lista && lista.length === 0 && <V2EmptyState icon={Newspaper} title={t('Nenhuma notícia ainda')} description={t('Resultados, assembleias, calendário, avisos: escreva a primeira.')} />}
-      {lista && lista.length > 0 && (
+      {lista && lista.length > 0 && <BuscaLista id="nt-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar notícia por título ou texto')} total={lista.length} achados={busca.filtrados.length} />}
+      {lista && lista.length > 0 && !busca.filtrados.length && <V2EmptyState icon={Newspaper} title={t('Nenhuma notícia com esse termo')} />}
+      {busca.visiveis.length > 0 && (
         <ul className="space-y-2">
-          {lista.map((n) => (
+          {busca.visiveis.map((n) => (
             <li key={n.id}>
               <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-4">
                 {n.pinned ? <Pin className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" /> : <Newspaper className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />}
@@ -100,6 +110,7 @@ function NoticiasTab({ federation, newsQ }) {
           ))}
         </ul>
       )}
+      <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
       {/* O aviso não volta atrás (sai uma vez só, para todo filiado ativo): diz para quantos antes de mandar. */}
       <ConfirmDialog
         open={Boolean(confirmar)}
@@ -119,7 +130,8 @@ function NoticiasTab({ federation, newsQ }) {
         }}
       />
       <Dialog open={editando != null} onOpenChange={(o) => { if (!o) setEditando(null); }}>
-        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+        {/* Um toque fora do diálogo jogava fora o texto da notícia: fecha só pelo X, Esc ou "Cancelar". */}
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogTitle>{editando && editando !== 'nova' ? t('Editar notícia') : t('Nova notícia')}</DialogTitle>
           <DialogDescription>{t('O que a federação quer contar. Salve como rascunho e publique quando estiver pronta.')}</DialogDescription>
           {editando != null && <NoticiaForm federation={federation} noticia={editando === 'nova' ? null : editando} onFechar={() => setEditando(null)} />}
@@ -133,7 +145,10 @@ function NoticiasTab({ federation, newsQ }) {
 
 function PatrocinadoresTab({ federation }) {
   const { user } = useAuth();
-  const [lista, setLista] = useState(() => (federation.sponsors || []).map((s) => ({ name: s.name || '', logo_url: s.logo_url || '', url: s.url || '', tier: s.tier || SPONSOR_TIER.SUPPORT })));
+  const [salva, setSalva] = useState(() => (federation.sponsors || []).map((s) => ({ name: s.name || '', logo_url: s.logo_url || '', url: s.url || '', tier: s.tier || SPONSOR_TIER.SUPPORT })));
+  const [lista, setLista] = useState(salva);
+  const alterado = JSON.stringify(lista) !== JSON.stringify(salva);
+  useAvisoNaoSalvo(alterado);
   const [erros, setErros] = useState({});
   const m = useFederationMutation(() => updateFederationSponsors(federation.id, lista, { uid: user?.uid }));
   const set = (i, patch) => { setLista((l) => l.map((s, j) => (j === i ? { ...s, ...patch } : s))); setErros({}); };
@@ -141,13 +156,13 @@ function PatrocinadoresTab({ federation }) {
     e.preventDefault();
     const r = validateSponsors(lista);
     if (!r.ok) { setErros(r.errors); return; }
-    m.mutate(undefined, { onSuccess: () => toast.success(t('Patrocinadores salvos.')), onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
+    m.mutate(undefined, { onSuccess: () => { setSalva(lista); toast.success(t('Patrocinadores salvos.')); }, onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); } });
   };
   return (
     <section className="space-y-4" aria-label={t('Patrocinadores')} data-dica="federacao-patrocinadores">
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Patrocinadores')}</h2><p className="text-sm text-gray-500">{t('Saem na página da federação e na carteirinha (os quatro primeiros), com o módulo "Patrocinadores" ligado. Até {n}.', { n: SPONSORS_MAX })}</p></div>
       <form onSubmit={salvar} noValidate className="space-y-3">
-        {lista.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum patrocinador cadastrado.')}</p>}
+        {lista.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum patrocinador cadastrado. Use "Acrescentar patrocinador" e depois salve.')}</p>}
         {lista.map((s, i) => (
           <V2Surface key={i} variant="compacto" className="grid gap-3 p-4 sm:grid-cols-12">
             <V2Field label={t('Nome')} htmlFor={`sp-nome-${i}`} error={erros[`${i}.name`]} required className="sm:col-span-3"><V2Input id={`sp-nome-${i}`} maxLength={60} value={s.name} onChange={(e) => set(i, { name: e.target.value })} /></V2Field>
@@ -160,7 +175,10 @@ function PatrocinadoresTab({ federation }) {
         {erros.sponsors && <p className="text-sm text-red-600">{erros.sponsors}</p>}
         <div className="flex flex-wrap justify-between gap-2">
           <V2Button type="button" variant="secondary" disabled={lista.length >= SPONSORS_MAX} onClick={() => setLista((l) => [...l, { name: '', logo_url: '', url: '', tier: SPONSOR_TIER.SUPPORT }])}><Plus className="h-4 w-4" />{t('Acrescentar patrocinador')}</V2Button>
-          <V2Button type="submit" disabled={m.isPending}>{t('Salvar patrocinadores')}</V2Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {alterado && <span className="text-sm text-gray-500" aria-live="polite">{t('Há mudanças não salvas.')}</span>}
+            <V2Button type="submit" disabled={m.isPending || !alterado}>{t('Salvar patrocinadores')}</V2Button>
+          </div>
         </div>
       </form>
     </section>

@@ -19,6 +19,7 @@ import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
 import { publicHost } from '../federationUi';
 import { AcervoFollowButton } from '../acervo/AcervoPublic';
+import { MostrarMais, POR_VEZ } from '../manage/listTools';
 import { AgendaEventItem, baixarIcs, mesAno } from './agendaUi';
 
 /* ------------------------------------------------- bloco na página -- */
@@ -74,6 +75,7 @@ export function AgendaSubscribe({ federation, items }) {
 /* --------------------------------------------------- página da agenda -- */
 
 const ABAS = ['proximos', 'anteriores'];
+const FILTRO_VAZIO = { q: '', group: '' };
 
 export function AgendaBrowser({ federation }) {
   const a = useVisibleAgenda(federation);
@@ -82,10 +84,14 @@ export function AgendaBrowser({ federation }) {
     const pedida = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('aba') : '';
     return ABAS.includes(pedida) ? pedida : 'proximos';
   });
-  const [filtro, setFiltro] = useState({ q: '', group: '' });
+  const [filtro, setFiltroCru] = useState(FILTRO_VAZIO);
+  const [quantos, setQuantos] = useState(POR_VEZ);
+  // Mudou o filtro ou a aba, a lista volta aos primeiros.
+  const setFiltro = (fn) => { setFiltroCru(fn); setQuantos(POR_VEZ); };
+  const algumFiltro = Boolean(filtro.q || filtro.group);
   const partes = useMemo(() => splitAgenda(a.items || []), [a.items]);
   const lista = useMemo(() => filterAgenda(aba === 'proximos' ? partes.upcoming : partes.past, filtro), [aba, partes, filtro]);
-  const meses = useMemo(() => groupByMonth(lista), [lista]);
+  const meses = useMemo(() => groupByMonth(lista.slice(0, quantos)), [lista, quantos]);
   const link = typeof window !== 'undefined' ? `${window.location.origin}${agendaPublicPath(federation)}` : agendaPublicPath(federation);
   const compartilhar = async () => {
     if (navigator.share) { try { await navigator.share({ title: t('Calendário oficial — {federacao}', { federacao: federation.name }), url: link }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
@@ -93,6 +99,7 @@ export function AgendaBrowser({ federation }) {
   };
   const trocar = (x) => {
     setAba(x.value);
+    setQuantos(POR_VEZ);
     try { const u = new URL(window.location.href); u.searchParams.set('aba', x.value); window.history.replaceState(null, '', u); } catch { /* sem URL: só a tela muda */ }
   };
   if (!a.ligado) return <p className="text-sm text-gray-500">{t('Esta federação não tem o calendário oficial ligado.')}</p>;
@@ -129,7 +136,10 @@ export function AgendaBrowser({ federation }) {
               {EVENT_GROUPS.map((g) => <option key={g.id} value={g.id}>{t(g.label)}</option>)}
             </V2Select>
           </div>
-          <p className="text-xs text-gray-500" aria-live="polite">{tn(lista.length, '{n} evento', '{n} eventos')}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-gray-500" aria-live="polite">{tn(lista.length, '{n} evento', '{n} eventos')}</p>
+            {algumFiltro && <button type="button" onClick={() => setFiltro(() => FILTRO_VAZIO)} className="text-xs font-semibold text-ink underline">{t('Limpar filtros')}</button>}
+          </div>
           {vazioTotal ? <p className="text-sm text-gray-500">{aba === 'proximos' ? t('Sem eventos marcados daqui para a frente.') : t('Sem eventos anteriores na agenda.')}</p>
             : lista.length === 0 ? <p className="text-sm text-gray-500">{t('Nada com esses filtros.')}</p>
               : meses.map((g) => (
@@ -138,6 +148,7 @@ export function AgendaBrowser({ federation }) {
                   <ul className="space-y-2">{g.items.map((ev) => <AgendaEventItem key={ev.id} federation={federation} ev={ev} />)}</ul>
                 </div>
               ))}
+          {!vazioTotal && <MostrarMais restam={lista.length - quantos} onClick={() => setQuantos((n) => n + POR_VEZ)} />}
         </section>
       )}
     </div>
