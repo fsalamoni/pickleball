@@ -4638,13 +4638,14 @@ service cloud.firestore {
     // cópia das permissões em `perms` — só o servidor (`federationStaff`).
     function fedRolePerms(role) {
       return role == 'president' || role == 'director'
-        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff']
+        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal']
         : (role == 'secretary' ? ['members', 'docs']
         : (role == 'treasurer' ? ['finance']
         : (role == 'competitions' ? ['competitions']
         : (role == 'referees' ? ['courses']
         : (role == 'discipline' ? ['discipline']
-        : (role == 'communication' ? ['comms'] : []))))));
+        : (role == 'communication' ? ['comms']
+        : (role == 'fiscal_council' ? ['fiscal'] : [])))))));
     }
     // As permissões do cargo com o MANDATO valendo (`term_end_ms` 0 = sem
     // prazo). O admin master segura: a federação nunca fica sem ninguém, e o
