@@ -87,6 +87,27 @@ describe('FedAccountsPanel', () => {
     expect(accountsAction).toHaveBeenCalledWith({ federationId: 'fpp', action: 'entry_void', entryId: 'l1', reason: 'Lançado em duplicidade' });
   });
 
+  it('importar extrato: lê o OFX, o já lançado chega desmarcado, a categoria muda e vai só o marcado', async () => {
+    fontes.ledger = q([{ id: 'l9', kind: 'income', category: 'other_income', date: `${ano}-01-02`, amount_cents: 100, status: 'posted', description: 'Antigo', source: 'bank', bank_ref: 'ofx:9:F1' }]);
+    await montar({ perms: ['finance'], tab: 'lancamentos' });
+    await clicar(botao('Importar extrato'));
+    const ofx = `OFXHEADER:100\n<OFX><ACCTID>9\n<STMTTRN><DTPOSTED>${ano}0102<TRNAMT>1.00<FITID>F1<MEMO>Antigo</STMTTRN>\n<STMTTRN><DTPOSTED>${ano}0103<TRNAMT>-39.90<FITID>F2<MEMO>TARIFA BANCARIA</STMTTRN></OFX>`;
+    const input = document.body.querySelector('#extrato-arquivo');
+    const file = new File([ofx], 'extrato.ofx', { type: 'application/x-ofx' });
+    if (!file.arrayBuffer) file.arrayBuffer = async () => new TextEncoder().encode(ofx).buffer;
+    Object.defineProperty(input, 'files', { value: [file] });
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(document.body.textContent).toContain('2 movimentos lidos');
+    expect(document.body.textContent).toContain('Já lançado');
+    const sel = document.body.querySelector('select[aria-label="Categoria de TARIFA BANCARIA"]');
+    await act(async () => { sel.value = 'admin'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    await clicar(botao('Importar 1 lançamento'));
+    expect(accountsAction).toHaveBeenCalledWith({ federationId: 'fpp', action: 'entry_import', entries: [
+      { kind: 'expense', category: 'admin', date: `${ano}-01-03`, amount_cents: 3990, description: 'TARIFA BANCARIA', counterparty: '', bank_ref: 'ofx:9:F2' },
+    ] });
+  });
+
   it('prestação enviada: o conselho fiscal dá o parecer; o financeiro só reabre', async () => {
     const rep = { id: `fpp_${ano - 1}`, period: String(ano - 1), status: 'submitted', snapshot: { income_total: 15000, expense_total: 12000, balance: 3000, income: {}, expense: {}, frozen_at_ms: 1 }, statements: [] };
     await montar({ perms: ['finance'], tab: 'prestacao-contas', reports: [rep] });

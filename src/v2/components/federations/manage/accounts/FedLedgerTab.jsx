@@ -6,7 +6,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Ban, Download, Paperclip, Plus } from 'lucide-react';
+import { Ban, Download, FileUp, Paperclip, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { accountsAction } from '@/modules/federations/services/accountsService';
@@ -21,6 +21,7 @@ import { quando } from '../../federationUi';
 import { BuscaLista, MostrarMais, useBuscaLista } from '../listTools';
 import { baixarCsv, haAlteracaoNaoSalva, useAvisoNaoSalvo } from '../naoSalvo';
 import { reais } from '../../accounts/accountsUi';
+import FedBankImport from './FedBankImport';
 import { AccountFileInput, ReasonField, YearSelect, accountYears, baixarArquivoDoServidor, motivoOk } from './accountsForms';
 
 const VAZIO = { kind: ENTRY_KIND.EXPENSE, category: '', date: '', amount: '', description: '', counterparty: '', document: null };
@@ -70,11 +71,12 @@ function EntryForm({ federation, hoje, onFechar }) {
   );
 }
 
-const ORIGENS = [{ id: 'todas', label: tk('Todas as origens') }, { id: 'manual', label: tk('Lançados à mão') }, { id: 'auto', label: tk('Automáticos') }];
+const ORIGENS = [{ id: 'todas', label: tk('Todas as origens') }, { id: 'manual', label: tk('Lançados à mão') }, { id: 'bank', label: tk('Do extrato bancário') }, { id: 'auto', label: tk('Automáticos') }];
 
 function OrigemBadge({ x }) {
   if (x.auto) return <V2Badge tone="blue">{t(AUTO_LABELS[x.auto] || AUTO_LABELS.derived)}</V2Badge>;
-  return x.status === ENTRY_STATUS.VOID ? <V2Badge tone="red" title={x.void_reason}>{t('Estornado')}</V2Badge> : <V2Badge tone="neutral">{t('Manual')}</V2Badge>;
+  if (x.status === ENTRY_STATUS.VOID) return <V2Badge tone="red" title={x.void_reason}>{t('Estornado')}</V2Badge>;
+  return x.source === 'bank' ? <V2Badge tone="neutral">{t('Extrato')}</V2Badge> : <V2Badge tone="neutral">{t('Manual')}</V2Badge>;
 }
 
 function Valor({ x }) {
@@ -93,10 +95,11 @@ export default function FedLedgerTab({ federation, perms, items, ledger, charges
   const linhas = useMemo(() => [...ledger.map((x) => ({ ...x, id: x.id })), ...chargeIncomeItems(charges)]
     .filter((x) => String(x.date || '').startsWith(String(ano)))
     .filter((x) => tipo === 'todos' || x.kind === tipo)
-    .filter((x) => origem === 'todas' || (origem === 'auto' ? Boolean(x.auto) : !x.auto))
+    .filter((x) => origem === 'todas' || (origem === 'auto' ? Boolean(x.auto) : origem === 'bank' ? x.source === 'bank' : !x.auto))
     .sort((a, b) => String(b.date).localeCompare(String(a.date))), [ledger, charges, ano, tipo, origem]);
   const busca = useBuscaLista(linhas, (x) => `${x.description} ${x.counterparty || ''} ${categoryLabel(x.kind, x.category)}`);
   const [novo, setNovo] = useState(false);
+  const [extrato, setExtrato] = useState(false);
   const [estornar, setEstornar] = useState(null);
   const [motivo, setMotivo] = useState('');
   const mVoid = useFederationMutation(() => accountsAction({ federationId: federation.id, action: 'entry_void', entryId: estornar.id, reason: motivo }));
@@ -133,6 +136,7 @@ export default function FedLedgerTab({ federation, perms, items, ledger, charges
         </div>
         <div className="flex flex-wrap gap-2">
           <V2Button type="button" variant="secondary" disabled={!linhas.length} onClick={() => baixarCsv(ledgerCsv(busca.filtrados), `lancamentos-${federation.acronym || federation.id}-${ano}.csv`)}><Download className="h-4 w-4" />{t('Planilha')}</V2Button>
+          {prep && <V2Button type="button" variant="secondary" onClick={() => setExtrato(true)} data-dica="federacao-contas-extrato"><FileUp className="h-4 w-4" />{t('Importar extrato')}</V2Button>}
           {prep && <V2Button type="button" onClick={() => setNovo(true)} data-dica="federacao-contas-lancar"><Plus className="h-4 w-4" />{t('Novo lançamento')}</V2Button>}
         </div>
       </div>
@@ -184,6 +188,13 @@ export default function FedLedgerTab({ federation, perms, items, ledger, charges
           <DialogTitle>{t('Novo lançamento')}</DialogTitle>
           <DialogDescription>{t('Receita ou despesa que já aconteceu, com o comprovante.')}</DialogDescription>
           {novo && <EntryForm federation={federation} hoje={hoje} onFechar={() => setNovo(false)} />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={extrato} onOpenChange={(o) => { if (!o) setExtrato(false); }}>
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto" onInteractOutside={(e) => { if (haAlteracaoNaoSalva()) e.preventDefault(); }}>
+          <DialogTitle>{t('Importar o extrato bancário')}</DialogTitle>
+          <DialogDescription>{t('Os movimentos da conta viram lançamentos: confira a categoria de cada um antes de importar. Importar o mesmo extrato de novo não duplica.')}</DialogDescription>
+          {extrato && <FedBankImport federation={federation} ledger={ledger} reports={reports} hoje={hoje} onFechar={() => setExtrato(false)} />}
         </DialogContent>
       </Dialog>
       <ConfirmDialog open={Boolean(estornar)} onOpenChange={(o) => { if (!o) setEstornar(null); }} destructive title={t('Estornar o lançamento?')} description={estornar ? `${estornar.description} · ${reais(estornar.amount_cents)}` : ''} confirmLabel={t('Estornar')} loading={mVoid.isPending} confirmDisabled={!motivoOk(motivo)}
