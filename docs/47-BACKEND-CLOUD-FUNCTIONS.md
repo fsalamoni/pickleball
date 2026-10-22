@@ -468,7 +468,14 @@ e `tests/rules/federation.rules.test.js` + `federationPr2/3/4.rules.test.js` +
 | `federationRankingConfig` | `onDocumentWritten federations/{fedId}` | Só quando `ranking_config` mudou (comparação por JSON): reaplica a soma (o `best_n`) só aos anos **abertos** (`openSeasons`); não reescreve lançamento nem ano fechado. |
 | `federationRankingRolling` | agendada (aposentada) | Função vazia: o ranking corrido (PR #308) foi desfeito em 2026-10-22. Fica publicada porque o deploy por nome não apaga; remover com `firebase functions:delete federationRankingRolling --region southamerica-east1`. |
 
-A conta (`awardPoints`, `aggregateSeason`, `ledgerDiff`, `seasonClosed`) é
+Categorias de torneio (2026-10-22): com `ranking_config.tiers[]` próprias, cada
+resultado pontua pela tabela da categoria (`result.tier` = o `id` dela,
+multiplicador 1) e o lançamento leva a cópia `tier_code`/`tier_group`/`tier_name`;
+sem categorias próprias, as três padrão são derivadas como antes. A
+normalização é idempotente (categoria marcada `legacy` é descartada ao reler).
+
+A conta (`awardPoints`, `aggregateSeason`, `ledgerDiff`, `seasonClosed`,
+`normalizeRankingConfig`) é
 **cópia** de `src/modules/federations/domain/officialRanking.js`, com paridade
 em `functions/federationRanking.parity.test.js`; o documento gravado corta os
 `results` de cada linha em 12. `federation_points` e `federation_rankings` são

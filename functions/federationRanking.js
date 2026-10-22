@@ -37,6 +37,52 @@ const POINTS_CANCEL_REASON = Object.freeze({
 
 const num = (v, padrao) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : padrao);
 const centavos = (v) => Math.round(v * 100) / 100;
+const texto = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
+
+/* ------------------------------------------------ categorias de torneio -- */
+
+const TIER_MAX_PLACES = 64;
+const TIER_MAX = 30;
+const TIER_ID = /^[a-z0-9_-]{1,40}$/;
+/** Os nomes das três categorias de antes (a tela traduz; aqui só identificam). */
+const LEGACY_TIER_NAMES = Object.freeze({ regional: 'Etapa regional', state: 'Etapa estadual', major: 'Campeonato principal' });
+
+function normalizeTier(input = {}) {
+  const id = String((input && input.id) || '');
+  if (!TIER_ID.test(id)) return null;
+  const bruto = (input && input.points_by_place) || {};
+  const chaves = Object.keys(bruto).map(Number).filter((k) => Number.isInteger(k) && k >= 1 && k <= TIER_MAX_PLACES && Number.isFinite(Number(bruto[k])) && Number(bruto[k]) >= 0);
+  const places = chaves.length ? Math.max(...chaves) : 0;
+  const tabela = {};
+  let anterior = 0;
+  for (let i = 1; i <= places; i += 1) {
+    const v = bruto[i];
+    anterior = Number.isFinite(Number(v)) && Number(v) >= 0 && v !== '' && v != null ? centavos(Number(v)) : anterior;
+    tabela[i] = anterior;
+  }
+  const req = (input && input.requirements) || {};
+  return {
+    id,
+    code: texto(input.code, 24),
+    group: texto(input.group, 12),
+    name: texto(input.name, 80),
+    points_by_place: tabela,
+    places,
+    participation: centavos(num(input.participation, 0)),
+    requirements: { min_entrants: Math.floor(num(req.min_entrants, 0)), prize: texto(req.prize, 120), notes: texto(req.notes, 500) },
+    active: input.active !== false,
+    legacy: input.legacy === true,
+  };
+}
+
+function legacyTiers(cfg) {
+  return Object.keys(DEFAULT_RANKING_CONFIG.tier_multipliers).map((id) => {
+    const peso = cfg.tier_multipliers[id] == null ? 1 : cfg.tier_multipliers[id];
+    const tabela = {};
+    for (let i = 1; i <= 8; i += 1) tabela[i] = centavos(cfg.points_by_place[i] * peso);
+    return normalizeTier({ id, code: '', group: '', name: LEGACY_TIER_NAMES[id], points_by_place: tabela, participation: centavos(cfg.participation * peso), legacy: true });
+  });
+}
 
 function normalizeRankingConfig(input = {}) {
   const base = DEFAULT_RANKING_CONFIG;
@@ -44,13 +90,19 @@ function normalizeRankingConfig(input = {}) {
   for (let i = 1; i <= 8; i += 1) pontos[i] = num(input && input.points_by_place && input.points_by_place[i], base.points_by_place[i]);
   const pesos = {};
   Object.keys(base.tier_multipliers).forEach((k) => { pesos[k] = num(input && input.tier_multipliers && input.tier_multipliers[k], base.tier_multipliers[k]); });
-  return {
+  const cfg = {
     points_by_place: pontos,
     participation: num(input && input.participation, base.participation),
     best_n: Math.floor(num(input && input.best_n, base.best_n)),
     tier_multipliers: pesos,
     members_only: input == null || input.members_only == null ? base.members_only : Boolean(input.members_only),
   };
+  const vistos = new Set();
+  const proprias = ((input && Array.isArray(input.tiers)) ? input.tiers : []).filter((tt) => tt && tt.legacy !== true).map(normalizeTier)
+    .filter((tt) => tt && !vistos.has(tt.id) && vistos.add(tt.id)).slice(0, TIER_MAX);
+  cfg.tiers_explicit = proprias.length > 0;
+  cfg.tiers = cfg.tiers_explicit ? proprias : legacyTiers(cfg);
+  return cfg;
 }
 
 /* ------------------------------------------------------ fechamento do ano -- */
@@ -90,10 +142,21 @@ function basePoints({ position, played = 0 }, cfg) {
   return played > 0 ? cfg.participation : 0;
 }
 
+function tierTablePoints({ position, played = 0 }, tier) {
+  if (position != null && position >= 1 && position <= tier.places) return tier.points_by_place[position];
+  return played > 0 ? tier.participation : 0;
+}
+
+function contaDaCategoria(row, tierId, cfg) {
+  const tier = cfg.tiers_explicit ? cfg.tiers.find((tt) => tt.id === tierId) || null : null;
+  if (tier) return { base: tierTablePoints(row, tier), peso: 1, tier };
+  return { base: basePoints(row, cfg), peso: cfg.tier_multipliers[tierId] == null ? 1 : cfg.tier_multipliers[tierId], tier: null };
+}
+
 function pointsFor({ position, played = 0 }, tier, config) {
   const cfg = normalizeRankingConfig(config);
-  const peso = cfg.tier_multipliers[tier] == null ? 1 : cfg.tier_multipliers[tier];
-  return centavos(basePoints({ position, played }, cfg) * peso);
+  const conta = contaDaCategoria({ position, played }, tier, cfg);
+  return centavos(conta.base * conta.peso);
 }
 
 function awardPoints({ result, members = [], config = {} } = {}) {
@@ -101,12 +164,11 @@ function awardPoints({ result, members = [], config = {} } = {}) {
   const cfg = normalizeRankingConfig(config);
   const porUid = new Map();
   (members || []).forEach((m) => { if (m && m.user_id) porUid.set(m.user_id, m); });
-  const peso = cfg.tier_multipliers[result.tier] == null ? 1 : cfg.tier_multipliers[result.tier];
   const melhor = new Map();
   (result.rows || []).forEach((row) => {
     if (!row || !row.uid) return;
     if (cfg.members_only && !memberValidOn(porUid.get(row.uid), result.date)) return;
-    const base = basePoints(row, cfg);
+    const { base, peso, tier } = contaDaCategoria(row, result.tier, cfg);
     const points = centavos(base * peso);
     if (points <= 0) return;
     const atual = melhor.get(row.uid);
@@ -115,6 +177,7 @@ function awardPoints({ result, members = [], config = {} } = {}) {
       uid: row.uid, name: String(row.name || '').slice(0, 120), photo_url: row.photo_url || null,
       position: row.position == null ? null : row.position, played: Number(row.played) || 0,
       base_points: base, multiplier: peso, points,
+      ...(tier ? { tier_code: tier.code, tier_group: tier.group, tier_name: tier.name } : {}),
     });
   });
   return [...melhor.values()];
@@ -150,6 +213,8 @@ function contamPorClasse(results, bestN) {
   });
 }
 
+const regrasDoAno = (cfg) => ({ points_by_place: cfg.points_by_place, participation: cfg.participation, best_n: cfg.best_n, tier_multipliers: cfg.tier_multipliers, members_only: cfg.members_only });
+
 function aggregateSeason({ entries = [], config = {}, season } = {}) {
   const cfg = normalizeRankingConfig(config);
   const classes = new Map();
@@ -179,7 +244,7 @@ function aggregateSeason({ entries = [], config = {}, season } = {}) {
     .filter((c) => c.rows.length > 0)
     .sort((a, b) => a.key.localeCompare(b.key));
   const geralLinhas = classifica(new Map([...geral].map(([uid, p]) => [uid, Object.assign({}, p, { counting: contamPorClasse(p.results, cfg.best_n) })])), 0);
-  return { season: season == null ? null : season, categories: categorias, general: geralLinhas, results_count: resultados.size, entries_count: usados, config: cfg };
+  return { season: season == null ? null : season, categories: categorias, general: geralLinhas, results_count: resultados.size, entries_count: usados, config: regrasDoAno(cfg) };
 }
 
 /* ------------------------------------------------- acerto dos lançamentos -- */
@@ -369,7 +434,7 @@ async function onFederationWritten(ctx, fedId, antes, depois) {
 }
 
 module.exports = {
-  DEFAULT_RANKING_CONFIG, POINTS_STATUS, POINTS_CANCEL_REASON, normalizeRankingConfig, rankingCategoryKey, memberValidOn, pointsFor,
+  DEFAULT_RANKING_CONFIG, POINTS_STATUS, POINTS_CANCEL_REASON, TIER_MAX_PLACES, TIER_MAX, normalizeTier, normalizeRankingConfig, rankingCategoryKey, memberValidOn, pointsFor,
   awardPoints, aggregateSeason, seasonClosesAtMs, seasonLastDay, seasonClosed, openSeasons, ledgerDiff,
   rankingDocument, recomputeSeason, onResultWritten, onFederationWritten,
 };

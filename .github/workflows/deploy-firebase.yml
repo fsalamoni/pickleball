@@ -384,7 +384,7 @@ jobs:
       - name: Conferir o site no ar (navegador)
         timeout-minutes: 8
         run: |
-          npx playwright install --with-deps chromium
+          npx playwright install chromium  # sem --with-deps: ver ci.yml (espelho do apt lento)
           E2E_BASE_URL=https://picklerush.web.app npx playwright test tests/e2e/public-routes.spec.js --project=chromium
           CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: text/plain' --data '{}' https://picklerush.web.app/api/erro || true)
           if [ "$CODE" != "204" ]; then

@@ -10,13 +10,13 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Ban, CheckCircle2, ClipboardList, Lock, RotateCcw, Trophy, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, ClipboardList, Lock, Plus, RotateCcw, Trophy, XCircle } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
-import { pendingSanctions, sanctionState, sanctionedTournaments } from '@/modules/federations/domain/sanction';
-import { normalizeRankingConfig, seasonClosed } from '@/modules/federations/domain/officialRanking';
+import { SANCTION_ORIGIN, pendingSanctions, sanctionState, sanctionedTournaments } from '@/modules/federations/domain/sanction';
+import { legacyTiers, normalizeRankingConfig, seasonClosed, tierLabel, tierOptions, validateTiers } from '@/modules/federations/domain/officialRanking';
 import { RESULT_STATUS, RESULT_STATUS_LABELS, SANCTION_STATUS_LABELS, SANCTION_TIER, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
@@ -24,19 +24,28 @@ import { FedRankingBlock, classeLabel } from '../FedPublicBlocks';
 import { quando } from '../federationUi';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 import { useAvisoNaoSalvo } from './naoSalvo';
+import FedTiersEditor from './FedTiersEditor';
+import FedTierRequirements from '../FedTierRequirements';
 
 const TIERS = Object.values(SANCTION_TIER).map((v) => ({ value: v, label: SANCTION_TIER_LABELS[v] }));
 
 /* ----------------------------------------------------------- chancelas -- */
 
-function DecisaoDialog({ tournament, acao, onClose }) {
+function DecisaoDialog({ tournament, federation, acao, onClose }) {
   const { user } = useAuth();
   const st = sanctionState(tournament);
-  const [tier, setTier] = useState(st.tier);
+  const opcoes = tierOptions(federation?.ranking_config, st.tier);
+  const [tier, setTier] = useState(opcoes.some((o) => o.id === st.tier) ? st.tier : opcoes[0]?.id || st.tier);
   const [soFiliados, setSoFiliados] = useState(st.requiresMembership);
+  // Quem pediu é da própria equipe? Então o mais provável é ser um torneio DA federação.
+  const [daFederacao, setDaFederacao] = useState(tournament.federation_sanction?.origin === SANCTION_ORIGIN.FEDERATION);
   const [motivo, setMotivo] = useState('');
   const [erro, setErro] = useState('');
-  const m = useFederationMutation(() => decideSanction(tournament, acao, { uid: user?.uid, reason: motivo, tier, requiresMembership: soFiliados }));
+  const m = useFederationMutation(() => decideSanction(tournament, acao, {
+    uid: user?.uid, reason: motivo, tier, requiresMembership: soFiliados, federation,
+    origin: daFederacao ? SANCTION_ORIGIN.FEDERATION : SANCTION_ORIGIN.SANCTIONED,
+  }));
+  const escolhida = opcoes.find((o) => o.id === tier) || null;
   const aprovar = acao === 'approve';
   const nome = tournament.name || '';
   const textos = {
@@ -72,9 +81,11 @@ function DecisaoDialog({ tournament, acao, onClose }) {
       <div className="space-y-4">
         {aprovar ? (
           <>
-            <V2Field label={t('Peso no ranking')} htmlFor="ch-tier" hint={t('Multiplica os pontos da tabela: regional ×1, estadual ×1,5, principal ×2 (ajustável em Ranking).')}>
-              <V2Select id="ch-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={TIERS.map((o) => ({ value: o.value, label: t(o.label) }))} />
+            <V2Field label={t('Categoria do torneio')} htmlFor="ch-tier" hint={t('Os pontos do ranking saem da tabela desta categoria. As categorias se configuram em Competições → Ranking.')}>
+              <V2Select id="ch-tier" value={tier} onChange={(e) => setTier(e.target.value)} options={opcoes.map((o) => ({ value: o.id, label: tierLabel(o) }))} />
             </V2Field>
+            <FedTierRequirements tier={escolhida} />
+            <V2Toggle id="ch-origem" checked={daFederacao} onChange={setDaFederacao} label={t('Torneio realizado pela própria federação')} hint={t('O selo diz "Realizado pela" em vez de "Chancelado". Desligado, o torneio é de um organizador e a federação só o autoriza.')} />
             <V2Toggle id="ch-filiados" checked={soFiliados} onChange={setSoFiliados} label={t('Só filiados em dia se inscrevem')} hint={t('A inscrição de quem não está em dia nesta federação é recusada.')} />
             {erro && <p className="text-sm text-red-600" role="alert">{erro}</p>}
           </>
@@ -88,7 +99,7 @@ function DecisaoDialog({ tournament, acao, onClose }) {
   );
 }
 
-function TorneioRow({ tournament: tt }) {
+function TorneioRow({ tournament: tt, federation }) {
   const [acao, setAcao] = useState(null);
   const st = sanctionState(tt);
   const s = tt.federation_sanction || {};
@@ -101,10 +112,11 @@ function TorneioRow({ tournament: tt }) {
             <p className="flex flex-wrap items-center gap-2 font-bold text-ink">
               <Link to={`/torneios/${tt.id}`} className="hover:underline">{tt.name}</Link>
               <V2Badge tone={st.approved ? 'green' : st.pending ? 'amber' : 'red'}>{t(SANCTION_STATUS_LABELS[st.status] || st.status)}</V2Badge>
+              {st.byFederation && <V2Badge tone="ink">{t('Da federação')}</V2Badge>}
               {st.approved && st.requiresMembership && <V2Badge tone="purple">{t('Só filiados')}</V2Badge>}
             </p>
             <p className="text-xs text-gray-500">
-              {[tt.starts_at ? quando(tt.starts_at) : '', tt.city || tt.location, t(SANCTION_TIER_LABELS[st.tier] || SANCTION_TIER_LABELS.regional)].filter(Boolean).join(' · ')}
+              {[tt.starts_at ? quando(tt.starts_at) : '', tt.city || tt.location, st.tierLabel].filter(Boolean).join(' · ')}
               {s.requested_at_ms ? ` · ${t('pedido em {data}', { data: quando(s.requested_at_ms) })}` : ''}
             </p>
             {s.reason && !st.approved && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: s.reason })}</p>}
@@ -120,7 +132,7 @@ function TorneioRow({ tournament: tt }) {
           {st.approved && <V2Button type="button" size="sm" variant="danger" onClick={() => setAcao('revoke')}><Ban className="h-4 w-4" />{t('Revogar')}</V2Button>}
         </div>
       </V2Surface>
-      {acao && <DecisaoDialog tournament={tt} acao={acao} onClose={() => setAcao(null)} />}
+      {acao && <DecisaoDialog tournament={tt} federation={federation} acao={acao} onClose={() => setAcao(null)} />}
     </li>
   );
 }
@@ -128,7 +140,7 @@ function TorneioRow({ tournament: tt }) {
 const FILTROS_CHANCELA = ['todos', 'pendentes', 'chancelados'];
 const CAMPOS_TORNEIO = (tt) => [tt.name, tt.city, tt.location].join(' ');
 
-function ChancelasTab({ tournamentsQ }) {
+function ChancelasTab({ tournamentsQ, federation }) {
   const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'todos', FILTROS_CHANCELA);
   const pendentes = useMemo(() => pendingSanctions(tournamentsQ.data || []), [tournamentsQ.data]);
   const chancelados = useMemo(() => sanctionedTournaments(tournamentsQ.data || []), [tournamentsQ.data]);
@@ -146,7 +158,14 @@ function ChancelasTab({ tournamentsQ }) {
   const contagem = { todos: pendentes.length + chancelados.length, pendentes: pendentes.length, chancelados: chancelados.length };
   return (
     <section className="space-y-6" aria-label={t('Chancelas')} data-dica="federacao-aba-chancelas">
-      <p className="text-sm text-gray-600">{t('O organizador pede a chancela em Gestão do torneio → Geral → Federação. Chancelado, o torneio ganha o selo, pode exigir filiação na inscrição e envia resultados ao ranking oficial.')}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="min-w-0 flex-1 text-sm text-gray-600">{t('O organizador pede a chancela em Gestão do torneio → Geral → Federação. Chancelado, o torneio ganha o selo, pode exigir filiação na inscrição e envia resultados ao ranking oficial. O torneio da própria federação nasce aqui e já sai chancelado.')}</p>
+        {federation?.id && (
+          <V2Button asChild size="sm" data-dica="federacao-criar-torneio">
+            <Link to={`/torneios/criar?federacao=${federation.id}`}><Plus className="h-4 w-4" />{t('Criar torneio da federação')}</Link>
+          </V2Button>
+        )}
+      </div>
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">{FILTROS_CHANCELA.map((id) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{`${rotulos[id]} (${contagem[id]})`}</V2FilterChip>)}</div>
         {lista.length > 0 && <BuscaLista id="ch-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar torneio por nome ou cidade')} total={lista.length} achados={busca.filtrados.length} />}
@@ -155,13 +174,13 @@ function ChancelasTab({ tournamentsQ }) {
       {filtro !== 'chancelados' && !(buscando && !achPendentes) && (
         <div>
           <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(buscando ? achPendentes : pendentes.length, '{n} pedido aguardando', '{n} pedidos aguardando')}</h3>
-          {pendentes.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum pedido de chancela aguardando.')}</p> : <ul className="space-y-3">{visPendentes.map((tt) => <TorneioRow key={tt.id} tournament={tt} />)}</ul>}
+          {pendentes.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum pedido de chancela aguardando.')}</p> : <ul className="space-y-3">{visPendentes.map((tt) => <TorneioRow key={tt.id} tournament={tt} federation={federation} />)}</ul>}
         </div>
       )}
       {filtro !== 'pendentes' && !(buscando && !achChancelados) && (visChancelados.length > 0 || chancelados.length === 0) && (
         <div>
           <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(buscando ? achChancelados : chancelados.length, '{n} torneio chancelado', '{n} torneios chancelados')}</h3>
-          {chancelados.length === 0 ? <V2EmptyState icon={Trophy} title={t('Nenhum torneio chancelado ainda')} description={t('Os pedidos aprovados aparecem aqui.')} /> : <ul className="space-y-3">{visChancelados.map((tt) => <TorneioRow key={tt.id} tournament={tt} />)}</ul>}
+          {chancelados.length === 0 ? <V2EmptyState icon={Trophy} title={t('Nenhum torneio chancelado ainda')} description={t('Os pedidos aprovados aparecem aqui.')} /> : <ul className="space-y-3">{visChancelados.map((tt) => <TorneioRow key={tt.id} tournament={tt} federation={federation} />)}</ul>}
         </div>
       )}
       <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
@@ -187,7 +206,7 @@ function ResultadoRow({ result: r }) {
           <span className="text-gray-500">·</span><span>{r.modality_name}</span>
           <V2Badge tone={recusado ? 'red' : 'green'}>{t(RESULT_STATUS_LABELS[r.status] || r.status)}</V2Badge>
         </p>
-        <p className="text-xs text-gray-500">{[classeLabel(r), r.date ? quando(r.date) : '', t(SANCTION_TIER_LABELS[r.tier] || SANCTION_TIER_LABELS.regional), tn((r.rows || []).length, '{n} atleta', '{n} atletas'), t('enviado em {data}', { data: quando(r.sent_at) })].filter(Boolean).join(' · ')}</p>
+        <p className="text-xs text-gray-500">{[classeLabel(r), r.date ? quando(r.date) : '', r.tier_label || t(SANCTION_TIER_LABELS[r.tier] || '') || r.tier, tn((r.rows || []).length, '{n} atleta', '{n} atletas'), t('enviado em {data}', { data: quando(r.sent_at) })].filter(Boolean).join(' · ')}</p>
         {podio && <p className="text-sm text-gray-700">{podio}</p>}
         {recusado && r.review?.reason && <p className="text-sm text-red-600">{t('Motivo: {motivo}', { motivo: r.review.reason })}</p>}
         {fechado && <p className="flex items-center gap-1 text-xs text-gray-500"><Lock className="h-3.5 w-3.5" aria-hidden="true" />{t('Temporada {ano} encerrada: este resultado não muda mais.', { ano: r.season })}</p>}
@@ -240,7 +259,18 @@ function RankingTab({ federation }) {
   const m = useFederationMutation(() => updateRankingConfig(federation.id, cfg, { uid: user?.uid }));
   const set = (patch) => setCfg((c) => ({ ...c, ...patch }));
   const num = (v) => (v === '' ? 0 : Number(v));
+  const proprias = cfg.tiers_explicit;
+  // Sem categorias próprias, as três padrão saem da tabela e dos pesos que estão na tela (ao vivo).
+  const categorias = proprias ? cfg.tiers : legacyTiers(cfg);
   const salvar = () => m.mutate(undefined, { onSuccess: () => { setSalvo(cfg); setConfirmando(false); toast.success(t('Pontuação salva. Vale para os próximos resultados enviados.')); }, onError: (er) => toast.error(er.message) });
+  const pedirConfirmacao = (e) => {
+    e.preventDefault();
+    if (proprias) {
+      const v = validateTiers(cfg.tiers);
+      if (!v.ok) { toast.error(Object.values(v.erros)[0] || v.geral); return; }
+    }
+    setConfirmando(true);
+  };
   return (
     <section className="space-y-6" aria-label={t('Ranking oficial')} data-dica="federacao-aba-ranking">
       <V2Surface className="space-y-4">
@@ -248,7 +278,9 @@ function RankingTab({ federation }) {
           <h3 className="font-display text-lg font-bold text-ink">{t('Como o ranking pontua')}</h3>
           <p className="text-sm text-gray-500">{t('Cada resultado enviado lança os pontos no histórico do atleta com a tabela do dia; mudar a tabela vale para os próximos envios e não reescreve o que já foi lançado. O ano soma os lançamentos e fecha em 31/01 do ano seguinte: depois disso não muda mais.')}</p>
         </div>
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirmando(true); }}>
+        <form className="space-y-6" onSubmit={pedirConfirmacao}>
+          <FedTiersEditor tiers={categorias} explicit={proprias} onChange={(lista) => set({ tiers: lista, tiers_explicit: lista.length > 0 })} />
+          {!proprias && <>
           <fieldset>
             <legend className="text-sm font-semibold text-ink">{t('Pontos por colocação')}</legend>
             <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
@@ -259,10 +291,7 @@ function RankingTab({ federation }) {
               ))}
             </div>
           </fieldset>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <V2Field label={t('Participação (fora dos 8)')} htmlFor="rk-part" hint={t('Para quem jogou e ficou do 9º em diante.')}><V2Input id="rk-part" type="number" min={0} inputMode="numeric" value={cfg.participation} onChange={(e) => set({ participation: num(e.target.value) })} /></V2Field>
-            <V2Field label={t('Melhores resultados que somam')} htmlFor="rk-best" hint={t('Por classe e temporada. 0 = todos somam. Mudar recalcula só o ano aberto.')}><V2Input id="rk-best" type="number" min={0} inputMode="numeric" value={cfg.best_n} onChange={(e) => set({ best_n: num(e.target.value) })} /></V2Field>
-          </div>
+          <V2Field label={t('Participação (fora dos 8)')} htmlFor="rk-part" hint={t('Para quem jogou e ficou do 9º em diante.')}><V2Input id="rk-part" type="number" min={0} inputMode="numeric" value={cfg.participation} onChange={(e) => set({ participation: num(e.target.value) })} className="sm:w-40" /></V2Field>
           <fieldset>
             <legend className="text-sm font-semibold text-ink">{t('Peso por tipo de torneio')}</legend>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -273,6 +302,8 @@ function RankingTab({ federation }) {
               ))}
             </div>
           </fieldset>
+          </>}
+          <V2Field label={t('Melhores resultados que somam')} htmlFor="rk-best" hint={t('Por classe e temporada. 0 = todos somam. Mudar recalcula só o ano aberto.')}><V2Input id="rk-best" type="number" min={0} inputMode="numeric" value={cfg.best_n} onChange={(e) => set({ best_n: num(e.target.value) })} className="sm:w-40" /></V2Field>
           <V2Toggle id="rk-members" checked={cfg.members_only} onChange={(v) => set({ members_only: v })} label={t('Só filiados em dia pontuam')} hint={t('Conferido na data do torneio. Desligado, todo mundo que jogou pontua.')} />
           <div className="flex flex-wrap items-center justify-end gap-2">
             {alterado && <span className="text-sm text-gray-500" aria-live="polite">{t('Há mudanças não salvas.')}</span>}
@@ -301,6 +332,6 @@ function RankingTab({ federation }) {
 export default function FedCompetitionsPanel({ federation, tournamentsQ, resultsQ, tab }) {
   if (tab === 'resultados') return <ResultadosTab resultsQ={resultsQ} />;
   if (tab === 'ranking') return <RankingTab federation={federation} />;
-  return <ChancelasTab tournamentsQ={tournamentsQ} />;
+  return <ChancelasTab tournamentsQ={tournamentsQ} federation={federation} />;
 }
 

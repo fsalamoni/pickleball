@@ -17,15 +17,15 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
-import { splitSanctionedTournaments } from '@/modules/federations/domain/sanction';
+import { sanctionState, splitSanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { tournamentPath } from '@/modules/federations/domain/agenda';
-import { rankingSeasons, seasonClosed, seasonLastDay } from '@/modules/federations/domain/officialRanking';
+import { normalizeRankingConfig, rankingSeasons, seasonClosed, seasonLastDay, tierLabel } from '@/modules/federations/domain/officialRanking';
 import { todayISO } from '@/modules/arenas/domain/calendar';
 import { canCancelEnrollment, courseState, credentialState, seatsLeft, sortCourses } from '@/modules/federations/domain/courses';
 import { protocolToId, reportProtocol, validateReportInput } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { verifyPath } from '@/modules/federations/domain/card';
-import { COURSE_KIND_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS, REPORT_KIND, REPORT_KIND_LABELS, REPORT_MAX_CHARS, REPORT_STATUS_LABELS, SANCTION_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { COURSE_KIND_LABELS, ENROLLMENT_STATUS, ENROLLMENT_STATUS_LABELS, REPORT_KIND, REPORT_KIND_LABELS, REPORT_MAX_CHARS, REPORT_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { courseAction, createReport } from '@/modules/federations/services/federationService';
 import { useApprovedAffiliations, useFederationMutation, useFederationRanking, useFederationTournaments, useMyEnrollments, usePublicCourses, usePublicCredentials, useReport } from '@/modules/federations/hooks/useFederations';
 import { AGE_CATEGORY_LABELS, GENDER_CATEGORY_LABELS, MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
@@ -110,14 +110,16 @@ const dataCurta = (iso) => {
 };
 
 function TorneioItem({ tt, logado }) {
+  const st = sanctionState(tt);
   return (
     <li>
       <Link to={tournamentPath(tt.id, { inApp: logado })} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 transition-colors hover:border-acid/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper text-gray-500"><Trophy className="h-5 w-5" aria-hidden="true" /></span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold text-ink">{tt.name}</span>
-          <span className="block truncate text-xs text-gray-500">{[dataCurta(tt.starts_at), tt.city || tt.location, t(SANCTION_TIER_LABELS[tt.federation_sanction?.tier] || SANCTION_TIER_LABELS.regional)].filter(Boolean).join(' · ')}</span>
+          <span className="block truncate text-xs text-gray-500">{[dataCurta(tt.starts_at), tt.city || tt.location, st.tierShort].filter(Boolean).join(' · ')}</span>
         </span>
+        {st.byFederation && <V2Badge tone="ink">{t('Da federação')}</V2Badge>}
         {tt.federation_sanction?.requires_membership && <V2Badge tone="amber">{t('Só filiados')}</V2Badge>}
       </Link>
     </li>
@@ -164,6 +166,32 @@ export function FedSanctionedTournaments({ federation, limite = 12, titulo = tru
 }
 
 /* ------------------------------------------------------- ranking oficial -- */
+
+/**
+ * As categorias de torneio da federação (sigla, grupo e quanto vale cada
+ * colocação), para o atleta saber quanto vale cada torneio. Só as próprias e
+ * ativas; com as três padrão, nada (o texto do ranking já explica).
+ */
+function FedTierList({ federation }) {
+  const cfg = normalizeRankingConfig(federation?.ranking_config);
+  const lista = cfg.tiers_explicit ? cfg.tiers.filter((tt) => tt.active) : [];
+  if (!lista.length) return null;
+  const colocacoes = (tt) => [1, 2, 3, 5, 9, 17].filter((p) => p <= tt.places).map((p) => `${p}º ${tt.points_by_place[p]}`).join(' · ');
+  return (
+    <details className="rounded-2xl border border-gray-100 bg-white p-3" data-dica="federacao-categorias-publicas">
+      <summary className="cursor-pointer text-sm font-semibold text-ink">{t('Quanto vale cada torneio')}</summary>
+      <ul className="mt-2 space-y-2">
+        {lista.map((tt) => (
+          <li key={tt.id} className="text-sm">
+            <span className="font-semibold text-ink">{tierLabel(tt)}</span>
+            <span className="block text-xs text-gray-500">{colocacoes(tt)}{tt.participation ? ` · ${t('participação {p}', { p: tt.participation })}` : ''}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-gray-500">{t('No mata-mata, quem cai nas quartas fica em 5º, nas oitavas em 9º, nos 16 avos em 17º.')}</p>
+    </details>
+  );
+}
 
 export const classeLabel = (c) => [GENDER_CATEGORY_LABELS[c.gender_category] || c.gender_category, AGE_CATEGORY_LABELS[c.age_category] || c.age_category, MODALITY_FORMAT_LABELS[c.format] || c.format].filter(Boolean).join(' · ');
 
@@ -271,6 +299,7 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
         </>
       )}
       {!q.isLoading && !q.isError && <p className="flex items-center gap-1 text-xs text-gray-500"><Landmark className="h-3.5 w-3.5" aria-hidden="true" />{t('Ranking oficial da {sigla}: soma só torneios chancelados por ela. O ranking da plataforma segue à parte.', { sigla: federation?.acronym || federation?.name })}</p>}
+      {!compacto && <FedTierList federation={federation} />}
     </section>
   );
 }

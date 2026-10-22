@@ -2287,3 +2287,102 @@ O recibo da cobrança paga também sai da pasta.
 `federacao-aba-cadastro`, `federacao-tipos`, `federacao-tipo-config`,
 `federacao-vinculo`, `federacao-abrir-pasta`, `federacao-pasta`. Guia
 "A pasta de cada filiado" (`federacao-pasta-filiado`).
+
+## 28. Categorias de torneio e o torneio da própria federação (Etapa 4 do cadastro estruturado, 2026-10-22)
+
+Cada federação define os **tipos de torneio** que chancela, com sigla, grupo e
+a própria tabela de pontos — por exemplo **FGP 1000 (G1)**, **FGP 500 (G2)** —,
+e pode **realizar** torneios em nome próprio. Zero coleção, zero índice, uma
+linha de regra (o reenvio do resultado também confere a categoria).
+
+### 28.1 As categorias (`ranking_config.tiers[]`)
+
+- **Onde**: Central → Competições → Ranking, no topo (`FedTiersEditor`,
+  `data-dica="federacao-categorias"`; o formulário é
+  `federacao-categoria-form`). Até 30 categorias; cada uma tem `id` estável,
+  sigla, grupo, nome, a tabela por colocação (até o 64º, não crescente), a
+  participação (≤ última colocação), requisitos (mínimo de inscrições,
+  premiação mínima, outras exigências) e o interruptor "Disponível para
+  torneios novos" (desligada = arquivada: some da escolha, e quem já a usa
+  segue igual). A última ativa não pode ser arquivada.
+- **Gerar tabela**: pontos do campeão + até que colocação ⇒ vice 60%,
+  semifinal 36%, quartas 18%, oitavas 9%… (`tierTableFromChampion`), e cada
+  posição se ajusta à mão.
+- **Sem categorias próprias** nada muda: as três padrão (Etapa regional,
+  Etapa estadual, Campeonato principal) são derivadas de `points_by_place` ×
+  `tier_multipliers` (`legacyTiers`). "Editar a partir das três padrão" as
+  copia com os mesmos `id` — os torneios que já usam cada uma continuam
+  ligados a ela; "Começar do zero" cria a primeira em branco.
+- **A conta** (`normalizeRankingConfig`/`awardPoints`, com cópia no servidor e
+  paridade): categoria própria encontrada ⇒ a tabela dela, multiplicador 1;
+  não encontrada ⇒ a conta antiga. O lançamento grava a cópia `tier_code`,
+  `tier_group` e `tier_name` — mudar ou arquivar a categoria depois não
+  reescreve nada (§6.2, ano imutável). O que os lançamentos já têm aparece em
+  "Meus pontos no ranking" e na pasta do filiado.
+- **Validação**: `validateTiers` na tela e de novo no serviço
+  (`updateRankingConfig`); sigla + grupo repetidos, pontos que sobem,
+  participação acima da tabela e lista sem categoria ativa são recusados com o
+  motivo ao lado da categoria.
+
+### 28.2 Escolher a categoria
+
+- **Quem pede a chancela** (`TournamentSanctionCard`) escolhe entre as
+  categorias ATIVAS da federação escolhida, com os requisitos à vista
+  (`FedTierRequirements`); a escolha é uma proposta.
+- **A equipe** (`DecisaoDialog`, Competições → Chancelas) confirma ou troca a
+  categoria ao aprovar e decide a **origem**: "Torneio realizado pela própria
+  federação" grava `origin: 'federation'` (selo "Realizado pela SIGLA"); sem
+  ela, `sanctioned` ("Chancelado · SIGLA"). `resolveSanctionTier` grava `tier`
+  + `tier_code`/`tier_group`/`tier_name`; a categoria atual entra na lista
+  mesmo arquivada, para não ser trocada à toa. O aviso da decisão vai a quem
+  pediu e a quem criou o torneio (sem repetir, sem avisar quem decidiu).
+- **O envio do resultado** usa a categoria da chancela (a regra confere no
+  envio e no reenvio) e leva `tier_label` para exibir.
+
+### 28.3 O torneio da federação
+
+Central → Competições → Chancelas → **"Criar torneio da federação"**
+(`data-dica="federacao-criar-torneio"`) abre `/torneios/criar?federacao=<id>`.
+O bloco `FedTournamentOrigin` (carregado só com o parâmetro,
+`data-dica="federacao-torneio-origem"`) pede a categoria e "só filiados" e,
+sem condição de realizar, **diz por quê** e o torneio nasce comum: falta a
+permissão `competitions`, a federação não está pública ou o módulo de torneios
+está desligado. Ao criar, `startFederationTournament` grava o pedido
+(silencioso — ninguém da equipe é avisado do que ela mesma faz) e aprova com
+`origin: 'federation'`. Dois caminhos que a regra já tinha
+(`tests/rules/federationPr2.rules.test.js`, "torneio DA federação"). Se a
+segunda parte falhar, o torneio existe e o pedido fica em Chancelas.
+
+### 28.4 Onde aparece
+
+- Selo `TournamentSanctionBadge`: "Realizado pela FGP · FGP 1000 · G1" ou
+  "Chancelado · FGP · FGP 500 · G2" (+ "só filiados").
+- Página pública: os torneios trazem a sigla da categoria e "Da federação";
+  o ranking ganha **"Quanto vale cada torneio"** (`FedTierList`,
+  `data-dica="federacao-categorias-publicas"`), só com categorias próprias.
+- Resultados enviados mostram a sigla.
+
+### 28.5 Colocação no mata-mata
+
+O envio ao ranking (`modalityPlacement(..., { allRounds: true })`) agora
+coloca também quem caiu antes da semifinal: quartas = 5º, oitavas = 9º,
+16 avos = 17º (perdedor da rodada `final − k` fica em `2^k + 1`). Antes,
+categorias com tabela além do 4º lugar não pagavam ninguém dessas fases. O
+pódio e os cartões seguem sem essa opção.
+
+### 28.6 Defeito corrigido: Chancelas vazia
+
+`listFederationTournaments` filtrava também `archived == false`, e torneio
+novo nasce SEM o campo: nenhum pedido aparecia em Chancelas nem na página da
+federação. Agora a consulta é só `federation_id ==` e o arquivado sai em
+memória (emulador: "a lista de torneios da federação… traz o torneio criado
+sem o campo `archived`").
+
+### 28.7 Âncoras e guia
+
+`federacao-categorias`, `federacao-categoria-form`, `federacao-criar-torneio`,
+`federacao-torneio-origem`, `federacao-categorias-publicas` e as abas
+`federacao-tab-chancelas`, `federacao-tab-resultados`, `federacao-tab-ranking`.
+Guia "Criar as categorias de torneio e o torneio da federação"
+(`federacao-categorias`), ligado ao artigo "Torneio chancelado por uma
+federação".

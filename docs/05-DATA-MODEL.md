@@ -1902,8 +1902,11 @@ organização, equipe `admin` ou admin; equipe `members` só convite ou recusado
 A colocação de uma categoria de torneio chancelado, enviada pelo organizador.
 `federation_id`, `federation_acronym`, `tournament_id`, `tournament_name`,
 `modality_id`, `modality_name`, `gender_category`, `age_category`, `format`,
-`tier`, `date` (ISO), `season` (ano), `rows[] { uid, name, photo_url, position,
-played, won }` (≤ 400, uma por pessoa), `uids[]`, `status` (`sent|rejected`),
+`tier` (o `id` da categoria da chancela — a regra exige que seja o MESMO de
+`tournaments/{id}.federation_sanction.tier` no envio e no reenvio), `tier_label` (opcional,
+a sigla · grupo para exibir), `date` (ISO), `season` (ano), `rows[] { uid, name, photo_url, position,
+played, won }` (≤ 400, uma por pessoa; no mata-mata a colocação vai até quem
+caiu antes da semifinal: quartas = 5º, oitavas = 9º, 16 avos = 17º), `uids[]`, `status` (`sent|rejected`),
 `sent_by`, `sent_at`, `review { by, at_ms, reason }`. Criação/reenvio: admin do
 torneio com a chancela desta federação aprovada (`fedSanctionedBy`). Revisão:
 equipe `competitions`, só `status`/`review`/`updated_at`. Apagar: admin do
@@ -1918,7 +1921,8 @@ Gravado pelo servidor (`federationRankingRecompute` → `onResultWritten`,
 `tournament_id`, `tournament_name`, `modality_id`, `modality_name`, `date`,
 `season`, `category`, `gender_category`, `age_category`, `format`, `tier`,
 `uid`, `name`, `photo_url`, `position`, `played`, `base_points`,
-`multiplier`, `points`, `status` (`awarded|cancelled`), `cancel_reason`
+`multiplier`, `points`, `tier_code`/`tier_group`/`tier_name` (opcionais, a
+categoria do torneio NAQUELE dia — com categorias próprias), `status` (`awarded|cancelled`), `cancel_reason`
 (`result_rejected|result_deleted|not_in_result|account_deleted`),
 `awarded_at_ms`, `revised_at_ms`, `previous { position, points }`,
 `cancelled_at_ms`, `updated_at_ms`. Os pontos ficam como foram lançados: mudar
@@ -1938,14 +1942,28 @@ regravado.
 
 ### `federations/{id}.ranking_config` (PR 2, opcional)
 `{ points_by_place { 1..8 }, participation, best_n, tier_multipliers
-{ regional, state, major }, members_only }`; ausente valem
+{ regional, state, major }, members_only, tiers[] }`; ausente valem
 `DEFAULT_RANKING_CONFIG`. A equipe `competitions` grava só esta chave (cláusula
 própria na regra do documento).
+
+`tiers[]` (2026-10-22, opcional, ≤ 30) são as **categorias de torneio** da
+federação: `{ id (estável, nunca renomeie — é o que a chancela e o resultado
+gravam), code (sigla, ex. "FGP 1000"), group (ex. "G1"), name, points_by_place
+{ 1..places } (não crescente), places (1–64), participation (≤ última
+colocação), requirements { min_entrants, prize, notes }, active }`. Vazio ou
+ausente ⇒ as três categorias padrão (`regional`/`state`/`major`) são DERIVADAS
+de `points_by_place` × `tier_multipliers`, como antes — nada muda para quem não
+criou categoria. Com categorias próprias, cada uma tem a sua tabela e
+multiplicador 1; categoria desconhecida cai na conta antiga. Validação em
+`validateTiers` (`domain/officialRanking.js`), refeita no serviço antes de gravar.
 
 ### `tournaments/{id}.federation_id` + `.federation_sanction` (PR 2, opcionais)
 `federation_id` (string ou `null`) e `federation_sanction { status
 (pending|approved|rejected|revoked), federation_name, federation_acronym, tier
-(regional|state|major), requires_membership, requested_by, requested_at_ms,
+(o `id` da categoria: `regional|state|major` ou um de `ranking_config.tiers`),
+`tier_code`/`tier_group`/`tier_name` (opcionais, cópia da categoria escolhida),
+`origin` (opcional, `sanctioned|federation` — só a decisão da equipe grava;
+`federation` = "Realizado pela"), requires_membership, requested_by, requested_at_ms,
 decided_by, decided_at_ms, reason }`. O organizador só grava `pending` (flag e
 módulo `tournaments` ligados; `tournamentFederationOk()`) ou apaga os dois
 (pendente); a equipe `competitions` decide só em `federation_sanction`. Com

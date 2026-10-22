@@ -1801,4 +1801,7 @@ export default {
   "WO Lado B": "WO Side B",
   "WO para {sideA}": "WO for {sideA}",
   "WO para {sideB}": "WO for {sideB}",
+  "Torneio criado e realizado pela {sigla}.": "Tournament created and run by {sigla}.",
+  "Torneio criado, mas a federação não foi aplicada: {erro}. Confira em Competições → Chancelas.": "Tournament created, but the federation wasn't applied: {erro}. Check Competitions → Sanctions.",
+  "erro desconhecido": "unknown error",
 };

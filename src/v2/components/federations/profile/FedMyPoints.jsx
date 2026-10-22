@@ -24,7 +24,7 @@ function Lancamento({ e }) {
       <span className="min-w-0">
         <span className={`font-semibold ${cancelado ? 'line-through' : 'text-ink'}`}>{e.tournament_name || t('Torneio')}</span>
         <span className="block text-xs text-gray-500">
-          {[diaBR(e.date), e.modality_name, e.position ? t('{n}º lugar', { n: e.position }) : t('participação')].filter(Boolean).join(' · ')}
+          {[diaBR(e.date), e.modality_name, [e.tier_code, e.tier_group].filter(Boolean).join(' · '), e.position ? t('{n}º lugar', { n: e.position }) : t('participação')].filter(Boolean).join(' · ')}
           {cancelado ? ` · ${t('cancelado')}: ${t(POINTS_CANCEL_REASON_LABELS[e.cancel_reason] || POINTS_CANCEL_REASON_LABELS.result_deleted)}` : ''}
           {!cancelado && e.previous ? ` · ${t('revisto (antes {n})', { n: e.previous.points })}` : ''}
         </span>

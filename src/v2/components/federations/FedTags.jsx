@@ -32,7 +32,11 @@ export function TournamentSanctionBadge({ tournament, link = true }) {
   const ligado = useFederationsEnabled();
   const st = sanctionState(tournament);
   if (!ligado || !st.approved) return null;
-  const selo = <V2Badge tone="purple"><Landmark className="h-3 w-3" aria-hidden="true" /> {t('Chancelado · {sigla}', { sigla: st.acronym || st.name })}{st.requiresMembership ? ` · ${t('só filiados')}` : ''}</V2Badge>;
+  const sigla = st.acronym || st.name;
+  // "Realizado pela FGP" (torneio da própria federação) × "Chancelado · FGP" (de um organizador, autorizado); a categoria vem junto.
+  const texto = st.byFederation ? t('Realizado pela {sigla}', { sigla }) : t('Chancelado · {sigla}', { sigla });
+  const selo = <V2Badge tone="purple"><Landmark className="h-3 w-3" aria-hidden="true" /> {texto}{st.tierShort ? ` · ${st.tierShort}` : ''}{st.requiresMembership ? ` · ${t('só filiados')}` : ''}</V2Badge>;
   if (!link) return selo;
-  return <Link to={`/federacoes/${st.federationId}`} title={t('Chancelado pela {nome}', { nome: st.name || st.acronym })}>{selo}</Link>;
+  const titulo = st.byFederation ? t('Realizado pela {nome}', { nome: st.name || st.acronym }) : t('Chancelado pela {nome}', { nome: st.name || st.acronym });
+  return <Link to={`/federacoes/${st.federationId}`} title={titulo}>{selo}</Link>;
 }

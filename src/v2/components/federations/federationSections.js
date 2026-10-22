@@ -96,9 +96,9 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
     pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking') || residual.tournaments) && {
       id: 'competicoes', grupo: 'atender', label: tk('Competições'), icon: Trophy, dica: 'federacao-secao-competicoes',
       tabs: [
-        ...(modulo('tournaments') || residual.tournaments ? [{ value: 'chancelas', label: tk('Chancelas'), icon: Trophy }] : []),
-        ...(modulo('tournaments') ? [{ value: 'resultados', label: tk('Resultados'), icon: ClipboardList }] : []),
-        ...(modulo('ranking') ? [{ value: 'ranking', label: tk('Ranking'), icon: Medal }] : []),
+        ...(modulo('tournaments') || residual.tournaments ? [{ value: 'chancelas', label: tk('Chancelas'), icon: Trophy, dica: 'federacao-tab-chancelas' }] : []),
+        ...(modulo('tournaments') ? [{ value: 'resultados', label: tk('Resultados'), icon: ClipboardList, dica: 'federacao-tab-resultados' }] : []),
+        ...(modulo('ranking') ? [{ value: 'ranking', label: tk('Ranking'), icon: Medal, dica: 'federacao-tab-ranking' }] : []),
       ],
     },
     pode(FED_PERMISSION.COMMS) && (modulo('news') || modulo('promos') || (admin && modulo('sponsors'))) && {

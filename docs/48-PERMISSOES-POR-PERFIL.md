@@ -336,9 +336,10 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Retirar pedido / desfiliar clube ou arena | ✖ | ✔ quem gere a organização | — | ✔ `admin` | ✔ | rules |
 | Ler filiação de clube/arena | ◐ só aprovada | ◐ aprovada; a própria organização | — | ✔ `admin`/`members` | ✔ | rules |
 | Pedir a chancela do torneio (módulo `tournaments`) | ✖ | ✔ admin do torneio, só `pending` com `requested_by` = ele | — | — | ✔ | rules (`tournamentFederationOk`) |
-| Aprovar/recusar/revogar chancela (tipo, só filiados) | ✖ | ✖ | ✖ | ✔ `competitions` (só `federation_sanction`) | ✔ | rules |
+| Aprovar/recusar/revogar chancela (categoria, origem "Realizado pela", só filiados) | ✖ | ✖ | ✖ | ✔ `competitions` (só `federation_sanction`) | ✔ | rules |
+| Criar torneio DA federação (`/torneios/criar?federacao=`) | ✖ | ✖ | ✖ | ✔ `competitions`: cria como organizador, pede (`pending`) e aprova com `origin: 'federation'` — os dois caminhos acima, sem regra nova (`tests/rules/federationPr2.rules.test.js`) | ✔ | rules |
 | Inscrever-se em torneio "só filiados" | ✖ | ◐ só com filiação `active` em dia — a do parceiro também (`fedMemberOk`) | ✔ | — | — | rules (`tournamentMembershipOk`); o admin do torneio inscreve qualquer pessoa |
-| Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`), só com a temporada aberta | — | — | ✔ (temporada aberta) | rules (`fedSeasonOpen`) |
+| Enviar/reenviar resultado de categoria ao ranking oficial | ✖ | ✔ admin do torneio chancelado por essa federação (`fedSanctionedBy`), só com a temporada aberta e o `tier` IGUAL ao da chancela no envio e no reenvio (o organizador não troca a categoria por conta própria) | — | — | ✔ (temporada aberta) | rules (`fedSeasonOpen`) |
 | Recusar/readmitir resultado | ✖ | ✖ | ✖ | ✔ `competitions`, só com a temporada aberta | ✔ (temporada aberta) | rules (`fedSeasonOpen`) |
 | Mexer em resultado de temporada FECHADA (depois de 31/01 do ano seguinte) | ✖ | ✖ | ✖ | ✖ | ✖ | rules (`fedSeasonOpen`); servidor e tela também recusam |
 | Ler resultados, lançamentos de pontos e ranking oficiais | ✔ | ✔ | ✔ | ✔ | ✔ | rules (públicos) |
