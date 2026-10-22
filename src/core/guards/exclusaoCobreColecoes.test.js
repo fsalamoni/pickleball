@@ -207,6 +207,9 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_comments: ['listMyFederationComments'],
   federation_referees: ['listMyRefereeRosters'],
   federation_assignments: ['listMyAssignments'],
+  federation_election_voters: ['listMyElectionVoters'],
+  federation_candidacies: ['listMyCandidacies'],
+  federation_election_endorsements: ['listMyElectionEndorsements'],
 };
 const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_plans: 'O plano é da federação (nome, preço, regras), não da pessoa; a filiação exportada já diz o plano escolhido.',
@@ -221,6 +224,8 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_budgets: 'O orçamento é da federação (valores por categoria, aprovação), não da pessoa; quem criou é só o uid de equipe.',
   federation_ledger: 'O lançamento é da contabilidade da federação (receita, despesa, comprovante), não dado da pessoa; quem lançou é só o uid de equipe.',
   federation_account_reports: 'A prestação de contas é da federação (totais, parecer, assembleia), não dado da pessoa; quem abriu é só o uid de equipe.',
+  federation_elections: 'O edital é ato da federação (cargos, calendário, pesos), não dado da pessoa; a participação dela sai como eleitor e nas chapas.',
+  federation_ballots: 'A cédula é SECRETA e não tem uid: não há como ligá-la a ninguém, e por isso ela não sai na exportação.',
   federation_admin_grants: 'Acesso de suporte do admin da plataforma a uma federação: registro interno e temporário (até 8 h), não é dado do titular.',
 };
 

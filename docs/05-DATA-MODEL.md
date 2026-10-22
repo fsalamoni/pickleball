@@ -1969,6 +1969,16 @@ anônima (consulta pelo protocolo — `reportProtocol(id)`), a equipe
 só muda `status`/`notes`/`handled_by`/`updated_at`; apaga só o admin da
 plataforma.
 
+### `federation_elections`, `federation_candidacies`, `federation_election_voters`, `federation_election_endorsements`, `federation_ballots` (módulo `elections`, só o servidor — `federationElections`)
+
+- `federation_elections/{id}`: `federation_id`, `title`, `description`, `positions[]` (`id` `c1…`, `label`, `kind` slate|individual, `organ`, `seats`, `gender_min`), `calendar` (notice_on, candidacy_from/to, challenge_to, defense_to, voting_from/to + voting_opens/closes, result_on, inauguration_on), `college` (`min_months`, `weights` por categoria), `mode` online|presential|mixed, `tie_rule`, `endorsement_pct`, `commission[]` + `commission_uids`, `status` draft|published|voting|counting|closed|cancelled, `public`, `notice_text`/`notice_doc_id`/`notice_code`, `endorsements_needed`, `college_frozen`, `voted_count`/`voted_weight`, `presential`, `results[]` (só pesos), `minutes_*`, `governance_applied`, `history[]`. Lê: publicada (`public`) quem vê a federação; a comissão; o admin.
+- `federation_candidacies/{id}`: `election_id`, `federation_id`, `position_id`, `name`, `platform`, `members[]` (uid, name, role, gender) + `member_uids`, `status` submitted|accepted|challenged|rejected|withdrawn, `public` (aceita), `endorsement_count`, `challenges[]` (by_uid, by_name, reason, defense, decision), `alerts[]`, `review`. Lê: aceita, quem vê a federação; quem está nela; quem conduz (`fedElRun`); o admin.
+- `federation_election_voters/{eid}_{uid}` (ou `{eid}_{club|arena}_{org}`): o colégio CONGELADO na abertura — `user_id`, `name`, `category`, `weight`, `kind`, `org_id`, `voted_at_ms`, `receipt`, `channel`. Nunca em quem votou. Lê: o próprio e quem conduz.
+- `federation_election_endorsements/{eid}_{cargo}_{uid}`: um apoio por cargo. Lê: só quem apoiou.
+- `federation_ballots/{aleatório}`: `election_id`, `choices` (cargo → chapa|blank|null), `weight` — **sem uid**, gravada na mesma transação que marca o eleitor. Ninguém lê pelo cliente.
+
+Zero índice composto. Exportação e exclusão: ver `docs/50-FEDERACAO.md` §22.5.
+
 ### `federation_news/{id}` (PR 4, módulo `news` — o cliente escreve)
 `federation_id`, `title`, `summary`, `body`, `image_url`, `link`, `pinned`,
 `audience` (`public|members`), `status` (`draft|published`), `published_at`,

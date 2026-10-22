@@ -10,6 +10,7 @@ import { isChargeOverdue } from './charges.js';
 import { isoDate, membershipState } from './membership.js';
 import { accountsPendingItems } from './accounts.js';
 import { myPendingAssignments, refereeStaffPending } from './referees.js';
+import { commissionTodo } from './elections.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
@@ -19,7 +20,7 @@ const plural = (n, um, varios) => (n === 1 ? um : varios);
  * @param {{ hoje?: string }} quando
  * @returns {Array<{ id: string, count: number, label: string, aba: string, filtro?: string }>} — `filtro` abre a lista da aba já filtrada (`?filtro=`)
  */
-export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate() } = {}) {
+export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate(), uid = null, now = Date.now() } = {}) {
   const itens = [];
   const { members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, refereeAssignments, refereeEvents, refereeRules } = fontes;
   const pode = (p) => perms.includes(p);
@@ -67,6 +68,16 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
   }
   // Contas (módulo `accounts`): parecer do conselho, parecer recebido e o prazo de abril.
   itens.push(...accountsPendingItems(accountReports, perms, { hoje }));
+  // Eleições: o que espera quem CONDUZ (a comissão; sem comissão, o admin).
+  if (Array.isArray(fontes.elections) && Array.isArray(fontes.candidacies)) {
+    const conduz = fontes.elections.filter((e) => (e.commission_uids || []).includes(uid) || (!(e.commission_uids || []).length && pode(FED_PERMISSION.ADMIN)));
+    const todo = conduz.flatMap((e) => commissionTodo(e, fontes.candidacies, { hoje, nowMs: now }));
+    const soma = (id) => todo.filter((x) => x.id === id).reduce((s, x) => s + (x.count || 0), 0);
+    const chapas = soma('judge_candidacies');
+    const impug = soma('judge_challenges');
+    if (chapas) itens.push({ id: 'chapas', count: chapas, aba: 'eleicoes', label: plural(chapas, tk('chapa eleitoral para analisar'), tk('chapas eleitorais para analisar')) });
+    if (impug) itens.push({ id: 'impugnacoes', count: impug, aba: 'eleicoes', label: plural(impug, tk('impugnação de chapa para julgar'), tk('impugnações de chapa para julgar')) });
+  }
   return itens;
 }
 

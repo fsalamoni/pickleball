@@ -1350,6 +1350,8 @@ exports.federationAccounts = federationCallable('federationAccounts', (ctx, acto
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationAccounts: Storage indisponível.', err); }
   return federationAccounts.accounts({ ...ctx, bucket }, actor, data);
 }, { timeoutSeconds: 120, memory: '512MiB' });
+// Eleições (edital, chapas, voto secreto ponderado, apuração): só o servidor grava — `functions/federationElections.js`.
+exports.federationElections = federationCallable('federationElections', require('./federationElections').elections);
 // Comentários nos documentos do acervo e nos eventos da agenda: só o servidor grava; a lista é pública (também sem conta).
 const federationComments = require('./federationComments');
 exports.federationComments = federationCallable('federationComments', federationComments.comments);

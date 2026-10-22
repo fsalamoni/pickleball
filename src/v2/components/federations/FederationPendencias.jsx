@@ -13,7 +13,9 @@ import { t } from '@/core/i18n';
 
 const dado = (q) => (q?.isSuccess ? q.data : undefined);
 
-export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, accountReportsQ, assignmentsQ, refEvents, refRules, perms, abas, onIrParaAba }) {
+export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, accountReportsQ, assignmentsQ, refEvents, refRules, electionsQ, candidaciesQ, uid = null, perms, abas, onIrParaAba }) {
+  const elections = dado(electionsQ);
+  const candidacies = dado(candidaciesQ);
   const members = dado(membersQ);
   const charges = dado(chargesQ);
   const affiliations = dado(affiliationsQ);
@@ -24,7 +26,7 @@ export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ
   const reports = dado(reportsQ);
   const accountReports = dado(accountReportsQ);
   const assignments = dado(assignmentsQ);
-  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, refereeAssignments: assignments, refereeEvents: refEvents, refereeRules: refRules }, perms), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, assignments, refEvents, refRules, perms]);
+  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, refereeAssignments: assignments, refereeEvents: refEvents, refereeRules: refRules, elections, candidacies }, perms, { uid }), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, assignments, refEvents, refRules, elections, candidacies, uid, perms]);
   // A consulta desligada guarda o dado em cache: a pendência de um módulo que
   // acabou de desligar (aba que não existe mais) não vira um botão morto.
   const visiveis = abas ? itens.filter((i) => abas.has(i.aba)) : itens;

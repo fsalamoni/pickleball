@@ -6,6 +6,7 @@
 import {
   listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyFederationInvites, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
   listMyMembersPrivate, listMyAssignments, listMyRefereeRosters, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
+  listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters,
 } from './federationService.js';
 
 /** @returns {Promise<{ federations: object, incomplete: string[] }>} */
@@ -30,6 +31,9 @@ export async function collectFederationExport(uid) {
     ['comments', 'Seus comentários em documentos e eventos de federação', () => listMyFederationComments(uid)],
     ['referee_rosters', 'Seu cadastro nos quadros de arbitragem', () => listMyRefereeRosters(uid)],
     ['referee_assignments', 'Suas escalas de arbitragem (convocações, súmulas, avaliações e diárias)', () => listMyAssignments(uid)],
+    ['election_voters', 'Eleições em que você está no colégio eleitoral (se votou — nunca em quem: o voto é secreto)', () => listMyElectionVoters(uid)],
+    ['candidacies', 'Chapas eleitorais de que você faz parte', () => listMyCandidacies(uid)],
+    ['election_endorsements', 'Apoios que você deu a chapas eleitorais', () => listMyElectionEndorsements(uid)],
   ];
   const lidas = await Promise.allSettled(partes.map(([, , ler]) => ler()));
   const federations = {};

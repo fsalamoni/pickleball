@@ -238,3 +238,12 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   lembrete de cobrança vencida na varredura (`overdue_notified`); "Em vigor" só
   em norma (`docHasValidity`); `whatsappLink`; "Filiar-se neste plano"
   (`?plano=`). Ver `docs/50-FEDERACAO.md` §21.
+- **Eleições** (módulo `elections`, 2026-10-22): `domain/elections.js` (cópia
+  de `functions/federationElectionsPolicy.js`, com paridade), função
+  `federationElections`, telas em `v2/components/federations/elections/` e
+  Central → Eleições. **O voto é secreto**: `federation_ballots` sem uid, id
+  aleatório, gravada na mesma transação que marca o eleitor; ninguém lê pelo
+  cliente; a tela mostra só % de participação e o resultado só em pesos. Quem
+  conduz é a comissão (`fedElRun` na regra; sem comissão, o admin). O colégio
+  congela na abertura. Edital e ata vão ao acervo (`publicarAtoDeTexto`). Ver
+  `docs/50-FEDERACAO.md` §22.

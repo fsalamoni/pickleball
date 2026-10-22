@@ -26,6 +26,8 @@ import { fedPreviewPath } from '@/v2/components/federations/profile/FedStaffBar'
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
 import { useFederationAccountReports } from '@/modules/federations/hooks/useAccounts';
 import { useFederationAssignments, useScalableEvents } from '@/modules/federations/hooks/useReferees';
+import { useFederationCandidacies, useFederationElections } from '@/modules/federations/hooks/useElections';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
 import { t } from '@/core/i18n';
@@ -50,11 +52,13 @@ const FedCommentsPanel = lazy(() => import('@/v2/components/federations/manage/F
 const FedCompliancePanel = lazy(() => import('@/v2/components/federations/manage/FedCompliancePanel'));
 const FedAccountsPanel = lazy(() => import('@/v2/components/federations/manage/accounts/FedAccountsPanel'));
 const FedRefereesPanel = lazy(() => import('@/v2/components/federations/manage/FedRefereesPanel'));
+const FedElectionsPanel = lazy(() => import('@/v2/components/federations/manage/FedElectionsPanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
 
 function Central({ federationId }) {
   const fq = useFederation(federationId);
+  const { user } = useAuth();
   const papel = useMyFederationRole(federationId);
   const perms = papel.perms;
   // Sanções e chancelas carregam com a PERMISSÃO (não com o módulo): desligado o
@@ -120,6 +124,10 @@ function Central({ federationId }) {
   const podeArbitragem = (perms.includes(FED_PERMISSION.COURSES) || admin) && fedModuleOn(fq.data, 'referees');
   const assignmentsQ = useFederationAssignments(federationId, { enabled: papel.isStaff && podeArbitragem });
   const refEventsQ = useScalableEvents(fq.data, { enabled: papel.isStaff && podeArbitragem });
+  // Eleições: o admin vê todas (a comissão conduz pela página da federação).
+  const podeEleicoes = admin && fedModuleOn(fq.data, 'elections');
+  const electionsQ = useFederationElections(federationId, { enabled: papel.isStaff && podeEleicoes });
+  const candidaciesQ = useFederationCandidacies(federationId, { enabled: papel.isStaff && podeEleicoes });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -160,7 +168,7 @@ function Central({ federationId }) {
 
       <FedHiddenBanner federation={f} canPublish={admin} onOpen={() => setTab('publicacao')} />
 
-      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} assignmentsQ={assignmentsQ} refEvents={refEventsQ.incompleto ? undefined : refEventsQ.events} refRules={f.referee_rules} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
+      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} assignmentsQ={assignmentsQ} refEvents={refEventsQ.incompleto ? undefined : refEventsQ.events} refRules={f.referee_rules} electionsQ={electionsQ} candidaciesQ={candidaciesQ} uid={user?.uid || null} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
 
       <div className="space-y-3">
         <V2SectionNav ariaLabel={t('Seções da Central da federação')} dica="federacao-secoes" sections={sections} grupos={FED_SECTION_GROUPS} activeId={secaoAtiva.id} onSelect={(s) => setTab(s.tabs[0].value)} />
@@ -179,6 +187,7 @@ function Central({ federationId }) {
         {tab === 'comentarios' && <FedCommentsPanel federation={f} />}
         {secaoAtiva.id === 'acervo' && tab !== 'comentarios' && <FedAcervoPanel federation={f} docsQ={docsQ} tab={tab} isAdmin={admin} />}
         {secaoAtiva.id === 'agenda' && tab !== 'comentarios' && <FedAgendaPanel federation={f} perms={perms} />}
+        {secaoAtiva.id === 'eleicoes' && <FedElectionsPanel federation={f} electionsQ={electionsQ} candidaciesQ={candidaciesQ} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}

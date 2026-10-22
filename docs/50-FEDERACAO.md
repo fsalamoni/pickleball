@@ -63,7 +63,7 @@ breve") e `FED_MODULE_META[x].status` só muda quando a tela existir.
    **`discipline`**; do PR 4, **`news`** (notícias e avisos), **`sponsors`**
    (patrocinadores), **`promos`** (cupons e campanhas) e **`store`** (loja
    oficial no Mercado); depois, **`official_docs`** (acervo) e **`calendar`**
-   (agenda); e **`referees`** (arbitragem, §22) — os doze disponíveis. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   (agenda); **`accounts`** (orçamento e prestação de contas, §22), **`referees`** (arbitragem, §23) e **`elections`** (eleições, §24) — os catorze disponíveis. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
    (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
    `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
    nem chancela àquela federação. Desligar um módulo não apaga nada: o que
@@ -1851,3 +1851,118 @@ Régua pura em `domain/referees.js`, com cópia em
 `functions/federationReferees.parity.test.js`; regra provada em
 `tests/rules/federationReferees.rules.test.js`; tela em
 `src/v2/components/federations/referees/` + `manage/FedRefereesPanel.jsx`.
+## 24. Eleições (módulo `elections`, 2026-10-22)
+
+A federação conduz a eleição inteira na plataforma: edital, chapas, apoios,
+impugnações com defesa, votação **secreta** pelo aplicativo (com peso por
+categoria), votação presencial, apuração, ata e — se o admin quiser — os
+eleitos indo para a governança da página.
+
+**Onde mora.** Domínio puro em `functions/federationElectionsPolicy.js`
+(servidor) com cópia em `src/modules/federations/domain/elections.js`
+(cliente; paridade em `functions/federationElections.parity.test.js`).
+Função `federationElections` (`functions/federationElections.js`). Telas em
+`src/v2/components/federations/elections/` e Central → **Eleições**
+(`manage/FedElectionsPanel.jsx`). Aba pública `PROFILE_TAB.ELECTIONS`
+(`eleicoes`, âncora `#fed-eleicoes`).
+
+### 22.1 Coleções (todas só o servidor grava)
+
+| Coleção | Id | Quem lê |
+|---|---|---|
+| `federation_elections` | automático | a eleição publicada (`public == true`), quem pode ver a federação; a comissão; o admin |
+| `federation_candidacies` | automático | a chapa aceita (`public == true`), quem vê a federação; quem está nela; quem conduz; o admin |
+| `federation_election_voters` | `{eid}_{uid}` ou `{eid}_{club|arena}_{org}` | o próprio eleitor; quem conduz |
+| `federation_election_endorsements` | `{eid}_{cargo}_{uid}` | só quem apoiou |
+| `federation_ballots` | aleatório (16 bytes) | **ninguém** pelo cliente |
+
+"Quem conduz" na regra é `fedElRun`: a comissão (`commission_uids`) ou, sem
+comissão, o admin da federação. Zero índice composto.
+
+### 22.2 O voto secreto (o que não pode regredir)
+
+- A cédula (`federation_ballots`) leva **só** `election_id`, `choices` e
+  `weight` — nenhum uid, nome, horário ou id de eleitor. O id é aleatório
+  (`crypto.randomBytes`), nunca sequencial.
+- A cédula e o `voted_at_ms` do eleitor são gravados **na mesma transação**:
+  ou os dois entram, ou nenhum. Voto duplo é recusado dentro da transação.
+- A auditoria do voto (`federation_election_vote`) leva só federação e
+  eleição. O comprovante (`receipt`, aleatório) prova que o voto entrou,
+  nunca em quem.
+- Durante a votação a tela mostra só **percentual** de participação; não
+  existe parcial. O resultado mostra **pesos**, nunca número de cédulas.
+- O assistente avisa quando um grupo tem menos de 3 eleitores (o voto dele
+  poderia ser deduzido pela apuração).
+- Limite conhecido: os metadados do Firestore (hora de escrita) são visíveis
+  para quem opera o projeto no console — não para quem usa a plataforma.
+
+### 22.3 Fluxo
+
+1. **Assistente** (admin): cargos (chapa ou individual, órgão, vagas,
+   mínimo de cada sexo) → calendário (edital, registro, impugnação, defesa,
+   votação com hora, resultado, posse; antecedência mínima configurável,
+   padrão 30 dias) → colégio e pesos (meses mínimos de filiação; pesos de
+   atletas, professores, árbitros, clubes e arenas, 0 a 6; **prévia do
+   servidor** com a conta de 1/3 dos atletas e 1:6 entre pesos) → comissão
+   (`FedPersonPicker`, até 7) → revisar e **publicar**.
+2. **Publicar** grava o edital (texto gerado por `noticeText`) e, com o
+   acervo ligado, um **edital numerado no acervo** (`publicarAtoDeTexto` em
+   `federationAcervo.js`); avisa todos os filiados ativos. Depois de
+   publicado, só calendário e colégio mudam, com motivo no histórico.
+3. **Chapas**: o filiado registra no prazo (ele faz parte da chapa; todos
+   com filiação ativa; ninguém da comissão; ninguém em duas chapas vivas).
+   Alertas para a comissão: mulheres abaixo de 30% e recondução do
+   presidente. **Apoio** (`endorsement_pct`, até 5% do colégio): pelo link
+   da chapa (`?aba=eleicoes&eleicao=&apoiar=`), um por cargo, quem está na
+   chapa não apoia a própria.
+4. **Impugnação** só de chapa aceita, com motivo (≥ 20 caracteres); a chapa
+   se defende no prazo; a comissão **julga depois da defesa** (ou do fim do
+   prazo). Procedente ⇒ chapa indeferida.
+5. **Abrir a votação** (quem conduz, a partir da data e hora do edital, sem
+   chapa em análise): o colégio é **congelado** nesse momento
+   (`federation_election_voters`); quem não estiver em dia ali não vota.
+   Clubes e arenas votam pelo representante que pediu a filiação;
+   dependentes não votam. Recusa se os atletas ficarem abaixo de 1/3.
+6. **Votar**: um cargo por tela → revisão → confirmação → comprovante
+   (`VoteFlow`). **Encerrar** depois da hora de fechamento.
+7. **Presencial** (modo `presential`/`mixed`): a comissão marca quem votou
+   na mesa e lança os totais por cargo, em peso; a soma de cada cargo tem de
+   fechar com o peso de quem votou na mesa; lançado uma vez só.
+8. **Apurar** (prévia só da comissão) e **publicar o resultado**: a apuração
+   é refeita no servidor, empate segue a regra do edital (mais velho, chapa
+   registrada primeiro, ou novo turno), o mínimo de cada sexo vale nos
+   cargos individuais; a **ata** vai ao acervo; todos os filiados são
+   avisados. O admin pode **levar os eleitos para a governança**
+   (`governance.board`) junto ou depois (`apply_governance`), com fim de
+   mandato opcional — as permissões da equipe não mudam.
+9. **Cancelar** (admin, com motivo, avisa os filiados).
+
+### 22.4 Telas
+
+- Central → **Eleições** (admin, módulo ligado): lista, "Nova eleição"
+  (assistente) e o painel de cada eleição (`ElectionConductPanel`: próximo
+  passo, linha do tempo, chapas com aceitar/indeferir/julgar, participação,
+  presencial, apuração com gráfico de barras acessível, resultado).
+- Faixa **"Precisa de você"**: chapas para analisar e impugnações prontas
+  para julgar (`federationPending`, itens `chapas` e `impugnacoes`).
+- Página da federação → aba **Eleições** (`ElectionsPublic`): edital e ata
+  (links do acervo), linha do tempo, cargos, chapas aceitas, resultado;
+  logado, **"Sua participação"** (`ElectionMemberCard`: votar com o peso,
+  comprovante, registrar e retirar chapa, defesa, link de apoio); para quem
+  está na comissão, a **área da comissão** com o mesmo painel. Na página
+  pública sem login no app, um botão leva ao app.
+- Minha filiação: aviso **"Eleição em andamento"** (`FedElectionNotice`).
+- Avisos levam a `/federacoes/{id}?aba=eleicoes` (no app, onde se age).
+
+### 22.5 Exclusão e exportação
+
+Entram na exportação: o colégio da pessoa (onde votou, peso, comprovante —
+nunca em quem), as chapas de que participa e os apoios que deu. Na exclusão:
+os apoios são apagados; nome no colégio, nas chapas e na comissão vira
+"Atleta removido". A cédula não tem dono e fica. Limite: o nome de quem
+impugnou fica na chapa impugnada (a lista não é consultável por pessoa).
+
+Âncoras de dica: `federacao-secao-eleicoes`, `federacao-pub-eleicoes`,
+`federacao-eleicao-*` (contrato). Enums gravados (situações, tipos de cargo,
+órgãos, modos, regras de empate, categorias, chaves do calendário) — nunca
+renomeie.

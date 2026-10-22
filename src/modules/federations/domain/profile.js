@@ -32,6 +32,7 @@ export const PROFILE_TAB = Object.freeze({
   COURSES: 'cursos',
   CLUBS: 'clubes',
   CONTACT: 'contato',
+  ELECTIONS: 'eleicoes',
 });
 
 /** A seção (id do título, `fed-*`) → a aba onde ela mora. */
@@ -54,6 +55,7 @@ const ANCHOR_TAB = Object.freeze({
   'fed-filiados-orgs': PROFILE_TAB.CLUBS,
   'fed-ouvidoria': PROFILE_TAB.CONTACT,
   'fed-contato': PROFILE_TAB.CONTACT,
+  'fed-eleicoes': PROFILE_TAB.ELECTIONS,
   'fed-minha-filiacao': PROFILE_TAB.MINE,
 });
 
@@ -79,6 +81,7 @@ export function profileTabs(federation, { member = false } = {}) {
     on('calendar') && { id: PROFILE_TAB.AGENDA, dica: 'federacao-pub-agenda', label: tk('Agenda') },
     (on('tournaments') || on('ranking') || on('referees')) && { id: PROFILE_TAB.COMPETITIONS, dica: 'federacao-pub-competicoes', label: tk('Competições') },
     (on('official_docs') || on('accounts') || hasGovernance(federation.governance)) && { id: PROFILE_TAB.DOCUMENTS, dica: 'federacao-pub-documentos', label: tk('Documentos') },
+    on('elections') && { id: PROFILE_TAB.ELECTIONS, dica: 'federacao-pub-eleicoes', label: tk('Eleições') },
     on('courses') && { id: PROFILE_TAB.COURSES, dica: 'federacao-pub-cursos', label: tk('Cursos') },
     on('affiliations') && { id: PROFILE_TAB.CLUBS, dica: 'federacao-pub-clubes', label: tk('Clubes e arenas') },
     { id: PROFILE_TAB.CONTACT, dica: 'federacao-pub-contato', label: on('discipline') ? tk('Contato e ouvidoria') : tk('Contato') },

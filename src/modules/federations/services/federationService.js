@@ -1054,6 +1054,29 @@ export async function listMyFederationComments(uid) {
   return (await getDocs(query(collection(db, C.comments), where('user_id', '==', uid)))).docs.map(toDoc);
 }
 
+/* ---- Eleições (módulo `elections`): só o servidor grava — `functions/federationElections.js` ---- */
+
+/** Toda ação da eleição (edital, chapas, voto, apuração), pelo servidor. */
+export const electionAction = (payload) => chamar('federationElections', payload);
+
+/** Onde estou no colégio eleitoral (meu peso, se já votei — nunca em quem). Também exportação de dados. */
+export async function listMyElectionVoters(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.electionVoters), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
+/** As chapas em que estou. */
+export async function listMyCandidacies(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.candidacies), where('member_uids', 'array-contains', uid)))).docs.map(toDoc);
+}
+
+/** Os apoios que dei a chapas. */
+export async function listMyElectionEndorsements(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.electionEndorsements), where('user_id', '==', uid)))).docs.map(toDoc);
+}
+
 /** O arquivo de um documento sem link público (filiado, equipe, rascunho), em base64. */
 export const fetchAcervoFile = ({ federationId, docId, path }) => acervoAction({ federationId, action: 'file', docId, path });
 

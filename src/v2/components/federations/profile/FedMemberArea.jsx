@@ -32,6 +32,7 @@ import FedReceiptDialog from '../FedReceipt';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { CHARGE_ORIGIN_LABELS } from '@/modules/federations/domain/constants';
 import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
+import FedElectionNotice from '../elections/FedElectionNotice';
 import { t, tn } from '@/core/i18n';
 
 /** A filiação e as cobranças abertas desta federação (as mesmas consultas nos três). */
@@ -178,6 +179,7 @@ export function FedMyMembership({ federation, plans }) {
         {st.status === MEMBER_STATUS.SUSPENDED && <p className="text-sm text-red-600">{t('Filiação suspensa{motivo}.', { motivo: m.suspended_reason ? `: ${m.suspended_reason}` : '' })}</p>}
         {isDisciplineSuspended(m) && <p className="text-sm text-red-600">{t('Suspensão disciplinar até {data}: sem inscrição em torneio chancelado "só filiados" até lá.', { data: quando(m.discipline_until_ms) })}</p>}
         {s.cobrancas.map((c) => <PixChargeBlock key={c.id} charge={c} federation={federation} />)}
+        {st.status === MEMBER_STATUS.ACTIVE && <FedElectionNotice federation={federation} />}
         <div className="flex flex-wrap gap-2">
           {temCartao(m, st) && <V2Button type="button" onClick={cartao.abrir}><IdCard className="h-4 w-4" />{t('Carteirinha digital')}</V2Button>}
           {st.status === MEMBER_STATUS.ACTIVE && m.card_code && normalizeFederationRules(federation.rules).member_declarations && (

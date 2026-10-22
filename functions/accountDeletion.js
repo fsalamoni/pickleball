@@ -198,6 +198,8 @@ const DELETE_BY_QUERY = Object.freeze([
   // que a pessoa escreveu como equipe também saem) e as denúncias que fez.
   { col: 'federation_comments', field: 'user_id', label: 'Comentários em documentos e eventos de federação' },
   { col: 'federation_comment_reports', field: 'reporter_id', label: 'Denúncias de comentários de federação' },
+  // O apoio a uma chapa eleitoral é da pessoa (a contagem na chapa fica).
+  { col: 'federation_election_endorsements', field: 'user_id', label: 'Apoios a chapas eleitorais de federação' },
   // Acesso de suporte a federações que estava aberto (o registro do motivo
   // fica em `admin_access_logs`, que não é apagado).
   { col: 'federation_admin_grants', field: 'admin_uid', label: 'Acessos de suporte a federações abertos' },
@@ -507,6 +509,17 @@ function buildReport(f) {
 const campos = (idField, name, clear = [], label = REMOVED_ATHLETE) => (d, uid) => (
   patchFlatFields(d, uid, [{ idField, name, clear }], label)
 );
+
+/** Chapa eleitoral de federação: o nome da pessoa sai da composição, de quem registrou e das impugnações que fez. */
+function patchCandidacy(d, uid) {
+  const patch = {};
+  const members = patchArrayItems(d.members, uid, { name: ['name'], label: REMOVED_USER });
+  if (members) patch.members = members;
+  const challenges = patchArrayItems(d.challenges, uid, { idKeys: ['by_uid'], name: ['by_name'], label: REMOVED_USER });
+  if (challenges) patch.challenges = challenges;
+  if (d.submitted_by === uid && d.submitted_by_name && d.submitted_by_name !== REMOVED_USER) patch.submitted_by_name = REMOVED_USER;
+  return Object.keys(patch).length ? patch : null;
+}
 
 /**
  * Inscrição de torneio. Troca nome, foto e e-mail do LADO da pessoa, os
@@ -1172,6 +1185,12 @@ const PSEUDO_SPECS = Object.freeze([
   // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
   { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },
+  // Eleições de federação: o eleitor do colégio (registro de que votou) e as
+  // chapas FICAM, sem o nome — são parte do resultado oficial. A cédula
+  // (`federation_ballots`) não tem uid nem nome: não há o que tirar dela.
+  { label: 'Eleições de federação em que estava no colégio (ficam, sem o nome)', bucket: 'retained', col: 'federation_election_voters', wheres: [['user_id', '==']], patch: (d) => (d.kind === 'person' && d.name !== REMOVED_USER ? { name: REMOVED_USER } : null), cols: ['federation_ballots'] },
+  { label: 'Chapas eleitorais de federação (ficam, sem o nome)', bucket: 'retained', col: 'federation_candidacies', wheres: [['member_uids', 'array-contains']], patch: patchCandidacy },
+  { label: 'Comissões eleitorais de federação (ficam, sem o nome)', bucket: 'retained', col: 'federation_elections', wheres: [['commission_uids', 'array-contains']], patch: (d, uid) => { const commission = patchArrayItems(d.commission, uid, { name: ['name'], label: REMOVED_USER }); return commission ? { commission } : null; } },
   // Mercado
   { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders', 'market_coupons', 'market_gift_cards'] },
   { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },
