@@ -5180,13 +5180,21 @@ service cloud.firestore {
         || fedHas(od().federation_id, 'fiscal');
       // Só o servidor cria; confirmar e cancelar também são dele.
       allow create, delete: if false;
-      // "Já paguei": o pagador só DECLARA — aberta/informada → informada, com a observação.
+      // "Já paguei": o pagador só DECLARA — aberta/informada → informada, com a observação
+      // e, opcional, o COMPROVANTE: um arquivo da PRÓPRIA pasta (`federacao/{uid}/`),
+      // que a equipe abre pela função `federationDocument` (`chargeId`).
       allow update: if fedOn() && isOwner(od().payer_uid)
         && od().status in ['open', 'declared']
         && nd().status == 'declared'
-        && chg().hasOnly(['status', 'declared_at', 'declared_note'])
+        && chg().hasOnly(['status', 'declared_at', 'declared_note', 'declared_proof'])
         && nd().get('declared_note', '') is string
-        && nd().get('declared_note', '').size() <= 300;
+        && nd().get('declared_note', '').size() <= 300
+        && (!chg().hasAny(['declared_proof']) || (nd().declared_proof is map
+          && nd().declared_proof.keys().hasOnly(['path', 'name', 'content_type', 'size'])
+          && nd().declared_proof.path is string
+          && nd().declared_proof.path.matches('federacao/' + me() + '/[A-Za-z0-9_-]+[.](pdf|jpg|png|webp)')
+          && nd().declared_proof.get('name', '') is string
+          && nd().declared_proof.get('name', '').size() <= 120));
     }
 
     // Código da carteirinha → filiação. Só o servidor (a verificação é a função `federationVerify`).

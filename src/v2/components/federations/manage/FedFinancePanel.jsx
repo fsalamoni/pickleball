@@ -16,10 +16,15 @@ import { V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t, tn } from '@/core/i18n';
 import { ChargeStatusBadge, quando } from '../federationUi';
+import { ChargeProofButton, temComprovante } from '../ChargeProof';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 import { baixarCsv } from './naoSalvo';
 
-function ChargeRow({ charge: c }) {
+/**
+ * Uma cobrança na visão da equipe. `podeDecidir` (financeiro) mostra confirmar e
+ * cancelar; `onRecibo` põe o botão do recibo nas pagas (a pasta do filiado usa).
+ */
+export function ChargeRow({ charge: c, podeDecidir = true, onRecibo = null }) {
   const [nota, setNota] = useState('');
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState('');
@@ -38,7 +43,13 @@ function ChargeRow({ charge: c }) {
           </div>
           <p className="font-display text-lg font-bold text-ink">{formatBrlCents(c.amount_cents)}</p>
         </div>
-        {canConfirmCharge(c) && (
+        {(temComprovante(c) || (onRecibo && c.status === CHARGE_STATUS.PAID)) && (
+          <div className="flex flex-wrap gap-2">
+            <ChargeProofButton charge={c} />
+            {onRecibo && c.status === CHARGE_STATUS.PAID && <V2Button type="button" size="sm" variant="ghost" onClick={() => onRecibo(c)}><Receipt className="h-4 w-4" aria-hidden="true" />{t('Recibo')}</V2Button>}
+          </div>
+        )}
+        {podeDecidir && canConfirmCharge(c) && (
           <div className="flex flex-wrap items-center gap-2">
             <V2Input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={200} placeholder={t('Observação (opcional)')} aria-label={t('Observação da confirmação')} className="sm:max-w-xs" />
             <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('confirm', t('Pagamento confirmado. A filiação está em dia e a pessoa foi avisada.'))}><CheckCircle2 className="h-4 w-4" />{t('Confirmar recebimento')}</V2Button>

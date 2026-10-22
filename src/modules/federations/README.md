@@ -14,6 +14,7 @@ federations/
 │   ├── staff.js                 # cargos (os da federação ou os 8 de modelo), mandato, admin master, quem pode nomear/prorrogar/passar (cópia no servidor: federationStaffPolicy.js)
 │   ├── plans.js                 # validatePlanInput (tipo do catálogo; clube/arena sem idade nem desconto), planPrice, rótulos
 │   ├── memberTypes.js           # Etapa 2: catálogo de tipos de filiação do admin (pessoa/clube/arena, grupo), cópia no servidor
+│   ├── registry.js              # Etapa 3: abas por tipo, filtro filiado × cadastrado, partes da pasta, linha do tempo
 │   ├── membership.js            # a CONTA da filiação: validade, renovação, estado, número, código, verificação
 │   ├── charges.js               # estado da cobrança, resumo financeiro, CSV
 │   ├── card.js                  # o que a carteirinha mostra (faixa com cor E texto), verifyPath
@@ -272,3 +273,10 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   (`functions/federationOrgMembers.js`). Telas: `OrgMembershipJoin`
   (`/federacoes/:id/filiar?entidade=club:ID`), `AdminFederationsConfig`. Ver
   `docs/50-FEDERACAO.md` §26.
+- **Filiados e cadastrados e a pasta** (Etapa 3, 2026-10-22): o Cadastro tem
+  uma aba por tipo (`domain/registry.js`, `?tipo=`/`?vinculo=`) e cada filiação
+  abre uma PASTA (`?pasta=`, `FedMemberFolder`) com as partes do tipo. Cada
+  parte consulta só com a permissão da regra (`hooks/useMemberFolder.js`) e,
+  sem ela, diz quem vê. O "Já paguei" aceita comprovante (`declared_proof`,
+  arquivo na pasta do pagador), que a equipe abre por `federationDocument`
+  com `chargeId` (auditado). Ver `docs/50-FEDERACAO.md` §27.

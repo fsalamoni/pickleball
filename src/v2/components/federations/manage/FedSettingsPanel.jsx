@@ -129,7 +129,7 @@ function PlanoForm({ federationId, plano, onFechar }) {
       <V2Field label={t('Benefícios (um por linha)')} htmlFor="pl-benef"><V2Textarea id="pl-benef" rows={3} maxLength={1200} value={f.benefits} onChange={(e) => set({ benefits: e.target.value })} /></V2Field>
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-ink">{t('Documentos exigidos')}</legend>
-        <p className="text-xs text-gray-500">{entidade ? t('Quem representa a entidade envia os arquivos no próprio pedido (ou depois, pela gestão do clube ou pela Central da arena) e a secretaria confere em Filiados → Documentos.') : t('A pessoa envia os arquivos no próprio pedido de filiação (ou depois, pela página da federação) e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
+        <p className="text-xs text-gray-500">{entidade ? t('Quem representa a entidade envia os arquivos no próprio pedido (ou depois, pela gestão do clube ou pela Central da arena) e a secretaria confere em Filiados e cadastrados → Documentos.') : t('A pessoa envia os arquivos no próprio pedido de filiação (ou depois, pela página da federação) e a secretaria confere em Filiados e cadastrados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {Object.values(DOC_KIND).filter((k) => !entidade || k === DOC_KIND.OTHER).map((k) => (
             <V2Toggle
@@ -392,7 +392,7 @@ function RegrasTab({ federation }) {
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); const enviado = f; m.mutate(undefined, { onSuccess: () => { marcarSalvo(enviado); toast.success(t('Regras salvas.')); }, onError: (er) => toast.error(er.message) }); }}>
         <V2Surface className="space-y-4">
           <V2Toggle id="rg-cpf" checked={f.ask_cpf} onChange={(v) => setF((x) => ({ ...x, ask_cpf: v }))} label={t('Pedir o CPF na filiação')} hint={t('Fica reservado (só a secretaria, com motivo registrado). Dependente menor não precisa.')} />
-          <V2Toggle id="rg-declaracao" checked={f.member_declarations} onChange={(v) => setF((x) => ({ ...x, member_declarations: v }))} label={t('O filiado emite a própria declaração de vínculo')} hint={t('Só com a filiação em dia, com o QR que confere a validade. Desligado, só a secretaria emite (Filiados → Ficha).')} />
+          <V2Toggle id="rg-declaracao" checked={f.member_declarations} onChange={(v) => setF((x) => ({ ...x, member_declarations: v }))} label={t('O filiado emite a própria declaração de vínculo')} hint={t('Só com a filiação em dia, com o QR que confere a validade. Desligado, só a secretaria emite (pela pasta do filiado).')} />
           <V2Toggle id="rg-comentarios" checked={f.comments} onChange={(v) => setF((x) => ({ ...x, comments: v }))} label={t('Comentários nos documentos e eventos')} hint={t('Quem tem conta comenta no que pode ler; a equipe do acervo responde e modera. Desligado, ninguém comenta e o que já foi escrito continua à vista.')} />
           <div className="grid gap-4 sm:grid-cols-2">
             <V2Field label={t('Carência entre transferências (dias)')} htmlFor="rg-carencia" hint={t('0 = sem carência.')}><V2Input id="rg-carencia" inputMode="numeric" value={f.transfer_cooldown_days} onChange={(e) => setF((x) => ({ ...x, transfer_cooldown_days: e.target.value }))} /></V2Field>

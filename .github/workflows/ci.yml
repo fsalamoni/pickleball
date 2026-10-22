@@ -101,7 +101,7 @@ jobs:
   # nada, regra do banco que recusa quem acabou de entrar. Ver docs/03-WORKFLOW.md §10.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
 
@@ -120,8 +120,13 @@ jobs:
         run: npm ci
         timeout-minutes: 8
 
+      # Sem --with-deps: a imagem ubuntu-latest já traz as bibliotecas do
+      # Chromium, e o --with-deps só acrescentava fontes (CJK, unifont) pelo
+      # espelho do apt, que em 2026-10-22 baixou a 30 kB/s e estourou 10 min
+      # duas vezes antes de qualquer teste. Biblioteca faltando falha alto no
+      # primeiro teste, não em silêncio.
       - name: Navegador do Playwright
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
         timeout-minutes: 5
 
       - name: Testes de navegador (build + emuladores)

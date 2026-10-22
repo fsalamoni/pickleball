@@ -1861,8 +1861,12 @@ Só o servidor cria, confirma e cancela. `federation_id`, `member_id`,
 `due_date` (hoje + 10), `declared_at`, `declared_note` (≤ 300), `paid_at_ms`,
 `confirmed_by`, `confirm_note`, `created_at`, `created_at_ms`,
 `overdue_notified` (opcional, marcos `[0, 7]` do lembrete de vencida já
-enviados — só o servidor). A única escrita
-do pagador: `open|declared` → `declared` com `declared_at`/`declared_note`.
+enviados — só o servidor), `declared_proof` (opcional, Etapa 3:
+`{ path, name, content_type, size }` do comprovante que o pagador anexou; o
+arquivo mora em `federacao/{payer_uid}/…`, PDF/JPG/PNG/WebP). A única escrita
+do pagador: `open|declared` → `declared` com `declared_at`/`declared_note` e,
+opcional, `declared_proof` apontando para a PRÓPRIA pasta (re-declarar uma
+cobrança já informada só para anexar o comprovante é permitido).
 
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso

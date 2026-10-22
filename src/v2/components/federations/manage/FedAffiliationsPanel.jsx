@@ -1,5 +1,5 @@
 /**
- * Clubes e arenas filiados (Central → Filiados → "Clubes e arenas", permissão
+ * Clubes e arenas filiados (Central → Filiados e cadastrados → "Vínculos de clubes e arenas", permissão
  * `members`): os pedidos para aprovar ou recusar e os filiados, com suspender
  * e reintegrar. A decisão grava só estado e motivo (a regra confere).
  */

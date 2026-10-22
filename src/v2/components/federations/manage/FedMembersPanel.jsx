@@ -1,120 +1,48 @@
 /**
- * Filiados da federação (secretaria, permissão `members`): os PEDIDOS para
- * aprovar ou recusar e a LISTA de filiados (em dia, vencendo, vencidos,
- * suspensos), com suspender e reintegrar. Toda decisão é do servidor
- * (`membershipAction`); a tela só pede.
+ * Filiados e cadastrados da federação (secretaria, permissão `members`).
+ *
+ *  - Pedidos: aprovar ou recusar (o servidor decide; a tela só pede).
+ *  - Cadastro: uma aba por TIPO (`?tipo=`: Atletas, Professores, Árbitros,
+ *    Clubes, Arenas e os tipos criados pelo admin da plataforma), o filtro de
+ *    vínculo (`?vinculo=`: filiados × cadastrados) e o de situação
+ *    (`?filtro=`; `vencendo` é contrato da faixa "Precisa de você"). Cada
+ *    pessoa ou entidade abre a sua PASTA (`?pasta=<id da filiação>`), com
+ *    tudo o que é dela aqui: cobranças, comprovantes e recibos, documentos,
+ *    cursos, credenciais, pontos, arbitragem, sanções e histórico.
  */
-import React, { useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { Ban, CheckCircle2, Eye, FileText, IdCard, Inbox, RotateCcw, Users, XCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { membershipAction, revealMemberPrivate } from '@/modules/federations/services/federationService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import React, { lazy, Suspense, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { FolderOpen, Inbox, Settings2, Users } from 'lucide-react';
+import { useFederationPlatformSettings } from '@/modules/federations/hooks/useFederations';
 import { membershipState, memberCounts, sortMembersForStaff } from '@/modules/federations/domain/membership';
-import { docLabel, formatCpf } from '@/modules/federations/domain/privateData';
-import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
-import { DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
-import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
-import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { MEMBER_STATUS, PLAN_TIER_LABELS, FED_PERMISSION } from '@/modules/federations/domain/constants';
+import { MEMBER_CATEGORY_LABELS, MEMBER_ENTITY_LABELS, memberTypeName, personTypeLabel } from '@/modules/federations/domain/memberTypes';
+import { REGISTRY_ALL, REGISTRY_BOND, REGISTRY_BOND_LABELS, bondCounts, memberBond, plansOfType, registryList, registryTabs } from '@/modules/federations/domain/registry';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
-import MembershipDeclarationDialog from '../MembershipDeclaration';
 import { ConvidarPessoas, ConvitesEnviados } from './FedInvites';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
+import { MemberActions } from './memberShared';
 
-/** Recusar / suspender: o motivo é obrigatório, porque a pessoa vai ler. */
-function MotivoDialog({ acao, member, federationId, onClose }) {
-  const [motivo, setMotivo] = useState('');
-  const [erro, setErro] = useState('');
-  const m = useFederationMutation(() => membershipAction({ federationId, action: acao, memberId: member.id, reason: motivo }));
-  const recusar = acao === 'reject';
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent sheet className="max-w-md">
-        <DialogTitle>{recusar ? t('Recusar o pedido') : t('Suspender a filiação')}</DialogTitle>
-        <DialogDescription>{member.user_name}. {recusar ? t('A pessoa lê o motivo e pode pedir de novo.') : t('A carteirinha deixa de verificar até você reintegrar.')}</DialogDescription>
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => { toast.success(recusar ? t('Pedido recusado. A pessoa foi avisada.') : t('Filiação suspensa. A pessoa foi avisada.')); onClose(); }, onError: (er) => setErro(er.message) }); }}>
-          <V2Field label={t('Motivo')} htmlFor="motivo-filiacao" error={erro} hint={t('Pelo menos 3 caracteres. A pessoa recebe este texto no aviso.')}>
-            <V2Textarea id="motivo-filiacao" rows={3} maxLength={500} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} autoFocus />
-          </V2Field>
-          <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={onClose}>{t('Voltar')}</V2Button>
-            <V2Button type="submit" variant="danger" disabled={m.isPending || motivo.trim().length < 3}>{recusar ? t('Recusar') : t('Suspender')}</V2Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+const FedMemberFolder = lazy(() => import('./FedMemberFolder'));
 
-/**
- * A ficha do filiado: o que a secretaria precisa e nada mais. CPF e
- * responsável ficam em `private/data` e só aparecem depois de "Revelar", com
- * motivo — a leitura é registrada na auditoria, como no suporte do admin.
- */
-function FichaDialog({ member: mb, documentos, onClose }) {
-  const { user } = useAuth();
-  const [motivo, setMotivo] = useState('');
-  const [privado, setPrivado] = useState(null);
-  const [erro, setErro] = useState('');
-  const revelar = useFederationMutation(() => revealMemberPrivate(mb, { uid: user?.uid, reason: motivo }));
-  const docs = (documentos || []).filter((d) => d.member_id === mb.id).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent sheet className="max-w-lg">
-        <DialogTitle>{mb.user_name}</DialogTitle>
-        <DialogDescription>{mb.plan_name}{mb.member_number ? ` · ${mb.member_number}` : ''}{mb.is_minor ? ` · ${t('menor de idade')}` : ''}{mb.guardian_uid ? ` · ${t('dependente de {nome}', { nome: mb.guardian_name || t('responsável') })}` : ''}</DialogDescription>
-        <div className="space-y-4">
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-ink">{t('Dados reservados')}</h3>
-            {privado ? (
-              <dl className="grid gap-1 text-sm text-gray-700">
-                <div className="flex gap-2"><dt className="font-semibold">{t('CPF:')}</dt><dd>{privado.cpf ? formatCpf(privado.cpf) : t('não informado')}</dd></div>
-                {privado.birth_date && <div className="flex gap-2"><dt className="font-semibold">{t('Nascimento:')}</dt><dd>{quando(privado.birth_date)}</dd></div>}
-                {privado.guardian && <div className="flex gap-2"><dt className="font-semibold">{t('Responsável:')}</dt><dd>{privado.guardian.name}{privado.guardian.contact ? ` · ${privado.guardian.contact}` : ''}</dd></div>}
-                {!privado.cpf && !privado.guardian && !privado.birth_date && <p className="text-gray-500">{t('Nada reservado para esta filiação.')}</p>}
-              </dl>
-            ) : (
-              <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); revelar.mutate(undefined, { onSuccess: (p) => setPrivado(p || {}), onError: (er) => setErro(er.message) }); }}>
-                <V2Field label={t('Motivo para ver CPF e responsável')} htmlFor="ficha-motivo" error={erro} className="flex-1" hint={t('Fica registrado na auditoria da federação.')}>
-                  <V2Input id="ficha-motivo" maxLength={300} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} />
-                </V2Field>
-                <V2Button type="submit" size="sm" variant="secondary" disabled={revelar.isPending || motivo.trim().length < 5}><Eye className="h-4 w-4" />{t('Revelar')}</V2Button>
-              </form>
-            )}
-          </section>
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-ink">{t('Documentos enviados')}</h3>
-            {documentos === undefined ? <p className="text-sm text-gray-500">{t('Os documentos não carregaram.')}</p>
-              : !docs.length ? <p className="text-sm text-gray-500">{t('Nenhum documento enviado. A conferência fica em Filiados → Documentos.')}</p>
-                : <ul className="space-y-1 text-sm text-gray-700">{docs.map((d) => <li key={d.id} className="flex flex-wrap items-center gap-2">{docLabel(d)}<V2Badge tone={{ pending: 'amber', approved: 'green', rejected: 'red' }[d.status] || 'neutral'}>{t(DOC_STATUS_LABELS[d.status] || d.status)}</V2Badge><span className="text-xs text-gray-500">{quando(d.created_at)}</span></li>)}</ul>}
-          </section>
-          {Number(mb.discipline_until_ms) > 0 && isDisciplineSuspended(mb) && <p className="text-sm text-red-600">{t('Suspensão disciplinar até {data}.', { data: quando(mb.discipline_until_ms) })}</p>}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function MemberRow({ member: mb, federation, documentos, pedido = false }) {
-  const federationId = federation.id;
-  const [motivo, setMotivo] = useState(null);
-  const [ficha, setFicha] = useState(false);
-  const [declaracao, setDeclaracao] = useState(false);
-  const m = useFederationMutation((action) => membershipAction({ federationId, action, memberId: mb.id }));
-  const agir = (action, msg) => m.mutate(action, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
+function MemberRow({ member: mb, federation, pedido = false, onAbrirPasta }) {
   const st = membershipState(mb);
+  const nome = mb.org_name || mb.user_name;
   return (
     <li>
       <V2Surface variant="compacto" className="space-y-3 p-4">
         <div className="flex flex-wrap items-start gap-3">
-          <V2Avatar name={mb.user_name} photoUrl={mb.photo_url} />
+          <V2Avatar name={nome} photoUrl={mb.photo_url} />
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{mb.user_name}<MemberStatusBadge status={st.status} label={st.label} />{mb.guardian_uid && <V2Badge tone="neutral">{t('dependente')}</V2Badge>}{mb.is_minor && !mb.guardian_uid && <V2Badge tone="neutral">{t('menor')}</V2Badge>}{mb.imported && <V2Badge tone="neutral">{t('importado')}</V2Badge>}{mb.org_kind && <V2Badge tone="blue">{mb.org_kind === 'club' ? t('clube') : t('arena')}</V2Badge>}</p>
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{nome}<MemberStatusBadge status={st.status} label={st.label} />{mb.guardian_uid && <V2Badge tone="neutral">{t('dependente')}</V2Badge>}{mb.is_minor && !mb.guardian_uid && <V2Badge tone="neutral">{t('menor')}</V2Badge>}{mb.imported && <V2Badge tone="neutral">{t('importado')}</V2Badge>}{mb.org_kind && <V2Badge tone="blue">{mb.org_kind === 'club' ? t('clube') : t('arena')}</V2Badge>}</p>
             {mb.org_kind && <p className="text-xs text-gray-500">{t('Representante: {nome}', { nome: mb.representative_name || '—' })}{mb.org_city ? ` · ${[mb.org_city, mb.org_state].filter(Boolean).join('/')}` : ''}</p>}
             <p className="text-xs text-gray-500">
-              {personTypeLabel(mb)} · {t(PLAN_TIER_LABELS[mb.tier] || PLAN_TIER_LABELS.federated)} · {mb.plan_name}
+              {personTypeLabel(mb)} · {t(PLAN_TIER_LABELS[memberBond(mb)])} · {mb.plan_name}
               {mb.member_number ? ` · ${mb.member_number}` : ''}
               {st.validUntil ? ` · ${t('até {data}', { data: quando(st.validUntil) })}` : ''}
               {pedido ? ` · ${t('pedido em {data}', { data: quando(mb.requested_at) })}` : ''}
@@ -123,31 +51,46 @@ function MemberRow({ member: mb, federation, documentos, pedido = false }) {
             {mb.suspended_reason && st.status === MEMBER_STATUS.SUSPENDED && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: mb.suspended_reason })}</p>}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <V2Button type="button" size="sm" variant="ghost" onClick={() => setFicha(true)}><IdCard className="h-4 w-4" />{t('Ficha')}</V2Button>
-          {!pedido && st.status === MEMBER_STATUS.ACTIVE && mb.card_code && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDeclaracao(true)}><FileText className="h-4 w-4" />{t('Declaração')}</V2Button>}
-          {pedido && (
-            <>
-              <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir('approve', t('Pedido aprovado. A pessoa foi avisada.'))}><CheckCircle2 className="h-4 w-4" />{t('Aprovar')}</V2Button>
-              <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('reject')}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>
-            </>
-          )}
-          {!pedido && [MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && (
-            <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('suspend')}><Ban className="h-4 w-4" />{t('Suspender')}</V2Button>
-          )}
-          {/* A suspensão DISCIPLINAR termina sozinha na data (ou pela Disciplina); "Reintegrar" é só da administrativa. */}
-          {!pedido && st.disciplined && mb.status !== MEMBER_STATUS.SUSPENDED && (
-            <p className="self-center text-xs text-gray-500">{t('Suspensão disciplinar até {data}. Encerra na Disciplina.', { data: quando(mb.discipline_until_ms) })}</p>
-          )}
-          {!pedido && mb.status === MEMBER_STATUS.SUSPENDED && (
-            <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir('reinstate', t('Filiação reintegrada.'))}><RotateCcw className="h-4 w-4" />{t('Reintegrar')}</V2Button>
-          )}
-        </div>
+        <MemberActions member={mb} federation={federation} pedido={pedido}>
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrirPasta(mb.id)} data-dica="federacao-abrir-pasta"><FolderOpen className="h-4 w-4" />{t('Abrir pasta')}</V2Button>
+        </MemberActions>
       </V2Surface>
-      {motivo && <MotivoDialog acao={motivo} member={mb} federationId={federationId} onClose={() => setMotivo(null)} />}
-      {ficha && <FichaDialog member={mb} documentos={documentos} onClose={() => setFicha(false)} />}
-      {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={mb} federation={federation} />}
     </li>
+  );
+}
+
+/** O tipo aberto: como a plataforma o define e os planos que a federação oferece para ele. */
+function TipoConfig({ tipo, plans, plansQ, podePlanos, federation, onIrParaAba }) {
+  const type = tipo.type;
+  const planos = plansOfType(plans, tipo.id);
+  const entidade = type?.entity === 'club' || type?.entity === 'arena';
+  return (
+    <V2Surface variant="compacto" className="space-y-3 p-4" data-dica="federacao-tipo-config">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-center gap-2 font-bold text-ink"><Settings2 className="h-4 w-4" aria-hidden="true" />{t('Como funciona: {tipo}', { tipo: memberTypeName(type) })}{type?.active === false && <V2Badge tone="amber">{t('desligado pela plataforma')}</V2Badge>}</p>
+          <p className="text-xs text-gray-500">{t(MEMBER_ENTITY_LABELS[type?.entity] || MEMBER_ENTITY_LABELS.person)} · {t('grupo de voto: {grupo}', { grupo: t(MEMBER_CATEGORY_LABELS[type?.category] || MEMBER_CATEGORY_LABELS.none) })}</p>
+        </div>
+        {podePlanos && onIrParaAba && <V2Button type="button" size="sm" variant="ghost" onClick={() => onIrParaAba('planos')}>{t('Editar os planos')}</V2Button>}
+      </div>
+      {type?.active === false && <p className="text-sm text-gray-600">{t('A plataforma desligou este tipo: não dá para criar plano novo, mas quem já tem filiação continua aqui.')}</p>}
+      {plansQ?.isError ? <p className="text-sm text-gray-500">{t('Os planos não carregaram.')}</p>
+        : !plansQ?.isSuccess ? null
+          : !planos.length ? <p className="text-sm text-gray-600">{t('Nenhum plano para este tipo. Sem plano, ninguém consegue pedir a filiação dele: crie em Configurações → Planos.')}</p>
+            : (
+              <ul className="flex flex-wrap gap-2">{planos.map((p) => (
+                <li key={p.id} className={`rounded-full border px-3 py-1 text-xs ${p.active === false ? 'border-gray-100 text-gray-500' : 'border-gray-200 text-ink'}`}>
+                  {p.name} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)} · {Number(p.price_cents) > 0 ? formatBrlCents(p.price_cents) : t('gratuito')}{p.active === false ? ` · ${t('pausado')}` : ''}
+                </li>
+              ))}</ul>
+            )}
+      {entidade && fedModuleOn(federation, 'affiliations') && onIrParaAba && (
+        <p className="text-sm text-gray-600">
+          {t('Clubes e arenas com vínculo sem plano (só o selo, sem anuidade) ficam em Vínculos de clubes e arenas.')}{' '}
+          <button type="button" className="font-semibold text-ink underline underline-offset-2" onClick={() => onIrParaAba('filiados-orgs')}>{t('Abrir')}</button>
+        </p>
+      )}
+    </V2Surface>
   );
 }
 
@@ -160,21 +103,56 @@ const FILTROS = [
   { id: MEMBER_STATUS.EXPIRED, label: () => t('Vencidos'), conta: (c) => c.expired },
   { id: MEMBER_STATUS.SUSPENDED, label: () => t('Suspensos'), conta: (c) => c.suspended },
 ];
-const BUSCA = (m) => `${m.user_name} ${m.member_number} ${m.plan_name}`;
+const VINCULOS = [REGISTRY_BOND.ALL, REGISTRY_BOND.FEDERATED, REGISTRY_BOND.REGISTERED];
+const BUSCA = (m) => `${m.org_name || m.user_name} ${m.member_number} ${m.plan_name} ${m.representative_name || ''}`;
 
-export default function FedMembersPanel({ federation, membersQ, documentsQ, plansQ, tab }) {
-  const documentos = documentsQ?.isSuccess ? documentsQ.data : undefined;
-  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'todos', FILTROS.map((f) => f.id));
+/** A pasta aberta mora em `?pasta=`; abrir EMPILHA no histórico (o "voltar" do aparelho volta à lista). */
+function usePasta() {
+  const [params, setParams] = useSearchParams();
+  const pasta = params.get('pasta');
+  const abrir = useCallback((id) => {
+    setParams((p) => { const n = new URLSearchParams(p); if (id) n.set('pasta', id); else n.delete('pasta'); return n; }, { replace: !id });
+  }, [setParams]);
+  return [pasta, abrir];
+}
+
+export default function FedMembersPanel({ federation, membersQ, documentsQ, plansQ, transfersQ, perms = [], tab, onIrParaAba }) {
+  const { catalog } = useFederationPlatformSettings();
+  const [pasta, abrirPasta] = usePasta();
   const todos = useMemo(() => sortMembersForStaff(membersQ.data || []), [membersQ.data]);
-  const contas = useMemo(() => memberCounts(todos), [todos]);
-  const doFiltro = useMemo(() => todos.filter((m) => m.status !== MEMBER_STATUS.PENDING && ![MEMBER_STATUS.CANCELLED, MEMBER_STATUS.REJECTED].includes(m.status)).filter((m) => {
+  const plans = plansQ?.isSuccess ? plansQ.data : [];
+  // Só os tipos que a federação USA (tem gente ou plano): tipo sem nenhum dos dois começa criando o plano em Configurações → Planos.
+  const abas = useMemo(() => registryTabs(catalog, todos, plans).filter((a) => a.id === REGISTRY_ALL || a.count || a.plans), [catalog, todos, plans]);
+  const [tipo, setTipo] = useFiltroNaUrl('tipo', REGISTRY_ALL, abas.map((a) => a.id));
+  const [vinculo, setVinculo] = useFiltroNaUrl('vinculo', REGISTRY_BOND.ALL, VINCULOS);
+  const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'todos', FILTROS.map((f) => f.id));
+  const doTipo = useMemo(() => registryList(todos, { tipo }), [todos, tipo]);
+  const vinculos = useMemo(() => bondCounts(doTipo), [doTipo]);
+  const doVinculo = useMemo(() => registryList(doTipo, { vinculo }), [doTipo, vinculo]);
+  const contas = useMemo(() => memberCounts(doVinculo), [doVinculo]);
+  const doFiltro = useMemo(() => doVinculo.filter((m) => {
     const st = membershipState(m);
     if (filtro === 'vencendo') return st.expiring;
     return filtro === 'todos' || st.status === filtro;
-  }), [todos, filtro]);
+  }), [doVinculo, filtro]);
   const busca = useBuscaLista(doFiltro, BUSCA);
   if (membersQ.isError) return <V2ErrorState title={t('Não carregaram os filiados')} onRetry={() => membersQ.refetch()} />;
   if (membersQ.isLoading) return <V2Skeleton lines={6} />;
+
+  if (pasta) {
+    const aberto = todos.find((m) => m.id === pasta);
+    if (!aberto) {
+      return (
+        <V2EmptyState icon={FolderOpen} title={t('Esta pasta não está mais na lista')} description={t('A filiação pode ter sido encerrada ou recusada.')}
+          action={<V2Button type="button" size="sm" onClick={() => abrirPasta(null)}>{t('Voltar à lista')}</V2Button>} />
+      );
+    }
+    return (
+      <Suspense fallback={<V2Skeleton lines={6} />}>
+        <FedMemberFolder key={aberto.id} federation={federation} member={aberto} members={todos} documentsQ={documentsQ} transfersQ={transfersQ} perms={perms} onIrParaAba={onIrParaAba} onAbrirPasta={abrirPasta} />
+      </Suspense>
+    );
+  }
 
   if (tab === 'pedidos') {
     const pedidos = todos.filter((m) => m.status === MEMBER_STATUS.PENDING);
@@ -182,33 +160,44 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, plan
       <section className="space-y-4" aria-label={t('Pedidos de filiação')} data-dica="federacao-pedidos">
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Pedidos de filiação')}</h2><p className="text-sm text-gray-500">{t('Aprovado, o plano gratuito ativa na hora; o pago gera a cobrança Pix para a pessoa.')}</p></div>
         {!pedidos.length ? <V2EmptyState icon={Inbox} title={t('Nenhum pedido esperando')} description={t('Quando alguém pedir filiação num plano sem aprovação automática, aparece aqui.')} />
-          : <ul className="space-y-3">{pedidos.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} pedido />)}</ul>}
+          : <ul className="space-y-3">{pedidos.map((m) => <MemberRow key={m.id} member={m} federation={federation} pedido onAbrirPasta={abrirPasta} />)}</ul>}
         <ConvitesEnviados federation={federation} />
       </section>
     );
   }
 
   const termo = busca.termo.trim();
+  const abaTipo = abas.find((a) => a.id === tipo) || abas[0];
+  const nomeTipo = abaTipo.type ? memberTypeName(abaTipo.type) : '';
   return (
-    <section className="space-y-4" aria-label={t('Filiados')} data-dica="federacao-filiados">
+    <section className="space-y-4" aria-label={t('Filiados e cadastrados')} data-dica="federacao-filiados">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div><h2 className="font-display text-xl font-bold text-ink">{t('Filiados')}</h2><p className="text-sm text-gray-500">{tn(contas.active, '{n} em dia', '{n} em dia')} · {tn(contas.expiring, '{n} vencendo em 30 dias', '{n} vencendo em 30 dias')} · {tn(contas.expired, '{n} vencido', '{n} vencidos')}</p></div>
+        <div>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Filiados e cadastrados')}</h2>
+          <p className="text-sm text-gray-500">{tn(vinculos.federated, '{n} filiado', '{n} filiados')} · {tn(vinculos.registered, '{n} cadastrado', '{n} cadastrados')} · {tn(contas.expiring, '{n} vencendo em 30 dias', '{n} vencendo em 30 dias')}</p>
+        </div>
         <BuscaLista id="fed-filiados-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, número ou plano')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
       </div>
-      <ConvidarPessoas federation={federation} membros={todos} plansQ={plansQ} />
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('Filtro')}>{FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{`${f.label()} (${f.conta(contas)})`}</V2FilterChip>)}</div>
+      <V2SubTabs ariaLabel={t('Tipos de filiação')} dica="federacao-tipos" tabs={abas.map((a) => ({ value: a.id, label: `${a.id === REGISTRY_ALL ? t('Todos') : memberTypeName(a.type)} (${a.count})` }))} activeValue={abaTipo.id} onSelect={(x) => setTipo(x.value)} />
+      {abaTipo.id !== REGISTRY_ALL && <TipoConfig tipo={abaTipo} plans={plans} plansQ={plansQ} podePlanos={perms.includes(FED_PERMISSION.ADMIN)} federation={federation} onIrParaAba={onIrParaAba} />}
+      {abaTipo.id === REGISTRY_ALL && <ConvidarPessoas federation={federation} membros={todos} plansQ={plansQ} />}
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('Vínculo')} data-dica="federacao-vinculo">
+        {VINCULOS.map((v) => <V2FilterChip key={v} active={vinculo === v} onClick={() => setVinculo(v)}>{`${t(REGISTRY_BOND_LABELS[v])} (${vinculos[v]})`}</V2FilterChip>)}
+      </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('Situação')}>{FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{`${f.label()} (${f.conta(contas)})`}</V2FilterChip>)}</div>
       {!busca.filtrados.length ? (
         <V2EmptyState
           icon={Users}
-          title={termo ? t('Ninguém com "{termo}"', { termo }) : t('Nenhum filiado neste filtro')}
-          description={termo ? t('Confira a grafia ou limpe a busca.') : filtro === 'todos' ? t('Convide pessoas acima ou importe uma planilha em Filiados → Importar.') : t('Veja os demais no filtro "Todos".')}
+          title={termo ? t('Ninguém com "{termo}"', { termo }) : nomeTipo ? t('Nenhum cadastro em {tipo} neste filtro', { tipo: nomeTipo }) : t('Nenhum filiado neste filtro')}
+          description={termo ? t('Confira a grafia ou limpe a busca.') : filtro === 'todos' && vinculo === REGISTRY_BOND.ALL ? t('Convide pessoas em "Todos" ou importe uma planilha em Importar.') : t('Veja os demais no filtro "Todos".')}
         />
       ) : (
         <>
-          <ul className="space-y-3">{busca.visiveis.map((m) => <MemberRow key={m.id} member={m} federation={federation} documentos={documentos} />)}</ul>
+          <ul className="space-y-3">{busca.visiveis.map((m) => <MemberRow key={m.id} member={m} federation={federation} onAbrirPasta={abrirPasta} />)}</ul>
           <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
         </>
       )}
     </section>
   );
 }
+

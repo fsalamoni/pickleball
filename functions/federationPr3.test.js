@@ -340,4 +340,23 @@ describe('PR 3: secretaria', () => {
     expect(docsDe(db, 'audit_logs').some((a) => a.action === 'federation_document_view')).toBe(true);
     await expect(secretariat.document(c, ANA, { documentId: 'd1' })).resolves.toMatchObject({ ok: true });
   });
+  it('o comprovante do "Já paguei" chega ao pagador e a quem lê cobranças, com registro', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_charges/c1', { federation_id: 'fpp', payer_uid: 'ana', member_id: 'fpp_ana', status: 'declared', declared_proof: { path: 'federacao/ana/pix123.pdf', name: 'pix.pdf' } });
+    db.store.docs.set('federation_charges/c2', { federation_id: 'fpp', payer_uid: 'ana', status: 'open' });
+    const bucket = createFakeBucket(['federacao/ana/pix123.pdf']);
+    bucket.file = (name) => ({ getMetadata: async () => [{ contentType: 'application/pdf', size: 12 }], download: async () => [Buffer.from(`conteudo:${name}`)] });
+    const c = { ...ctx(db), bucket };
+    // Arbitragem e disciplina não leem cobranças; financeiro e secretaria leem.
+    await expect(secretariat.document(c, REF, { chargeId: 'c1' })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(secretariat.document(c, DISC, { chargeId: 'c1' })).rejects.toMatchObject({ code: 'permission-denied' });
+    const r = await secretariat.document(c, TES, { chargeId: 'c1' });
+    expect(Buffer.from(r.base64, 'base64').toString()).toBe('conteudo:federacao/ana/pix123.pdf');
+    await expect(secretariat.document(c, SEC, { chargeId: 'c1' })).resolves.toMatchObject({ kind: 'proof' });
+    expect(docsDe(db, 'audit_logs').filter((a) => a.action === 'federation_charge_proof_view')).toHaveLength(2);
+    // O pagador abre o próprio, sem registro; cobrança sem comprovante diz que não há.
+    await expect(secretariat.document(c, ANA, { chargeId: 'c1' })).resolves.toMatchObject({ ok: true });
+    expect(docsDe(db, 'audit_logs').filter((a) => a.action === 'federation_charge_proof_view')).toHaveLength(2);
+    await expect(secretariat.document(c, ANA, { chargeId: 'c2' })).rejects.toMatchObject({ code: 'not-found' });
+  });
 });
