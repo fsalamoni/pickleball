@@ -298,6 +298,32 @@ describe('PR 3: secretaria', () => {
     expect(doc(db, `federation_imports/${out.importId}`).pending).toEqual([{ email: 'ze@naotem.com', name: 'Zé', member_number: '', valid_until: '' }]);
     expect(avisosPara(db, 'caio')).toHaveLength(1);
   });
+  it('quem estava sem conta recebe o CONVITE ao criar a conta; aceito, entra ativo sem cobrança com os dados da lista', async () => {
+    const db = cenario();
+    const out = await secretariat.importMembers(ctx(db), SEC, { federationId: 'fpp', planId: 'anual', rows: [{ name: 'Zé', email: 'Ze@naotem.com', member_number: 'FPP-7', valid_until: '2027-02-28' }] });
+    expect(doc(db, `federation_imports/${out.importId}`)).toMatchObject({ pending_emails: ['ze@naotem.com'], invited_emails: [] });
+    // Conta de outro e-mail: nada.
+    expect(await secretariat.onUserCreated(ctx(db), 'outro', { email: 'outro@x.com' })).toEqual({ invited: 0 });
+    db.store.docs.set('users/ze', { full_name: 'José', email: 'ZE@naotem.com', birth_date: '1980-01-01' });
+    expect(await secretariat.onUserCreated(ctx(db), 'ze', doc(db, 'users/ze'))).toEqual({ invited: 1 });
+    expect(doc(db, 'federation_members/fpp_ze')).toBeUndefined(); // ninguém vira filiado sem aceitar
+    expect(doc(db, 'federation_invites/fpp_ze')).toMatchObject({ status: 'pending', source: 'import', plan_id: 'anual', member_number: 'FPP-7', valid_until: '2027-02-28', invited_by: 'sec' });
+    expect(doc(db, `federation_imports/${out.importId}`)).toMatchObject({ pending_emails: [], invited_emails: ['ze@naotem.com'] });
+    expect(avisosPara(db, 'ze')).toHaveLength(1);
+    expect(await secretariat.onUserCreated(ctx(db), 'ze', doc(db, 'users/ze'))).toEqual({ invited: 0 }); // não repete
+    const r = await fed.membership(ctx(db), { uid: 'ze' }, { federationId: 'fpp', action: 'request', planId: 'anual', cpf: '52998224725' });
+    expect(r.chargeId).toBeNull();
+    expect(doc(db, 'federation_members/fpp_ze')).toMatchObject({ status: 'active', member_number: 'FPP-7', valid_until: '2027-02-28', imported: true, invited: true });
+    expect(doc(db, 'federation_invites/fpp_ze').status).toBe('accepted');
+    expect(docsDe(db, 'federation_charges')).toHaveLength(0);
+  });
+  it('federação oculta não convida: o e-mail segue pendente', async () => {
+    const db = cenario();
+    const out = await secretariat.importMembers(ctx(db), SEC, { federationId: 'fpp', planId: 'anual', rows: [{ name: 'Zé', email: 'ze@naotem.com' }] });
+    db.store.docs.set('federations/fpp', { ...doc(db, 'federations/fpp'), published: false });
+    expect(await secretariat.onUserCreated(ctx(db), 'ze', { email: 'ze@naotem.com' })).toEqual({ invited: 0 });
+    expect(doc(db, `federation_imports/${out.importId}`).pending_emails).toEqual(['ze@naotem.com']);
+  });
   it('o documento só chega à secretaria/dono, pela função, com o conteúdo', async () => {
     const db = cenario();
     db.store.docs.set('federation_documents_submitted/d1', { federation_id: 'fpp', user_id: 'ana', member_id: 'fpp_ana', kind: 'identidade', storage_path: 'federacao/ana/abc123.pdf', status: 'pending' });

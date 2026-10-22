@@ -359,9 +359,18 @@ federação que já existia fora da plataforma cola a lista (nome, e-mail, núme
 validade) e escolhe o plano: quem **tem conta** com aquele e-mail vira filiado
 **ativo** numa transação por pessoa (número da lista ou sequencial, validade
 da lista ou do plano); quem já tem filiação viva é pulado; quem **não tem
-conta** fica em `federation_imports.pending` (só a equipe lê) para a
-secretaria convidar por fora — **não** há vínculo automático quando a pessoa
-se cadastra depois. Nenhum e-mail vai para a filiação.
+conta** fica em `federation_imports.pending` (só a equipe lê). **Quando ela
+cria a conta com aquele e-mail** (2026-10-22), o gatilho `federationImportInvite`
+(`users/{uid}` criado → `onUserCreated`, `functions/federationSecretariat.js`)
+acha a importação por `pending_emails` (`array-contains`, zero índice) e grava
+o **convite** (`federation_invites`, `source: 'import'`, com o número e a
+validade da lista, vale 90 dias) e o aviso — nunca a filiação direta: ninguém
+vira filiado sem aceitar. Confirmando no plano do convite (`/federacoes/:id/filiar`
+mostra "A federação já tinha você na lista de filiados"), a filiação entra
+**ativa e sem cobrança**, com o número e a validade da lista, como a de quem
+já tinha conta. Federação oculta, plano desativado ou filiação viva: não
+convida e o e-mail segue pendente. A aba Importar mostra quem já foi
+convidado (`invited_emails`). Nenhum e-mail vai para a filiação.
 
 **Regras da federação** (`federations.rules`, aba Regras, `admin`):
 `ask_cpf`, `transfer_release_days`, `transfer_cooldown_days`.
@@ -558,6 +567,7 @@ derivado dos resultados, que já vão.
 | `federationCourse` | callable | a pessoa (`enroll`, `cancel`) ou `courses` (`pass`, `fail`) | inscrição, vaga, cobrança do curso e credencial (§6.5) |
 | `federationDiscipline` | callable | `discipline` (`apply`, `decide_appeal`, `end`) ou a pessoa/responsável (`appeal`) | sanção e o efeito na filiação (§6.6) |
 | `federationImportMembers` | callable | `members` | importa até 500 linhas; quem tem conta vira filiado ativo, quem não tem fica em `federation_imports` |
+| `federationImportInvite` | gatilho `users/{uid}` criado | — | conta nova com e-mail de importação recebe o convite (aceito: ativa sem cobrança) |
 | `federationDocument` | callable | `members`/`admin` da federação do documento | devolve o arquivo do Storage (base64) à secretaria, com auditoria |
 | `federationNews` | callable | `comms`/`admin` da federação | avisa os filiados ativos de uma notícia publicada, uma vez só (§6.7) |
 | `federationAcervo` | callable (540 s, 1 GiB) | `docs`/`admin` da federação; `file` para quem lê o documento | acervo oficial: rascunho, publicação numerada com SHA-256, retificação, visibilidade, retirada do ar, entrega de arquivo restrito (§14) |

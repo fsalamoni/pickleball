@@ -1322,6 +1322,19 @@ exports.federationTransfer = federationCallable('federationTransfer', federation
 exports.federationCourse = federationCallable('federationCourse', federationCourses.course);
 exports.federationDiscipline = federationCallable('federationDiscipline', federationDiscipline.discipline);
 exports.federationImportMembers = federationCallable('federationImportMembers', federationSecretariat.importMembers);
+// Conta nova com e-mail de uma importação sem conta: convite da federação (nunca filiação direta).
+exports.federationImportInvite = onDocumentCreated(
+  { document: 'users/{uid}', database: DATABASE_ID, region: REGION, timeoutSeconds: 120 },
+  async (event) => {
+    try {
+      const snap = event.data;
+      const user = snap && typeof snap.data === 'function' ? snap.data() : null;
+      if (user) await federationSecretariat.onUserCreated(fedCtx(), event.params.uid, user);
+    } catch (err) {
+      logger.error('federationImportInvite falhou', err);
+    }
+  },
+);
 const federationNews = require('./federationNews');
 exports.federationNews = federationCallable('federationNews', federationNews.notify);
 // Notícia agendada: a cada 15 min publica a que chegou a hora (e avisa, se pedido).
