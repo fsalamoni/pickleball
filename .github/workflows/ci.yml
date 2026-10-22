@@ -101,7 +101,7 @@ jobs:
   # nada, regra do banco que recusa quem acabou de entrar. Ver docs/03-WORKFLOW.md §10.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
 
@@ -120,9 +120,11 @@ jobs:
         run: npm ci
         timeout-minutes: 8
 
+      # As fontes do apt vêm de um espelho que às vezes fica lento (2026-10-22:
+      # cinco minutos só baixando fontes, antes de qualquer teste). 10 min de folga.
       - name: Navegador do Playwright
         run: npx playwright install --with-deps chromium
-        timeout-minutes: 5
+        timeout-minutes: 10
 
       - name: Testes de navegador (build + emuladores)
         run: npm run e2e
