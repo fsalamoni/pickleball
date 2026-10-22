@@ -20,7 +20,7 @@ import { FED_PERMISSION, FEDERATION_STATUS, FEDERATION_STATUS_LABELS } from '@/m
 import { V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { PAGE_TITLE } from '@/v2/ui/pageFrame';
-import { FED_SECTION_GROUPS, buildFederationSections, sectionOfTab } from '@/v2/components/federations/federationSections';
+import { FED_SECTION_GROUPS, buildFederationSections, residualModules, sectionOfTab } from '@/v2/components/federations/federationSections';
 import { FedBadges, FedLogo, FederationGate, fedPath, fedPublicPath } from '@/v2/components/federations/federationUi';
 import { fedPreviewPath } from '@/v2/components/federations/profile/FedStaffBar';
 import FederationPendencias from '@/v2/components/federations/FederationPendencias';
@@ -50,7 +50,14 @@ function Central({ federationId }) {
   const fq = useFederation(federationId);
   const papel = useMyFederationRole(federationId);
   const perms = papel.perms;
-  const sections = useMemo(() => buildFederationSections(perms, fq.data, { isMaster: papel.isMaster }), [perms, fq.data, papel.isMaster]);
+  // Sanções e chancelas carregam com a PERMISSÃO (não com o módulo): desligado o
+  // módulo, o que ficou em aberto mantém a seção aberta (`residualModules`).
+  const podeCompeticoes = perms.includes(FED_PERMISSION.COMPETITIONS);
+  const sanctionsQ = useFederationSanctions(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.DISCIPLINE) });
+  const tournamentsQ = useFederationTournaments(federationId, { enabled: papel.isStaff && podeCompeticoes });
+  const residual = useMemo(() => residualModules(fq.data, { sanctions: sanctionsQ.isSuccess ? sanctionsQ.data : undefined, tournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined }), [fq.data, sanctionsQ.isSuccess, sanctionsQ.data, tournamentsQ.isSuccess, tournamentsQ.data]);
+  const sections = useMemo(() => buildFederationSections(perms, fq.data, { isMaster: papel.isMaster, residual }), [perms, fq.data, papel.isMaster, residual]);
+  const abasExistentes = useMemo(() => new Set(sections.flatMap((s) => s.tabs.map((x) => x.value))), [sections]);
   const [params, setParams] = useSearchParams();
   const tabPedida = params.get('aba') || '';
   const secaoPedida = params.get('secao') || '';
@@ -73,9 +80,7 @@ function Central({ federationId }) {
   const chargesQ = useFederationCharges(federationId, { enabled: papel.isStaff && podeFinanceiro });
   const plansQ = useFederationPlans(federationId, { enabled: papel.isStaff && (admin || podeFinanceiro || podeFiliados) });
   const staffQ = useFederationStaff(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.STAFF) });
-  const podeCompeticoes = perms.includes(FED_PERMISSION.COMPETITIONS);
   const affiliationsQ = useFederationAffiliations(federationId, { enabled: papel.isStaff && podeFiliados && fedModuleOn(fq.data, 'affiliations') });
-  const tournamentsQ = useFederationTournaments(federationId, { enabled: papel.isStaff && podeCompeticoes && fedModuleOn(fq.data, 'tournaments') });
   const resultsQ = useFederationResults(federationId, { enabled: papel.isStaff && podeCompeticoes && fedModuleOn(fq.data, 'tournaments') });
   // PR 3 — secretaria, cursos e disciplina (cada consulta só com a permissão e o módulo).
   const transfersQ = useFederationTransfers(federationId, { enabled: papel.isStaff && podeFiliados });
@@ -86,7 +91,6 @@ function Central({ federationId }) {
   const coursesQ = useFederationCourses(federationId, { enabled: papel.isStaff && podeCursos });
   const credentialsQ = useFederationCredentials(federationId, { enabled: papel.isStaff && podeCursos && tab === 'credenciais' });
   const podeDisciplina = perms.includes(FED_PERMISSION.DISCIPLINE) && fedModuleOn(fq.data, 'discipline');
-  const sanctionsQ = useFederationSanctions(federationId, { enabled: papel.isStaff && podeDisciplina });
   const reportsQ = useFederationReports(federationId, { enabled: papel.isStaff && podeDisciplina });
   // PR 4 — comunicação: as notícias só com a permissão e o módulo.
   const newsQ = useFederationNews(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.COMMS) && fedModuleOn(fq.data, 'news') });
@@ -133,7 +137,7 @@ function Central({ federationId }) {
 
       <FedHiddenBanner federation={f} canPublish={admin} onOpen={() => setTab('publicacao')} />
 
-      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} perms={perms} onIrParaAba={irParaAba} />
+      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
 
       <div className="space-y-3">
         <V2SectionNav ariaLabel={t('Seções da Central da federação')} dica="federacao-secoes" sections={sections} grupos={FED_SECTION_GROUPS} activeId={secaoAtiva.id} onSelect={(s) => setTab(s.tabs[0].value)} />
@@ -144,7 +148,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'hoje' && <FedHojePanel federation={f} membersQ={membersQ} chargesQ={chargesQ} plansQ={plansQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} perms={perms} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'filiados' && tab === 'filiados-orgs' && <FedAffiliationsPanel affiliationsQ={affiliationsQ} />}
         {secaoAtiva.id === 'filiados' && ABAS_SECRETARIA.includes(tab) && <FedSecretariatPanel federation={f} tab={tab} membersQ={membersQ} transfersQ={transfersQ} incomingQ={incomingQ} documentsQ={documentsQ} importsQ={importsQ} plansQ={plansQ} />}
-        {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} tab={tab} />}
+        {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} plansQ={plansQ} tab={tab} />}
         {secaoAtiva.id === 'cursos' && <FedCoursesPanel federation={f} coursesQ={coursesQ} credentialsQ={credentialsQ} tab={tab} perms={perms} />}
         {secaoAtiva.id === 'disciplina' && <FedDisciplinePanel federation={f} membersQ={membersQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} tab={tab} />}
         {secaoAtiva.id === 'comunicacao' && <FedCommsPanel federation={f} newsQ={newsQ} tab={tab} />}

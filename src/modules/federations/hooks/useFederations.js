@@ -51,6 +51,8 @@ export const fedKeys = {
   transfers: (id) => ['federacoes', 'federacao', id, 'transferencias'],
   incomingTransfers: (id) => ['federacoes', 'federacao', id, 'transferencias-chegando'],
   imports: (id) => ['federacoes', 'federacao', id, 'importacoes'],
+  invites: (id) => ['federacoes', 'federacao', id, 'convites'],
+  myInvites: (uid) => ['federacoes', 'meus-convites', uid],
   courses: (id) => ['federacoes', 'federacao', id, 'cursos'],
   publicCourses: (id) => ['federacoes', 'federacao', id, 'cursos', 'publicos'],
   courseEnrollments: (courseId) => ['federacoes', 'curso', courseId, 'inscritos'],
@@ -168,6 +170,15 @@ export function useMyFederationRole(fedId) {
       isLoading: carregando, isError: q.isError || g.isError, refetch: () => { qRefetch(); if (isPlatformAdmin) gRefetch(); },
     };
   }, [q.data, q.isLoading, q.isError, qRefetch, g.data, g.isLoading, g.isError, gRefetch, fedId, isPlatformAdmin]);
+}
+
+export function useFederationInvites(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: fedKeys.invites(id), queryFn: () => svc.listFederationInvites(id), enabled: !!id && enabled });
+}
+
+export function useMyFederationInvites({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({ queryKey: fedKeys.myInvites(user?.uid), queryFn: () => svc.listMyFederationInvites(user?.uid), enabled: !!user?.uid && enabled });
 }
 
 export function useMyMemberships({ enabled = true } = {}) {

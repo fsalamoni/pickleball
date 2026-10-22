@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeftRight, Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
-  HandCoins, Heart, HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
+  HandCoins, Heart, HelpCircle, Inbox, MailPlus, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
   Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -40,7 +40,7 @@ import { USER_AREA_SECTION as S, marketPendingCounts } from '@/modules/athletes/
 import { useMarketCart, useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { ORDER_FINAL_STATUSES } from '@/modules/marketplace/domain/constants';
 import { membershipState } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import { credentialState } from '@/modules/federations/domain/courses';
 import { staffRoleName } from '@/modules/federations/domain/staff';
 import { verifyPath } from '@/modules/federations/domain/card';
@@ -653,8 +653,9 @@ function CredencialRow({ c }) {
 }
 
 function FederacoesSecao({ ctx }) {
-  const { membersQ, chargesQ, rolesQ, dependentsQ, credentialsQ, transfersQ } = ctx.federacoes;
-  const falhas = [membersQ, chargesQ, rolesQ, dependentsQ, credentialsQ, transfersQ].filter((q) => q?.isError);
+  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ } = ctx.federacoes;
+  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ].filter((q) => q?.isError);
+  const convites = (invitesQ?.data || []).filter((inv) => isInvitePending(inv));
   const filiacoes = (membersQ.data || []).filter((m) => !['cancelled', 'rejected'].includes(m.status));
   const abertas = (chargesQ.data || []).filter((c) => [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED].includes(c.status));
   const papeis = rolesQ.data || [];
@@ -664,6 +665,11 @@ function FederacoesSecao({ ctx }) {
   return (
     <div className="space-y-6">
       {falhas.length > 0 && <V2ErrorState inline title={t('Não carregaram as suas federações')} onRetry={() => falhas.forEach((q) => q.refetch())} />}
+      {convites.length > 0 && (
+        <Bloco id="federacoes-convites" icon={MailPlus} title={t('Convites para filiar')}>
+          <ul className="space-y-2">{convites.map((inv) => <ConviteRow key={inv.id} inv={inv} />)}</ul>
+        </Bloco>
+      )}
       {abertas.length > 0 && (
         <Bloco id="federacoes-pagar" icon={HandCoins} title={t('Pagamentos da federação')}>
           <ul className="space-y-3">
@@ -708,6 +714,22 @@ function FederacoesSecao({ ctx }) {
         </Bloco>
       )}
     </div>
+  );
+}
+
+/** O convite da secretaria: aceitar = pedir a filiação no plano do convite (entra sem esperar aprovação). */
+function ConviteRow({ inv }) {
+  const recusar = useFederationMutation(() => membershipAction({ federationId: inv.federation_id, action: 'invite_decline' }));
+  return (
+    <li className="space-y-2 rounded-2xl border border-gray-100 p-3">
+      <p className="text-sm font-bold text-ink">{inv.federation_acronym || inv.federation_name}</p>
+      <p className="text-xs text-gray-500">{t('Plano {plano} · vale até {data}', { plano: inv.plan_name, data: quando(inv.expires_at_ms) })}</p>
+      {inv.note && <p className="text-sm text-gray-700">“{inv.note}”</p>}
+      <div className="flex flex-wrap gap-2">
+        <V2Button asChild size="sm"><Link to={`/federacoes/${inv.federation_id}/filiar`}>{t('Aceitar e filiar')}</Link></V2Button>
+        <V2Button type="button" size="sm" variant="ghost" disabled={recusar.isPending} onClick={() => recusar.mutate(undefined, { onSuccess: () => toast.success(t('Convite recusado.')), onError: (e) => toast.error(e.message) })}>{t('Recusar')}</V2Button>
+      </div>
+    </li>
   );
 }
 

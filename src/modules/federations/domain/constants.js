@@ -32,7 +32,15 @@ export const FED_COLLECTIONS = Object.freeze({
   followers: 'federation_followers',
   events: 'federation_events',
   comments: 'federation_comments',
+  invites: 'federation_invites',
 });
+
+/** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
+export const FED_INVITE_DAYS = 30;
+export const FED_INVITE_MAX = 50;
+
+/** O convite ainda está esperando a resposta da pessoa? */
+export const isInvitePending = (inv, now = Date.now()) => Boolean(inv) && inv.status === 'pending' && Number(inv.expires_at_ms) > now;
 
 /** Id determinístico da inscrição em curso: `{courseId}_{uid}`. */
 export const fedEnrollmentDocId = (courseId, uid) => `${courseId}_${uid}`;
@@ -165,6 +173,8 @@ export const STAFF_ROLE_PERMISSIONS = Object.freeze({
  * As funcionalidades internas que CADA federação liga para si (sub-flags).
  * `available` já tem tela; `planned` aparece como "em breve" e não liga.
  * A filiação, a cobrança e a carteirinha não são módulo: toda federação tem.
+ * `central`/`tab`/`page`: onde o módulo aparece quando ligado (a tela de
+ * Módulos mostra e leva até lá; `tab` é um valor de aba da Central).
  */
 export const FED_MODULE = Object.freeze({
   TOURNAMENTS: 'tournaments',
@@ -181,17 +191,17 @@ export const FED_MODULE = Object.freeze({
 });
 
 export const FED_MODULE_META = Object.freeze({
-  tournaments: { label: tk('Torneios chancelados'), description: tk('Organizadores pedem a chancela; a federação aprova e o torneio ganha o selo e as regras dela.'), status: 'available' },
-  ranking: { label: tk('Ranking oficial'), description: tk('Pontos dos torneios chancelados por temporada, classe e faixa etária.'), status: 'available' },
-  affiliations: { label: tk('Clubes e arenas filiados'), description: tk('Clubes e arenas pedem filiação e aparecem como filiados na página da federação.'), status: 'available' },
-  courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'available' },
-  discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'available' },
-  news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'available' },
-  sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'available' },
-  store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'available' },
-  promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available' },
-  official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available' },
-  calendar: { label: tk('Calendário oficial'), description: tk('Agenda esportiva e institucional (assembleias, diretoria, conselho fiscal, prazos e eventos), com torneios chancelados, adiamentos com motivo e agenda para assinar no celular.'), status: 'available' },
+  tournaments: { label: tk('Torneios chancelados'), description: tk('Organizadores pedem a chancela; a federação aprova e o torneio ganha o selo e as regras dela.'), status: 'available', central: tk('Competições → Chancelas e Resultados'), tab: 'chancelas', page: tk('Aba Competições: os torneios chancelados') },
+  ranking: { label: tk('Ranking oficial'), description: tk('Pontos dos torneios chancelados por temporada, classe e faixa etária.'), status: 'available', requires: 'tournaments', central: tk('Competições → Ranking'), tab: 'ranking', page: tk('Aba Competições: o ranking oficial') },
+  affiliations: { label: tk('Clubes e arenas filiados'), description: tk('Clubes e arenas pedem filiação e aparecem como filiados na página da federação.'), status: 'available', central: tk('Filiados → Clubes e arenas'), tab: 'filiados-orgs', page: tk('Aba Clubes e arenas') },
+  courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'available', central: tk('Cursos (cursos e credenciais)'), tab: 'cursos', page: tk('Aba Cursos') },
+  discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'available', central: tk('Disciplina (sanções e ouvidoria)'), tab: 'sancoes', page: tk('Aba Contato e ouvidoria') },
+  news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'available', central: tk('Comunicação → Notícias'), tab: 'noticias', page: tk('Aba Notícias e a visão geral') },
+  sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'available', central: tk('Comunicação → Patrocinadores'), tab: 'patrocinadores', page: tk('Visão geral e carteirinha') },
+  store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'available', central: tk('Configurações → Loja'), tab: 'loja', page: tk('Visão geral: o link da loja oficial') },
+  promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available', central: tk('Comunicação → Cupons e campanhas'), tab: 'divulgacao', page: tk('Visão geral e tela inicial') },
+  official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available', central: tk('Acervo oficial (documentos e transparência)'), tab: 'acervo', page: tk('Aba Documentos e a página de transparência') },
+  calendar: { label: tk('Calendário oficial'), description: tk('Agenda esportiva e institucional (assembleias, diretoria, conselho fiscal, prazos e eventos), com torneios chancelados, adiamentos com motivo e agenda para assinar no celular.'), status: 'available', central: tk('Agenda (calendário oficial)'), tab: 'agenda', page: tk('Aba Agenda e a agenda para assinar') },
 });
 
 /* ---------------------------------------------------- PR 4: notícias -- */

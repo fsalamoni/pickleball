@@ -14,6 +14,7 @@ import { Gavel, MessageSquareWarning, Plus } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { disciplineAction, updateReport } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { canAppeal, reportProtocol, sanctionInForce, sortReports, sortSanctions, validateSanctionInput } from '@/modules/federations/domain/discipline';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
@@ -114,6 +115,7 @@ function SancaoRow({ s }) {
 function SancoesTab({ federation, membersQ, sanctionsQ }) {
   const [novo, setNovo] = useState(false);
   const [filtro, setFiltro] = useState('vigentes');
+  const ligado = fedModuleOn(federation, 'discipline');
   if (sanctionsQ.isError) return <V2ErrorState title={t('Não carregaram as sanções')} onRetry={() => sanctionsQ.refetch()} />;
   if (sanctionsQ.isLoading) return <V2Skeleton lines={5} />;
   const todas = sortSanctions(sanctionsQ.data || []);
@@ -122,8 +124,9 @@ function SancoesTab({ federation, membersQ, sanctionsQ }) {
     <section className="space-y-4" aria-label={t('Sanções')} data-dica="federacao-sancoes">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h2 className="font-display text-xl font-bold text-ink">{t('Sanções disciplinares')}</h2><p className="text-sm text-gray-500">{t('Só a pessoa e a federação veem. Toda sanção cabe um recurso, decidido aqui.')}</p></div>
-        {!novo && <V2Button type="button" size="sm" variant="danger" onClick={() => setNovo(true)} data-dica="federacao-sancao-nova"><Plus className="h-4 w-4" />{t('Aplicar sanção')}</V2Button>}
+        {ligado && !novo && <V2Button type="button" size="sm" variant="danger" onClick={() => setNovo(true)} data-dica="federacao-sancao-nova"><Plus className="h-4 w-4" />{t('Aplicar sanção')}</V2Button>}
       </div>
+      {!ligado && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('O módulo de disciplina está desligado: não dá para aplicar sanção nova. As que já existem seguem valendo até a data, e os recursos e o encerramento antecipado continuam aqui.')}</p>}
       {novo && <V2Surface><SancaoForm federation={federation} membersQ={membersQ} onFechar={() => setNovo(false)} /></V2Surface>}
       <div className="flex flex-wrap gap-2">{[['vigentes', t('Em vigor')], ['recursos', t('Com recurso')], ['todas', t('Todas')]].map(([id, label]) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{label}</V2FilterChip>)}</div>
       {!lista.length ? <V2EmptyState icon={Gavel} title={t('Nenhuma sanção neste filtro')} /> : <ul className="space-y-3">{lista.map((s) => <SancaoRow key={s.id} s={s} />)}</ul>}

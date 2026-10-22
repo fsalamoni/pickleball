@@ -121,7 +121,14 @@ publicado e no evento — `federation_comments` (só o autor lê direto) e
 `functions/federationComments.js` e listado por `federationCommentsList`
 (sem uid), régua em `domain/comments.js` com cópia em
 `functions/federationCommentsPolicy.js`; telas `comments/CommentsSection.jsx`
-e a fila `manage/FedCommentsPanel.jsx`. Zero índice composto; os únicos campos novos
+e a fila `manage/FedCommentsPanel.jsx`; convites para filiar
+(`tests/rules/federationInvites.rules.test.js`, `docs/50` §19):
+`federation_invites` (a convidada e a secretaria leem; só o servidor grava,
+ações `invite`/`invite_cancel`/`invite_decline` de `federationMembership`;
+aceitar = pedir no plano do convite, sem aprovação), telas
+`manage/FedInvites.jsx` e o seletor `manage/FedPersonPicker.jsx` (lista de
+usuários da plataforma, também na equipe); o interruptor de módulo grava só
+`modules.x` (`setFederationModule`). Zero índice composto; os únicos campos novos
 em coleção existente são os opcionais `tournaments.federation_id`/`federation_sanction`.
 
 ## O que não pode regredir

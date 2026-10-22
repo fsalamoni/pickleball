@@ -4,13 +4,14 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Building2, CheckCircle2, ExternalLink, Receipt, Trophy, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, ExternalLink, Eye, Receipt, Trophy, Users, Wallet } from 'lucide-react';
 import { financeSummary, formatBrlCents } from '@/modules/federations/domain/charges';
 import { memberCounts } from '@/modules/federations/domain/membership';
 import { affiliationCounts } from '@/modules/federations/domain/affiliations';
 import { pendingSanctions, sanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
-import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { fedModuleOn, isFederationPublic } from '@/modules/federations/domain/federation';
+import { fedPreviewPath } from '../profile/FedStaffBar';
 import { V2Button, V2ErrorState, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { fedManagePath, fedPublicPath, publicHost } from '../federationUi';
 import { t, tn } from '@/core/i18n';
@@ -98,9 +99,11 @@ export default function FedHojePanel({ federation, membersQ, chargesQ, plansQ, a
         </div>
       )}
       <V2Surface variant="compacto" className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <p className="text-sm text-gray-700">{t('Página pública: {url}', { url: `${publicHost()}${fedPublicPath(federation)}` })}</p>
+        <p className="text-sm text-gray-700">{isFederationPublic(federation) ? t('Página pública: {url}', { url: `${publicHost()}${fedPublicPath(federation)}` }) : t('A página ainda não está no ar: só a equipe a vê. Confira como visitante antes de publicar.')}</p>
         <div className="flex gap-2">
-          <V2Button asChild size="sm" variant="secondary"><Link to={fedPublicPath(federation)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Abrir')}</Link></V2Button>
+          {isFederationPublic(federation)
+            ? <V2Button asChild size="sm" variant="secondary"><Link to={fedPublicPath(federation)} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Abrir')}</Link></V2Button>
+            : <V2Button asChild size="sm" variant="secondary"><Link to={fedPreviewPath(federation)}><Eye className="h-4 w-4" />{t('Ver como visitante')}</Link></V2Button>}
           {admin && <V2Button asChild size="sm" variant="ghost"><Link to={fedManagePath(federation, 'pagina')}>{t('Editar')}</Link></V2Button>}
         </div>
       </V2Surface>

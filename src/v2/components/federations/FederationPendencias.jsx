@@ -13,7 +13,7 @@ import { t } from '@/core/i18n';
 
 const dado = (q) => (q?.isSuccess ? q.data : undefined);
 
-export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, perms, onIrParaAba }) {
+export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, perms, abas, onIrParaAba }) {
   const members = dado(membersQ);
   const charges = dado(chargesQ);
   const affiliations = dado(affiliationsQ);
@@ -23,12 +23,15 @@ export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ
   const sanctions = dado(sanctionsQ);
   const reports = dado(reportsQ);
   const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports }, perms), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, perms]);
-  if (itens.length === 0) return null;
+  // A consulta desligada guarda o dado em cache: a pendência de um módulo que
+  // acabou de desligar (aba que não existe mais) não vira um botão morto.
+  const visiveis = abas ? itens.filter((i) => abas.has(i.aba)) : itens;
+  if (visiveis.length === 0) return null;
   return (
     <V2Surface as="section" variant="compacto" aria-label={t('Precisa de você')} data-dica="federacao-pendencias" className="p-4">
       <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Precisa de você')}</p>
       <ul className="mt-2 flex flex-wrap gap-2">
-        {itens.map((i) => (
+        {visiveis.map((i) => (
           <li key={i.id}>
             <button type="button"
               onClick={() => onIrParaAba(i.aba)}

@@ -13,7 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarClock, Crown, LogOut, Pencil, Plus, Save, Trash2, UserCog, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
+import FedPersonPicker from './FedPersonPicker';
 import { staffAction } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import {
@@ -21,11 +21,10 @@ import {
 } from '@/modules/federations/domain/staff';
 import { addMonthsISO, isoDate } from '@/modules/federations/domain/membership';
 import { FED_PERMISSION_META, STAFF_TERM_MAX_MONTHS } from '@/modules/federations/domain/constants';
-import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { quando } from '@/v2/components/federations/federationUi';
 import { t, tn } from '@/core/i18n';
 
-const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const nomeDe = (a) => a.platform_name || a.full_name || a.display_name || '';
 const ok = (msg, depois) => ({ onSuccess: () => { toast.success(msg); depois?.(); }, onError: (e) => toast.error(e.message) });
 const fimPadrao = (role, inicio) => (role?.term_months ? addMonthsISO(inicio, role.term_months) : '');
@@ -40,32 +39,9 @@ function MandatoChip({ s }) {
   return <V2Badge tone="red">{t('Mandato vencido em {fim}', { fim: quando(s.term_end) })}</V2Badge>;
 }
 
-/** Busca na lista de usuários da plataforma (o diretório de atletas). */
+/** Uma pessoa da lista de usuários da plataforma; `excluir` = Map uid → motivo. */
 function BuscaPessoa({ excluir, escolhido, onEscolher, id }) {
-  const atletas = useAthletes();
-  const [busca, setBusca] = useState('');
-  const termo = normaliza(busca.trim());
-  const sugestoes = useMemo(() => (termo.length < 2 || !atletas.isSuccess ? [] : (atletas.data || []).filter((a) => !excluir.has(a.id) && normaliza(nomeDe(a)).includes(termo)).slice(0, 8)), [termo, atletas.isSuccess, atletas.data, excluir]);
-  if (atletas.isError) return <V2ErrorState inline title={t('Não carregou a lista de usuários')} onRetry={() => atletas.refetch()} />;
-  return (
-    <div className="space-y-2">
-      <V2SearchInput id={id} value={escolhido ? nomeDe(escolhido) : busca} onChange={(e) => { setBusca(e.target.value); onEscolher(null); }} placeholder={t('Nome da pessoa (com conta no PickleRush)')} aria-label={t('Buscar pessoa')} />
-      {!escolhido && sugestoes.length > 0 && (
-        <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-100">
-          {sugestoes.map((a) => (
-            <li key={a.id}>
-              <button type="button" onClick={() => { onEscolher(a); setBusca(''); }} className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink">
-                <V2Avatar name={nomeDe(a)} photoUrl={a.photo_url} size="sm" />
-                <span className="text-sm text-ink">{nomeDe(a)}</span>
-                {a.city && <span className="text-xs text-gray-500">· {a.city}{a.state ? `/${a.state}` : ''}</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!escolhido && termo.length >= 2 && atletas.isSuccess && sugestoes.length === 0 && <p className="text-sm text-gray-500">{t('Ninguém com esse nome. A pessoa precisa ter conta e perfil visível.')}</p>}
-    </div>
-  );
+  return <FedPersonPicker id={id} excluir={excluir} selecionados={escolhido ? [escolhido] : []} onChange={(l) => onEscolher(l[0] || null)} />;
 }
 
 /** Início e fim do mandato, com o alerta de mais de 4 anos. */
@@ -93,7 +69,7 @@ function Nomear({ federation, ator, lista, roles }) {
   const role = roles.find((r) => r.id === roleId);
   const [inicio, setInicio] = useState(isoDate());
   const [fim, setFim] = useState(fimPadrao(role, isoDate()));
-  const excluir = useMemo(() => new Set(lista.map((s) => s.user_id)), [lista]);
+  const excluir = useMemo(() => new Map(lista.map((s) => [s.user_id, t('Já na equipe')])), [lista]);
   const m = useFederationMutation(() => staffAction(federation.id, 'appoint', { userId: pessoa.id, userName: nomeDe(pessoa), roleId, termStart: inicio, termEnd: fim }));
   if (!possiveis.length) return null;
   const valido = pessoa && role && validateTerm({ term_start: inicio, term_end: fim }).ok;
@@ -226,7 +202,7 @@ function PassarAdministracao({ federation, lista, roles, uid }) {
   const masters = roles.filter((r) => r.is_master);
   const [roleId, setRoleId] = useState(masters[0]?.id || '');
   const [sair, setSair] = useState(false);
-  const excluir = useMemo(() => new Set([uid]), [uid]);
+  const excluir = useMemo(() => new Map([[uid, t('Você')]]), [uid]);
   const m = useFederationMutation(() => staffAction(federation.id, 'transfer', { userId: pessoa.id, roleId, leave: sair }));
   const naEquipe = lista.filter((s) => s.user_id !== uid && !staffIsMaster(s));
   return (

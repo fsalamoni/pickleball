@@ -558,7 +558,7 @@ export function V2Select({ className, children, options, ...props }) {
   );
 }
 
-export function V2Toggle({ checked, onChange, label, hint, id }) {
+export function V2Toggle({ checked, onChange, label, hint, id, disabled = false, ariaLabel }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
@@ -570,9 +570,11 @@ export function V2Toggle({ checked, onChange, label, hint, id }) {
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={ariaLabel}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors',
+          'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:cursor-wait disabled:opacity-60',
           checked ? 'bg-acid' : 'bg-gray-200',
         )}
       >

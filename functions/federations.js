@@ -45,7 +45,7 @@ const C = Object.freeze({
   members: 'federation_members', charges: 'federation_charges', cardIndex: 'federation_card_index',
   transfers: 'federation_transfers', documents: 'federation_documents_submitted', imports: 'federation_imports',
   courses: 'federation_courses', enrollments: 'federation_course_enrollments', credentials: 'federation_credentials',
-  sanctions: 'federation_sanctions', reports: 'federation_reports',
+  sanctions: 'federation_sanctions', reports: 'federation_reports', invites: 'federation_invites',
 });
 const MINOR_AGE = 18;
 const GUARDIAN_ONLY_AGE = 12;
@@ -281,12 +281,13 @@ async function membership(ctx, actor, data) {
   const fed = await federacao(ctx, data.federationId);
   const hoje = m.isoDateBR(ctx.now);
   const acao = texto(data.action, 30);
-  const propria = ['request', 'renew', 'cancel'].includes(acao);
+  const propria = ['request', 'renew', 'cancel', 'invite_decline'].includes(acao);
   if (!propria) await exigePerm(ctx, fed.id, actor, 'members');
   const reason = texto(data.reason, 500);
   const link = `/perfil?secao=federacoes`;
 
   if (acao === 'request') return pedirFiliacao(ctx, actor, data, { fed, hoje });
+  if (['invite', 'invite_cancel', 'invite_decline'].includes(acao)) return convite(ctx, actor, acao, data, { fed });
 
   // A filiação alvo: pelo id (dependente, ou a equipe apontando) ou a da própria conta.
   const memberId = texto(data.memberId, 120) || `${fed.id}_${propria ? actor.uid : texto(data.userId, 128)}`;
@@ -391,6 +392,68 @@ async function membership(ctx, actor, data) {
   return falha('invalid-argument', 'Ação desconhecida.');
 }
 
+const INVITE_DAYS = 30;
+const INVITE_MAX = 50;
+const conviteValido = (cv, now) => Boolean(cv) && cv.status === 'pending' && Number(cv.expires_at_ms) > now;
+
+/**
+ * Convite para filiar: a secretaria escolhe pessoas na lista da plataforma.
+ * NÃO cria filiação — ninguém vira filiado sem querer. A pessoa aceita
+ * pedindo a filiação no plano do convite, e esse pedido entra sem esperar a
+ * secretaria (`pedirFiliacao`); ou recusa. O convite vale 30 dias.
+ */
+async function convite(ctx, actor, acao, data, { fed }) {
+  const agora = ctx.Timestamp.fromMillis(ctx.now);
+  if (acao === 'invite_decline' || acao === 'invite_cancel') {
+    const uid = acao === 'invite_decline' ? actor.uid : texto(data.userId, 128);
+    const ref = ctx.db.collection(C.invites).doc(`${fed.id}_${uid}`);
+    const snap = await ref.get();
+    if (!snap.exists || snap.data().status !== 'pending') falha('not-found', 'Convite não encontrado.');
+    const recusou = acao === 'invite_decline';
+    await ref.update({ status: recusou ? 'declined' : 'cancelled', decided_by: actor.uid, decided_at_ms: ctx.now, updated_at: agora });
+    await auditoria(ctx, actor, recusou ? 'federation_invite_decline' : 'federation_invite_cancel', { federation_id: fed.id, user_id: uid });
+    return { ok: true };
+  }
+  if (!publicada(fed)) falha('failed-precondition', 'Publique a federação antes de convidar: o convite leva à página de filiação.');
+  const p = await plano(ctx, fed.id, data.planId);
+  if (p.active === false) falha('failed-precondition', 'Este plano não está mais disponível.');
+  const ids = [...new Set((Array.isArray(data.userIds) ? data.userIds : []).map((x) => texto(x, 128)).filter(Boolean))];
+  if (!ids.length) falha('invalid-argument', 'Escolha ao menos uma pessoa.');
+  if (ids.length > INVITE_MAX) falha('invalid-argument', `No máximo ${INVITE_MAX} pessoas por vez.`);
+  const note = texto(data.note, 300);
+  const convidados = [];
+  const pulados = [];
+  const batch = ctx.db.batch();
+  for (const uid of ids) {
+    const invRef = ctx.db.collection(C.invites).doc(`${fed.id}_${uid}`);
+    // eslint-disable-next-line no-await-in-loop
+    const [u, mem, inv] = await Promise.all([
+      ctx.db.collection('users').doc(uid).get(),
+      ctx.db.collection(C.members).doc(`${fed.id}_${uid}`).get(),
+      invRef.get(),
+    ]);
+    if (!u.exists) { pulados.push({ uid, reason: 'Conta não encontrada' }); continue; }
+    if (mem.exists && LIVE.includes(mem.data().status)) { pulados.push({ uid, reason: 'Já tem filiação nesta federação' }); continue; }
+    if (inv.exists && conviteValido(inv.data(), ctx.now)) { pulados.push({ uid, reason: 'Já tem convite em aberto' }); continue; }
+    const ud = u.data() || {};
+    batch.set(invRef, {
+      federation_id: fed.id, federation_name: fed.name, federation_acronym: fed.acronym || '', user_id: uid,
+      user_name: texto(ud.platform_name || ud.full_name || ud.display_name || 'Atleta', 120), photo_url: texto(ud.photo_url || ud.avatar_url, 500),
+      plan_id: p.id, plan_name: p.name, note, status: 'pending', invited_by: actor.uid,
+      created_at_ms: ctx.now, expires_at_ms: ctx.now + INVITE_DAYS * 86400000, updated_at: agora,
+    });
+    aviso(ctx, batch, uid, {
+      title: tx('A {sigla} convidou você para se filiar', { sigla: fed.acronym || fed.name }),
+      message: tx('Plano {plano}. Para aceitar, peça a filiação neste plano: ela entra sem esperar a secretaria. O convite vale 30 dias.', { plano: p.name }),
+      link: `/federacoes/${fed.id}/filiar`,
+    });
+    convidados.push(uid);
+  }
+  if (convidados.length) await batch.commit();
+  await auditoria(ctx, actor, 'federation_invite', { federation_id: fed.id, plan_id: p.id, invited: convidados, skipped: pulados.length });
+  return { ok: true, invited: convidados.length, skipped: pulados };
+}
+
 /** Encerra a filiação (cancelamento, exclusão, liberação por transferência): estado + o código deixa de verificar. */
 function encerrarFiliacao(ctx, batch, memberRef, member, patch) {
   batch.update(memberRef, { ...patch, card_code: null, updated_at: ctx.Timestamp.fromMillis(ctx.now) });
@@ -418,6 +481,7 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   let memberRef;
   let idade;
   let alvo;
+  let conviteRef = null;
 
   if (dependente) {
     const nome = texto(dependente.name, 120);
@@ -449,6 +513,10 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
     };
     // Quem já é FEDERADO em outra federação só muda por transferência (a antiga libera).
     await exigeSemOutraFederacao(ctx, uid, fed.id, p);
+    // Convidado pela secretaria para ESTE plano: o pedido entra sem esperar a aprovação.
+    const convRef = ctx.db.collection(C.invites).doc(`${fed.id}_${uid}`);
+    const conv = await convRef.get();
+    if (conv.exists && conviteValido(conv.data(), ctx.now) && conv.data().plan_id === p.id) conviteRef = convRef;
   }
   if (p.age_min != null && idade != null && idade < p.age_min) falha('failed-precondition', 'Este plano exige idade mínima maior.');
   if (p.age_max != null && idade != null && idade > p.age_max) falha('failed-precondition', 'Este plano tem idade máxima menor.');
@@ -469,10 +537,14 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
     member_number: alvo.member_number || null, card_code: null, valid_from: null, valid_until: null, expiry_notified: {},
   };
   const privRef = memberRef.collection('private').doc('data');
-  const gravaPrivado = (w) => { if (Object.keys(privado).length) w.set(privRef, { ...privado, updated_at_ms: ctx.now }, { merge: true }); };
+  const gravaPrivado = (w) => {
+    if (Object.keys(privado).length) w.set(privRef, { ...privado, updated_at_ms: ctx.now }, { merge: true });
+    if (conviteRef) w.update(conviteRef, { status: 'accepted', member_id: memberRef.id, decided_at_ms: ctx.now, updated_at: ctx.Timestamp.fromMillis(ctx.now) });
+  };
   const valor = Number(p.price_cents) > 0 ? m.planPrice(p, { age: idade, familyIndex: await indiceFamilia(ctx, fed.id, { id: memberRef.id, ...doc }) }).total : 0;
   let charge = null;
-  if (p.auto_approve) {
+  if (p.auto_approve || conviteRef) {
+    if (conviteRef) doc.invited = true;
     if (!(valor > 0)) {
       await ctx.db.runTransaction(async (tr) => {
         await ativar(ctx, tr, { fed, memberRef, member: doc, plan: p, hoje, novo: true });

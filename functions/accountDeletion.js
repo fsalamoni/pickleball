@@ -192,6 +192,8 @@ const DELETE_BY_QUERY = Object.freeze([
   // Federações: o papel na equipe é da pessoa (a federação segue com os outros).
   { col: 'federation_staff', field: 'user_id', label: 'Papéis em equipes de federação' },
   { col: 'federation_followers', field: 'user_id', label: 'Acervos de federação que seguia' },
+  // O convite para filiar é endereçado à pessoa (nome e foto copiados).
+  { col: 'federation_invites', field: 'user_id', label: 'Convites para filiar em federações' },
   // Comentários em documentos e eventos de federação (as respostas oficiais
   // que a pessoa escreveu como equipe também saem) e as denúncias que fez.
   { col: 'federation_comments', field: 'user_id', label: 'Comentários em documentos e eventos de federação' },
