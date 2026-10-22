@@ -56,6 +56,8 @@ describe('paridade: orçamento e prestação de contas', () => {
     expect([s.AMOUNT_MAX, s.DESCRIPTION_MAX, s.COUNTERPARTY_MAX, s.NOTES_MAX, s.REASON_MIN, s.OPINION_MIN, s.OPINION_MAX, s.STATEMENTS_MAX, s.FILE_MAX])
       .toEqual([c.ACCOUNT_AMOUNT_MAX, c.ACCOUNT_DESCRIPTION_MAX, c.ACCOUNT_COUNTERPARTY_MAX, c.ACCOUNT_NOTES_MAX, c.ACCOUNT_REASON_MIN, c.OPINION_TEXT_MIN, c.OPINION_TEXT_MAX, c.STATEMENTS_MAX, c.ACCOUNT_FILE_MAX]);
     expect(s.FILE_TYPES).toEqual(c.ACCOUNT_FILE_TYPES);
+    expect([s.BANK_IMPORT_MAX, s.BANK_REF_MAX]).toEqual([c.BANK_IMPORT_MAX, c.BANK_REF_MAX]);
+    ['ofx:123', '  csv:2026-01-02|1500|PIX   RECEBIDO|1  ', '', null, 'x'.repeat(300)].forEach((v) => expect(s.bankRef(v)).toBe(c.bankRef(v)));
   });
 
   it('a mesma validação do lançamento (resultado, campos com erro e valor)', () => {

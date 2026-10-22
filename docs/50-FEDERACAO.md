@@ -1784,7 +1784,12 @@ orçado × realizado com alerta "perto do limite" ≥ 90%, "estourou", "sem
 orçamento", e o prazo legal) · Orçamento (`orcamento-anual`: as categorias
 ao lado do orçado e do realizado do ano anterior) · Lançamentos
 (`lancamentos`: busca, filtros, anexo, estorno, planilha; os automáticos
-marcados) · Prestação de contas (`prestacao-contas`: linha do tempo, prévia
+marcados; **Importar extrato** lê o OFX ou a planilha CSV do banco na tela
+— `domain/bankStatement.js`: valor com sinal nos formatos brasileiros,
+cabeçalho achado depois das linhas da conta, saldo fora, Windows-1252 —,
+mostra cada movimento com a categoria para conferir e manda os marcados à
+ação `entry_import`; o já lançado, o do futuro e o de período fechado
+chegam desmarcados, e o filtro "Do extrato bancário" mostra o importado) · Prestação de contas (`prestacao-contas`: linha do tempo, prévia
 ao vivo até congelar, demonstrações, parecer, assembleia, publicação). Os
 valores de `?aba=` são contrato de link (o aviso ao conselho leva a
 `prestacao-contas`). **Precisa de você** (`accountsPendingItems`): prestação

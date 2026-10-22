@@ -15,6 +15,8 @@ const REASON_MIN = 10;
 const OPINION_MIN = 20;
 const OPINION_MAX = 8000;
 const STATEMENTS_MAX = 10;
+const BANK_IMPORT_MAX = 200;
+const BANK_REF_MAX = 160;
 const FILE_MAX = 9 * 1024 * 1024;
 const FILE_TYPES = Object.freeze(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
 
@@ -40,6 +42,8 @@ const str = (v, max) => String(v == null ? '' : v).replace(/\r\n/g, '\n').trim()
 const cents = (v) => Math.max(0, Math.trunc(Number(v) || 0));
 const isRealDate = (d) => ISO_RE.test(d) && new Date(`${d}T12:00:00Z`).toISOString().slice(0, 10) === d;
 const lista = (v) => (Array.isArray(v) ? v : []);
+/** A identidade do movimento do extrato (FITID do OFX ou a assinatura da linha do CSV): importar de novo não repete. */
+const bankRef = (v) => line(v, BANK_REF_MAX);
 const dateBR = (ms) => new Date(Number(ms) - BR_OFFSET_MS).toISOString().slice(0, 10);
 
 const isValidPeriod = (p) => PERIOD_RE.test(String(p || '')) && Number(String(p).slice(0, 4)) >= 2000 && Number(String(p).slice(0, 4)) <= 2100;
@@ -224,7 +228,7 @@ function closedPeriodFor(date, reports = []) {
 }
 
 module.exports = {
-  AMOUNT_MAX, DESCRIPTION_MAX, COUNTERPARTY_MAX, NOTES_MAX, REASON_MIN, OPINION_MIN, OPINION_MAX, STATEMENTS_MAX, FILE_MAX, FILE_TYPES,
+  BANK_IMPORT_MAX, BANK_REF_MAX, bankRef, AMOUNT_MAX, DESCRIPTION_MAX, COUNTERPARTY_MAX, NOTES_MAX, REASON_MIN, OPINION_MIN, OPINION_MAX, STATEMENTS_MAX, FILE_MAX, FILE_TYPES,
   INCOME, EXPENSE, LINE_KEYS, CHARGE_ORIGIN_CATEGORY, BUDGET_STATUS, REPORT_STATUS, VERDICTS, ASSEMBLY_RESULTS, STATEMENT_KINDS,
   UPLOAD_RE, OFFICIAL_RE, dateBR, isValidPeriod, isAnnualPeriod, periodRange, legalDeadline,
   validateEntry, validateBudget, validateStatements, validateOpinion, validateAssembly,

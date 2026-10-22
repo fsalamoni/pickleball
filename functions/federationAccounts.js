@@ -17,6 +17,9 @@
  *    agenda em que foi aprovado) → `budget_publish`;
  *  - `entry_add` / `entry_void`: lançamento manual (anexo copiado para a pasta
  *    oficial, fechada à regra) e estorno com motivo — nunca apagar;
+ *  - `entry_import`: os movimentos do extrato bancário (até 200), cada um com a
+ *    validação do lançamento; o id vem da identidade do movimento, então
+ *    importar de novo não duplica;
  *  - `report_open` (abre o período ou reabre a enviada sem parecer, com
  *    motivo), `report_save` (demonstrações e notas), `report_submit`
  *    (CONGELA o retrato e avisa o conselho fiscal), `opinion` (parecer; avisa
@@ -249,6 +252,48 @@ async function entryVoid(ctx, actor, data, { fed, perms }) {
   return { ok: true };
 }
 
+/**
+ * Importa os movimentos do extrato bancário (OFX ou planilha, lidos na tela)
+ * como lançamentos. Cada um passa pela MESMA validação do lançamento à mão e
+ * pelo período aberto; a identidade do movimento (`bank_ref`) vira o id do
+ * documento, então importar o mesmo extrato de novo só traz o que faltava.
+ * Tudo numa transação: ou entra o lote, ou nada.
+ */
+async function entryImport(ctx, actor, data, { fed, perms }) {
+  exigePreparar(perms);
+  const rows = Array.isArray(data.entries) ? data.entries : [];
+  if (!rows.length) falha('invalid-argument', 'Escolha ao menos um movimento do extrato.');
+  if (rows.length > A.BANK_IMPORT_MAX) falha('invalid-argument', `No máximo ${A.BANK_IMPORT_MAX} movimentos por vez. Importe o extrato em partes.`);
+  const hoje = hojeBR(ctx);
+  const reps = await relatorios(ctx, fed);
+  const porId = new Map();
+  rows.forEach((r, i) => {
+    const ref = A.bankRef(r && r.bank_ref);
+    const chk = A.validateEntry({ ...(r || {}), document: null }, { hoje });
+    if (!ref || !chk.ok) falha('invalid-argument', `O movimento ${i + 1} do extrato está incompleto (${Object.values(chk.errors)[0] || 'sem identificação'}). Leia o arquivo de novo.`);
+    const v = chk.value;
+    const fechado = A.closedPeriodFor(v.date, reps);
+    if (fechado) falha('failed-precondition', `O movimento de ${v.date} cai no período ${fechado}, cuja prestação de contas já foi enviada. Desmarque-o.`);
+    const id = `${fed.id}_bk_${crypto.createHash('sha256').update(ref).digest('hex').slice(0, 24)}`;
+    if (!porId.has(id)) porId.set(id, { ...v, document: null, bank_ref: ref });
+  });
+  const ids = [...porId.keys()];
+  const refs = ids.map((id) => ctx.db.collection(LEDGER).doc(id));
+  const batchId = ctx.db.collection(LEDGER).doc().id;
+  const novos = await ctx.db.runTransaction(async (tr) => {
+    const snaps = await tr.getAll(...refs);
+    const faltam = refs.filter((_, i) => !snaps[i].exists);
+    faltam.forEach((ref) => tr.set(ref, {
+      federation_id: fed.id, ...porId.get(ref.id), status: 'posted', source: 'bank', import_batch: batchId,
+      created_by: actor.uid, created_by_name: quem(actor), created_at: ctx.Timestamp.fromMillis(ctx.now), created_at_ms: ctx.now,
+    }));
+    return faltam.length;
+  });
+  const repetidos = rows.length - novos;
+  await f.auditoria(ctx, actor, 'federation_ledger_import', { federation_id: fed.id, batch: batchId, imported: novos, skipped: repetidos });
+  return { ok: true, imported: novos, skipped: repetidos };
+}
+
 /* ---------------------------------------------------- prestação de contas -- */
 
 async function relatorio(ctx, fed, reportId) {
@@ -435,6 +480,7 @@ const ACOES = {
   budget_approve: (ctx, actor, data, c) => budgetStep(ctx, actor, data, c, 'approve'),
   budget_publish: (ctx, actor, data, c) => budgetStep(ctx, actor, data, c, 'publish'),
   entry_add: entryAdd,
+  entry_import: entryImport,
   entry_void: entryVoid,
   report_open: reportOpen,
   report_save: reportSave,

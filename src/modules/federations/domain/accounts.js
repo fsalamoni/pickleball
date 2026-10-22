@@ -41,6 +41,9 @@ export const ACCOUNT_REASON_MIN = 10;
 export const OPINION_TEXT_MIN = 20;
 export const OPINION_TEXT_MAX = 8000;
 export const STATEMENTS_MAX = 10;
+/** Importação do extrato bancário: quantos movimentos por vez e o tamanho da identidade de cada um. */
+export const BANK_IMPORT_MAX = 200;
+export const BANK_REF_MAX = 160;
 /** Anexo (nota, recibo, demonstração): PDF ou imagem até 9 MB — a equipe o abre pela função. */
 export const ACCOUNT_FILE_MAX = 9 * 1024 * 1024;
 export const ACCOUNT_FILE_TYPES = Object.freeze(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
@@ -118,6 +121,9 @@ const str = (v, max) => String(v ?? '').replace(/\r\n/g, '\n').trim().slice(0, m
 const cents = (v) => Math.max(0, Math.trunc(Number(v) || 0));
 const isRealDate = (d) => ISO_RE.test(d) && new Date(`${d}T12:00:00Z`).toISOString().slice(0, 10) === d;
 const lista = (v) => (Array.isArray(v) ? v : []);
+
+/** A identidade do movimento do extrato (FITID do OFX ou a assinatura da linha do CSV): importar de novo não repete. */
+export const bankRef = (v) => line(v, BANK_REF_MAX);
 
 /** A data de Brasília de um instante (ms). */
 export const dateBR = (ms) => new Date(Number(ms) - BR_OFFSET_MS).toISOString().slice(0, 10);

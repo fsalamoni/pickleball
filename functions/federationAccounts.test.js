@@ -135,6 +135,40 @@ describe('contas: lançamentos', () => {
   });
 });
 
+describe('contas: importação do extrato bancário', () => {
+  const mov = (extra = {}) => ({ kind: 'income', category: 'sponsorship', date: '2026-04-02', amount_cents: 500000, description: 'PIX RECEBIDO PATROCINADOR', counterparty: 'Loja X', bank_ref: 'ofx:A1', ...extra });
+
+  it('importa o lote com origem "extrato" e importar de novo só traz o que faltava', async () => {
+    const c = cenario();
+    const r = await chamar(c, FIN, { action: 'entry_import', entries: [mov(), mov({ kind: 'expense', category: 'admin', amount_cents: 3990, description: 'TARIFA', bank_ref: 'ofx:A2' })] });
+    expect(r).toMatchObject({ ok: true, imported: 2, skipped: 0 });
+    const lancs = docs(c, 'federation_ledger/');
+    expect(lancs).toHaveLength(2);
+    expect(lancs.find((x) => x.bank_ref === 'ofx:A1')).toMatchObject({
+      federation_id: 'fpp', status: 'posted', source: 'bank', created_by: 'fin', document: null,
+      kind: 'income', category: 'sponsorship', date: '2026-04-02', amount_cents: 500000, description: 'PIX RECEBIDO PATROCINADOR', counterparty: 'Loja X',
+    });
+    expect(lancs[0].path).toMatch(/^federation_ledger\/fpp_bk_[0-9a-f]{24}$/);
+    const r2 = await chamar(c, FIN, { action: 'entry_import', entries: [mov(), mov({ bank_ref: 'ofx:A3', amount_cents: 100 })] });
+    expect(r2).toMatchObject({ imported: 1, skipped: 1 });
+    expect(docs(c, 'federation_ledger/')).toHaveLength(3);
+    expect(docs(c, 'audit_logs/').some((a) => a.action === 'federation_ledger_import')).toBe(true);
+  });
+
+  it('a mesma régua do lançamento à mão: quem pode, movimento inválido derruba o lote, teto, período fechado', async () => {
+    const c = cenario();
+    await expect(chamar(c, SEC, { action: 'entry_import', entries: [mov()] })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(chamar(c, FIN, { action: 'entry_import', entries: [] })).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(chamar(c, FIN, { action: 'entry_import', entries: [mov(), mov({ bank_ref: 'ofx:B', date: '2027-12-01' })] })).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(chamar(c, FIN, { action: 'entry_import', entries: [mov({ bank_ref: '' })] })).rejects.toMatchObject({ code: 'invalid-argument' });
+    const muitos = Array.from({ length: 201 }, (_, i) => mov({ bank_ref: `ofx:${i}` }));
+    await expect(chamar(c, FIN, { action: 'entry_import', entries: muitos })).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(docs(c, 'federation_ledger/')).toHaveLength(0);
+    await c.db.collection('federation_account_reports').doc('fpp_2026').set({ federation_id: 'fpp', period: '2026', status: 'submitted' });
+    await expect(chamar(c, FIN, { action: 'entry_import', entries: [mov()] })).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+});
+
 describe('contas: prestação de contas', () => {
   async function enviada(c) {
     await chamar(c, FIN, { action: 'budget_save', budget: { year: 2026, lines: { 'income.memberships': 20000, 'expense.travel': 10000 } } });

@@ -226,6 +226,10 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   só lê `pub == true` e o lançamento nunca; categorias e `?aba=`
   (`orcamento`, `orcamento-anual`, `lancamentos`, `prestacao-contas`) são
   contrato. `extraExpenses`/`despesasDerivadas()` é onde a arbitragem entra.
+  O **extrato bancário** (OFX ou CSV) é lido na tela por `domain/bankStatement.js`
+  e gravado pela ação `entry_import`: a identidade do movimento (`bank_ref`)
+  vira o id do lançamento, então importar de novo não duplica — nunca troque
+  a forma de montar o `bank_ref` (o mesmo extrato passaria a entrar duas vezes).
 - **Revisão de UX, Entrega 1** (2026-10-22): link público de torneio/clube é
   `tournamentPath(id, { inApp })` e `orgLink` (visitante sem conta nunca cai no
   login); cupons e loja só para quem entrou; torneios chancelados divididos por

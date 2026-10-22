@@ -2964,7 +2964,7 @@ const GUIAS_BASE = [
         target: 'federacao-aba-lancamentos',
         advanceOn: 'click',
         title: tk('Lançamentos'),
-        body: tk('Lance o que não passou pela plataforma, com o comprovante. O que entrou pelo Pix e as diárias pagas da arbitragem já estão aqui, marcados como automáticos.'),
+        body: tk('Lance o que não passou pela plataforma, com o comprovante, ou traga o extrato do banco em "Importar extrato". O que entrou pelo Pix e as diárias pagas da arbitragem já estão aqui, marcados como automáticos.'),
       },
       {
         id: 'prestacao',
