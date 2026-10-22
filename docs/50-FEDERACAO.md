@@ -558,7 +558,23 @@ Toda função confere a flag, grava `audit_logs` (`federation_*`) e avisa por
   filiados, enviar, pontuar); do PR 4, **"Notícias, cupons e loja da
   federação"** (`federacao-comunicacao`); pistas de rota para `/federacoes*`
   (a Central também aponta o artigo do torneio e o da comunicação); catorze
-  perguntas no FAQ.
+  perguntas no FAQ. Depois vieram `federacao-acervo`, `federacao-agenda`,
+  `federacao-reuniao`, `federacao-comentarios` e, em 2026-10-22, os artigos dos
+  módulos de governança: **`federacao-arbitragem`** (quadro, escalas, súmula,
+  avaliação, diárias, o que o público vê), **`federacao-contas`** (orçamento,
+  lançamentos, prestação, parecer, prazo de abril), **`federacao-eleicoes`**
+  (edital, chapas, impugnação, voto secreto, apuração) e
+  **`federacao-conformidade`** (a lista da Lei 14.597), com cinco perguntas no
+  FAQ e as pistas da Central e da página da federação (eleições).
+- **Guias com seta (2026-10-22)**: **`federacao-arbitragem`** (Central →
+  Arbitragem → Quadro → Incluir árbitro), **`federacao-contas`** (Contas →
+  Orçamento → Lançamentos → Prestação de contas), **`federacao-eleicao`**
+  (Eleições → Nova eleição) e **`federacao-votar`** (página → aba Eleições →
+  Votar → Confirmar → comprovante). As abas Quadro, Orçamento, Lançamentos e
+  Prestação de contas ganharam âncora (`federacao-aba-arbitragem-quadro`,
+  `federacao-aba-orcamento-anual`, `federacao-aba-lancamentos`,
+  `federacao-aba-prestacao-contas`) — contrato. Nenhum ponto de dica novo: as
+  duas rotas da federação já estão no teto de 8.
 - **Guias com seta** (`guias.js`, área **Federações**): `federacao-filiar`
   (buscar → filiar → plano → enviar → carteirinha), `federacao-gerir` (Central:
   seções, configurações, filiados, financeiro, pendências),
@@ -1866,7 +1882,7 @@ Função `federationElections` (`functions/federationElections.js`). Telas em
 (`manage/FedElectionsPanel.jsx`). Aba pública `PROFILE_TAB.ELECTIONS`
 (`eleicoes`, âncora `#fed-eleicoes`).
 
-### 22.1 Coleções (todas só o servidor grava)
+### 24.1 Coleções (todas só o servidor grava)
 
 | Coleção | Id | Quem lê |
 |---|---|---|
@@ -1879,7 +1895,7 @@ Função `federationElections` (`functions/federationElections.js`). Telas em
 "Quem conduz" na regra é `fedElRun`: a comissão (`commission_uids`) ou, sem
 comissão, o admin da federação. Zero índice composto.
 
-### 22.2 O voto secreto (o que não pode regredir)
+### 24.2 O voto secreto (o que não pode regredir)
 
 - A cédula (`federation_ballots`) leva **só** `election_id`, `choices` e
   `weight` — nenhum uid, nome, horário ou id de eleitor. O id é aleatório
@@ -1896,7 +1912,7 @@ comissão, o admin da federação. Zero índice composto.
 - Limite conhecido: os metadados do Firestore (hora de escrita) são visíveis
   para quem opera o projeto no console — não para quem usa a plataforma.
 
-### 22.3 Fluxo
+### 24.3 Fluxo
 
 1. **Assistente** (admin): cargos (chapa ou individual, órgão, vagas,
    mínimo de cada sexo) → calendário (edital, registro, impugnação, defesa,
@@ -1937,7 +1953,7 @@ comissão, o admin da federação. Zero índice composto.
    mandato opcional — as permissões da equipe não mudam.
 9. **Cancelar** (admin, com motivo, avisa os filiados).
 
-### 22.4 Telas
+### 24.4 Telas
 
 - Central → **Eleições** (admin, módulo ligado): lista, "Nova eleição"
   (assistente) e o painel de cada eleição (`ElectionConductPanel`: próximo
@@ -1954,7 +1970,7 @@ comissão, o admin da federação. Zero índice composto.
 - Minha filiação: aviso **"Eleição em andamento"** (`FedElectionNotice`).
 - Avisos levam a `/federacoes/{id}?aba=eleicoes` (no app, onde se age).
 
-### 22.5 Exclusão e exportação
+### 24.5 Exclusão e exportação
 
 Entram na exportação: o colégio da pessoa (onde votou, peso, comprovante —
 nunca em quem), as chapas de que participa e os apoios que deu. Na exclusão:

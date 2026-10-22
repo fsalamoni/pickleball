@@ -16,15 +16,16 @@ garimpar o que não interessa.
 | Parte | Público | Artigos |
 |---|---|---|
 | **Começar aqui** | todos | 10 |
-| **Atleta** | quem joga | 40 |
+| **Atleta** | quem joga | 51 |
 | **Arena** | quem tem quadra | 13 |
 | **Professor** | quem dá aula | 8 |
 | **Conta e privacidade** | todos | 9 |
 
-80 artigos no total (contados no código em 2026-10-18). Só 7 seguem atrás de
+91 artigos no total (contados no código em 2026-10-22). Só 18 seguem atrás de
 flag (§4): os 4 do Mercado (`marketplace`), "Avisos por e-mail, WhatsApp e
-SMS" (`external_messaging`) e os 2 de federação — "Filiar-se a uma federação"
-e "Abrir e administrar uma federação" (`federations`, `docs/50-FEDERACAO.md`). As demais funcionalidades que já tiveram flag
+SMS" (`external_messaging`) e os 13 de federação — de "Filiar-se a uma federação"
+e "Abrir e administrar uma federação" até arbitragem, contas, eleições e
+conformidade (`federations`, `docs/50-FEDERACAO.md` §9). As demais funcionalidades que já tiveram flag
 (gamificação, treino, dicas…) viraram código permanente e os artigos delas
 aparecem sempre. O mais novo é "Instalar o PickleRush no celular" (Começar
 aqui), que explica a instalação no Android, no iPhone/iPad e no computador e o

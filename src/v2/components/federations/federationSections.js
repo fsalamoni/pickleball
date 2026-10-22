@@ -79,7 +79,7 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       id: 'arbitragem', grupo: 'atender', label: tk('Arbitragem'), icon: Flag, dica: 'federacao-secao-arbitragem',
       tabs: [
         { value: 'arbitragem', label: tk('Escalas'), icon: CalendarCheck },
-        { value: 'arbitragem-quadro', label: tk('Quadro'), icon: Users },
+        { value: 'arbitragem-quadro', label: tk('Quadro'), icon: Users, dica: 'federacao-aba-arbitragem-quadro' },
         { value: 'arbitragem-avaliacoes', label: tk('Avaliações e súmulas'), icon: Star },
         { value: 'arbitragem-diarias', label: tk('Diárias'), icon: Banknote },
         { value: 'arbitragem-regras', label: tk('Regras e níveis'), icon: Settings2 },
@@ -140,9 +140,9 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       id: 'contas', grupo: 'gerir', label: tk('Contas'), icon: Calculator, dica: 'federacao-secao-contas',
       tabs: [
         { value: 'orcamento', label: tk('Visão geral'), icon: BarChart3 },
-        { value: 'orcamento-anual', label: tk('Orçamento'), icon: Calculator },
-        { value: 'lancamentos', label: tk('Lançamentos'), icon: Receipt },
-        { value: 'prestacao-contas', label: tk('Prestação de contas'), icon: ScrollText },
+        { value: 'orcamento-anual', label: tk('Orçamento'), icon: Calculator, dica: 'federacao-aba-orcamento-anual' },
+        { value: 'lancamentos', label: tk('Lançamentos'), icon: Receipt, dica: 'federacao-aba-lancamentos' },
+        { value: 'prestacao-contas', label: tk('Prestação de contas'), icon: ScrollText, dica: 'federacao-aba-prestacao-contas' },
       ],
     },
     (admin || pode(FED_PERMISSION.MEMBERS) || pode(FED_PERMISSION.FINANCE)) && {
