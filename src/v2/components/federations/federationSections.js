@@ -10,7 +10,7 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, Calculator, CalendarDays, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, ListChecks, Receipt } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -72,6 +72,17 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       tabs: [
         { value: 'cursos', label: tk('Cursos'), icon: GraduationCap },
         { value: 'credenciais', label: tk('Credenciais'), icon: ShieldCheck },
+      ],
+    },
+    // Arbitragem: a equipe de arbitragem (`courses`) ou o admin (o admin master antigo não tem `courses` gravado).
+    (pode(FED_PERMISSION.COURSES) || admin) && modulo('referees') && {
+      id: 'arbitragem', grupo: 'atender', label: tk('Arbitragem'), icon: Flag, dica: 'federacao-secao-arbitragem',
+      tabs: [
+        { value: 'arbitragem', label: tk('Escalas'), icon: CalendarCheck },
+        { value: 'arbitragem-quadro', label: tk('Quadro'), icon: Users },
+        { value: 'arbitragem-avaliacoes', label: tk('Avaliações e súmulas'), icon: Star },
+        { value: 'arbitragem-diarias', label: tk('Diárias'), icon: Banknote },
+        { value: 'arbitragem-regras', label: tk('Regras e níveis'), icon: Settings2 },
       ],
     },
     pode(FED_PERMISSION.DISCIPLINE) && (modulo('discipline') || residual.discipline) && {

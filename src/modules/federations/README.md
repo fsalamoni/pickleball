@@ -133,6 +133,16 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Arbitragem** (módulo `referees`, `docs/50` §22): `federation_referees` e
+  `federation_assignments` **só o servidor grava** (`functions/federationReferees.js`,
+  régua em `domain/referees.js` com cópia e paridade em
+  `functions/federationRefereesPolicy.js`; `federations.referee_rules` em
+  `fedLocked()`). O árbitro lê só o seu, a equipe `courses`/`admin` lê tudo, as
+  notas (`private/staff`) só a equipe. Alerta de impedimento **avisa, não
+  bloqueia**. O público vê só pela função `federationRefereesPublic` (quem
+  aceitou aparecer + confirmados de evento público, nome e função) — nunca
+  valor, nota, conflito nem disponibilidade. Diária paga vira despesa por
+  `refereeFeesAsExpenses`. Funções, situações e ids de nível são gravados.
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da

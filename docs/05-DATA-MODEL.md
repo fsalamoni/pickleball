@@ -1747,6 +1747,44 @@ lê nem grava pelo navegador. Na exclusão de conta sai (por `reporter_id`);
 fora da exportação (é sobre o comentário de outra pessoa). `federations.rules`
 ganha `comments` (opcional; `false` desliga os comentários da federação).
 
+### `federation_referees/{fedId}_{uid}` (NOVO — quadro de arbitragem, `docs/50` §22)
+`federation_id`, `federation_acronym`, `federation_name`, `user_id`, `name`,
+`photo_url`, `city`, `state` (copiados do cadastro), `level` (id de
+`federations.referee_rules.levels`, gravado), `functions[]` (`referee` |
+`head_referee` | `line_judge` | `technical_delegate` |
+`tournament_director`), `status` (`active` | `inactive` | `suspended`),
+`credential_ids[]` (credenciais de árbitro dos cursos), `since` (ISO),
+`public_listing` (padrão `false`), `unavailable[]` (ISO, até 60 — dias em
+que não pode), `stats` `{ acts, no_show, evaluations, avg }`, `added_by`,
+`created_at_ms`, `updated_at_ms`. Subcoleção `private/staff` `{ notes }`
+(só a equipe lê). Leitura: o próprio árbitro e a equipe com
+`courses`/`admin`; **só o servidor grava** (`federationReferees`). Zero
+índice. Exclusão de conta: sai (com `private/staff`); exportação: entra.
+
+### `federation_assignments/{id}` (NOVO — escala de arbitragem)
+`federation_id`, `federation_acronym`, `federation_name`, `event` `{ kind
+tournament|agenda, id, name, date, end_date, city, public }` (copiado),
+`event_key` (`{kind}_{id}`), `function`, `referee_uid`, `referee_name`,
+`referee_level`, `status` (`invited` | `confirmed` | `declined` |
+`replaced` | `done` | `no_show` | `cancelled`), `respond_by` (ISO),
+`fee_cents`, `travel_cents`, `warnings[]` (`unavailable` | `same_day` |
+`athlete` | `level_below`), `conflict` `{ declared, reason }` | null,
+`decline_reason`, `report` `{ text, at_ms, first_at_ms }` | null, `evaluation` `{ scores
+{ rules, positioning, communication, punctuality, presentation }, avg,
+comment, at_ms, by, by_name }` | null, `paid_at_ms`, `paid_by`, `replaces`,
+`replaced_by`, `reminded`, `created_by`, `created_at_ms`, `updated_at_ms`.
+Leitura: o árbitro (`referee_uid`) e a equipe com `courses`/`admin`; **só o
+servidor grava**. Zero índice. Exclusão de conta: fica pseudonimizada
+("Atleta removido", sem conflito nem motivo; a aberta é cancelada) —
+histórico do evento e despesa da federação; exportação: entra.
+
+### `federations.referee_rules` (campo opcional, só o servidor grava)
+`{ levels[] { id, label } (até 8; ausente ⇒ Trainee, Nível 1, Nível 2,
+Certificado), min_level_by_function { [função]: id }, needs { [função]: n },
+fee_default_cents { [função]: centavos }, respond_days (1–30, padrão 3),
+crew_visible (padrão false) }`. Gravado pela ação `rules` de
+`federationReferees` (`fedLocked()`).
+
 ### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
 Contador da numeração: `{ "<tipo>_<ano>": n }`. Só o servidor grava, numa
 transação ao publicar.

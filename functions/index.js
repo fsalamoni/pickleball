@@ -1370,11 +1370,27 @@ exports.federationDocument =federationCallable('federationDocument', (ctx, actor
   return federationSecretariat.document({ ...ctx, bucket }, actor, data);
 });
 
+// Arbitragem (quadro, escalas, súmulas, avaliações e diárias): só o servidor grava — `functions/federationReferees.js`.
+// O quadro público e quem apita cada evento saem por uma função à parte, também sem conta (sem valor, nota nem conflito).
+const federationReferees = require('./federationReferees');
+exports.federationReferees = federationCallable('federationReferees', federationReferees.referees);
+exports.federationRefereesPublic = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
+  const ctx = fedCtx();
+  try {
+    const actor = req.auth ? { uid: req.auth.uid, name: (req.auth.token || {}).name || '', email: (req.auth.token || {}).email || '', isPlatformAdmin: await isPlatformAdminUser(req, ctx.db) } : null;
+    return await federationReferees.publico(ctx, actor, req.data || {});
+  } catch (err) {
+    if (err instanceof federations.FederationError) throw new HttpsError(err.code, err.message);
+    logger.error('federationRefereesPublic falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

@@ -12,6 +12,10 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CalendarClock, Eye } from 'lucide-react';
 import { useFederationCharges } from '@/modules/federations/hooks/useFederations';
 import { useFederationBudgets, useFederationLedger } from '@/modules/federations/hooks/useAccounts';
+import { useFederationAssignments } from '@/modules/federations/hooks/useReferees';
+import { refereeFeesAsExpenses } from '@/modules/federations/domain/referees';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import {
   ACCOUNT_REPORT_STATUS, ACCOUNT_REPORT_STATUS_LABELS, BUDGET_STATUS_LABELS, accountItems, budgetVsActual, canPrepareAccounts, dateBR, itemsInPeriod, legalDeadline, monthlySeries, totalsByCategory,
 } from '@/modules/federations/domain/accounts';
@@ -81,7 +85,14 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
   const chargesQ = useFederationCharges(id);
   const hoje = dateBR(Date.now());
   const qs = [budgetsQ, ledgerQ, chargesQ, reportsQ];
-  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: [] }), [ledgerQ.data, chargesQ.data]);
+  // Diárias pagas da arbitragem: só quem lê as escalas (`courses`/`admin`) — a regra recusa o resto, e a
+  // prestação as soma de qualquer jeito no servidor (`despesasDerivadas`).
+  const arbitragemOn = fedModuleOn(federation, 'referees');
+  const leArbitragem = arbitragemOn && (perms.includes(FED_PERMISSION.COURSES) || perms.includes(FED_PERMISSION.ADMIN));
+  const assignmentsQ = useFederationAssignments(id, { enabled: leArbitragem });
+  const diarias = leArbitragem && assignmentsQ.isSuccess ? refereeFeesAsExpenses(assignmentsQ.data) : [];
+  const semDiarias = arbitragemOn && (!leArbitragem || assignmentsQ.isError);
+  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: diarias }), [ledgerQ.data, chargesQ.data, diarias]); // eslint-disable-line react-hooks/exhaustive-deps
   if (qs.some((q) => q.isError)) return <V2ErrorState title={t('As contas não carregaram')} onRetry={() => qs.forEach((q) => { if (q.isError) q.refetch(); })} />;
   if (qs.some((q) => q.isLoading || !q.isSuccess)) return <V2Skeleton lines={6} />;
   const leitura = !canPrepareAccounts(perms);
@@ -92,6 +103,12 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
         <p className="flex items-start gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-3 text-sm text-gray-700">
           <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {t('Você vê as contas em leitura (conselho fiscal). O parecer é dado em Prestação de contas, depois que o financeiro envia.')}
+        </p>
+      )}
+      {semDiarias && (
+        <p className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {t('As diárias pagas da arbitragem não aparecem nesta prévia (seu cargo não lê as escalas, ou elas não carregaram). A prestação de contas as soma no envio ao conselho fiscal.')}
         </p>
       )}
       {tab === 'orcamento' && <Overview {...comum} onIrParaAba={onIrParaAba} />}

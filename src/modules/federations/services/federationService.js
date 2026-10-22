@@ -342,6 +342,20 @@ export async function listMyFederationInvites(uid) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/** O cadastro da pessoa nos quadros de arbitragem (todas as federações) — Minha área e exportação. */
+export async function listMyRefereeRosters(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.referees), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** As escalas de arbitragem da pessoa (todas as federações) — Minha área e exportação. */
+export async function listMyAssignments(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.assignments), where('referee_uid', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 export async function listMyMemberships(uid) {
   if (!uid) return [];
   const q = query(collection(db, C.members), where('user_id', '==', uid));

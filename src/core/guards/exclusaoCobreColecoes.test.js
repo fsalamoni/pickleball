@@ -205,6 +205,8 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_followers: ['listMyAcervoFollows'],
   federation_invites: ['listMyFederationInvites'],
   federation_comments: ['listMyFederationComments'],
+  federation_referees: ['listMyRefereeRosters'],
+  federation_assignments: ['listMyAssignments'],
 };
 const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_plans: 'O plano é da federação (nome, preço, regras), não da pessoa; a filiação exportada já diz o plano escolhido.',

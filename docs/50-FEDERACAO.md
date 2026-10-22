@@ -33,7 +33,7 @@ O que esta entrega cobre:
 | Pedido de filiação, aprovação, cobrança Pix, "Já paguei", confirmação | `/federacoes/:id/filiar`, Central → Filiados / Financeiro |
 | Carteirinha digital (PNG, imprimir, compartilhar) e verificação pelo QR | Minha área → Federações, página da federação, `/f/verificar/:codigo` |
 | Equipe com 8 papéis e permissões | Central → Equipe |
-| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os onze do catálogo, todos `available`; §19) |
+| Sub-módulos que cada federação liga para si | Central → Configurações → Módulos (os doze disponíveis, com a arbitragem do §22; §19) |
 | Indicadores dos últimos 12 meses (filiados, renovação, receita, atraso), com CSV | Central → Gerir → Indicadores (§6.8) |
 | Declaração de vínculo imprimível, com QR | página da federação, Minha área → Federações, Central → Filiados (§6.8) |
 | Avisos (sino, e por e-mail/celular quando `external_messaging` estiver ligada) | categoria "Federações" em Configurações → Notificações |
@@ -63,7 +63,7 @@ breve") e `FED_MODULE_META[x].status` só muda quando a tela existir.
    **`discipline`**; do PR 4, **`news`** (notícias e avisos), **`sponsors`**
    (patrocinadores), **`promos`** (cupons e campanhas) e **`store`** (loja
    oficial no Mercado); depois, **`official_docs`** (acervo) e **`calendar`**
-   (agenda) — os onze do catálogo. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
+   (agenda); e **`referees`** (arbitragem, §22) — os doze disponíveis. Ligar e desligar: §19. Módulo novo nasce `planned` ("Em breve"). A tela de cada módulo pergunta `fedModuleOn(federation, x)`
    (`domain/federation.js`), e a **regra também pergunta** (`fedModuleOn()` no
    `firestore.rules`): módulo desligado ⇒ ninguém pede filiação de clube/arena
    nem chancela àquela federação. Desligar um módulo não apaga nada: o que
@@ -1709,11 +1709,16 @@ publicado.
 **Receita derivada, não lançada.** A cobrança **paga** entra sozinha, pela
 origem (`membership`/`renewal` → filiações, `course` → cursos, `fine` →
 outras receitas), na data do pagamento em Brasília. O conselho fiscal ganhou
-leitura de `federation_charges` para conferir. **Ponto de junção da
-arbitragem**: `extraExpenses` em `accountItems` (cliente) e
-`despesasDerivadas()` em `functions/federationAccounts.js` (hoje `[]`) — as
-diárias pagas entram ali como despesa `referees`, marcadas "Diária de
-arbitragem", sem lançar de novo.
+leitura de `federation_charges` para conferir. **Diárias da arbitragem**
+(§23): com o módulo `referees` ligado, as diárias PAGAS (diária +
+deslocamento, na data do pagamento) entram como despesa `referees` sem lançar
+de novo — no servidor por `despesasDerivadas()` (lê `federation_assignments`
+e usa `refereeFeesAsExpenses` da régua, com paridade) e no cliente por
+`extraExpenses`. A prévia da tela só as mostra a quem lê as escalas
+(`courses`/`admin`); para o financeiro e o conselho fiscal sem essa leitura,
+a tela AVISA que a prévia está sem as diárias — o retrato congelado da
+prestação sempre as inclui (a regra não abre as escalas ao financeiro, porque
+elas guardam conflito de interesse declarado).
 
 **Período fechado.** Com a prestação enviada, lançar ou estornar naquele
 período é recusado (o retrato que o conselho examina não muda por baixo).
@@ -1756,3 +1761,93 @@ categorias, mapa de origem, períodos, prazo, validações, totais e retrato.
 
 **O que ficou de fora.** Orçamento mensal (só anual); importação de extrato;
 conciliação bancária.
+## 23. Arbitragem (módulo `referees`, 2026-10-22)
+
+A federação mantém o **quadro de árbitros** por nível, **escala** quem apita
+cada evento (convocação → confirmação), recebe a **súmula**, **avalia** a
+atuação e registra o **pagamento das diárias**. Liga em Configurações →
+Módulos (`referees`); a seção da Central é **Arbitragem** (permissão `courses`
+— o cargo `referees` já a tinha — ou `admin`).
+
+**Onde fica**
+
+| Quem | Onde |
+|---|---|
+| Equipe | Central → Arbitragem: `?aba=arbitragem` (Escalas), `arbitragem-quadro`, `arbitragem-avaliacoes`, `arbitragem-diarias`, `arbitragem-regras` (contrato de link). Escalas filtra por `?filtro=proximos`, `sem-cobertura`, `sem-resposta` ou `anteriores` |
+| Árbitro | Minha área → Federações → **Minhas escalas de arbitragem** (âncora `federacoes-escalas`): responder, próximas, histórico com avaliação e diária, súmula, equipe do evento, disponibilidade |
+| Público (também sem conta) | Página da federação → Competições → **Quadro de arbitragem** (`#fed-arbitragem`) e, no torneio chancelado e público, o cartão **Arbitragem** acima das abas |
+
+**Dados** (`docs/05-DATA-MODEL.md`): `federation_referees/{fed}_{uid}` (o
+cadastro no quadro: nível, funções, situação, credenciais, disponibilidade,
+`public_listing`, contadores) + `private/staff` (notas da equipe, que o
+árbitro não lê); `federation_assignments/{id}` (a escala: evento copiado,
+função, situação, prazo, diária, deslocamento, alertas, conflito, súmula,
+avaliação, pagamento, substituição); `federations.referee_rules` (níveis,
+nível mínimo e quantos por função, diária padrão, prazo de resposta,
+`crew_visible`). **Tudo só o servidor grava** (`write: if false`); o árbitro
+lê o próprio cadastro e as próprias escalas; a equipe com `courses`/`admin`
+lê tudo. Zero índice (as consultas são de uma igualdade).
+
+**Funções**: `referee`, `head_referee`, `line_judge`, `technical_delegate`,
+`tournament_director` — gravadas, nunca renomeie. **Situações da escala**:
+`invited` → `confirmed` ou `declined`; `replaced`; `cancelled`; e no
+fechamento `done` (atuou) ou `no_show`. Os ids dos níveis também são
+gravados: o rótulo muda, o código não.
+
+**Eventos que se escalam** (`scalableEvents`, `domain/referees.js`): os
+torneios **chancelados** (aprovados) por esta federação e, com o calendário
+ligado, os eventos da agenda dos tipos `competition`, `selection` e
+`sport_other` ainda marcados. Curso e reunião não. Nada é gravado no evento:
+a escala copia nome, data, cidade e se é público.
+
+**Escalar** (`federationReferees`, `functions/federationReferees.js`):
+`assign` convoca até 20 por vez, mostrando **alertas** sem bloquear — marcou
+que não pode, outra escala no mesmo dia, inscrito como atleta no torneio,
+nível abaixo do mínimo da função. Bloqueia só o que não faz sentido: fora do
+quadro, inativo/suspenso, função que não exerce, já escalado no evento. As
+sugestões vêm sem alerta primeiro, depois por nível e por quem atuou menos
+(`suggestReferees`). O prazo de resposta é o da regra contado da convocação,
+nunca depois da véspera (`defaultRespondBy`). `reassign` troca a pessoa (a
+antiga vira `replaced` e é avisada); `cancel` exige motivo; `close_event`
+marca quem não veio, o resto confirmado vira `done` e as convocações sem
+resposta são canceladas. A cobertura do evento é `referee_rules.needs` por
+função (`eventCoverage`).
+
+**O árbitro**: `respond` confirma ou recusa (motivo; **conflito de
+interesse** declarado com o que é — fica só para a equipe); depois do evento
+`report` envia a súmula (10 a 4.000 letras); `self` grava a disponibilidade
+(dias em que não pode, até 60) e se aparece no quadro público; `crew` mostra
+a equipe do evento (nome e função) só com `crew_visible`.
+
+**Avaliação e diárias**: `evaluate` (cinco critérios de 1 a 5 + comentário
+que o árbitro vê; média gravada) e `mark_paid` (em lote; desfazer é
+`paid: false`). As diárias pagas viram despesa das contas da federação por
+`refereeFeesAsExpenses(assignments)` → `{ date, amount_cents, category:
+'referees', ref }` (só `done` com `paid_at_ms`; diária + deslocamento). CSV
+em `feesCsv` (`;`, reais com vírgula, defesa contra fórmula).
+
+**Lembrete**: a varredura diária (`federationMembershipSweep`) avisa o
+convocado sem resposta na véspera do prazo, uma vez só (`reminded`).
+
+**Precisa de você**: equipe — convocações sem resposta e eventos dos próximos
+7 dias sem cobertura (`refereeStaffPending`, que levam aos filtros); árbitro —
+convocações para responder (`myPendingAssignments`). Fonte que falhou não
+vira zero.
+
+**Privacidade** (não pode regredir): o público vê pela função
+`federationRefereesPublic` (sem login) **só** quem está ativo e aceitou
+aparecer (nome, nível, cidade, foto) e, nos eventos públicos a partir de 30
+dias atrás, quem está **confirmado** (nome e função). Nunca valor, nota,
+conflito, disponibilidade nem uid. Federação oculta (§17) só responde à
+equipe e ao filiado ativo.
+
+**Exclusão e exportação**: a exportação leva o próprio cadastro e as
+próprias escalas; na exclusão de conta o cadastro e as notas saem, e as
+escalas ficam pseudonimizadas ("Atleta removido", sem conflito nem motivo) —
+as abertas são canceladas.
+
+Régua pura em `domain/referees.js`, com cópia em
+`functions/federationRefereesPolicy.js` e paridade em
+`functions/federationReferees.parity.test.js`; regra provada em
+`tests/rules/federationReferees.rules.test.js`; tela em
+`src/v2/components/federations/referees/` + `manage/FedRefereesPanel.jsx`.

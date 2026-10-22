@@ -9,6 +9,7 @@ import { sanctionState } from './sanction.js';
 import { isChargeOverdue } from './charges.js';
 import { isoDate, membershipState } from './membership.js';
 import { accountsPendingItems } from './accounts.js';
+import { myPendingAssignments, refereeStaffPending } from './referees.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
@@ -20,7 +21,7 @@ const plural = (n, um, varios) => (n === 1 ? um : varios);
  */
 export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate() } = {}) {
   const itens = [];
-  const { members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports } = fontes;
+  const { members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, refereeAssignments, refereeEvents, refereeRules } = fontes;
   const pode = (p) => perms.includes(p);
 
   if (pode(FED_PERMISSION.MEMBERS) && Array.isArray(members)) {
@@ -53,6 +54,11 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
     const n = tournaments.filter((tt) => sanctionState(tt).pending).length;
     if (n) itens.push({ id: 'chancelas', count: n, aba: 'chancelas', filtro: 'pendentes', label: plural(n, tk('pedido de chancela para analisar'), tk('pedidos de chancela para analisar')) });
   }
+  if (pode(FED_PERMISSION.COURSES) || pode(FED_PERMISSION.ADMIN)) {
+    const r = refereeStaffPending({ assignments: refereeAssignments, events: refereeEvents, rules: refereeRules, hoje });
+    if (r.semResposta) itens.push({ id: 'arbitragem-resposta', count: r.semResposta, aba: 'arbitragem', filtro: 'sem-resposta', label: plural(r.semResposta, tk('convocação de arbitragem sem resposta'), tk('convocações de arbitragem sem resposta')) });
+    if (r.semCobertura) itens.push({ id: 'arbitragem-cobertura', count: r.semCobertura, aba: 'arbitragem', filtro: 'sem-cobertura', label: plural(r.semCobertura, tk('evento em 7 dias sem arbitragem completa'), tk('eventos em 7 dias sem arbitragem completa')) });
+  }
   if (pode(FED_PERMISSION.FINANCE) && Array.isArray(charges)) {
     const n = charges.filter((c) => c.status === CHARGE_STATUS.DECLARED).length;
     if (n) itens.push({ id: 'informados', count: n, aba: 'cobrancas', filtro: 'informadas', label: plural(n, tk('pagamento informado para confirmar'), tk('pagamentos informados para confirmar')) });
@@ -70,8 +76,8 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
  * @param {object[]|undefined} charges as cobranças da pessoa
  * @param {{ hoje?: string, invites?: object[], now?: number }} [opts] `invites`: os convites para filiar recebidos
  */
-export function myFederationPending(members, charges, { hoje = isoDate(), invites, now = Date.now() } = {}) {
-  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined };
+export function myFederationPending(members, charges, { hoje = isoDate(), invites, assignments, now = Date.now() } = {}) {
+  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined, escalas: myPendingAssignments(assignments, hoje) };
   if (Array.isArray(invites)) out.convites = invites.filter((inv) => isInvitePending(inv, now)).length;
   if (Array.isArray(charges)) out.pagar = charges.filter((c) => c.status === CHARGE_STATUS.OPEN).length;
   if (Array.isArray(members)) {

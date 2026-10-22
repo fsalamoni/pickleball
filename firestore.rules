@@ -4700,7 +4700,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules'];
     }
 
     match /federations/{fedId} {
@@ -5066,6 +5066,28 @@ service cloud.firestore {
     }
     match /federation_ledger/{id} {
       allow read: if fedAcc(od().federation_id);
+      allow write: if false;
+    }
+    // ARBITRAGEM (módulo `referees`): o quadro (`{fed}_{uid}`) e as escalas.
+    // Só o SERVIDOR grava (`federationReferees`): os alertas da convocação
+    // leem dados de outras pessoas, e a diária paga vira despesa. Lê a equipe
+    // de arbitragem (`courses`, ou `admin`) e o próprio árbitro — valores,
+    // notas e conflitos não são públicos; o quadro público e quem apita
+    // passam pela função `federationRefereesPublic`. As notas internas da
+    // equipe (`private/staff`) o árbitro não lê.
+    function fedRef(fedId) {
+      return fedHas(fedId, 'courses') || fedHas(fedId, 'admin');
+    }
+    match /federation_referees/{id} {
+      allow read: if isOwner(od().user_id) || fedRef(od().federation_id);
+      allow write: if false;
+      match /private/{doc} {
+        allow read: if fedRef(id.split('_')[0]);
+        allow write: if false;
+      }
+    }
+    match /federation_assignments/{id} {
+      allow read: if isOwner(od().referee_uid) || fedRef(od().federation_id);
       allow write: if false;
     }
 

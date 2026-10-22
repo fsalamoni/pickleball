@@ -34,6 +34,7 @@
 const crypto = require('node:crypto');
 const A = require('./federationAccountsPolicy.js');
 const AG = require('./federationAgendaPolicy.js');
+const RP = require('./federationRefereesPolicy.js');
 const f = require('./federations.js');
 const ac = require('./federationAcervo.js');
 const { tx } = require('./avisoI18n.js');
@@ -80,10 +81,12 @@ function exigeMotivo(data, oQue) {
  * Despesas DERIVADAS de outros módulos, no formato de `extraExpenseItems`
  * (`{ date, amount_cents, category, ref, auto }`). ⭐ Ponto de junção da
  * arbitragem: as diárias pagas (`refereeFeesAsExpenses(assignments)`) entram
- * aqui, sem serem lançadas de novo à mão. Hoje: nenhuma.
+ * aqui, sem serem lançadas de novo à mão — com o módulo de arbitragem ligado.
  */
-async function despesasDerivadas(_ctx, _fed) {
-  return [];
+async function despesasDerivadas(ctx, fed) {
+  if (!(fed.modules && fed.modules.referees === true)) return [];
+  const snap = await ctx.db.collection('federation_assignments').where('federation_id', '==', fed.id).get();
+  return RP.refereeFeesAsExpenses(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
 }
 
 /** Tudo o que entra na conta da federação: manual + cobranças pagas + derivadas. */

@@ -242,8 +242,25 @@ describe('contas: prestação de contas', () => {
   });
 });
 
-describe('contas: o ponto de junção das despesas derivadas', () => {
-  it('hoje não há despesa derivada', async () => {
-    expect(await ac.despesasDerivadas(ctx(cenario()), { id: 'fpp' })).toEqual([]);
+describe('contas: as diárias pagas da arbitragem entram como despesa derivada', () => {
+  const escalas = (c) => {
+    c.db.store.docs.set('federation_assignments/a1', { federation_id: 'fpp', status: 'done', fee_cents: 20000, travel_cents: 5000, paid_at_ms: Date.UTC(2026, 4, 3, 15, 0) });
+    c.db.store.docs.set('federation_assignments/a2', { federation_id: 'fpp', status: 'done', fee_cents: 20000 }); // a pagar: não entra
+    c.db.store.docs.set('federation_assignments/a3', { federation_id: 'outra', status: 'done', fee_cents: 9999, paid_at_ms: Date.UTC(2026, 4, 3, 15, 0) });
+  };
+
+  it('sem o módulo de arbitragem ligado, nada', async () => {
+    const c = cenario();
+    escalas(c);
+    expect(await ac.despesasDerivadas(ctx(c), { id: 'fpp', modules: { accounts: true } })).toEqual([]);
+  });
+
+  it('com a arbitragem ligada, a diária paga (diária + deslocamento) vai para a categoria arbitragem e entra no retrato', async () => {
+    const c = cenario({ accounts: true, official_docs: true, calendar: true, referees: true });
+    escalas(c);
+    expect(await ac.despesasDerivadas(ctx(c), { id: 'fpp', modules: { referees: true } })).toEqual([{ date: '2026-05-03', amount_cents: 25000, category: 'referees', ref: 'a1' }]);
+    const q = await chamar(c, FIN, { action: 'report_open', period: '2026-Q2' });
+    await chamar(c, FIN, { action: 'report_submit', reportId: q.reportId });
+    expect(doc(c, 'federation_account_reports/fpp_2026-Q2').snapshot).toMatchObject({ expense: { referees: 25000 }, expense_total: 25000 });
   });
 });

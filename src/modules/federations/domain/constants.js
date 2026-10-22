@@ -33,6 +33,8 @@ export const FED_COLLECTIONS = Object.freeze({
   events: 'federation_events',
   comments: 'federation_comments',
   invites: 'federation_invites',
+  referees: 'federation_referees',
+  assignments: 'federation_assignments',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -212,7 +214,7 @@ export const FED_MODULE_META = Object.freeze({
   promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available', central: tk('Comunicação → Cupons e campanhas'), tab: 'divulgacao', page: tk('Visão geral e tela inicial') },
   official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available', central: tk('Acervo oficial (documentos e transparência)'), tab: 'acervo', page: tk('Aba Documentos e a página de transparência') },
   calendar: { label: tk('Calendário oficial'), description: tk('Agenda esportiva e institucional (assembleias, diretoria, conselho fiscal, prazos e eventos), com torneios chancelados, adiamentos com motivo e agenda para assinar no celular.'), status: 'available', central: tk('Agenda (calendário oficial)'), tab: 'agenda', page: tk('Aba Agenda e a agenda para assinar') },
-  referees: { label: tk('Arbitragem'), description: tk('Quadro de árbitros por nível, disponibilidade, escalas com convocação e confirmação, impedimentos, avaliação, súmulas e diárias.'), status: 'planned', central: tk('Arbitragem (quadro e escalas)'), tab: 'arbitragem', page: tk('Aba Competições: o quadro de arbitragem') },
+  referees: { label: tk('Arbitragem'), description: tk('Quadro de árbitros por nível, disponibilidade, escalas com convocação e confirmação, impedimentos, avaliação, súmulas e diárias.'), status: 'available', central: tk('Arbitragem (quadro e escalas)'), tab: 'arbitragem', page: tk('Aba Competições: o quadro de arbitragem') },
   accounts: { label: tk('Orçamento e prestação de contas'), description: tk('Orçamento anual por categoria, receitas e despesas lançadas, orçado × realizado, parecer do conselho fiscal e contas publicadas na transparência.'), status: 'available', central: tk('Contas (orçamento e prestação de contas)'), tab: 'orcamento', page: tk('Página de transparência: orçamento e contas') },
   elections: { label: tk('Eleições'), description: tk('Edital, colégio eleitoral com pesos, chapas, impugnações, votação secreta pelo app, apuração e resultado publicado.'), status: 'planned', central: tk('Eleições'), tab: 'eleicoes', page: tk('Aba Eleições: edital, chapas e resultado') },
 });
