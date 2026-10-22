@@ -4954,6 +4954,28 @@ service cloud.firestore {
         || fedAny(od().federation_id, ['competitions', 'admin']);
       allow write: if false;
     }
+    // Seleção e editais (Bloco 3) — só o servidor grava (`federationSelection`).
+    // A convocação publicada e o edital publicado são públicos (a lista da
+    // delegação leva só nome e categoria; os pagamentos do edital vão à
+    // transparência). O convite e a inscrição: a pessoa e a equipe.
+    match /federation_callups/{id} {
+      allow read: if (od().status in ['open', 'closed', 'cancelled'] && fedSees(od().federation_id))
+        || fedAny(od().federation_id, ['competitions', 'finance', 'admin']);
+      allow write: if false;
+    }
+    match /federation_callup_members/{id} {
+      allow read: if isOwner(od().user_id) || fedAny(od().federation_id, ['competitions', 'admin']);
+      allow write: if false;
+    }
+    match /federation_grants/{id} {
+      allow read: if (od().status in ['open', 'review', 'result', 'final', 'cancelled'] && fedSees(od().federation_id))
+        || fedAny(od().federation_id, ['competitions', 'finance', 'admin']);
+      allow write: if false;
+    }
+    match /federation_grant_applications/{id} {
+      allow read: if isOwner(od().user_id) || fedAny(od().federation_id, ['competitions', 'finance', 'admin']);
+      allow write: if false;
+    }
     match /federation_credentials/{credId} {
       allow read: if (od().get('public', false) == true && od().status == 'active' && fedSees(od().federation_id))
         || (isOwner(od().user_id))

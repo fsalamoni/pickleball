@@ -1448,11 +1448,17 @@ exports.federationSanctionSync = onDocumentWritten(
   },
 );
 
+// Seleção e editais (Bloco 3): convocação pelo ranking com suplente automático,
+// documentos de viagem, uniforme e custos; editais de apoio ao atleta com
+// inscrição, resultado, recurso e pagamento — `functions/federationSelection.js`.
+const federationSelection = require('./federationSelection');
+exports.federationSelection = federationCallable('federationSelection', federationSelection.selection);
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

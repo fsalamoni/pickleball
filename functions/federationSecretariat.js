@@ -175,9 +175,23 @@ async function chargeProof(ctx, actor, chargeId) {
   return { ok: true, contentType: meta.contentType || 'application/octet-stream', base64: Buffer.from(bytes).toString('base64'), kind: 'proof', status: c.status };
 }
 
+/** O arquivo de uma inscrição em edital (`federationSelection.applicationFile` decide quem pode). */
+async function grantApplicationFile(ctx, actor, data) {
+  const { path, dono, audit } = await require('./federationSelection.js').applicationFile(ctx, actor, data.applicationId, data.fileKey);
+  if (!ctx.bucket) f.falha('unavailable', 'Arquivos indisponíveis no momento.');
+  const file = ctx.bucket.file(path);
+  const [meta] = await file.getMetadata().catch(() => [null]);
+  if (!meta) f.falha('not-found', 'O arquivo não está mais no servidor.');
+  if (Number(meta.size) > MAX_DOC_BYTES) f.falha('failed-precondition', 'Arquivo maior que o permitido.');
+  const [bytes] = await file.download();
+  if (!dono) await f.auditoria(ctx, actor, 'federation_grant_file_view', audit);
+  return { ok: true, contentType: meta.contentType || 'application/octet-stream', base64: Buffer.from(bytes).toString('base64'), kind: 'grant_application' };
+}
+
 async function document(ctx, actor, data) {
   if (!(await f.flagLigada(ctx))) f.falha('failed-precondition', 'As federações não estão ligadas nesta plataforma.');
   if (data.chargeId) return chargeProof(ctx, actor, data.chargeId);
+  if (data.applicationId) return grantApplicationFile(ctx, actor, data);
   const snap = await ctx.db.collection(f.C.documents).doc(f.texto(data.documentId, 80)).get();
   if (!snap.exists) f.falha('not-found', 'Documento não encontrado.');
   const d = snap.data();

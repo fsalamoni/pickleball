@@ -2719,3 +2719,130 @@ entre gêneros). É aviso, não trava.
 
 Guias: `federacao-chancela` (atualizado) e `federacao-final-circuito`.
 Artigo: `federacao-torneios`.
+
+## 32. Seleção estadual e editais de apoio ao atleta (Bloco 3 das próximas frentes, 2026-10-22)
+
+Dois módulos novos, ligáveis por federação: **Seleção e delegações**
+(`selection`) e **Editais de apoio ao atleta** (`grants`). Na Central, a seção
+**Seleção e editais** (abas Convocações e Editais) aparece para
+`competitions`, `finance` e `admin` com ao menos um dos dois ligado. Na página
+pública, os dois ficam na aba **Competições** (âncoras `fed-selecao` e
+`fed-editais`). Tudo é gravado **pelo servidor**
+(`functions/federationSelection.js`: callable `federationSelection` e a
+varredura diária). A régua tem cópia em
+`functions/federationSelectionPolicy.js`, com paridade contra
+`src/modules/federations/domain/selection.js`
+(`federationSelection.parity.test.js`).
+
+### 32.1 Convocação da seleção
+
+- **Montar** (`callup_save`, `competitions`/`admin`): campeonato, local,
+  datas, critério — **pelo ranking oficial** de um ano (`season`, as
+  categorias do ranking ou todas, e quantos por categoria) ou **a dedo** —,
+  prazo para responder (`accept_days`), documentos de viagem pedidos
+  (`travel_docs`), se pede o tamanho do uniforme e as orientações. Nasce
+  rascunho.
+- **Publicar** (`callup_publish`): pelo ranking, convida os primeiros de cada
+  categoria de `federation_rankings/{fed}_{ano}` (o mesmo desenho dos convites
+  da final, §31.5) e avisa cada um. Publicada, o **critério não muda** (ano,
+  categorias, vagas); a logística segue editável. A dedo (`callup_add`), a
+  equipe escolhe cada pessoa na lista de usuários (`FedPersonPicker`), com a
+  categoria ou função (técnico, chefe de delegação).
+- **Responder** (`callup_answer`): o próprio convocado, em Minha área →
+  Federações, dentro do prazo, com o tamanho do uniforme se pedido. Recusar,
+  vencer o prazo (varredura) ou ser cancelado pela equipe
+  (`callup_cancel_member`, com motivo) chama o próximo do ranking sozinho
+  (`substitute: true`) — só com a convocação aberta e o evento ainda não
+  começado.
+- **Acompanhar** (`callup_member_update`): a equipe marca os documentos de
+  viagem conferidos (`docs_ok`) e escreve a anotação; o convocado só muda o
+  próprio uniforme.
+- **Encerrar**: `callup_close` fecha a delegação (convites em aberto são
+  cancelados, ninguém mais é chamado, quem aceitou é avisado);
+  `callup_cancel` cancela com motivo e avisa todos — o rascunho, que ninguém
+  viu, é apagado.
+- **Custos** (`callup_costs`): passagens, hospedagem, inscrição etc. (até 30,
+  categoria de despesa das contas). Competições edita; **só o financeiro marca
+  `paid_at`**. O custo pago entra nas contas como despesa **derivada**
+  (`callupExpenses`, `ref: callup:{id}:{custo}`), sem lançamento duplicado —
+  como as diárias da arbitragem (§23).
+- **Lista pública**: `roster` guarda só os confirmados, com nome, categoria e
+  função; a chave de cada linha é um hash do id do convite (**nunca o uid**).
+
+### 32.2 Edital de apoio ao atleta
+
+- **Montar** (`grant_save`): tipo (`travel|scholarship|equipment|other`),
+  vagas, valor por contemplado (em branco se não for dinheiro), critérios,
+  período de inscrição, documentos pedidos (`required_docs`, chaves `d1…`),
+  dias para recurso e "só filiados em dia" (padrão sim). Publicado
+  (`grant_publish`), **as regras não mudam**: só o fim das inscrições pode ser
+  estendido, com motivo no `history`. Com o acervo oficial ligado, o edital
+  publicado e o resultado viram atos numerados (`notice_code`,
+  `result_code`). Filiados são avisados.
+- **Inscrever-se** (`grant_apply`): conta logada (só filiado em dia, se
+  `members_only`), justificativa e os arquivos — que ficam na pasta
+  `federacao/{uid}/` da própria pessoa (`ownFilePath`). Reenviar substitui
+  enquanto não analisada; `grant_withdraw` desiste.
+- **Analisar**: no fim do prazo a varredura passa o edital para `review` e
+  avisa competições. Cada inscrição recebe decisão (`grant_decide`:
+  contemplada, lista de espera ou não contemplada, com motivo quando não
+  contempla, nota opcional; o teto de vagas é conferido). Com todas
+  decididas, `grant_result` publica os contemplados (`result`, **sem uid**),
+  avisa todos e abre o prazo de recurso (`appeal_until`).
+- **Recurso** (`grant_appeal`, a pessoa, até `appeal_until`, uma vez) e
+  julgamento (`grant_appeal_decide`, com motivo; provido, entra no resultado
+  se houver vaga). Com o prazo vencido e nenhum recurso pendente, a varredura
+  (ou `grant_finalize`) encerra o edital (`final`).
+- **Pagamento** (`grant_pay`, `finance`/`admin`): valor e data por
+  contemplado; `undo` desfaz. Entra nas contas como despesa derivada
+  (`grantExpenses`, categoria do tipo de apoio) e, pela prestação de contas,
+  na transparência.
+- **Arquivos**: a equipe `competitions`/`admin` abre pela função
+  `federationDocument` com `applicationId` (auditado em
+  `federation_grant_file_view`); a regra do Storage não consulta o banco.
+
+### 32.3 Leitura, exclusão e exportação
+
+- Convocação e edital **publicados** são públicos na federação pública
+  (`fedSees`); o rascunho, só `competitions`/`finance`/`admin`.
+- O **convite** (documentos, uniforme, anotação) só o convocado e
+  `competitions`/`admin` — o financeiro **não**. A **inscrição** no edital, a
+  pessoa e `competitions`/`finance`/`admin`.
+- As quatro coleções: só o servidor grava.
+- Exclusão de conta: o convite é apagado e o nome sai da `roster`; a inscrição
+  contemplada ou paga fica sem nome, texto e arquivos (é registro contábil da
+  federação), as demais são apagadas, e o nome sai de `result`/`payments`.
+  Exportação: os convites e as inscrições da pessoa.
+- Minha área → Federações: "Minhas convocações" (abertas e as aceitas cujo
+  evento não passou) e "Minhas inscrições em editais" (último ano); a faixa
+  "Precisa de você" conta as convocações esperando resposta.
+
+### 32.4 Não pode regredir
+
+68. A régua (validação, convidados pelo ranking, custos, despesas, prazo de
+    recurso, resultado público) muda nos dois lados ao mesmo tempo, senão a
+    paridade quebra.
+69. A lista pública da delegação e o resultado do edital **nunca levam uid**
+    (`rosterKey`, `grantPublicResult`).
+70. O custo da convocação só vira despesa com `paid_at`, e só o financeiro o
+    marca; o servidor reaplica o `paid_at` anterior quando quem salva não é do
+    financeiro.
+71. Publicada, a convocação não troca de critério e o edital não troca de
+    regra; só o prazo de inscrição do edital estende, com motivo.
+72. O financeiro não lê `federation_callup_members` (teste de regra).
+73. Arquivo da inscrição só da pasta de quem se inscreve, e só competições ou
+    a própria pessoa o abrem.
+74. Os enums gravados (`travel_docs`, `GRANT_KINDS`, status, `UNIFORM_SIZES`,
+    `CALLUP_COST_CATEGORIES`) e os valores `?aba=convocacoes|editais` são
+    contrato — nunca renomeie.
+
+### 32.5 Âncoras e guias
+
+Âncoras: `federacao-secao-selecao`, `federacao-tab-convocacoes`,
+`federacao-tab-editais`, `federacao-aba-convocacoes`, `federacao-aba-editais`,
+`federacao-nova-convocacao`, `federacao-novo-edital`,
+`federacao-pub-selecao`, `federacao-pub-editais`,
+`federacao-edital-inscrever`.
+
+Guias: `federacao-convocacao`, `federacao-editais` e
+`federacao-edital-inscricao`. Artigo: `federacao-selecao`.

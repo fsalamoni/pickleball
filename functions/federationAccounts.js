@@ -85,11 +85,18 @@ function exigeMotivo(data, oQue) {
  * (`{ date, amount_cents, category, ref, auto }`). ⭐ Ponto de junção da
  * arbitragem: as diárias pagas (`refereeFeesAsExpenses(assignments)`) entram
  * aqui, sem serem lançadas de novo à mão — com o módulo de arbitragem ligado.
+ * Também os custos pagos das convocações e os pagamentos dos editais
+ * (`federationSelection.despesas`, cada um com o seu módulo ligado).
  */
 async function despesasDerivadas(ctx, fed) {
-  if (!(fed.modules && fed.modules.referees === true)) return [];
-  const snap = await ctx.db.collection('federation_assignments').where('federation_id', '==', fed.id).get();
-  return RP.refereeFeesAsExpenses(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  const arbitragem = async () => {
+    if (!(fed.modules && fed.modules.referees === true)) return [];
+    const snap = await ctx.db.collection('federation_assignments').where('federation_id', '==', fed.id).get();
+    return RP.refereeFeesAsExpenses(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  };
+  // require tardio: `federationSelection` usa o acervo, que este arquivo também usa.
+  const [a, s] = await Promise.all([arbitragem(), require('./federationSelection.js').despesas(ctx, fed)]);
+  return [...a, ...s];
 }
 
 /** Tudo o que entra na conta da federação: manual + cobranças pagas + derivadas. */

@@ -144,6 +144,18 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Seleção e editais** (`docs/50` §32, módulos `selection` e `grants`):
+  convocação (`federation_callups`), convite (`federation_callup_members`),
+  edital (`federation_grants`) e inscrição (`federation_grant_applications`)
+  **só o servidor grava** (callable `federationSelection` em
+  `functions/federationSelection.js`, mais a varredura); régua em
+  `domain/selection.js` com cópia e paridade em
+  `functions/federationSelectionPolicy.js`. Pelo ranking, recusar ou vencer o
+  prazo chama o próximo sozinho. A delegação pública e o resultado do edital
+  não levam uid; o financeiro não lê os convites. Custo pago da convocação e
+  pagamento do edital entram nas contas como despesa derivada. Telas em
+  `manage/FedSelectionPanel.jsx` e `selection/` (Central, página pública,
+  Minha área); regras em `tests/rules/federationSelection.rules.test.js`.
 - **Competições** (`docs/50` §31): o pedido de chancela é conferido pelo
   servidor (gatilho `federationSanctionSync` em `functions/federationCompetitions.js`):
   antecedência (`rules.sanction_min_days`), diretor credenciado

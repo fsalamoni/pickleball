@@ -2055,6 +2055,61 @@ fica sem o nome do diretor; entra na exportação.
 equipe `competitions`/`admin`. Zero índice. Na exclusão de conta é apagado;
 entra na exportação.
 
+### `federation_callups/{id}` (NOVO — convocação da seleção, `docs/50` §32.1)
+`federation_id`, `title`, `event_name`, `place`, `starts_at`, `ends_at`,
+`criterion` (`ranking|manual`), `season`, `categories` (chaves do ranking ou
+`null` = todas), `per_category` (1–32), `accept_days`, `travel_docs[]`
+(`id_doc|minor_authorization|medical|passport|vaccination`, gravados),
+`collect_uniform`, `notes`, `status` (`draft|open|closed|cancelled`),
+`costs[] { id, label, category (travel|events|equipment|other_expense),
+amount_cents, paid_at }` (até 30), `roster[] { key, name, category_key,
+gender_category, age_category, format, label }` (só os confirmados; `key` é
+um hash do id do convite, **sem uid**), `counts`, `published_at_ms`,
+`published_by`, `cancel_reason`, `created_by`, `created_by_name`,
+`created_at_ms`, `updated_at_ms`. Só o servidor grava (`federationSelection`).
+Leem: todos, se publicada (`open|closed|cancelled`) e a federação pública; o
+rascunho, `competitions`/`finance`/`admin`. Zero índice. Na exclusão de conta
+o nome sai da `roster`.
+
+### `federation_callup_members/{callupId}_{categoria}_{uid}` (NOVO — o convite, `docs/50` §32.1)
+`federation_id`, `federation_acronym`, `callup_id`, `callup_title`,
+`event_name`, `starts_at`, `category_key` (ou `manual`), `gender_category`,
+`age_category`, `format`, `label` (função, na convocação a dedo), `user_id`,
+`user_name`, `position`, `points`, `substitute`, `status`
+(`invited|accepted|declined|expired|cancelled`, gravado), `expires_at_ms`,
+`answered_at_ms`, `uniform_size` (`PP…XG`), `docs_ok { doc: true }`,
+`staff_note`, `cancel_reason`, `cancelled_by`, `invited_by`, `created_at_ms`,
+`updated_at_ms`. Só o servidor grava. Leem: o convocado e
+`competitions`/`admin` (o financeiro **não**). Zero índice. Na exclusão de
+conta é apagado; entra na exportação (`listMyCallupInvites`).
+
+### `federation_grants/{id}` (NOVO — edital de apoio ao atleta, `docs/50` §32.2)
+`federation_id`, `title`, `description`, `kind`
+(`travel|scholarship|equipment|other`, gravado), `slots`, `amount_cents`,
+`criteria`, `opens_at`, `closes_at`, `appeal_days`, `members_only`,
+`required_docs[] { key (d1…), label }`, `status`
+(`draft|open|review|result|final|cancelled`), `notice_doc_id`/`notice_code`
+e `result_doc_id`/`result_code` (acervo), `result[] { application_id, name }`,
+`appeal_until`, `payments[] { application_id, name, amount_cents, paid_at }`,
+`history[]`, `cancel_reason`, `created_by`, `published_at_ms`,
+`result_at_ms`, `final_at_ms`, `created_at_ms`, `updated_at_ms`. Só o
+servidor grava. Leem: todos, se publicado e a federação pública; o rascunho,
+`competitions`/`finance`/`admin`. Zero índice. Na exclusão de conta o nome sai
+de `result` e `payments`.
+
+### `federation_grant_applications/{id}` (NOVO — inscrição no edital, `docs/50` §32.2)
+`federation_id`, `grant_id`, `grant_title`, `user_id`, `user_name`,
+`member_id` (filiação em dia, ou `null`), `text`, `files { d1: { path, name,
+contentType, size } }` (só da pasta `federacao/{uid}/` de quem se inscreve),
+`status` (`submitted|withdrawn|approved|waitlisted|rejected`), `decision {
+status, reason, score, by, by_name, at_ms }`, `appeal { status, text, reason, by,
+at_ms, decided_at_ms }`, `payment { paid_at, amount_cents, by, at_ms }`,
+`submitted_at_ms`, `withdrawn_at_ms`, `created_at_ms`, `updated_at_ms`. Só o
+servidor grava. Leem: a pessoa e `competitions`/`finance`/`admin`. Zero índice.
+Na exclusão de conta: contemplada ou paga, fica sem nome, texto nem arquivos
+(é registro contábil da federação); as demais são apagadas. Entra na
+exportação (`listMyGrantApplications`).
+
 ### Chancela (Bloco 2): campos novos e opcionais
 `tournaments.federation_sanction` ganha, do organizador, `requested_by_name`,
 `director_code` e `prize { female_cents, male_cents, note }`; e, só do

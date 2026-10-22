@@ -31,6 +31,10 @@ vi.mock('@/modules/federations/hooks/useFederations', async () => {
     useVisibleAgenda: () => ({ ligado: false, items: [] }),
   };
 });
+vi.mock('@/modules/federations/hooks/useSelection', () => ({
+  usePublicCallups: () => fontes.callups || q([]),
+  usePublicGrants: () => fontes.grants || q([]),
+}));
 
 const { default: FedAccountsPanel } = await import('./FedAccountsPanel');
 

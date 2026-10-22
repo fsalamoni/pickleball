@@ -25,6 +25,7 @@ import { FedAgendaBlock } from '../agenda/AgendaPublic';
 import FedAccountsPublic from '../accounts/FedAccountsPublic';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '../FedPublicBlocks';
 import { FedRefereesBoard } from '../referees/RefereesPublic';
+import { FedCallupsBlock, FedGrantsBlock } from '../selection/SelectionPublic';
 import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip, FedStoreLink } from '../FedCommsBlocks';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
@@ -182,6 +183,8 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
             <FedSanctionedTournaments federation={f} />
             <FedRankingBlock federation={f} meUid={meUid} />
             <FedRefereesBoard federation={f} />
+            <FedCallupsBlock federation={f} />
+            <FedGrantsBlock federation={f} meUid={meUid} />
           </div>
         )}
         {aba === PROFILE_TAB.DOCUMENTS && (

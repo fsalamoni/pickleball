@@ -10,7 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeftRight, Award, BarChart3, Flag, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
+  ArrowLeftRight, Award, BarChart3, FileSignature, Flag, Plane, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
   HandCoins, Heart, HelpCircle, Inbox, MailPlus, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
   Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
@@ -42,6 +42,7 @@ import { ORDER_FINAL_STATUSES } from '@/modules/marketplace/domain/constants';
 import { isoDate, membershipState } from '@/modules/federations/domain/membership';
 import { finalInviteOpen } from '@/modules/federations/domain/competitions';
 import { MyDirectedTournaments, MyFinalInvites } from '@/v2/components/federations/competitions/MyCompetitions';
+import { MyCallupInvites, MyGrantApplications } from '@/v2/components/federations/selection/MySelection';
 import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import { credentialState } from '@/modules/federations/domain/courses';
 import { staffRoleName } from '@/modules/federations/domain/staff';
@@ -658,8 +659,11 @@ function CredencialRow({ c }) {
 }
 
 function FederacoesSecao({ ctx }) {
-  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ } = ctx.federacoes;
-  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ].filter((q) => q?.isError);
+  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ, callupsQ, grantAppsQ } = ctx.federacoes;
+  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ, callupsQ, grantAppsQ].filter((q) => q?.isError);
+  // Convocações: as abertas e as aceitas de eventos que ainda vêm; inscrições em editais: as do último ano.
+  const convocacoes = (callupsQ?.data || []).filter((i) => finalInviteOpen(i) || (i.status === 'accepted' && (!i.starts_at || i.starts_at >= isoDate())));
+  const editais = (grantAppsQ?.data || []).filter((a) => (a.created_at_ms || 0) > Date.now() - 365 * 86400000);
   // Convite da final: os abertos e os confirmados de torneios que ainda vêm (o resto é histórico).
   const finais = (finalsQ?.data || []).filter((i) => finalInviteOpen(i) || (i.status === 'accepted' && (!i.starts_at || i.starts_at >= isoDate())));
   const dirigidos = directedQ?.data || [];
@@ -682,6 +686,16 @@ function FederacoesSecao({ ctx }) {
       {finais.length > 0 && (
         <Bloco id="federacoes-finais" icon={Medal} title={t('Convites para finais de circuito')}>
           <MyFinalInvites invites={finais} />
+        </Bloco>
+      )}
+      {convocacoes.length > 0 && (
+        <Bloco id="federacoes-convocacoes" icon={Plane} title={t('Minhas convocações')}>
+          <MyCallupInvites invites={convocacoes} />
+        </Bloco>
+      )}
+      {editais.length > 0 && (
+        <Bloco id="federacoes-editais" icon={FileSignature} title={t('Minhas inscrições em editais')}>
+          <MyGrantApplications applications={editais} />
         </Bloco>
       )}
       {dirigidos.length > 0 && (
