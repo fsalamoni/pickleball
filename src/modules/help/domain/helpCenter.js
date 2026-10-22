@@ -598,11 +598,12 @@ const ATLETA = {
       guias: ['federacao-filiar'],
       title: tk('Filiar-se a uma federação'),
       summary: tk('Escolher o plano, pagar por Pix à federação e receber a carteirinha digital com QR de verificação.'),
-      keywords: ['federação', 'federar', 'filiação', 'filiar', 'carteirinha', 'anuidade', 'mensalidade', 'pix', 'federado', 'cadastrado', 'qr', 'verificar'],
+      keywords: ['federação', 'federar', 'filiação', 'filiar', 'carteirinha', 'anuidade', 'mensalidade', 'pix', 'federado', 'filiado', 'cadastrado', 'documentos', 'qr', 'verificar'],
       blocks: [
         p(tk('No menu, Federações mostra as federações abertas ao público, perto de você primeiro. A federação aprovada só aparece depois que quem a administra a torna pública, em Página pública → Publicação. Cada uma tem página pública, planos de filiação e, quando a federação liga, torneios chancelados e ranking oficial. A federação é uma entidade própria: a plataforma organiza o pedido, a cobrança e a carteirinha, e o dinheiro vai por Pix direto para a conta dela.')),
         steps(
-          tk('Abra a federação e toque em "Filiar-se". Escolha o tipo (atleta, professor ou árbitro) e o plano: mensal ou anual, cadastro gratuito ou federado. O preço mostra o desconto que vale para você (por idade, por exemplo).'),
+          tk('Abra a federação e toque em "Filiar-se". Escolha o tipo (atleta, professor ou árbitro) e o plano: mensal ou anual, cadastro gratuito ou filiado. O preço mostra o desconto que vale para você (por idade, por exemplo).'),
+          tk('Se o plano pede documentos, cada um aparece com o espaço para escolher o arquivo ali mesmo (PDF ou imagem, até 5 MB). Eles sobem junto com o pedido; o que faltar dá para enviar depois, na aba Minha filiação.'),
           tk('Diga se a filiação aparece no seu perfil público e se você entra no diretório de filiados. Se joga por um clube, indique-o. Envie.'),
           tk('Plano gratuito com aprovação automática ativa na hora. Nos outros, a secretaria aprova e o plano pago gera a cobrança: pague o Pix pelo QR ou pelo "copia e cola" e toque em "Já paguei".'),
           tk('Quando a federação confirma o recebimento, a filiação fica em dia e a carteirinha aparece: na página da federação e em Minha área → Federações. Dá para compartilhar, baixar PNG ou imprimir.'),
@@ -610,14 +611,14 @@ const ATLETA = {
         ),
         list(
           tk('CARTEIRINHA — traz número, validade e um QR. Quem lê o QR vê, sem conta, se a filiação está em dia: nome, foto (se você permitir), federação, vínculo, número e validade. Nada mais.'),
-          tk('CADASTRADO × FEDERADO — cadastrado é o vínculo gratuito, só para constar; federado é o que paga e pontua no ranking oficial da federação.'),
+          tk('CADASTRADO × FILIADO — cadastrado é o vínculo gratuito, só para constar; filiado é o vínculo pago com a federação, o que pontua no ranking oficial dela.'),
           tk('O QUE A FEDERAÇÃO VÊ — nome, foto, categoria, plano e o que você escrever. E-mail, telefone, nascimento e endereço não vão no pedido.'),
           tk('CANCELAR — a qualquer hora, em Minha área → Federações. Não há reembolso automático: isso é com a federação.'),
           tk('DECLARAÇÃO DE VÍNCULO — com a filiação em dia, "Declaração de vínculo" (na página da federação ou em Minha área → Federações) gera a folha para Bolsa Atleta, escola, empregador ou patrocinador: seus dados de filiado, a validade, os resultados oficiais nesta federação e o QR que confere tudo. Renovou ou foi suspenso? O código muda: emita de novo.'),
           tk('TORNEIO CHANCELADO — o selo "Chancelado · SIGLA" no torneio diz que a federação o reconhece e que o resultado vai para o ranking oficial dela. Quando vem "só filiados", só quem está em dia na federação consegue se inscrever — a tela avisa antes.'),
           tk('RANKING OFICIAL — na página da federação, por temporada e categoria: pontos pela colocação em cada torneio chancelado (peso por tipo de torneio), contando os melhores resultados do ano. Só filiados em dia na data do torneio pontuam, se a federação assim decidir.'),
           tk('CLUBES E ARENAS FILIADOS — também aparecem na página da federação, com o selo "Filiado" na página do clube ou da arena.'),
-          tk('CPF E DOCUMENTOS — a federação pode pedir o CPF (fica guardado à parte, só a secretaria lê, com motivo registrado) e documentos do plano (foto, identidade, atestado médico, comprovante de residência, autorização do responsável). Você envia na aba Minha filiação e acompanha a conferência; documento recusado volta com o motivo.'),
+          tk('CPF E DOCUMENTOS — a federação pode pedir o CPF (fica guardado à parte, só a secretaria lê, com motivo registrado) e documentos do plano (identidade, atestado médico, comprovante de residência, autorização do responsável e os documentos próprios que a federação nomear). Você envia no próprio pedido ou na aba Minha filiação e acompanha a conferência; documento recusado volta com o motivo.'),
           tk('MENOR DE IDADE — de 12 a 17 anos a filiação pede nome, contato e consentimento do responsável, e a autorização de foto é separada. Abaixo de 12, só como DEPENDENTE: o responsável filia pela própria conta ("Filiar um dependente"), responde pela cobrança e pelos documentos e vê a carteirinha do menor em Minha área → Federações.'),
           tk('TRANSFERÊNCIA — trocar de clube dentro da federação ou sair para outra federação se pede em "Minha filiação → Transferência". A federação responde; sem resposta no prazo dela, a troca de federação é liberada sozinha. Há carência entre transferências (a federação define).'),
           tk('CURSOS E CREDENCIAIS — a federação pode publicar cursos e clínicas (arbitragem, capacitação, formação de professor). Aprovado num curso que emite credencial, você recebe a credencial com código verificável, igual à carteirinha, e escolhe se aparece no diretório público de credenciados.'),
@@ -638,7 +639,7 @@ const ATLETA = {
       blocks: [
         p(tk('Qualquer conta pode pedir a abertura de uma federação em Federações → "Abrir uma federação": nome, sigla, abrangência (nacional, estadual, regional ou municipal), contato público e os dados da entidade (CNPJ e razão social, que só a equipe do PickleRush lê). A equipe da plataforma analisa; aprovada, quem pediu vira presidente e ganha a Central da federação.')),
         steps(
-          tk('Na Central → Configurações → Planos, crie ao menos um plano: para quem (atleta, professor, árbitro), cadastrado ou federado, mensal ou anual, o valor (0 = gratuito), descontos por idade e se aprova na hora.'),
+          tk('Na Central → Configurações → Planos, crie ao menos um plano: para quem (atleta, professor, árbitro), cadastrado ou filiado, mensal ou anual, o valor (0 = gratuito), descontos por idade, os documentos exigidos e se aprova na hora. Em "Outro documento", dê o nome de cada um (até 5): é o que a pessoa lê na hora de enviar.'),
           tk('Em Configurações → Recebimento, cadastre a chave Pix e o nome de quem recebe. Sem Pix, plano pago não gera cobrança.'),
           tk('Em Página pública → Conteúdo, capriche no "Sobre", na cor e no logo: é o que aparece em picklerush.web.app/f/sua-sigla. "Ver como visitante", no topo da Central, mostra a página como o público a vê.'),
           tk('Aprovada, a federação nasce OCULTA: só a equipe e os filiados a veem, para você montar tudo com calma. Quando estiver pronta, Página pública → Publicação → "Tornar pública" (só o admin) abre a página, o diretório e a filiação para todo mundo. "Tirar do ar" volta a esconder, sem apagar nada.'),

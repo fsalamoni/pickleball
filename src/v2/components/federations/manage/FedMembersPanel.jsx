@@ -12,9 +12,9 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { membershipAction, revealMemberPrivate } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { membershipState, memberCounts, sortMembersForStaff } from '@/modules/federations/domain/membership';
-import { formatCpf } from '@/modules/federations/domain/privateData';
+import { docLabel, formatCpf } from '@/modules/federations/domain/privateData';
 import { isDisciplineSuspended } from '@/modules/federations/domain/discipline';
-import { DOC_KIND_LABELS, DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { DOC_STATUS_LABELS, MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { MemberStatusBadge, quando } from '../federationUi';
@@ -87,7 +87,7 @@ function FichaDialog({ member: mb, documentos, onClose }) {
             <h3 className="text-sm font-bold text-ink">{t('Documentos enviados')}</h3>
             {documentos === undefined ? <p className="text-sm text-gray-500">{t('Os documentos não carregaram.')}</p>
               : !docs.length ? <p className="text-sm text-gray-500">{t('Nenhum documento enviado. A conferência fica em Filiados → Documentos.')}</p>
-                : <ul className="space-y-1 text-sm text-gray-700">{docs.map((d) => <li key={d.id} className="flex flex-wrap items-center gap-2">{t(DOC_KIND_LABELS[d.kind] || DOC_KIND_LABELS.outro)}<V2Badge tone={{ pending: 'amber', approved: 'green', rejected: 'red' }[d.status] || 'neutral'}>{t(DOC_STATUS_LABELS[d.status] || d.status)}</V2Badge><span className="text-xs text-gray-500">{quando(d.created_at)}</span></li>)}</ul>}
+                : <ul className="space-y-1 text-sm text-gray-700">{docs.map((d) => <li key={d.id} className="flex flex-wrap items-center gap-2">{docLabel(d)}<V2Badge tone={{ pending: 'amber', approved: 'green', rejected: 'red' }[d.status] || 'neutral'}>{t(DOC_STATUS_LABELS[d.status] || d.status)}</V2Badge><span className="text-xs text-gray-500">{quando(d.created_at)}</span></li>)}</ul>}
           </section>
           {Number(mb.discipline_until_ms) > 0 && isDisciplineSuspended(mb) && <p className="text-sm text-red-600">{t('Suspensão disciplinar até {data}.', { data: quando(mb.discipline_until_ms) })}</p>}
         </div>

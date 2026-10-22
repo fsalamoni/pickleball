@@ -1805,7 +1805,8 @@ só o dono lê e escreve, tipos e tetos do catálogo, sem sobrescrever;
 100.000.000), `age_min`, `age_max`, `discounts { minor_pct, senior_pct,
 family_pct, family_from }`, `requires_docs[]` (PR 3:
 `identidade|atestado|comprovante_residencia|autorizacao_responsavel|outro`),
-`auto_approve`, `active`, `sort`, `updated_by`.
+`other_docs[] { id, label }` (opcional, até 5: o nome de cada "outro
+documento"; com ele o `requires_docs` leva `outro`), `auto_approve`, `active`, `sort`, `updated_by`.
 Cria/edita `admin` ou `finance`; apaga só o admin da plataforma (desativa).
 
 ### `federation_members/{fedId}_{uid}` (NOVO, **nunca público**)
@@ -1927,7 +1928,9 @@ módulo `tournaments` ligados; `tournamentFederationOk()`) ou apaga os dois
 
 ### `federation_documents_submitted/{id}` (PR 3)
 Registro de um documento enviado pelo filiado. `federation_id`, `member_id`,
-`user_id`, `kind` (os de `requires_docs`), `storage_path`
+`user_id`, `kind` (os de `requires_docs`), `doc_key` (opcional: o `id` do
+`other_docs` quando o documento é um dos próprios do plano) e `label`
+(opcional, ≤ 80, o nome dele), `storage_path`
 (`federacao/{uid}/{arquivo}.{ext}`, conferido na regra), `file_name`,
 `content_type`, `size`, `status` (`pending|approved|rejected`), `review { by,
 at_ms, reason }`,

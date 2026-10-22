@@ -11,7 +11,7 @@
  *    o consentimento do responsável.
  */
 import { t } from '@/core/i18n';
-import { DOC_KIND, DOC_MAX_BYTES, DOC_STATUS, GUARDIAN_ONLY_AGE, MINOR_AGE } from './constants.js';
+import { DOC_KIND, DOC_KIND_LABELS, DOC_MAX_BYTES, DOC_STATUS, GUARDIAN_ONLY_AGE, MINOR_AGE } from './constants.js';
 
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 export const onlyDigits = (v) => String(v ?? '').replace(/\D/g, '');
@@ -118,17 +118,58 @@ export function requiredDocKinds(plan) {
   return [...new Set((plan?.requires_docs || []).filter((k) => validos.includes(k)))];
 }
 
+/** Quantos documentos próprios ("outro documento", com nome) um plano pode pedir. */
+export const OTHER_DOCS_MAX = 5;
+
+/**
+ * Os documentos PRÓPRIOS do plano (`other_docs[]`): cada um com id estável
+ * (é o que liga o arquivo enviado ao pedido, mesmo se o nome for corrigido)
+ * e o nome que a federação deu. Sem nome, some; repetido, vale um.
+ * @returns {Array<{ id: string, label: string }>}
+ */
+export function normalizeOtherDocs(list) {
+  const vistos = new Set();
+  return (Array.isArray(list) ? list : [])
+    .map((x) => ({ id: str(x?.id, 24).replace(/[^A-Za-z0-9_-]/g, ''), label: str(x?.label, 80) }))
+    .filter((x) => x.id && x.label.length >= 2 && !vistos.has(x.label.toLowerCase()) && vistos.add(x.label.toLowerCase()))
+    .slice(0, OTHER_DOCS_MAX);
+}
+
+/**
+ * Cada documento que o plano exige, já com o nome para a tela: os do catálogo
+ * (identidade, atestado…) e cada documento próprio com o nome que a federação
+ * deu. Plano antigo com "Outro documento" sem nome continua pedindo um
+ * documento genérico (`key: 'outro'`).
+ * @returns {Array<{ key: string, kind: string, label: string|null }>}
+ */
+export function requiredDocs(plan) {
+  const proprios = normalizeOtherDocs(plan?.other_docs);
+  const kinds = requiredDocKinds(plan);
+  const lista = kinds.filter((k) => k !== DOC_KIND.OTHER).map((k) => ({ key: k, kind: k, label: null }));
+  if (kinds.includes(DOC_KIND.OTHER) || proprios.length) {
+    if (proprios.length) proprios.forEach((o) => lista.push({ key: o.id, kind: DOC_KIND.OTHER, label: o.label }));
+    else lista.push({ key: DOC_KIND.OTHER, kind: DOC_KIND.OTHER, label: null });
+  }
+  return lista;
+}
+
+/** O nome de um documento (exigido ou enviado) para a tela: o próprio, ou o do catálogo. */
+export const docLabel = (d) => (d?.label ? String(d.label) : t(DOC_KIND_LABELS[d?.kind] || DOC_KIND_LABELS.outro));
+
+/** A chave de um documento ENVIADO: o id do documento próprio ou o tipo do catálogo. */
+export const submittedDocKey = (d) => d?.doc_key || d?.kind || DOC_KIND.OTHER;
+
 /**
  * Cada documento exigido e a situação dele: o mais recente enviado daquele
- * tipo decide. `missing` = falta enviar (ou o último foi recusado).
- * @returns {Array<{ kind: string, status: 'missing'|'pending'|'approved'|'rejected', doc: object|null }>}
+ * documento decide. `missing` = falta enviar (ou o último foi recusado).
+ * @returns {Array<{ key: string, kind: string, label: string|null, status: 'missing'|'pending'|'approved'|'rejected', doc: object|null }>}
  */
 export function requiredDocsStatus(plan, docs = []) {
-  return requiredDocKinds(plan).map((kind) => {
-    const dos = docs.filter((d) => d.kind === kind).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+  return requiredDocs(plan).map((req) => {
+    const dos = docs.filter((d) => submittedDocKey(d) === req.key).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
     const doc = dos[0] || null;
-    if (!doc) return { kind, status: 'missing', doc: null };
-    return { kind, status: doc.status === DOC_STATUS.APPROVED ? 'approved' : doc.status === DOC_STATUS.REJECTED ? 'rejected' : 'pending', doc };
+    if (!doc) return { ...req, status: 'missing', doc: null };
+    return { ...req, status: doc.status === DOC_STATUS.APPROVED ? 'approved' : doc.status === DOC_STATUS.REJECTED ? 'rejected' : 'pending', doc };
   });
 }
 

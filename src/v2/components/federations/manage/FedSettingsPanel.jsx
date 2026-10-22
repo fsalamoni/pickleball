@@ -6,7 +6,8 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Pencil, Plus, Puzzle } from 'lucide-react';
+import { ExternalLink, Pencil, Plus, Puzzle, Trash2 } from 'lucide-react';
+import { OTHER_DOCS_MAX } from '@/modules/federations/domain/privateData';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { savePlan, setPlanActive, setFederationModule, updateFederationGovernance, updateFederationPayment, updateFederationProfile, updateFederationRules } from '@/modules/federations/services/federationService';
 import { BOARD_MAX, MINUTES_MAX, validateGovernance, womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
@@ -44,11 +45,35 @@ function useRascunho(inicial) {
 
 /* ---------------------------------------------------------------- planos -- */
 
-const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN_PERSON_TYPE.ATHLETE, tier: PLAN_TIER.FEDERATED, billing: PLAN_BILLING.ANNUAL, validity: PLAN_VALIDITY.ROLLING, rollover_mmdd: '12-31', calendar_grace_days: 60, preco: '0,00', age_min: '', age_max: '', discounts: { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 }, requires_docs: [], auto_approve: false, active: true, sort: 0 };
+const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN_PERSON_TYPE.ATHLETE, tier: PLAN_TIER.FEDERATED, billing: PLAN_BILLING.ANNUAL, validity: PLAN_VALIDITY.ROLLING, rollover_mmdd: '12-31', calendar_grace_days: 60, preco: '0,00', age_min: '', age_max: '', discounts: { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 }, requires_docs: [], other_docs: [], auto_approve: false, active: true, sort: 0 };
+// Plano antigo com "Outro documento" sem nome: o campo do nome já abre, para a federação dizer qual é.
+const outrosIniciais = (plano) => (plano.other_docs?.length ? plano.other_docs : (plano.requires_docs || []).includes(DOC_KIND.OTHER) ? [novoOutroDoc()] : []);
+
+const novoOutroDoc = () => ({ id: `o_${Math.random().toString(36).slice(2, 10)}`, label: '' });
+
+/** Os documentos PRÓPRIOS do plano: cada um com o nome que a pessoa vai ler na hora de enviar. */
+function OutrosDocumentos({ lista, erro, onChange }) {
+  const mudar = (i, label) => onChange(lista.map((x, j) => (j === i ? { ...x, label } : x)));
+  return (
+    <div className="space-y-2 rounded-2xl border border-gray-100 p-3" data-dica="federacao-plano-outros-docs">
+      <p className="text-sm font-semibold text-ink">{t('Quais outros documentos?')}</p>
+      <ul className="space-y-2">
+        {lista.map((x, i) => (
+          <li key={x.id} className="flex items-center gap-2">
+            <V2Input id={`pl-outro-${x.id}`} aria-label={t('Nome do documento {n}', { n: i + 1 })} maxLength={80} placeholder={t('Ex.: Exame de vista, Ficha de inscrição assinada')} value={x.label} onChange={(e) => mudar(i, e.target.value)} />
+            <V2Button type="button" size="sm" variant="ghost" aria-label={t('Tirar {nome}', { nome: x.label || t('documento {n}', { n: i + 1 }) })} onClick={() => onChange(lista.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></V2Button>
+          </li>
+        ))}
+      </ul>
+      {lista.length < OTHER_DOCS_MAX && <V2Button type="button" size="sm" variant="secondary" onClick={() => onChange([...lista, novoOutroDoc()])}><Plus className="h-4 w-4" />{t('Mais um documento')}</V2Button>}
+      {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
+    </div>
+  );
+}
 
 function PlanoForm({ federationId, plano, onFechar }) {
   const { user } = useAuth();
-  const [f, setF] = useRascunho(plano ? { ...PLANO_VAZIO, ...plano, preco: reais(plano.price_cents), age_min: plano.age_min ?? '', age_max: plano.age_max ?? '', discounts: { ...PLANO_VAZIO.discounts, ...(plano.discounts || {}) } } : PLANO_VAZIO);
+  const [f, setF] = useRascunho(plano ? { ...PLANO_VAZIO, ...plano, preco: reais(plano.price_cents), age_min: plano.age_min ?? '', age_max: plano.age_max ?? '', discounts: { ...PLANO_VAZIO.discounts, ...(plano.discounts || {}) }, other_docs: outrosIniciais(plano) } : PLANO_VAZIO);
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setDesc = (patch) => set({ discounts: { ...f.discounts, ...patch } });
@@ -63,12 +88,12 @@ function PlanoForm({ federationId, plano, onFechar }) {
   const anualFixo = f.billing === PLAN_BILLING.ANNUAL && f.validity === PLAN_VALIDITY.CALENDAR;
   return (
     <form onSubmit={enviar} noValidate className="space-y-4" data-dica="federacao-plano-formulario">
-      <V2Field label={t('Nome do plano')} htmlFor="pl-nome" error={erros.name} required hint={t('Ex.: Atleta federado 2026, Professor, Cadastro gratuito.')}>
+      <V2Field label={t('Nome do plano')} htmlFor="pl-nome" error={erros.name} required hint={t('Ex.: Atleta filiado 2026, Professor, Cadastro gratuito.')}>
         <V2Input id="pl-nome" maxLength={80} value={f.name} onChange={(e) => set({ name: e.target.value })} />
       </V2Field>
       <div className="grid gap-4 sm:grid-cols-3">
         <V2Field label={t('Para quem')} htmlFor="pl-tipo"><V2Select id="pl-tipo" value={f.person_type} onChange={(e) => set({ person_type: e.target.value })}>{Object.values(PLAN_PERSON_TYPE).map((v) => <option key={v} value={v}>{t(PLAN_PERSON_TYPE_LABELS[v])}</option>)}</V2Select></V2Field>
-        <V2Field label={t('Vínculo')} htmlFor="pl-tier" hint={t('Federado pontua no ranking oficial; cadastrado só consta.')}><V2Select id="pl-tier" value={f.tier} onChange={(e) => set({ tier: e.target.value })}>{Object.values(PLAN_TIER).map((v) => <option key={v} value={v}>{t(PLAN_TIER_LABELS[v])}</option>)}</V2Select></V2Field>
+        <V2Field label={t('Vínculo')} htmlFor="pl-tier" hint={t('Filiado paga e pontua no ranking oficial; cadastrado é gratuito e só consta.')}><V2Select id="pl-tier" value={f.tier} onChange={(e) => set({ tier: e.target.value })}>{Object.values(PLAN_TIER).map((v) => <option key={v} value={v}>{t(PLAN_TIER_LABELS[v])}</option>)}</V2Select></V2Field>
         <V2Field label={t('Valor (R$)')} htmlFor="pl-preco" error={erros.price_cents} hint={t('0,00 = gratuito.')} required><V2Input id="pl-preco" inputMode="decimal" value={f.preco} onChange={(e) => set({ preco: e.target.value })} /></V2Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -90,12 +115,26 @@ function PlanoForm({ federationId, plano, onFechar }) {
       <V2Field label={t('Benefícios (um por linha)')} htmlFor="pl-benef"><V2Textarea id="pl-benef" rows={3} maxLength={1200} value={f.benefits} onChange={(e) => set({ benefits: e.target.value })} /></V2Field>
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-ink">{t('Documentos exigidos')}</legend>
-        <p className="text-xs text-gray-500">{t('A pessoa envia pela página da federação e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
+        <p className="text-xs text-gray-500">{t('A pessoa envia os arquivos no próprio pedido de filiação (ou depois, pela página da federação) e a secretaria confere em Filiados → Documentos. Nada trava a filiação sozinho: é a secretaria que decide.')}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {Object.values(DOC_KIND).map((k) => (
-            <V2Toggle key={k} id={`pl-doc-${k}`} label={t(DOC_KIND_LABELS[k])} checked={(f.requires_docs || []).includes(k)} onChange={(v) => set({ requires_docs: v ? [...(f.requires_docs || []), k] : (f.requires_docs || []).filter((x) => x !== k) })} />
+            <V2Toggle
+              key={k}
+              id={`pl-doc-${k}`}
+              label={t(DOC_KIND_LABELS[k])}
+              checked={(f.requires_docs || []).includes(k)}
+              onChange={(v) => {
+                const requires_docs = v ? [...(f.requires_docs || []), k] : (f.requires_docs || []).filter((x) => x !== k);
+                // "Outro documento" ligado já abre o campo do nome; desligado, os nomes saem junto.
+                if (k === DOC_KIND.OTHER) set({ requires_docs, other_docs: v ? (f.other_docs?.length ? f.other_docs : [novoOutroDoc()]) : [] });
+                else set({ requires_docs });
+              }}
+            />
           ))}
         </div>
+        {(f.requires_docs || []).includes(DOC_KIND.OTHER) && (
+          <OutrosDocumentos lista={f.other_docs || []} erro={erros.other_docs} onChange={(other_docs) => set({ other_docs })} />
+        )}
       </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
         <V2Toggle id="pl-auto" checked={f.auto_approve} onChange={(v) => set({ auto_approve: v })} label={t('Aprovar na hora')} hint={t('Sem fila: pedido aprovado e cobrança gerada no ato.')} />
@@ -123,7 +162,7 @@ function PlanosTab({ federation, plansQ }) {
         {editando == null && <V2Button type="button" size="sm" onClick={() => setEditando('novo')} data-dica="federacao-plano-novo"><Plus className="h-4 w-4" />{t('Novo plano')}</V2Button>}
       </div>
       {editando != null && <V2Surface><PlanoForm federationId={federation.id} plano={editando === 'novo' ? null : editando} onFechar={() => setEditando(null)} /></V2Surface>}
-      {!planos.length && editando == null ? <V2EmptyState icon={Plus} title={t('Nenhum plano ainda')} description={t('Crie ao menos um: por exemplo "Atleta federado", anual, com o valor da anuidade.')} action={<V2Button type="button" onClick={() => setEditando('novo')}>{t('Criar o primeiro plano')}</V2Button>} /> : (
+      {!planos.length && editando == null ? <V2EmptyState icon={Plus} title={t('Nenhum plano ainda')} description={t('Crie ao menos um: por exemplo "Atleta filiado", anual, com o valor da anuidade.')} action={<V2Button type="button" onClick={() => setEditando('novo')}>{t('Criar o primeiro plano')}</V2Button>} /> : (
         <ul className="space-y-3">
           {planos.map((p) => (
             <li key={p.id}>

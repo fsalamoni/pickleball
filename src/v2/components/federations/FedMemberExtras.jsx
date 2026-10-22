@@ -20,11 +20,11 @@ import { deleteMyDocument, disciplineAction, membershipAction, transferAction, u
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useFederationMutation, useMyDocuments, useMySanctions, useMyTransfers, usePublicFederations } from '@/modules/federations/hooks/useFederations';
-import { requiredDocKinds, requiredDocsStatus, validateDocumentFile } from '@/modules/federations/domain/privateData';
+import { docLabel, requiredDocs, requiredDocsStatus, submittedDocKey, validateDocumentFile } from '@/modules/federations/domain/privateData';
 import { canRequestTransfer, isReleaseOverdue, sortTransfers, transferReleaseDays, transferSummary, validateTransferInput } from '@/modules/federations/domain/transfers';
 import { canAppeal, sanctionInForce, sortSanctions } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { MEMBER_STATUS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_KIND_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { MEMBER_STATUS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from './federationUi';
@@ -71,10 +71,10 @@ export function FedCancelMembership({ member, size = 'sm', className = '' }) {
 
 /* ------------------------------------------------------------- documentos -- */
 
-function EnviarDocumento({ member, kind, rotulo = t('Enviar') }) {
+function EnviarDocumento({ member, req, rotulo = t('Enviar') }) {
   const { user } = useAuth();
   const input = useRef(null);
-  const m = useFederationMutation((file) => uploadMemberDocument({ member, kind, file, uid: user?.uid }));
+  const m = useFederationMutation((file) => uploadMemberDocument({ member, kind: req.kind, docKey: req.key, label: req.label, file, uid: user?.uid }));
   const escolher = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -86,7 +86,7 @@ function EnviarDocumento({ member, kind, rotulo = t('Enviar') }) {
   return (
     <>
       <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => input.current?.click()}><FileUp className="h-4 w-4" />{m.isPending ? t('Enviando…') : rotulo}</V2Button>
-      <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" onChange={escolher} aria-label={t('Arquivo do documento: {tipo}', { tipo: t(DOC_KIND_LABELS[kind] || DOC_KIND_LABELS.outro) })} />
+      <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" onChange={escolher} aria-label={t('Arquivo do documento: {tipo}', { tipo: docLabel(req) })} />
     </>
   );
 }
@@ -102,20 +102,21 @@ export function FedMemberDocuments({ member, plan, compacto = false }) {
   const apagar = useFederationMutation((docu) => deleteMyDocument(docu));
   const meus = useMemo(() => (dq.data || []).filter((d) => d.member_id === member?.id), [dq.data, member?.id]);
   const exigidos = useMemo(() => requiredDocsStatus(plan, meus), [plan, meus]);
-  const extras = meus.filter((d) => !requiredDocKinds(plan).includes(d.kind));
+  const chaves = requiredDocs(plan).map((x) => x.key);
+  const extras = meus.filter((d) => !chaves.includes(submittedDocKey(d)));
   if (!member) return null;
   if (dq.isError) return <V2ErrorState inline title={t('Não carregaram os seus documentos')} onRetry={() => dq.refetch()} />;
   if (dq.isLoading) return <V2Skeleton lines={2} />;
   if (!exigidos.length && !extras.length) return null;
-  const linha = (kind, status, docu) => (
-    <li key={docu?.id || kind} className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="font-semibold text-ink">{t(DOC_KIND_LABELS[kind] || DOC_KIND_LABELS.outro)}</span>
+  const linha = (req, status, docu) => (
+    <li key={docu?.id || req.key} className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="font-semibold text-ink">{docLabel(req)}</span>
       <V2Badge tone={TOM_DOC[status] || 'neutral'}>{status === 'missing' ? t('Falta enviar') : t(DOC_STATUS_LABELS[status] || status)}</V2Badge>
       {docu?.review?.reason && status === 'rejected' && <span className="text-xs text-red-600">{docu.review.reason}</span>}
       <span className="ml-auto flex items-center gap-1">
-        {(status === 'missing' || status === 'rejected') && <EnviarDocumento member={member} kind={kind} rotulo={status === 'rejected' ? t('Enviar outro') : t('Enviar')} />}
+        {(status === 'missing' || status === 'rejected') && <EnviarDocumento member={member} req={req} rotulo={status === 'rejected' ? t('Enviar outro') : t('Enviar')} />}
         {docu && status === 'pending' && (
-          <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar {tipo}', { tipo: t(DOC_KIND_LABELS[kind] || DOC_KIND_LABELS.outro) })} disabled={apagar.isPending && apagando === docu.id} onClick={() => { setApagando(docu.id); apagar.mutate(docu, { onSuccess: () => toast.success(t('Documento apagado.')), onError: (e) => toast.error(e.message) }); }}><Trash2 className="h-4 w-4" /></V2Button>
+          <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar {tipo}', { tipo: docLabel(req) })} disabled={apagar.isPending && apagando === docu.id} onClick={() => { setApagando(docu.id); apagar.mutate(docu, { onSuccess: () => toast.success(t('Documento apagado.')), onError: (e) => toast.error(e.message) }); }}><Trash2 className="h-4 w-4" /></V2Button>
         )}
       </span>
     </li>
@@ -124,8 +125,8 @@ export function FedMemberDocuments({ member, plan, compacto = false }) {
     <div className={compacto ? 'space-y-2' : 'space-y-3'} data-dica="federacao-documentos-meus">
       {!compacto && <p className="text-sm font-semibold text-ink">{t('Documentos do plano')}</p>}
       <ul className="space-y-2">
-        {exigidos.map((x) => linha(x.kind, x.status, x.doc))}
-        {extras.map((d) => linha(d.kind, d.status, d))}
+        {exigidos.map((x) => linha(x, x.status, x.doc))}
+        {extras.map((d) => linha({ key: submittedDocKey(d), kind: d.kind, label: d.label || null }, d.status, d))}
       </ul>
       <p className="text-xs text-gray-500">{t('PDF ou imagem até 5 MB. Só você e a secretaria da federação veem o arquivo; ele some quando você exclui a conta.')}</p>
     </div>

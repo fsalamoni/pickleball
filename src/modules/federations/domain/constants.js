@@ -282,7 +282,7 @@ export const PLAN_PERSON_TYPE_LABELS = Object.freeze({
   referee: tk('Árbitro(a)'),
 });
 
-/** Nível de vínculo: cadastrado (grátis) ou federado (paga e pontua). */
+/** Nível de vínculo: cadastrado (grátis) ou filiado (paga e pontua). O valor gravado segue `federated`. */
 export const PLAN_TIER = Object.freeze({
   REGISTERED: 'registered',
   FEDERATED: 'federated',
@@ -290,7 +290,7 @@ export const PLAN_TIER = Object.freeze({
 
 export const PLAN_TIER_LABELS = Object.freeze({
   registered: tk('Cadastrado'),
-  federated: tk('Federado'),
+  federated: tk('Filiado'),
 });
 
 /** Como se paga: mensalidade ou anuidade. */

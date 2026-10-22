@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ageGroup, ageOn, docsComplete, documentStoragePath, formatCpf, isValidCpf, maskCpf, requiredDocsStatus, validateDependentInput, validateDocumentFile, validatePrivateInput,
+  ageGroup, ageOn, docLabel, docsComplete, normalizeOtherDocs, OTHER_DOCS_MAX, requiredDocs, documentStoragePath, formatCpf, isValidCpf, maskCpf, requiredDocsStatus, validateDependentInput, validateDocumentFile, validatePrivateInput,
 } from './privateData.js';
 
 describe('idade e faixa', () => {
@@ -78,6 +78,30 @@ describe('documentos', () => {
     expect(docsComplete(plan, docs)).toBe(false);
     expect(docsComplete({ requires_docs: [] }, [])).toBe(true);
     expect(requiredDocsStatus(plan, [])[0].status).toBe('missing');
+  });
+  it('documento PRÓPRIO do plano: cada um com nome e chave estável; o envio casa pela chave', () => {
+    const p = { requires_docs: ['identidade', 'outro'], other_docs: [{ id: 'o_1', label: 'Exame de vista' }, { id: 'o_2', label: 'Ficha assinada' }] };
+    expect(requiredDocs(p)).toEqual([
+      { key: 'identidade', kind: 'identidade', label: null },
+      { key: 'o_1', kind: 'outro', label: 'Exame de vista' },
+      { key: 'o_2', kind: 'outro', label: 'Ficha assinada' },
+    ]);
+    const docs = [{ kind: 'outro', doc_key: 'o_2', label: 'Ficha assinada', status: 'approved', created_at_ms: 1 }];
+    const st = requiredDocsStatus(p, docs);
+    expect(st.map((x) => [x.key, x.status])).toEqual([['identidade', 'missing'], ['o_1', 'missing'], ['o_2', 'approved']]);
+    expect(docLabel(st[1])).toBe('Exame de vista');
+    expect(docLabel({ kind: 'atestado' })).toBe('Atestado médico');
+  });
+  it('plano antigo com "Outro documento" sem nome segue pedindo um documento genérico', () => {
+    expect(requiredDocs({ requires_docs: ['outro'] })).toEqual([{ key: 'outro', kind: 'outro', label: null }]);
+    expect(requiredDocsStatus({ requires_docs: ['outro'] }, [{ kind: 'outro', status: 'pending', created_at_ms: 1 }])[0].status).toBe('pending');
+  });
+  it('normalizeOtherDocs: sem nome some, repetido vale um, no máximo cinco', () => {
+    const lista = [{ id: 'a', label: 'X1' }, { id: 'b', label: '' }, { id: 'c', label: 'x1' }, ...[2, 3, 4, 5, 6, 7].map((n) => ({ id: `d${n}`, label: `Doc ${n}` }))];
+    const r = normalizeOtherDocs(lista);
+    expect(r).toHaveLength(OTHER_DOCS_MAX);
+    expect(r[0]).toEqual({ id: 'a', label: 'X1' });
+    expect(r.map((x) => x.id)).not.toContain('c');
   });
   it('caminho no Storage pela pasta de quem envia', () => {
     expect(documentStoragePath('u1', 'abc', 'application/pdf')).toBe('federacao/u1/abc.pdf');

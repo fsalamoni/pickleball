@@ -136,6 +136,10 @@ describe('⭐ documentos', () => {
     await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd6'), documento(ANA, { member_id: `${FED}_${BIA}` })));
     await assertFails(setDoc(doc(como(BIA), 'federation_documents_submitted', 'd7'), documento(ANA)));
     await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd8'), documento(ANA, { kind: 'rg' })));
+    // Documento próprio do plano: chave estável e nome; chave fora do formato ou nome longo não passam.
+    await assertSucceeds(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd9'), documento(ANA, { kind: 'outro', doc_key: 'o_ab12cd34', label: 'Exame de vista' })));
+    await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd10'), documento(ANA, { kind: 'outro', doc_key: 'a/b', label: 'X' })));
+    await assertFails(setDoc(doc(como(ANA), 'federation_documents_submitted', 'd11'), documento(ANA, { kind: 'outro', doc_key: 'o_1', label: 'x'.repeat(81) })));
   });
   it('a secretaria aceita ou recusa (só estado e motivo); o financeiro não; quem enviou apaga o pendente', async () => {
     await assertFails(updateDoc(doc(como(TES), 'federation_documents_submitted', 'd1'), { status: 'approved' }));

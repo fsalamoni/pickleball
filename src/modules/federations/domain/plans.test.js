@@ -8,6 +8,14 @@ describe('validatePlanInput', () => {
     expect(r.value.rollover_mmdd).toBe('12-31');
     expect(validatePlanInput({ name: 'X abc', price_cents: 1, billing: 'annual', validity: 'calendar', rollover_mmdd: '31-12' }).errors.rollover_mmdd).toBeTruthy();
   });
+  it('"Outro documento" exige o nome; nome sem o interruptor liga o "outro" sozinho', () => {
+    const base = { name: 'Atleta filiado', price_cents: 0 };
+    expect(validatePlanInput({ ...base, requires_docs: ['outro'] }).errors.other_docs).toBeTruthy();
+    const r = validatePlanInput({ ...base, requires_docs: ['identidade'], other_docs: [{ id: 'o_1', label: 'Exame de vista' }] });
+    expect(r.ok).toBe(true);
+    expect(r.value.requires_docs).toEqual(['identidade', 'outro']);
+    expect(r.value.other_docs).toEqual([{ id: 'o_1', label: 'Exame de vista' }]);
+  });
   it('reprova nome curto, preço ausente e idades invertidas', () => {
     const r = validatePlanInput({ name: 'ab', price_cents: '', age_min: 40, age_max: 30 });
     expect(Object.keys(r.errors).sort()).toEqual(['age_max', 'name', 'price_cents']);

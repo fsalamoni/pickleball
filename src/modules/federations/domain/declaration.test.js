@@ -11,7 +11,7 @@ describe('buildMembershipDeclaration', () => {
     expect(d.canIssue).toBe(true);
     expect(d.body).toContain('Ana Souza');
     expect(d.body).toContain('FGP-2026-000007');
-    expect(d.body).toContain('federado');
+    expect(d.body).toContain('filiado');
     expect(d.body).toContain('10/01/2026');
     expect(d.body).toContain('09/01/2027');
     expect(d.verifyUrl).toBe('https://picklerush.web.app/f/verificar/ABCDEFGH23');
@@ -21,7 +21,7 @@ describe('buildMembershipDeclaration', () => {
 
   it('sem início do período, diz só até quando vale', () => {
     const d = buildMembershipDeclaration({ member: { ...membro, valid_from: '' }, federation: fed, hoje: HOJE });
-    expect(d.body).toContain('válida até 09/01/2027');
+    expect(d.body).toContain('válido até 09/01/2027');
     expect(d.body).not.toContain(' de — a ');
   });
 
