@@ -19,7 +19,7 @@ import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { deleteMyDocument, disciplineAction, membershipAction, transferAction, uploadMemberDocument } from '@/modules/federations/services/federationService';
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { useFederationMutation, useMyDocuments, useMySanctions, useMyTransfers, usePublicFederations } from '@/modules/federations/hooks/useFederations';
+import { useFederationMutation, useMyDocuments, useMySanctions, useMyTransfers, useOrgDocuments, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { docLabel, requiredDocs, requiredDocsStatus, submittedDocKey, validateDocumentFile } from '@/modules/federations/domain/privateData';
 import { canRequestTransfer, isReleaseOverdue, sortTransfers, transferReleaseDays, transferSummary, validateTransferInput } from '@/modules/federations/domain/transfers';
 import { canAppeal, sanctionInForce, sortSanctions } from '@/modules/federations/domain/discipline';
@@ -97,7 +97,12 @@ function EnviarDocumento({ member, req, rotulo = t('Enviar') }) {
  * renderiza — a seção só existe quando há o que fazer ou ver.
  */
 export function FedMemberDocuments({ member, plan, compacto = false }) {
-  const dq = useMyDocuments({ enabled: Boolean(member) });
+  const { user } = useAuth();
+  // Clube/arena filiado: os documentos são da ENTIDADE — todos os gestores veem; apaga quem enviou.
+  const org = Boolean(member?.org_kind);
+  const minhas = useMyDocuments({ enabled: Boolean(member) && !org });
+  const daOrg = useOrgDocuments(member?.org_kind, member?.org_id, { enabled: org });
+  const dq = org ? daOrg : minhas;
   const [apagando, setApagando] = useState(null);
   const apagar = useFederationMutation((docu) => deleteMyDocument(docu));
   const meus = useMemo(() => (dq.data || []).filter((d) => d.member_id === member?.id), [dq.data, member?.id]);
@@ -115,7 +120,7 @@ export function FedMemberDocuments({ member, plan, compacto = false }) {
       {docu?.review?.reason && status === 'rejected' && <span className="text-xs text-red-600">{docu.review.reason}</span>}
       <span className="ml-auto flex items-center gap-1">
         {(status === 'missing' || status === 'rejected') && <EnviarDocumento member={member} req={req} rotulo={status === 'rejected' ? t('Enviar outro') : t('Enviar')} />}
-        {docu && status === 'pending' && (
+        {docu && status === 'pending' && docu.user_id === user?.uid && (
           <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar {tipo}', { tipo: docLabel(req) })} disabled={apagar.isPending && apagando === docu.id} onClick={() => { setApagando(docu.id); apagar.mutate(docu, { onSuccess: () => toast.success(t('Documento apagado.')), onError: (e) => toast.error(e.message) }); }}><Trash2 className="h-4 w-4" /></V2Button>
         )}
       </span>
@@ -128,7 +133,7 @@ export function FedMemberDocuments({ member, plan, compacto = false }) {
         {exigidos.map((x) => linha(x, x.status, x.doc))}
         {extras.map((d) => linha({ key: submittedDocKey(d), kind: d.kind, label: d.label || null }, d.status, d))}
       </ul>
-      <p className="text-xs text-gray-500">{t('PDF ou imagem até 5 MB. Só você e a secretaria da federação veem o arquivo; ele some quando você exclui a conta.')}</p>
+      <p className="text-xs text-gray-500">{org ? t('PDF ou imagem até 5 MB. Os gestores da entidade e a secretaria da federação veem a lista; o arquivo, só quem enviou e a secretaria.') : t('PDF ou imagem até 5 MB. Só você e a secretaria da federação veem o arquivo; ele some quando você exclui a conta.')}</p>
     </div>
   );
 }

@@ -12,7 +12,8 @@ federations/
 │   ├── constants.js             # coleções, enums GRAVADOS (status, papéis, permissões, planos, módulos)
 │   ├── federation.js            # validação do pedido/página/Pix, slug, selos, ações de revisão, FED_MODULE_META
 │   ├── staff.js                 # cargos (os da federação ou os 8 de modelo), mandato, admin master, quem pode nomear/prorrogar/passar (cópia no servidor: federationStaffPolicy.js)
-│   ├── plans.js                 # validatePlanInput, planPrice (descontos por idade), rótulos
+│   ├── plans.js                 # validatePlanInput (tipo do catálogo; clube/arena sem idade nem desconto), planPrice, rótulos
+│   ├── memberTypes.js           # Etapa 2: catálogo de tipos de filiação do admin (pessoa/clube/arena, grupo), cópia no servidor
 │   ├── membership.js            # a CONTA da filiação: validade, renovação, estado, número, código, verificação
 │   ├── charges.js               # estado da cobrança, resumo financeiro, CSV
 │   ├── card.js                  # o que a carteirinha mostra (faixa com cor E texto), verifyPath
@@ -260,3 +261,14 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   conduz é a comissão (`fedElRun` na regra; sem comissão, o admin). O colégio
   congela na abertura. Edital e ata vão ao acervo (`publicarAtoDeTexto`). Ver
   `docs/50-FEDERACAO.md` §22.
+- **Tipos de filiação e clube/arena por plano** (Etapa 2, 2026-10-22): o
+  catálogo de tipos é do admin da plataforma (`platform_settings/federations`,
+  `domain/memberTypes.js` com cópia em `functions/federationMemberTypes.js` e
+  paridade); o plano grava o tipo resolvido e o servidor relê o catálogo no
+  pedido. A filiação da entidade é `{fed}_{club|arena}_{org}` com `user_id`
+  nulo: "é o dono?" inclui quem gere a entidade (`fedMemberOwner` →
+  `fedOrgManager`), a cobrança vai ao representante (`represent` troca) e o
+  espelho em `federation_affiliations` (com `member_id`) só o servidor grava
+  (`functions/federationOrgMembers.js`). Telas: `OrgMembershipJoin`
+  (`/federacoes/:id/filiar?entidade=club:ID`), `AdminFederationsConfig`. Ver
+  `docs/50-FEDERACAO.md` §26.

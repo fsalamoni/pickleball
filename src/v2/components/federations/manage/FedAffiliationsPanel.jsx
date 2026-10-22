@@ -56,6 +56,8 @@ function OrgRow({ aff }) {
   const m = useFederationMutation((action) => decideAffiliation(aff, action, { uid: user?.uid }));
   const cancelar = useFederationMutation(() => cancelAffiliationInvite(aff, { uid: user?.uid }));
   const convite = aff.status === AFFILIATION_STATUS.INVITED;
+  // Filiação POR PLANO (Etapa 2): este registro é o espelho do servidor — decide-se em Filiados, na filiação.
+  const porPlano = Boolean(aff.member_id);
   const Icone = aff.kind === 'club' ? Users : Building2;
   const to = aff.kind === 'club' ? `/clubes/${aff.org_id}` : `/arenas/${aff.org_id}`;
   return (
@@ -69,12 +71,15 @@ function OrgRow({ aff }) {
               <V2Badge tone={TOM[aff.status] || 'neutral'}>{t(AFFILIATION_STATUS_LABELS[aff.status] || aff.status)}</V2Badge>
             </p>
             <p className="text-xs text-gray-500">
-              {t(ORG_KIND_LABELS[aff.kind] || aff.kind)}{aff.org_city ? ` · ${[aff.org_city, aff.org_state].filter(Boolean).join('/')}` : ''} · {convite || (!aff.requested_at && aff.invited_at) ? t('convidado em {data}', { data: quando(aff.invited_at) }) : t('pedido em {data}', { data: quando(aff.requested_at) })}
+              {t(ORG_KIND_LABELS[aff.kind] || aff.kind)}{aff.org_city ? ` · ${[aff.org_city, aff.org_state].filter(Boolean).join('/')}` : ''} · {porPlano ? [t('plano {nome}', { nome: aff.plan_name || '—' }), aff.member_number ? t('nº {numero}', { numero: aff.member_number }) : '', aff.valid_until ? t('válida até {data}', { data: quando(aff.valid_until) }) : ''].filter(Boolean).join(' · ') : convite || (!aff.requested_at && aff.invited_at) ? t('convidado em {data}', { data: quando(aff.invited_at) }) : t('pedido em {data}', { data: quando(aff.requested_at) })}
             </p>
             {aff.message && <p className="mt-1 text-sm text-gray-700">“{aff.message}”</p>}
             {aff.review?.reason && aff.status !== AFFILIATION_STATUS.APPROVED && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: aff.review.reason })}</p>}
           </div>
         </div>
+        {porPlano ? (
+          <p className="text-xs text-gray-500">{t('Filiada por plano: aprovar, suspender e cobranças ficam em Filiados, na filiação da entidade.')}</p>
+        ) : (
         <div className="flex flex-wrap gap-2">
           {aff.status === AFFILIATION_STATUS.PENDING && (
             <>
@@ -86,6 +91,7 @@ function OrgRow({ aff }) {
           {convite && <V2Button type="button" size="sm" variant="ghost" disabled={cancelar.isPending} onClick={() => setCancelando(true)}><XCircle className="h-4 w-4" />{t('Cancelar convite')}</V2Button>}
           {aff.status === AFFILIATION_STATUS.SUSPENDED && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => m.mutate('approve', { onSuccess: () => toast.success(t('Filiação reintegrada.')), onError: (e) => toast.error(e.message) })}><RotateCcw className="h-4 w-4" />{t('Reintegrar')}</V2Button>}
         </div>
+        )}
       </V2Surface>
       <ConfirmDialog
         open={aprovando}

@@ -4,7 +4,8 @@
  */
 import { t, tk, fmtData } from '@/core/i18n';
 import { readableInk, BRAND_DEFAULT_COLOR, normalizeHex } from '@/modules/arenas/domain/whiteLabel.js';
-import { MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from './constants.js';
+import { MEMBER_STATUS, PLAN_TIER_LABELS } from './constants.js';
+import { personTypeLabel } from './memberTypes.js';
 import { isoDate, membershipState } from './membership.js';
 import { visibleSponsors } from './sponsors.js';
 
@@ -41,7 +42,7 @@ export function buildMemberCard({ member, federation, plan = null, origin = '', 
   return {
     federation: { name: federation?.name || '', acronym: federation?.acronym || '', logo: federation?.branding?.logo_url || '', color, ink: readableInk(color), official: federation?.official === true, sponsors: visibleSponsors(federation).slice(0, 4) },
     person: { name: member?.user_name || t('Atleta'), photo: member?.photo_url || '' },
-    kind: t(PLAN_PERSON_TYPE_LABELS[member?.person_type] || PLAN_PERSON_TYPE_LABELS.athlete),
+    kind: personTypeLabel(member),
     tier: t(PLAN_TIER_LABELS[member?.tier] || PLAN_TIER_LABELS.federated),
     plan: plan?.name || '',
     number: member?.member_number || '—',

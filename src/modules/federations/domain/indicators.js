@@ -11,7 +11,8 @@
  * não renovou). A tela escreve essa definição ao lado do número.
  */
 import { t } from '@/core/i18n';
-import { CHARGE_ORIGIN, CHARGE_ORIGIN_LABELS, CHARGE_STATUS, MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from './constants.js';
+import { CHARGE_ORIGIN, CHARGE_ORIGIN_LABELS, CHARGE_STATUS, MEMBER_STATUS, PLAN_TIER_LABELS } from './constants.js';
+import { personTypeLabel } from './memberTypes.js';
 import { addMonthsISO, isoDate, membershipState, toISODate } from './membership.js';
 import { csvCell, csvReais, isChargeOverdue } from './charges.js';
 
@@ -51,7 +52,8 @@ export function memberIndicators(members, hoje = isoDate()) {
     requests12: [...pedidosPorMes.values()].reduce((a, b) => a + b, 0),
     notRenewed12: naoRenovaram,
     byPlan: contar(emDia, (m) => m.plan_name || ''),
-    byPersonType: contar(emDia, (m) => m.person_type || 'athlete'),
+    // O nome do tipo vem da própria filiação: o tipo criado pelo admin não está nas constantes.
+    byPersonType: contar(emDia, (m) => m.person_type || 'athlete').map((x) => ({ ...x, label: personTypeLabel(emDia.find((m) => (m.person_type || 'athlete') === x.key)) })),
     byTier: contar(emDia, (m) => m.tier || 'federated'),
     dependents: emDia.filter((m) => m.guardian_uid).length,
   };
@@ -124,7 +126,7 @@ export function indicatorsCsv(ind) {
   }
   if (ind?.members) {
     blocos.push([linha([t('Plano'), t('Em dia')]), ...ind.members.byPlan.map((x) => linha([x.key || t('Sem plano'), x.n]))]);
-    blocos.push([linha([t('Tipo'), t('Em dia')]), ...ind.members.byPersonType.map((x) => linha([rotulo(PLAN_PERSON_TYPE_LABELS, x.key), x.n]))]);
+    blocos.push([linha([t('Tipo'), t('Em dia')]), ...ind.members.byPersonType.map((x) => linha([x.label || x.key, x.n]))]);
     blocos.push([linha([t('Categoria'), t('Em dia')]), ...ind.members.byTier.map((x) => linha([rotulo(PLAN_TIER_LABELS, x.key), x.n]))]);
   }
   if (ind?.finance) blocos.push([linha([t('Origem'), t('Recebido (R$)')]), ...ind.finance.paidByOrigin.map((x) => linha([rotulo(CHARGE_ORIGIN_LABELS, x.key), csvReais(x.cents)]))]);

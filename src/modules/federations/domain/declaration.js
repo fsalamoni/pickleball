@@ -11,7 +11,8 @@
  * — a folha diz isso. Nada é gravado: zero banco.
  */
 import { t, tk, fmtData } from '@/core/i18n';
-import { MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER } from './constants.js';
+import { MEMBER_STATUS, PLAN_TIER } from './constants.js';
+import { personTypeLabel } from './memberTypes.js';
 import { isoDate, membershipState } from './membership.js';
 import { dataCurta, verifyPath } from './card.js';
 
@@ -59,7 +60,7 @@ export function buildMembershipDeclaration({ member, federation, results = [], o
     logo: federation?.branding?.logo_url || '',
   };
   const nome = member?.user_name || t('Atleta');
-  const tipo = t(PLAN_PERSON_TYPE_LABELS[member?.person_type] || PLAN_PERSON_TYPE_LABELS.athlete).toLowerCase();
+  const tipo = personTypeLabel(member).toLowerCase();
   // Filiado = vínculo pago; cadastrado = gratuito. A declaração diz qual dos dois, sem chamar o cadastrado de filiado.
   const vinculo = member?.tier === PLAN_TIER.REGISTERED ? t('cadastrado(a)') : t('filiado(a)');
   const de = dataCurta(String(member?.valid_from || '').slice(0, 10));

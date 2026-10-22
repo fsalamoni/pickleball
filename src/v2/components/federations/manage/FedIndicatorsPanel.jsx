@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { BarChart3, Download, Receipt, RefreshCcw, Users, Wallet } from 'lucide-react';
 import { federationIndicators, indicatorsCsv } from '@/modules/federations/domain/indicators';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { CHARGE_ORIGIN_LABELS, FED_PERMISSION, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { CHARGE_ORIGIN_LABELS, FED_PERMISSION, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Button, V2ErrorState, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { t, fmtData, fmtNumero } from '@/core/i18n';
 import { baixarCsv } from './naoSalvo';
@@ -113,7 +113,7 @@ export default function FedIndicatorsPanel({ federation, membersQ, chargesQ, per
           <MonthBars titulo={t('Pedidos de filiação por mês')} dados={m.requestsByMonth.map((x) => ({ m: x.month, v: x.n }))} formatar={(v) => fmtNumero(v)} />
           <div className="grid gap-4 lg:grid-cols-3">
             <BarList titulo={t('Em dia por plano')} itens={m.byPlan.map((x) => ({ k: x.key || '-', label: x.key || t('Sem plano'), v: x.n }))} />
-            <BarList titulo={t('Em dia por tipo')} itens={m.byPersonType.map((x) => ({ k: x.key, label: t(PLAN_PERSON_TYPE_LABELS[x.key] || PLAN_PERSON_TYPE_LABELS.athlete), v: x.n }))} />
+            <BarList titulo={t('Em dia por tipo')} itens={m.byPersonType.map((x) => ({ k: x.key, label: x.label || x.key, v: x.n }))} />
             <BarList titulo={t('Em dia por categoria')} itens={m.byTier.map((x) => ({ k: x.key, label: t(PLAN_TIER_LABELS[x.key] || PLAN_TIER_LABELS.federated), v: x.n }))} />
           </div>
         </div>

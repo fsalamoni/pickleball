@@ -5,6 +5,7 @@
 import { t } from '@/core/i18n';
 import { DOC_KIND, PLAN_BILLING, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_VALIDITY } from './constants.js';
 import { normalizeOtherDocs } from './privateData.js';
+import { MEMBER_TYPE_ID_RE, isOrgEntity, memberTypeCatalog, memberTypeOf, planTypeFields } from './memberTypes.js';
 
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
 const intOr = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v !== null ? Math.trunc(Number(v)) : d);
@@ -21,11 +22,20 @@ export function isValidMonthDay(mmdd) {
   return d.getMonth() === Number(m[1]) - 1 && d.getDate() === Number(m[2]);
 }
 
-export function validatePlanInput(input = {}) {
+/**
+ * `catalog` é o catálogo de tipos da plataforma (`memberTypeCatalog`): o plano
+ * grava o tipo resolvido (entidade, grupo e nome) para valer mesmo se o tipo
+ * sair do catálogo depois. Plano de CLUBE ou ARENA não tem faixa de idade nem
+ * desconto de pessoa, e só pede documentos com nome (estatuto, CNPJ, ata…).
+ */
+export function validatePlanInput(input = {}, { catalog = memberTypeCatalog(), currentType = null } = {}) {
   const errors = {};
   const name = str(input.name, 80);
   if (name.length < 3) errors.name = t('Dê um nome ao plano (mínimo 3 caracteres).');
-  const person_type = Object.values(PLAN_PERSON_TYPE).includes(input.person_type) ? input.person_type : PLAN_PERSON_TYPE.ATHLETE;
+  const tipo = planTypeFields(catalog, MEMBER_TYPE_ID_RE.test(String(input.person_type || '')) ? input.person_type : PLAN_PERSON_TYPE.ATHLETE);
+  const entidade = isOrgEntity(tipo.entity);
+  // Tipo desligado pelo admin: o plano que já é dele segue editável; plano novo não nasce nele.
+  if (memberTypeOf(catalog, tipo.person_type).active === false && tipo.person_type !== currentType) errors.person_type = t('Este tipo de filiação não está disponível para planos novos.');
   const tier = Object.values(PLAN_TIER).includes(input.tier) ? input.tier : PLAN_TIER.FEDERATED;
   const billing = Object.values(PLAN_BILLING).includes(input.billing) ? input.billing : PLAN_BILLING.ANNUAL;
   const validity = Object.values(PLAN_VALIDITY).includes(input.validity) ? input.validity : PLAN_VALIDITY.ROLLING;
@@ -35,24 +45,24 @@ export function validatePlanInput(input = {}) {
   if (billing === PLAN_BILLING.ANNUAL && validity === PLAN_VALIDITY.CALENDAR && !isValidMonthDay(rollover)) {
     errors.rollover_mmdd = t('Informe a data de virada no formato MM-DD (ex.: 12-31).');
   }
-  const age_min = intOr(input.age_min, null);
-  const age_max = intOr(input.age_max, null);
+  const age_min = entidade ? null : intOr(input.age_min, null);
+  const age_max = entidade ? null : intOr(input.age_max, null);
   if (age_min != null && age_max != null && age_min > age_max) errors.age_max = t('Idade máxima menor que a mínima.');
-  const discounts = {
+  const discounts = entidade ? { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 } : {
     minor_pct: pct(input.discounts?.minor_pct), senior_pct: pct(input.discounts?.senior_pct),
     family_pct: pct(input.discounts?.family_pct), family_from: Math.max(2, intOr(input.discounts?.family_from, 2)),
   };
   // "Outro documento" sempre com nome: é o que a pessoa lê na hora de enviar.
   const other_docs = normalizeOtherDocs(input.other_docs);
-  let requires_docs = [...new Set((Array.isArray(input.requires_docs) ? input.requires_docs : []).filter((k) => Object.values(DOC_KIND).includes(k)))];
+  let requires_docs = [...new Set((Array.isArray(input.requires_docs) ? input.requires_docs : []).filter((k) => Object.values(DOC_KIND).includes(k) && (!entidade || k === DOC_KIND.OTHER)))];
   if (other_docs.length && !requires_docs.includes(DOC_KIND.OTHER)) requires_docs = [...requires_docs, DOC_KIND.OTHER];
-  if (!other_docs.length && requires_docs.includes(DOC_KIND.OTHER)) errors.other_docs = t('Diga qual é o outro documento (ex.: exame de vista).');
+  if (!other_docs.length && requires_docs.includes(DOC_KIND.OTHER)) errors.other_docs = entidade ? t('Diga qual é o documento (ex.: estatuto social).') : t('Diga qual é o outro documento (ex.: exame de vista).');
   return {
     ok: Object.keys(errors).length === 0,
     errors,
     value: {
       name, description: str(input.description, 600), benefits: str(input.benefits, 1200),
-      person_type, tier, billing, validity, rollover_mmdd: billing === PLAN_BILLING.ANNUAL && validity === PLAN_VALIDITY.CALENDAR ? rollover : '',
+      ...tipo, tier, billing, validity, rollover_mmdd: billing === PLAN_BILLING.ANNUAL && validity === PLAN_VALIDITY.CALENDAR ? rollover : '',
       calendar_grace_days: Math.min(180, Math.max(0, intOr(input.calendar_grace_days, 60))),
       price_cents: Math.max(0, price_cents), age_min, age_max, discounts,
       auto_approve: input.auto_approve === true, active: input.active !== false,

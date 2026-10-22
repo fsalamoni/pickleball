@@ -2101,3 +2101,109 @@ Regras que não podem regredir: fonte que não carregou é `unknown` ("não deu
 para conferir"), **nunca** reprovação — a plataforma não sabe o que a
 federação guarda fora dela; é aviso, não trava. As consultas extras (agenda
 pública, orçamentos) só saem com a aba aberta.
+
+
+## 26. Tipos de filiação e clube/arena filiados por plano (Etapa 2 do cadastro estruturado, 2026-10-22)
+
+Plano das cinco etapas em `/mnt/project-files/federacao/plano-cadastros-e-categorias.md`
+(fora do repositório). Termos: **filiado** é quem tem vínculo pago (plano
+`federated`); **cadastrado** é o vínculo gratuito (`registered`).
+
+### 26.1 O catálogo de tipos (admin da plataforma)
+
+**Painel admin → Federações → Configuração** (`AdminFederationsConfig`,
+`data-dica="admin-federacoes-tipos"`) grava `platform_settings/federations.member_types[]`
+(documento legível por todos, gravável só pelo admin da plataforma — regra que
+já existia para `platform_settings`). Domínio em `domain/memberTypes.js`
+(`memberTypeCatalog`, `memberTypeOf`, `planTypeFields`, `personTypeLabel`,
+`validateMemberTypes`), cópia no servidor em `functions/federationMemberTypes.js`
+com paridade (`federationMemberTypes.parity.test.js`).
+
+- **Cinco prontos**: atleta, professor, árbitro (entidade `person`), clube e
+  arena. O admin renomeia, descreve ou desliga; entidade e grupo não mudam e
+  eles não saem da lista.
+- **Tipos próprios** (até 30 no total): nome, descrição, código (sugerido do
+  nome, gravado nos planos — não muda depois), **quem se filia** (`person`,
+  `club`, `arena`) e **em que grupo conta** (`athlete`, `coach`, `referee` ou
+  `none`, que não vota). Clube e arena contam como eles mesmos.
+- **Desligar** um tipo só impede plano NOVO dele (`validatePlanInput` com
+  `currentType`): planos e filiações que já existem continuam.
+- O plano grava o tipo resolvido (`person_type`, `entity`, `person_category`,
+  `person_type_label`) e vale mesmo se o tipo sair do catálogo. A regra de
+  `federation_plans` confere só o FORMATO do código (`[a-z][a-z0-9_]{1,23}`) e
+  `entity` conhecida; quem decide pessoa × clube × arena no pedido é o servidor
+  (`resolveMemberType`, que relê o catálogo a cada pedido).
+- O formulário do plano (Central → Configurações → Planos) só grava com o
+  catálogo carregado. Plano de clube ou arena não tem faixa de idade nem
+  descontos de pessoa e só pede documentos com nome ("Pedir documentos da
+  entidade": estatuto social, ata de eleição, alvará…).
+
+### 26.2 Clube e arena filiados por plano
+
+Quem gere a entidade abre **Gestão do clube → Federação** ou **Central da arena
+→ Federação** (`OrgAffiliationCard`): se a federação tem plano para aquele
+tipo de entidade, o cartão leva a **`/federacoes/:id/filiar?entidade=club:ID`**
+(ou `arena:ID`), que troca a tela pela filiação da entidade
+(`OrgMembershipJoin`, `data-dica="federacao-filiar-entidade"`). Sem plano, o
+pedido simples de antes (`federation_affiliations`, sem cobrança) segue igual.
+
+- **Pedido** (`federationMembership`, ação `request` com `org: { kind, id }`):
+  o servidor confere que a pessoa gere a entidade (`club_members/{club}_{uid}`
+  com `role: 'admin'` ou `arena_managers/{arena}_{uid}`), que o plano é do tipo
+  daquela entidade, e cria **`federation_members/{fed}_{club|arena}_{org}`** com
+  `user_id: null`, `org_kind`, `org_id`, `org_name`/`org_city`/`org_state`/`org_logo`
+  (copiados — a federação não lê `clubs`/`arenas`), `representative_uid`,
+  `representative_name`, `representatives[{ uid, name, role }]` e o cargo
+  obrigatório de quem pede. Uma filiação viva por entidade e federação. A
+  filiação aprovada antes pelo pedido simples mantém a data
+  (`affiliated_since_ms`).
+- **Documentos**: os do plano sobem no próprio pedido (`DocumentsUploadList` +
+  `uploadChosenDocuments`) com `org_kind`/`org_id` gravados; todos os gestores
+  da entidade veem a lista, o arquivo só quem enviou e a secretaria (pela
+  função `federationDocument`). O documento enviado por um representante cuja
+  conta é excluída sai com a conta (o arquivo mora na pasta dele) — a secretaria pede de novo.
+- **Cobrança e avisos** vão para o representante (`destinatario`: responsável,
+  pessoa ou representante). Os outros gestores veem a situação e o aviso de
+  para quem foi a cobrança.
+- **Trocar o representante** (ação `represent`, botão "Passar a representar a
+  entidade"): qualquer gestor da entidade assume, com o cargo; as cobranças em
+  aberto passam a ele (`payer_uid`), o anterior é avisado e fica na lista
+  `representatives`; auditoria `federation_membership_represent`.
+- **Situação** (mesma tela): status, Pix, certificado de filiação (a
+  carteirinha com o título "Certificado de filiação"), renovação,
+  cancelamento e documentos. A verificação pública devolve `org_kind` e o nome do tipo.
+- **O espelho**: ativa ⇒ `federation_affiliations/{fed}_{kind}_{org}` com
+  `status: 'approved'` e `member_id`; vencida ou suspensa ⇒ `suspended`;
+  cancelada ⇒ o espelho sai (só se o `member_id` for desta filiação). Pedido e
+  aguardando pagamento não mexem no espelho. Assim a página pública, o selo
+  "Filiado", a chancela e o colégio eleitoral seguem lendo o mesmo lugar. A
+  regra recusa decidir ou apagar pelo navegador o espelho que tem `member_id`;
+  a aba Clubes e arenas da Central mostra plano, número e validade e manda
+  decidir em Filiados.
+
+### 26.3 Quem lê (regra)
+
+- `fedMemberOwner` aceita, além da pessoa e do responsável, **quem gere a
+  entidade** da filiação (`fedOrgManager`). A filiação da entidade e a lista
+  por `org_kind` + `org_id` são lidas pelos gestores dela; o membro comum do
+  clube, não.
+- `federation_documents_submitted`: os gestores da entidade leem; o envio tem
+  de levar o `org_kind`/`org_id` da filiação (documento de pessoa não vira de
+  entidade nem o contrário).
+- Provado em `tests/rules/federationOrgMembers.rules.test.js`.
+
+### 26.4 O que a filiação da entidade não faz
+
+- Não pontua no ranking oficial, não entra em "minhas filiações" da pessoa nem
+  conta como pessoa no colégio eleitoral (`user_id` nulo; a entidade vota pelo
+  espelho, com `requested_by` = representante). Tipo de grupo `none` também não vota.
+- Notícia "só filiados" não avisa o representante (ele não teria como abrir).
+- **Exclusão da conta do representante**: a filiação continua (é da entidade),
+  sem representante (`representative_uid: null`, nome "Usuário removido", sai
+  de `representatives`); a cobrança da entidade perde só o pagador. Outro
+  gestor assume por `represent`.
+- Nada foi migrado: os pedidos simples de clube/arena seguem como estavam.
+
+### 26.5 Âncoras
+
+`admin-federacoes-tipos`, `federacao-filiar-entidade`, `federacao-filiar-entidade-situacao`.

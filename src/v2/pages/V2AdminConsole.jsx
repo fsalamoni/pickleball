@@ -120,6 +120,7 @@ const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/Adm
 const AdminMarketPanel = lazy(() => import('@/v2/components/admin/market/AdminMarketPanel'));
 const AdminMessagingPanel = lazy(() => import('@/v2/components/admin/messaging/AdminMessagingPanel'));
 const AdminFederationsPanel = lazy(() => import('@/v2/components/admin/federations/AdminFederationsPanel'));
+const AdminFederationsConfig = lazy(() => import('@/v2/components/admin/federations/AdminFederationsConfig'));
 
 const SECTIONS = Object.freeze([
   { id: 'today', label: tk('Hoje'), icon: LayoutDashboard, tabs: [
@@ -158,6 +159,7 @@ const SECTIONS = Object.freeze([
   // Federações (flag `federations`): pedidos de abertura, selos e dados da entidade.
   { id: 'federations', label: tk('Federações'), icon: Landmark, flag: 'federations', dica: 'admin-secao-federacoes', tabs: [
     { id: 'federacoes', label: tk('Federações'), icon: Landmark, keywords: ['federação', 'filiação', 'carteirinha', 'aprovar', 'oficial', 'verificada', 'cnpj'] },
+    { id: 'federacoes-config', label: tk('Configuração'), icon: SlidersHorizontal, keywords: ['federação', 'tipos de filiação', 'clube filiado', 'arena filiada', 'filiado', 'dirigente'] },
   ] },
   // O Mercado (flag `marketplace`): some da barra com a flag desligada.
   { id: 'market', label: tk('Mercado'), icon: Store, flag: 'marketplace', dica: 'admin-secao-mercado', tabs: [
@@ -265,6 +267,11 @@ export default function V2AdminConsole() {
         {tab === 'federacoes' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminFederationsPanel />
+          </Suspense>
+        )}
+        {tab === 'federacoes-config' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminFederationsConfig />
           </Suspense>
         )}
         {tab.startsWith('mercado-') && (

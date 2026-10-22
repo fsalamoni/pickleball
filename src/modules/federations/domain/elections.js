@@ -208,7 +208,9 @@ export function buildVoterRoll({ members = [], affiliations = [], election, hoje
     if (!m || m.status !== 'active' || !m.user_id || vistos.has(m.user_id)) return;
     if (m.valid_until && m.valid_until < hoje) return;
     if (Number(m.discipline_until_ms) > nowMs) return;
-    const category = PERSON_CATEGORIES.includes(m.person_type) ? m.person_type : 'athlete';
+    // O grupo gravado na filiação (tipo do catálogo, 2026-10-22); `none` não vota. Filiação antiga: pelo tipo.
+    const category = m.person_category || (PERSON_CATEGORIES.includes(m.person_type) ? m.person_type : 'athlete');
+    if (!PERSON_CATEGORIES.includes(category)) return;
     const weight = Number(w[category]) || 0;
     if (!(weight > 0)) return;
     if (minMonths > 0 && !(m.valid_from && m.valid_from <= corte)) return;
@@ -257,6 +259,7 @@ export function memberEligible(m, { hoje, nowMs, minMonths = 0 }) {
   if (!m || m.status !== 'active' || !m.user_id) return false;
   if (m.valid_until && m.valid_until < hoje) return false;
   if (Number(m.discipline_until_ms) > nowMs) return false;
+  if (m.person_category && !PERSON_CATEGORIES.includes(m.person_category)) return false;
   return !(minMonths > 0) || Boolean(m.valid_from && m.valid_from <= collegeCutoff(hoje, minMonths));
 }
 

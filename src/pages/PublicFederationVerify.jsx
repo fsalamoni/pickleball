@@ -15,7 +15,8 @@ import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import { useCardVerification } from '@/modules/federations/hooks/useFederations';
 import { normalizeCardCode } from '@/modules/federations/domain/membership';
 import { verifyPath } from '@/modules/federations/domain/card';
-import { COURSE_KIND_LABELS, CREDENTIAL_STATUS, CREDENTIAL_STATUS_LABELS, MEMBER_STATUS, MEMBER_STATUS_LABELS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { COURSE_KIND_LABELS, CREDENTIAL_STATUS, CREDENTIAL_STATUS_LABELS, MEMBER_STATUS, MEMBER_STATUS_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import { V2Avatar, V2Button, V2ErrorState, V2Input, V2Skeleton } from '@/v2/ui/primitives';
 import { quando } from '@/v2/components/federations/federationUi';
 import { fmtData, t } from '@/core/i18n';
@@ -78,7 +79,7 @@ function Resultado({ r, consultadoEm }) {
         <V2Avatar name={r.name} photoUrl={r.photo_url} size="lg" />
         <div className="min-w-0">
           <p className="font-display text-xl font-bold text-ink">{r.name}</p>
-          <p className="text-sm text-gray-700">{t(PLAN_PERSON_TYPE_LABELS[r.person_type] || PLAN_PERSON_TYPE_LABELS.athlete)} · {t(PLAN_TIER_LABELS[r.tier] || PLAN_TIER_LABELS.federated)}</p>
+          <p className="text-sm text-gray-700">{personTypeLabel(r)} · {t(PLAN_TIER_LABELS[r.tier] || PLAN_TIER_LABELS.federated)}</p>
           {r.member_number && <p className="text-sm text-gray-700">{t('Nº {numero}', { numero: r.member_number })}</p>}
           {r.valid_until && <p className="text-sm text-gray-700">{t('Válida até {data}', { data: quando(r.valid_until) })}</p>}
         </div>

@@ -5,7 +5,8 @@
 import React from 'react';
 import { isFreePlan, planBenefitLines, planPeriodLabel } from '@/modules/federations/domain/plans';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { PLAN_TIER_LABELS } from '@/modules/federations/domain/constants';
+import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import { V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -20,7 +21,7 @@ export default function PlansList({ plans, action }) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-display text-lg font-bold text-ink">{p.name}</p>
-              <p className="text-xs uppercase tracking-widest text-gray-500">{t(PLAN_PERSON_TYPE_LABELS[p.person_type] || PLAN_PERSON_TYPE_LABELS.athlete)} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)}</p>
+              <p className="text-xs uppercase tracking-widest text-gray-500">{personTypeLabel(p)} · {t(PLAN_TIER_LABELS[p.tier] || PLAN_TIER_LABELS.federated)}</p>
             </div>
             <p className="text-right"><span className="font-display text-xl font-bold text-ink">{isFreePlan(p) ? t('Grátis') : formatBrlCents(p.price_cents)}</span>{!isFreePlan(p) && <span className="block text-xs text-gray-500">{planPeriodLabel(p)}</span>}</p>
           </div>

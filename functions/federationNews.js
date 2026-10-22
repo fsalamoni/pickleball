@@ -25,7 +25,8 @@ const SISTEMA = { uid: 'system', name: 'Agendamento de notícias' };
 /** O aviso em si, para quem a federação tem como filiado ativo. Devolve quantos. */
 async function avisar(ctx, fed, news, actor) {
   const membros = await ctx.db.collection(f.C.members).where('federation_id', '==', fed.id).where('status', '==', 'active').get();
-  const uids = [...new Set(membros.docs.map((d) => d.data()).map((m) => m.user_id || m.guardian_uid).filter(Boolean))];
+  // Representante de clube/arena só na notícia pública: a "só filiados" a regra confere por `{fed}_{uid}`.
+  const uids = [...new Set(membros.docs.map((d) => d.data()).map((m) => m.user_id || m.guardian_uid || (news.audience === 'members' ? null : m.representative_uid)).filter(Boolean))];
   const link = `/federacoes/${fed.id}?noticia=${encodeURIComponent(news.id)}`;
   const title = tx('{sigla}: {titulo}', { sigla: fed.acronym || fed.name, titulo: f.texto(news.title, 140) });
   const message = f.texto(news.summary, 300) || f.texto(news.body, 300);

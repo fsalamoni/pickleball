@@ -287,8 +287,20 @@ async function coletarFederacoes(db, uid) {
     const encerra = FED_LIVE.includes(data.status) ? { status: 'cancelled', cancelled_at_ms: Date.now(), cancelled_by: 'account_deletion' } : {};
     itens.push({ ref: d.ref, patch: { ...encerra, guardian_name: REMOVED_USER, card_code: null } });
   });
+  // Clube/arena filiado por plano que esta conta representava: a filiação é da
+  // ENTIDADE e continua; a conta sai do representante e outro gestor assume
+  // (ação `represent`, que também passa a ele as cobranças em aberto).
+  const representadas = await consultar(db, 'federation_members', 'representative_uid', '==', uid);
+  const orgIds = new Set(representadas.docs.map((d) => d.id));
+  representadas.docs.forEach((d) => {
+    const data = d.data() || {};
+    const reps = (Array.isArray(data.representatives) ? data.representatives : []).filter((r) => r && r.uid !== uid);
+    itens.push({ ref: d.ref, patch: { representative_uid: null, representative_name: REMOVED_USER, representatives: reps } });
+  });
   cobrancas.docs.forEach((d) => {
     const c = d.data() || {};
+    // A cobrança da entidade guarda o nome DELA: só perde o pagador.
+    if (orgIds.has(c.member_id)) { itens.push({ ref: d.ref, patch: { payer_uid: null } }); return; }
     if (c.payer_name !== REMOVED_ATHLETE || c.member_name) itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE, member_name: '' } });
   });
   // Resultados enviados ao ranking oficial: a linha fica como "Atleta removido"

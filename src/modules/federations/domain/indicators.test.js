@@ -50,7 +50,7 @@ describe('memberIndicators', () => {
   it('divisões só de quem está em dia, maior primeiro', () => {
     const m = memberIndicators(membros, HOJE);
     expect(m.byPlan).toEqual([{ key: 'Anual', n: 2 }, { key: 'Grátis', n: 1 }]);
-    expect(m.byPersonType).toEqual([{ key: 'athlete', n: 2 }, { key: 'coach', n: 1 }]);
+    expect(m.byPersonType).toEqual([{ key: 'athlete', n: 2, label: 'Atleta' }, { key: 'coach', n: 1, label: 'Professor(a)' }]);
     expect(m.byTier).toEqual([{ key: 'federated', n: 2 }, { key: 'registered', n: 1 }]);
   });
 });

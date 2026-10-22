@@ -92,7 +92,7 @@ describe('federações no servidor', () => {
     expect(v).toEqual({
       found: true, name: 'Ana Souza', photo_url: 'https://x/ana.png',
       federation: { name: 'Federação Paulista de Pickleball', acronym: 'FPP', slug: 'fpp' },
-      tier: 'federated', person_type: 'athlete', member_number: 'FPP-2026-000001', status: 'active', valid_until: '2027-10-18',
+      tier: 'federated', person_type: 'athlete', person_type_label: 'Atleta', org_kind: null, member_number: 'FPP-2026-000001', status: 'active', valid_until: '2027-10-18',
     });
     expect(await fed.verify(c, { code: 'NAOEXISTE1' })).toEqual({ found: false });
 

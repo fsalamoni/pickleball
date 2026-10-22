@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isFreePlan, planAcceptsAge, planPrice, plansFor, validatePlanInput, isValidMonthDay, planBenefitLines } from './plans.js';
+import { memberTypeCatalog } from './memberTypes.js';
 
 describe('validatePlanInput', () => {
   it('aceita o plano anual e exige a virada quando é por data fixa', () => {
@@ -15,6 +16,19 @@ describe('validatePlanInput', () => {
     expect(r.ok).toBe(true);
     expect(r.value.requires_docs).toEqual(['identidade', 'outro']);
     expect(r.value.other_docs).toEqual([{ id: 'o_1', label: 'Exame de vista' }]);
+  });
+  it('plano de clube: sem idade nem desconto, só documentos com nome; tipo desligado não aceita plano novo', () => {
+    const catalog = memberTypeCatalog({ member_types: [{ id: 'arena', active: false }, { id: 'juiz_linha', label: 'Juiz de linha', entity: 'person', category: 'referee' }] });
+    const r = validatePlanInput({ name: 'Clube filiado', price_cents: 50000, person_type: 'club', age_min: 10, discounts: { minor_pct: 50 }, requires_docs: ['identidade', 'outro'], other_docs: [{ id: 'o_1', label: 'Estatuto social' }] }, { catalog });
+    expect(r.ok).toBe(true);
+    expect(r.value).toMatchObject({ person_type: 'club', entity: 'club', person_category: 'club', age_min: null, requires_docs: ['outro'] });
+    expect(r.value.discounts.minor_pct).toBe(0);
+    expect(validatePlanInput({ name: 'Clube filiado', price_cents: 0, person_type: 'club', requires_docs: ['outro'] }, { catalog }).errors.other_docs).toBeTruthy();
+    // Tipo próprio do admin: grava nome e grupo.
+    expect(validatePlanInput({ name: 'Juiz de linha', price_cents: 0, person_type: 'juiz_linha' }, { catalog }).value).toMatchObject({ entity: 'person', person_category: 'referee', person_type_label: 'Juiz de linha' });
+    // Desligado: plano novo recusa; o que já era do tipo segue editável.
+    expect(validatePlanInput({ name: 'Arena filiada', price_cents: 0, person_type: 'arena' }, { catalog }).errors.person_type).toBeTruthy();
+    expect(validatePlanInput({ name: 'Arena filiada', price_cents: 0, person_type: 'arena' }, { catalog, currentType: 'arena' }).ok).toBe(true);
   });
   it('reprova nome curto, preço ausente e idades invertidas', () => {
     const r = validatePlanInput({ name: 'ab', price_cents: '', age_min: 40, age_max: 30 });
