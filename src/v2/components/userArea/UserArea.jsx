@@ -40,6 +40,7 @@ import { useMyCredentials, useMyDependents, useMyFederationCharges, useMyFederat
 import { isInvitePending } from '@/modules/federations/domain/constants';
 import { myFederationPending } from '@/modules/federations/domain/federationPending';
 import { useMyAssignments, useMyRefereeRosters } from '@/modules/federations/hooks/useReferees';
+import { useMyDirectedReports, useMyFinalInvites } from '@/modules/federations/hooks/useCompetitions';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifiedLevel';
 import {
@@ -91,13 +92,16 @@ export default function UserArea() {
   // Arbitragem: o cadastro nos quadros e as escalas (a convocação sem resposta vai para "Precisa de você").
   const fedRostersQ = useMyRefereeRosters({ enabled: federacoesOn });
   const fedAssignmentsQ = useMyAssignments({ enabled: federacoesOn });
-  const fedQs = [fedMembersQ, fedChargesQ, fedRolesQ, fedInvitesQ, fedRostersQ, fedAssignmentsQ];
+  // Competições: convites para finais de circuito e os torneios que a pessoa dirige.
+  const fedFinalsQ = useMyFinalInvites({ enabled: federacoesOn });
+  const fedDirectedQ = useMyDirectedReports({ enabled: federacoesOn });
+  const fedQs = [fedMembersQ, fedChargesQ, fedRolesQ, fedInvitesQ, fedRostersQ, fedAssignmentsQ, fedFinalsQ, fedDirectedQ];
   // Dependentes, credenciais e transferências só quando a seção Federações abre.
   const fedSecaoAberta = federacoesOn && params.get('secao') === 'federacoes';
   const fedDependentsQ = useMyDependents({ enabled: fedSecaoAberta });
   const fedCredentialsQ = useMyCredentials({ enabled: fedSecaoAberta });
   const fedTransfersQ = useMyTransfers({ enabled: fedSecaoAberta });
-  const temFederacao = (fedMembersQ.data || []).some((m) => !['cancelled', 'rejected'].includes(m.status)) || (fedRolesQ.data || []).length > 0 || (fedInvitesQ.data || []).some((inv) => isInvitePending(inv)) || (fedRostersQ.data || []).length > 0 || (fedAssignmentsQ.data || []).length > 0;
+  const temFederacao = (fedMembersQ.data || []).some((m) => !['cancelled', 'rejected'].includes(m.status)) || (fedRolesQ.data || []).length > 0 || (fedInvitesQ.data || []).some((inv) => isInvitePending(inv)) || (fedRostersQ.data || []).length > 0 || (fedAssignmentsQ.data || []).length > 0 || (fedFinalsQ.data || []).length > 0 || (fedDirectedQ.data || []).length > 0;
 
   // Mercado (flag `marketplace`). As vendas só se consultam para quem já vende.
   // ponytail: só a ficha pessoal (`athlete_{uid}`); vendas como professor,
@@ -123,10 +127,10 @@ export default function UserArea() {
     clubes: temConvite ? true : papelDe(clubsQ, (clubsQ.data || []).length > 0),
     admin: !!isPlatformAdmin,
     mercado: mercadoOn,
-    federacoes: federacoesOn ? (fedQs.some((q) => q.isError) ? 'erro' : fedMembersQ.isSuccess && fedRolesQ.isSuccess && fedInvitesQ.isSuccess && fedRostersQ.isSuccess && fedAssignmentsQ.isSuccess ? temFederacao : undefined) : false,
+    federacoes: federacoesOn ? (fedQs.some((q) => q.isError) ? 'erro' : fedMembersQ.isSuccess && fedRolesQ.isSuccess && fedInvitesQ.isSuccess && fedRostersQ.isSuccess && fedAssignmentsQ.isSuccess && fedFinalsQ.isSuccess && fedDirectedQ.isSuccess ? temFederacao : undefined) : false,
   }).map((s) => ({ ...s, icon: ICONES[s.icone] })),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn, federacoesOn, temFederacao, fedMembersQ.isSuccess, fedRolesQ.isSuccess, fedInvitesQ.isSuccess, fedRostersQ.isSuccess, fedAssignmentsQ.isSuccess, fedMembersQ.isError, fedChargesQ.isError, fedRolesQ.isError, fedInvitesQ.isError, fedRostersQ.isError, fedAssignmentsQ.isError]);
+  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn, federacoesOn, temFederacao, fedMembersQ.isSuccess, fedRolesQ.isSuccess, fedInvitesQ.isSuccess, fedRostersQ.isSuccess, fedAssignmentsQ.isSuccess, fedFinalsQ.isSuccess, fedDirectedQ.isSuccess, fedFinalsQ.isError, fedDirectedQ.isError, fedMembersQ.isError, fedChargesQ.isError, fedRolesQ.isError, fedInvitesQ.isError, fedRostersQ.isError, fedAssignmentsQ.isError]);
 
   const ativa = resolveUserAreaSection(params.get('secao'), secoes);
   const Secao = SECOES[ativa];
@@ -160,7 +164,7 @@ export default function UserArea() {
       myOrders: myOrdersQ.isSuccess ? myOrdersQ.data : undefined,
       myOffers: myOffersQ.isSuccess ? myOffersQ.data : undefined,
     }) : undefined,
-    federacoes: federacoesOn ? myFederationPending(fedMembersQ.isSuccess ? fedMembersQ.data : undefined, fedChargesQ.isSuccess ? fedChargesQ.data : undefined, { invites: fedInvitesQ.isSuccess ? fedInvitesQ.data : undefined, assignments: fedAssignmentsQ.isSuccess ? fedAssignmentsQ.data : undefined }) : undefined,
+    federacoes: federacoesOn ? myFederationPending(fedMembersQ.isSuccess ? fedMembersQ.data : undefined, fedChargesQ.isSuccess ? fedChargesQ.data : undefined, { invites: fedInvitesQ.isSuccess ? fedInvitesQ.data : undefined, assignments: fedAssignmentsQ.isSuccess ? fedAssignmentsQ.data : undefined, finalInvites: fedFinalsQ.isSuccess ? fedFinalsQ.data : undefined, directedReports: fedDirectedQ.isSuccess ? fedDirectedQ.data : undefined }) : undefined,
   });
   const falhas = [
     arenasQ.isError && t('as suas arenas'),
@@ -180,7 +184,7 @@ export default function UserArea() {
     if (balancos.isError) balancos.refetch();
   };
 
-  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ } };
+  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ, finalsQ: fedFinalsQ, directedQ: fedDirectedQ } };
 
   return (
     <V2Page className="space-y-6">

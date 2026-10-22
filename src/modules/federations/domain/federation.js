@@ -188,5 +188,9 @@ export function normalizeFederationRules(raw = {}) {
     levels: normalizeLevels(typeof raw?.levels === 'string' ? raw.levels.split(',') : raw?.levels),
     level_public: raw?.level_public === true,
     extra_consents: normalizeExtraConsents(raw?.extra_consents),
+    // Chancela (Bloco 2): antecedência mínima do pedido (0 = sem prazo) e se o
+    // torneio precisa de diretor credenciado. Ver `domain/competitions.js`.
+    sanction_min_days: int(raw?.sanction_min_days, 0, 0, 365),
+    sanction_requires_director: raw?.sanction_requires_director === true,
   };
 }

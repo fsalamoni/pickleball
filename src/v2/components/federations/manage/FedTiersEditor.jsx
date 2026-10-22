@@ -14,6 +14,7 @@ import { Archive, ArchiveRestore, Minus, Pencil, Plus, Sparkles, Tags, Trash2 } 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { TIER_MAX, TIER_MAX_PLACES, newTierId, normalizeTier, tierLabel, tierShortLabel, tierTableFromChampion, validateTiers } from '@/modules/federations/domain/officialRanking';
 import { applyTierTemplate } from '@/modules/federations/domain/platformCatalog';
+import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { fmtNumero, t, tn } from '@/core/i18n';
 
@@ -29,18 +30,20 @@ function resumoDaTabela(tt) {
   ].filter(Boolean).join(' · ');
 }
 
-function resumoDosRequisitos(req = {}) {
+function resumoDosRequisitos(req = {}, fee = 0) {
   return [
+    fee > 0 ? t('taxa de chancela {valor}', { valor: formatBrlCents(fee) }) : '',
     req.min_entrants ? tn(req.min_entrants, 'mínimo de {n} inscrição', 'mínimo de {n} inscrições') : '',
     req.prize ? t('premiação: {p}', { p: req.prize }) : '',
   ].filter(Boolean).join(' · ');
 }
 
-function TierDialog({ inicial, todas, onSave, onClose }) {
+function TierDialog({ inicial, todas, onSave, onClose, modelo = false }) {
   const [tier, setTier] = useState(inicial);
   const [campeao, setCampeao] = useState(String(inicial.points_by_place[1] || 1000));
   const [alcance, setAlcance] = useState(String(ALCANCES.find((n) => n >= (inicial.places || 32)) || 32));
   const [erro, setErro] = useState('');
+  const [taxa, setTaxa] = useState(inicial.sanction_fee_cents > 0 ? formatBrlCents(inicial.sanction_fee_cents) : '');
   const set = (patch) => { setTier((x) => ({ ...x, ...patch })); setErro(''); };
   const setReq = (patch) => set({ requirements: { ...tier.requirements, ...patch } });
   const linhas = Array.from({ length: tier.places }, (_, i) => i + 1);
@@ -56,7 +59,9 @@ function TierDialog({ inicial, todas, onSave, onClose }) {
   };
   const salvar = (e) => {
     e.preventDefault();
-    const limpa = normalizeTier({ ...tier, legacy: false });
+    const centavos = taxa.trim() ? parseBrlCents(taxa) : 0;
+    if (!Number.isFinite(centavos)) return setErro(t('Taxa de chancela inválida. Ex.: 150,00'));
+    const limpa = normalizeTier({ ...tier, legacy: false, sanction_fee_cents: modelo ? 0 : centavos });
     const lista = todas.some((x) => x.id === limpa.id) ? todas.map((x) => (x.id === limpa.id ? limpa : x)) : [...todas, limpa];
     const v = validateTiers(lista);
     if (v.erros[limpa.id]) return setErro(v.erros[limpa.id]);
@@ -107,6 +112,12 @@ function TierDialog({ inicial, todas, onSave, onClose }) {
           <V2Field label={t('Participação')} htmlFor="tier-part" hint={t('Para quem jogou e ficou fora da tabela. Não pode valer mais que a última colocação.')}>
             <V2Input id="tier-part" type="number" min={0} inputMode="numeric" value={tier.participation} onChange={(e) => set({ participation: e.target.value === '' ? '' : Number(e.target.value) })} className="sm:w-40" />
           </V2Field>
+
+          {!modelo && (
+            <V2Field label={t('Taxa de chancela (R$)')} htmlFor="tier-fee" hint={t('Cobrada por Pix de quem pede a chancela nesta categoria, assim que o pedido chega. Em branco = sem taxa. A equipe só chancela com a taxa paga (ou dispensada pelo financeiro).')}>
+              <V2Input id="tier-fee" inputMode="decimal" value={taxa} maxLength={14} placeholder="0,00" onChange={(e) => { setTaxa(e.target.value); setErro(''); }} className="sm:w-40" />
+            </V2Field>
+          )}
 
           <fieldset className="space-y-3">
             <legend className="text-sm font-semibold text-ink">{t('Requisitos e regulamento')}</legend>
@@ -201,7 +212,7 @@ export default function FedTiersEditor({ tiers, explicit, onChange, templates = 
                     {!tt.active && <V2Badge tone="neutral">{t('Arquivada')}</V2Badge>}
                   </p>
                   <p className="text-xs text-gray-500">{resumoDaTabela(tt)}</p>
-                  {resumoDosRequisitos(tt.requirements) && <p className="text-xs text-gray-500">{resumoDosRequisitos(tt.requirements)}</p>}
+                  {resumoDosRequisitos(tt.requirements, tt.sanction_fee_cents) && <p className="text-xs text-gray-500">{resumoDosRequisitos(tt.requirements, tt.sanction_fee_cents)}</p>}
                   {tt.requirements.notes && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{tt.requirements.notes}</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -220,7 +231,7 @@ export default function FedTiersEditor({ tiers, explicit, onChange, templates = 
         </ul>
       )}
 
-      {editando && <TierDialog inicial={editando} todas={proprias} onSave={aplicar} onClose={() => setEditando(null)} />}
+      {editando && <TierDialog inicial={editando} todas={proprias} modelo={modelo} onSave={aplicar} onClose={() => setEditando(null)} />}
     </div>
   );
 }

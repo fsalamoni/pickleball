@@ -2594,3 +2594,128 @@ paridade contra `src/modules/federations/domain/regularity.js`
 
 Guias: `federacao-regularidade` (equipe) e `federacao-minha-regularidade`
 (filiado). Artigo: `federacao-regularidade`.
+
+## 31. Competições: chancela com prazo, diretor e taxa; relatório; final do circuito (Bloco 2 das próximas frentes, 2026-10-22)
+
+Tudo o que muda o pedido de chancela além do que o organizador escreve, e tudo
+do relatório e dos convites da final, é gravado **pelo servidor**
+(`functions/federationCompetitions.js`: gatilho `federationSanctionSync` em
+`tournaments/{id}`, callable `federationCompetition` e a varredura diária). A
+régua tem cópia em `functions/federationCompetitionsPolicy.js`, com paridade
+contra `src/modules/federations/domain/competitions.js`
+(`federationCompetitions.parity.test.js`).
+
+### 31.1 O pedido de chancela conferido pelo servidor
+
+- Em **Configurações → Regras → Chancela de torneios** (só com o módulo
+  `tournaments`): antecedência mínima (`rules.sanction_min_days`, 0 a 365;
+  0 = sem prazo) e "exigir diretor credenciado"
+  (`rules.sanction_requires_director`).
+- O organizador informa, no pedido (`TournamentSanctionCard`), a premiação por
+  gênero (`federation_sanction.prize = { female_cents, male_cents, note }`) e,
+  se quiser ou se a federação exigir, o código da credencial de diretor
+  (`director_code`). `requested_by_name` vai junto.
+- O gatilho confere **uma vez por pedido** (`checked_at_ms = requested_at_ms`):
+  sem data de início ou fora do prazo ⇒ recusado sozinho (`decided_by:
+  'system'`, com o motivo); código que não é de uma credencial **ativa** de
+  diretor (`kind: 'director'`) **desta** federação, com a exigência ligada ⇒
+  recusado. Aprovado na conferência, grava `director_uid`, `director_name`,
+  `director_credential_id`, `director_verified`, `days_ahead`, `fee_cents` e
+  `fee_charge_id`. Sem diretor credenciado, o diretor é quem pediu.
+- A equipe `competitions`/`admin` da própria federação não passa por prazo nem
+  taxa (é o torneio da federação).
+- A credencial de diretor sai de um curso do tipo "Diretor de torneio"
+  (`director`), como as outras credenciais (§6.5).
+
+### 31.2 A taxa de chancela
+
+- Cada categoria pode ter a sua taxa (`ranking_config.tiers[].sanction_fee_cents`,
+  editada em Competições → Ranking → Categorias; os modelos de categoria não
+  levam taxa). `normalizeTier` a preserva.
+- Pedido conferido com taxa ⇒ cobrança Pix para quem pediu
+  (`federation_charges`, `origin: 'sanction'`, `tournament_id`, `tier`), aviso
+  e o Pix na própria gestão do torneio. Uma taxa que já cobre o pedido (paga
+  com valor suficiente, ou aberta com o mesmo valor) é reaproveitada; aberta
+  com outro valor (mudou a categoria) é cancelada e sai outra.
+- Pedido retirado, recusado ou trocado de federação cancela a taxa em aberto.
+- `chargeConfirm` com `origin: 'sanction'` grava no torneio
+  `fee_paid_at_ms` (confirmada) ou `fee_cancelled_at_ms` (dispensada) e avisa
+  competições. O "Chancelar" da Central fica travado enquanto a taxa está
+  aberta. A trava é **só da tela**, de propósito: a taxa é da própria
+  federação, e quem aprovaria sem ela é a própria equipe.
+- O financeiro lê a cobrança de chancela; quem tem só `competitions` também a
+  lê (para ver se foi paga), mas não as anuidades.
+
+### 31.3 Checklist e relatório do diretor
+
+- Chancela aprovada ⇒ nasce `federation_tournament_reports/{tournamentId}`
+  (federação, torneio, datas, `director_uid`/`director_name`/
+  `director_verified`, `organizer_uid`) e o diretor é avisado (se não for quem
+  pediu).
+- `checklist` (diretor ou organizador): seguro, arbitragem, local,
+  primeiros socorros e programação (`CHECKLIST_ITEMS`, gravados — nunca
+  renomeie), observações e `complete`.
+- `report`, a partir do primeiro dia do torneio: inscritos, W.O.,
+  ocorrências, lesões e reclamações (com a descrição obrigatória quando há
+  número), notas. Reenviar substitui o relatório e conta as revisões
+  (`report.revisions`); só a
+  primeira entrega avisa competições.
+- Na Central, Chancelas → "Ver relatório" (leitura) e os selos "Checklist
+  completo/pendente" e "Relatório entregue/pendente". Para o diretor, Minha
+  área → Federações → "Torneios que você dirige" (`directorStage`).
+
+### 31.4 Premiação
+
+`prizeParity(prize)` compara feminino e masculino. Diferentes, o pedido e a
+Central mostram a diferença e lembram a Lei 14.597/2023 (premiação igual
+entre gêneros). É aviso, não trava.
+
+### 31.5 Final do circuito
+
+- Em uma chancela **aprovada**, "Final do circuito" (`final_send`, só
+  `competitions`/`admin`): ano do ranking, vagas por categoria (1 a 64) e dias
+  para responder (padrão 7). Convida os primeiros de cada categoria de
+  `federation_rankings/{fed}_{ano}` que ainda não foram convidados
+  (`federation_final_invites/{torneio}_{categoria}_{uid}`), avisa cada um e
+  guarda as opções em `report.final`.
+- O atleta confirma ou recusa em Minha área → Federações
+  (`final_answer`). Recusar, vencer o prazo (varredura) ou ser cancelado pela
+  equipe (`final_cancel`, com motivo) abre a vaga, e o próximo do ranking é
+  chamado sozinho (`substitute: true`) — até o torneio começar.
+- O convite não inscreve ninguém: confirmar só garante a vaga; a inscrição
+  segue pelo torneio.
+
+### 31.6 Leitura
+
+- `federation_tournament_reports`: diretor, organizador e `competitions`/
+  `admin` (e o admin da plataforma com acesso justificado). O financeiro não.
+- `federation_final_invites`: o próprio atleta e `competitions`/`admin`.
+- As duas coleções: só o servidor grava. Na exclusão de conta, o convite é
+  apagado e o relatório fica sem o nome do diretor; na exportação, aparecem
+  as duas.
+
+### 31.7 Não pode regredir
+
+63. O organizador **nunca** escreve as chaves que o servidor confere
+    (`checked_at_ms`, `director_uid`, `director_name`,
+    `director_credential_id`, `director_verified`, `days_ahead`, `fee_cents`,
+    `fee_charge_id`, `fee_paid_at_ms`, `fee_cancelled_at_ms`) — a regra
+    (`tournamentFederationOk`) recusa. Depois da conferência, `checked_at_ms`
+    está no mapa e qualquer mudança do organizador nele é recusada; editar os
+    outros campos do torneio segue livre.
+64. **`fedAny(fid, [perms])`** é a forma de dizer "alguma destas permissões"
+    na regra. Várias `fedHas` em sequência estouram o limite de 1.000
+    expressões numa leitura recusada (o teste de regra da cobrança pegou).
+65. A taxa só é criada pelo servidor e nunca duas vezes para o mesmo pedido.
+66. Convite para a final só para torneio chancelado por esta federação, e
+    suplente só antes do início.
+67. A régua (prazo, taxa, premiação, checklist, relatório, convites) muda nos
+    dois lados ao mesmo tempo, senão a paridade quebra.
+
+### 31.8 Âncoras e guia
+
+Âncoras: `federacao-regras-chancela`, `federacao-aba-chancelas`,
+`federacoes-finais` e `federacoes-diretor` (Minha área).
+
+Guias: `federacao-chancela` (atualizado) e `federacao-final-circuito`.
+Artigo: `federacao-torneios`.

@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Ban, CheckCircle2, ClipboardList, Lock, Plus, RotateCcw, Trophy, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, ClipboardList, FileText, Lock, Medal, Plus, RotateCcw, Trophy, XCircle } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/modules/federations/services/federationService';
@@ -27,6 +27,11 @@ import { useAvisoNaoSalvo } from './naoSalvo';
 import FedTiersEditor from './FedTiersEditor';
 import FedTierRequirements from '../FedTierRequirements';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
+import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { useFederationTournamentReports, useSanctionFees } from '@/modules/federations/hooks/useCompetitions';
+import DirectorReportForm from '../competitions/DirectorReportForm';
+import FinalCircuitDialog from '../competitions/FinalCircuitDialog';
+import PrizeParityNote from '../competitions/PrizeParityNote';
 
 const TIERS = Object.values(SANCTION_TIER).map((v) => ({ value: v, label: SANCTION_TIER_LABELS[v] }));
 
@@ -100,10 +105,26 @@ function DecisaoDialog({ tournament, federation, acao, onClose }) {
   );
 }
 
-function TorneioRow({ tournament: tt, federation }) {
+/**
+ * A taxa de chancela do pedido: aberta trava o "Chancelar" (o financeiro
+ * confirma o Pix ou dispensa); `fee` indefinido = não carregou, e aí não trava
+ * nem afirma nada. Sem taxa na categoria, `none`.
+ */
+function estadoDaTaxa(s, fee) {
+  if (!(s.fee_cents > 0)) return 'none';
+  if (s.fee_paid_at_ms || fee?.status === 'paid') return 'paid';
+  if (s.fee_cancelled_at_ms || fee?.status === 'cancelled') return 'waived';
+  return fee === undefined ? 'unknown' : 'open';
+}
+
+function TorneioRow({ tournament: tt, federation, fee, report }) {
   const [acao, setAcao] = useState(null);
+  const [vendoRelatorio, setVendoRelatorio] = useState(false);
+  const [final, setFinal] = useState(false);
   const st = sanctionState(tt);
   const s = tt.federation_sanction || {};
+  const taxa = estadoDaTaxa(s, fee);
+  const conferindo = st.pending && s.checked_at_ms !== s.requested_at_ms;
   return (
     <li>
       <V2Surface variant="compacto" className="space-y-3 p-4">
@@ -120,20 +141,41 @@ function TorneioRow({ tournament: tt, federation }) {
               {[tt.starts_at ? quando(tt.starts_at) : '', tt.city || tt.location, st.tierLabel].filter(Boolean).join(' · ')}
               {s.requested_at_ms ? ` · ${t('pedido em {data}', { data: quando(s.requested_at_ms) })}` : ''}
             </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+              {s.director_name && <span className="text-gray-600">{t('Diretor: {nome}', { nome: s.director_name })}</span>}
+              {s.director_name && (s.director_verified ? <V2Badge tone="green">{t('Credenciado')}</V2Badge> : <V2Badge tone="neutral">{t('Sem credencial')}</V2Badge>)}
+              {st.pending && typeof s.days_ahead === 'number' && <span className="text-gray-500">{tn(s.days_ahead, 'pedido {n} dia antes', 'pedido {n} dias antes')}</span>}
+              {taxa === 'open' && <V2Badge tone="amber">{t('Taxa de {valor} aguardando pagamento', { valor: formatBrlCents(s.fee_cents) })}</V2Badge>}
+              {taxa === 'paid' && <V2Badge tone="green">{t('Taxa paga')}</V2Badge>}
+              {taxa === 'waived' && <V2Badge tone="neutral">{t('Taxa dispensada')}</V2Badge>}
+              {st.approved && report && (
+                <>
+                  <V2Badge tone={report.checklist?.complete ? 'green' : 'amber'}>{report.checklist?.complete ? t('Checklist completo') : t('Checklist pendente')}</V2Badge>
+                  <V2Badge tone={report.report ? 'green' : 'neutral'}>{report.report ? t('Relatório entregue') : t('Relatório pendente')}</V2Badge>
+                </>
+              )}
+            </div>
+            {s.prize && <div className="mt-2"><PrizeParityNote prize={s.prize} /></div>}
+            {conferindo && <p className="mt-1 text-xs text-gray-500">{t('O servidor está conferindo prazo, diretor e taxa.')}</p>}
             {s.reason && !st.approved && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: s.reason })}</p>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {st.pending && (
             <>
-              <V2Button type="button" size="sm" onClick={() => setAcao('approve')}><CheckCircle2 className="h-4 w-4" />{t('Chancelar')}</V2Button>
+              <V2Button type="button" size="sm" disabled={taxa === 'open' || conferindo} title={taxa === 'open' ? t('Aguardando o pagamento da taxa. O financeiro confirma o Pix ou dispensa a taxa.') : undefined} onClick={() => setAcao('approve')}><CheckCircle2 className="h-4 w-4" />{t('Chancelar')}</V2Button>
               <V2Button type="button" size="sm" variant="danger" onClick={() => setAcao('reject')}><XCircle className="h-4 w-4" />{t('Recusar')}</V2Button>
             </>
           )}
+          {st.approved && report && <V2Button type="button" size="sm" variant="ghost" onClick={() => setVendoRelatorio((v) => !v)}><FileText className="h-4 w-4" />{vendoRelatorio ? t('Fechar relatório') : t('Ver relatório')}</V2Button>}
+          {st.approved && report && <V2Button type="button" size="sm" variant="ghost" onClick={() => setFinal(true)}><Medal className="h-4 w-4" />{t('Final do circuito')}</V2Button>}
           {st.approved && <V2Button type="button" size="sm" variant="danger" onClick={() => setAcao('revoke')}><Ban className="h-4 w-4" />{t('Revogar')}</V2Button>}
         </div>
+        {taxa === 'open' && st.pending && <p className="text-xs text-gray-500">{t('O "Chancelar" libera quando o financeiro confirmar o Pix da taxa (ou dispensá-la) em Financeiro → Cobranças.')}</p>}
+        {vendoRelatorio && report && <div className="border-t border-gray-100 pt-3"><DirectorReportForm report={report} readOnly /></div>}
       </V2Surface>
       {acao && <DecisaoDialog tournament={tt} federation={federation} acao={acao} onClose={() => setAcao(null)} />}
+      {final && <FinalCircuitDialog tournament={tt} federation={federation} report={report} onClose={() => setFinal(false)} />}
     </li>
   );
 }
@@ -147,6 +189,11 @@ function ChancelasTab({ tournamentsQ, federation }) {
   const chancelados = useMemo(() => sanctionedTournaments(tournamentsQ.data || []), [tournamentsQ.data]);
   const lista = useMemo(() => (filtro === 'pendentes' ? pendentes : filtro === 'chancelados' ? chancelados : [...pendentes, ...chancelados]), [filtro, pendentes, chancelados]);
   const busca = useBuscaLista(lista, CAMPOS_TORNEIO);
+  // Taxas e relatórios são acessórios da linha: falhando, a linha segue sem eles (não trava o "Chancelar").
+  const feesQ = useSanctionFees(federation?.id);
+  const reportsQ = useFederationTournamentReports(federation?.id);
+  const taxaDe = (tt) => (feesQ.isSuccess ? (feesQ.data || []).find((c) => c.id === tt.federation_sanction?.fee_charge_id) || null : undefined);
+  const relatorioDe = (tt) => (reportsQ.data || []).find((r) => r.id === tt.id) || null;
   if (tournamentsQ.isError) return <V2ErrorState title={t('Não carregaram os torneios')} onRetry={() => tournamentsQ.refetch()} />;
   if (!tournamentsQ.isSuccess) return <V2Skeleton lines={5} />;
   // A busca e o "Mostrar mais" valem sobre a lista inteira; os grupos saem do que está visível.
@@ -175,13 +222,13 @@ function ChancelasTab({ tournamentsQ, federation }) {
       {filtro !== 'chancelados' && !(buscando && !achPendentes) && (
         <div>
           <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(buscando ? achPendentes : pendentes.length, '{n} pedido aguardando', '{n} pedidos aguardando')}</h3>
-          {pendentes.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum pedido de chancela aguardando.')}</p> : <ul className="space-y-3">{visPendentes.map((tt) => <TorneioRow key={tt.id} tournament={tt} federation={federation} />)}</ul>}
+          {pendentes.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum pedido de chancela aguardando.')}</p> : <ul className="space-y-3">{visPendentes.map((tt) => <TorneioRow key={tt.id} tournament={tt} federation={federation} fee={taxaDe(tt)} report={relatorioDe(tt)} />)}</ul>}
         </div>
       )}
       {filtro !== 'pendentes' && !(buscando && !achChancelados) && (visChancelados.length > 0 || chancelados.length === 0) && (
         <div>
           <h3 className="mb-2 font-display text-lg font-bold text-ink">{tn(buscando ? achChancelados : chancelados.length, '{n} torneio chancelado', '{n} torneios chancelados')}</h3>
-          {chancelados.length === 0 ? <V2EmptyState icon={Trophy} title={t('Nenhum torneio chancelado ainda')} description={t('Os pedidos aprovados aparecem aqui.')} /> : <ul className="space-y-3">{visChancelados.map((tt) => <TorneioRow key={tt.id} tournament={tt} federation={federation} />)}</ul>}
+          {chancelados.length === 0 ? <V2EmptyState icon={Trophy} title={t('Nenhum torneio chancelado ainda')} description={t('Os pedidos aprovados aparecem aqui.')} /> : <ul className="space-y-3">{visChancelados.map((tt) => <TorneioRow key={tt.id} tournament={tt} federation={federation} fee={taxaDe(tt)} report={relatorioDe(tt)} />)}</ul>}
         </div>
       )}
       <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />

@@ -144,6 +144,20 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Competições** (`docs/50` §31): o pedido de chancela é conferido pelo
+  servidor (gatilho `federationSanctionSync` em `functions/federationCompetitions.js`):
+  antecedência (`rules.sanction_min_days`), diretor credenciado
+  (`rules.sanction_requires_director` + credencial `director` ativa) e a taxa
+  da categoria (`tiers[].sanction_fee_cents` → cobrança `origin: 'sanction'`).
+  O organizador nunca escreve as chaves conferidas (`tournamentFederationOk`).
+  Relatório do diretor (`federation_tournament_reports`) e convites da final
+  (`federation_final_invites`) **só o servidor grava** (callable
+  `federationCompetition`); régua em `domain/competitions.js` com cópia e
+  paridade em `functions/federationCompetitionsPolicy.js`. Na regra, "alguma
+  destas permissões" é `fedAny(fid, [...])`. Telas em
+  `TournamentSanctionCard.jsx`, `manage/FedCompetitionsPanel.jsx`,
+  `competitions/` (relatório, premiação, final, Minha área); regras em
+  `tests/rules/federationCompetitions.rules.test.js`.
 - **Regularidade do filiado** (`docs/50` §30): validade dos documentos
   (`doc_validity` no plano, `valid_until` gravado pela secretaria), nível
   oficial com histórico e pedido de revisão, autorizações (LGPD) e o seguro

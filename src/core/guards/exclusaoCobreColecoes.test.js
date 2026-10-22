@@ -203,6 +203,8 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_credentials: ['listMyCredentials'],
   federation_sanctions: ['listMySanctions'],
   federation_incidents: ['listMyIncidents'],
+  federation_final_invites: ['listMyFinalInvites'],
+  federation_tournament_reports: ['listMyDirectedReports'],
   federation_reports: ['listMyReports'],
   federation_followers: ['listMyAcervoFollows'],
   federation_invites: ['listMyFederationInvites'],

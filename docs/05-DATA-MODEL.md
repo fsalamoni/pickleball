@@ -2032,6 +2032,39 @@ equipe `members`/`competitions`/`admin`. Zero índice (consultas de uma
 igualdade). Na exclusão de conta fica sem nome, relato e parte do corpo; entra
 na exportação (`listMyIncidents`).
 
+### `federation_tournament_reports/{tournamentId}` (NOVO — relatório do diretor, `docs/50` §31.3)
+`federation_id`, `tournament_id`, `tournament_name`, `starts_at`, `ends_at`,
+`director_uid`, `director_name`, `director_verified`, `organizer_uid`,
+`checklist { items { insurance, referees, venue, medical, schedule }, notes,
+complete, by, by_name, at_ms }` (chaves dos itens gravadas), `report {
+entrants, walkovers, injuries, complaints, incidents_text, injuries_text,
+complaints_text, notes, by, by_name, submitted_at_ms, revisions }`, `final {
+season, per_category, accept_days, categories, sent_by, sent_at_ms,
+updated_at_ms }`, `created_at_ms`, `updated_at_ms`. Nasce quando a chancela é
+aprovada; só o servidor grava (`federationCompetition`). Leem: o diretor, quem
+organiza e a equipe `competitions`/`admin`. Zero índice. Na exclusão de conta
+fica sem o nome do diretor; entra na exportação.
+
+### `federation_final_invites/{tournamentId}_{categoria}_{uid}` (NOVO — final do circuito, `docs/50` §31.5)
+`federation_id`, `federation_acronym`, `tournament_id`, `tournament_name`,
+`starts_at`, `season`, `category_key`, `gender_category`, `age_category`,
+`format`, `user_id`, `user_name`, `position`, `points`, `substitute`, `status`
+(`invited|accepted|declined|expired|cancelled`, gravado), `expires_at_ms`,
+`answered_at_ms`, `cancel_reason`, `cancelled_by`, `invited_by`,
+`created_at_ms`, `updated_at_ms`. Só o servidor grava. Leem: o atleta e a
+equipe `competitions`/`admin`. Zero índice. Na exclusão de conta é apagado;
+entra na exportação.
+
+### Chancela (Bloco 2): campos novos e opcionais
+`tournaments.federation_sanction` ganha, do organizador, `requested_by_name`,
+`director_code` e `prize { female_cents, male_cents, note }`; e, só do
+servidor, `checked_at_ms`, `director_uid`, `director_name`,
+`director_credential_id`, `director_verified`, `days_ahead`, `fee_cents`,
+`fee_charge_id`, `fee_paid_at_ms`, `fee_cancelled_at_ms`. Em `federations`:
+`rules.sanction_min_days` (0–365) e `rules.sanction_requires_director`, e
+`ranking_config.tiers[].sanction_fee_cents`. Em `federation_charges`: `origin:
+'sanction'`, com `tournament_id` e `tier`.
+
 ### `federation_transfers/{id}` (PR 3, só o servidor — `federationTransfer`)
 `federation_id`, `member_id`, `user_id`, `guardian_uid`, `user_name`, `kind`
 (`club|federation`), `to_club_id`/`to_club_name` ou `to_federation_id`/

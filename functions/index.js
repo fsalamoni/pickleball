@@ -1427,11 +1427,32 @@ exports.federationDocumentsSync = onDocumentWritten(
   },
 );
 
+// Competições (Bloco 2): o pedido de chancela é conferido pelo servidor
+// (antecedência, diretor credenciado, taxa da categoria), a chancela aprovada
+// abre o relatório do diretor, e a final do circuito convida pelo ranking —
+// `functions/federationCompetitions.js`.
+const federationCompetitions = require('./federationCompetitions');
+exports.federationCompetition = federationCallable('federationCompetition', federationCompetitions.competition);
+exports.federationSanctionSync = onDocumentWritten(
+  { document: 'tournaments/{tournamentId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 60 },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    // Torneio sem federação (quase todos) sai sem ler nada.
+    if (!(a && a.federation_id) && !(d && d.federation_id)) return;
+    try {
+      await federationCompetitions.onTournamentWritten(fedCtx(), a, d, event.params.tournamentId);
+    } catch (err) {
+      logger.error('federationSanctionSync falhou', err);
+    }
+  },
+);
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

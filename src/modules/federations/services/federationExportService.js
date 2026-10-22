@@ -6,7 +6,7 @@
 import {
   listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyFederationInvites, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
   listMyMembersPrivate, listMyAssignments, listMyIncidents, listMyRefereeRosters, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
-  listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters, listMyFederationPoints,
+  listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters, listMyFederationPoints, listMyFinalInvites, listMyDirectedReports,
 } from './federationService.js';
 
 /** @returns {Promise<{ federations: object, incomplete: string[] }>} */
@@ -36,6 +36,8 @@ export async function collectFederationExport(uid) {
     ['election_voters', 'Eleições em que você está no colégio eleitoral (se votou — nunca em quem: o voto é secreto)', () => listMyElectionVoters(uid)],
     ['candidacies', 'Chapas eleitorais de que você faz parte', () => listMyCandidacies(uid)],
     ['election_endorsements', 'Apoios que você deu a chapas eleitorais', () => listMyElectionEndorsements(uid)],
+    ['final_invites', 'Convites para finais de circuito', () => listMyFinalInvites(uid)],
+    ['directed_tournaments', 'Torneios chancelados que você dirigiu (checklist e relatório)', () => listMyDirectedReports(uid)],
   ];
   const lidas = await Promise.allSettled(partes.map(([, , ler]) => ler()));
   const federations = {};

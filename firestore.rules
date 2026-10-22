@@ -1404,7 +1404,9 @@ service cloud.firestore {
           && fedModuleOn(nd().federation_id, 'tournaments')
           && fedPublic(nd().federation_id)
           && nd().federation_sanction.status == 'pending'
-          && nd().federation_sanction.requested_by == me());
+          && nd().federation_sanction.requested_by == me()
+          // O que o servidor confere (prazo, diretor, taxa) o organizador não escreve.
+          && !nd().federation_sanction.keys().hasAny(['checked_at_ms', 'director_uid', 'director_verified', 'fee_charge_id', 'fee_cents', 'fee_paid_at_ms', 'fee_cancelled_at_ms', 'director_name', 'director_credential_id', 'days_ahead']));
     }
     // Filiação ativa e sem suspensão DISCIPLINAR em vigor (PR 3) na federação.
     // Ativo, sem suspensão em vigor e — se a federação trava (`rules.block_expired_docs`) —
@@ -3428,7 +3430,7 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/coaches/$(me())))
         // PR 4: a federação (módulo `promos`) emite pela equipe de comunicação.
         || (type == 'federation' && fedOn() && fedModuleOn(id, 'promos')
-          && (fedHas(id, 'comms') || fedHas(id, 'admin')))
+          && (fedAny(id, ['comms', 'admin'])))
       );
     }
     function promoIssuerKept() {
@@ -4264,7 +4266,7 @@ service cloud.firestore {
         || (key.matches('arena_[^/]+') && isArenaManager(key.replace('^arena_', '')))
         // PR 4: a loja oficial da federação (módulo `store`) — quem tem `admin` ou `finance`.
         || (key.matches('federation_[^/]+') && fedOn() && fedModuleOn(key.replace('^federation_', ''), 'store')
-          && (fedHas(key.replace('^federation_', ''), 'admin') || fedHas(key.replace('^federation_', ''), 'finance'))));
+          && (fedAny(key.replace('^federation_', ''), ['admin', 'finance']))));
     }
     function marketSeller(key) {
       return get(/databases/$(database)/documents/market_sellers/$(key)).data;
@@ -4673,6 +4675,11 @@ service cloud.firestore {
     function fedHas(fedId, perm) {
       return isAuthed() && (fedPlat(fedId) || perm in fedPerms(fedId));
     }
+    // Qualquer uma das permissões, numa leitura só do cargo: várias `fedHas`
+    // em OU estouram o teto de 1.000 expressões do Firestore numa leitura negada.
+    function fedAny(fedId, perms) {
+      return isAuthed() && (fedPlat(fedId) || fedPerms(fedId).hasAny(perms));
+    }
     function fedMemberActive(fedId) {
       return isAuthed()
         && exists(/databases/$(database)/documents/federation_members/$(fedId + '_' + me()))
@@ -4755,9 +4762,7 @@ service cloud.firestore {
       allow read: if isPlatformAdmin()
         || (isOwner(od().user_id))
         || (isAuthed() && fedSees(od().federation_id))
-        || fedHas(od().federation_id, 'admin')
-        || fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'finance');
+        || fedAny(od().federation_id, ['admin', 'members', 'finance']);
       // Cargos, mandatos e admins master: SÓ o servidor (`federationStaff`).
       // Ele confere quem pode nomear para quê, grava a cópia das permissões do
       // cargo e garante que sempre sobra um admin master.
@@ -4776,7 +4781,7 @@ service cloud.firestore {
       // filiar) — da federação publicada; da oculta, quem a vê (`fedSees`).
       allow read: if fedSees(od().federation_id);
       allow create: if fedOn() && fedApproved(nd().federation_id)
-        && (fedHas(nd().federation_id, 'admin') || fedHas(nd().federation_id, 'finance'))
+        && (fedAny(nd().federation_id, ['admin', 'finance']))
         && nd().name is string
         && nd().name.size() >= 3
         && nd().name.size() <= 80
@@ -4791,7 +4796,7 @@ service cloud.firestore {
         && nd().person_type is string
         && nd().person_type.matches('[a-z][a-z0-9_]{1,23}')
         && nd().get('entity', 'person') in ['person', 'club', 'arena'];
-      allow update: if fedOn() && (fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'finance'))
+      allow update: if fedOn() && (fedAny(od().federation_id, ['admin', 'finance']))
         && !chg().hasAny(['federation_id'])
         && nd().price_cents is int
         && nd().price_cents >= 0
@@ -4837,8 +4842,7 @@ service cloud.firestore {
       // A secretaria REVELA o CPF com auditoria na tela.
       match /private/{docId} {
         allow read: if docId == 'data' && (fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
-          || fedHas(memberId.split('_')[0], 'members')
-          || fedHas(memberId.split('_')[0], 'admin'));
+          || fedAny(memberId.split('_')[0], ['members', 'admin']));
         allow write: if false;
       }
     }
@@ -4869,7 +4873,7 @@ service cloud.firestore {
         && nd().get('org_kind', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_kind', '')
         && nd().get('org_id', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_id', '');
       // A secretaria aceita ou recusa (com motivo) e diz até quando vale; nada mais muda.
-      allow update: if fedOn() && (fedHas(od().federation_id, 'members') || fedHas(od().federation_id, 'admin'))
+      allow update: if fedOn() && (fedAny(od().federation_id, ['members', 'admin']))
         && chg().hasOnly(['status', 'review', 'valid_until', 'updated_at'])
         && nd().status in ['approved', 'rejected']
         && nd().get('valid_until', '') is string;
@@ -4883,18 +4887,16 @@ service cloud.firestore {
     // na troca de federação, a secretaria da federação de destino.
     match /federation_transfers/{trId} {
       allow read: if fedMemberOwner(od())
-        || fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'admin')
+        || fedAny(od().federation_id, ['members', 'admin'])
         || (od().get('to_federation_id', null) is string
-          && (fedHas(od().to_federation_id, 'members') || fedHas(od().to_federation_id, 'admin')));
+          && (fedAny(od().to_federation_id, ['members', 'admin'])));
       allow write: if false;
     }
 
     // Relatório de uma importação de filiados (PR 3): e-mails pendentes de
     // conta. Só a secretaria lê; só o servidor grava (`federationImportMembers`).
     match /federation_imports/{impId} {
-      allow read: if fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'admin');
+      allow read: if fedAny(od().federation_id, ['members', 'admin']);
       allow write: if false;
     }
 
@@ -4904,8 +4906,7 @@ service cloud.firestore {
     // secretaria; aceitar é pedir a filiação no plano do convite.
     match /federation_invites/{invId} {
       allow read: if isOwner(od().user_id)
-        || fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['members', 'admin']);
       allow write: if false;
     }
 
@@ -4913,20 +4914,19 @@ service cloud.firestore {
     // (cursos/admin) cria e edita — a inscrição e a credencial são do servidor.
     match /federation_courses/{courseId} {
       allow read: if (od().status != 'draft' && fedSees(od().federation_id))
-        || fedHas(od().federation_id, 'courses')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['courses', 'admin']);
       allow create: if fedOn() && fedModuleOn(nd().federation_id, 'courses')
-        && (fedHas(nd().federation_id, 'courses') || fedHas(nd().federation_id, 'admin'))
+        && (fedAny(nd().federation_id, ['courses', 'admin']))
         && nd().name is string
         && nd().name.size() >= 3
         && nd().name.size() <= 120
-        && nd().kind in ['referee', 'coach', 'clinic', 'workshop']
+        && nd().kind in ['referee', 'coach', 'clinic', 'workshop', 'director']
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled']
         && nd().price_cents is int
         && nd().price_cents >= 0
         && nd().get('enrolled_count', 0) == 0;
       allow update: if fedOn()
-        && (fedHas(od().federation_id, 'courses') || fedHas(od().federation_id, 'admin'))
+        && (fedAny(od().federation_id, ['courses', 'admin']))
         && !chg().hasAny(['federation_id', 'enrolled_count'])
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled'];
       allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin') && od().get('enrolled_count', 0) == 0);
@@ -4936,25 +4936,33 @@ service cloud.firestore {
     // confere vagas, filiação exigida e gera a cobrança. Lê o próprio e a equipe.
     match /federation_course_enrollments/{enrId} {
       allow read: if (isOwner(od().user_id))
-        || fedHas(od().federation_id, 'courses')
-        || fedHas(od().federation_id, 'finance')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['courses', 'finance', 'admin']);
       allow write: if false;
     }
 
     // Credencial (árbitro, treinador…): o servidor emite ao aprovar o curso; a
     // equipe (cursos/admin) revoga. Pública SÓ se a pessoa marcou `public`
     // (diretório de credenciados); a pessoa muda só isso.
+    // Competições (Bloco 2): relatório do diretor e convites da final — só o servidor grava.
+    match /federation_tournament_reports/{tid} {
+      allow read: if isOwner(od().director_uid) || isOwner(od().organizer_uid)
+        || fedAny(od().federation_id, ['competitions', 'admin']);
+      allow write: if false;
+    }
+    match /federation_final_invites/{invId} {
+      allow read: if isOwner(od().user_id)
+        || fedAny(od().federation_id, ['competitions', 'admin']);
+      allow write: if false;
+    }
     match /federation_credentials/{credId} {
       allow read: if (od().get('public', false) == true && od().status == 'active' && fedSees(od().federation_id))
         || (isOwner(od().user_id))
-        || fedHas(od().federation_id, 'courses')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['courses', 'admin']);
       allow create, delete: if false;
       allow update: if fedOn() && (
         (isOwner(od().user_id)
           && chg().hasOnly(['public', 'public_photo', 'prefs_updated_at']))
-        || ((fedHas(od().federation_id, 'courses') || fedHas(od().federation_id, 'admin'))
+        || ((fedAny(od().federation_id, ['courses', 'admin']))
           && chg().hasOnly(['status', 'review', 'updated_at'])
           && nd().status in ['active', 'revoked'])
       );
@@ -4968,15 +4976,13 @@ service cloud.firestore {
     // e a equipe que atende (filiados, competições, admin).
     match /federation_incidents/{incId} {
       allow read: if fedMemberOwner(od()) || isOwner(od().reported_by)
-        || fedHas(od().federation_id, 'members') || fedHas(od().federation_id, 'competitions')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['members', 'competitions', 'admin']);
       allow write: if false;
     }
 
     match /federation_sanctions/{sancId} {
       allow read: if fedMemberOwner(od())
-        || fedHas(od().federation_id, 'discipline')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['discipline', 'admin']);
       allow write: if false;
     }
 
@@ -4986,11 +4992,9 @@ service cloud.firestore {
     match /federation_reports/{repId} {
       allow get: if (isAuthed() && od().get('anonymous', false) == true)
         || (isAuthed() && od().get('reporter_uid', null) == me())
-        || fedHas(od().federation_id, 'discipline')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['discipline', 'admin']);
       allow list: if (isAuthed() && od().get('reporter_uid', null) == me())
-        || fedHas(od().federation_id, 'discipline')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['discipline', 'admin']);
       allow create: if fedOn() && isAuthed()
         && fedModuleOn(nd().federation_id, 'discipline')
         && fedSees(nd().federation_id)
@@ -5005,7 +5009,7 @@ service cloud.firestore {
           : nd().reporter_uid == me())
         && !nd().keys().hasAny(['notes', 'handled_by']);
       allow update: if fedOn()
-        && (fedHas(od().federation_id, 'discipline') || fedHas(od().federation_id, 'admin'))
+        && (fedAny(od().federation_id, ['discipline', 'admin']))
         && chg().hasOnly(['status', 'notes', 'handled_by', 'updated_at'])
         && nd().status in ['open', 'in_review', 'closed'];
       allow delete: if fedPlat(od().federation_id);
@@ -5019,10 +5023,9 @@ service cloud.firestore {
     match /federation_news/{newsId} {
       allow read: if (od().status == 'published'
           && ((od().audience == 'public' && fedSees(od().federation_id)) || (od().audience == 'members' && fedMemberActive(od().federation_id))))
-        || fedHas(od().federation_id, 'comms')
-        || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['comms', 'admin']);
       allow create: if fedOn() && fedModuleOn(nd().federation_id, 'news')
-        && (fedHas(nd().federation_id, 'comms') || fedHas(nd().federation_id, 'admin'))
+        && (fedAny(nd().federation_id, ['comms', 'admin']))
         && nd().title is string
         && nd().title.size() >= 3
         && nd().title.size() <= 140
@@ -5033,7 +5036,7 @@ service cloud.firestore {
         && nd().audience in ['public', 'members']
         && !nd().keys().hasAny(['notified_at', 'notified_count']);
       allow update: if fedOn()
-        && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin'))
+        && (fedAny(od().federation_id, ['comms', 'admin']))
         && !chg().hasAny(['federation_id', 'notified_at', 'notified_count'])
         && nd().title is string
         && nd().title.size() >= 3
@@ -5042,7 +5045,7 @@ service cloud.firestore {
         && (nd().status != 'scheduled' || nd().publish_at_ms is number)
         && nd().audience in ['public', 'members'];
       allow delete: if fedPlat(od().federation_id)
-        || (fedOn() && (fedHas(od().federation_id, 'comms') || fedHas(od().federation_id, 'admin')));
+        || (fedOn() && (fedAny(od().federation_id, ['comms', 'admin'])));
     }
 
     // ACERVO OFICIAL (módulo `official_docs`): normas, atos, atas, editais,
@@ -5058,7 +5061,7 @@ service cloud.firestore {
           && ((od().visibility == 'public' && fedSees(od().federation_id))
             || (od().visibility == 'members' && fedMemberActive(od().federation_id))
             || (od().visibility in ['members', 'staff'] && (fedPlat(od().federation_id) || fedPerms(od().federation_id).size() > 0))))
-        || fedHas(od().federation_id, 'docs') || fedHas(od().federation_id, 'admin');
+        || fedAny(od().federation_id, ['docs', 'admin']);
       allow write: if false;
     }
 
@@ -5186,12 +5189,11 @@ service cloud.firestore {
     }
 
     match /federation_charges/{chargeId} {
+      // O conselho fiscal (`fiscal`) confere as receitas (a cobrança paga entra nas contas).
       allow read: if (isOwner(od().payer_uid))
-        || fedHas(od().federation_id, 'admin')
-        || fedHas(od().federation_id, 'finance')
-        || fedHas(od().federation_id, 'members')
-        // O conselho fiscal confere as receitas (a cobrança paga entra nas contas).
-        || fedHas(od().federation_id, 'fiscal');
+        || fedAny(od().federation_id, ['admin', 'finance', 'members', 'fiscal'])
+        // Competições vê a taxa de chancela (aprova depois do pagamento).
+        || (od().get('origin', '') == 'sanction' && fedHas(od().federation_id, 'competitions'));
       // Só o servidor cria; confirmar e cancelar também são dele.
       allow create, delete: if false;
       // "Já paguei": o pagador só DECLARA — aberta/informada → informada, com a observação
@@ -5232,13 +5234,12 @@ service cloud.firestore {
       allow read: if (od().status == 'approved' && fedSees(od().federation_id))
         || (isOwner(od().requested_by))
         || fedOrgManager(od().kind, od().org_id)
-        || fedHas(od().federation_id, 'admin')
-        || fedHas(od().federation_id, 'members');
+        || fedAny(od().federation_id, ['admin', 'members']);
       // A organização PEDE (`pending`) ou a equipe CONVIDA (`invited`, 2026-10-22).
       allow create: if fedOn() && isAuthed()
         && ((nd().status == 'pending' && nd().requested_by == me() && fedOrgManager(nd().kind, nd().org_id))
           || (nd().status == 'invited' && nd().invited_by == me() && nd().requested_by == null
-            && (fedHas(nd().federation_id, 'admin') || fedHas(nd().federation_id, 'members'))))
+            && (fedAny(nd().federation_id, ['admin', 'members']))))
         && nd().kind in ['club', 'arena']
         && nd().org_id is string
         && nd().federation_id is string
@@ -5249,7 +5250,7 @@ service cloud.firestore {
         && fedPublic(nd().federation_id);
       // A equipe decide o pedido; quem gere a organização ACEITA o convite (vira filiado).
       allow update: if fedOn()
-        && (((fedHas(od().federation_id, 'admin') || fedHas(od().federation_id, 'members'))
+        && (((fedAny(od().federation_id, ['admin', 'members']))
             && od().status != 'invited'
             // A filiação POR PLANO (`member_id`) é espelho do servidor: decide-se na filiação.
             && !('member_id' in od())

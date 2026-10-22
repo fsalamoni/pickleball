@@ -17,7 +17,7 @@ import { useFederationMutation, useFederationPlatformSettings } from '@/modules/
 import { isOrgEntity, memberTypeName, memberTypeOf, personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
-import { isFederationPublic, normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
+import { fedModuleOn, isFederationPublic, normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
 import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
 import { PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
@@ -422,6 +422,7 @@ function RegrasTab({ federation }) {
   const [f, setF, marcarSalvo] = useRascunho({
     ask_cpf: atual.ask_cpf, transfer_cooldown_days: String(atual.transfer_cooldown_days), transfer_release_days: String(atual.transfer_release_days), member_declarations: atual.member_declarations, convocation_min_days: String(atual.convocation_min_days), comments: atual.comments,
     block_expired_docs: atual.block_expired_docs, levels: atual.levels.join(', '), level_public: atual.level_public, extra_consents: atual.extra_consents,
+    sanction_min_days: String(atual.sanction_min_days), sanction_requires_director: atual.sanction_requires_director,
   });
   const m = useFederationMutation(() => updateFederationRules(federation.id, f, { uid: user?.uid }));
   const setConsent = (i, patch) => setF((x) => ({ ...x, extra_consents: x.extra_consents.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
@@ -439,6 +440,14 @@ function RegrasTab({ federation }) {
             <V2Field label={t('Prazo mínimo de convocação (dias)')} htmlFor="rg-convocacao" hint={t('O que o estatuto pede entre o edital e a reunião. Fora do prazo, a agenda avisa (não bloqueia).')}><V2Input id="rg-convocacao" inputMode="numeric" value={f.convocation_min_days} onChange={(e) => setF((x) => ({ ...x, convocation_min_days: e.target.value }))} /></V2Field>
           </div>
         </V2Surface>
+        {fedModuleOn(federation, 'tournaments') && (
+          <V2Surface className="space-y-4" data-dica="federacao-regras-chancela">
+            <h3 className="font-display font-bold text-ink">{t('Chancela de torneios')}</h3>
+            <V2Field label={t('Antecedência mínima do pedido (dias)')} htmlFor="rg-chancela-prazo" hint={t('Entre o pedido e o início do torneio. 0 = sem prazo. Fora do prazo, o pedido é recusado sozinho, com o motivo.')}><V2Input id="rg-chancela-prazo" inputMode="numeric" value={f.sanction_min_days} onChange={(e) => setF((x) => ({ ...x, sanction_min_days: e.target.value }))} /></V2Field>
+            <V2Toggle id="rg-chancela-diretor" checked={f.sanction_requires_director} onChange={(v) => setF((x) => ({ ...x, sanction_requires_director: v }))} label={t('Exigir diretor de torneio credenciado')} hint={t('O organizador informa o código da credencial de diretor emitida pela federação (curso do tipo "Diretor de torneio"). Desligado, quem organiza responde pelo torneio.')} />
+            <p className="text-xs text-gray-500">{t('A taxa de chancela é definida por categoria, em Ranking → Categorias.')}</p>
+          </V2Surface>
+        )}
         <V2Surface className="space-y-4" data-dica="federacao-regras-regularidade">
           <h3 className="font-display font-bold text-ink">{t('Regularidade do filiado')}</h3>
           <V2Toggle id="rg-docs-trava" checked={f.block_expired_docs} onChange={(v) => setF((x) => ({ ...x, block_expired_docs: v }))} label={t('Documento vencido impede a inscrição em torneio só para filiados')} hint={t('Vale para os documentos com validade nos planos (atestado, por exemplo). Desligado, a pessoa e a secretaria são avisadas, mas a inscrição segue liberada.')} />
