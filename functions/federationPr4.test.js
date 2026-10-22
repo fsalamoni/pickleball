@@ -48,6 +48,28 @@ describe('PR 4: aviso da notícia', () => {
     expect(avisos(db)).toHaveLength(2);
   });
 
+  it('agendada: publica quando chega a hora (data de Brasília) e avisa se pedido, uma vez só', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_news/a1', { federation_id: 'fpp', title: 'Assembleia', body: 'Convocação.', status: 'scheduled', publish_at_ms: NOW - 60000, notify_on_publish: true });
+    db.store.docs.set('federation_news/a2', { federation_id: 'fpp', title: 'Depois', body: 'Ainda não.', status: 'scheduled', publish_at_ms: NOW + 3600000 });
+    db.store.docs.set('federation_news/a3', { federation_id: 'fpp', title: 'Sem aviso', body: 'Só publica.', status: 'scheduled', publish_at_ms: Date.UTC(2026, 9, 21, 2, 0) });
+    expect(await news.publishDue(ctx(db))).toEqual({ published: 2 });
+    expect(doc(db, 'federation_news/a1')).toMatchObject({ status: 'published', published_at: '2026-10-21', notified_count: 2, notified_by: 'system' });
+    expect(doc(db, 'federation_news/a2').status).toBe('scheduled');
+    expect(doc(db, 'federation_news/a3')).toMatchObject({ status: 'published', published_at: '2026-10-20' }); // 23h de Brasília
+    expect(doc(db, 'federation_news/a3').notified_at).toBeUndefined();
+    expect(avisos(db)).toHaveLength(2);
+    expect(await news.publishDue(ctx(db))).toEqual({ published: 0 });
+    expect(avisos(db)).toHaveLength(2);
+  });
+
+  it('agendada em federação sem o módulo espera', async () => {
+    const db = cenario({ modules: {} });
+    db.store.docs.set('federation_news/a1', { federation_id: 'fpp', title: 'Assembleia', body: 'Convocação.', status: 'scheduled', publish_at_ms: NOW - 1 });
+    expect(await news.publishDue(ctx(db))).toEqual({ published: 0 });
+    expect(doc(db, 'federation_news/a1').status).toBe('scheduled');
+  });
+
   it('recusa quem não é da comunicação, rascunho e federação sem o módulo', async () => {
     await expect(news.notify(ctx(cenario()), SEC, { newsId: 'n1' })).rejects.toMatchObject({ code: 'permission-denied' });
     await expect(news.notify(ctx(cenario()), COM, { newsId: 'n2' })).rejects.toMatchObject({ code: 'failed-precondition' });

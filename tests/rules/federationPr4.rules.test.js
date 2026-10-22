@@ -98,6 +98,15 @@ describe('2. escrita das notícias', () => {
     await assertFails(updateDoc(doc(como(COM), 'federation_news', 'pub'), { federation_id: FED2 }));
     await assertSucceeds(updateDoc(doc(como(COM), 'federation_news', 'pub'), { title: 'Etapa estadual — novo prazo' }));
   });
+  it('agendada: exige a hora (número) e só a equipe lê até publicar', async () => {
+    await assertFails(setDoc(doc(como(COM), 'federation_news', 'ag0'), noticia({ status: 'scheduled' })));
+    await assertSucceeds(setDoc(doc(como(COM), 'federation_news', 'ag1'), noticia({ status: 'scheduled', publish_at_ms: Date.now() + 86400000, notify_on_publish: true })));
+    await assertFails(getDoc(doc(anonimo(), 'federation_news', 'ag1')));
+    await assertFails(getDoc(doc(como(ANA), 'federation_news', 'ag1')));
+    await assertSucceeds(getDoc(doc(como(PRES), 'federation_news', 'ag1')));
+    await assertFails(updateDoc(doc(como(COM), 'federation_news', 'pub'), { status: 'scheduled' }));
+    await assertSucceeds(updateDoc(doc(como(COM), 'federation_news', 'pub'), { status: 'scheduled', publish_at_ms: Date.now() + 3600000 }));
+  });
 });
 
 describe('3. patrocinadores', () => {

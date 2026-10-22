@@ -17,7 +17,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { deleteNews, notifyNews, saveNews, updateFederationSponsors } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
-import { canNotifyNews, newsSummaryLine, sortNews, validateNewsInput } from '@/modules/federations/domain/news';
+import { canNotifyNews, newsSummaryLine, scheduleInputValue, sortNews, validateNewsInput } from '@/modules/federations/domain/news';
 import { SPONSORS_MAX, validateSponsors } from '@/modules/federations/domain/sponsors';
 import { NEWS_AUDIENCE, NEWS_AUDIENCE_LABELS, NEWS_STATUS, NEWS_STATUS_LABELS, SPONSOR_TIER, SPONSOR_TIER_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
@@ -32,11 +32,13 @@ const PromoMarketingConsole = lazy(() => import('@/v2/components/promo/PromoMark
 
 /* ---------------------------------------------------------------- notícias -- */
 
-const NOTICIA_VAZIA = { title: '', summary: '', body: '', status: NEWS_STATUS.DRAFT, audience: NEWS_AUDIENCE.PUBLIC, link: '', image_url: '', published_at: '', pinned: false };
+const NOTICIA_VAZIA = { title: '', summary: '', body: '', status: NEWS_STATUS.DRAFT, audience: NEWS_AUDIENCE.PUBLIC, link: '', image_url: '', published_at: '', pinned: false, publish_at: '', notify_on_publish: false };
+const TOM_ESTADO = { published: 'green', scheduled: 'blue' };
 
 function NoticiaForm({ federation, noticia, onFechar }) {
   const { user } = useAuth();
-  const [inicial] = useState(() => (noticia ? { ...NOTICIA_VAZIA, ...noticia } : NOTICIA_VAZIA));
+  const [inicial] = useState(() => (noticia ? { ...NOTICIA_VAZIA, ...noticia, publish_at: scheduleInputValue(noticia.publish_at_ms), notify_on_publish: noticia.notify_on_publish === true } : NOTICIA_VAZIA));
+  const agendada = (st) => st === NEWS_STATUS.SCHEDULED;
   const [f, setF] = useState(inicial);
   // Texto mexido: trocar de aba da Central ou fechar o navegador pergunta antes. Salvar fecha o formulário.
   useAvisoNaoSalvo(f !== inicial && JSON.stringify(f) !== JSON.stringify(inicial));
@@ -57,8 +59,11 @@ function NoticiaForm({ federation, noticia, onFechar }) {
       <div className="grid gap-4 sm:grid-cols-3">
         <V2Field label={t('Estado')} htmlFor="nt-estado"><V2Select id="nt-estado" value={f.status} onChange={(e) => set({ status: e.target.value })}>{Object.values(NEWS_STATUS).map((v) => <option key={v} value={v}>{t(NEWS_STATUS_LABELS[v])}</option>)}</V2Select></V2Field>
         <V2Field label={t('Para quem')} htmlFor="nt-publico" hint={t('"Só filiados" aparece a quem tem filiação ativa.')}><V2Select id="nt-publico" value={f.audience} onChange={(e) => set({ audience: e.target.value })}>{Object.values(NEWS_AUDIENCE).map((v) => <option key={v} value={v}>{t(NEWS_AUDIENCE_LABELS[v])}</option>)}</V2Select></V2Field>
-        <V2Field label={t('Data')} htmlFor="nt-data" error={erros.published_at} hint={t('Em branco, a de hoje ao publicar.')}><V2Input id="nt-data" type="date" value={f.published_at} onChange={(e) => set({ published_at: e.target.value })} /></V2Field>
+        {agendada(f.status)
+          ? <V2Field label={t('Publicar em')} htmlFor="nt-quando" error={erros.publish_at} required hint={t('A notícia entra no ar sozinha, em até 15 minutos depois dessa hora.')}><V2Input id="nt-quando" type="datetime-local" value={f.publish_at} onChange={(e) => set({ publish_at: e.target.value })} /></V2Field>
+          : <V2Field label={t('Data')} htmlFor="nt-data" error={erros.published_at} hint={t('Em branco, a de hoje ao publicar.')}><V2Input id="nt-data" type="date" value={f.published_at} onChange={(e) => set({ published_at: e.target.value })} /></V2Field>}
       </div>
+      {agendada(f.status) && !noticia?.notified_at && <V2Toggle id="nt-avisar" checked={f.notify_on_publish} onChange={(v) => set({ notify_on_publish: v })} label={t('Avisar os filiados quando publicar')} hint={t('O aviso sai uma vez só, para cada filiado ativo, junto com a publicação.')} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <V2Field label={t('Link (opcional)')} htmlFor="nt-link" error={erros.link} hint={t('https:// ou um caminho do app, como /torneios.')}><V2Input id="nt-link" maxLength={300} value={f.link} onChange={(e) => set({ link: e.target.value })} /></V2Field>
         <V2Field label={t('Imagem (URL, opcional)')} htmlFor="nt-img" error={erros.image_url}><V2Input id="nt-img" type="url" maxLength={500} placeholder="https://" value={f.image_url} onChange={(e) => set({ image_url: e.target.value })} /></V2Field>
@@ -82,7 +87,7 @@ function NoticiasTab({ federation, newsQ }) {
   return (
     <section className="space-y-4" aria-label={t('Notícias da federação')} data-dica="federacao-noticias">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="font-display text-xl font-bold text-ink">{t('Notícias e avisos')}</h2><p className="text-sm text-gray-500">{t('Publicada e pública, sai na página da federação. "Só filiados" só aparece a quem tem filiação ativa. "Avisar os filiados" manda um aviso (sino, e-mail…) a cada filiado ativo, uma vez só por notícia.')}</p></div>
+        <div><h2 className="font-display text-xl font-bold text-ink">{t('Notícias e avisos')}</h2><p className="text-sm text-gray-500">{t('Publicada e pública, sai na página da federação. "Só filiados" só aparece a quem tem filiação ativa. "Agendada" entra no ar sozinha na hora marcada. "Avisar os filiados" manda um aviso (sino, e-mail…) a cada filiado ativo, uma vez só por notícia.')}</p></div>
         <V2Button type="button" onClick={() => setEditando('nova')} data-dica="federacao-noticia-nova"><Plus className="h-4 w-4" />{t('Nova notícia')}</V2Button>
       </div>
       {newsQ.isError && <V2ErrorState inline title={t('Não carregaram as notícias')} onRetry={() => newsQ.refetch()} />}
@@ -97,7 +102,7 @@ function NoticiasTab({ federation, newsQ }) {
               <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-4">
                 {n.pinned ? <Pin className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" /> : <Newspaper className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />}
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{n.title}<V2Badge tone={n.status === NEWS_STATUS.PUBLISHED ? 'green' : 'neutral'}>{t(NEWS_STATUS_LABELS[n.status] || n.status)}</V2Badge><V2Badge tone="ink">{t(NEWS_AUDIENCE_LABELS[n.audience] || n.audience)}</V2Badge></p>
+                  <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{n.title}<V2Badge tone={TOM_ESTADO[n.status] || 'neutral'}>{t(NEWS_STATUS_LABELS[n.status] || n.status)}</V2Badge><V2Badge tone="ink">{t(NEWS_AUDIENCE_LABELS[n.audience] || n.audience)}</V2Badge></p>
                   <p className="text-xs text-gray-500">{[n.published_at ? quando(n.published_at) : null, newsSummaryLine(n)].filter(Boolean).join(' · ')}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">

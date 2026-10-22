@@ -1987,9 +1987,13 @@ Zero índice composto. Exportação e exclusão: ver `docs/50-FEDERACAO.md` §22
 
 ### `federation_news/{id}` (PR 4, módulo `news` — o cliente escreve)
 `federation_id`, `title`, `summary`, `body`, `image_url`, `link`, `pinned`,
-`audience` (`public|members`), `status` (`draft|published`), `published_at`,
+`audience` (`public|members`), `status` (`draft|scheduled|published|archived`), `published_at`,
 `created_by`, `created_at`, `updated_at`; `notified_at`/`notified_count`/
 `notified_by` **só o servidor** (`federationNews`; a regra recusa o cliente).
+Agendada (2026-10-22, opcionais): `publish_at_ms` (número, exigido pela regra
+quando `scheduled`), `notify_on_publish`; a varredura `federationNewsPublish`
+grava `status: 'published'`, `published_at` (data de Brasília da hora marcada)
+e `scheduled_published_at`.
 Leitura: publicada e pública, qualquer um (até sem conta); `members`, filiação
 **ativa** (`fedMemberActive`); rascunho e a lista inteira, equipe
 `comms`/`admin` e o admin da plataforma. Escrita: `comms`/`admin` com o módulo

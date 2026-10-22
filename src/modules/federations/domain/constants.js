@@ -229,12 +229,15 @@ export const FED_MODULE_META = Object.freeze({
 /** Estado da notícia. Só `published` sai da Central. */
 export const NEWS_STATUS = Object.freeze({
   DRAFT: 'draft',
+  // Publica sozinha na hora marcada (`publish_at_ms`), pela varredura `federationNewsPublish`.
+  SCHEDULED: 'scheduled',
   PUBLISHED: 'published',
   ARCHIVED: 'archived',
 });
 
 export const NEWS_STATUS_LABELS = Object.freeze({
   draft: tk('Rascunho'),
+  scheduled: tk('Agendada'),
   published: tk('Publicada'),
   archived: tk('Arquivada'),
 });
