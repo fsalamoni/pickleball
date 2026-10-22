@@ -53,6 +53,7 @@ const FedCompliancePanel = lazy(() => import('@/v2/components/federations/manage
 const FedAccountsPanel = lazy(() => import('@/v2/components/federations/manage/accounts/FedAccountsPanel'));
 const FedRefereesPanel = lazy(() => import('@/v2/components/federations/manage/FedRefereesPanel'));
 const FedElectionsPanel = lazy(() => import('@/v2/components/federations/manage/FedElectionsPanel'));
+const FedSelectionPanel = lazy(() => import('@/v2/components/federations/manage/FedSelectionPanel'));
 
 const FedInsurancePanel = lazy(() => import('@/v2/components/federations/manage/FedInsurancePanel'));
 
@@ -193,7 +194,8 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'agenda' && tab !== 'comentarios' && <FedAgendaPanel federation={f} perms={perms} />}
         {secaoAtiva.id === 'eleicoes' && <FedElectionsPanel federation={f} electionsQ={electionsQ} candidaciesQ={candidaciesQ} />}
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
-        {secaoAtiva.id === 'financeiro' && <FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
+        {secaoAtiva.id === 'selecao' && <FedSelectionPanel federation={f} tab={tab} perms={perms} />}
+        {secaoAtiva.id === 'financeiro' &&<FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} budgetsQ={budgetsQ} accountReportsQ={accountReportsQ} electionsQ={electionsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'contas' && <FedAccountsPanel federation={f} perms={perms} tab={tab} reportsQ={accountReportsQ} onIrParaAba={irParaAba} />}

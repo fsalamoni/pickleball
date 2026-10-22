@@ -88,10 +88,12 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
  * @param {object[]|undefined} charges as cobranças da pessoa
  * @param {{ hoje?: string, invites?: object[], now?: number }} [opts] `invites`: os convites para filiar recebidos
  */
-export function myFederationPending(members, charges, { hoje = isoDate(), invites, assignments, finalInvites, directedReports, now = Date.now() } = {}) {
-  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined, escalas: myPendingAssignments(assignments, hoje), finais: undefined, diretor: undefined };
+export function myFederationPending(members, charges, { hoje = isoDate(), invites, assignments, finalInvites, directedReports, callupInvites, now = Date.now() } = {}) {
+  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined, escalas: myPendingAssignments(assignments, hoje), finais: undefined, diretor: undefined, convocacoes: undefined };
   // Competições (Bloco 2): convite da final esperando resposta; torneio que a pessoa dirige com checklist ou relatório faltando.
   if (Array.isArray(finalInvites)) out.finais = finalInvites.filter((i) => finalInviteOpen(i, now)).length;
+  // Seleção (Bloco 3): convocação esperando resposta (o mesmo prazo do convite da final).
+  if (Array.isArray(callupInvites)) out.convocacoes = callupInvites.filter((i) => finalInviteOpen(i, now)).length;
   if (Array.isArray(directedReports)) out.diretor = directedReports.filter((r) => directorStage(r, r, hoje) !== 'done' && !(directorStage(r, r, hoje) === 'checklist' && r.checklist?.complete)).length;
   if (Array.isArray(invites)) out.convites = invites.filter((inv) => isInvitePending(inv, now)).length;
   if (Array.isArray(charges)) out.pagar = charges.filter((c) => c.status === CHARGE_STATUS.OPEN).length;

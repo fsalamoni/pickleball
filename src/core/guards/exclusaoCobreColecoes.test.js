@@ -204,6 +204,8 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_sanctions: ['listMySanctions'],
   federation_incidents: ['listMyIncidents'],
   federation_final_invites: ['listMyFinalInvites'],
+  federation_callup_members: ['listMyCallupInvites'],
+  federation_grant_applications: ['listMyGrantApplications'],
   federation_tournament_reports: ['listMyDirectedReports'],
   federation_reports: ['listMyReports'],
   federation_followers: ['listMyAcervoFollows'],
@@ -230,6 +232,8 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_account_reports: 'A prestação de contas é da federação (totais, parecer, assembleia), não dado da pessoa; quem abriu é só o uid de equipe.',
   federation_elections: 'O edital é ato da federação (cargos, calendário, pesos), não dado da pessoa; a participação dela sai como eleitor e nas chapas.',
   federation_ballots: 'A cédula é SECRETA e não tem uid: não há como ligá-la a ninguém, e por isso ela não sai na exportação.',
+  federation_callups: 'A convocação é ato da federação (campeonato, critério, custos), não da pessoa; a lista pública só leva nomes e o convite exportado já diz a convocação.',
+  federation_grants: 'O edital é ato da federação (regras, vagas, resultado); a inscrição exportada já diz o edital, a decisão e o pagamento.',
   federation_admin_grants: 'Acesso de suporte do admin da plataforma a uma federação: registro interno e temporário (até 8 h), não é dado do titular.',
 };
 

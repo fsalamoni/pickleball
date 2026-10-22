@@ -1121,6 +1121,18 @@ export async function listMyFinalInvites(uid) {
   return (await getDocs(query(collection(db, C.finalInvites), where('user_id', '==', uid)))).docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
 }
 
+/** As convocações da seleção que a pessoa recebeu (Bloco 3) — mais recentes primeiro. */
+export async function listMyCallupInvites(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.callupMembers), where('user_id', '==', uid)))).docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
+/** As inscrições da pessoa em editais de apoio (Bloco 3) — mais recentes primeiro. */
+export async function listMyGrantApplications(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, C.grantApplications), where('user_id', '==', uid)))).docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
 /** Os torneios chancelados que a pessoa dirige (checklist e relatório). */
 export async function listMyDirectedReports(uid) {
   if (!uid) return [];

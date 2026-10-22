@@ -954,6 +954,33 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-selecao',
+      flags: ['federations'],
+      guias: ['federacao-convocacao', 'federacao-editais', 'federacao-edital-inscricao'],
+      title: tk('Seleção estadual e editais de apoio ao atleta'),
+      summary: tk('Convocar a delegação para os campeonatos nacionais e abrir editais de auxílio-viagem, bolsa ou material, com recurso e pagamento nas contas.'),
+      keywords: ['federação', 'seleção', 'convocação', 'delegação', 'suplente', 'brasileiro', 'uniforme', 'edital', 'auxílio-viagem', 'bolsa', 'apoio', 'recurso', 'contemplado'],
+      blocks: [
+        p(tk('Com os módulos Seleção e delegações e Editais de apoio ao atleta ligados, a federação ganha a seção Seleção e editais na Central. A equipe de competições conduz; o financeiro vê os custos e registra os pagamentos.')),
+        steps(
+          tk('CONVOCAR — Central → Seleção e editais → Convocações → "Nova convocação": campeonato, datas, local e quem é convocado — pelo ranking oficial de um ano (as categorias e quantos por categoria) ou a dedo. Diga os documentos de viagem, se pede o tamanho do uniforme e o prazo para responder.'),
+          tk('PUBLICAR — os melhores de cada categoria recebem o convite e respondem em Minha área → Federações. Quem recusa, não responde no prazo ou é cancelado com motivo dá a vaga ao próximo do ranking sozinho. A dedo, convoque cada pessoa pela lista de usuários, com a categoria ou função (técnico, chefe de delegação).'),
+          tk('ACOMPANHAR — confira os documentos de viagem de cada convocado, o uniforme e a anotação da comissão. "Fechar delegação" encerra os convites em aberto e avisa quem aceitou.'),
+          tk('CUSTOS — passagens, hospedagem e inscrição ficam na convocação. Quando o financeiro marca a data do pagamento, o custo entra nas contas como despesa de viagem, sem lançar de novo.'),
+          tk('EDITAL — Editais → "Novo edital": tipo de apoio, vagas, valor, critérios, período de inscrição, documentos pedidos, dias para recurso e se é só para filiados em dia. Publicado, as regras não mudam; só o prazo de inscrição pode ser estendido, com motivo.'),
+          tk('INSCRIÇÃO E RESULTADO — o atleta se inscreve na aba Competições da federação, com a justificativa e os arquivos. No fim do prazo o edital passa para análise; a equipe decide cada inscrição (com motivo, se não contemplar) e publica o resultado, que abre o prazo de recurso.'),
+          tk('RECURSO E PAGAMENTO — quem não foi contemplado pode recorrer no prazo; a equipe julga e a pessoa é avisada. O financeiro registra o pagamento de cada contemplado, que entra nas contas e na prestação pública. Com os recursos julgados e o prazo vencido, o edital é encerrado.'),
+        ),
+        list(
+          tk('NA PÁGINA — a convocação publicada mostra a delegação por categoria; o edital mostra as regras e, depois do resultado, os contemplados. Nenhum dos dois mostra conta, documento ou anotação de ninguém.'),
+          tk('PRIVACIDADE — os documentos da inscrição ficam na pasta do atleta e só a equipe de competições os abre. O financeiro não lê os convocados (documentos de viagem e uniforme são dado da pessoa).'),
+          tk('ACERVO — com o acervo oficial ligado, o edital publicado vira um ato numerado.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+        tip(tk('Use a final do circuito (em Chancelas) para convidar os melhores a um torneio; a convocação é para levar a seleção a um campeonato de fora.')),
+      ],
+    },
+    {
       id: 'federacao-conformidade',
       flags: ['federations'],
       title: tk('Conformidade com a Lei Geral do Esporte'),

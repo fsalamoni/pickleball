@@ -44,6 +44,10 @@ export const FED_COLLECTIONS = Object.freeze({
   incidents: 'federation_incidents',
   tournamentReports: 'federation_tournament_reports',
   finalInvites: 'federation_final_invites',
+  callups: 'federation_callups',
+  callupMembers: 'federation_callup_members',
+  grants: 'federation_grants',
+  grantApplications: 'federation_grant_applications',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -212,6 +216,8 @@ export const FED_MODULE = Object.freeze({
   ACCOUNTS: 'accounts',
   ELECTIONS: 'elections',
   INSURANCE: 'insurance',
+  SELECTION: 'selection',
+  GRANTS: 'grants',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -230,6 +236,8 @@ export const FED_MODULE_META = Object.freeze({
   referees: { label: tk('Arbitragem'), description: tk('Quadro de árbitros por nível, disponibilidade, escalas com convocação e confirmação, impedimentos, avaliação, súmulas e diárias.'), status: 'available', central: tk('Arbitragem (quadro e escalas)'), tab: 'arbitragem', page: tk('Aba Competições: o quadro de arbitragem') },
   insurance: { label: tk('Seguro e ocorrências'), description: tk('A apólice do seguro esportivo dos filiados (seguradora, vigência, como acionar) e o registro de lesões e acidentes em evento, com o acionamento do seguro.'), status: 'available', central: tk('Filiados e cadastrados → Seguro e ocorrências'), tab: 'ocorrencias', page: tk('Minha filiação: o seguro e as ocorrências da pessoa') },
   accounts: { label: tk('Orçamento e prestação de contas'), description: tk('Orçamento anual por categoria, receitas e despesas lançadas, orçado × realizado, parecer do conselho fiscal e contas publicadas na transparência.'), status: 'available', central: tk('Contas (orçamento e prestação de contas)'), tab: 'orcamento', page: tk('Página de transparência: orçamento e contas') },
+  selection: { label: tk('Seleção e delegações'), description: tk('Convocação para campeonatos nacionais pelo ranking oficial do ano ou a dedo, com prazo para responder, suplente chamado sozinho, documentos de viagem, uniforme e custos lançados nas contas.'), status: 'available', central: tk('Seleção e editais → Convocações'), tab: 'convocacoes', page: tk('Aba Competições: as convocações e a delegação') },
+  grants: { label: tk('Editais de apoio ao atleta'), description: tk('Auxílio-viagem, bolsa e material: edital com critérios, inscrição com documentos, resultado, recurso e pagamento nas contas e na transparência.'), status: 'available', central: tk('Seleção e editais → Editais'), tab: 'editais', page: tk('Aba Competições: os editais abertos e os resultados') },
 });
 
 /* ---------------------------------------------------- PR 4: notícias -- */
