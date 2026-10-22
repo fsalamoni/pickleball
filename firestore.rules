@@ -4847,6 +4847,9 @@ service cloud.firestore {
         && nd().kind in ['identidade', 'atestado', 'comprovante_residencia', 'autorizacao_responsavel', 'outro']
         && nd().storage_path is string
         && nd().storage_path.matches('federacao/' + me() + '/[A-Za-z0-9_-]+\\.[a-z]{3,4}')
+        // Documento PRÓPRIO do plano ("outro documento" com nome, 2026-10-22): a chave e o nome, curtos.
+        && nd().get('doc_key', '').matches('[A-Za-z0-9_-]{0,24}')
+        && nd().get('label', '') is string && nd().get('label', '').size() <= 80
         && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data)
         && nd().federation_id == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.federation_id;
       // A secretaria aceita ou recusa (com motivo); nada mais muda.

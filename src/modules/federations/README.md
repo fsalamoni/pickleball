@@ -20,7 +20,7 @@ federations/
 │   ├── affiliations.js          # PR 2: pedido e decisão de filiação de clube/arena, contagens
 │   ├── sanction.js              # PR 2: chancela do torneio (pedir, decidir, retirar) e a exigência "só filiados"
 │   ├── officialRanking.js       # PR 2 (refeito 2026-10-22): lançamento de pontos por torneio, soma do ano, ano fechado em 31/01, histórico do atleta (cópia em functions/federationRanking.js)
-│   ├── privateData.js           # PR 3: CPF (só se a federação pede), idade/faixa, menor e dependente, documentos exigidos
+│   ├── privateData.js           # PR 3: CPF (só se a federação pede), idade/faixa, menor e dependente, documentos exigidos (requiredDocs: fixos + "outros" com nome)
 │   ├── transfers.js             # PR 3: troca de clube / de federação — prazo de liberação, carência, estados
 │   ├── importMembers.js         # PR 3: a lista colada (CSV/linhas) → linhas válidas, erros, prévia
 │   ├── courses.js               # PR 3: estado do curso, vagas, cancelar inscrição, estado da credencial

@@ -31,7 +31,7 @@ import { normalizeRankingConfig, resultSeason, seasonClosed, seasonLastDay, tour
 import { staffPerms } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
 import { availableModules, fedModuleOn, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
-import { documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
+import { docLabel, documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
 import { validateCourseInput } from '../domain/courses.js';
 import { validateReportInput } from '../domain/discipline.js';
 import { validateNewsInput } from '../domain/news.js';
@@ -767,7 +767,7 @@ export async function listFederationDocuments(fedId) {
  * registra. O caminho leva o uid de quem envia: a regra do Storage e a da
  * coleção conferem, e a exclusão de conta apaga a pasta.
  */
-export async function uploadMemberDocument({ member, kind, file, uid }) {
+export async function uploadMemberDocument({ member, kind, file, uid, docKey = null, label = null }) {
   const erro = validateDocumentFile(file);
   if (erro) throw new FederationError(erro, { file: erro });
   if (!storage) throw new FederationError(t('Firebase não está configurado neste ambiente.'));
@@ -777,6 +777,9 @@ export async function uploadMemberDocument({ member, kind, file, uid }) {
   const data = {
     federation_id: member.federation_id, member_id: member.id, user_id: uid, kind, storage_path,
     content_type: file.type, size: Number(file.size) || 0, file_name: String(file.name || '').slice(0, 120),
+    // Documento PRÓPRIO do plano ("outro documento" com nome): a chave liga o arquivo ao pedido e o nome vai junto para a secretaria.
+    ...(docKey && docKey !== kind ? { doc_key: String(docKey).slice(0, 24) } : {}),
+    ...(label ? { label: String(label).trim().slice(0, 80) } : {}),
     status: 'pending', review: null, created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
   };
   await setDoc(ref, data);
@@ -799,7 +802,7 @@ export async function reviewDocument(docu, action, { uid, reason = '' } = {}) {
   await createAuditLog({ action: `federation_document_${action}`, actor: { uid }, userId: docu.user_id, details: { federation_id: docu.federation_id, member_id: docu.member_id, kind: docu.kind, reason: motivo } });
   await notifyUsers([docu.user_id], {
     type: NOTIFICATION_TYPE.FEDERATION, title: status === 'approved' ? t('Documento aceito') : t('Documento recusado'),
-    message: status === 'approved' ? t('A federação aceitou o documento enviado.') : t('A federação recusou o documento enviado. Motivo: {motivo}. Envie outro.', { motivo }),
+    message: status === 'approved' ? t('A federação aceitou o documento: {doc}.', { doc: docLabel(docu) }) : t('A federação recusou o documento {doc}. Motivo: {motivo}. Envie outro.', { doc: docLabel(docu), motivo }),
     link: '/perfil?secao=federacoes', actor: { uid },
   }).catch(() => 0);
   return status;

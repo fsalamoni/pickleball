@@ -4,6 +4,7 @@
  */
 import { t } from '@/core/i18n';
 import { DOC_KIND, PLAN_BILLING, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_VALIDITY } from './constants.js';
+import { normalizeOtherDocs } from './privateData.js';
 
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
 const intOr = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v !== null ? Math.trunc(Number(v)) : d);
@@ -41,6 +42,11 @@ export function validatePlanInput(input = {}) {
     minor_pct: pct(input.discounts?.minor_pct), senior_pct: pct(input.discounts?.senior_pct),
     family_pct: pct(input.discounts?.family_pct), family_from: Math.max(2, intOr(input.discounts?.family_from, 2)),
   };
+  // "Outro documento" sempre com nome: é o que a pessoa lê na hora de enviar.
+  const other_docs = normalizeOtherDocs(input.other_docs);
+  let requires_docs = [...new Set((Array.isArray(input.requires_docs) ? input.requires_docs : []).filter((k) => Object.values(DOC_KIND).includes(k)))];
+  if (other_docs.length && !requires_docs.includes(DOC_KIND.OTHER)) requires_docs = [...requires_docs, DOC_KIND.OTHER];
+  if (!other_docs.length && requires_docs.includes(DOC_KIND.OTHER)) errors.other_docs = t('Diga qual é o outro documento (ex.: exame de vista).');
   return {
     ok: Object.keys(errors).length === 0,
     errors,
@@ -52,7 +58,8 @@ export function validatePlanInput(input = {}) {
       auto_approve: input.auto_approve === true, active: input.active !== false,
       sort: intOr(input.sort, 0),
       // PR 3: documentos que a pessoa precisa enviar (a secretaria confere antes de aprovar).
-      requires_docs: [...new Set((Array.isArray(input.requires_docs) ? input.requires_docs : []).filter((k) => Object.values(DOC_KIND).includes(k)))],
+      requires_docs,
+      other_docs,
     },
   };
 }

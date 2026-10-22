@@ -161,10 +161,22 @@ sozinha, com o responsável ciente, e a foto do menor só sai na verificação
 pública com `minor_photo_consent`. Quem **já é federado em outra federação**
 não pede filiação nova: só entra por **transferência** (§6.4). O plano pode
 exigir **documentos** (`requires_docs[]`: identidade, atestado, comprovante de
-residência, autorização do responsável, outro): a pessoa envia pela página da
-federação (`FedMemberDocuments`, Storage `federacao/{uid}/`, PDF ou imagem
-< 5 MB, registro em `federation_documents_submitted`) e a secretaria aceita ou
-recusa (aba Documentos; o arquivo chega pela função `federationDocument`).
+residência, autorização do responsável, outro). "Outro documento" exige o
+**nome** de cada um (`other_docs[] { id, label }`, até 5, id estável
+`o_xxxxxxxx`; `requiredDocs(plan)` em `domain/privateData.js` devolve a lista
+que a tela mostra). A pessoa escolhe os arquivos **no próprio formulário de
+filiação** (`V2FederationJoin`, um campo por documento): eles sobem logo depois
+que o servidor cria a filiação (a regra exige a filiação existindo), e o que
+falhar fica para a aba Minha filiação (`FedMemberDocuments`), sem perder o
+pedido. Storage `federacao/{uid}/`, PDF ou imagem < 5 MB, registro em
+`federation_documents_submitted` com `doc_key` (o id do documento próprio) e
+`label`; a secretaria aceita ou recusa (aba Documentos; o arquivo chega pela
+função `federationDocument`). Plano antigo com "outro" sem nome segue pedindo
+um "Outro documento" genérico; ao editar, o plano pede o nome.
+
+**Termos.** **Filiado** é quem tem o vínculo pago com a federação (plano
+`tier: 'federated'`, o valor gravado não muda); **cadastrado** é o vínculo
+gratuito (`registered`). A tela, a declaração e a ajuda usam esses dois nomes.
 
 Ao ativar: o **número** sai de `federations.member_counter` numa transação
 (`SIGLA-ANO-000001`, `formatMemberNumber`); `valid_from`/`valid_until` pela
@@ -384,7 +396,9 @@ A pessoa envia (`FedMemberDocuments`: tipo, PDF ou imagem < 5 MB, sem
 sobrescrever), só o dono lê a própria pasta pela regra do Storage; a secretaria
 (`members`/`admin`) vê o arquivo pela função `federationDocument` (base64,
 auditado em `federation_document_view`) e marca `approved|rejected` com
-observação; a pessoa apaga o pendente. O plano diz o que exige (`requires_docs`).
+observação; a pessoa apaga o pendente. O plano diz o que exige (`requires_docs`
++ `other_docs`); o envio casa com o exigido por `submittedDocKey` (`doc_key`, ou
+o `kind` nos tipos fixos).
 
 **Importação** (`federationImportMembers`, até 500 linhas, aba Importar). A
 federação que já existia fora da plataforma cola a lista (nome, e-mail, número,

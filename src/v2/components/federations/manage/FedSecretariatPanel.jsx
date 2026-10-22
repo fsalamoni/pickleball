@@ -18,7 +18,8 @@ import { fetchDocumentContent, importMembers, reviewDocument, transferAction } f
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { isReleaseOverdue, sortTransfers, transferSummary } from '@/modules/federations/domain/transfers';
 import { parseMembersCsv } from '@/modules/federations/domain/importMembers';
-import { DOC_KIND_LABELS, DOC_STATUS, DOC_STATUS_LABELS, IMPORT_MAX_ROWS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { docLabel } from '@/modules/federations/domain/privateData';
+import { DOC_STATUS, DOC_STATUS_LABELS, IMPORT_MAX_ROWS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
@@ -169,7 +170,7 @@ async function abrirDocumento(docu, nome) {
   const r = await fetchDocumentContent(docu.id);
   const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
   const ext = (r.contentType || '').split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
-  baixarBlob(new Blob([bytes], { type: r.contentType }), docu.file_name || `${t(DOC_KIND_LABELS[docu.kind] || DOC_KIND_LABELS.outro)} - ${nome || ''}.${ext}`);
+  baixarBlob(new Blob([bytes], { type: r.contentType }), docu.file_name || `${docLabel(docu)} - ${nome || ''}.${ext}`);
 }
 
 function DocRow({ docu, nome }) {
@@ -184,7 +185,7 @@ function DocRow({ docu, nome }) {
       <V2Surface variant="compacto" className="space-y-3 p-4">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{nome || t('Filiado')}<V2Badge tone={tom}>{t(DOC_STATUS_LABELS[docu.status] || docu.status)}</V2Badge></p>
-          <p className="text-xs text-gray-500">{t(DOC_KIND_LABELS[docu.kind] || DOC_KIND_LABELS.outro)} · {docu.file_name || ''} · {t('enviado em {data}', { data: quando(docu.created_at) })}</p>
+          <p className="text-xs text-gray-500">{docLabel(docu)} · {docu.file_name || ''} · {t('enviado em {data}', { data: quando(docu.created_at) })}</p>
           {docu.review?.reason && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: docu.review.reason })}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -216,7 +217,7 @@ function DocumentosTab({ documentsQ, membersQ }) {
   const todos = useMemo(() => [...(documentsQ.data || [])].sort((a, b) => (a.status === DOC_STATUS.PENDING ? -1 : 1) - (b.status === DOC_STATUS.PENDING ? -1 : 1) || (b.created_at_ms || 0) - (a.created_at_ms || 0)), [documentsQ.data]);
   const opcao = FILTROS_DOC.find((f) => f.id === filtro) || FILTROS_DOC[0];
   const doFiltro = useMemo(() => (opcao.status ? todos.filter((d) => d.status === opcao.status) : todos), [todos, opcao]);
-  const campos = useCallback((d) => `${nomes[d.member_id] || ''} ${t(DOC_KIND_LABELS[d.kind] || DOC_KIND_LABELS.outro)} ${d.file_name || ''}`, [nomes]);
+  const campos = useCallback((d) => `${nomes[d.member_id] || ''} ${docLabel(d)} ${d.file_name || ''}`, [nomes]);
   const busca = useBuscaLista(doFiltro, campos);
   if (documentsQ.isError) return <V2ErrorState title={t('Não carregaram os documentos')} onRetry={() => documentsQ.refetch()} />;
   if (documentsQ.isLoading) return <V2Skeleton lines={5} />;

@@ -2516,7 +2516,7 @@ const GUIAS_BASE = [
         route: '/federacoes/*/filiar',
         target: 'federacao-filiar-formulario',
         title: tk('Tipo e plano'),
-        body: tk('Escolha se entra como atleta, professor ou árbitro e o plano: mensal ou anual, cadastro gratuito ou federado. O preço já mostra o desconto que vale para você.'),
+        body: tk('Escolha se entra como atleta, professor ou árbitro e o plano: mensal ou anual, cadastro gratuito ou filiado. O preço já mostra o desconto que vale para você. Se o plano pede documentos, escolha os arquivos logo abaixo: eles sobem junto com o pedido.'),
       },
       {
         id: 'enviar',

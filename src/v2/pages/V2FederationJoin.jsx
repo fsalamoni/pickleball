@@ -13,23 +13,24 @@
  * menor de 12 só entra como DEPENDENTE (`?dependente=1`: o responsável filia
  * pela própria conta, com nome e nascimento da criança — a filiação é dela,
  * a cobrança e os avisos são do responsável). O plano que exige documentos
- * avisa aqui; o envio é na página da federação, depois do pedido.
+ * abre o envio aqui mesmo (os arquivos sobem logo depois do pedido gravado);
+ * o que ficar faltando a pessoa envia pela página da federação.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, IdCard, Landmark, MailPlus, Users } from 'lucide-react';
+import { Check, FileUp, IdCard, Landmark, MailPlus, Trash2, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { calculateAge } from '@/core/lib/profileValidation';
 import { useFederation, useFederationMutation, useFederationPlans, useMyFederationCharges, useMyFederationInvites, useMyMembership } from '@/modules/federations/hooks/useFederations';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
-import { membershipAction } from '@/modules/federations/services/federationService';
+import { membershipAction, uploadMemberDocument } from '@/modules/federations/services/federationService';
 import { canRequestMembership } from '@/modules/federations/domain/membership';
 import { isFreePlan, planPeriodLabel, planPrice, plansFor, planBenefitLines } from '@/modules/federations/domain/plans';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { ageGroup, ageOn, federationAsksCpf, requiredDocKinds, validateDependentInput, validatePrivateInput } from '@/modules/federations/domain/privateData';
+import { ageGroup, ageOn, docLabel, federationAsksCpf, requiredDocs, validateDependentInput, validateDocumentFile, validatePrivateInput } from '@/modules/federations/domain/privateData';
 import { isoDate } from '@/modules/federations/domain/membership';
-import { CHARGE_STATUS, DOC_KIND_LABELS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import {
   V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -38,7 +39,7 @@ import PixChargeBlock from '@/v2/components/federations/PixChargeBlock';
 import { cn } from '@/core/lib/utils';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
 import { rolarAte } from '@/v2/ui/rolarAte';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 /**
  * Depois do pedido do DEPENDENTE: a confirmação e, quando já nasceu, o Pix
@@ -92,8 +93,52 @@ function ConviteAviso({ convite }) {
   );
 }
 
+/**
+ * Os documentos que o plano exige, já no pedido: cada um com o seu espaço de
+ * envio. O arquivo sobe DEPOIS que o pedido existe (o documento é da filiação);
+ * o que não for escolhido aqui a pessoa envia depois, pela página da federação.
+ */
+function DocumentosDoPedido({ docs, arquivos, onChange }) {
+  const escolher = (key, file) => {
+    if (!file) return;
+    const erro = validateDocumentFile(file);
+    if (erro) { toast.error(erro); return; }
+    onChange({ ...arquivos, [key]: file });
+  };
+  const tirar = (key) => { const x = { ...arquivos }; delete x[key]; onChange(x); };
+  return (
+    <V2Surface className="space-y-4" data-dica="federacao-filiar-documentos">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Documentos do plano')}</h2>
+        <p className="text-sm text-gray-600">{t('PDF ou imagem, até 5 MB cada. Só você e a secretaria da federação veem os arquivos. O que faltar agora dá para enviar depois, pela página da federação.')}</p>
+      </div>
+      <ul className="space-y-3">
+        {docs.map((d) => {
+          const arq = arquivos[d.key];
+          const id = `fj-doc-${d.key}`;
+          return (
+            <li key={d.key} className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-ink">{docLabel(d)}</p>
+                <p className="truncate text-xs text-gray-500">{arq ? arq.name : t('Nenhum arquivo escolhido')}</p>
+              </div>
+              {arq && <V2Button type="button" size="sm" variant="ghost" aria-label={t('Tirar o arquivo de {doc}', { doc: docLabel(d) })} onClick={() => tirar(d.key)}><Trash2 className="h-4 w-4" /></V2Button>}
+              <label htmlFor={id} className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm font-semibold text-ink hover:border-ink focus-within:ring-4 focus-within:ring-acid/30 coarse:min-h-11">
+                <FileUp className="h-4 w-4" aria-hidden="true" />{arq ? t('Trocar') : t('Escolher arquivo')}
+                <input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" aria-label={t('Arquivo do documento: {tipo}', { tipo: docLabel(d) })} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; escolher(d.key, file); }} />
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </V2Surface>
+  );
+}
+
 function Formulario({ federation, plans, dependente = false, onEnviado, convite = null, planoInicial = '' }) {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
+  const [arquivos, setArquivos] = useState({});
+  const [enviandoDocs, setEnviandoDocs] = useState(false);
   const idadeConta = useMemo(() => calculateAge(userProfile?.birth_date), [userProfile?.birth_date]);
   const clubes = useMyClubs();
   const planoConvite = convite ? (plans || []).find((p) => p.id === convite.plan_id && p.active !== false) : null;
@@ -123,7 +168,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const candidatos = plansFor(plans || [], { personType: tipo, age: idade });
   const plano = candidatos.find((p) => p.id === planId) || null;
   const preco = plano ? planPrice(plano, { age: idade }) : null;
-  const docsExigidos = requiredDocKinds(plano);
+  const docsExigidos = requiredDocs(plano);
   // O Pix só nasce na hora com aprovação automática ou convite neste plano; senão, depois que a secretaria aprova.
   const pagaDepois = Boolean(plano && !isFreePlan(plano) && !plano.auto_approve && planoConvite?.id !== plano.id);
   // Convite da importação, neste plano: entra ativo sem cobrança (já era filiado fora da plataforma).
@@ -154,7 +199,24 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       federationId: federation.id, action: 'request', planId: plano.id,
       publicBadge: opcoes.publicBadge, showInDirectory: opcoes.showInDirectory, clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
     }, {
-      onSuccess: (r) => { toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : t('Pedido de filiação enviado.')); onEnviado?.({ ...(r || {}), nome: dependente ? dep.name.trim() : '' }); },
+      onSuccess: async (r) => {
+        toast.success(dependente ? t('Pedido de filiação do dependente enviado.') : semCobranca ? t('Filiação confirmada.') : t('Pedido de filiação enviado.'));
+        // Os arquivos sobem com o pedido já gravado; um que falhe não desfaz o pedido — a tela diz qual falta.
+        const escolhidos = docsExigidos.filter((d) => arquivos[d.key]);
+        if (escolhidos.length && r?.memberId) {
+          setEnviandoDocs(true);
+          const falhas = [];
+          for (const d of escolhidos) {
+            try {
+              await uploadMemberDocument({ member: { id: r.memberId, federation_id: federation.id }, kind: d.kind, docKey: d.key, label: d.label, file: arquivos[d.key], uid: user?.uid });
+            } catch { falhas.push(docLabel(d)); }
+          }
+          setEnviandoDocs(false);
+          if (falhas.length) toast.error(t('Não deu para enviar: {lista}. Envie depois em Minha filiação, na página da federação.', { lista: falhas.join(', ') }), { duration: 12000 });
+          else toast.success(tn(escolhidos.length, 'Documento enviado. A secretaria confere.', '{n} documentos enviados. A secretaria confere.'));
+        }
+        onEnviado?.({ ...(r || {}), nome: dependente ? dep.name.trim() : '' });
+      },
       onError: (er) => { setErro(er.message); toast.error(er.message); },
     });
   };
@@ -216,7 +278,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
                     {p.description && <p className="mt-2 text-sm text-gray-600">{p.description}</p>}
                     {planBenefitLines(p).length > 0 && <ul className="mt-2 space-y-1 text-sm text-gray-700">{planBenefitLines(p).map((b) => <li key={b} className="flex gap-2"><span aria-hidden="true">•</span>{b}</li>)}</ul>}
                     {p.auto_approve && <p className="mt-2 text-xs text-gray-500">{t('Aprovação automática')}</p>}
-                    {requiredDocKinds(p).length > 0 && <p className="mt-2 text-xs text-gray-500">{t('Exige documentos: {lista}', { lista: requiredDocKinds(p).map((k) => t(DOC_KIND_LABELS[k])).join(', ') })}</p>}
+                    {requiredDocs(p).length > 0 && <p className="mt-2 text-xs text-gray-500">{t('Exige documentos: {lista}', { lista: requiredDocs(p).map(docLabel).join(', ') })}</p>}
                   </button>
                 </li>
               );
@@ -224,6 +286,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
           </ul>
         )}
       </V2Surface>
+
+      {docsExigidos.length > 0 && <DocumentosDoPedido docs={docsExigidos} arquivos={arquivos} onChange={setArquivos} />}
 
       {(pedeCpf || menorComConta) && (
         <V2Surface className="space-y-4" data-dica="federacao-filiar-dados">
@@ -247,9 +311,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
 
       <V2Surface className="space-y-4">
         <h2 className="font-display text-lg font-bold text-ink">{dependente ? t('3. Escolhas do dependente') : t('3. Suas escolhas')}</h2>
-        <V2Toggle id="fj-selo" checked={opcoes.publicBadge} onChange={(v) => setOpcoes((o) => ({ ...o, publicBadge: v }))} label={t('Mostrar o selo de federado no meu perfil')} hint={t('Aparece no perfil público e nas inscrições em torneio.')} />
+        <V2Toggle id="fj-selo" checked={opcoes.publicBadge} onChange={(v) => setOpcoes((o) => ({ ...o, publicBadge: v }))} label={t('Mostrar o selo de filiado no meu perfil')} hint={t('Aparece no perfil público e nas inscrições em torneio.')} />
         <V2Toggle id="fj-dir" checked={opcoes.showInDirectory} onChange={(v) => setOpcoes((o) => ({ ...o, showInDirectory: v }))} label={t('Aparecer no diretório de filiados da federação')} hint={t('Nome e foto, para outros filiados.')} />
-        {docsExigidos.length > 0 && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Este plano exige: {lista}. Depois de pedir, envie os arquivos pela página da federação (PDF ou imagem, até 5 MB).', { lista: docsExigidos.map((k) => t(DOC_KIND_LABELS[k])).join(', ') })}</p>}
         {clubes.isSuccess && (clubes.data || []).length > 0 && (
           <V2Field label={t('Clube que você representa')} htmlFor="fj-clube" hint={t('Opcional. Vale para os torneios por equipes da federação.')}>
             <V2Select id="fj-clube" value={opcoes.clubId} onChange={(e) => setOpcoes((o) => ({ ...o, clubId: e.target.value }))}>
@@ -274,7 +337,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
           <p className="text-sm text-gray-600">{semCobranca ? t('Sem cobrança: você já estava na lista de filiados.') : plano ? (isFreePlan(plano) ? t('Plano gratuito') : t('Total: {valor} {periodo}', { valor: formatBrlCents(preco.total), periodo: planPeriodLabel(plano) })) : t('Escolha um plano')}</p>
           {pagaDepois && <p className="text-xs text-gray-500">{t('Você paga depois que a secretaria aprovar.')}</p>}
         </div>
-        <V2Button type="submit" disabled={m.isPending || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{m.isPending ? t('Enviando…') : semCobranca ? t('Confirmar a filiação') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
+        <V2Button type="submit" disabled={m.isPending || enviandoDocs || !plano || criancaComConta} data-dica="federacao-filiar-enviar">{enviandoDocs ? t('Enviando os documentos…') : m.isPending ? t('Enviando…') : semCobranca ? t('Confirmar a filiação') : plano && !isFreePlan(plano) && !pagaDepois ? t('Pedir filiação e gerar o Pix') : t('Pedir filiação')}</V2Button>
       </div>
     </form>
   );

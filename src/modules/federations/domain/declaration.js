@@ -11,7 +11,7 @@
  * — a folha diz isso. Nada é gravado: zero banco.
  */
 import { t, tk, fmtData } from '@/core/i18n';
-import { MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER_LABELS } from './constants.js';
+import { MEMBER_STATUS, PLAN_PERSON_TYPE_LABELS, PLAN_TIER } from './constants.js';
 import { isoDate, membershipState } from './membership.js';
 import { dataCurta, verifyPath } from './card.js';
 
@@ -60,12 +60,13 @@ export function buildMembershipDeclaration({ member, federation, results = [], o
   };
   const nome = member?.user_name || t('Atleta');
   const tipo = t(PLAN_PERSON_TYPE_LABELS[member?.person_type] || PLAN_PERSON_TYPE_LABELS.athlete).toLowerCase();
-  const categoria = t(PLAN_TIER_LABELS[member?.tier] || PLAN_TIER_LABELS.federated).toLowerCase();
+  // Filiado = vínculo pago; cadastrado = gratuito. A declaração diz qual dos dois, sem chamar o cadastrado de filiado.
+  const vinculo = member?.tier === PLAN_TIER.REGISTERED ? t('cadastrado(a)') : t('filiado(a)');
   const de = dataCurta(String(member?.valid_from || '').slice(0, 10));
   const ate = st.validUntil ? dataCurta(st.validUntil) : '—';
   const corpo = de !== '—'
-    ? t('Declaramos, para os devidos fins, que {nome}, filiado(a) a esta federação sob o nº {numero}, como {tipo} na categoria {categoria}, está com a filiação em dia, válida de {de} a {ate}.', { nome, numero: member?.member_number || '—', tipo, categoria, de, ate })
-    : t('Declaramos, para os devidos fins, que {nome}, filiado(a) a esta federação sob o nº {numero}, como {tipo} na categoria {categoria}, está com a filiação em dia, válida até {ate}.', { nome, numero: member?.member_number || '—', tipo, categoria, ate });
+    ? t('Declaramos, para os devidos fins, que {nome} é {vinculo} desta federação sob o nº {numero}, como {tipo}, com o vínculo em dia, válido de {de} a {ate}.', { nome, vinculo, numero: member?.member_number || '—', tipo, de, ate })
+    : t('Declaramos, para os devidos fins, que {nome} é {vinculo} desta federação sob o nº {numero}, como {tipo}, com o vínculo em dia, válido até {ate}.', { nome, vinculo, numero: member?.member_number || '—', tipo, ate });
   const uid = member?.user_id || '';
   return {
     canIssue: !block,

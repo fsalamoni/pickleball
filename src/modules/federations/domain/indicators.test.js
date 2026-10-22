@@ -105,7 +105,7 @@ describe('indicatorsCsv', () => {
     expect(csv).toContain('"Mês";"Pedidos de filiação"');
     expect(csv).toContain('"10/2026";"1"');
     expect(csv).toContain('"Atleta";"1"');
-    expect(csv).toContain('"Federado";"1"');
+    expect(csv).toContain('"Filiado";"1"');
     expect(csv).not.toContain('Recebido');
     expect(csv).toContain(`"'=HYPERLINK(""x"")"`);
   });
