@@ -142,4 +142,17 @@ describe('ranking oficial no servidor: lançamento por torneio', () => {
     await fr.recomputeSeason(ctx(db, Date.UTC(2027, 0, 10)), 'fpp', 2027);
     expect(doc(db, 'federation_rankings/fpp_2027')).toBeUndefined();
   });
+
+  it('resultado enviado antes do livro de pontos é lançado uma vez na próxima soma do ano aberto', async () => {
+    const db = cenario();
+    db.store.docs.set('federation_results/fpp_t0_m0', resultado({ tournament_id: 't0', modality_id: 'm0', tournament_name: 'Antigo', rows: [{ uid: 'ana', name: 'Ana', position: 2, played: 3, won: 2 }] }));
+    db.store.docs.set('federation_results/fpp_t9_m9', resultado({ tournament_id: 't9', modality_id: 'm9', status: 'rejected', rows: [{ uid: 'ana', name: 'Ana', position: 1, played: 3, won: 3 }] }));
+    await fr.onResultWritten(ctx(db), null, doc(db, `federation_results/${RID}`), RID);
+    expect(doc(db, 'federation_points/fpp_t0_m0_ana')).toMatchObject({ points: 105, status: 'awarded', tournament_name: 'Antigo' });
+    expect(doc(db, 'federation_points/fpp_t9_m9_ana')).toBeUndefined();
+    expect(doc(db, 'federation_rankings/fpp_2026').results_count).toBe(2);
+    const antes = doc(db, 'federation_points/fpp_t0_m0_ana');
+    await fr.recomputeSeason(ctx(db, NOW + 1000), 'fpp', 2026);
+    expect(doc(db, 'federation_points/fpp_t0_m0_ana')).toEqual(antes);
+  });
 });

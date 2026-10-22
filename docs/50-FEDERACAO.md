@@ -347,7 +347,10 @@ pontos no ranking.
   agendada); fechado, o gatilho não muda lançamento nem soma, e a regra recusa
   mexer nos resultados dele. Mudar `ranking_config` (`federationRankingConfig`)
   **não é retroativo**: vale para os próximos envios e só reaplica o
-  `best_n` aos anos **abertos** (`openSeasons`). A conta é
+  `best_n` aos anos **abertos** (`openSeasons`).
+  Resultado `sent` que ainda não tem lançamento (enviado antes do livro de
+  pontos, ou cujo gatilho se perdeu) é lançado na próxima soma do ano aberto
+  (`recomputeSeason`), uma vez só — nenhuma migração à mão. A conta é
   `domain/officialRanking.js` com **cópia** em `functions/federationRanking.js`
   e paridade (`functions/federationRanking.parity.test.js`).
   `DEFAULT_RANKING_CONFIG` em `constants.js`; a equipe `competitions` edita em

@@ -284,6 +284,22 @@ async function recomputeSeason(ctx, fedId, season) {
   const fed = fedSnap.exists ? fedSnap.data() : {};
   const snap = await db.collection('federation_points').where('federation_id', '==', fedId).where('season', '==', Number(season)).get();
   const entries = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+  // Resultado enviado antes do livro de pontos existir (ou cujo gatilho se
+  // perdeu) ainda não tem lançamento: é lançado agora, com a tabela de agora —
+  // uma vez só, porque depois disso já tem.
+  const comLancamento = new Set(entries.map((e) => e.result_id));
+  const resSnap = await db.collection('federation_results').where('federation_id', '==', fedId).where('season', '==', Number(season)).get();
+  const cfg = normalizeRankingConfig(fed.ranking_config || {});
+  for (const d of resSnap.docs) {
+    const res = d.data() || {};
+    if (res.status !== 'sent' || comLancamento.has(d.id)) continue;
+    const members = cfg.members_only ? await filiacoesDe(db, fedId, res.rows) : [];
+    const escritas = ledgerDiff({ resultId: d.id, antes: null, depois: res, awards: awardPoints({ result: res, members, config: cfg }), existing: [], nowMs: agora });
+    if (!escritas.length) continue;
+    const lote = db.batch();
+    escritas.forEach((w) => { lote.set(db.collection('federation_points').doc(w.id), w.data); entries.push(Object.assign({ id: w.id }, w.data)); });
+    await lote.commit();
+  }
   const calc = aggregateSeason({ entries, config: fed.ranking_config || {}, season: Number(season) });
   const ref = db.collection('federation_rankings').doc(`${fedId}_${season}`);
   // Ano sem lançamento nenhum e sem ranking gravado: não cria um ranking vazio.
