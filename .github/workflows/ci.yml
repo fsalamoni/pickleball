@@ -120,11 +120,14 @@ jobs:
         run: npm ci
         timeout-minutes: 8
 
-      # As fontes do apt vêm de um espelho que às vezes fica lento (2026-10-22:
-      # cinco minutos só baixando fontes, antes de qualquer teste). 10 min de folga.
+      # Sem --with-deps: a imagem ubuntu-latest já traz as bibliotecas do
+      # Chromium, e o --with-deps só acrescentava fontes (CJK, unifont) pelo
+      # espelho do apt, que em 2026-10-22 baixou a 30 kB/s e estourou 10 min
+      # duas vezes antes de qualquer teste. Biblioteca faltando falha alto no
+      # primeiro teste, não em silêncio.
       - name: Navegador do Playwright
-        run: npx playwright install --with-deps chromium
-        timeout-minutes: 10
+        run: npx playwright install chromium
+        timeout-minutes: 5
 
       - name: Testes de navegador (build + emuladores)
         run: npm run e2e
