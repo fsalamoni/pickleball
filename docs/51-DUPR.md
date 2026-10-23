@@ -42,8 +42,14 @@ Actions → o workflow → *Run workflow*:
 | `seed` | Copia as credenciais dos segredos para `platform_secrets/dupr` |
 | `webhook` | Registra no DUPR a URL do nosso webhook de rating |
 | `user` | Mostra os ratings públicos de um ID DUPR |
+| `flag` | Liga (`on`) ou desliga (`off`) `dupr_official_sync` em `platform_settings/global` |
 
 `ambiente` = `uat` (padrão) ou `prod` (só depois da aprovação do DUPR).
+
+Além do "Run workflow", o workflow roda quando `.github/dupr-uat-run.json`
+(`{ "acao", "ambiente", "arg" }`) muda na `main`. É o caminho de quem só consegue
+mesclar PR (a sessão de desenvolvimento não dispara workflow): editar o arquivo e
+mesclar executa a ação, e o log do Actions mostra o resultado.
 
 ## 4. Código
 
