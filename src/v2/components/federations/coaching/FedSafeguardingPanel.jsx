@@ -26,6 +26,7 @@ import { baixarBlob } from '../acervo/acervoFiles';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { dataCurta } from '../referees/refUi';
+import SafeguardingReport from '../institutional/SafeguardingReport';
 
 const ate = (iso) => (iso === SG_FOREVER ? t('sem vencimento') : t('até {data}', { data: dataCurta(iso) }));
 
@@ -229,6 +230,7 @@ export default function FedSafeguardingPanel({ federation, tab = 'protecao', ove
       {tab === 'protecao-denuncias' && <DenunciasTab federation={federation} minorReportsQ={minorReportsQ} />}
       {tab === 'protecao-regras' && <RegrasTab key={JSON.stringify(federation.safeguarding_rules || {})} federation={federation} />}
       {tab === 'protecao' && <QuadroTab federation={federation} overviewQ={overviewQ} />}
+      {tab === 'protecao-relatorio' && <SafeguardingReport federation={federation} overviewQ={overviewQ} minorReportsQ={minorReportsQ} />}
     </div>
   );
 }

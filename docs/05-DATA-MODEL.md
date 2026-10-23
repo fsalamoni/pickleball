@@ -2185,6 +2185,30 @@ grava), `federation_tournament_reports.report.equipment_checked` /
 `federation_courses.kind`. Módulos novos `modules.equipment` e
 `modules.antidoping` em `federations`.
 
+### `federation_certificates/{id}` (NOVO — cofre de certidões, `docs/50` §37.1)
+`federation_id`, `kind` (`cnd_federal|fgts|cndt|state|municipal|other`),
+`label` (só em `other`), `number`, `issued_at`, `valid_until` (ISO), `note`,
+`file { path, name, size, content_type }` (pasta fechada
+`federacao-certidoes/{fed}/{id}/`), `warned_steps[]` (30/7/1/0),
+`history[]`, `created_by`, `created_at_ms`, `updated_at_ms`. Só o servidor
+grava (`federationInstitutional`). Leitura `fedAcc` (financeiro, fiscal,
+admin). Consulta `federation_id ==`, zero índice. Na exclusão de conta só sai
+`created_by`; fora da exportação. Módulo `modules.certificates`.
+
+### `federation_incentive_projects/{id}` (NOVO — Lei de Incentivo, `docs/50` §37.4)
+`federation_id`, `title`, `process_number`, `manifestation`,
+`approved_cents`, `capture_until`, `exec_start`, `exec_end`, `bank_account`,
+`notes`,
+`status` (`capturing|executing|reporting|closed|cancelled`),
+`receipts[] { id, kind (sponsorship|donation), donor_name, donor_doc,
+amount_cents, date, voided_at?, voided_by?, voided_reason? }` (até 300),
+`accountability { sent_at, protocol, result
+(approved|approved_caveats|rejected), result_at, result_note }`,
+`warned_capture_for`, `history[]`, `created_by`, `created_at_ms`,
+`updated_at_ms`. Só o servidor grava (`federationInstitutional`). Leitura
+`fedAcc`. Consulta `federation_id ==`, zero índice. Exclusão de conta: só
+sai `created_by`; fora da exportação. Módulo `modules.incentive_projects`.
+
 ### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
 `conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,
 `federation_name`, `federation_acronym`, `federation_slug`, `federation_state`,

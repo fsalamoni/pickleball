@@ -235,6 +235,8 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_dues: 'A anuidade é repasse entre a federação estadual e a confederação (valor, vencimento, pagamento), não dado da pessoa.',
   federation_sponsor_contracts: 'O contrato de patrocínio é da federação com uma empresa (vigência, parcelas, contrapartidas), não dado da pessoa; quem lançou é só o uid de equipe.',
   federation_equipment: 'O equipamento (marca, modelo, situação) é da lista pública de homologação da federação, não dado da pessoa; quem cadastrou é só o uid de equipe.',
+  federation_certificates: 'A certidão negativa é da própria federação (CND, FGTS, CNDT), não dado da pessoa; quem anexou é só o uid de equipe.',
+  federation_incentive_projects: 'O projeto da Lei de Incentivo é da federação; os aportes são de empresas e doadores (nome e documento do apoiador, como no recibo fiscal); quem lançou é só o uid de equipe.',
   federation_assets: 'O bem é do patrimônio da federação, emprestado a clube, arena ou evento (nunca a uma pessoa); quem emprestou é só o uid de equipe.',
   federation_account_reports: 'A prestação de contas é da federação (totais, parecer, assembleia), não dado da pessoa; quem abriu é só o uid de equipe.',
   federation_elections: 'O edital é ato da federação (cargos, calendário, pesos), não dado da pessoa; a participação dela sai como eleitor e nas chapas.',

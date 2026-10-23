@@ -1488,6 +1488,16 @@ exports.federationManagement = federationCallable('federationManagement', federa
 const federationIntegrity = require('./federationIntegrity');
 exports.federationIntegrity = federationCallable('federationIntegrity', federationIntegrity.integrity);
 
+// Regularidade da própria federação (rodada 3, Bloco 2): o cofre de certidões
+// (arquivo fechado, aviso antes de vencer) e os projetos da Lei de Incentivo
+// ao Esporte, com os aportes entrando nas contas — `functions/federationInstitutional.js`.
+const federationInstitutional = require('./federationInstitutional');
+exports.federationInstitutional = federationCallable('federationInstitutional', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationInstitutional: Storage indisponível.', err); }
+  return federationInstitutional.institutional({ ...ctx, bucket }, actor, data);
+}, { timeoutSeconds: 120, memory: '512MiB' });
+
 // Camada nacional (Bloco 6): vínculo das estaduais com a confederação, regras
 // da rede e repasse da anuidade; o ranking nacional é refeito junto com o
 // ranking de cada filiada — `functions/federationNational.js`.
@@ -1498,7 +1508,7 @@ exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx()), federationManagement.sweep(fedCtx()), federationNational.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx()), federationManagement.sweep(fedCtx()), federationNational.sweep(fedCtx()), federationInstitutional.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

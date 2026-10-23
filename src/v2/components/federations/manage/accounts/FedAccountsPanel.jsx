@@ -18,6 +18,8 @@ import { usePublicCallups, usePublicGrants } from '@/modules/federations/hooks/u
 import { callupExpenses, grantExpenses } from '@/modules/federations/domain/selection';
 import { useSponsorContracts } from '@/modules/federations/hooks/useManagement';
 import { sponsorIncome } from '@/modules/federations/domain/management';
+import { useIncentiveProjects } from '@/modules/federations/hooks/useInstitutional';
+import { incentiveIncome } from '@/modules/federations/domain/institutional';
 import { useDuesOwed, useDuesReceivable } from '@/modules/federations/hooks/useNational';
 import { duesExpenses, duesIncome, isConfederation } from '@/modules/federations/domain/national';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -114,9 +116,17 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
   // Parcelas recebidas dos contratos de patrocínio (módulo `sponsors`): quem lê as contas lê os contratos (mesma regra).
   const contratosOn = fedModuleOn(federation, 'sponsors');
   const contractsQ = useSponsorContracts(id, { enabled: contratosOn });
-  const patrocinio = [...(contratosOn && contractsQ.isSuccess ? sponsorIncome(contractsQ.data) : []), ...(ehConf && duesInQ.isSuccess ? duesIncome(duesInQ.data) : [])];
+  // Aportes da Lei de Incentivo (módulo `incentive_projects`): quem lê as contas lê os projetos (mesma regra).
+  const incentivoOn = fedModuleOn(federation, 'incentive_projects');
+  const projectsQ = useIncentiveProjects(id, { enabled: incentivoOn });
+  const patrocinio = [
+    ...(contratosOn && contractsQ.isSuccess ? sponsorIncome(contractsQ.data) : []),
+    ...(incentivoOn && projectsQ.isSuccess ? incentiveIncome(projectsQ.data) : []),
+    ...(ehConf && duesInQ.isSuccess ? duesIncome(duesInQ.data) : []),
+  ];
   const semPatrocinio = contratosOn && contractsQ.isError;
-  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: extras, extraIncome: patrocinio }), [ledgerQ.data, chargesQ.data, extras.length, callupsQ.data, grantsQ.data, assignmentsQ.data, contractsQ.data, duesQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const semIncentivo = incentivoOn && projectsQ.isError;
+  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: extras, extraIncome: patrocinio }), [ledgerQ.data, chargesQ.data, extras.length, callupsQ.data, grantsQ.data, assignmentsQ.data, contractsQ.data, projectsQ.data, duesQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
   if (qs.some((q) => q.isError)) return <V2ErrorState title={t('As contas não carregaram')} onRetry={() => qs.forEach((q) => { if (q.isError) q.refetch(); })} />;
   if (qs.some((q) => q.isLoading || !q.isSuccess)) return <V2Skeleton lines={6} />;
   const leitura = !canPrepareAccounts(perms);
@@ -151,6 +161,12 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
         <p className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {t('As parcelas recebidas dos contratos de patrocínio não carregaram nesta prévia. A prestação de contas as soma no envio ao conselho fiscal.')}
+        </p>
+      )}
+      {semIncentivo && (
+        <p className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {t('Os aportes dos projetos da Lei de Incentivo não carregaram nesta prévia. A prestação de contas os soma no envio ao conselho fiscal.')}
         </p>
       )}
       {tab === 'orcamento' && <Overview {...comum} onIrParaAba={onIrParaAba} />}
