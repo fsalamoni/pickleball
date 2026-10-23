@@ -21,6 +21,9 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({ userProfile: estado.perfil, updateUserProfile }),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/modules/rating/hooks/useDuprMode', () => ({
+  useDuprMode: () => ({ official: false, ownRatingOff: false, pilot: true }),
+}));
 
 const { default: V2OnboardingWizard } = await import('./V2OnboardingWizard.jsx');
 

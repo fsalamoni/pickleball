@@ -19,9 +19,12 @@ import { tk } from './i18n/engine.js';
 
 export const FEATURE_FLAG = Object.freeze({
   /**
-   * Integração OFICIAL com o DUPR (fase 2 — reservado): puxar o rating por ID
-   * e enviar partidas. Exige acesso de parceiro/clube DUPR e um backend com
-   * credenciais. Sem efeito enquanto a integração não for implementada.
+   * Integração OFICIAL com o DUPR (`docs/51-DUPR.md`): conta conectada pelo
+   * login do DUPR, rating por webhook e selo. Enquanto vale para a pessoa
+   * (ver `useDuprMode` — o "público" da política pode limitá-la aos admins),
+   * o rating PRÓPRIO da plataforma (ELO "Nacional" e "Nível 2.0–8.0") sai da
+   * tela dela: o contrato faz do DUPR o sistema de rating da plataforma. O
+   * servidor segue calculando o próprio em silêncio; desligada, volta tudo.
    */
   DUPR_OFFICIAL_SYNC: 'dupr_official_sync',
 
@@ -524,7 +527,7 @@ export const FEATURE_FLAG_META = Object.freeze({
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: tk('DUPR oficial (conexão da conta e rating)'),
-    description: tk('Liga a integração oficial com o DUPR: cada pessoa conecta a própria conta pelo login do DUPR (Perfil → Editar perfil), o ID, o rating e o selo "Verificada pelo DUPR" passam a vir do DUPR e se atualizam sozinhos, e o ID e o rating digitados à mão saem da tela. Exige as credenciais de parceiro gravadas no servidor (Actions → "DUPR — conferir e configurar a integração"). Desligada, o cadastro segue como sempre.'),
+    description: tk('Liga a integração oficial com o DUPR: cada pessoa conecta a própria conta pelo login do DUPR (Perfil → Editar perfil), o ID, o rating e o selo "Verificada pelo DUPR" passam a vir do DUPR e se atualizam sozinhos, e o ID e o rating digitados à mão saem da tela. Enquanto ligada, o rating próprio da plataforma (ranking Nacional e Nível 2.0–8.0) fica suspenso e o ranking passa a ser o do DUPR. Quem vê depende do "Público" logo abaixo: só os admins (piloto) ou todo mundo. Exige as credenciais de parceiro gravadas no servidor. Desligada, tudo volta a ser como antes.'),
   },
 });
 

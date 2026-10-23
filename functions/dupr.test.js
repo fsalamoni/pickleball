@@ -29,9 +29,10 @@ function clienteFalso(extra = {}) {
   };
 }
 
-function cenario({ flag = true, secrets = CREDS, seed = {}, client = clienteFalso(), now = NOW } = {}) {
+function cenario({ flag = true, audience = 'all', secrets = CREDS, seed = {}, client = clienteFalso(), now = NOW } = {}) {
   const db = createFakeDb({
     'platform_settings/global': { feature_flags: { dupr_official_sync: flag } },
+    ...(audience ? { 'platform_settings/dupr_policy': { audience } } : {}),
     ...(secrets ? { 'platform_secrets/dupr': secrets } : {}),
     'users/ana': { full_name: 'Ana Souza' },
     'athlete_profiles/ana': { platform_name: 'Ana' },
@@ -57,6 +58,13 @@ describe('dupr — config', () => {
     const c = await dupr.config(ctx, ANA);
     expect(c).toMatchObject({ enabled: true, configured: true, env: 'uat', ssoUrl: 'https://uat.dupr.gg/login-external-app/S0VZ' });
     expect(JSON.stringify(c)).not.toContain('SEGREDO');
+  });
+
+  it('piloto (padrão, sem política gravada): só o admin da plataforma usa', async () => {
+    const { ctx } = cenario({ audience: null });
+    expect((await dupr.config(ctx, ANA)).enabled).toBe(false);
+    expect((await dupr.config(ctx, { ...ANA, isPlatformAdmin: true })).enabled).toBe(true);
+    expect((await erro(dupr.link(ctx, ANA, SSO))).code).toBe('failed-precondition');
   });
 });
 

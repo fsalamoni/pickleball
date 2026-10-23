@@ -9,6 +9,7 @@ import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchie
 import { useKudoActions } from '@/modules/progression/hooks/useKudoActions';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import { ACHIEVEMENT_FAMILY_META, ACHIEVEMENT_RARITY_META, ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 import TierBadge from '@/modules/progression/components/TierBadge';
 import KudosButton from '@/modules/progression/components/KudosButton';
@@ -63,6 +64,8 @@ function V2PublicAchievementsOn() {
   const kudos = useKudoActions(me?.uid, !!me);
   const { stats } = usePlayerStats();
   const { data: ranking = [] } = useNationalRanking();
+  // Com o DUPR oficial valendo, a posição no ranking próprio (ELO) sai da tela.
+  const { ownRatingOff } = useDuprMode();
 
   const meRank = useMemo(
     () => ranking.find((p) => p.id === uid || p.uid === uid) || null,
@@ -140,7 +143,7 @@ function V2PublicAchievementsOn() {
             <V2Badge tone="green">
               <Award className="h-3.5 w-3.5" /> {unlocked.length}/{progression?.achievementsTotal || ACHIEVEMENTS_V2.length}
             </V2Badge>
-            {meRank && (
+            {meRank && !ownRatingOff && (
               <V2Badge tone="blue">
                 #{meRank.position} · {meRank.rating}
               </V2Badge>

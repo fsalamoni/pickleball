@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 7 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 9 |
-| Arquivos de teste (`*.test.js(x)`) | 830 |
+| Arquivos de teste (`*.test.js(x)`) | 833 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 57 |
 
@@ -61,7 +61,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `performance` | 2 | · | 1 | · | · | · | sim |
 | `progression` | 37 | 20 | 27 | 14 | · | 2 | sim |
 | `promo` | 2 | 1 | 1 | · | · | · | sim |
-| `rating` | 16 | 7 | 6 | 2 | · | · | sim |
+| `rating` | 18 | 8 | 7 | 2 | · | · | sim |
 | `search` | 1 | · | · | · | · | · | sim |
 | `sharing` | 1 | · | · | 2 | · | · | sim |
 | `social` | 1 | 1 | 2 | 1 | · | · | sim |

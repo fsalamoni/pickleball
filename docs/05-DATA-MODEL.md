@@ -1934,6 +1934,13 @@ reserva de um ID DUPR a uma única conta — fechado. Em `users` e `athlete_prof
 (regra `duprSeloIntacto`). Credenciais do parceiro: `platform_secrets/dupr`
 (`client_key`, `client_secret`, `env`, `webhook_token`), sem leitura no navegador.
 
+`platform_settings/dupr_policy` (documento novo na coleção de sempre: leitura de
+todos, escrita do admin) — `{ mode: off|manual|rules, audience: admins|all,
+rules: { tournament_fixed, tournament_team, tournament_rotation, game_day_rotation:
+required|optional|excluded }, optional_default_on, grace_minutes, updated_at,
+updated_by }`. Ausente = padrão (piloto, envio desligado); lido por
+`normalizeDuprPolicy` (cliente) e `functions/duprPolicy.js` (servidor).
+
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
 (PR 3), `{ kind: 'credential', credential_id, federation_id, created_at_ms }`.

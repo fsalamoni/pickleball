@@ -15,6 +15,8 @@ import {
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import V2DuprRankingView from '@/v2/components/rating/V2DuprRankingView';
+import V2DuprOfficialRankingView from '@/v2/components/rating/V2DuprOfficialRankingView';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import { t } from '@/core/i18n';
 
 function medalEmoji(position) {
@@ -287,16 +289,16 @@ function NationalRankingView() {
 }
 
 /**
- * Página de Ranking. Com a flag `skill_rating_dupr` LIGADA, mostra uma barra de
- * abas: "Nacional" (rating ELO existente, inalterado) e "Nível 2.0–8.0" (ranking
- * estilo DUPR, apartado). Desligada, renderiza apenas o ranking nacional — a
- * página fica idêntica ao comportamento anterior.
+ * Página de Ranking: abas "Nacional" (ELO) e "Nível 2.0–8.0" (escala estilo
+ * DUPR). Com o DUPR oficial valendo para a pessoa, só o ranking DUPR.
  */
 export default function V2Ranking() {
-  const duprOn = true;
   const [params, setParams] = useSearchParams();
+  // Com o DUPR oficial valendo para a pessoa, o rating próprio (Nacional e
+  // 2.0–8.0) sai da tela: o ranking é o do DUPR (contrato de exclusividade).
+  const { ownRatingOff } = useDuprMode();
 
-  if (!duprOn) return <NationalRankingView />;
+  if (ownRatingOff) return <V2Page><V2DuprOfficialRankingView /></V2Page>;
 
   // Aba controlada pela URL (?tab=dupr) — permite links diretos de outros locais.
   const tab = params.get('tab') === 'dupr' ? 'dupr' : 'national';

@@ -31,8 +31,7 @@ import {
   HERO_TITLE,
 } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import DuprConnectCard from '@/v2/components/rating/DuprConnectCard';
 
 export default function V2ProfileEdit() {
@@ -40,7 +39,7 @@ export default function V2ProfileEdit() {
   const { track } = useFunnel();
   const coachDirectoryOn = true;
   // Conexão oficial com o DUPR: o ID e o rating digitados à mão dão lugar ao login do DUPR.
-  const duprOficial = useFeatureFlag(FEATURE_FLAG.DUPR_OFFICIAL_SYNC);
+  const duprOficial = useDuprMode().official;
   // Perfil completo de professor (coleção coaches) — fonte para pré-preencher
   // e para manter em sincronia com o "Sou professor" do perfil.
   const { data: myCoach } = useCoach(user?.uid);

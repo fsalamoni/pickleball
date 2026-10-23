@@ -11,6 +11,7 @@ import ProgressionCard from '@/modules/progression/components/ProgressionCard';
 import GoalsCard from '@/modules/progression/components/GoalsCard';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import MyGamesPanel from '@/v2/components/performance/MyGamesPanel';
 import { useMyPlayerRating } from '@/modules/rating/hooks/useRating';
@@ -60,7 +61,9 @@ export default function V2Performance() {
 function StatsPanel() {
   const { user } = useAuth();
   const achievementsOn = true;
-  const ratingHistoryOn = true;
+  // Com o DUPR oficial valendo, o rating próprio (ELO e 2.0–8.0) sai da tela.
+  const { ownRatingOff } = useDuprMode();
+  const ratingHistoryOn = !ownRatingOff;
   const progressionOn = true;
   const {
     stats, coverage, isLoading, isError, refetch,
@@ -125,7 +128,7 @@ function StatsPanel() {
           )}
 
           {/* Evolução do Nível 2.0–8.0 (estilo DUPR) — auto-oculto pela flag/dados. */}
-          <V2DuprEvolution uid={user?.uid} />
+          {!ownRatingOff && <V2DuprEvolution uid={user?.uid} />}
 
 
           {achievementsOn && (
@@ -136,6 +139,7 @@ function StatsPanel() {
             <div className="mt-8">
               <GoalsCard
                 uid={user?.uid}
+                semRating={ownRatingOff}
                 values={{ games: stats.played, wins: stats.wins, tournaments: stats.tournaments, rating: currentRating }}
               />
             </div>

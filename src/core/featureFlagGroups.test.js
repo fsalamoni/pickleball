@@ -12,7 +12,7 @@ describe('featureFlagGroups', () => {
   });
 
   it('classifica a flag remanescente no grupo certo', () => {
-    expect(flagGroupId(FEATURE_FLAG.DUPR_OFFICIAL_SYNC)).toBe('athlete');
+    expect(flagGroupId(FEATURE_FLAG.DUPR_OFFICIAL_SYNC)).toBe('dupr');
   });
 
   it('classifica chaves desconhecidas em "other"', () => {

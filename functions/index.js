@@ -1923,8 +1923,12 @@ const duprCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: Fi
 exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 60, maxInstances: 3 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
   const token = req.auth.token || {};
-  const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '' };
   const data = req.data || {};
+  // No piloto da política, só o admin da plataforma usa a integração.
+  const isPlatformAdmin = data.action === 'config' || data.action === 'link'
+    ? await isPlatformAdminUser(req, getFirestore(getApp(), DATABASE_ID))
+    : false;
+  const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '', isPlatformAdmin };
   const acoes = { config: duprOficial.config, link: duprOficial.link, unlink: duprOficial.unlink, status: duprOficial.status };
   const fn = acoes[data.action];
   if (!fn) throw new HttpsError('invalid-argument', 'Ação desconhecida.');

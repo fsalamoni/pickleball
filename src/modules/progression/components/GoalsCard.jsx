@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { GOAL_METRIC_LABELS, goalProgress } from '../domain/progression.js';
+import { GOAL_METRIC, GOAL_METRIC_LABELS, goalProgress } from '../domain/progression.js';
 import { useGoals, useCreateGoal, useDeleteGoal } from '../hooks/useProgression.js';
 import { t } from '@/core/i18n';
 
@@ -15,8 +15,12 @@ import { t } from '@/core/i18n';
  *
  * @param {{ uid: string, values: Record<string, number> }} props
  */
-export default function GoalsCard({ uid, values }) {
-  const { data: goals = [] } = useGoals(uid);
+export default function GoalsCard({ uid, values, semRating = false }) {
+  // `semRating`: com o DUPR oficial valendo, o rating próprio sai da tela — e a
+  // meta de rating, que mede ele, some junto (volta se o DUPR for desligado).
+  const { data: todas = [] } = useGoals(uid);
+  const goals = semRating ? todas.filter((g) => g.metric !== GOAL_METRIC.RATING) : todas;
+  const metricas = Object.entries(GOAL_METRIC_LABELS).filter(([m]) => !semRating || m !== GOAL_METRIC.RATING);
   const create = useCreateGoal();
   const remove = useDeleteGoal();
   const [metric, setMetric] = useState('games');
@@ -48,7 +52,7 @@ export default function GoalsCard({ uid, values }) {
               onChange={(e) => setMetric(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {Object.entries(GOAL_METRIC_LABELS).map(([value, label]) => (
+              {metricas.map(([value, label]) => (
                 <option key={value} value={value}>{t(label)}</option>
               ))}
             </select>
