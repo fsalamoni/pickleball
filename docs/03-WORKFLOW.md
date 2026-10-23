@@ -255,8 +255,10 @@ push em main
           ≥ 262144 bytes; e o compactado tem de ficar < 140 KB, porque o
           COMPILADO tem teto de 250 KB) + Deploy Firestore rules
           → --only firestore:rules,firestore:pickleball
-          (falha se a CLI não disser "released rules"; num 409 repete com
-          --debug e mostra a resposta do serviço de regras)
+          (falha se a CLI não disser "released rules"; erro 5xx/"currently
+          unavailable" do serviço de regras ganha até 3 tentativas com espera
+          crescente (2026-10-23); num 409 repete com --debug e mostra a
+          resposta do serviço de regras)
        8. Deploy Firestore indexes → --only firestore:indexes,firestore:pickleball
           (sem --force: índice remoto não versionado é preservado e avisado)
        9. Install functions deps + Deploy Cloud Functions (não fatal)
