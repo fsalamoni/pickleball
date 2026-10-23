@@ -1,0 +1,73 @@
+name: DUPR — conferir e configurar a integração
+
+# Só roda quando alguém dispara (Actions → "DUPR — conferir e configurar a
+# integração" → Run workflow). Existe porque as credenciais do DUPR moram nos
+# SEGREDOS do repositório (DUPR_CLIENT_KEY e DUPR_CLIENT_SECRET) e só um
+# workflow as enxerga — nem o navegador nem a sessão de desenvolvimento.
+#
+# Ações (ver scripts/dupr-uat.cjs):
+#   smoke    a credencial vale? o DUPR e a tela de login respondem? (só leitura)
+#   seed     copia as credenciais para platform_secrets/dupr, de onde as Cloud
+#            Functions as leem (a regra do Firestore bloqueia o navegador)
+#   webhook  registra no DUPR o endereço do nosso webhook de rating
+#   user     mostra os ratings públicos de um jogador (informe o ID DUPR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: Ação
+        type: choice
+        options: [smoke, seed, webhook, user]
+        default: smoke
+      ambiente:
+        description: Ambiente do DUPR (produção só depois da aprovação do DUPR)
+        type: choice
+        options: [uat, prod]
+        default: uat
+      dupr_id:
+        description: ID DUPR (só para a ação "user")
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dupr-uat
+  cancel-in-progress: false
+
+jobs:
+  dupr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      DUPR_ENV: ${{ inputs.ambiente }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Credenciais da service account
+        if: inputs.acao == 'seed' || inputs.acao == 'webhook'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          jq -e . "$SA_FILE" >/dev/null || { echo "::error::FIREBASE_SERVICE_ACCOUNT não é JSON válido."; exit 1; }
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$SA_FILE" >> "$GITHUB_ENV"
+
+      - name: Dependências das funções
+        run: npm --prefix functions ci --no-audit --no-fund
+
+      - name: Executar
+        env:
+          DUPR_CLIENT_KEY: ${{ secrets.DUPR_CLIENT_KEY }}
+          DUPR_CLIENT_SECRET: ${{ secrets.DUPR_CLIENT_SECRET }}
+          ACAO: ${{ inputs.acao }}
+          DUPR_ID: ${{ inputs.dupr_id }}
+        run: node scripts/dupr-uat.cjs "$ACAO" "$DUPR_ID"
