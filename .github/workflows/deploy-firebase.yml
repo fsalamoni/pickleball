@@ -196,9 +196,19 @@ jobs:
       - name: Deploy Firestore rules
         run: |
           set +e
-          OUT=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
-          RC=$?
-          echo "$OUT"
+          # O serviço de regras às vezes devolve 503/500 passageiro (deploy do
+          # PR #320 parou assim, sem nada errado no código): repete até 3 vezes
+          # com espera crescente antes de desistir.
+          for TENTATIVA in 1 2 3; do
+            OUT=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+            RC=$?
+            echo "$OUT"
+            if [ $RC -eq 0 ] || ! echo "$OUT" | grep -qiE "HTTP Error: 5[0-9][0-9]|currently unavailable|ECONNRESET|ETIMEDOUT"; then
+              break
+            fi
+            echo "::warning title=Serviço de regras indisponível::Tentativa $TENTATIVA falhou com erro passageiro; repetindo."
+            sleep $((TENTATIVA * 20))
+          done
           if [ $RC -eq 0 ]; then
             # Verde sem publicar é o pior desfecho: parece que as regras estão
             # no ar e não estão. Sem a confirmação da CLI, o passo falha.
