@@ -30,8 +30,7 @@ import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreferen
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tk } from '@/core/i18n';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 
 /** Quando a pessoa adiou os interesses — no navegador, por uid (zero banco). */
 const PREF_ADIADO = 'onboarding:adiado';
@@ -90,7 +89,7 @@ export default function V2OnboardingWizard() {
   const [interests, setInterests] = useState([]);
   const [levelMode, setLevelMode] = useState(null); // null | 'choose'
   const [levelCode, setLevelCode] = useState('');
-  const duprOficial = useFeatureFlag(FEATURE_FLAG.DUPR_OFFICIAL_SYNC);
+  const duprOficial = useDuprMode().official;
   const [duprId, setDuprId] = useState('');
   const [duprRating, setDuprRating] = useState('');
   const [retorno, setRetorno] = useState(false);

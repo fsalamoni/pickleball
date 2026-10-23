@@ -21,6 +21,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useNavRotulos } from '@/core/lib/useNavRotulos';
 
 import { useMyPlayerRating } from '@/modules/rating/hooks/useRating';
+import { useDuprMirror, useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useMyJoinRequests } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_ROLE_LABELS, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
@@ -146,15 +147,44 @@ function ResumoSecao({ ctx }) {
   );
 }
 
+/** O rating oficial do DUPR de quem está logado (no lugar dos números do rating próprio). */
+function DuprNumeros({ uid }) {
+  const dupr = useDuprMirror(uid);
+  const d = dupr.data;
+  const fmt = (n) => (n != null && Number.isFinite(Number(n)) ? Number(n).toFixed(3) : '—');
+  return (
+    <Bloco id="numeros" icon={Award} title={t('Seu rating DUPR')} action={d?.verified ? { to: '/ranking', label: t('Ver no ranking') } : undefined}>
+      {dupr.isPending ? (
+        <V2Skeleton className="h-28 rounded-3xl" />
+      ) : dupr.isError ? (
+        <V2ErrorState inline title={t('Não carregou o seu rating')} description={t('Os seus jogos continuam lá — tente de novo.')} onRetry={() => dupr.refetch()} />
+      ) : d?.verified ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <MiniStat label={t('Duplas')} value={fmt(d.doubles)} />
+          <MiniStat label={t('Simples')} value={fmt(d.singles)} />
+          <MiniStat label={t('ID DUPR')} value={d.dupr_id || '—'} />
+        </div>
+      ) : (
+        <HomeEmpty icon={BarChart3} actions={<HomeAction to="/perfil/editar">{t('Conectar conta DUPR')}</HomeAction>}>
+          {t('O rating da plataforma agora é o do DUPR. Conecte a sua conta DUPR no editor de perfil para ele aparecer aqui e no ranking.')}
+        </HomeEmpty>
+      )}
+    </Bloco>
+  );
+}
+
 /** Perfil E conta: os números, o editor, a progressão e as configurações — uma seção só. */
 function PerfilSecao() {
   const { user } = useAuth();
   const gamificationOn = true;
   const inicioOn = useHomeCardsOn();
-  const rating = useMyPlayerRating();
+  // Com o DUPR oficial valendo, os números são os do DUPR (rating próprio suspenso).
+  const { ownRatingOff } = useDuprMode();
+  const rating = useMyPlayerRating({ enabled: !ownRatingOff });
   const me = rating.data;
   return (
     <div className="space-y-6">
+      {ownRatingOff ? <DuprNumeros uid={user?.uid} /> : (
       <Bloco id="numeros" icon={Award} title={t('Seus números no ranking')} action={me ? { to: '/ranking', label: t('Ver no ranking') } : undefined}>
         {rating.isPending ? (
           <V2Skeleton className="h-28 rounded-3xl" />
@@ -177,6 +207,7 @@ function PerfilSecao() {
           <Link to="/meu-desempenho" className="font-bold text-ink underline">{t('Meu desempenho')}</Link>.
         </p>
       </Bloco>
+      )}
 
       <div className="rounded-4xl border border-dashed border-gray-200 bg-paper p-6 text-sm text-gray-500">
         {t('Edite seus dados, nivelamento e privacidade no editor de perfil.')}{' '}

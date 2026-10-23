@@ -15,8 +15,10 @@ import { tk } from './i18n/engine.js';
 /** Grupos "normais" (fora Arena V3), na ordem de exibição. */
 export const FLAG_GROUPS = Object.freeze([
   {
-    id: 'athlete',
-    label: tk('Atleta, rating e social'),
+    // O painel do grupo traz também a política do DUPR (público e envio de
+    // partidas), que mora em `platform_settings/dupr_policy`.
+    id: 'dupr',
+    label: tk('DUPR'),
     keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC],
   },
   {

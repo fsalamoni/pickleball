@@ -5,6 +5,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNavRotulos } from '@/core/lib/useNavRotulos';
 
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import { useDuprMode, useVerifiedDuprProfiles } from '@/modules/rating/hooks/useDuprMode';
+import { buildOfficialDuprRanking } from '@/modules/rating/domain/duprOfficialRanking';
 import { rankMatchmakingCandidates, DEFAULT_MAX_RATING_DIFF } from '@/modules/rating/domain/matchmaking';
 import { rankSmartMatchmaking } from '@/modules/rating/domain/smartMatchmaking';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
@@ -23,7 +25,9 @@ import {
   V2Skeleton,
   V2Surface, V2Page,
 } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { t, fmtNumero } from '@/core/i18n';
+
+const DUPR_TO_ELO_SCALE = 300;
 
 /** Cor do selo de compatibilidade conforme a força do match. */
 function compatTone(score) {
@@ -36,7 +40,21 @@ export default function V2FindPlayers() {
   const { user, userProfile } = useAuth();
   const rotulos = useNavRotulos();
   const smartOn = true;
-  const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
+  // Com o DUPR oficial valendo, o nível de referência é o rating do DUPR (de
+  // quem conectou a conta) — o ELO próprio sai da tela.
+  const { ownRatingOff } = useDuprMode();
+  const nacional = useNationalRanking();
+  const duprProfiles = useVerifiedDuprProfiles({ enabled: ownRatingOff });
+  const fonte = ownRatingOff ? duprProfiles : nacional;
+  const { isLoading, isError, refetch } = fonte;
+  const players = useMemo(() => (ownRatingOff
+    ? buildOfficialDuprRanking(duprProfiles.data, 'doubles').map((r) => ({
+      ...r, id: r.uid, platform_name: r.name, dupr: r.rating,
+      // ponytail: os motores de afinidade usam a escala do ELO (±150); o DUPR
+      // entra ×300 (±0,5 DUPR). Um motor na escala 2–8 dispensa a conversão.
+      rating: Math.round(r.rating * DUPR_TO_ELO_SCALE),
+    }))
+    : nacional.data || []), [ownRatingOff, duprProfiles.data, nacional.data]);
   // Diretório (lado da quadra + interesses) só é buscado no modo inteligente.
   const { data: directory = [] } = useAthletes(smartOn);
   const [sameCityOnly, setSameCityOnly] = useState(false);
@@ -132,8 +150,10 @@ export default function V2FindPlayers() {
         <V2Surface>
           <V2EmptyState
             icon={Medal}
-            title={t('Você ainda não tem rating')}
-            description={t('Dispute jogos em torneios da plataforma para receber seu rating e liberar as sugestões de parceiros do seu nível.')}
+            title={ownRatingOff ? t('Conecte a sua conta DUPR') : t('Você ainda não tem rating')}
+            description={ownRatingOff
+              ? t('O nível de referência agora é o rating do DUPR. Conecte a sua conta em Perfil → Editar perfil para ver parceiros do seu nível.')
+              : t('Dispute jogos em torneios da plataforma para receber seu rating e liberar as sugestões de parceiros do seu nível.')}
           />
         </V2Surface>
       </V2Page>
@@ -151,11 +171,13 @@ export default function V2FindPlayers() {
 
       <V2Surface className="mb-8" data-dica="jogadores-filtros">
         <p className="text-sm text-gray-500">
-          {t('Seu rating:')} <strong className="text-ink">{me.rating}</strong>{myCity ? <> · {myCity}</> : null}.
+          {ownRatingOff ? t('Seu rating DUPR:') : t('Seu rating:')} <strong className="text-ink">{ownRatingOff ? me.dupr.toFixed(3) : me.rating}</strong>{myCity ? <> · {myCity}</> : null}.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <V2FilterChip active={closeLevelOnly} onClick={() => setCloseLevelOnly((v) => !v)}>
-            {t('Nível parecido (±{n})', { n: DEFAULT_MAX_RATING_DIFF })}
+            {ownRatingOff
+              ? t('Nível parecido (±{n} DUPR)', { n: fmtNumero(DEFAULT_MAX_RATING_DIFF / DUPR_TO_ELO_SCALE, { maximumFractionDigits: 1 }) })
+              : t('Nível parecido (±{n})', { n: DEFAULT_MAX_RATING_DIFF })}
           </V2FilterChip>
           {regiaoOn ? (
             <V2FilterChip active={soRegiao} onClick={() => setSoRegiao((v) => !v)}>
@@ -197,7 +219,7 @@ export default function V2FindPlayers() {
                   )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
-                  <V2Badge tone="acid">Rating {p.rating}</V2Badge>
+                  <V2Badge tone="acid">{ownRatingOff ? `DUPR ${p.dupr.toFixed(3)}` : `Rating ${p.rating}`}</V2Badge>
                   {[p.city, p.state].filter(Boolean).length > 0 && (
                     <span>
                       {[p.city, p.state].filter(Boolean).join(' / ')}

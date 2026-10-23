@@ -59,6 +59,10 @@ vi.mock('@/modules/rating/hooks/useRating', () => ({
   useNationalRanking: () => ({ data: [{ uid: 'u-other', position: 47, rating: 1023 }] }),
 }));
 
+vi.mock('@/modules/rating/hooks/useDuprMode', () => ({
+  useDuprMode: () => ({ official: false, ownRatingOff: false, pilot: true }),
+}));
+
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({
   useAthlete: () => ({ data: { platform_name: 'Ana Prado', photo_url: null } }),
 }));

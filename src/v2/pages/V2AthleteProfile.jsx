@@ -18,6 +18,7 @@ import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
 import { t, tn, fmtData } from '@/core/i18n';
 
@@ -32,7 +33,10 @@ function clubNames(athlete) {
 export default function V2AthleteProfile() {
   const enabled = true;
   const followOn = true;
-  const ratingHistoryOn = true;
+  // Com o DUPR oficial valendo, o rating próprio (ELO e 2.0–8.0) sai da tela;
+  // o selo mostra o rating do DUPR.
+  const { ownRatingOff } = useDuprMode();
+  const ratingHistoryOn = !ownRatingOff;
   const headToHeadOn = true;
   const achievementsOn = true;
   const coachResidentOn = true;
@@ -125,7 +129,7 @@ export default function V2AthleteProfile() {
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">
-              {rating && (
+              {rating && !ownRatingOff && (
                 <div className="flex items-center gap-2 rounded-2xl border border-acid/40 bg-acid/15 px-4 py-2 text-sm font-semibold text-ink">
                   <Medal className="h-4 w-4" /> {t('Rating {n}', { n: rating.rating })}{rating.position ? ` · ${rating.position}º` : ''}
                 </div>
@@ -231,7 +235,7 @@ export default function V2AthleteProfile() {
       )}
 
       {/* Evolução do Nível 2.0–8.0 (estilo DUPR) — auto-oculto pela flag/dados. */}
-      <V2DuprEvolution uid={uid} />
+      {!ownRatingOff && <V2DuprEvolution uid={uid} />}
 
       {achievementsOn && !historicoFalhou && (
         <div className="mt-8"><AchievementsCard summary={{ ...stats, rating: rating?.rating }} /></div>

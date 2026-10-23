@@ -8,10 +8,11 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Handshake, Medal, Sparkles } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Handshake, Medal, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyDoublesRankings, useMyPlayerRating } from '@/modules/rating/hooks/useRating';
 import { useDuprRatingForUid } from '@/modules/rating/hooks/useDuprRating';
+import { useDuprMirror, useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeSection } from './HomeSection';
 import { t, fmtNumero } from '@/core/i18n';
@@ -44,8 +45,12 @@ function Tile({ to, icon: Icon, label, value, detail, carregando, falhou, onRetr
 
 export default function HomeRankingSection({ reason }) {
   const { user } = useAuth();
-  const nacional = useMyPlayerRating();
-  const nivel = useDuprRatingForUid(user?.uid, true);
+  // Com o DUPR oficial valendo, os dois primeiros quadros mostram o rating do
+  // DUPR no lugar do rating próprio (que nem é consultado).
+  const { ownRatingOff } = useDuprMode();
+  const nacional = useMyPlayerRating({ enabled: !ownRatingOff });
+  const nivel = useDuprRatingForUid(user?.uid, !ownRatingOff);
+  const dupr = useDuprMirror(user?.uid, { enabled: ownRatingOff });
   const duplas = useMyDoublesRankings();
 
   const r = nacional.data;
@@ -60,6 +65,31 @@ export default function HomeRankingSection({ reason }) {
   return (
     <HomeSection id="ranking" icon={Medal} title={t('Ranking e duplas')} reason={reason} action={{ to: '/ranking', label: t('Ranking') }}>
       <div className="grid gap-3 sm:grid-cols-3">
+        {ownRatingOff ? (
+          <>
+            <Tile
+              to={dupr.data?.verified ? '/ranking' : '/perfil/editar'}
+              icon={BadgeCheck}
+              label={t('DUPR duplas')}
+              carregando={dupr.isLoading}
+              falhou={dupr.isError}
+              onRetry={dupr.refetch}
+              value={dupr.data?.verified && dupr.data.doubles != null ? fmt(dupr.data.doubles, 3) : '—'}
+              detail={dupr.data?.verified ? t('Rating oficial do DUPR') : t('Conecte a sua conta DUPR no perfil')}
+            />
+            <Tile
+              to={dupr.data?.verified ? '/ranking' : '/perfil/editar'}
+              icon={BadgeCheck}
+              label={t('DUPR simples')}
+              carregando={dupr.isLoading}
+              falhou={dupr.isError}
+              onRetry={dupr.refetch}
+              value={dupr.data?.verified && dupr.data.singles != null ? fmt(dupr.data.singles, 3) : '—'}
+              detail={dupr.data?.verified ? t('Rating oficial do DUPR') : t('Conecte a sua conta DUPR no perfil')}
+            />
+          </>
+        ) : (
+          <>
         <Tile
           to="/ranking"
           icon={Medal}
@@ -82,6 +112,8 @@ export default function HomeRankingSection({ reason }) {
             ? nivelSimples != null ? t('Duplas · simples {nivel}', { nivel: fmt(nivelSimples, 2) }) : t('Duplas')
             : (nivelSimples != null ? t('Simples') : t('Calculado com os jogos publicados'))}
         />
+          </>
+        )}
         <Tile
           to="/ranking/duplas"
           icon={Handshake}

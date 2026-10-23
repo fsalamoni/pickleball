@@ -103,3 +103,34 @@ substitui os campos de ID e de rating digitados à mão.
 Limite conhecido: se `athlete_profiles/{uid}` ainda não existe na hora do vínculo,
 o espelho público só ganha o selo quando o perfil público for criado e o vínculo
 renovado (o dono não pode criar o espelho já com o selo).
+
+## 6. Política, piloto e o rating próprio suspenso
+
+**Política** em `platform_settings/dupr_policy` (legível por todos, escrita só pelo
+admin — regra de sempre de `platform_settings`), editada no cartão **Política do
+DUPR** (Painel admin → Funcionalidades → grupo **DUPR**, `DuprPolicyCard`). Régua
+pura em `src/modules/rating/domain/duprPolicy.js`, cópia no servidor em
+`functions/duprPolicy.js` (paridade: `functions/duprPolicy.parity.test.js`).
+
+* **Público** (`audience`): `admins` (padrão, **piloto**) ou `all`. No piloto, com
+  a flag ligada, a integração vale só para o admin da plataforma; os demais seguem
+  como antes. A tela pergunta a `useDuprMode()` (`modules/rating/hooks/useDuprMode.js`)
+  e o servidor confere de novo (`liberadaPara` em `functions/dupr.js`: `config`
+  diz `enabled: false` e `link` recusa para quem está fora do público).
+* **Envio de partidas** (`mode`: `off` | `manual` | `rules`) e as **regras por
+  grupo** (`duprBucket`): torneio de simples/duplas e de equipes = *sempre envia*;
+  Americano/Mexicano do torneio (por modalidade) e dia de jogo com placar = *quem
+  cria escolhe*; Play nunca (sem placar). `duprSubmissionDecision` decide;
+  `duprMatchEligibility` barra partida sem placar, com game empatado, lados
+  desiguais ou jogador repetido; `duprReadiness` exige conta conectada com
+  `BASIC_L1` de todos; `duprIdentifier` dá o identificador único (`pr:tm:…`,
+  `pr:gd:…`). **O envio ainda não existe**: a política fica salva para ele.
+
+**Rating próprio suspenso.** Enquanto `useDuprMode().ownRatingOff` (= a integração
+vale para quem vê), saem da tela o ELO "Nacional", o "Nível 2.0–8.0", as curvas de
+evolução e a meta de rating; entram o **Ranking DUPR** (`V2DuprOfficialRankingView`,
+só contas com o selo, ordem por `buildOfficialDuprRanking`), o selo DUPR no perfil
+(`V2DuprRatingBadge`), os quadros DUPR no início, "Seu rating DUPR" na Minha área,
+o nível DUPR em Encontrar jogadores e na lista de alunos do professor. O servidor
+segue calculando o próprio em silêncio; desligar a flag (ou voltar ao piloto) traz
+tudo de volta. O ranking de duplas por aproveitamento não é rating e continua.

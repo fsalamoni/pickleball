@@ -24,6 +24,8 @@ import {
 } from '../hooks/useStudents.js';
 import { useCoachValidations, useUpsertValidation } from '../hooks/useValidations.js';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import { useDuprMode, useVerifiedDuprProfiles } from '@/modules/rating/hooks/useDuprMode';
+import { buildOfficialDuprRanking } from '@/modules/rating/domain/duprOfficialRanking';
 
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
@@ -188,7 +190,7 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
               <div className="mt-1">
                 <V2Badge tone="acid">
                   <TrendingUp className="mr-1 inline h-3 w-3" />
-                  {t('Rating')} {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
+                  {rating.dupr ? t('DUPR') : t('Rating')} {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
                 </V2Badge>
               </div>
             )}
@@ -294,17 +296,26 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
   } = useCoachStudents(coachId);
   const { data: validations = [] } = useCoachValidations(levelingOn ? coachId : null);
   const { data: ranking = [] } = useNationalRanking();
+  // Com o DUPR oficial valendo, a evolução do aluno é o rating do DUPR.
+  const { ownRatingOff } = useDuprMode();
+  const { data: duprProfiles } = useVerifiedDuprProfiles({ enabled: ownRatingOff });
 
-  // Evolução do aluno: mapa uid → rating/posição no ranking nacional (gated).
+  // Evolução do aluno: mapa uid → rating/posição no ranking (nacional ou DUPR).
   const ratingByUid = useMemo(() => {
     const map = new Map();
     if (!progressOn) return map;
+    if (ownRatingOff) {
+      buildOfficialDuprRanking(duprProfiles, 'doubles').forEach((r) => {
+        map.set(r.uid, { rating: r.rating.toFixed(3), position: r.position, dupr: true });
+      });
+      return map;
+    }
     ranking.forEach((p) => {
       const uid = p.uid || p.id;
       if (uid) map.set(uid, { rating: p.rating, position: p.position });
     });
     return map;
-  }, [progressOn, ranking]);
+  }, [progressOn, ranking, ownRatingOff, duprProfiles]);
   const upsert = useUpsertStudent();
   const setStatus = useSetStudentStatus();
   const remove = useRemoveStudent();

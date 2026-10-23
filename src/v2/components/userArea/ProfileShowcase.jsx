@@ -13,6 +13,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { V2Avatar, V2Button, V2Surface, PAGE_TITLE } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
+import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import { memberSince } from '@/modules/athletes/domain/userArea';
 import { t } from '@/core/i18n';
 
@@ -25,8 +26,12 @@ export function MiniStat({ label, value }) {
   );
 }
 
-export default function ProfileShowcase({ me, editDica }) {
+export default function ProfileShowcase({ me: meRanking, editDica }) {
   const { user, userProfile } = useAuth();
+  // Com o DUPR oficial valendo, os números do rating próprio saem; o selo
+  // (`V2DuprRatingBadge`) passa a mostrar o rating do DUPR.
+  const { ownRatingOff } = useDuprMode();
+  const me = ownRatingOff ? null : meRanking;
 
   const name = userProfile?.platform_name || user?.displayName || 'Atleta';
   const photo = userProfile?.photo_url || user?.photoURL || '';

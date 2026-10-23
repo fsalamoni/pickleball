@@ -21,6 +21,7 @@
  */
 const crypto = require('node:crypto');
 const { createDuprClient, DuprError } = require('./duprClient');
+const { normalizeDuprPolicy, DUPR_AUDIENCE } = require('./duprPolicy');
 
 const FLAG = 'dupr_official_sync';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,6 +53,18 @@ async function flagLigada(ctx) {
   return Boolean(snap.exists && snap.data().feature_flags && snap.data().feature_flags[FLAG] === true);
 }
 
+/**
+ * A integração vale para ESTA pessoa? Flag ligada e a pessoa no público da
+ * política (`platform_settings/dupr_policy`): no piloto, só o admin da
+ * plataforma. Mesma regra de `useDuprMode` no cliente.
+ */
+async function liberadaPara(ctx, actor) {
+  if (!(await flagLigada(ctx))) return false;
+  const snap = await ctx.db.collection('platform_settings').doc('dupr_policy').get();
+  const policy = normalizeDuprPolicy(snap.exists ? snap.data() : null);
+  return policy.audience === DUPR_AUDIENCE.ALL || Boolean(actor && actor.isPlatformAdmin);
+}
+
 async function segredos(ctx) {
   const snap = await ctx.db.collection('platform_secrets').doc('dupr').get();
   const d = snap.exists ? snap.data() : null;
@@ -65,8 +78,8 @@ async function clienteDuprDe(ctx) {
   return { client: make({ clientKey: s.client_key, clientSecret: s.client_secret, env: s.env }), secrets: s };
 }
 
-async function exigeLigada(ctx) {
-  if (!(await flagLigada(ctx))) falha('failed-precondition', 'A integração oficial com o DUPR não está ligada nesta plataforma.');
+async function exigeLigada(ctx, actor) {
+  if (!(await liberadaPara(ctx, actor))) falha('failed-precondition', 'A integração oficial com o DUPR não está ligada nesta plataforma.');
 }
 
 /** Erro do DUPR → mensagem para a tela (sem vazar corpo nem cabeçalho). */
@@ -114,7 +127,7 @@ async function espelhar(ctx, uid, campos) {
 
 /** O que a tela precisa para começar (ou mostrar o vínculo). */
 async function config(ctx, actor) {
-  const enabled = await flagLigada(ctx);
+  const enabled = await liberadaPara(ctx, actor);
   const s = enabled ? await segredos(ctx) : null;
   const linkSnap = await ctx.db.collection('dupr_links').doc(actor.uid).get();
   const out = { enabled, configured: Boolean(s), env: s ? (texto(s.env).toLowerCase() === 'prod' ? 'prod' : 'uat') : null, linked: linkSnap.exists ? resumo(linkSnap.data()) : null };
@@ -137,7 +150,7 @@ function resumo(l) {
  * o SSO devolveu; a identidade vem do DUPR.
  */
 async function link(ctx, actor, data) {
-  await exigeLigada(ctx);
+  await exigeLigada(ctx, actor);
   const accessToken = texto(data.accessToken);
   const refreshToken = texto(data.refreshToken);
   if (!accessToken || accessToken.length > 4096 || refreshToken.length > 4096) falha('invalid-argument', 'Não recebi o login do DUPR. Tente de novo.');

@@ -95,6 +95,7 @@ import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 // Sob demanda: só com a flag `platform_marketing`, e só quando a aba abre.
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
 const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
+const DuprPolicyCard = lazy(() => import('@/v2/components/admin/DuprPolicyCard'));
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -950,6 +951,9 @@ function FlagsTab() {
                 })}
               </div>
             ) : renderRows(keys)}
+            {group.id === 'dupr' && (
+              <Suspense fallback={<V2Skeleton className="mt-4 h-40 rounded-3xl" />}><DuprPolicyCard /></Suspense>
+            )}
           </V2Surface>
         );
       })}
