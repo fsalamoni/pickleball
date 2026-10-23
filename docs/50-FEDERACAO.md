@@ -3902,3 +3902,65 @@ renovação da filiação, `federationMembership`. A régua mora em
   `org-certificado-seguro`.
 - **Guia:** `federacao-seguro-termo-certificado`. **Artigo:**
   `federacao-seguro-termo-certificado`.
+
+## 43. Pix com baixa automática (rodada 3, Bloco 6a, 2026-10-23)
+
+**Regra de ouro: sem chave configurada, tudo funciona como antes** — o Pix
+estático da chave da federação (`chargePixPayload`) e o "Já paguei" que o
+financeiro confirma.
+
+### 43.1 Ligar
+
+- **Central → Configurações → Recebimento → "Confirmação automática"**
+  (`FedPaymentGateway`, âncora `federacao-pix-automatico`), para `finance` ou
+  `admin`. Escolhe o provedor (**Mercado Pago** ou **Asaas**) e cola a chave
+  da **conta da federação** — o dinheiro cai direto nela; a plataforma não
+  intermedeia e as taxas são as do provedor.
+- O servidor (`federationPayments`, `gateway_save`) confere a chave no
+  provedor (Mercado Pago `GET /users/me`; Asaas `GET /finance/balance`) antes
+  de gravar. A chave mora em `federation_secrets/{fed}` — **sem regra**: nem o
+  navegador nem o admin leem; a tela vê só "chave …1234". O sinal público
+  `federations.payment_gateway` (em `fedLocked()`) diz às telas que há baixa
+  automática.
+- **Mercado Pago**: cada Pix leva o `notification_url`, nada a configurar.
+  **Asaas**: o webhook é cadastrado pela API; se falhar, a tela mostra o
+  endereço para colar. O Asaas exige o CPF de quem paga (só o do PRÓPRIO
+  filiado, de `private/data`): sem ele, a cobrança fica no Pix estático.
+- "Desligar e apagar a chave" apaga o documento e desliga o sinal.
+
+### 43.2 Pagar e dar baixa
+
+1. Quem paga abre a cobrança (`PixChargeBlock`): `pix` gera — ou reaproveita
+   enquanto vale mais de 10 min — o Pix no provedor (validade de 24 h) e grava
+   `federation_charges.gateway = { provider, id, payload, expires_at_ms }`. A
+   tela desenha o QR do copia e cola e diz "Confirmação automática".
+2. O provedor avisa em `/api/federacao/pix/{fed}/{token}`
+   (`federationPixHook`). O servidor **não confia no corpo**: tira o id do
+   pagamento, busca o pagamento no provedor com a chave da federação e só dá
+   baixa se ele está **pago**, aponta para **esta cobrança**
+   (`external_reference`), é o **`gateway.id` gravado** e **cobre o valor**
+   (`paymentSettles`).
+3. A baixa é a **mesma do financeiro**: `fecharCobranca` (extraída de
+   `chargeConfirm`), com ator `gateway` — filiação ativa ou renovada,
+   inscrição em curso confirmada, multa quitada, taxa de chancela paga, os
+   mesmos avisos. Repetir o aviso não faz nada (cobrança já fechada).
+4. Se o aviso não chegar, "Já paguei — conferir agora" (`check`) pergunta ao
+   provedor na hora. O "Já paguei" manual some enquanto o Pix é do provedor.
+5. Provedor fora do ar: a cobrança mostra o Pix estático e o financeiro
+   confirma como antes. Estorno é feito no provedor e acertado à mão.
+
+### 43.3 O que não pode regredir
+
+123. A chave só no servidor (`federation_secrets`, sem regra); a tela vê só o
+     fim. `payment_gateway` em `fedLocked()`; `gateway` fora da lista do
+     pagador em `federation_charges`.
+124. O aviso do provedor nunca é confiado: baixa só com o pagamento buscado
+     no provedor, pago, desta cobrança, do `gateway.id` gravado e cobrindo o
+     valor.
+125. Um caminho de baixa: `fecharCobranca` (financeiro e provedor). Origem
+     nova de cobrança ganha o efeito ali, e vale para os dois.
+126. Sem chave, sem CPF (Asaas) ou provedor fora do ar: Pix estático.
+
+### 43.4 Ajuda
+
+- **Artigo:** `federacao-pix-automatico`.

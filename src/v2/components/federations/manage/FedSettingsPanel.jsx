@@ -25,6 +25,7 @@ import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import FederationPublicFields from '../FederationPublicFields';
 import FedPublicationTab from './FedPublication';
+import FedPaymentGateway from './FedPaymentGateway';
 import { FedLogo, fedPublicPath, publicHost } from '../federationUi';
 import { listIssuerCampaigns, listIssuerCoupons, setPromoCouponActive, updatePromoCampaign } from '@/modules/promo/services/promoService';
 import { listSellerListings, setListingStatus } from '@/modules/marketplace/services/marketService';
@@ -262,6 +263,7 @@ function PixTab({ federation }) {
           <div className="flex justify-end"><V2Button type="submit" disabled={m.isPending} data-dica="federacao-pix-salvar">{t('Salvar Pix')}</V2Button></div>
         </form>
       </V2Surface>
+      <FedPaymentGateway federation={federation} />
     </section>
   );
 }

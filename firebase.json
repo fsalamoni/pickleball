@@ -47,6 +47,13 @@
           }
         },
         {
+          "source": "/api/federacao/pix/**",
+          "function": {
+            "functionId": "federationPixHook",
+            "region": "southamerica-east1"
+          }
+        },
+        {
           "source": "/api/mensagens/**",
           "function": {
             "functionId": "messagingHook",

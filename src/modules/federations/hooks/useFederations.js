@@ -498,3 +498,21 @@ export function useCommentsQueue(fedId, { enabled = true } = {}) {
 export function useReport(id, { enabled = true } = {}) {
   return useQuery({ queryKey: fedKeys.report(id), queryFn: () => svc.getReportById(id), enabled: !!id && enabled, retry: 0 });
 }
+
+/* ------------------------------------------- Bloco 6a: Pix com baixa automática -- */
+
+/** O provedor configurado (só o fim da chave) — financeiro. */
+export function useFederationGateway(id, { enabled = true } = {}) {
+  return useQuery({ queryKey: [...fedKeys.all, 'gateway', id], queryFn: () => svc.federationPayments({ action: 'gateway_status', federationId: id }), enabled: !!id && enabled });
+}
+
+/** O Pix do provedor para esta cobrança (`mode: 'static'` = o Pix da chave de sempre). */
+export function useChargeGatewayPix(chargeId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: [...fedKeys.all, 'pix', chargeId],
+    queryFn: () => svc.federationPayments({ action: 'pix', chargeId }),
+    enabled: !!chargeId && enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}

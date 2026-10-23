@@ -999,6 +999,29 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-pix-automatico',
+      flags: ['federations'],
+      title: tk('Pix com confirmação automática'),
+      summary: tk('Ligar o Mercado Pago ou o Asaas da federação para que cada cobrança fique paga sozinha quando o banco confirma.'),
+      keywords: ['federação', 'pix', 'pagamento', 'cobrança', 'confirmação automática', 'baixa automática', 'mercado pago', 'asaas', 'webhook', 'financeiro'],
+      blocks: [
+        p(tk('Sem nada configurado, a cobrança da federação usa o Pix da chave cadastrada e o financeiro confirma depois do "Já paguei". Com a confirmação automática, cada cobrança ganha um Pix próprio no provedor da federação e fica paga sozinha.')),
+        steps(
+          tk('LIGAR — na Central, Configurações → Recebimento, em "Confirmação automática", escolha o Mercado Pago ou o Asaas e cole a chave da conta da federação. A plataforma confere a chave com o provedor antes de salvar.'),
+          tk('ASAAS — o aviso de pagamento é cadastrado sozinho; se não der, a tela mostra o endereço do webhook para colar no Asaas. O Asaas exige o CPF de quem paga: ligue "Pedir o CPF na filiação" nas regras.'),
+          tk('QUEM PAGA — abre a cobrança e vê o Pix com o aviso "Confirmação automática". Pago, a filiação ativa (ou o curso, a multa, a taxa de chancela) na hora, com o mesmo aviso de sempre.'),
+          tk('NÃO CHEGOU? — "Já paguei — conferir agora" pergunta ao provedor na hora.'),
+        ),
+        list(
+          tk('A CHAVE — fica só no servidor. Ninguém a vê de novo, nem a equipe: a tela mostra só o fim dela.'),
+          tk('O DINHEIRO — cai direto na conta da federação no provedor; as taxas são as do provedor. A plataforma não intermedeia.'),
+          tk('SE O PROVEDOR CAIR — a cobrança mostra o Pix da chave da federação e o financeiro confirma como antes.'),
+          tk('ESTORNO — devolução de dinheiro é feita no provedor; a cobrança na plataforma o financeiro acerta à mão.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+      ],
+    },
+    {
       id: 'federacao-contas',
       flags: ['federations'],
       guias: ['federacao-contas'],

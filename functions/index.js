@@ -1364,6 +1364,9 @@ exports.federationAcervo = federationCallable('federationAcervo', (ctx, actor, d
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationAcervo: Storage indisponível.', err); }
   return federationAcervo.acervo({ ...ctx, bucket }, actor, data);
 }, { timeoutSeconds: 540, memory: '1GiB' });
+// Pix com baixa automática (Mercado Pago/Asaas da conta da federação) — `functions/federationPayments.js`.
+const federationPayments = require('./federationPayments');
+exports.federationPayments = federationCallable('federationPayments', federationPayments.payments);
 // Calendário oficial (agenda esportiva e institucional): só o servidor grava — `functions/federationAgenda.js`.
 const federationAgenda = require('./federationAgenda');
 exports.federationAgenda = federationCallable('federationAgenda', federationAgenda.agenda);
@@ -1750,6 +1753,20 @@ exports.federationAgendaFeed = onRequest(
       logger.error('federationAgendaFeed falhou', err);
       res.status(500).end();
     }
+  },
+);
+
+// Aviso do provedor de Pix da federação (`/api/federacao/pix/{fed}/{token}`, rewrite
+// do Hosting). Sem conta, de propósito; o corpo não é confiado — o servidor busca
+// o pagamento no provedor com a chave da federação (`federationPayments.hook`).
+exports.federationPixHook = onRequest(
+  { region: REGION, maxInstances: 5, memory: '256MiB', invoker: 'public' },
+  async (req, res) => {
+    if (req.method !== 'POST' && req.method !== 'GET') { res.status(405).end(); return; }
+    const m = String(req.path || '').match(/\/api\/federacao\/pix\/([A-Za-z0-9_-]{1,80})\/([a-f0-9]{48})$/);
+    if (!m) { res.status(404).end(); return; }
+    const status = await federationPayments.hook(fedCtx(), { fedId: m[1], token: m[2], body: req.body || {}, query: req.query || {} });
+    res.status(status).end();
   },
 );
 

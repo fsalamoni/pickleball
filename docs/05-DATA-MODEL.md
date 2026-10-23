@@ -1894,6 +1894,20 @@ arquivo mora em `federacao/{payer_uid}/…`, PDF/JPG/PNG/WebP). A única escrita
 do pagador: `open|declared` → `declared` com `declared_at`/`declared_note` e,
 opcional, `declared_proof` apontando para a PRÓPRIA pasta (re-declarar uma
 cobrança já informada só para anexar o comprovante é permitido).
+`gateway` (opcional, Bloco 6a, só o servidor): `{ provider:
+'mercadopago'|'asaas', id, payload, expires_at_ms, created_at_ms }` — o Pix
+gerado no provedor da federação (o QR a tela desenha do `payload`). Baixa
+automática grava `confirmed_by: 'gateway'`, `confirmed_by_name: 'Pix
+automático'`.
+
+### `federation_secrets/{fedId}` (Bloco 6a)
+A chave do provedor de Pix da federação: `{ federation_id, provider,
+mercadopago: { access_token }, asaas: { api_key, sandbox }, webhook_token,
+webhook_auto, updated_at_ms, updated_by }`. **Nenhuma regra** (o padrão do
+Firestore nega): nem o navegador nem o admin leem — só o servidor
+(`federationPayments`). Desligar apaga o documento. O sinal público é
+`federations.payment_gateway = { provider, enabled, since_ms }` (em
+`fedLocked()`; desligado: `{ provider: '', enabled: false, off_at_ms }`).
 
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
