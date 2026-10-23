@@ -224,6 +224,10 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   aceitou aparecer + confirmados de evento público, nome e função) — nunca
   valor, nota, conflito nem disponibilidade. Diária paga vira despesa por
   `refereeFeesAsExpenses`. Funções, situações e ids de nível são gravados.
+  Desde o `docs/50` §40: função `evaluator` (avalia a equipe do próprio evento
+  pela ficha da Central), progressão de nível (`promotionProgress`, pedido do
+  árbitro, decisão da equipe, `level_history`) e vencimento da credencial
+  configurável (`credentialStanding`), barrado no servidor e na varredura.
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da

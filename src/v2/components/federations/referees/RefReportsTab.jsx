@@ -2,7 +2,8 @@
  * Arbitragem → AVALIAÇÕES E SÚMULAS (Central): o que cada árbitro enviou
  * depois do evento e a avaliação da equipe (notas de 1 a 5 em cinco
  * critérios + comentário). Só quem atuou é avaliado; o aviso ao árbitro não
- * traz a nota — ele a vê na Minha área.
+ * traz a nota — ele a vê na Minha área. A ficha (`AvaliacaoForm`) é a mesma
+ * do AVALIADOR escalado no evento (Minha área → escalas).
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -23,7 +24,7 @@ const FILTROS = [
   { id: 'todas', label: tk('Todas') },
 ];
 
-function AvaliacaoForm({ federation, a, onFechar }) {
+export function AvaliacaoForm({ federation, a, onFechar }) {
   const [scores, setScores] = useState(() => ({ ...(a.evaluation?.scores || {}) }));
   const [comment, setComment] = useState(a.evaluation?.comment || '');
   useAvisoNaoSalvo(JSON.stringify(scores) !== JSON.stringify(a.evaluation?.scores || {}) || comment !== (a.evaluation?.comment || ''));
@@ -83,7 +84,7 @@ export default function RefReportsTab({ federation, assignmentsQ }) {
               <V2Surface variant="compacto" className="space-y-2 p-3">
                 <div className="flex flex-wrap items-start gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{a.referee_name}<AssignmentBadge status={a.status} />{a.evaluation && <V2Badge tone="ink">{t('Média {m}', { m: a.evaluation.avg })}</V2Badge>}</p>
+                    <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{a.referee_name}<AssignmentBadge status={a.status} />{a.evaluation && <V2Badge tone="ink">{t('Média {m}', { m: a.evaluation.avg })}</V2Badge>}{a.evaluation?.by_role === 'evaluator' && <V2Badge tone="neutral">{t('Por {nome} (avaliador)', { nome: a.evaluation.by_name || '' })}</V2Badge>}</p>
                     <p className="text-xs text-gray-500">{funcao(a.function)} · {a.event?.name} · {periodo(a.event)}</p>
                   </div>
                   {a.status === 'done' && <V2Button type="button" size="sm" variant={a.evaluation ? 'ghost' : 'primary'} onClick={() => setAberto(a)}><Star className="h-4 w-4" />{a.evaluation ? t('Corrigir a avaliação') : t('Avaliar')}</V2Button>}

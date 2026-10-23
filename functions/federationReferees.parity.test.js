@@ -93,4 +93,31 @@ describe('paridade: arbitragem', () => {
     expect(s.refereeFeesAsExpenses(ESCALAS)).toEqual(c.refereeFeesAsExpenses(ESCALAS));
     expect(s.refereeFeesAsExpenses(ESCALAS)).toEqual([{ date: '2026-11-08', amount_cents: 12500, category: 'referees', ref: 'a1' }]);
   });
+
+  it('vencimento da credencial e progressão de nível', () => {
+    expect(s.CREDENTIAL_ON_EXPIRE).toEqual(c.CREDENTIAL_ON_EXPIRE);
+    expect(s.CREDENTIAL_FUNCTIONS).toEqual(c.CREDENTIAL_FUNCTIONS);
+    expect(s.CREDENTIAL_DEFAULTS).toEqual(c.CREDENTIAL_DEFAULTS);
+    expect(s.CREDENTIAL_STANDING).toEqual(c.CREDENTIAL_STANDING);
+    expect(s.PROMOTION_CHECKS).toEqual(c.PROMOTION_CHECKS);
+    const pols = [undefined, { required: true, grace_days: 10, warn_days: 15, on_expire: 'block_and_release' }, { required: true, on_expire: 'block_new', grace_days: 'x' }];
+    pols.forEach((p) => {
+      expect(s.normalizeCredentialPolicy(p)).toEqual(c.normalizeCredentialPolicy(p));
+      [null, '', '2026-10-01', '2026-10-20', '2027-01-01'].forEach((u) => ['2026-10-05', '2026-10-12', '2026-10-30'].forEach((hoje) => {
+        const a = s.credentialStanding(u, { credential_policy: p }, hoje);
+        expect(a).toEqual(c.credentialStanding(u, { credential_policy: p }, hoje));
+        expect(s.credentialBlocker(a)).toBe(c.credentialBlocker(a));
+      }));
+    });
+    const creds = [{ kind: 'referee', federation_id: 'f', valid_until: '2026-12-01' }, { kind: 'referee', federation_id: 'f', status: 'revoked', valid_until: '2030-01-01' }, { kind: 'referee', federation_id: 'g' }];
+    expect(s.refereeCredentialUntil(creds, 'f')).toBe(c.refereeCredentialUntil(creds, 'f'));
+    expect(s.refereeCredentialUntil(creds, 'g')).toBe(c.refereeCredentialUntil(creds, 'g'));
+    const regra = { promotion: { l1: { events: 1, avg: 3.5, months: 1 }, certified: { months: 12 } } };
+    expect(s.normalizeRefereeRules(regra)).toEqual(c.normalizeRefereeRules(regra));
+    const lista = ESCALAS.map((a) => ({ ...a, status: 'done', federation_id: 'f' }));
+    [{ ...ARB, federation_id: 'f', since: '2026-01-01' }, { ...ARB, level: 'l2', level_since: '2026-10-01' }, { ...ARB, level: 'certified' }].forEach((r) => ['2026-10-22', '2027-03-01'].forEach((hoje) => {
+      expect(s.promotionProgress(r, lista, regra, hoje)).toEqual(c.promotionProgress(r, lista, regra, hoje));
+    }));
+    [['2026-01-31', '2026-02-28'], ['2025-05-10', '2026-10-22']].forEach(([a, b]) => expect(s.monthsBetween(a, b)).toBe(c.monthsBetween(a, b)));
+  });
 });

@@ -3633,3 +3633,87 @@ competições (permissão `competitions`) e o admin (`canManageHosting`; na regr
   `federacao-pub-sedes` e `federacao-pub-copa`.
 - **Guias:** `federacao-sedes` e `federacao-copa`.
 - **Artigo:** `federacao-sedes-copa`.
+
+## 40. Arbitragem: avaliador, progressão de nível e vencimento da credencial (rodada 3, Bloco 4a, 2026-10-23)
+
+Tudo dentro do módulo `referees` (§22), sem coleção nova: campos opcionais em
+`federation_referees`, em `federation_assignments.evaluation` e em
+`federations.referee_rules`, todos gravados só por `federationReferees`. A
+régua mora em `domain/referees.js` com cópia em
+`functions/federationRefereesPolicy.js` (paridade em
+`federationReferees.parity.test.js`).
+
+### 40.1 Avaliador de arbitragem
+
+- Função nova `evaluator` ("Avaliador(a) de arbitragem"), escalada como
+  qualquer outra (cobertura, alertas, diária).
+- O avaliador confirmado avalia, a partir do início do evento, a equipe de
+  arbitragem confirmada **daquele evento** (`event_key`), pela mesma ficha da
+  Central (`AvaliacaoForm`): Minha área → escalas → **"Avaliar a equipe"**
+  (`evaluator_crew` lista quem atuou; `evaluate` grava). Não avalia a si mesmo
+  nem outro avaliador, só avalia escala `done` e **não corrige a avaliação de
+  outra pessoa** (a equipe pode sempre). A avaliação guarda
+  `by_role: 'staff' | 'evaluator'`, e a Central mostra "Por {nome}
+  (avaliador)".
+
+### 40.2 Progressão de nível
+
+- **Regras e níveis → Progressão de nível** (`referee_rules.promotion`): para
+  cada nível acima do primeiro, o que o árbitro precisa no nível de baixo —
+  atuações (`events`), média mínima das avaliações (`avg`, 1 a 5) e meses no
+  nível (`months`). Em branco, sem requisito: a equipe decide.
+- A conta é `promotionProgress`: conta as atuações `done` e as avaliações
+  desde `level_since` (na falta, `since`). O servidor guarda uma cópia em
+  `federation_referees.promotion_progress` (refeita a cada escala fechada,
+  avaliação, troca de nível e regra) porque o árbitro não lê as regras.
+- O árbitro vê quanto falta (Minha área → "Nível, credencial e
+  disponibilidade") e, cumprindo (ou sem requisito), **pede a promoção**
+  (`promotion_request`, um pedido aberto por vez; avisa a equipe).
+- **Quem promove é sempre a equipe**: no Quadro, "Promover" abre o cadastro no
+  nível pedido; "Recusar" pede motivo (`promotion_decline`, avisa o árbitro).
+  Toda troca de nível grava `level_since`, limpa o pedido, entra em
+  `level_history` (até 20: de, para, quando, quem, motivo, se cumpria) e avisa
+  o árbitro.
+
+### 40.3 Vencimento da credencial
+
+- **Regras e níveis → Vencimento da credencial**
+  (`referee_rules.credential_policy`): exigir credencial de árbitro em dia
+  (`required`, padrão não), avisar antes (`warn_days`, até 120), carência
+  (`grace_days`, até 180) e o que acontece depois (`on_expire`: `warn` só
+  avisa; `block_new` não convoca; `block_and_release` não convoca e tira das
+  escalas futuras).
+- A validade é a da **melhor credencial de árbitro ativa** da pessoa naquela
+  federação (`refereeCredentialUntil`), não só as ligadas ao cadastro:
+  renovar é passar num curso de reciclagem, que emite credencial nova.
+  `credentialStanding` dá `ok | expiring | grace | lapsed | none`.
+- **Vale no servidor**: com `required` e `on_expire` diferente de `warn`, a
+  convocação, a substituição e a confirmação do árbitro são recusadas nas
+  funções de arbitragem (`CREDENTIAL_FUNCTIONS`: árbitro, árbitro geral, juiz
+  de linha, avaliador).
+- **Varredura diária**: avisa uma vez por validade quem está para vencer
+  (`cred_warned_for`); com `block_and_release`, cancela as escalas futuras em
+  aberto (`cancel_reason: 'Credencial de árbitro vencida.'`), avisa o árbitro
+  e a equipe, uma vez por validade (`cred_released_for`).
+- O cadastro guarda `credential_until` e `credential_policy` para o árbitro
+  ver a situação; a Central mostra o selo da credencial no Quadro.
+
+### 40.4 O que não pode regredir
+
+111. Avaliador só avalia a equipe confirmada do próprio evento, nunca a si
+     mesmo, e não sobrescreve avaliação de outra pessoa (`evaluate` confere no
+     servidor).
+112. Promoção é decisão da equipe: o árbitro só pede, e o pedido exige que os
+     requisitos estejam cumpridos (`met !== false`). Toda troca de nível vai
+     para `level_history` e avisa o árbitro.
+113. O bloqueio da credencial vale no servidor (`assign`, `reassign`,
+     `respond`) e na varredura; `required` desligado nunca barra nada.
+114. `evaluator`, `on_expire` (`warn|block_new|block_and_release`) e as chaves
+     de `promotion` (ids de nível) são gravados: nunca os renomeie.
+
+### 40.5 Âncoras e guias
+
+- **Âncoras:** `federacao-arbitragem-credencial`,
+  `federacao-arbitragem-progressao`.
+- **Guia:** `federacao-arbitragem` (passo da seção cita as regras novas).
+- **Artigo:** `federacao-arbitragem` (avaliador, progressão, vencimento).

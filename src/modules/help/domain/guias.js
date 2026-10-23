@@ -3039,7 +3039,7 @@ const GUIAS_BASE = [
         target: 'federacao-secao-arbitragem',
         advanceOn: 'click',
         title: tk('Arbitragem'),
-        body: tk('Aparece com o módulo "Arbitragem" ligado, para a diretoria de arbitragem e para a presidência. Em "Regras e níveis" ficam os níveis, quantos árbitros cada função pede, a diária e o prazo de resposta.'),
+        body: tk('Aparece com o módulo "Arbitragem" ligado, para a diretoria de arbitragem e para a presidência. Em "Regras e níveis" ficam os níveis, quantos árbitros cada função pede, a diária, o prazo de resposta, o que cada nível exige para promoção e o que acontece quando a credencial vence.'),
       },
       {
         id: 'quadro',

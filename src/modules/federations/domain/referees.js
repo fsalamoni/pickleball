@@ -20,6 +20,7 @@ export const REFEREE_FUNCTION = Object.freeze({
   LINE_JUDGE: 'line_judge',
   TECHNICAL_DELEGATE: 'technical_delegate',
   TOURNAMENT_DIRECTOR: 'tournament_director',
+  EVALUATOR: 'evaluator',
 });
 export const REFEREE_FUNCTION_LABELS = Object.freeze({
   referee: tk('Árbitro(a)'),
@@ -27,6 +28,7 @@ export const REFEREE_FUNCTION_LABELS = Object.freeze({
   line_judge: tk('Juiz(a) de linha'),
   technical_delegate: tk('Delegado(a) técnico(a)'),
   tournament_director: tk('Diretor(a) do torneio'),
+  evaluator: tk('Avaliador(a) de arbitragem'),
 });
 export const REFEREE_FUNCTIONS = Object.freeze(Object.values(REFEREE_FUNCTION));
 
@@ -66,9 +68,32 @@ export const SCALABLE_EVENT_KINDS = Object.freeze(['competition', 'selection', '
 
 export const REFEREE_LIMITS = Object.freeze({
   UNAVAILABLE_MAX: 60, REPORT_MAX: 4000, NOTES_MAX: 2000, COMMENT_MAX: 1000, CONFLICT_MAX: 500, REASON_MAX: 500,
-  ASSIGN_BATCH_MAX: 20, LEVELS_MAX: 8, LEVEL_LABEL_MAX: 40, NEED_MAX: 50, FEE_MAX_CENTS: 1000000, RESPOND_DAYS_MAX: 30, CREDENTIALS_MAX: 10, EVENT_DAYS_MAX: 31,
+  ASSIGN_BATCH_MAX: 20, GRACE_DAYS_MAX: 180, WARN_DAYS_MAX: 120, PROMO_EVENTS_MAX: 500, PROMO_MONTHS_MAX: 120, LEVEL_HISTORY_MAX: 20, LEVELS_MAX: 8, LEVEL_LABEL_MAX: 40, NEED_MAX: 50, FEE_MAX_CENTS: 1000000, RESPOND_DAYS_MAX: 30, CREDENTIALS_MAX: 10, EVENT_DAYS_MAX: 31,
 });
 export const RESPOND_DAYS_DEFAULT = 3;
+
+/**
+ * O que acontece quando a credencial de árbitro vence (passada a carência):
+ * só avisa; não recebe convocação nova; ou também perde as escalas futuras
+ * em aberto (a varredura cancela e avisa). Gravado: nunca renomeie.
+ */
+export const CREDENTIAL_ON_EXPIRE = Object.freeze({ WARN: 'warn', BLOCK_NEW: 'block_new', BLOCK_AND_RELEASE: 'block_and_release' });
+export const CREDENTIAL_ON_EXPIRE_LABELS = Object.freeze({
+  warn: tk('Só avisar'),
+  block_new: tk('Não recebe convocação nova'),
+  block_and_release: tk('Não recebe convocação e perde as escalas futuras'),
+});
+/** As funções que exigem credencial de árbitro (diretor e delegado técnico não). */
+export const CREDENTIAL_FUNCTIONS = Object.freeze(['referee', 'head_referee', 'line_judge', 'evaluator']);
+export const CREDENTIAL_DEFAULTS = Object.freeze({ required: false, grace_days: 0, warn_days: 30, on_expire: 'warn' });
+/** A situação da credencial de árbitro (a conta é `credentialStanding`). */
+export const CREDENTIAL_STANDING = Object.freeze({ OK: 'ok', EXPIRING: 'expiring', GRACE: 'grace', LAPSED: 'lapsed', NONE: 'none' });
+export const CREDENTIAL_STANDING_LABELS = Object.freeze({
+  ok: tk('Credencial em dia'), expiring: tk('Credencial vence em breve'), grace: tk('Credencial vencida (na carência)'), lapsed: tk('Credencial vencida'), none: tk('Sem credencial de árbitro'),
+});
+/** Os critérios para subir de nível (gravados em `promotion[nível]`). */
+export const PROMOTION_CHECKS = Object.freeze(['events', 'avg', 'months']);
+export const PROMOTION_CHECK_LABELS = Object.freeze({ events: tk('Atuações no nível atual'), avg: tk('Média das avaliações'), months: tk('Meses no nível atual') });
 
 /* --------------------------------------------------------------- datas -- */
 
@@ -128,7 +153,40 @@ export function normalizeRefereeRules(raw) {
     needs: porFuncao(r.needs, (v) => (v == null || v === '' ? undefined : inteiro(v, 0, REFEREE_LIMITS.NEED_MAX))),
     respond_days: r.respond_days == null || r.respond_days === '' ? RESPOND_DAYS_DEFAULT : inteiro(r.respond_days, 1, REFEREE_LIMITS.RESPOND_DAYS_MAX),
     crew_visible: r.crew_visible === true,
+    credential_policy: normalizeCredentialPolicy(r.credential_policy),
+    promotion: normalizePromotion(r.promotion, ids),
   };
+}
+
+/** A regra do vencimento da credencial, completa (o que falta vale o padrão). */
+export function normalizeCredentialPolicy(raw) {
+  const p = raw && typeof raw === 'object' ? raw : {};
+  return {
+    required: p.required === true,
+    grace_days: p.grace_days == null || p.grace_days === '' ? CREDENTIAL_DEFAULTS.grace_days : inteiro(p.grace_days, 0, REFEREE_LIMITS.GRACE_DAYS_MAX),
+    warn_days: p.warn_days == null || p.warn_days === '' ? CREDENTIAL_DEFAULTS.warn_days : inteiro(p.warn_days, 0, REFEREE_LIMITS.WARN_DAYS_MAX),
+    on_expire: Object.values(CREDENTIAL_ON_EXPIRE).includes(p.on_expire) ? p.on_expire : CREDENTIAL_DEFAULTS.on_expire,
+  };
+}
+
+/**
+ * Os requisitos para CHEGAR a cada nível (menos o primeiro): atuações e
+ * meses no nível de baixo e média mínima das avaliações (1 a 5, uma casa).
+ * Nível sem nenhum requisito sai da lista (a equipe decide sozinha).
+ */
+function normalizePromotion(raw, ids) {
+  const fonte = raw && typeof raw === 'object' ? raw : {};
+  const out = {};
+  ids.slice(1).forEach((id) => {
+    const r = fonte[id];
+    if (!r || typeof r !== 'object') return;
+    const events = r.events == null || r.events === '' ? 0 : inteiro(r.events, 0, REFEREE_LIMITS.PROMO_EVENTS_MAX);
+    const months = r.months == null || r.months === '' ? 0 : inteiro(r.months, 0, REFEREE_LIMITS.PROMO_MONTHS_MAX);
+    const n = Number(r.avg);
+    const avg = Number.isFinite(n) && n > 0 ? Math.round(Math.min(5, n) * 10) / 10 : 0;
+    if (events || months || avg) out[id] = { events, avg, months };
+  });
+  return out;
 }
 
 /** Valida o que a equipe salva em Regras/níveis. */
@@ -348,6 +406,85 @@ export function suggestReferees({ referees = [], assignments = [], event, fn, ru
     })
     .filter(Boolean)
     .sort((a, b) => (a.warnings.length > 0) - (b.warnings.length > 0) || b.rank - a.rank || a.acts - b.acts || String(a.referee.name || '').localeCompare(String(b.referee.name || ''), 'pt-BR'));
+}
+
+/* ------------------------------------------- credencial e progressão -- */
+
+const diasEntre = (de, ate) => {
+  if (!isIsoDate(de) || !isIsoDate(ate)) return 0;
+  const ms = (iso) => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  return Math.round((ms(ate) - ms(de)) / 86400000);
+};
+/** Meses inteiros completos de `de` até `ate`. */
+export function monthsBetween(de, ate) {
+  if (!isIsoDate(de) || !isIsoDate(ate) || ate < de) return 0;
+  const [y1, m1, d1] = de.split('-').map(Number);
+  const [y2, m2, d2] = ate.split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
+}
+
+/**
+ * Até quando vale a credencial de árbitro da pessoa nesta federação: a
+ * MELHOR entre as ativas (uma sem validade vale para sempre ⇒ '').
+ * `null` = nenhuma. Renovar é passar num curso de reciclagem (credencial
+ * nova), por isso conta toda credencial de árbitro, não só as ligadas.
+ */
+export function refereeCredentialUntil(credentials = [], fedId) {
+  const validas = (credentials || []).filter((c) => c && c.kind === 'referee' && (!fedId || c.federation_id === fedId) && (c.status || 'active') === 'active');
+  if (!validas.length) return null;
+  if (validas.some((c) => !isIsoDate(c.valid_until))) return '';
+  return validas.map((c) => c.valid_until).sort().pop();
+}
+
+/**
+ * A situação da credencial hoje, pela regra da federação. `blocks` = não
+ * recebe convocação nova (nem confirma); `releases` = a varredura tira das
+ * escalas futuras em aberto. Sem a exigência ligada, nada bloqueia.
+ */
+export function credentialStanding(until, rules, hoje = isoDateBR()) {
+  const p = normalizeRefereeRules(rules).credential_policy;
+  const base = { required: p.required, until: until == null ? null : until, grace_until: '', days_left: null, blocks: false, releases: false };
+  if (until == null) return { ...base, state: CREDENTIAL_STANDING.NONE, blocks: p.required && p.on_expire !== CREDENTIAL_ON_EXPIRE.WARN };
+  if (until === '') return { ...base, state: CREDENTIAL_STANDING.OK };
+  const left = diasEntre(hoje, until);
+  if (left >= 0) return { ...base, days_left: left, state: left <= p.warn_days ? CREDENTIAL_STANDING.EXPIRING : CREDENTIAL_STANDING.OK };
+  const grace = addDaysISO(until, p.grace_days);
+  if (p.grace_days > 0 && grace >= hoje) return { ...base, days_left: left, grace_until: grace, state: CREDENTIAL_STANDING.GRACE };
+  const corta = p.required && p.on_expire !== CREDENTIAL_ON_EXPIRE.WARN;
+  return { ...base, days_left: left, grace_until: p.grace_days > 0 ? grace : '', state: CREDENTIAL_STANDING.LAPSED, blocks: corta, releases: p.required && p.on_expire === CREDENTIAL_ON_EXPIRE.BLOCK_AND_RELEASE };
+}
+
+/** Por que a credencial impede a convocação (ou a confirmação), ou ''. */
+export function credentialBlocker(standing) {
+  if (!standing || !standing.blocks) return '';
+  return standing.state === CREDENTIAL_STANDING.NONE
+    ? t('A federação exige credencial de árbitro em dia, e esta pessoa não tem.')
+    : t('A credencial de árbitro desta pessoa venceu: renove antes de convocar.');
+}
+
+/**
+ * Quanto falta para o próximo nível: atuações (com "atuou") e meses desde
+ * que chegou ao nível atual (`level_since`, senão `since`) e a média das
+ * avaliações dessas atuações. `met` = cumpre todos os requisitos (null
+ * quando o próximo nível não tem requisito — a equipe decide).
+ */
+export function promotionProgress(referee = {}, assignments = [], rules, hoje = isoDateBR()) {
+  const regra = normalizeRefereeRules(rules);
+  const rank = regra.levels.findIndex((l) => l.id === referee.level);
+  const next = rank >= 0 ? regra.levels[rank + 1] : null;
+  if (!next) return { next: null, checks: [], met: null };
+  const desde = isIsoDate(referee.level_since) ? referee.level_since : (isIsoDate(referee.since) ? referee.since : '');
+  const feitas = (assignments || []).filter((a) => a && a.status === ASSIGNMENT_STATUS.DONE && (!referee.user_id || a.referee_uid === referee.user_id)
+    && (!referee.federation_id || a.federation_id === referee.federation_id) && (!desde || String((a.event && a.event.date) || '') >= desde));
+  const notas = feitas.map((a) => (a.evaluation ? evaluationAverage(a.evaluation) : 0)).filter((n) => n > 0);
+  const tem = {
+    events: feitas.length,
+    avg: notas.length ? Math.round((notas.reduce((s, n) => s + n, 0) / notas.length) * 10) / 10 : null,
+    months: desde ? monthsBetween(desde, hoje) : null,
+  };
+  const req = regra.promotion[next.id] || null;
+  const checks = req ? PROMOTION_CHECKS.filter((k) => req[k] > 0).map((k) => ({ key: k, need: req[k], have: tem[k], ok: tem[k] != null && tem[k] >= req[k] })) : [];
+  return { next: { id: next.id, label: next.label }, since: desde, have: tem, checks, met: req ? checks.every((c) => c.ok) : null };
 }
 
 /* ------------------------------------------------- avaliação e súmula -- */
