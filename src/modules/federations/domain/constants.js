@@ -67,6 +67,7 @@ export const FED_COLLECTIONS = Object.freeze({
   cupTeams: 'federation_cup_teams',
   nationalLinks: 'federation_national_links',
   dues: 'federation_dues',
+  repasses: 'federation_repasses',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -418,6 +419,7 @@ export const CHARGE_STATUS_LABELS = Object.freeze({
 export const CHARGE_ORIGIN = Object.freeze({
   MEMBERSHIP: 'membership',
   RENEWAL: 'renewal',
+  UPGRADE: 'upgrade',
   COURSE: 'course',
   FINE: 'fine',
   SANCTION: 'sanction',
@@ -426,6 +428,7 @@ export const CHARGE_ORIGIN = Object.freeze({
 export const CHARGE_ORIGIN_LABELS = Object.freeze({
   membership: tk('Filiação'),
   renewal: tk('Renovação'),
+  upgrade: tk('Troca de plano'),
   course: tk('Curso'),
   fine: tk('Multa'),
   sanction: tk('Taxa de chancela'),

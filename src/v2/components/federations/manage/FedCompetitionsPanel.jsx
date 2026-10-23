@@ -33,6 +33,7 @@ import { useFederationTournamentReports, useSanctionFees } from '@/modules/feder
 import DirectorReportForm from '../competitions/DirectorReportForm';
 import FinalCircuitDialog from '../competitions/FinalCircuitDialog';
 import PrizeParityNote from '../competitions/PrizeParityNote';
+import DuprSheetButton from '../competitions/DuprSheetButton';
 
 const TIERS = Object.values(SANCTION_TIER).map((v) => ({ value: v, label: SANCTION_TIER_LABELS[v] }));
 
@@ -170,6 +171,7 @@ function TorneioRow({ tournament: tt, federation, fee, report }) {
           )}
           {st.approved && report && <V2Button type="button" size="sm" variant="ghost" onClick={() => setVendoRelatorio((v) => !v)}><FileText className="h-4 w-4" />{vendoRelatorio ? t('Fechar relatório') : t('Ver relatório')}</V2Button>}
           {st.approved && report && <V2Button type="button" size="sm" variant="ghost" onClick={() => setFinal(true)}><Medal className="h-4 w-4" />{t('Final do circuito')}</V2Button>}
+          {st.approved && <DuprSheetButton tournament={tt} />}
           {st.approved && <V2Button type="button" size="sm" variant="danger" onClick={() => setAcao('revoke')}><Ban className="h-4 w-4" />{t('Revogar')}</V2Button>}
         </div>
         {taxa === 'open' && st.pending && <p className="text-xs text-gray-500">{t('O "Chancelar" libera quando o financeiro confirmar o Pix da taxa (ou dispensá-la) em Financeiro → Cobranças.')}</p>}

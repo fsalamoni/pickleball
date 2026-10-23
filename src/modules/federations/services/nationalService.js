@@ -37,6 +37,17 @@ export async function listDuesReceivable(confId) {
   return (await porCampo(C.dues, 'conf_id', confId)).sort(porAno);
 }
 
+/* Repasses da cobrança dividida (Bloco 6d): o que esta federação repassa, e o que a confederação recebe. */
+const porCriacao = (a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0);
+export async function listRepassesOut(fedId) {
+  return (await porCampo(C.repasses, 'federation_id', fedId)).sort(porCriacao);
+}
+/** A consulta leva o destino: a regra só deixa a confederação ler os repasses que vão para ela. */
+export async function listRepassesIn(confId) {
+  return (await ler(query(collection(db, C.repasses), where('to_id', '==', confId), where('to', '==', 'confederation')))).sort(porCriacao);
+}
+export const splitAction = (repasseId, action, reason = '') => chamar('federationSplit', { repasseId, action, reason });
+
 /** As transferências que esperam (ou esperaram) a homologação desta confederação. */
 export async function listHomologations(confId) {
   return (await porCampo(C.transfers, 'homologation_by', confId)).sort(recentes);

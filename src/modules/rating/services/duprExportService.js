@@ -12,12 +12,12 @@
  * na lista de exportação) e nas linhas de auditoria correspondentes.
  */
 
-import { collection, doc, getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS } from '@/modules/tournament/domain/constants';
-import { normalizeExportMatches, buildExportProfileIndex } from '../domain/duprMatchExport.js';
+import { normalizeExportMatches, buildExportProfileIndex, tournamentDuprExport, tournamentMatchUids } from '../domain/duprMatchExport.js';
 import { EXPORT_STATUS, buildLedgerUpserts, buildQueueUpserts } from '../domain/duprReconcile.js';
 
 /** Ação de auditoria por situação registrada no ledger. */
@@ -251,4 +251,26 @@ async function commitUpserts(upserts) {
     });
     await batch.commit();
   }
+}
+
+/**
+ * A planilha DUPR de UM torneio chancelado (rodada 3, Bloco 6c), para a equipe
+ * de competições da federação. Lê só o que ela pode ler: os jogos e as
+ * inscrições do torneio (leitura pública) e os perfis públicos de quem jogou
+ * (`athlete_profiles`, onde está o ID DUPR). Uma igualdade por consulta, sem
+ * índice composto; o filtro de situação é em memória. Não grava nada.
+ */
+export async function loadTournamentDuprExport(tournamentId) {
+  const [tSnap, matchesSnap, regsSnap] = await Promise.all([
+    getDoc(doc(db, 'tournaments', tournamentId)),
+    getDocs(query(collection(db, 'tournament_matches'), where('tournament_id', '==', tournamentId))),
+    getDocs(query(collection(db, 'tournament_registrations'), where('tournament_id', '==', tournamentId))),
+  ]);
+  const tournament = tSnap.exists() ? { id: tSnap.id, ...tSnap.data() } : { id: tournamentId };
+  const matches = matchesSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((m) => FINISHED_STATUSES.includes(m.status));
+  const regById = new Map(regsSnap.docs.map((d) => [d.id, d.data()]));
+  const uids = tournamentMatchUids(matches, regById);
+  const perfis = await Promise.all(uids.map((uid) => getDoc(doc(db, 'athlete_profiles', uid))));
+  const profilesById = new Map(perfis.filter((s) => s.exists()).map((s) => [s.id, s.data()]));
+  return { tournament, ...tournamentDuprExport({ tournament, matches, regById, profilesById }) };
 }

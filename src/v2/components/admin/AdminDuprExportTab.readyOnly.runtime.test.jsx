@@ -74,6 +74,7 @@ vi.mock('@/modules/rating/domain/duprMatchExport', () => ({
   buildDuprCsv: () => '',
   entriesToRows: (e) => e,
   duprCsvFilename: () => 'dupr.csv',
+  sentByFederation: () => false,
 }));
 
 const { default: AdminDuprExportTab } = await import('./AdminDuprExportTab.jsx');

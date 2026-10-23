@@ -81,7 +81,7 @@ export const BUDGET_LINE_KEYS = Object.freeze([
 ]);
 
 /** A cobrança paga (pela `origin`) → a categoria de receita. Origem nova cai em "Outras receitas". */
-export const CHARGE_ORIGIN_CATEGORY = Object.freeze({ membership: 'memberships', renewal: 'memberships', course: 'courses', fine: 'other_income', sanction: 'events' });
+export const CHARGE_ORIGIN_CATEGORY = Object.freeze({ membership: 'memberships', renewal: 'memberships', upgrade: 'memberships', course: 'courses', fine: 'other_income', sanction: 'events' });
 
 export const BUDGET_STATUS = Object.freeze({ DRAFT: 'draft', SUBMITTED: 'submitted', APPROVED: 'approved', PUBLISHED: 'published' });
 export const BUDGET_STATUS_LABELS = Object.freeze({ draft: tk('Rascunho'), submitted: tk('Enviado para aprovação'), approved: tk('Aprovado'), published: tk('Publicado') });

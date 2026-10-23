@@ -7,6 +7,7 @@ import { DOC_KIND, PLAN_BILLING, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_VALIDITY } fr
 import { normalizeOtherDocs, requiredDocs } from './privateData.js';
 import { normalizeDocValidity } from './regularity.js';
 import { MEMBER_TYPE_ID_RE, isOrgEntity, memberTypeCatalog, memberTypeOf, planTypeFields } from './memberTypes.js';
+import { validateSplit } from './split.js';
 
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
 const intOr = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v !== null ? Math.trunc(Number(v)) : d);
@@ -61,6 +62,9 @@ export function validatePlanInput(input = {}, { catalog = memberTypeCatalog(), c
   let requires_docs = [...new Set((Array.isArray(input.requires_docs) ? input.requires_docs : []).filter((k) => Object.values(DOC_KIND).includes(k) && (!entidade || k === DOC_KIND.OTHER)))];
   if (other_docs.length && !requires_docs.includes(DOC_KIND.OTHER)) requires_docs = [...requires_docs, DOC_KIND.OTHER];
   if (!other_docs.length && requires_docs.includes(DOC_KIND.OTHER)) errors.other_docs = entidade ? t('Diga qual é o documento (ex.: estatuto social).') : t('Diga qual é o outro documento (ex.: exame de vista).');
+  // Bloco 6d: a parte repassada ao clube (só pessoa: entidade não representa clube) e à confederação.
+  const repasse = validateSplit({ club_pct: entidade ? 0 : input.split?.club_pct, confederation_pct: input.split?.confederation_pct });
+  if (!repasse.ok) Object.assign(errors, repasse.errors);
   return {
     ok: Object.keys(errors).length === 0,
     errors,
@@ -76,6 +80,7 @@ export function validatePlanInput(input = {}, { catalog = memberTypeCatalog(), c
       other_docs,
       // Bloco 1: quantos meses vale cada documento exigido (sem entrada = não vence).
       doc_validity: normalizeDocValidity(input.doc_validity, requiredDocs({ requires_docs, other_docs }).map((d) => d.key)),
+      split: repasse.value,
     },
   };
 }

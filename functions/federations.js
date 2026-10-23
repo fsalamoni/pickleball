@@ -38,6 +38,7 @@ const O = require('./federationOrgMembers.js');
 const { resolveMemberType } = require('./federationMemberTypes.js');
 const RG = require('./federationRegularityPolicy.js');
 const IP = require('./federationInsurancePolicy.js');
+const SP = require('./federationSplitPolicy.js');
 
 class FederationError extends Error {
   constructor(code, message) { super(message); this.code = code; this.name = 'FederationError'; }
@@ -331,7 +332,7 @@ async function membership(ctx, actor, data) {
   const fed = await federacao(ctx, data.federationId);
   const hoje = m.isoDateBR(ctx.now);
   const acao = texto(data.action, 30);
-  const propria = ['request', 'renew', 'cancel', 'invite_decline', 'represent'].includes(acao);
+  const propria = ['request', 'renew', 'upgrade', 'cancel', 'invite_decline', 'represent'].includes(acao);
   if (!propria) await exigePerm(ctx, fed.id, actor, 'members');
   const reason = texto(data.reason, 500);
   const link = `/perfil?secao=federacoes`;
@@ -435,6 +436,30 @@ async function membership(ctx, actor, data) {
     const charge = novaCobranca(ctx, batch, { fed, member, memberId: memberRef.id, plan: p, origin: 'renewal', hoje, amount: valor });
     await batch.commit();
     return { ok: true, chargeId: charge.id };
+  }
+
+  // TROCA DE PLANO (Bloco 6d): para um plano mais caro do mesmo período e tipo, pagando só a diferença.
+  // A troca vale quando o pagamento é confirmado (`fecharCobranca`); a validade não muda.
+  if (acao === 'upgrade') {
+    const alvo = await plano(ctx, fed.id, data.planId).catch(() => null);
+    const bloqueio = SP.upgradeBlocker(member, p, alvo && { ...alvo, federation_id: alvo.federation_id || fed.id });
+    if (bloqueio) falha('failed-precondition', bloqueio);
+    const idade = await idadeDoMembro(ctx, member, hoje);
+    if (alvo.age_min != null && (idade == null || idade < alvo.age_min)) falha('failed-precondition', 'Este plano exige idade mínima maior.');
+    if (alvo.age_max != null && (idade == null || idade > alvo.age_max)) falha('failed-precondition', 'Este plano tem idade máxima menor.');
+    const [atual, novo] = await Promise.all([
+      Number(p.price_cents) > 0 ? valorDoPlano(ctx, fed, member, p, hoje) : 0,
+      valorDoPlano(ctx, fed, member, alvo, hoje),
+    ]);
+    const dif = SP.upgradeDifference(atual, novo);
+    if (!dif.ok) falha('failed-precondition', dif.error);
+    const abertas = await ctx.db.collection(C.charges).where('member_id', '==', memberRef.id).get();
+    if (abertas.docs.some((d) => ['open', 'declared'].includes(d.data().status) && d.data().origin === 'upgrade')) falha('already-exists', 'Já existe uma troca de plano esperando o pagamento.');
+    const batch = ctx.db.batch();
+    const charge = novaCobranca(ctx, batch, { fed, member, memberId: memberRef.id, plan: alvo, origin: 'upgrade', hoje, amount: dif.diff_cents, extra: { from_plan_id: p.id, from_plan_name: p.name } });
+    await batch.commit();
+    await auditoria(ctx, actor, 'federation_membership_upgrade', { federation_id: fed.id, user_id: uid, member_id: memberRef.id, from: p.id, to: alvo.id, amount_cents: dif.diff_cents });
+    return { ok: true, chargeId: charge.id, amountCents: dif.diff_cents };
   }
 
   if (acao === 'cancel') {
@@ -739,6 +764,42 @@ async function chargeConfirm(ctx, actor, data) {
   return fecharCobranca(ctx, actor, { fed, snap, charge, action: data.action, note: texto(data.note, 300) });
 }
 
+const REPASSES = 'federation_repasses';
+
+/**
+ * COBRANÇA DIVIDIDA (Bloco 6d): a cobrança de filiação paga anota o que é do
+ * clube (o que o filiado representa, se filiado à federação) e da confederação
+ * (`fed.national_body`), pelas porcentagens do plano. Anota "a repassar"; o
+ * financeiro marca "Repassado" (`federationSplit.js`). Ids fixos: confirmar de
+ * novo não duplica. Um erro aqui não desfaz o pagamento já confirmado.
+ */
+async function anotarRepasses(ctx, { fed, charge, member, plan, hoje }) {
+  try {
+    if (!SP.SPLIT_ORIGINS.includes(charge.origin) || !plan || !member) return;
+    const split = SP.normalizeSplit(plan.split);
+    if (!split.club_pct && !split.confederation_pct) return;
+    let club = null;
+    if (split.club_pct && member.represented_club_id) {
+      const aff = await ctx.db.collection('federation_affiliations').doc(`${fed.id}_club_${member.represented_club_id}`).get();
+      if (aff.exists && aff.data().status === 'approved') club = { id: member.represented_club_id, name: aff.data().org_name || '' };
+    }
+    const nb = fed.national_body;
+    const confederation = split.confederation_pct && nb && nb.id ? { id: nb.id, name: nb.name || nb.acronym || '' } : null;
+    const { shares } = SP.splitShares(charge.amount_cents, split, { club, confederation });
+    if (!shares.length) return;
+    const batch = ctx.db.batch();
+    shares.forEach((s) => batch.set(ctx.db.collection(REPASSES).doc(SP.repasseId(charge.id, s.to)), {
+      federation_id: fed.id, federation_name: fed.name || '', federation_acronym: fed.acronym || '',
+      charge_id: charge.id, origin: charge.origin, plan_name: texto(plan.name, 80), base_cents: Math.trunc(Number(charge.amount_cents) || 0),
+      ...s, status: SP.REPASSE_STATUS.PENDING, paid_at: null, paid_by: null, charge_paid_at: hoje,
+      created_at_ms: ctx.now, history: [],
+    }));
+    await batch.commit();
+  } catch (e) {
+    if (ctx.logger) ctx.logger.warn('federations: repasses não anotados', { charge: charge.id, erro: String(e && e.message) });
+  }
+}
+
 /**
  * Os EFEITOS de confirmar/cancelar uma cobrança, por origem — um caminho só,
  * usado pelo financeiro (`chargeConfirm`) e pela baixa automática do Pix
@@ -808,14 +869,41 @@ async function fecharCobranca(ctx, actor, { fed, snap, charge, action, note = ''
 
   if (!memberRef) falha('failed-precondition', 'Esta cobrança não está ligada a uma filiação.');
   const p = await plano(ctx, fed.id, charge.plan_id);
+
+  // TROCA DE PLANO paga: o plano muda, a validade fica. Filiação que venceu ou foi suspensa no meio não troca.
+  if (charge.origin === 'upgrade') {
+    let antes = null;
+    await ctx.db.runTransaction(async (tr) => {
+      const ms = await tr.get(memberRef);
+      if (!ms.exists) falha('not-found', 'A filiação desta cobrança não existe mais.');
+      antes = { id: ms.id, ...ms.data() };
+      if (antes.status !== 'active') falha('failed-precondition', 'A filiação não está em dia: cancele esta cobrança e renove antes de trocar de plano.');
+      const patch = {
+        plan_id: p.id, plan_name: p.name, tier: p.tier || 'federated', billing: p.billing || 'annual',
+        plan_changed_at_ms: ctx.now, updated_at: ctx.Timestamp.fromMillis(ctx.now),
+      };
+      tr.update(memberRef, patch);
+      O.espelhar(ctx, tr, { ...antes, ...patch }, memberRef.id, 'active');
+      tr.update(snap.ref, { status: 'paid', paid_at: hoje, paid_at_ms: ctx.now, confirmed_by: actor.uid, confirmed_by_name: actor.name || '', confirm_note: note });
+    });
+    await anotarRepasses(ctx, { fed, charge, member: antes, plan: p, hoje });
+    const batch = ctx.db.batch();
+    aviso(ctx, batch, charge.payer_uid, { title: tx('Pagamento confirmado — {sigla}', { sigla: fed.acronym }), message: tx('Sua filiação passou para o plano {plano}. A validade continua a mesma.', { plano: p.name }), link: '/perfil?secao=federacoes' });
+    await batch.commit();
+    await auditoria(ctx, actor, 'federation_charge_confirm', { federation_id: fed.id, charge_id: charge.id, user_id: charge.payer_uid, amount_cents: charge.amount_cents, origin: 'upgrade' });
+    return { ok: true };
+  }
+
+  let pago = null;
   await ctx.db.runTransaction(async (tr) => {
     const ms = await tr.get(memberRef);
     if (!ms.exists) falha('not-found', 'A filiação desta cobrança não existe mais.');
     const member = { id: ms.id, ...ms.data() };
     if (!['awaiting_payment', 'active', 'expired'].includes(member.status)) falha('failed-precondition', 'A filiação não está num estado que aceite pagamento.');
-    await ativar(ctx, tr, { fed, memberRef, member, plan: p, hoje });
+    pago = await ativar(ctx, tr, { fed, memberRef, member, plan: p, hoje });
     tr.update(snap.ref, { status: 'paid', paid_at: hoje, paid_at_ms: ctx.now, confirmed_by: actor.uid, confirmed_by_name: actor.name || '', confirm_note: note });
   });
+  await anotarRepasses(ctx, { fed, charge, member: pago, plan: p, hoje });
   const batch = ctx.db.batch();
   aviso(ctx, batch, charge.payer_uid, {
     title: tx('Pagamento confirmado — {sigla}', { sigla: fed.acronym }),
