@@ -1922,6 +1922,18 @@ updated_at_ms }`. Sem regra (nega tudo); só o serviço web da Apple
 só do servidor: `wallet_google` (há objeto no Google a corrigir) e
 `wallet_updated_ms` (a última mudança que a carteira precisa buscar).
 
+### `dupr_links/{uid}`, `dupr_link_tokens/{uid}`, `dupr_ids/{duprId}` (DUPR oficial — `dupr_official_sync`)
+Só o servidor (`functions/dupr.js`) escreve. `dupr_links/{uid}`: o resumo do
+vínculo — `{ user_id, dupr_id, name, ratings: { singles, doubles }, entitlements[],
+linked_at_ms, rating_updated_ms, entitlements_checked_ms, webhook_ok }`; **o dono e
+o admin leem**. `dupr_link_tokens/{uid}`: os tokens do login do DUPR (somente
+leitura, o refresh gira) — fechado ao navegador. `dupr_ids/{ID}`: `{ user_id }`,
+reserva de um ID DUPR a uma única conta — fechado. Em `users` e `athlete_profiles`
+(campos opcionais, só do servidor): `dupr_verified`, `dupr_verified_at_ms` e
+`dupr_rating_singles`; com o selo, `dupr_id`/`dupr_rating` também são do servidor
+(regra `duprSeloIntacto`). Credenciais do parceiro: `platform_secrets/dupr`
+(`client_key`, `client_secret`, `env`, `webhook_token`), sem leitura no navegador.
+
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
 (PR 3), `{ kind: 'credential', credential_id, federation_id, created_at_ms }`.

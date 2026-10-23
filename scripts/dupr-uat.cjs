@@ -24,7 +24,7 @@ const exigir = (m) => require(require.resolve(m, { paths: [funcoes] }));
 const { createDuprClient } = require(path.join(funcoes, 'duprClient.js'));
 
 const DATABASE_ID = 'pickleball';
-const REGION = 'southamerica-east1';
+const SITE = 'https://picklerush.web.app';
 
 const env = () => (String(process.env.DUPR_ENV || 'uat').toLowerCase() === 'prod' ? 'prod' : 'uat');
 
@@ -83,9 +83,10 @@ async function webhook() {
   const snap = await db().collection('platform_secrets').doc('dupr').get();
   const token = snap.exists && snap.data().webhook_token;
   if (!token) throw new Error('Rode `seed` antes: falta o webhook_token.');
-  const url = `https://${REGION}-${process.env.FIREBASE_PROJECT_ID}.cloudfunctions.net/duprWebhook?k=${token}`;
+  // Pelo domínio do site (rewrite do hosting → `duprWebhook`): o endereço não muda se a função for recriada.
+  const url = `${SITE}/api/dupr/webhook?k=${token}`;
   const r = await c.registerWebhook(url, ['RATING']);
-  log(`✔ Webhook registrado no DUPR (${r && r.status}). Endereço: https://${REGION}-${process.env.FIREBASE_PROJECT_ID}.cloudfunctions.net/duprWebhook?k=***`);
+  log(`✔ Webhook registrado no DUPR (${r && r.status}). Endereço: ${SITE}/api/dupr/webhook?k=***`);
 }
 
 async function user(id) {

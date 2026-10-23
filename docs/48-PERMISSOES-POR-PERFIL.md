@@ -124,6 +124,7 @@ torneio, `/c/:clubId`) existem para isso.
 | Ler `audit_logs` | ✖ | ✔ | rules (`create`: qualquer logado, mas `actor_id == uid`; nunca `update/delete`) |
 | Promover alguém a admin | ✖ | ✖ | **só no console do Firebase** (nenhum caminho de cliente concede `role`) |
 | Revogar o poder de outra conta | ✖ | ◐ **só o dono** (e-mail do token), resultado obrigatoriamente `role: 'user'` | rules |
+| Conta DUPR (flag `dupr_official_sync`) | ✔ conecta/desconecta a própria; lê o próprio `dupr_links`. O selo `dupr_verified` e, com ele, o ID e o rating **só o servidor escreve** | ✔ lê `dupr_links` | **Cloud Function** `duprIntegration` + rules (`duprSeloIntacto`; `dupr_link_tokens` e `dupr_ids` fechados) |
 | Diretório público do atleta (`athlete_profiles`) | ✔ o próprio escreve; qualquer logado lê. Telefone, e-mail e endereço só com a marca `*_public` no espelho **e** no `users/{uid}` | ✔ (contato só com a marca no espelho) | rules (`hidden*` só o admin; `contatosDoDonoPermitidos` / `contatosMarcados`) |
 | Arquivos em `uploads/{uid}/**` | ✔ só o próprio grava (< 25 MB); `get` por qualquer logado; `list` só o dono | — | storage.rules |
 | `uploads/{uid}/private/**` | ✔ só o dono lê/grava | ✖ | storage.rules (nem o admin) |
