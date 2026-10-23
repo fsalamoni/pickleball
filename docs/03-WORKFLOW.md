@@ -377,7 +377,7 @@ que já não existe: a tela mostra "Uma versão nova foi publicada — Recarrega
 
 | Workflow | Quando roda | O que faz |
 |---|---|---|
-| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java), sobre o `firestore.rules` **compactado** como vai ao ar (`scripts/firestore-rules-compactar.mjs --escrever`). Job `e2e`: `npm run e2e` — testes de navegador no build do PR com Auth e Firestore nos emuladores (relatório do Playwright como artefato quando falha). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
+| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java), sobre o `firestore.rules` **compactado** como vai ao ar (`scripts/firestore-rules-compactar.mjs --escrever`). Job `e2e`: `npm run e2e` — testes de navegador no build do PR com Auth, Firestore e funções nos emuladores (relatório do Playwright como artefato quando falha). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
 | `deploy-firebase.yml` | push em `main` + manual | Deploy completo (§4.1) |
 | `functions-watchdog.yml` | a cada 30 min (`7,37 * * * *`) + manual | Confere se todas as funções exportadas existem em `southamerica-east1` com o rótulo `picklerush`; recria o que sumiu pelo mesmo script e **falha o job de propósito** para avisar por e-mail (§9.1) |
 | `firestore-manual-export.yml` | manual (`confirm = EXPORTAR`) | Exporta o Firestore para o GCS, conferindo banco e privacidade do bucket; aceita prefixo e instante de snapshot |
@@ -511,16 +511,20 @@ Quando user reporta "feature X não funciona":
 ### 7.2 Testes de navegador (Playwright)
 
 `npm run e2e` (`scripts/e2e.sh`) monta o build deste código apontando para os
-**emuladores** (projeto `demo-picklerush`, nada toca produção), serve com
-`vite preview` e roda `tests/e2e/` em Chromium de computador e de celular
-(Pixel 5). É o mesmo comando do job `e2e` do CI. Precisa de Java e do
-Chromium do Playwright (`npm run e2e:install`).
+**emuladores** de Auth, Firestore e **funções** (projeto `demo-picklerush`,
+nada toca produção), serve com `vite preview` e roda `tests/e2e/` em Chromium
+de computador e de celular (Pixel 5). É o mesmo comando do job `e2e` do CI.
+Precisa de Java e do Chromium do Playwright (`npm run e2e:install`); as
+dependências das funções são instaladas pelo script se faltarem. Os ajudantes
+dos emuladores (semear documento, ler, criar conta) moram em
+`tests/e2e/emulador.js`.
 
 | Arquivo | O que prova |
 |---|---|
 | `public-routes.spec.js` | o site abre, `/login` tem o formulário, rota fechada leva ao login. Também roda no **site no ar** depois de cada deploy |
 | `acessibilidade.spec.js` | axe (WCAG 2.1 AA) em `/` e `/login`: violação séria ou crítica reprova |
 | `logado.spec.js` (`@emuladores`) | cria uma conta no emulador (Auth REST + `users/{uid}` completo, para o assistente de cadastro não abrir), entra pelo formulário e abre as telas principais: cada uma tem de mostrar o título, sem a tela de erro e sem exceção na página |
+| `funcoes.spec.js` (`@emuladores`, sem tela, só no projeto de computador) | o emulador de funções carrega **todas** as exportações de `functions/index.js`, e a filiação a uma federação vai de ponta a ponta (pedir, aprovar, "Já paguei" pela regra, confirmar, verificação pública) — ver `docs/47` §10.4 |
 
 Teste que precisa dos emuladores leva `@emuladores` no nome: o
 `npm run e2e:producao` (`E2E_BASE_URL=https://picklerush.web.app`) os pula.

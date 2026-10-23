@@ -8,7 +8,9 @@ name: Vigilância das Cloud Functions
 # região do PickleRush e, se alguma sumiu, publica de novo (só as nossas, pelo
 # nome) e FALHA o job — para o dono do repositório receber o aviso por e-mail.
 #
-# Ela só lê a lista de funções; não toca no banco. Ver docs/03-WORKFLOW.md §9.1.
+# No banco, ela só grava o registro da conferência em
+# platform_settings/functions_health (o painel admin o mostra). Ver
+# docs/03-WORKFLOW.md §9.1.
 
 on:
   schedule:
@@ -78,11 +80,19 @@ jobs:
             echo "Todas as funções do PickleRush estão no ar."
           fi
 
+      - name: Dependências das funções
+        run: npm --prefix functions ci --no-audit --no-fund
+
+      # O painel admin (Sistema → Diagnóstico → "Funções no ar") lê este
+      # registro. Gravado antes de tentar republicar, para valer mesmo se a
+      # republicação falhar. Nunca falha o job.
+      - name: Registrar a conferência no painel
+        if: steps.conferir.outcome == 'success'
+        run: node scripts/functions-health.cjs check esperadas.txt publicadas.txt faltando.txt sem_rotulo.txt
+
       - name: Publicar de novo o que sumiu
         if: steps.conferir.outputs.faltando == 'true' || steps.conferir.outputs.sem_rotulo == 'true'
-        run: |
-          npm --prefix functions ci
-          bash scripts/functions-deploy.sh
+        run: bash scripts/functions-deploy.sh
 
       - name: Avisar (falha proposital)
         if: steps.conferir.outputs.faltando == 'true'

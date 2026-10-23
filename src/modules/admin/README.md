@@ -49,6 +49,19 @@ saíram (nada lia o que gravavam).
   conta oculta/suspensa/bloqueada fora), `notifyUsers` + auditoria
   `admin_broadcast_sent`. Zero coleção.
 
+## Funções no ar (2026-10-23)
+
+Sistema → Diagnóstico abre com o cartão **"Funções no ar"**
+(`components/FunctionsHealthCard.jsx`, domínio `domain/functionsHealth.js`,
+hook `useFunctionsHealth`). Ele lê `platform_settings/functions_health`, que a
+vigilância (a cada 30 min) e o deploy gravam por `scripts/functions-health.cjs`:
+quantas funções o código exporta × quantas estão publicadas, os nomes que
+faltam, e se o último deploy das funções deu certo (com a linha do erro e
+quando deu certo pela última vez). Do #315 ao #321 esse deploy falhou calado.
+Sem conferência há mais de 90 min, o cartão diz que a vigilância parou;
+leitura que falha é dita, nunca "tudo publicado". Guarda em
+`src/core/guards/funcoesNoAr.test.js`.
+
 ## Hooks
 ```js
 import { useAllPlatformUsers, useDeleteAccounts, useSetAccountStatus } from '@/modules/admin/hooks/usePlatformUsers';

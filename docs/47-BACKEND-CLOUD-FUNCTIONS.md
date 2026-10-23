@@ -546,6 +546,16 @@ precisa de Cloud Functions Admin e Service Account User, e as APIs
 cloudfunctions/cloudbuild/artifactregistry/run/eventarc/pubsub habilitadas — ver
 `functions/README.md`).
 
+🐞 Do #315 ao #321 esse passo falhou em todo deploy (uma função mudou de HTTPS
+para gatilho com o mesmo nome) e nada avisou. Desde o Bloco 0 da rodada 3 ele
+grava o resultado em `platform_settings/functions_health.deploy`
+(`node scripts/functions-health.cjs deploy ok|falhou "<linha do erro>"`: hora,
+commit, link da execução, a primeira linha `Error:` e `last_ok_at`, que a
+falha preserva) e, na falha, escreve **"As Cloud Functions NÃO foram
+publicadas"** com o erro no resumo da execução. O painel admin mostra em
+**Sistema → Diagnóstico → "Funções no ar"** (`FunctionsHealthCard`, domínio
+`admin/domain/functionsHealth.js`).
+
 ### 10.3 Vigilância (`functions-watchdog.yml`)
 
 Agenda `7,37 * * * *` (a cada 30 min) + `workflow_dispatch`, `timeout-minutes: 20`,
@@ -554,14 +564,21 @@ account do secret `FIREBASE_SERVICE_ACCOUNT` e:
 
 1. compara as funções exportadas em `functions/index.js` com
    `firebase functions:list --json` na região `southamerica-east1`;
-2. se faltar alguma — ou se alguma nossa não tiver o rótulo do codebase —
-   roda `npm --prefix functions ci` + `bash scripts/functions-deploy.sh`;
-3. se algo **sumiu**, **falha o job de propósito** (e-mail ao dono do
+2. grava a conferência em `platform_settings/functions_health.check`
+   (`node scripts/functions-health.cjs check …`: esperadas, publicadas, os
+   nomes que faltam e os sem rótulo, hora e link da execução) — é o que o
+   cartão "Funções no ar" mostra; sem conferência há mais de 90 min, o cartão
+   diz que a vigilância parou;
+3. se faltar alguma — ou se alguma nossa não tiver o rótulo do codebase —
+   roda `bash scripts/functions-deploy.sh`;
+4. se algo **sumiu**, **falha o job de propósito** (e-mail ao dono do
    repositório), dizendo que algo fora do repositório apagou funções; a
    recuperação agendada do ranking (`catchUpPlatformRankings`) cobre os
    resultados do intervalo.
 
-Só lê a lista de funções; não toca no banco. O que segue compartilhado mesmo
+No banco, só grava esse registro (público como o resto de `platform_settings`:
+só nomes de funções, contagens, commit e link). Gravar nunca falha o job: sem
+permissão de escrita no Firestore, o script avisa e segue. O que segue compartilhado mesmo
 assim (Auth, bucket do Storage, service account): `docs/03-WORKFLOW.md` §9.1.
 
 ### 10.4 Testar e publicar localmente
@@ -578,7 +595,16 @@ Os testes de `functions/` usam Firestore falso (`tests/fakes/fakeFirestore.cjs`,
 `fakeFirestoreRico.cjs`) e `createRequire` para carregar os módulos CommonJS.
 **Limite**: o falso nunca recusa — o que depende de regra precisa de teste no
 emulador. Os wrappers de `functions/index.js` (gatilhos e callables) não são
-carregados pelos testes; a lógica testável mora nos módulos ao lado.
+carregados pelos testes de unidade; a lógica testável mora nos módulos ao lado.
+
+O `npm run e2e` (job `e2e` do CI) sobe também o **emulador de funções**, e
+`tests/e2e/funcoes.spec.js` (`@emuladores`, sem tela) prova duas coisas com o
+código carregado como no Google: o emulador descobre **todas** as exportações
+de `functions/index.js` no codebase `picklerush` e na região certa, e o ciclo
+da filiação funciona de ponta a ponta por três contas (pedir → aprovar →
+"Já paguei" pela regra → confirmar → `federationVerify` sem login). As
+agendadas ficam de fora no emulador (sem Pub/Sub), mas aparecem na lista.
+Guarda: `src/core/guards/funcoesNoAr.test.js`.
 
 Publicação manual (exige login na CLI e `FIREBASE_PROJECT_ID`; o script usa
 `jq`):

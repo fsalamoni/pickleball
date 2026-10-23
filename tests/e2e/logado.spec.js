@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { PROJETO, AUTH, FIRESTORE, campo } from './emulador.js';
 
 /**
  * ⭐ A pessoa entra e as telas principais abrem — no build deste código, com
@@ -6,19 +7,6 @@ import { test, expect } from '@playwright/test';
  * unidade não veem: tela que quebra ao montar de verdade, rota que leva ao
  * nada, regra do banco que recusa a leitura de quem acabou de entrar.
  */
-const PROJETO = 'demo-picklerush';
-const AUTH = 'http://127.0.0.1:9099';
-const FIRESTORE = 'http://127.0.0.1:8080';
-
-/** Valor do Firestore REST a partir de um valor JS simples. */
-function campo(v) {
-  if (Array.isArray(v)) return { arrayValue: { values: v.map(campo) } };
-  if (v instanceof Date) return { timestampValue: v.toISOString() };
-  if (typeof v === 'boolean') return { booleanValue: v };
-  if (typeof v === 'number') return { integerValue: String(v) };
-  if (v && typeof v === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, campo(x)])) } };
-  return { stringValue: String(v) };
-}
 
 /**
  * Conta nova no emulador, com o cadastro completo (o assistente não abre).
