@@ -7,8 +7,8 @@ import {
 const HOJE = '2026-10-22';
 
 describe('proteção de menores: régua', () => {
-  it('sem nada gravado: professor, árbitro e diretor; certidão de 12 meses', () => {
-    expect(normalizeSgRules(undefined)).toEqual({ required_for: ['coach', 'referee', 'director'], background_months: 12 });
+  it('sem nada gravado: professor, árbitro, diretor e embaixador; certidão de 12 meses', () => {
+    expect(normalizeSgRules(undefined)).toEqual({ required_for: ['coach', 'referee', 'director', 'ambassador'], background_months: 12 });
   });
 
   it('lista vazia gravada é escolha (ninguém), papel desconhecido sai', () => {

@@ -159,6 +159,14 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         ...(admin && modulo('antidoping') ? [{ value: 'antidopagem', label: tk('Antidopagem'), icon: ShieldCheck, dica: 'federacao-aba-antidopagem' }] : []),
       ],
     },
+    // Rede e desenvolvimento (rodada 3, Bloco 3): embaixadores e selo de clube — a secretaria e o admin.
+    (pode(FED_PERMISSION.MEMBERS) || admin) && (modulo('ambassadors') || modulo('club_seal')) && {
+      id: 'desenvolvimento', grupo: 'atender', label: tk('Rede e desenvolvimento'), icon: Star, dica: 'federacao-secao-desenvolvimento',
+      tabs: [
+        ...(modulo('ambassadors') ? [{ value: 'embaixadores', label: tk('Embaixadores'), icon: Users, dica: 'federacao-aba-embaixadores' }] : []),
+        ...(modulo('club_seal') ? [{ value: 'selo-clubes', label: tk('Selo de clubes'), icon: BadgeCheck, dica: 'federacao-aba-selo-clubes' }] : []),
+      ],
+    },
     pode(FED_PERMISSION.COMMS) && (modulo('news') || modulo('promos') || (admin && modulo('sponsors'))) && {
       id: 'comunicacao', grupo: 'atender', label: tk('Comunicação'), icon: Megaphone, dica: 'federacao-secao-comunicacao',
       tabs: [

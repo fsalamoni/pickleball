@@ -419,6 +419,13 @@ export async function listMyCoachLicenses(uid) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/** As candidaturas e mandatos de embaixador da pessoa (todas as federações) — Minha área e exportação. */
+export async function listMyAmbassadorships(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.ambassadors), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 /** O registro da proteção de menores da pessoa (todas as federações) — exportação. */
 export async function listMySafeguarding(uid) {
   if (!uid) return [];

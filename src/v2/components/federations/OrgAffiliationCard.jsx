@@ -24,6 +24,7 @@ import { AFFILIATION_STATUS_LABELS } from '@/modules/federations/domain/constant
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t } from '@/core/i18n';
+import OrgSealBlock from './development/OrgSealBlock';
 
 const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red', invited: 'blue' };
 // Âncoras das dicas (literais, para o guarda `dicas.test.js` as encontrar).
@@ -123,6 +124,9 @@ export default function OrgAffiliationCard({ kind, org }) {
           {vivas.map((m) => <LinhaPorPlano key={m.id} member={m} kind={kind} orgId={org.id} />)}
           {simples.map((a) => <Linha key={a.id} aff={a} pending={retirar.isPending || responder.isPending} onWithdraw={setConfirmar} onAnswer={onAnswer} />)}
         </ul>
+      )}
+      {minhas.isSuccess && feds.isSuccess && (
+        <OrgSealBlock kind={kind} org={org} federations={(feds.data || []).filter((f) => (minhas.data || []).some((a) => a.federation_id === f.id && affiliationState(a).approved))} />
       )}
       {/* Desfiliar apaga o vínculo: voltar é um pedido novo, com nova aprovação. Por isso pergunta antes. */}
       <ConfirmDialog

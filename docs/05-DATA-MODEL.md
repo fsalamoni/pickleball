@@ -1899,6 +1899,9 @@ ESPELHO da filiação, gravado só pelo servidor, com `member_id`, `plan_id`,
 diz — ausente = filiado), `member_number`, `valid_until` (ativa ⇒ `approved`; vencida ou
 suspensa ⇒ `suspended`; cancelada ⇒ sai). Com `member_id` a regra recusa
 decidir ou apagar pelo navegador.
+Rodada 3 (2026-10-23): `seal { name, valid_until, granted_at }`, o selo de
+clube certificado em dia (`docs/50` §38.2), só o servidor grava; o pedido
+feito pelo navegador não pode trazê-lo.
 `federation_id`, `federation_name`, `federation_acronym`, `kind`, `org_id`,
 `org_name`, `org_city`, `org_state`, `org_logo` (copiados — a página da
 federação não lê `clubs`/`arenas`), `status`
@@ -2208,6 +2211,36 @@ amount_cents, date, voided_at?, voided_by?, voided_reason? }` (até 300),
 `updated_at_ms`. Só o servidor grava (`federationInstitutional`). Leitura
 `fedAcc`. Consulta `federation_id ==`, zero índice. Exclusão de conta: só
 sai `created_by`; fora da exportação. Módulo `modules.incentive_projects`.
+
+### `federation_ambassadors/{fed}_{uid}` (NOVO — embaixadores regionais, `docs/50` §38.1)
+`federation_id`, `user_id`, `user_name`, `photo_url`, `city`, `state`,
+`region_wish`, `motivation`, `status` (`applied|appointed|rejected|ended`),
+`conduct_version`, `conduct_accepted_at_ms`, `applied_at_ms`, `region`,
+`term_until`, `appointed_at`, `ended_at`, `next_report_due`, `warned_for`,
+`reports[] { id, text, at_ms, due }` (até 60), `decision { by, at_ms,
+reason }`, `history[]`, `created_at_ms`, `updated_at_ms`. Só o servidor grava
+(`federationDevelopment`). Leitura: a própria pessoa, `members`/`admin`.
+Consultas `federation_id ==` e `user_id ==`, zero índice. Exclusão de conta:
+apagado; exportação: sim. Módulo `modules.ambassadors`. Em `federations`:
+`ambassador_rules { open, report_months, conduct_text, conduct_version }`
+(o admin grava) e `ambassadors_public[] { key, name, photo_url, region }`
+(só o servidor, `fedLocked()`).
+
+### `federation_club_seals/{fed}_{kind}_{org}` (NOVO — selo de clube certificado, `docs/50` §38.2)
+`federation_id`, `kind` (`club|arena`), `org_id`, `org_name`, `org_city`,
+`org_state`, `applicant_uid`, `evidence { <critério>: { text, file? { path,
+name } } }`, `auto_checks { hosted_event, licensed_coach }`, `criteria[]`
+(cópia), `seal_name`, `status` (`applied|granted|rejected|revoked`),
+`granted_at`, `granted_until`, `warned_until`, `decision { checks, note,
+reason, by, at_ms }`, `history[]`, `applied_at_ms`, `created_at_ms`,
+`updated_at_ms`. Só o servidor grava (`federationDevelopment`). Leitura: quem
+gere a organização, `members`/`admin`. Consultas `federation_id ==` e
+`kind == + org_id ==`, zero índice. Exclusão de conta: fica
+(`applicant_uid` retido); fora da exportação (é da organização). Módulo
+`modules.club_seal`. Em `federations`: `club_seal { open, name,
+validity_months, criteria[] { id, label, description, required, auto } }`
+(o admin grava). O selo concedido é copiado para
+`federation_affiliations.seal`.
 
 ### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
 `conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,

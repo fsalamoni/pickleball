@@ -56,6 +56,8 @@ export const FED_COLLECTIONS = Object.freeze({
   equipment: 'federation_equipment',
   certificates: 'federation_certificates',
   incentiveProjects: 'federation_incentive_projects',
+  ambassadors: 'federation_ambassadors',
+  clubSeals: 'federation_club_seals',
   nationalLinks: 'federation_national_links',
   dues: 'federation_dues',
 });
@@ -238,6 +240,8 @@ export const FED_MODULE = Object.freeze({
   ANTIDOPING: 'antidoping',
   CERTIFICATES: 'certificates',
   INCENTIVE_PROJECTS: 'incentive_projects',
+  AMBASSADORS: 'ambassadors',
+  CLUB_SEAL: 'club_seal',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -263,6 +267,8 @@ export const FED_MODULE_META = Object.freeze({
   equipment: { label: tk('Equipamentos homologados'), description: tk('A lista pública de raquetes, bolas e redes homologadas, reprovadas ou descertificadas, com data e busca. A confederação publica a lista da rede, que aparece também nas estaduais filiadas.'), status: 'available', central: tk('Jogo limpo → Equipamentos'), tab: 'equipamentos', page: tk('Aba Jogo limpo: a lista com busca') },
   antidoping: { label: tk('Antidopagem (#JogoLimpo)'), description: tk('Texto e links da ABCD na página pública, as cláusulas antidopagem no regulamento dos torneios chancelados, o curso ADEL como credencial e a suspensão por antidopagem barrando a inscrição.'), status: 'available', central: tk('Jogo limpo → Antidopagem'), tab: 'antidopagem', page: tk('Aba Jogo limpo e a página do torneio chancelado') },
   certificates: { label: tk('Certidões da federação'), description: tk('O cofre das certidões negativas (federal, FGTS, trabalhista, estadual e municipal), com arquivo, validade e aviso 30, 7 e 1 dia antes de vencer. Certidão vencida aparece na Conformidade.'), status: 'available', central: tk('Certidões e incentivo → Certidões'), tab: 'certidoes', page: tk('Não aparece na página: é controle interno') },
+  ambassadors: { label: tk('Embaixadores regionais'), description: tk('O filiado se candidata aceitando o código de conduta, a federação confere a proteção de menores e nomeia para uma região. O embaixador manda um relatório periódico e aparece na página.'), status: 'available', central: tk('Rede e desenvolvimento → Embaixadores'), tab: 'embaixadores', page: tk('Visão geral: os embaixadores por região') },
+  club_seal: { label: tk('Selo de clube certificado'), description: tk('Critérios definidos pela federação (proteção de menores, professor licenciado, seguro, quadras). Parte a plataforma confere sozinha, parte vem de evidência enviada. O selo tem validade e aparece na lista de clubes e arenas.'), status: 'available', requires: 'affiliations', central: tk('Rede e desenvolvimento → Selo de clubes'), tab: 'selo-clubes', page: tk('Aba Clubes e arenas: o selo ao lado do nome') },
   incentive_projects: { label: tk('Lei de Incentivo ao Esporte'), description: tk('Os projetos incentivados: valor aprovado, prazo de captação, cada aporte de patrocinador ou doador e a prestação de contas, com os aportes entrando sozinhos nas contas.'), status: 'available', central: tk('Certidões e incentivo → Lei de Incentivo'), tab: 'lei-incentivo', page: tk('Não aparece na página: é controle interno') },
   safeguarding: { label: tk('Proteção de menores'), description: tk('Quem trabalha com menores precisa de curso de proteção e certidão de antecedentes em dia; a ouvidoria ganha a denúncia de proteção, prioritária e de acesso restrito.'), status: 'available', central: tk('Proteção de menores'), tab: 'protecao', page: tk('Aba Contato: a denúncia de proteção de menor') },
 });

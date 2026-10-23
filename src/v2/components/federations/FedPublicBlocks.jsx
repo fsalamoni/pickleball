@@ -11,12 +11,13 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Download, GraduationCap, Landmark, Lock, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
+import { BadgeCheck, Building2, Download, GraduationCap, Landmark, Lock, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { approvedAffiliations } from '@/modules/federations/domain/affiliations';
+import { affiliationSealValid } from '@/modules/federations/domain/development';
 import { sanctionState, splitSanctionedTournaments } from '@/modules/federations/domain/sanction';
 import { tournamentPath } from '@/modules/federations/domain/agenda';
 import { normalizeRankingConfig, rankingSeasons, seasonClosed, seasonLastDay, tierLabel } from '@/modules/federations/domain/officialRanking';
@@ -62,6 +63,7 @@ function OrgCard({ aff, logado }) {
       <span className="min-w-0">
         <span className="block truncate font-semibold text-ink">{aff.org_name}</span>
         <span className="block truncate text-xs text-gray-500">{[aff.org_city, aff.org_state].filter(Boolean).join(' · ') || (aff.kind === 'club' ? t('Clube') : t('Arena'))}</span>
+        {affiliationSealValid(aff, todayISO()) && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-acid/20 px-2 py-0.5 text-2xs font-bold text-ink" data-dica="federacao-pub-selo"><BadgeCheck className="h-3 w-3" aria-hidden="true" />{aff.seal.name}</span>}
       </span>
     </>
   );

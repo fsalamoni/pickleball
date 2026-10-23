@@ -4710,7 +4710,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config', 'ambassadors_public'];
     }
 
     match /federations/{fedId} {
@@ -4727,7 +4727,7 @@ service cloud.firestore {
         && nd().status == 'pending'
         && nd().get('verified', false) == false
         && nd().get('official', false) == false
-        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles', 'published', 'confederation', 'national_body', 'national_config'])
+        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles', 'published', 'confederation', 'national_body', 'national_config', 'ambassadors_public'])
         && fedProfileOk();
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
       // Publicar e tirar do ar: só o admin, e só a federação aprovada.
@@ -5182,6 +5182,21 @@ service cloud.firestore {
       allow read: if fedAcc(od().federation_id);
       allow write: if false;
     }
+    // REDE E DESENVOLVIMENTO (rodada 3, Bloco 3): a candidatura e o mandato de
+    // embaixador (motivação, relatórios) só a pessoa e a secretaria/admin leem
+    // — a lista pública (nome, foto, região, sem uid) é o campo
+    // `federations.ambassadors_public`, gravado pelo servidor. O pedido de selo
+    // (evidências) só quem gere a organização e a secretaria/admin; o selo
+    // concedido sai em `federation_affiliations.seal`. Só o servidor grava
+    // (`federationDevelopment`).
+    match /federation_ambassadors/{id} {
+      allow read: if isOwner(od().user_id) || fedAny(od().federation_id, ['members', 'admin']);
+      allow write: if false;
+    }
+    match /federation_club_seals/{id} {
+      allow read: if fedOrgManager(od().kind, od().org_id) || fedAny(od().federation_id, ['members', 'admin']);
+      allow write: if false;
+    }
     // JOGO LIMPO (rodada 3, Bloco 1): a lista de equipamentos homologados é
     // pública com o módulo ligado (a estadual mostra também a da confederação);
     // a equipe de competições e o admin leem sempre. Só o servidor grava
@@ -5348,6 +5363,8 @@ service cloud.firestore {
         && affId == nd().federation_id + '_' + nd().kind + '_' + nd().org_id
         && nd().get('message', '') is string
         && nd().get('message', '').size() <= 500
+        // O selo de clube certificado (`seal`) só o servidor grava.
+        && !('seal' in nd())
         && fedModuleOn(nd().federation_id, 'affiliations')
         && fedPublic(nd().federation_id);
       // A equipe decide o pedido; quem gere a organização ACEITA o convite (vira filiado).
