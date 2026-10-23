@@ -21,6 +21,8 @@ import { useFederationMutation } from '@/modules/federations/hooks/useFederation
 import { useMyIncidents } from '@/modules/federations/hooks/useRegularity';
 import { useUnifiedLevels } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { regularityAction } from '@/modules/federations/services/regularityService';
+import { useInsuranceAction } from '@/modules/federations/hooks/useInsurance';
+import { termState } from '@/modules/federations/domain/insurance';
 import {
   DOCS_STATE_LABELS, INCIDENT_KIND, INCIDENT_KIND_LABELS, INCIDENT_STATUS_LABELS, consentGranted, consentItems, insuranceState,
   levelReviewPending, memberInsured, normalizeLevels, suggestLevel, validateIncident, validateLevelInput, validateLevelReview,
@@ -31,6 +33,7 @@ import { FED_PERMISSION, MEMBER_STATUS } from '@/modules/federations/domain/cons
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from './federationUi';
+import { InsuranceTermDialog } from './insurance/InsuranceTerm';
 
 const DOCS_TOM = { expired: 'red', expiring: 'amber', incomplete: 'amber', ok: 'green' };
 
@@ -189,6 +192,29 @@ function Autorizacoes({ federation, member }) {
   );
 }
 
+/** O termo do seguro da filiação: aceito (com a data) ou o botão que pede o aceite. */
+function TermoDoSeguro({ federation, member }) {
+  const st = termState(member, federation);
+  const [lendo, setLendo] = useState(false);
+  const m = useInsuranceAction(federation.id);
+  if (!st.required) return null;
+  if (st.accepted) return <p className="text-gray-700">{t('Termo do seguro aceito em {data}.', { data: quando(st.accepted_at_ms) })}</p>;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+      <p className="text-amber-900">{st.outdated ? t('O termo do seguro mudou: leia e aceite a versão nova.') : t('Falta aceitar o termo do seguro da federação.')}</p>
+      <V2Button type="button" size="sm" onClick={() => setLendo(true)}>{t('Ler e aceitar')}</V2Button>
+      {lendo && (
+        <InsuranceTermDialog
+          federation={federation}
+          loading={m.isPending}
+          onCancel={() => setLendo(false)}
+          onAccept={(version) => m.mutate({ action: 'term_accept', memberId: member.id, version }, { onSuccess: () => { toast.success(t('Termo aceito.')); setLendo(false); }, onError: (er) => toast.error(er.message) })}
+        />
+      )}
+    </div>
+  );
+}
+
 function Seguro({ federation, member }) {
   const [registrando, setRegistrando] = useState(false);
   const incidentsQ = useMyIncidents();
@@ -208,6 +234,7 @@ function Seguro({ federation, member }) {
           {ins.phone && <p className="text-gray-700"><span className="font-semibold">{t('Telefone da seguradora:')}</span> <a className="underline" href={`tel:${ins.phone.replace(/[^\d+]/g, '')}`}>{ins.phone}</a></p>}
         </div>
       )}
+      <TermoDoSeguro federation={federation} member={member} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold text-ink">{t('Ocorrências')}</p>
         <V2Button type="button" size="sm" variant="secondary" onClick={() => setRegistrando(true)}>{t('Registrar ocorrência')}</V2Button>

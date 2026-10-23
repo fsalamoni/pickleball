@@ -41,6 +41,29 @@ function Resultado({ r, consultadoEm }) {
       </div>
     );
   }
+  if (r.kind === 'insurance_certificate') {
+    const valido = r.status === 'valid';
+    const e = r.event || {};
+    return (
+      <div className={`rounded-4xl border p-8 ${valido ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+        <div className="flex items-center gap-3">
+          {valido ? <ShieldCheck className="h-10 w-10 text-green-700" aria-hidden="true" /> : <ShieldAlert className="h-10 w-10 text-amber-600" aria-hidden="true" />}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Certificado de seguro')} · {r.federation?.acronym} · {r.federation?.name}</p>
+            <h2 className="font-display text-2xl font-bold text-ink">{valido ? t('Certificado válido') : r.status === 'expired' ? t('Evento já encerrado') : t('Certificado cancelado')}</h2>
+          </div>
+        </div>
+        <div className="mt-6 space-y-1 text-sm text-gray-700">
+          <p className="font-display text-xl font-bold text-ink">{e.name}</p>
+          <p>{r.org_name}</p>
+          <p>{[e.venue, e.city].filter(Boolean).join(' · ')}</p>
+          <p>{e.date_to && e.date_to !== e.date_from ? t('de {de} a {ate}', { de: quando(e.date_from), ate: quando(e.date_to) }) : quando(e.date_from)}{e.participants ? ` · ${t('até {n} participantes', { n: e.participants })}` : ''}</p>
+          {r.policy?.insurer && <p>{t('Seguradora: {s}', { s: r.policy.insurer })}{r.policy.number ? ` · ${t('apólice {n}', { n: r.policy.number })}` : ''}</p>}
+        </div>
+        <Rodape r={r} consultadoEm={consultadoEm} />
+      </div>
+    );
+  }
   if (r.kind === 'credential') {
     const valida = r.status === CREDENTIAL_STATUS.ACTIVE;
     return (

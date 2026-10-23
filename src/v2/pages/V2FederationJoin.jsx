@@ -38,6 +38,8 @@ import { personTypeLabel } from '@/modules/federations/domain/memberTypes';
 import { consentItems } from '@/modules/federations/domain/regularity';
 import DocumentsUploadList from '@/v2/components/federations/DocumentsUploadList';
 import OrgMembershipJoin from '@/v2/components/federations/OrgMembershipJoin';
+import { InsuranceTermBox } from '@/v2/components/federations/insurance/InsuranceTerm';
+import { termState } from '@/modules/federations/domain/insurance';
 import { isoDate } from '@/modules/federations/domain/membership';
 import { CHARGE_STATUS, FEDERATION_STATUS, GUARDIAN_ONLY_AGE, MEMBER_STATUS, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_TIER_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import {
@@ -122,7 +124,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   });
   const [tipo, setTipo] = useState(planoEscolhido?.person_type || tipos[0]?.id || PLAN_PERSON_TYPE.ATHLETE);
   const [planId, setPlanId] = useState(planoEscolhido?.id || '');
-  const [opcoes, setOpcoes] = useState({ clubId: '', note: '', termos: false });
+  const [opcoes, setOpcoes] = useState({ clubId: '', note: '', termos: false, seguro: false });
   const [consentes, setConsentes] = useState({});
   const [dep, setDep] = useState({ name: '', birth_date: '' });
   const [privado, setPrivado] = useState({ cpf: '', guardian_name: '', guardian_contact: '', guardian_consent: false, minor_photo_consent: false });
@@ -145,6 +147,8 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
   const candidatos = plansFor(planosPessoa, { personType: tipo, age: idade }).filter((p) => idade != null || (p.age_min == null && p.age_max == null));
   const escondidosPorIdade = idade == null && plansFor(planosPessoa, { personType: tipo, age: null }).length > candidatos.length;
   const plano = candidatos.find((p) => p.id === planId) || null;
+  // O termo do seguro (módulo `insurance`): só quando a federação o exige para o público deste plano.
+  const termoSeguro = termState({ tier: plano?.tier }, federation);
   const preco = plano ? planPrice(plano, { age: idade }) : null;
   const docsExigidos = requiredDocs(plano);
   // O Pix só nasce na hora com aprovação automática ou convite neste plano; senão, depois que a secretaria aprova.
@@ -174,10 +178,12 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
       if (menorComConta) { extra.guardian = { ...rp.value.guardian, consent: true }; extra.minorPhotoConsent = privado.minor_photo_consent; }
     }
     if (!opcoes.termos) { setErro(t('Para se filiar é preciso aceitar os termos.')); return; }
+    if (termoSeguro.required && !opcoes.seguro) { setErro(t('Para se filiar é preciso aceitar o termo do seguro.')); return; }
     setErro('');
     m.mutate({
       federationId: federation.id, action: 'request', planId: plano.id,
       clubId: opcoes.clubId || null, note: opcoes.note, ...extra,
+      ...(termoSeguro.required ? { insuranceTermVersion: termoSeguro.version } : {}),
       consents: Object.fromEntries(consentItems(federation).map((c) => [c.id, Boolean(consentes[c.id])])),
     }, {
       onSuccess: async (r) => {
@@ -303,6 +309,7 @@ function Formulario({ federation, plans, dependente = false, onEnviado, convite 
           {/* Termo e estatuto abrem em outra aba: sair daqui desmontaria o formulário já preenchido. */}
           <span>{t('Li e aceito os')} <Link to="/legal/termos-filiacao" target="_blank" rel="noopener noreferrer" className="font-bold text-ink underline">{t('Termos de Filiação')}</Link>{' '}{t('e o')}{' '}{estatuto ? <a href={estatuto} target="_blank" rel="noopener noreferrer nofollow" className="font-bold text-ink underline">{t('estatuto da federação')}</a> : t('estatuto da federação')}.{' '}{t('A federação recebe o meu nome, foto, data de nascimento e cidade para emitir a carteirinha.')}</span>
         </label>
+        {termoSeguro.required && <InsuranceTermBox federation={federation} id="fj-seguro" checked={opcoes.seguro} onChange={(v) => setOpcoes((o) => ({ ...o, seguro: v }))} />}
         <fieldset className="space-y-3" data-dica="federacao-filiar-autorizacoes">
           <legend className="text-sm font-semibold text-ink">{t('Autorizações (opcionais, você muda quando quiser)')}</legend>
           {consentItems(federation).map((c) => <V2Toggle key={c.id} id={`fj-cs-${c.id}`} checked={Boolean(consentes[c.id])} onChange={(v) => setConsentes((x) => ({ ...x, [c.id]: v }))} label={c.label} hint={c.text} />)}

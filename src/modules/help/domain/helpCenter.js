@@ -973,6 +973,32 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-seguro-termo-certificado',
+      flags: ['federations'],
+      guias: ['federacao-seguro-termo-certificado'],
+      title: tk('Termo do seguro e certificado de seguro para eventos'),
+      summary: tk('O aceite eletrônico do termo do seguro na filiação e na renovação, e o certificado com QR que clubes e arenas filiados pedem para um evento.'),
+      keywords: ['federação', 'seguro', 'termo', 'aceite', 'apólice', 'certificado', 'certificado de seguro', 'evento', 'QR', 'verificação', 'clube', 'arena', 'renovação'],
+      blocks: [
+        p(tk('Com o módulo "Seguro e ocorrências" ligado e a apólice cadastrada, a federação pode pedir o aceite do termo do seguro e emitir certificados de seguro para eventos. Tudo é gravado pelo servidor.')),
+        steps(
+          tk('O TERMO — em Filiados → Seguro e ocorrências, "Editar a apólice", ligue "Pedir o aceite do termo" e escreva o texto. Se a apólice cobre só os filiados (não os cadastrados), só eles aceitam.'),
+          tk('NA FILIAÇÃO E NA RENOVAÇÃO — o pedido mostra o termo e só segue com a caixa marcada; a renovação abre o termo antes de gerar a cobrança. O aceite guarda a versão do texto, a data e quem aceitou (o responsável, no caso de dependente).'),
+          tk('TEXTO NOVO — mudar o texto pede um aceite novo. Quem já é filiado vê o aviso em Minha filiação e aceita ali, ou na próxima renovação. A aba mostra quantos filiados em dia já aceitaram a versão de hoje.'),
+          tk('O CERTIFICADO — quem gere um clube ou uma arena filiada pede na parte Federação da gestão: nome do evento, local, cidade, datas (até 31 dias) e quantas pessoas. A equipe de filiados recebe o aviso.'),
+          tk('EMITIR — na aba Seguro e ocorrências, "Emitir" só funciona se a apólice estiver em vigor e cobrir todas as datas do evento. O certificado sai com a apólice, o período e um QR; quem pediu é avisado e imprime ou mostra o QR.'),
+          tk('RECUSAR OU CANCELAR — sempre com motivo, que vai no aviso. O certificado cancelado continua no QR, mas a verificação passa a dizer que foi cancelado.'),
+        ),
+        list(
+          tk('A VERIFICAÇÃO — quem recebe o certificado abre o QR, sem conta: vê se é válido, o evento, a organização, as datas e a seguradora. Depois do evento, diz "Evento já encerrado".'),
+          tk('QUEM VÊ OS PEDIDOS — quem gere a organização e a equipe de filiados e a presidência. O financeiro não.'),
+          tk('QUEM EMITE — a equipe de filiados ou a presidência, nunca quem também gere a organização que pediu.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+        tip(tk('Escreva o termo em frases curtas: o que o seguro cobre, o que não cobre e como acionar. Ele aparece inteiro antes do aceite.')),
+      ],
+    },
+    {
       id: 'federacao-contas',
       flags: ['federations'],
       guias: ['federacao-contas'],

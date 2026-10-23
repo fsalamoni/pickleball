@@ -2032,7 +2032,10 @@ id: { granted, at_ms } }` e `consents_log[]` (≤ 30, `{ id, granted, at_ms, by
 }`). Em `federations`: `rules.block_expired_docs`, `rules.levels[]`,
 `rules.level_public`, `rules.extra_consents[] { id, label }` (≤ 5) e
 `insurance { insurer, policy, phone, valid_from, valid_until, covers:
-active_members|federated_only, how_to }`. Em `federation_plans`:
+active_members|federated_only, how_to, require_term, term_text }` (o termo,
+`docs/50` §42.1). Em `federation_members`, gravados só pelo servidor:
+`insurance_term { version, accepted_at_ms, by }` e `insurance_term_log[]`
+(≤ 10). Em `federation_plans`:
 `doc_validity { chave: meses }`.
 
 ### `federation_incidents/{id}` (NOVO — seguro e ocorrências, `docs/50` §30.4)
@@ -2320,6 +2323,19 @@ Exclusão de conta: apagada, com a pasta `federacao-laudos/{uid}/`;
 exportação: sim (`listMyAdaptedClassifications`). Em `federations`, o campo
 opcional `adapted_classes[] { id, label, description }` (até 10, em
 `fedLocked()`; ausente = as três padrão).
+
+### `federation_insurance_certificates/{id}` (NOVO — certificado de seguro para eventos, `docs/50` §42.2)
+`federation_id`, `federation_name`, `federation_acronym`, `kind`
+(`club|arena`), `org_id`, `org_name`, `org_city`, `org_state`,
+`requested_by`, `event { event_name, venue, city, date_from, date_to,
+participants, note }`, `status` (`requested|issued|declined|cancelled|withdrawn`,
+gravado), `code` (o índice `federation_card_index/{code}` com `kind:
+'insurance_certificate'`), `policy { insurer, policy, valid_from, valid_until,
+coverage }` (cópia na emissão), `decision_reason`, `issued_at_ms`,
+`history[]`, `created_at_ms`, `updated_at_ms`. Só o servidor grava
+(`federationInsurance`). Leem quem gere a organização e `members`/`admin` da
+federação. Consultas `federation_id ==` e `kind ==` + `org_id ==`, zero índice.
+Exclusão de conta: listada por `requested_by` (fica, é da organização).
 
 ### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
 `conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,

@@ -234,6 +234,13 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   (`federationAdapted`), revisão com aviso (`classificationState`) e a
   conferência dos inscritos na modalidade adaptada (`adaptedPlayerCheck`),
   sem expor o laudo. Telas em `src/v2/components/federations/adapted/`.
+- **Termo e certificado do seguro** (`docs/50` §42, módulo `insurance`):
+  termo com versão (`termVersion`) aceito no pedido e na renovação
+  (`termState`, `aceiteDoTermo` no servidor), certificado de seguro para
+  eventos pedido pelo clube/arena filiado e emitido pela equipe só com a
+  apólice cobrindo as datas (`certificateIssueError`, `federationInsurance`),
+  com QR de verificação pública. Telas em
+  `src/v2/components/federations/insurance/`.
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da

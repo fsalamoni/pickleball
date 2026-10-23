@@ -262,6 +262,8 @@ const RETAINED_AS_IS = Object.freeze([
   // Rodada 3, Bloco 3: o pedido de selo é do clube ou da arena; as evidências
   // enviadas saem com a pasta `federacao/{uid}/` de quem pediu.
   { col: 'federation_club_seals', field: 'applicant_uid', label: 'Pedidos de selo de clube certificado que fez (como gestor; o selo é da organização)' },
+  // Bloco 5 (seguro): o certificado do evento é do clube ou da arena.
+  { col: 'federation_insurance_certificates', field: 'requested_by', label: 'Certificados de seguro para eventos que pediu (como gestor; o certificado é da organização)' },
   // Sedes e Copa (Bloco 3b): o edital, a candidatura (da organização), as notas
   // da comissão e a Copa são da federação; ficam com o uid para o histórico.
   { col: 'federation_host_bids', field: 'created_by', label: 'Editais de sede que criou (como equipe da federação)' },
