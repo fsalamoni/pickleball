@@ -1859,6 +1859,12 @@ service cloud.firestore {
       allow read: if isPlatformAdmin();
       allow write: if false;
     }
+    // Livro do envio automático ao DUPR (`duprSubmitWorker`): o admin, os
+    // jogadores da partida (`uids`) e quem organizou leem; só o servidor escreve.
+    match /dupr_submissions/{id} {
+      allow read: if isPlatformAdmin() || me() in od().uids || od().organizer_uid == me();
+      allow write: if false;
+    }
 
     // ---- Clubs -----------------------------------------------------------
     match /clubs/{clubId} {

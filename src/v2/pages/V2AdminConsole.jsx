@@ -64,7 +64,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, FileDown, TicketPercent, BadgeCheck, FlaskConical } from 'lucide-react';
+import { UserCog, Wrench, FileDown, TicketPercent, BadgeCheck, FlaskConical, Send } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
 import {
   FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
@@ -97,6 +97,7 @@ const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPr
 const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
 const DuprPolicyCard = lazy(() => import('@/v2/components/admin/DuprPolicyCard'));
 const AdminDuprPilotTab = lazy(() => import('@/v2/components/admin/AdminDuprPilotTab'));
+const AdminDuprSubmissionsTab = lazy(() => import('@/v2/components/admin/AdminDuprSubmissionsTab'));
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -194,6 +195,7 @@ const SECTIONS = Object.freeze([
   ] },
   { id: 'duprSection', label: tk('DUPR'), icon: BadgeCheck, dica: 'admin-secao-dupr', tabs: [
     { id: 'dupr-piloto', label: tk('Piloto'), icon: FlaskConical, keywords: ['dupr', 'teste', 'uat', 'jogadores de teste', 'enviar partida'] },
+    { id: 'dupr-envios', label: tk('Envios'), icon: Send, keywords: ['dupr', 'fila', 'retidas', 'aprovar', 'apagar no dupr', 'envio automático'] },
     { id: 'dupr', label: tk('Exportar DUPR'), icon: FileDown, keywords: ['csv', 'planilha'] },
   ] },
   { id: 'features', label: tk('Funcionalidades'), icon: Flag, tabs: [
@@ -261,6 +263,9 @@ export default function V2AdminConsole() {
         {tab === 'dupr'       && <AdminDuprExportTab />}
         {tab === 'dupr-piloto' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}><AdminDuprPilotTab /></Suspense>
+        )}
+        {tab === 'dupr-envios' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}><AdminDuprSubmissionsTab /></Suspense>
         )}
         {tab === 'arena-modules' && <AdminArenaModulesTab />}
         {tab.startsWith('gam-') && (

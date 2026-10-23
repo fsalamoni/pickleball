@@ -124,7 +124,7 @@ pura em `src/modules/rating/domain/duprPolicy.js`, cópia no servidor em
   `duprMatchEligibility` barra partida sem placar, com game empatado, lados
   desiguais ou jogador repetido; `duprReadiness` exige conta conectada com
   `BASIC_L1` de todos; `duprIdentifier` dá o identificador único (`pr:tm:…`,
-  `pr:gd:…`). **O envio ainda não existe**: a política fica salva para ele.
+  `pr:gd:…`). Quem aplica a política é o envio automático (§8).
 
 **Rating próprio suspenso.** Enquanto `useDuprMode().ownRatingOff` (= a integração
 vale para quem vê), saem da tela o ELO "Nacional", o "Nível 2.0–8.0", as curvas de
@@ -163,3 +163,44 @@ exportação CSV não enxergam o piloto.
   admin ler as duas coleções e ninguém escrever (`tests/rules/dupr.rules.test.js`).
 * A aba **Exportar DUPR** (CSV) mudou de Sistema para a mesma seção DUPR; o id da
   aba (`?tab=dupr`) não mudou.
+
+## 8. Envio automático das partidas (`dupr_submissions`)
+
+**Painel admin → DUPR → Envios** (`AdminDuprSubmissionsTab`). O servidor mantém um
+livro, um documento por partida em `dupr_submissions/{identifier}`
+(`functions/duprSubmissions.js`, testes em `duprSubmissions.test.js`).
+
+* **Quando roda**: a varredura `duprSubmitWorker` (a cada 15 min) e o botão
+  **Processar agora** (ação `submissions_run`). Só com a flag `dupr_official_sync`
+  ligada **e** a política fora de *Desligado*; um lease em
+  `platform_settings/dupr_submissions` impede duas passadas ao mesmo tempo. Cada
+  passada faz até 60 chamadas ao DUPR; o resto fica para a próxima.
+* **O que lê**: as mesmas partidas decididas do ranking — `tournament_matches`
+  (torneio elegível, como em `isEligible`) e `club_event_games` (dias de jogo
+  publicados e confrontos de equipe). W.O. e partida sem vencedor ficam de fora.
+  Torneio **chancelado por federação** também: quem envia é a federação (planilha
+  DUPR). Partida nova só entra se foi decidida nos últimos 30 dias; histórico
+  antigo vai pela exportação CSV.
+* **Quem decide**: `duprSubmissionDecision` (política + grupo + escolha de quem
+  criou, em `tournament_modalities.dupr_submit` / `game_days.dupr_submit`). No
+  piloto (`audience: admins`) só entram partidas com algum admin da plataforma.
+* **Estados**: `held` (retida: jogador sem conta, sem DUPR conectado ou sem
+  `BASIC_L1` — a tela diz quem falta, e ela sai sozinha quando todos conectarem),
+  `awaiting_approval` (modo manual: o admin aprova), `queued` (torneio espera a
+  carência `grace_minutes`, para corrigir placar; dia de jogo vai já), `sent`
+  (guarda o `match_code`), `failed` (nova tentativa em 15 min, 30, 60… até 1 dia,
+  no máximo 6; recusa 4xx do DUPR não se repete sozinha) e `deleted`.
+* **Placar mudou** depois de enviado → `update` no DUPR (o hash do corpo muda).
+  **Resultado deixou de existir** (placar apagado, dia despublicado, torneio
+  cancelado/arquivado/privado) → `delete` no DUPR. Mudança de política ou alguém
+  desconectar a conta **não** apaga o que já foi enviado.
+* **Ações do admin** (`submissions_approve|retry|remove|unblock`, só
+  `platform_admin`): aprovar, tentar de novo, **Apagar no DUPR / Não enviar**
+  (motivo obrigatório; trava a partida para não voltar) e **Destravar**. Tudo em
+  `audit_logs` (`dupr_submission_*`).
+* **Quem lê o livro**: o admin, quem jogou (`uids`) e quem organizou
+  (`organizer_uid`); ninguém escreve pelo navegador
+  (`tests/rules/dupr.rules.test.js`). O corpo enviado é o mesmo do piloto
+  (`duprMatchPayload`).
+* **Exclusão de conta** apaga `dupr_links`, `dupr_link_tokens` e o ID reservado em
+  `dupr_ids`.
