@@ -1941,6 +1941,15 @@ required|optional|excluded }, optional_default_on, grace_minutes, updated_at,
 updated_by }`. Ausente = padrão (piloto, envio desligado); lido por
 `normalizeDuprPolicy` (cliente) e `functions/duprPolicy.js` (servidor).
 
+`dupr_pilot_players/{id}` e `dupr_pilot_matches/{id}` (Piloto do DUPR, Painel
+admin → DUPR): só o admin lê, só o servidor (`functions/duprPilot.js`) escreve.
+Jogador: `{ name, email|null, dupr_id|null, dupr_name, ratings: { singles, doubles }|null,
+status: waiting|ready, checked_ms, invited_ms?, created_at_ms, created_by, updated_at_ms }`.
+Partida: `{ identifier ('pr:pl:{id}'), payload (o corpo enviado ao DUPR), side_a[],
+side_b[] ({ player_id, name, dupr_id }), env: 'uat', status: sent|failed|deleted,
+match_code|null, error|null, sent_at_ms?, deleted_at_ms?, created_at_ms, created_by }`.
+Nenhum dado de usuário da plataforma: o piloto é isolado.
+
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
 (PR 3), `{ kind: 'credential', credential_id, federation_id, created_at_ms }`.

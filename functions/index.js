@@ -1916,26 +1916,37 @@ exports.messagingHook = onRequest(
 // por webhook e assinaturas. Ver `functions/dupr.js` e `docs/51-DUPR.md`.
 // =====================================================================
 const duprOficial = require('./dupr');
+const duprPiloto = require('./duprPilot');
 
 const duprCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: FieldValueDel, Timestamp, now: Date.now(), logger });
 
-/** `action`: `config` (URL do login + situação), `link`, `unlink`, `status`. */
+/**
+ * `action`: `config` (URL do login + situação), `link`, `unlink`, `status` e,
+ * só para o admin, as do piloto (`pilot_*`, ver `functions/duprPilot.js`).
+ */
 exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 60, maxInstances: 3 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
   const token = req.auth.token || {};
   const data = req.data || {};
+  const piloto = String(data.action || '').startsWith('pilot_');
   // No piloto da política, só o admin da plataforma usa a integração.
-  const isPlatformAdmin = data.action === 'config' || data.action === 'link'
+  const isPlatformAdmin = piloto || data.action === 'config' || data.action === 'link'
     ? await isPlatformAdminUser(req, getFirestore(getApp(), DATABASE_ID))
     : false;
   const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '', isPlatformAdmin };
-  const acoes = { config: duprOficial.config, link: duprOficial.link, unlink: duprOficial.unlink, status: duprOficial.status };
+  const acoes = {
+    config: duprOficial.config, link: duprOficial.link, unlink: duprOficial.unlink, status: duprOficial.status,
+    pilot_player_save: duprPiloto.savePlayer, pilot_player_refresh: duprPiloto.refreshPlayer,
+    pilot_player_remove: duprPiloto.removePlayer, pilot_player_invite: duprPiloto.invitePlayer,
+    pilot_match_send: duprPiloto.sendMatch, pilot_match_delete: duprPiloto.deleteMatch,
+  };
   const fn = acoes[data.action];
   if (!fn) throw new HttpsError('invalid-argument', 'Ação desconhecida.');
   try {
-    return await fn(duprCtx(), actor, data);
+    const ctx = duprCtx();
+    return await fn(ctx, actor, data, () => duprOficial.clienteDuprDe(ctx));
   } catch (err) {
-    if (err instanceof duprOficial.DuprServiceError) throw new HttpsError(err.code, err.message);
+    if (err instanceof duprOficial.DuprServiceError || err instanceof duprPiloto.PilotError) throw new HttpsError(err.code, err.message);
     logger.error('duprIntegration falhou', err);
     throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
   }

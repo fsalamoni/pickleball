@@ -6,7 +6,8 @@
  * Ver docs/51-DUPR.md.
  */
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/core/config/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { db, functions } from '@/core/config/firebase';
 import { t } from '@/core/i18n';
 
 async function chamar(action, payload = {}) {
@@ -34,3 +35,19 @@ export const unlinkDuprAccount = () => chamar('unlink');
 
 /** Resumo do vínculo, com as assinaturas renovadas se passou de 24 h. */
 export const getDuprStatus = () => chamar('status');
+
+/*
+ * PILOTO (Painel admin → DUPR → Piloto): jogadores e partidas de teste que
+ * existem só ali. Só o admin lê; quem escreve é o servidor (`pilot_*`).
+ */
+export const pilotAction = (acao, payload) => chamar(`pilot_${acao}`, payload);
+
+async function listar(colecao) {
+  if (!db) return [];
+  const snap = await getDocs(collection(db, colecao));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+export const listPilotPlayers = async () => (await listar('dupr_pilot_players'))
+  .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+export const listPilotMatches = async () => (await listar('dupr_pilot_matches'))
+  .sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));

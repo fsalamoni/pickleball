@@ -1849,6 +1849,16 @@ service cloud.firestore {
     match /dupr_ids/{duprId} {
       allow read, write: if false;
     }
+    // Piloto do DUPR (Painel admin → DUPR): jogadores e partidas de teste que
+    // existem só ali. Só o admin lê; só o servidor escreve (`pilot_*`).
+    match /dupr_pilot_players/{id} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
+    }
+    match /dupr_pilot_matches/{id} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
+    }
 
     // ---- Clubs -----------------------------------------------------------
     match /clubs/{clubId} {

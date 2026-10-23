@@ -64,7 +64,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, FileDown, TicketPercent } from 'lucide-react';
+import { UserCog, Wrench, FileDown, TicketPercent, BadgeCheck, FlaskConical } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
 import {
   FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
@@ -96,6 +96,7 @@ import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
 const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
 const DuprPolicyCard = lazy(() => import('@/v2/components/admin/DuprPolicyCard'));
+const AdminDuprPilotTab = lazy(() => import('@/v2/components/admin/AdminDuprPilotTab'));
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -191,12 +192,15 @@ const SECTIONS = Object.freeze([
     { id: 'com-modelos', label: tk('Modelos'), icon: FileText, keywords: ['prévia', 'como chega', 'idioma'] },
     { id: 'com-entregas', label: tk('Entregas'), icon: Inbox, keywords: ['por que não chegou', 'bloqueio', 'denúncia', 'registro'] },
   ] },
+  { id: 'duprSection', label: tk('DUPR'), icon: BadgeCheck, dica: 'admin-secao-dupr', tabs: [
+    { id: 'dupr-piloto', label: tk('Piloto'), icon: FlaskConical, keywords: ['dupr', 'teste', 'uat', 'jogadores de teste', 'enviar partida'] },
+    { id: 'dupr', label: tk('Exportar DUPR'), icon: FileDown, keywords: ['csv', 'planilha'] },
+  ] },
   { id: 'features', label: tk('Funcionalidades'), icon: Flag, tabs: [
     { id: 'flags', label: tk('Funcionalidades'), icon: Flag, keywords: ['flags', 'ligar', 'desligar', 'opcionais'] },
   ] },
   { id: 'system', label: tk('Sistema'), icon: ListChecks, quieta: true, tabs: [
     { id: 'audit', label: tk('Auditoria'), icon: ListChecks },
-    { id: 'dupr', label: tk('Exportar DUPR'), icon: FileDown },
     { id: 'tools', label: tk('Diagnóstico'), icon: Wrench, keywords: ['ferramentas', 'avançado', 'restaurar'] },
   ] },
 ]);
@@ -255,6 +259,9 @@ export default function V2AdminConsole() {
         {tab === 'audit'      && <AuditTab />}
         {tab === 'tools'      && <ToolsTab navigate={navigate} />}
         {tab === 'dupr'       && <AdminDuprExportTab />}
+        {tab === 'dupr-piloto' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}><AdminDuprPilotTab /></Suspense>
+        )}
         {tab === 'arena-modules' && <AdminArenaModulesTab />}
         {tab.startsWith('gam-') && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
