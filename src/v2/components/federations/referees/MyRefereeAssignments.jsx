@@ -3,21 +3,24 @@
  * convocações para responder em destaque (confirmar, recusar, declarar
  * conflito de interesse), as próximas, o histórico com avaliação e diária,
  * a súmula depois do evento e, por federação, o calendário de datas em que
- * não pode (toque no dia) e se aparece no quadro público.
+ * não pode (toque no dia), se aparece no quadro público, a situação da
+ * credencial, quanto falta para o próximo nível (e o pedido de promoção).
+ * O AVALIADOR escalado avalia a equipe do evento pela mesma ficha da Central.
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarX2, Check, FileText, Save, Users, X } from 'lucide-react';
+import { CalendarX2, Check, ClipboardCheck, FileText, Save, Star, TrendingUp, Users, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { refereesAction } from '@/modules/federations/services/refereesService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import {
-  EVAL_CRITERIA, EVAL_CRITERIA_LABELS, REFEREE_LIMITS, addDaysISO, amountOf, assignmentState, isoDateBR, normalizeUnavailable, splitMyAssignments, toggleUnavailable, validateReport,
+  CREDENTIAL_STANDING_LABELS, EVAL_CRITERIA, EVAL_CRITERIA_LABELS, REFEREE_LIMITS, addDaysISO, amountOf, assignmentState, credentialStanding, isoDateBR, normalizeUnavailable, splitMyAssignments, toggleUnavailable, validateReport,
 } from '@/modules/federations/domain/referees';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
 import { V2Badge, V2Button, V2Field, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { fmtData, t, tk, tn } from '@/core/i18n';
-import { AssignmentBadge, dataCurta, funcao, periodo } from './refUi';
+import { AssignmentBadge, PromotionProgress, dataCurta, funcao, periodo } from './refUi';
+import { AvaliacaoForm } from './RefReportsTab';
 
 const sigla = (a) => a.federation_acronym || a.federation_name || t('Federação');
 
@@ -79,6 +82,36 @@ function Equipe({ a }) {
   return <ul className="space-y-1 text-sm text-ink">{(m.data.crew || []).map((p) => <li key={`${p.name}${p.function}`}>{p.name} · {funcao(p.function)}{p.status === 'invited' ? ` (${t('aguardando resposta')})` : ''}</li>)}</ul>;
 }
 
+/** O avaliador vê quem atuou no evento e avalia com a ficha da Central. */
+function AvaliarEquipe({ a }) {
+  const lista = useFederationMutation(() => refereesAction({ federationId: a.federation_id, action: 'evaluator_crew', assignmentId: a.id }));
+  const [avaliando, setAvaliando] = useState(null);
+  const { mutate } = lista;
+  React.useEffect(() => { mutate(); }, [mutate]);
+  if (avaliando) return <AvaliacaoForm federation={{ id: a.federation_id }} a={avaliando} onFechar={() => { setAvaliando(null); mutate(); }} />;
+  if (lista.isError) return <p className="text-sm text-gray-500">{lista.error.message}</p>;
+  if (!lista.data) return <p className="text-sm text-gray-500">{t('Carregando a equipe do evento…')}</p>;
+  const crew = lista.data.crew || [];
+  if (!crew.length) return <p className="text-sm text-gray-500">{t('Ninguém da arbitragem confirmado neste evento ainda.')}</p>;
+  return (
+    <ul className="space-y-2">
+      {crew.map((p) => (
+        <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-100 p-2">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-ink">{p.name}</p>
+            <p className="text-xs text-gray-500">{funcao(p.function)}{p.evaluation ? ` · ${t('sua nota: {m}', { m: p.evaluation.avg })}` : ''}</p>
+          </div>
+          {p.evaluated_by_other
+            ? <V2Badge tone="neutral">{t('Já avaliado pela equipe')}</V2Badge>
+            : p.status === 'done'
+              ? <V2Button type="button" size="sm" variant={p.evaluation ? 'ghost' : 'primary'} onClick={() => setAvaliando({ id: p.id, evaluation: p.evaluation })}><Star className="h-4 w-4" />{p.evaluation ? t('Corrigir') : t('Avaliar')}</V2Button>
+              : <V2Badge tone="neutral">{t('Avalie depois que a equipe fechar o evento')}</V2Badge>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /* ----------------------------------------------------------------- linhas -- */
 
 function Escala({ a, hoje, onAbrir }) {
@@ -96,6 +129,7 @@ function Escala({ a, hoje, onAbrir }) {
           {st.canRespond && a.status === 'invited' && <V2Button type="button" size="sm" onClick={() => onAbrir('aceitar', a)}><Check className="h-4 w-4" />{t('Confirmar')}</V2Button>}
           {st.canRespond && <V2Button type="button" size="sm" variant="ghost" onClick={() => onAbrir('recusar', a)}>{a.status === 'confirmed' ? t('Não vou poder') : t('Recusar')}</V2Button>}
           {st.canReport && <V2Button type="button" size="sm" variant="secondary" onClick={() => onAbrir('sumula', a)}><FileText className="h-4 w-4" />{a.report ? t('Súmula enviada') : t('Enviar a súmula')}</V2Button>}
+          {a.function === 'evaluator' && st.started && ['confirmed', 'done'].includes(a.status) && <V2Button type="button" size="sm" variant="secondary" onClick={() => onAbrir('avaliar', a)}><ClipboardCheck className="h-4 w-4" />{t('Avaliar a equipe')}</V2Button>}
         </div>
       </div>
       {a.status === 'confirmed' && !st.ended && <Equipe a={a} />}
@@ -114,6 +148,40 @@ function Escala({ a, hoje, onAbrir }) {
 
 const SEMANAS = 9;
 
+function Carreira({ roster }) {
+  const [nota, setNota] = useState('');
+  const [pedindo, setPedindo] = useState(false);
+  const m = useFederationMutation(() => refereesAction({ federationId: roster.federation_id, action: 'promotion_request', note: nota }));
+  const pol = roster.credential_policy;
+  const cred = pol?.required && roster.credential_until !== undefined ? credentialStanding(roster.credential_until, { credential_policy: pol }) : null;
+  const tomCred = { ok: 'green', expiring: 'amber', grace: 'amber', lapsed: 'red', none: 'red' };
+  const p = roster.promotion_progress;
+  const podePedir = p?.next && !roster.promotion_request && p.met !== false;
+  return (
+    <div className="space-y-2">
+      {cred && (
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <V2Badge tone={tomCred[cred.state] || 'neutral'}>{t(CREDENTIAL_STANDING_LABELS[cred.state])}</V2Badge>
+          {cred.until ? <span className="text-xs text-gray-500">{t('Validade: {data}', { data: dataCurta(cred.until) })}{cred.grace_until && cred.state === 'grace' ? ` · ${t('carência até {data}', { data: dataCurta(cred.grace_until) })}` : ''}</span> : null}
+          {cred.blocks && <span className="text-xs font-semibold text-red-700">{t('Você não recebe convocações até renovar.')}</span>}
+        </p>
+      )}
+      <PromotionProgress progress={p} />
+      {roster.promotion_request && <p className="flex items-center gap-1 text-xs font-semibold text-ink"><TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />{t('Promoção pedida em {data}: a equipe vai responder.', { data: dataCurta(roster.promotion_request.at) })}</p>}
+      {podePedir && !pedindo && <V2Button type="button" size="sm" variant="secondary" onClick={() => setPedindo(true)}><TrendingUp className="h-4 w-4" />{t('Pedir promoção')}</V2Button>}
+      {podePedir && pedindo && (
+        <form noValidate className="space-y-2" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => { toast.success(t('Pedido enviado à equipe.')); setPedindo(false); }, onError: (er) => toast.error(er.message) }); }}>
+          <V2Field label={t('Recado à equipe (opcional)')} htmlFor={`mr-promo-${roster.federation_id}`}><V2Textarea id={`mr-promo-${roster.federation_id}`} rows={2} maxLength={REFEREE_LIMITS.REASON_MAX} value={nota} onChange={(e) => setNota(e.target.value)} /></V2Field>
+          <div className="flex justify-end gap-2">
+            <V2Button type="button" size="sm" variant="ghost" onClick={() => setPedindo(false)}>{t('Voltar')}</V2Button>
+            <V2Button type="submit" size="sm" disabled={m.isPending}>{t('Enviar o pedido')}</V2Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function Disponibilidade({ roster }) {
   const hoje = isoDateBR();
   const [dias, setDias] = useState(() => normalizeUnavailable(roster.unavailable, hoje));
@@ -127,6 +195,7 @@ function Disponibilidade({ roster }) {
   return (
     <div className="space-y-3 rounded-2xl border border-gray-100 p-3">
       <p className="font-bold text-ink">{roster.federation_acronym || roster.federation_name || t('Federação')}</p>
+      <Carreira roster={roster} />
       <p className="flex items-center gap-2 text-sm text-gray-500"><CalendarX2 className="h-4 w-4" aria-hidden="true" />{t('Toque nos dias em que você NÃO pode apitar. A equipe vê um alerta ao convocar.')}</p>
       <div className="grid grid-cols-7 gap-1 text-center" role="group" aria-label={t('Dias em que não posso')}>
         {semana.map((d, i) => <span key={`h${i}`} className="text-xs font-bold text-gray-500" aria-hidden="true">{d}</span>)}
@@ -158,7 +227,7 @@ function Disponibilidade({ roster }) {
 
 /* ----------------------------------------------------------------- bloco -- */
 
-const TITULOS = { aceitar: tk('Confirmar a escala'), recusar: tk('Recusar a escala'), sumula: tk('Súmula do evento') };
+const TITULOS = { aceitar: tk('Confirmar a escala'), recusar: tk('Recusar a escala'), sumula: tk('Súmula do evento'), avaliar: tk('Avaliar a equipe do evento') };
 
 export default function MyRefereeAssignments({ rosters = [], assignments = [] }) {
   const hoje = isoDateBR();
@@ -188,7 +257,7 @@ export default function MyRefereeAssignments({ rosters = [], assignments = [] })
       )}
       {rosters.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Disponibilidade')}</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Nível, credencial e disponibilidade')}</h3>
           {rosters.map((r) => <Disponibilidade key={r.id} roster={r} />)}
         </div>
       )}
@@ -196,7 +265,8 @@ export default function MyRefereeAssignments({ rosters = [], assignments = [] })
         <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
           <DialogTitle>{aberto ? t(TITULOS[aberto.modo]) : ''}</DialogTitle>
           <DialogDescription>{aberto ? `${aberto.a.event?.name} · ${periodo(aberto.a.event)}` : ''}</DialogDescription>
-          {aberto && aberto.modo !== 'sumula' && <Responder a={aberto.a} aceitar={aberto.modo === 'aceitar'} onFechar={fechar} />}
+          {aberto && (aberto.modo === 'aceitar' || aberto.modo === 'recusar') && <Responder a={aberto.a} aceitar={aberto.modo === 'aceitar'} onFechar={fechar} />}
+          {aberto?.modo === 'avaliar' && <AvaliarEquipe a={aberto.a} />}
           {aberto?.modo === 'sumula' && <Sumula a={aberto.a} onFechar={fechar} />}
         </DialogContent>
       </Dialog>

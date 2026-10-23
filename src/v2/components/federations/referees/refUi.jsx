@@ -3,8 +3,8 @@
  * evento, função, situação da escala e os alertas da convocação.
  */
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { ASSIGNMENT_STATUS_LABELS, REFEREE_FUNCTION_LABELS, WARNING_LABELS, levelLabel } from '@/modules/federations/domain/referees';
+import { AlertTriangle, Check, TrendingUp } from 'lucide-react';
+import { ASSIGNMENT_STATUS_LABELS, PROMOTION_CHECK_LABELS, REFEREE_FUNCTION_LABELS, WARNING_LABELS, isoDateBR, levelLabel, monthsBetween } from '@/modules/federations/domain/referees';
 import { V2Badge } from '@/v2/ui/primitives';
 import { fmtData, t } from '@/core/i18n';
 
@@ -42,5 +42,37 @@ export function WarningsList({ warnings = [], rules, className = '' }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Quanto falta para o próximo nível (cópia que o servidor grava no
+ * cadastro). Os meses andam sozinhos: são refeitos com a data de hoje.
+ */
+export function PromotionProgress({ progress, className = '' }) {
+  if (!progress?.next) return null;
+  const hoje = isoDateBR();
+  const checks = (progress.checks || []).map((c) => {
+    if (c.key !== 'months' || !progress.since) return c;
+    const have = monthsBetween(progress.since, hoje);
+    return { ...c, have, ok: have >= c.need };
+  });
+  const formata = (k, v) => (v == null ? '—' : k === 'avg' ? String(v).replace('.', ',') : String(v));
+  return (
+    <div className={`space-y-1 rounded-xl bg-gray-50 p-3 text-sm ${className}`}>
+      <p className="flex items-center gap-2 font-semibold text-ink"><TrendingUp className="h-4 w-4" aria-hidden="true" />{t('Próximo nível: {nivel}', { nivel: progress.next.label })}</p>
+      {checks.length === 0
+        ? <p className="text-xs text-gray-500">{t('Sem requisitos definidos: a equipe decide.')}</p>
+        : (
+          <ul className="space-y-0.5">
+            {checks.map((c) => (
+              <li key={c.key} className={`flex items-center gap-1 text-xs ${c.ok ? 'text-green-700' : 'text-gray-500'}`}>
+                {c.ok ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <span className="inline-block h-3.5 w-3.5" aria-hidden="true" />}
+                {t(PROMOTION_CHECK_LABELS[c.key])}: {formata(c.key, c.have)} / {formata(c.key, c.need)}
+              </li>
+            ))}
+          </ul>
+        )}
+    </div>
   );
 }

@@ -855,7 +855,7 @@ const ATLETA = {
       guias: ['federacao-arbitragem'],
       title: tk('Arbitragem da federação: quadro, escalas, súmulas e diárias'),
       summary: tk('Montar o quadro de árbitros, convocar para os eventos, receber a confirmação e a súmula, avaliar e pagar as diárias.'),
-      keywords: ['federação', 'arbitragem', 'árbitro', 'juiz', 'escala', 'convocação', 'convocar', 'súmula', 'diária', 'deslocamento', 'avaliação', 'impedimento', 'conflito de interesse', 'disponibilidade', 'quadro'],
+      keywords: ['federação', 'arbitragem', 'árbitro', 'juiz', 'escala', 'convocação', 'convocar', 'súmula', 'diária', 'deslocamento', 'avaliação', 'impedimento', 'conflito de interesse', 'disponibilidade', 'quadro', 'avaliador', 'nível', 'promoção', 'progressão', 'credencial vencida', 'reciclagem', 'carência'],
       blocks: [
         p(tk('Com o módulo Arbitragem ligado (Configurações → Módulos), a seção Arbitragem da Central fica com a diretoria de arbitragem e com a presidência. Nada sobre árbitros é gravado pelo navegador: cada passo passa pelo servidor, que confere quem pode.')),
         steps(
@@ -864,6 +864,9 @@ const ATLETA = {
           tk('ESCALAS — cada torneio chancelado e cada competição da agenda aparece com a cobertura por função. "Convocar" sugere primeiro quem não tem nenhum alerta e atuou menos. Os alertas (marcou que não pode, outra escala no dia, inscrito como atleta, nível abaixo do mínimo) avisam, mas não barram.'),
           tk('A RESPOSTA — o árbitro confirma ou recusa em Minha área → Federações → Minhas escalas de arbitragem. Se declarar conflito de interesse, só a equipe vê. Quem não respondeu recebe um lembrete na véspera do prazo.'),
           tk('DEPOIS DO EVENTO — "Fechar o evento" marca quem não veio; os demais confirmados ficam como atuaram. O árbitro envia a súmula, e a equipe avalia a atuação em cinco critérios (o árbitro vê a nota e o comentário).'),
+          tk('AVALIADOR — escale alguém na função "Avaliador(a) de arbitragem": no evento, ele avalia a equipe pela mesma ficha, em Minha área → escalas → "Avaliar a equipe". Não avalia a si mesmo nem corrige a avaliação de outra pessoa; a equipe vê quem avaliou.'),
+          tk('PROGRESSÃO DE NÍVEL — em Regras e níveis, diga o que cada nível pede no nível de baixo: atuações, média das avaliações e meses no nível. O árbitro vê quanto falta e, cumprindo, pede a promoção; a equipe promove ou recusa com motivo no Quadro, e tudo fica no histórico de nível.'),
+          tk('VENCIMENTO DA CREDENCIAL — também em Regras e níveis: exigir credencial em dia, avisar antes, dar carência e o que acontece depois (só avisar, não convocar mais, ou não convocar e tirar das escalas futuras). Vale no servidor: a convocação e a confirmação são recusadas, e a varredura diária avisa e libera as escalas. Renovar é passar num curso de reciclagem que emite credencial nova.'),
           tk('DIÁRIAS — marque as pagas, em lote, e baixe a planilha. Com o módulo de contas ligado, a diária paga já entra como despesa de arbitragem, sem lançar de novo.'),
         ),
         list(
@@ -2756,6 +2759,7 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Como abro uma consulta pública sobre um regulamento?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comentarios' },
   { q: tk('Como a federação vende uniforme e material pelo Mercado?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comunicacao' },
   { q: tk('Fui convocado para apitar. Onde confirmo e mando a súmula?'), section: HELP_SECTION.ATHLETE, article: 'federacao-arbitragem' },
+  { q: tk('Como subo de nível na arbitragem da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-arbitragem' },
   { q: tk('Como peço a licença de professor da federação e ganho o selo no perfil?'), section: HELP_SECTION.ATHLETE, article: 'federacao-licencas' },
   { q: tk('Onde denuncio um risco a criança ou adolescente na federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-protecao-menores' },
   { q: tk('Como a federação faz o orçamento e publica a prestação de contas?'), section: HELP_SECTION.ATHLETE, article: 'federacao-contas' },

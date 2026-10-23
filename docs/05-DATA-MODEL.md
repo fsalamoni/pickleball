@@ -1758,11 +1758,17 @@ ganha `comments` (opcional; `false` desliga os comentários da federação).
 `photo_url`, `city`, `state` (copiados do cadastro), `level` (id de
 `federations.referee_rules.levels`, gravado), `functions[]` (`referee` |
 `head_referee` | `line_judge` | `technical_delegate` |
-`tournament_director`), `status` (`active` | `inactive` | `suspended`),
+`tournament_director` | `evaluator`), `status` (`active` | `inactive` | `suspended`),
 `credential_ids[]` (credenciais de árbitro dos cursos), `since` (ISO),
 `public_listing` (padrão `false`), `unavailable[]` (ISO, até 60 — dias em
 que não pode), `stats` `{ acts, no_show, evaluations, avg }`, `added_by`,
-`created_at_ms`, `updated_at_ms`. Subcoleção `private/staff` `{ notes }`
+`created_at_ms`, `updated_at_ms`; desde o `docs/50` §40 (opcionais):
+`credential_until` (ISO da melhor credencial de árbitro ativa; `''` = não
+vence; `null` = nenhuma), `credential_policy` (cópia da regra, para o árbitro
+ver), `promotion_progress` (`promotionProgress` congelado), `promotion_request`
+`{ to, at, at_ms, met, note }` | null, `level_since` (ISO), `level_history[]`
+(até 20: `{ from, to, at, at_ms, by, reason, met, declined? }`),
+`cred_warned_for` e `cred_released_for` (validade já avisada/liberada). Subcoleção `private/staff` `{ notes }`
 (só a equipe lê). Leitura: o próprio árbitro e a equipe com
 `courses`/`admin`; **só o servidor grava** (`federationReferees`). Zero
 índice. Exclusão de conta: sai (com `private/staff`); exportação: entra.
@@ -1777,7 +1783,7 @@ tournament|agenda, id, name, date, end_date, city, public }` (copiado),
 `athlete` | `level_below`), `conflict` `{ declared, reason }` | null,
 `decline_reason`, `report` `{ text, at_ms, first_at_ms }` | null, `evaluation` `{ scores
 { rules, positioning, communication, punctuality, presentation }, avg,
-comment, at_ms, by, by_name }` | null, `paid_at_ms`, `paid_by`, `replaces`,
+comment, at_ms, by, by_name, by_role (staff|evaluator) }` | null, `paid_at_ms`, `paid_by`, `replaces`,
 `replaced_by`, `reminded`, `created_by`, `created_at_ms`, `updated_at_ms`.
 Leitura: o árbitro (`referee_uid`) e a equipe com `courses`/`admin`; **só o
 servidor grava**. Zero índice. Exclusão de conta: fica pseudonimizada
@@ -1788,7 +1794,9 @@ histórico do evento e despesa da federação; exportação: entra.
 `{ levels[] { id, label } (até 8; ausente ⇒ Trainee, Nível 1, Nível 2,
 Certificado), min_level_by_function { [função]: id }, needs { [função]: n },
 fee_default_cents { [função]: centavos }, respond_days (1–30, padrão 3),
-crew_visible (padrão false) }`. Gravado pela ação `rules` de
+crew_visible (padrão false), credential_policy { required, grace_days (0–180),
+warn_days (0–120), on_expire (warn|block_new|block_and_release) }, promotion
+{ [id do nível]: { events, avg, months } } }` (os dois últimos: `docs/50` §40). Gravado pela ação `rules` de
 `federationReferees` (`fedLocked()`).
 
 ### `federations.doc_numbers` (PR 8, campo opcional, `fedLocked()`)
