@@ -89,6 +89,14 @@ async function webhook() {
   log(`✔ Webhook registrado no DUPR (${r && r.status}). Endereço: ${SITE}/api/dupr/webhook?k=***`);
 }
 
+// Liga/desliga `dupr_official_sync` em platform_settings/global (o campo que o
+// Painel admin → Funcionalidades grava).
+async function flag(valor) {
+  if (valor !== 'on' && valor !== 'off') throw new Error('Informe on ou off.');
+  await db().collection('platform_settings').doc('global').set({ feature_flags: { dupr_official_sync: valor === 'on' } }, { merge: true });
+  log(`✔ dupr_official_sync ${valor === 'on' ? 'LIGADA' : 'desligada'}.`);
+}
+
 async function user(id) {
   if (!id) throw new Error('Informe o ID DUPR.');
   const r = await cliente().getUser(id);
@@ -96,7 +104,7 @@ async function user(id) {
   log(JSON.stringify({ id: x.id, nome: x.fullName, ratings: x.ratings && { singles: x.ratings.singles, doubles: x.ratings.doubles } }));
 }
 
-const comandos = { smoke, seed, webhook, user };
+const comandos = { smoke, seed, webhook, user, flag };
 
 async function main() {
   const [cmd, ...args] = process.argv.slice(2);

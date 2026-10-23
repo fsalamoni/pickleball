@@ -13,12 +13,19 @@ name: DUPR — conferir e configurar a integração
 #   user     mostra os ratings públicos de um jogador (informe o ID DUPR)
 
 on:
+  # Também roda quando .github/dupr-uat-run.json muda na main: é o caminho para
+  # quem não consegue abrir o "Run workflow" (a sessão de desenvolvimento não
+  # dispara workflow, mas mescla PR). O arquivo diz
+  # { "acao": "...", "ambiente": "uat", "arg": "..." }.
+  push:
+    branches: [main]
+    paths: ['.github/dupr-uat-run.json']
   workflow_dispatch:
     inputs:
       acao:
         description: Ação
         type: choice
-        options: [smoke, seed, webhook, user]
+        options: [smoke, seed, webhook, user, flag]
         default: smoke
       ambiente:
         description: Ambiente do DUPR (produção só depois da aprovação do DUPR)
@@ -26,7 +33,7 @@ on:
         options: [uat, prod]
         default: uat
       dupr_id:
-        description: ID DUPR (só para a ação "user")
+        description: ID DUPR (ação "user") ou on/off (ação "flag")
         type: string
         required: false
 
@@ -43,16 +50,32 @@ jobs:
     timeout-minutes: 10
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-      DUPR_ENV: ${{ inputs.ambiente }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Definir ação e ambiente
+        env:
+          IN_ACAO: ${{ inputs.acao }}
+          IN_AMBIENTE: ${{ inputs.ambiente }}
+          IN_ARG: ${{ inputs.dupr_id }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            F=.github/dupr-uat-run.json
+            echo "ACAO=$(jq -r '.acao // "smoke"' $F)" >> "$GITHUB_ENV"
+            echo "DUPR_ENV=$(jq -r '.ambiente // "uat"' $F)" >> "$GITHUB_ENV"
+            echo "DUPR_ID=$(jq -r '.arg // ""' $F)" >> "$GITHUB_ENV"
+          else
+            echo "ACAO=$IN_ACAO" >> "$GITHUB_ENV"
+            echo "DUPR_ENV=$IN_AMBIENTE" >> "$GITHUB_ENV"
+            echo "DUPR_ID=$IN_ARG" >> "$GITHUB_ENV"
+          fi
 
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
 
       - name: Credenciais da service account
-        if: inputs.acao == 'seed' || inputs.acao == 'webhook'
+        if: env.ACAO == 'seed' || env.ACAO == 'webhook' || env.ACAO == 'flag'
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
@@ -68,6 +91,4 @@ jobs:
         env:
           DUPR_CLIENT_KEY: ${{ secrets.DUPR_CLIENT_KEY }}
           DUPR_CLIENT_SECRET: ${{ secrets.DUPR_CLIENT_SECRET }}
-          ACAO: ${{ inputs.acao }}
-          DUPR_ID: ${{ inputs.dupr_id }}
         run: node scripts/dupr-uat.cjs "$ACAO" "$DUPR_ID"
