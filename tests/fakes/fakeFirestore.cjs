@@ -107,6 +107,7 @@ function createFakeDb(seed = {}) {
   const db = {
     store,
     collection: (name) => new FakeQuery(store, name),
+    getAll: (...refs) => Promise.all(refs.map((r) => r.get())),
     /**
      * Transação falsa: lê e escreve direto (sem isolamento) — basta para
      * exercitar a LÓGICA; a exclusão mútua de verdade é do Firestore.

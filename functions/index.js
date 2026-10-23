@@ -1917,6 +1917,7 @@ exports.messagingHook = onRequest(
 // =====================================================================
 const duprOficial = require('./dupr');
 const duprPiloto = require('./duprPilot');
+const duprEnvios = require('./duprSubmissions');
 
 const duprCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: FieldValueDel, Timestamp, now: Date.now(), logger });
 
@@ -1924,11 +1925,11 @@ const duprCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: Fi
  * `action`: `config` (URL do login + situação), `link`, `unlink`, `status` e,
  * só para o admin, as do piloto (`pilot_*`, ver `functions/duprPilot.js`).
  */
-exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 60, maxInstances: 3 }, async (req) => {
+exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 300, maxInstances: 3 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
   const token = req.auth.token || {};
   const data = req.data || {};
-  const piloto = String(data.action || '').startsWith('pilot_');
+  const piloto = /^(pilot|submissions)_/.test(String(data.action || ''));
   // No piloto da política, só o admin da plataforma usa a integração.
   const isPlatformAdmin = piloto || data.action === 'config' || data.action === 'link'
     ? await isPlatformAdminUser(req, getFirestore(getApp(), DATABASE_ID))
@@ -1939,6 +1940,8 @@ exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 60, maxInstan
     pilot_player_save: duprPiloto.savePlayer, pilot_player_refresh: duprPiloto.refreshPlayer,
     pilot_player_remove: duprPiloto.removePlayer, pilot_player_invite: duprPiloto.invitePlayer,
     pilot_match_send: duprPiloto.sendMatch, pilot_match_delete: duprPiloto.deleteMatch,
+    submissions_run: duprEnvios.runNow, submissions_approve: duprEnvios.approve, submissions_retry: duprEnvios.retry,
+    submissions_remove: duprEnvios.remove, submissions_unblock: duprEnvios.unblock,
   };
   const fn = acoes[data.action];
   if (!fn) throw new HttpsError('invalid-argument', 'Ação desconhecida.');
@@ -1946,11 +1949,30 @@ exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 60, maxInstan
     const ctx = duprCtx();
     return await fn(ctx, actor, data, () => duprOficial.clienteDuprDe(ctx));
   } catch (err) {
-    if (err instanceof duprOficial.DuprServiceError || err instanceof duprPiloto.PilotError) throw new HttpsError(err.code, err.message);
+    if (err instanceof duprOficial.DuprServiceError || err instanceof duprPiloto.PilotError
+      || err instanceof duprEnvios.SubmissionError) throw new HttpsError(err.code, err.message);
     logger.error('duprIntegration falhou', err);
     throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
   }
 });
+
+// Envio automático das partidas (livro `dupr_submissions`, ver
+// `functions/duprSubmissions.js`). Sem a flag e a política ligadas, só lê dois
+// documentos e sai.
+exports.duprSubmitWorker = onSchedule(
+  { schedule: 'every 15 minutes', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540, memory: '512MiB' },
+  async () => {
+    const ctx = duprCtx();
+    try {
+      const r = await duprEnvios.runSubmissions(ctx, () => duprOficial.clienteDuprDe(ctx));
+      if (!r.skipped) logger.info('DUPR: passada de envios concluída.', r);
+      return r;
+    } catch (err) {
+      logger.error('DUPR: falha na passada de envios.', { err: err && err.message });
+      return { error: true };
+    }
+  },
+);
 
 // Eventos de rating do DUPR (`/api/dupr/webhook?k=<token>`, rewrite no hosting).
 // Responde 200 depressa; o token da URL é o que separa o DUPR de qualquer outro.

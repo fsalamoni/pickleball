@@ -127,6 +127,9 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'market_addresses', label: 'Endereços salvos do Mercado' },
   // Código de confirmação do celular em andamento (id = uid).
   { col: 'phone_verifications', label: 'Confirmação do celular em andamento' },
+  // Vínculo com o DUPR (resumo e tokens do login no DUPR; id = uid).
+  { col: 'dupr_links', label: 'Vínculo com o DUPR' },
+  { col: 'dupr_link_tokens', label: 'Acesso ao DUPR (tokens)' },
 ]);
 
 /**
@@ -135,6 +138,7 @@ const DELETE_BY_ID = Object.freeze([
  */
 const DELETE_BY_QUERY = Object.freeze([
   { col: 'push_tokens', field: 'user_id', label: 'Aparelhos para notificação' },
+  { col: 'dupr_ids', field: 'user_id', label: 'ID DUPR reservado para a conta' },
   { col: 'notifications', field: 'user_id', label: 'Notificações' },
   { col: 'arena_favorites', field: 'user_id', label: 'Arenas favoritas' },
   { col: 'coach_favorites', field: 'user_id', label: 'Professores favoritos' },

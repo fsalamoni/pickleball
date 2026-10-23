@@ -1950,6 +1950,19 @@ side_b[] ({ player_id, name, dupr_id }), env: 'uat', status: sent|failed|deleted
 match_code|null, error|null, sent_at_ms?, deleted_at_ms?, created_at_ms, created_by }`.
 Nenhum dado de usuário da plataforma: o piloto é isolado.
 
+`dupr_submissions/{identifier}` (envio automático ao DUPR, `pr:tm:{matchId}` ou
+`pr:gd:{clubEventGameId}`): só o servidor (`functions/duprSubmissions.js`) escreve;
+leem o admin, quem jogou (`uids` contém o uid) e quem organizou (`organizer_uid`).
+`{ identifier, ref, origin: tournament|game_day|club_event, bucket, event, date,
+tournament_id|null, modality_id|null, game_day_id|null, organizer_uid|null, uids[],
+side_a[], side_b[], games[{a,b}], decision, status: held|awaiting_approval|queued|sent|failed|deleted,
+problems[], missing_uids[], no_entitlement_uids[], payload_hash, sent_hash, match_code|null,
+due_at_ms?, approved?, attempts, last_error|null, next_try_ms|null, delete_error?,
+blocked?, blocked_by?, blocked_reason?, sent_at_ms?, last_sent_ms?, deleted_at_ms?,
+created_at_ms, updated_at_ms }`. `platform_settings/dupr_submissions` guarda o
+lease da varredura e a última passada (`lease_until_ms`, `last_run_ms`,
+`last_result` com `by_status`). Ver `51-DUPR.md` §8.
+
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
 (PR 3), `{ kind: 'credential', credential_id, federation_id, created_at_ms }`.
