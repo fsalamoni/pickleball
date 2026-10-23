@@ -11,11 +11,12 @@
  * entra depois (conferido no DUPR) ou é gerado pelo convite do DUPR, quando a
  * plataforma tiver essa permissão.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { FlaskConical, Plus, RefreshCw, Send, Trash2, UserPlus } from 'lucide-react';
+import { FlaskConical, Link2, Plus, RefreshCw, Send, Trash2, UserPlus } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { usePilotAction, usePilotMatches, usePilotPlayers } from '@/modules/rating/hooks/useDuprPilot';
+import { usePilotAction, usePilotMatches, usePilotPlayers, usePilotSsoConfig } from '@/modules/rating/hooks/useDuprPilot';
+import { originOf, parseSsoMessage } from '@/modules/rating/domain/duprSso';
 import { todayISO, formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface,
@@ -65,6 +66,7 @@ export default function AdminDuprPilotTab() {
 function PilotPlayers({ query, rodar, ocupado }) {
   const [form, setForm] = useState(VAZIO);
   const [remover, setRemover] = useState(null);
+  const [autorizando, setAutorizando] = useState(null);
   const editando = Boolean(form.id);
 
   async function salvar(e) {
@@ -76,6 +78,19 @@ function PilotPlayers({ query, rodar, ocupado }) {
   return (
     <V2Surface className="space-y-4">
       <h3 className="font-display text-base font-bold text-ink">{t('Jogadores do piloto')}</h3>
+      <p className="text-sm text-gray-500">
+        {t('O DUPR só mostra uma conta depois que ela autoriza a plataforma. Em cada jogador, toque em "Autorizar pelo login do DUPR" e entre com a conta de teste DELE: o ID vem do próprio DUPR. Entre um jogador e outro, saia da conta no quadro do DUPR.')}
+      </p>
+      {autorizando && (
+        <PilotSsoFrame
+          player={autorizando}
+          onCancel={() => setAutorizando(null)}
+          onLogin={async (dados) => {
+            setAutorizando(null);
+            await rodar({ acao: 'player_sso', id: autorizando.id, accessToken: dados.accessToken }, t('Conta autorizada no DUPR.'));
+          }}
+        />
+      )}
 
       {query.isLoading && <V2Skeleton className="h-24 rounded-3xl" />}
       {query.isError && <V2ErrorState inline title={t('Os jogadores do piloto não carregaram')} description="" onRetry={() => query.refetch()} />}
@@ -93,10 +108,17 @@ function PilotPlayers({ query, rodar, ocupado }) {
                   {p.dupr_id && ` · ${t('Simples {s} · Duplas {d}', { s: nota(p.ratings?.singles), d: nota(p.ratings?.doubles) })}`}
                 </p>
               </div>
-              {p.dupr_id
-                ? <V2Badge tone="green">{t('Pronto')}</V2Badge>
-                : <V2Badge tone="amber">{t('Aguardando conta DUPR')}</V2Badge>}
+              {!p.dupr_id
+                ? <V2Badge tone="amber">{t('Aguardando conta DUPR')}</V2Badge>
+                : p.status === 'consent'
+                  ? <V2Badge tone="amber">{t('Falta autorizar no DUPR')}</V2Badge>
+                  : <V2Badge tone="green">{t('Pronto')}</V2Badge>}
               <div className="flex flex-wrap gap-2">
+                {(!p.dupr_id || p.status === 'consent') && (
+                  <V2Button type="button" size="sm" disabled={ocupado} onClick={() => setAutorizando(p)}>
+                    <Link2 className="h-3.5 w-3.5" /> {t('Autorizar pelo login do DUPR')}
+                  </V2Button>
+                )}
                 <V2Button type="button" size="sm" variant="subtle" onClick={() => setForm({ id: p.id, name: p.name || '', email: p.email || '', duprId: p.dupr_id || '' })}>{t('Editar')}</V2Button>
                 {p.dupr_id && (
                   <V2Button type="button" size="sm" variant="subtle" disabled={ocupado} onClick={() => rodar({ acao: 'player_refresh', id: p.id }, t('Ratings atualizados.'))}>
@@ -150,6 +172,49 @@ function PilotPlayers({ query, rodar, ocupado }) {
 }
 
 const JOGO_VAZIO = { a: '', b: '' };
+
+/**
+ * O login do DUPR (SSO) dentro do painel, para autorizar a conta de teste de um
+ * jogador. Só a mensagem do quadro do DUPR, da origem do DUPR, é aceita
+ * (`parseSsoMessage`); o token segue direto ao servidor e não é guardado.
+ */
+function PilotSsoFrame({ player, onLogin, onCancel }) {
+  const config = usePilotSsoConfig();
+  const frameRef = useRef(null);
+  const ssoUrl = config.data?.ssoUrl || '';
+  const ssoOrigin = useMemo(() => originOf(ssoUrl), [ssoUrl]);
+  const aoEntrar = useRef(onLogin);
+  aoEntrar.current = onLogin;
+
+  useEffect(() => {
+    if (!ssoOrigin) return undefined;
+    const onMessage = (event) => {
+      const dados = parseSsoMessage(event, { ssoOrigin, frameWindow: frameRef.current?.contentWindow });
+      if (dados) aoEntrar.current(dados);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [ssoOrigin]);
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper p-4">
+      <p className="text-sm font-semibold text-ink">{t('Entre no DUPR com a conta de teste de {nome}', { nome: player.name })}</p>
+      {player.email && <p className="text-xs text-gray-500">{t('E-mail da conta: {email}', { email: player.email })}</p>}
+      {config.isPending && <V2Skeleton className="h-40 rounded-xl" />}
+      {config.isError && <V2ErrorState inline title={t('O login do DUPR não abriu')} description={config.error?.message || ''} onRetry={() => config.refetch()} />}
+      {ssoUrl && (
+        <iframe
+          ref={frameRef}
+          title={t('Login no DUPR')}
+          src={ssoUrl}
+          className="h-[480px] w-full rounded-xl border border-gray-100 bg-white"
+          referrerPolicy="strict-origin"
+        />
+      )}
+      <V2Button type="button" variant="ghost" size="sm" onClick={onCancel}>{t('Cancelar')}</V2Button>
+    </div>
+  );
+}
 
 function NewPilotMatch({ players, rodar, ocupado }) {
   const prontos = useMemo(() => (players || []).filter((p) => p.dupr_id), [players]);

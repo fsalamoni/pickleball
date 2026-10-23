@@ -38,6 +38,8 @@ import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
 import TeamModalityConfig, { defaultTeamConfig } from '@/v2/components/tournament/TeamModalityConfig';
 import { normalizeTeamConfig } from '@/modules/tournament/domain/teamFormat';
+import { DUPR_BUCKET, duprBucket } from '@/modules/rating/domain/duprPolicy';
+import DuprSubmitChoice from '@/v2/components/rating/DuprSubmitChoice';
 import { V2Badge, V2Button, V2EmptyState, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { AdaptedClassField, AdaptedModalityBadge, useAdaptedOptions } from '@/v2/components/federations/adapted/AdaptedModality';
 import { t, fmtLista } from '@/core/i18n';
@@ -66,6 +68,7 @@ const emptyForm = {
   team_config: defaultTeamConfig(),
   adapted_class: '',
   adapted_class_label: '',
+  dupr_submit: null,
 };
 
 function buildFormState(modality) {
@@ -94,7 +97,20 @@ function buildFormState(modality) {
     notes: modality.notes || '',
     adapted_class: modality.adapted_class || '',
     adapted_class_label: modality.adapted_class_label || '',
+    dupr_submit: typeof modality.dupr_submit === 'boolean' ? modality.dupr_submit : null,
   };
+}
+
+/**
+ * O grupo da política do DUPR a que a modalidade pertence: equipes; rotação se
+ * alguma fase é Americano/Mexicano (é ali que a escolha de quem cria vale);
+ * senão simples/duplas fixas.
+ */
+function modalityDuprBucket(form) {
+  if (form.team_enabled) return duprBucket({ origin: 'tournament', teamConfrontation: true });
+  const fases = form.phases?.length ? form.phases : [{ type: form.stage_type }];
+  const buckets = fases.map((p) => duprBucket({ origin: 'tournament', stageType: p.type }));
+  return buckets.includes(DUPR_BUCKET.TOURNAMENT_ROTATION) ? DUPR_BUCKET.TOURNAMENT_ROTATION : buckets[0];
 }
 
 export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
@@ -256,6 +272,8 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       // Pickleball adaptado (federação com o módulo `adapted`): vazio = não é adaptada.
       adapted_class: form.adapted_class || null,
       adapted_class_label: form.adapted_class ? form.adapted_class_label || null : null,
+      // Enviar ao DUPR (escolha de quem cria; null = vale o padrão da plataforma).
+      dupr_submit: typeof form.dupr_submit === 'boolean' ? form.dupr_submit : null,
     };
 
     try {
@@ -434,6 +452,14 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               </div>
             </div>
           )}
+          <DuprSubmitChoice
+            id="modalidade-dupr"
+            className="mt-5 border-t border-gray-100 pt-4"
+            bucket={modalityDuprBucket(form)}
+            value={form.dupr_submit}
+            disabled={saving}
+            onChange={(v) => set('dupr_submit', v)}
+          />
         </V2Surface>
 
         <V2Surface className="p-5 sm:p-6">

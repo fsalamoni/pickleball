@@ -1940,6 +1940,7 @@ exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 300, maxInsta
     pilot_player_save: duprPiloto.savePlayer, pilot_player_refresh: duprPiloto.refreshPlayer,
     pilot_player_remove: duprPiloto.removePlayer, pilot_player_invite: duprPiloto.invitePlayer,
     pilot_match_send: duprPiloto.sendMatch, pilot_match_delete: duprPiloto.deleteMatch,
+    pilot_sso_config: duprPiloto.ssoConfig, pilot_player_sso: duprPiloto.ssoPlayer,
     submissions_run: duprEnvios.runNow, submissions_approve: duprEnvios.approve, submissions_retry: duprEnvios.retry,
     submissions_remove: duprEnvios.remove, submissions_unblock: duprEnvios.unblock,
   };

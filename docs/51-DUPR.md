@@ -156,6 +156,14 @@ exportação CSV não enxergam o piloto.
   `matchSource: PARTNER`, sem `clubId`, `identifier` = `pr:pl:{id}`) e envia.
   Fica o `matchCode`, ou a recusa com a mensagem do DUPR. **Apagar no DUPR**
   chama `DELETE /match/delete` com `identifier` + `matchCode`.
+* **Autorizar pelo login do DUPR** (`pilot_sso_config`, `pilot_player_sso`): o
+  DUPR só mostra uma conta (`GET /user/{id}`) depois que ela autoriza a
+  plataforma pelo login (SSO); antes disso responde 403 ("has not granted
+  consent"). O ID digitado de uma conta sem autorização fica guardado como
+  **Falta autorizar no DUPR** (`status: consent`), e o envio de partida recusa
+  esses jogadores. O botão abre o login do DUPR no painel; o admin entra com a
+  conta de teste DAQUELE jogador, o servidor pergunta ao DUPR quem entrou
+  (`/public/user/info`) e recusa se for outra conta. O token não é guardado.
 * **Só no UAT**: com as credenciais de produção, o piloto não envia (partida de
   quem não conectou a conta fere o contrato).
 * Quem escreve é o servidor: ações `pilot_*` de `duprIntegration`
@@ -184,6 +192,12 @@ livro, um documento por partida em `dupr_submissions/{identifier}`
 * **Quem decide**: `duprSubmissionDecision` (política + grupo + escolha de quem
   criou, em `tournament_modalities.dupr_submit` / `game_days.dupr_submit`). No
   piloto (`audience: admins`) só entram partidas com algum admin da plataforma.
+* **A escolha de quem cria** é a caixa *Enviar os resultados ao DUPR*
+  (`DuprSubmitChoice`), no cartão de configurações do dia de jogo (as três
+  origens) e no formulário da modalidade do torneio. Ela só aparece quando a regra
+  do grupo é *quem cria escolhe*; nos grupos *sempre*/*nunca* vira uma linha que
+  diz a regra, e some sem o DUPR valendo para quem vê, sem a política carregada
+  ou com o envio desligado. Sem escolha (`null`) vale o padrão do admin.
 * **Estados**: `held` (retida: jogador sem conta, sem DUPR conectado ou sem
   `BASIC_L1` — a tela diz quem falta, e ela sai sozinha quando todos conectarem),
   `awaiting_approval` (modo manual: o admin aprova), `queued` (torneio espera a

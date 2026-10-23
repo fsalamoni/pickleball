@@ -202,6 +202,8 @@ export async function updateGameDay(id, patch, actor) {
   const editable = {};
   ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format', 'play_courts', 'manage_mode']
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
+  // Escolha de quem cria: enviar (ou não) os resultados ao DUPR. `null` = vale o padrão.
+  if ('dupr_submit' in patch) editable.dupr_submit = typeof patch.dupr_submit === 'boolean' ? patch.dupr_submit : null;
   await updateDoc(doc(db, COL, id), { ...editable, updated_at: serverTimestamp() });
 
   // Sincroniza o convite público (open_games) conforme a visibilidade resultante.

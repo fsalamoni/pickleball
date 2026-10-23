@@ -14,6 +14,11 @@ export function usePilotMatches() {
   return useQuery({ queryKey: MATCHES, queryFn: listPilotMatches });
 }
 
+/** O endereço do login do DUPR (SSO), pedido só quando o admin vai autorizar uma conta. */
+export function usePilotSsoConfig({ enabled = true } = {}) {
+  return useQuery({ queryKey: ['dupr', 'pilot', 'sso'], queryFn: () => pilotAction('sso_config', {}), enabled, staleTime: 10 * 60_000 });
+}
+
 /** Uma ação do piloto no servidor (`player_save`, `match_send`…); recarrega as duas listas. */
 export function usePilotAction() {
   const qc = useQueryClient();
