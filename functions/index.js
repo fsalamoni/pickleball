@@ -1483,6 +1483,11 @@ exports.federationMinorReportNotify = onDocumentCreated(
 const federationManagement = require('./federationManagement');
 exports.federationManagement = federationCallable('federationManagement', federationManagement.management);
 
+// Jogo limpo (rodada 3, Bloco 1): a lista de equipamentos homologados, com
+// situação, data e motivo — `functions/federationIntegrity.js`.
+const federationIntegrity = require('./federationIntegrity');
+exports.federationIntegrity = federationCallable('federationIntegrity', federationIntegrity.integrity);
+
 // Camada nacional (Bloco 6): vínculo das estaduais com a confederação, regras
 // da rede e repasse da anuidade; o ranking nacional é refeito junto com o
 // ranking de cada filiada — `functions/federationNational.js`.

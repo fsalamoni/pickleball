@@ -2169,6 +2169,22 @@ returned_by, return_condition, return_note, warned_for }`, `history[]` (últimos
 `fedAcc` e `competitions`. Zero índice. Na exclusão de conta só sai
 `created_by`; fora da exportação. Módulo novo `modules.assets` em `federations`.
 
+### `federation_equipment/{id}` (NOVO — equipamentos homologados, `docs/50` §36.1)
+`federation_id`, `kind` (`paddle|ball|net|other`), `brand`, `model`,
+`reference`, `source`, `notes`, `status` (`approved|rejected|decertified`),
+`status_at` (ISO), `status_reason`, `history[] { from, to, at, reason, by }`
+(últimos 30), `created_by`, `created_at_ms`, `updated_at_ms`. Só o servidor
+grava (`federationIntegrity`). Leitura pública com a federação visível e o
+módulo `equipment` ligado; senão, só `competitions`/`admin`. Consulta
+`federation_id ==`, zero índice. Na exclusão de conta só sai `created_by`;
+fora da exportação. Campos opcionais ligados ao Jogo limpo (§36):
+`federations.antidoping { note, contact, show_clauses, links[] }` (admin
+grava), `federation_tournament_reports.report.equipment_checked` /
+`.antidoping_clauses` (booleanos), `federation_sanctions.basis`
+(`antidoping`, só em suspensão/exclusão) e o tipo de curso `antidoping` em
+`federation_courses.kind`. Módulos novos `modules.equipment` e
+`modules.antidoping` em `federations`.
+
 ### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
 `conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,
 `federation_name`, `federation_acronym`, `federation_slug`, `federation_state`,

@@ -148,6 +148,14 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         ...(modulo('grants') ? [{ value: 'editais', label: tk('Editais'), icon: FileSignature, dica: 'federacao-tab-editais' }] : []),
       ],
     },
+    // Jogo limpo: equipamentos homologados (competições e admin) e o texto da antidopagem na página (só o admin).
+    (pode(FED_PERMISSION.COMPETITIONS) || admin) && (modulo('equipment') || (admin && modulo('antidoping'))) && {
+      id: 'jogo-limpo', grupo: 'atender', label: tk('Jogo limpo'), icon: ShieldCheck, dica: 'federacao-secao-jogo-limpo',
+      tabs: [
+        ...(modulo('equipment') ? [{ value: 'equipamentos', label: tk('Equipamentos'), icon: Package, dica: 'federacao-aba-equipamentos' }] : []),
+        ...(admin && modulo('antidoping') ? [{ value: 'antidopagem', label: tk('Antidopagem'), icon: ShieldCheck, dica: 'federacao-aba-antidopagem' }] : []),
+      ],
+    },
     pode(FED_PERMISSION.COMMS) && (modulo('news') || modulo('promos') || (admin && modulo('sponsors'))) && {
       id: 'comunicacao', grupo: 'atender', label: tk('Comunicação'), icon: Megaphone, dica: 'federacao-secao-comunicacao',
       tabs: [

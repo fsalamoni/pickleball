@@ -19,8 +19,8 @@ import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { canAppeal, reportProtocol, sanctionInForce, sortReports, sortSanctions, validateSanctionInput } from '@/modules/federations/domain/discipline';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { LIVE_MEMBER_STATUSES } from '@/modules/federations/domain/membership';
-import { DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS, DISCIPLINE_STATUS_LABELS, REPORT_KIND_LABELS, REPORT_STATUS, REPORT_STATUS_LABELS } from '@/modules/federations/domain/constants';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { DISCIPLINE_BASIS_LABELS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS, DISCIPLINE_STATUS_LABELS, REPORT_KIND_LABELS, REPORT_STATUS, REPORT_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from '../federationUi';
 import { BuscaLista, MostrarMais, normalizaBusca as normaliza, useBuscaLista, useFiltroNaUrl } from './listTools';
@@ -32,7 +32,7 @@ const cents = parseBrlCents;
 function SancaoForm({ federation, membersQ, onFechar }) {
   const [busca, setBusca] = useState('');
   const [memberId, setMemberId] = useState('');
-  const [f, setF] = useState({ kind: DISCIPLINE_KIND.WARNING, reason: '', starts_at: '', ends_at: '', multa: '0,00', tournament_name: '' });
+  const [f, setF] = useState({ kind: DISCIPLINE_KIND.WARNING, reason: '', starts_at: '', ends_at: '', multa: '0,00', tournament_name: '', basis: '' });
   const [erros, setErros] = useState({});
   const [resumo, setResumo] = useState(null);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
@@ -76,6 +76,9 @@ function SancaoForm({ federation, membersQ, onFechar }) {
       </div>
       <V2Field label={t('Torneio relacionado (opcional)')} htmlFor="sa-torneio"><V2Input id="sa-torneio" maxLength={120} value={f.tournament_name} onChange={(e) => set({ tournament_name: e.target.value })} /></V2Field>
       <V2Field label={t('Motivo')} htmlFor="sa-motivo" error={erros.reason} required hint={t('A pessoa lê este texto no aviso. Mínimo 10 caracteres.')}><V2Textarea id="sa-motivo" rows={3} maxLength={1000} value={f.reason} onChange={(e) => set({ reason: e.target.value })} /></V2Field>
+      {(f.kind === DISCIPLINE_KIND.SUSPENSION || f.kind === DISCIPLINE_KIND.EXCLUSION) && (
+        <V2Toggle id="sa-doping" checked={f.basis === 'antidoping'} onChange={(v) => set({ basis: v ? 'antidoping' : '' })} label={t('Cumpre decisão de antidopagem (ABCD/JAD)')} hint={t('Registra que a sanção aplica uma decisão da Justiça Desportiva Antidopagem. O prazo e o efeito na inscrição são os mesmos.')} />
+      )}
       {f.kind === DISCIPLINE_KIND.SUSPENSION && <p className="text-xs text-gray-500">{t('Suspenso, a pessoa não se inscreve em torneio chancelado "só filiados" e a carteirinha mostra "Suspensa" até o fim do prazo.')}</p>}
       {f.kind === DISCIPLINE_KIND.EXCLUSION && <p className="text-xs text-red-600">{t('A exclusão encerra a filiação e cancela as cobranças abertas. Recurso aceito devolve a filiação.')}</p>}
       <div className="flex justify-end gap-2">
@@ -144,7 +147,7 @@ function SancaoRow({ s }) {
     <li>
       <V2Surface variant="compacto" className="space-y-3 p-4">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{s.user_name}<V2Badge tone={TOM_SANCAO[s.status] || 'neutral'}>{t(DISCIPLINE_STATUS_LABELS[s.status] || s.status)}</V2Badge><V2Badge tone="ink">{tipo}</V2Badge></p>
+          <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{s.user_name}<V2Badge tone={TOM_SANCAO[s.status] || 'neutral'}>{t(DISCIPLINE_STATUS_LABELS[s.status] || s.status)}</V2Badge><V2Badge tone="ink">{tipo}</V2Badge>{s.basis === 'antidoping' && <V2Badge tone="purple">{t(DISCIPLINE_BASIS_LABELS.antidoping)}</V2Badge>}</p>
           <p className="text-xs text-gray-500">{t('aplicada em {data}', { data: quando(s.created_at_ms) })}{s.kind === DISCIPLINE_KIND.SUSPENSION ? ` · ${quando(s.starts_at)} – ${quando(s.ends_at)}` : ''}{s.kind === DISCIPLINE_KIND.FINE ? ` · ${formatBrlCents(s.fine_cents)}` : ''}{s.tournament_name ? ` · ${s.tournament_name}` : ''}</p>
           <p className="mt-1 text-sm text-gray-700">{s.reason}</p>
           {s.appeal?.text && <p className="mt-2 rounded-xl bg-gray-50 p-3 text-sm text-gray-700"><span className="font-semibold">{t('Recurso:')}</span> {s.appeal.text}</p>}

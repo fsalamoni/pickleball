@@ -22,6 +22,7 @@ import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
+import TournamentIntegrityNotice from '@/v2/components/federations/integrity/TournamentIntegrityNotice';
 import { TournamentRefereeCrew } from '@/v2/components/federations/referees/RefereesPublic';
 
 function parseDate(value) {
@@ -227,6 +228,8 @@ export default function V2Tournament() {
           </div>
         </div>
       </div>
+
+      <TournamentIntegrityNotice tournament={tournament} className="mt-6" />
 
       {/* Modalities */}
       {modalities.length > 0 && (

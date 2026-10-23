@@ -55,6 +55,8 @@ function validateEventReport(input = {}) {
     injuries_text: str(input.injuries_text, REPORT_TEXT_MAX),
     complaints_text: str(input.complaints_text, REPORT_TEXT_MAX),
     notes: str(input.notes, REPORT_TEXT_MAX),
+    equipment_checked: input.equipment_checked === true,
+    antidoping_clauses: input.antidoping_clauses === true,
   };
   const errors = {};
   if (v.injuries > 0 && v.injuries_text.length < 5) errors.injuries_text = 'describe';

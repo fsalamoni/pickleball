@@ -24,7 +24,7 @@ import { docLabel, requiredDocs, requiredDocsStatus, submittedDocKey, validateDo
 import { canRequestTransfer, homologationSummary, isReleaseOverdue, sortTransfers, transferReleaseDays, transferSummary, validateTransferInput } from '@/modules/federations/domain/transfers';
 import { canAppeal, sanctionInForce, sortSanctions } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { MEMBER_STATUS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_OPEN, TRANSFER_STATUS_LABELS, TRANSFER_STATUS_TONE } from '@/modules/federations/domain/constants';
+import { MEMBER_STATUS, DISCIPLINE_BASIS_LABELS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_OPEN, TRANSFER_STATUS_LABELS, TRANSFER_STATUS_TONE } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from './federationUi';
@@ -257,7 +257,7 @@ export function FedMySanctions({ federationId = null, titulo = true }) {
       <ul className="space-y-3">
         {lista.map((s) => (
           <li key={s.id} className="space-y-2 text-sm">
-            <p className="flex flex-wrap items-center gap-2"><span className="font-semibold text-ink">{t(DISCIPLINE_KIND_LABELS[s.kind] || s.kind)}</span>{!federationId && <span className="text-gray-500">{s.federation_acronym}</span>}{s.user_name && s.guardian_uid && <span className="text-gray-500">· {s.user_name}</span>}<V2Badge tone={sanctionInForce(s) ? 'red' : 'neutral'}>{t(DISCIPLINE_STATUS_LABELS[s.status] || s.status)}</V2Badge></p>
+            <p className="flex flex-wrap items-center gap-2"><span className="font-semibold text-ink">{t(DISCIPLINE_KIND_LABELS[s.kind] || s.kind)}</span>{!federationId && <span className="text-gray-500">{s.federation_acronym}</span>}{s.user_name && s.guardian_uid && <span className="text-gray-500">· {s.user_name}</span>}<V2Badge tone={sanctionInForce(s) ? 'red' : 'neutral'}>{t(DISCIPLINE_STATUS_LABELS[s.status] || s.status)}</V2Badge>{s.basis === 'antidoping' && <V2Badge tone="purple">{t(DISCIPLINE_BASIS_LABELS.antidoping)}</V2Badge>}</p>
             <p className="text-gray-700">{s.reason}</p>
             <p className="text-xs text-gray-500">{quando(s.created_at_ms)}{s.kind === DISCIPLINE_KIND.SUSPENSION ? ` · ${t('até {data}', { data: quando(s.ends_at) })}` : ''}{s.kind === DISCIPLINE_KIND.FINE ? ` · ${formatBrlCents(s.fine_cents)} · ${t('a cobrança está em pagamentos')}` : ''}</p>
             {s.appeal_decision?.note && <p className="text-xs text-gray-600">{t('Decisão: {nota}', { nota: s.appeal_decision.note })}</p>}

@@ -29,6 +29,7 @@ import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
+import TournamentIntegrityNotice from '@/v2/components/federations/integrity/TournamentIntegrityNotice';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -192,6 +193,8 @@ export default function PublicTournament() {
             </div>
           </CardContent>
         </Card>
+
+        <TournamentIntegrityNotice tournament={tournament} />
 
         {falhouModalidades && (
           <V2ErrorState

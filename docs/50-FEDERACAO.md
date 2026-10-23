@@ -3247,3 +3247,89 @@ exportação não os inclui (isenção no guarda `exclusaoCobreColecoes`).
 
 Guia `federacao-confederacao`; artigo `federacao-confederacao` (com pergunta
 frequente).
+
+## 36. Jogo limpo: equipamentos homologados e antidopagem (rodada 3, Bloco 1, 2026-10-23)
+
+Dois módulos novos em `FED_MODULE_META`, ambos `available` e desligados por
+padrão: **`equipment`** (Equipamentos homologados) e **`antidoping`**
+(Antidopagem). Com qualquer um ligado, a página pública ganha a aba
+**"Jogo limpo"** (`PROFILE_TAB.INTEGRITY = 'jogo-limpo'`, âncoras
+`fed-equipamentos` e `fed-antidopagem`) e a Central, a seção **Jogo limpo**
+(grupo "Atender").
+
+### 36.1 Equipamentos homologados (`federation_equipment`)
+
+- Coleção nova, **só o servidor grava** (`functions/federationIntegrity.js`,
+  callable `federationIntegrity`; régua em `federationIntegrityPolicy.js` com
+  paridade contra `src/modules/federations/domain/integrity.js`).
+- Leitura **pública** (até sem conta) com a federação visível e o módulo
+  ligado; com o módulo desligado ou a federação oculta, só `competitions` e
+  `admin`. A consulta é `federation_id ==` (é o campo que a regra confere).
+- Campos: `kind` (`paddle`/`ball`/`net`/`other`), `brand`, `model`,
+  `reference`, `source` (o ensaio/certificação), `notes` (interno), `status`
+  (`approved`/`rejected`/`decertified`), `status_at` (data), `status_reason`,
+  `history[]` (até 30 mudanças), `created_by`.
+- Ações: `equipment_save` (cria com a situação inicial ou edita só os dados),
+  `equipment_status` (muda a situação: data não futura nem anterior à atual;
+  reprovar e descertificar pedem motivo, que é público) e `equipment_delete`
+  (**só `admin`**; o caminho normal é descertificar, que fica na lista).
+- Quem: `competitions` e `admin` (`canManageEquipment`). Toda escrita audita.
+- **Rede nacional**: a estadual filiada mostra também a lista da
+  confederação (lida pelo `national_body.id`, só com o módulo ligado lá),
+  marcada "lista da {sigla}". A aba aparece pelos módulos da PRÓPRIA
+  federação — a estadual liga `equipment` para exibir a lista da rede.
+- Lista: homologados primeiro, depois descertificados e reprovados; busca
+  sem acento por marca, modelo e referência, filtros de tipo e situação.
+
+### 36.2 Antidopagem (`federations.antidoping`)
+
+- Campo opcional do documento da federação, gravado pelo **admin** da
+  federação pela regra de update que já existia (não está em `fedLocked()`):
+  `{ note (≤ 2000), contact (≤ 160), show_clauses (padrão true), links[] (≤ 5, https) }`.
+  Auditoria `federation_antidoping_update`.
+- A página mostra o texto (em branco = o padrão do #JogoLimpo), o contato, os
+  links oficiais **sempre** (ABCD, lista proibida da WADA, ADEL) e os da
+  federação, e as cláusulas-padrão (`ANTIDOPING_CLAUSES`): controle pela
+  ABCD, declaração de conhecer a lista, AUT antes do evento, **lista de
+  inscritos publicada até 30 dias antes** e atleta suspenso por violação
+  barrado.
+- **Torneio chancelado**: `TournamentIntegrityNotice` (página do torneio e
+  `/p/:id`) mostra o link para a lista de equipamentos e as cláusulas, só com
+  o módulo ligado na federação que chancelou; se a federação não carregar,
+  não mostra nada (o selo de chancela segue no cabeçalho).
+
+### 36.3 Relatório do diretor, disciplina e curso
+
+- O relatório do evento (`federation_tournament_reports.report`) ganha dois
+  booleanos opcionais, validados nos dois lados (`validateEventReport`):
+  `equipment_checked` e `antidoping_clauses`. O formulário só os pede com o
+  módulo correspondente ligado.
+- A sanção ganha `basis` opcional (`DISCIPLINE_BASIS.ANTIDOPING`), aceito só
+  em suspensão e exclusão: registra que a sanção cumpre decisão da Justiça
+  Desportiva Antidopagem. **O efeito é o da suspensão de sempre**
+  (`discipline_until_ms` na regra da inscrição "só filiados") — nada novo
+  barra a inscrição. Selo "Antidopagem" nas listas de sanções.
+- Curso: novo tipo `antidoping` ("Antidopagem (ADEL)"), aceito pela regra de
+  `federation_courses`; vira credencial com validade como os outros
+  (`credential_months`).
+
+### 36.4 O que não pode regredir
+
+92. `federation_equipment` só o servidor grava; apagar só `admin`;
+    descertificar mantém o item público com a data.
+93. Os ids `kind`, `status`, `basis` e o tipo de curso `antidoping` são
+    gravados — nunca renomeie. `?aba=equipamentos`/`?aba=antidopagem` (Central)
+    e `?aba=jogo-limpo` (página pública) são contrato de link.
+94. O texto e os links da antidopagem só aceitam `https`; os links oficiais
+    não dependem do que a federação grava.
+95. `federation_equipment` entra na exclusão de conta (por `created_by`, como
+    equipe).
+
+### 36.5 Âncoras e guias
+
+Âncoras: `federacao-secao-jogo-limpo`, `federacao-aba-equipamentos`,
+`federacao-aba-antidopagem`, `federacao-pub-jogo-limpo`,
+`federacao-pub-equipamentos`, `federacao-pub-antidopagem`,
+`torneio-jogo-limpo`.
+
+Guia `federacao-jogo-limpo`; artigo `federacao-jogo-limpo`.

@@ -104,7 +104,10 @@ async function discipline(ctx, actor, data) {
     const batch = ctx.db.batch();
     const doc = {
       federation_id: fed.id, federation_acronym: fed.acronym || '', member_id: member.id, user_id: member.user_id || null, guardian_uid: member.guardian_uid || null, user_name: member.user_name || '',
-      kind, reason, starts_at, ends_at, fine_cents, tournament_id: f.texto(data.tournament_id, 80) || null, tournament_name: f.texto(data.tournament_name, 120),
+      kind, reason, starts_at, ends_at, fine_cents,
+      // Rodada 3, Bloco 1: a suspensão/exclusão que cumpre decisão antidopagem (ABCD/JAD). O efeito é o de sempre.
+      basis: data.basis === 'antidoping' && ['suspension', 'exclusion'].includes(kind) ? 'antidoping' : '',
+      tournament_id: f.texto(data.tournament_id, 80) || null, tournament_name: f.texto(data.tournament_name, 120),
       status: 'active', applied_by: actor.uid, created_at_ms: ctx.now, updated_at_ms: ctx.now, appeal: null,
       // Suspensão: quando o efeito entrou na filiação (a futura entra pela varredura do dia).
       applied_at_ms: kind === 'suspension' && starts_at <= hoje ? ctx.now : null,
