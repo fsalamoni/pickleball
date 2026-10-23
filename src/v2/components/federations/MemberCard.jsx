@@ -11,7 +11,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
-import { Download, Printer, Share2, ShieldCheck } from 'lucide-react';
+import { Download, Printer, Share2, ShieldCheck, Wallet } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buildMemberCard } from '@/modules/federations/domain/card';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks';
@@ -20,6 +20,8 @@ import { V2Button } from '@/v2/ui/primitives';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useMemberWalletLinks } from '@/modules/federations/hooks/useFederations';
 import { useQrDataUrl } from './federationUi';
 
 const PIXEL_TRANSPARENTE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -72,6 +74,34 @@ export function MemberCard({ card, qrDataUrl, showPhoto = true, className }) {
 }
 
 /** O diálogo da carteirinha, com as saídas. */
+/**
+ * "Adicionar à carteira" (Bloco 6b): só o titular (ou o responsável) vê, e só
+ * quando a plataforma configurou a carteira — sem credencial o servidor devolve
+ * links nulos e nada aparece. A carteirinha na carteira se atualiza sozinha.
+ */
+function WalletButtons({ member }) {
+  const { user } = useAuth();
+  const dono = !!user?.uid && (member?.user_id === user.uid || member?.guardian_uid === user.uid);
+  const q = useMemberWalletLinks(member?.id, { enabled: dono && !member?.org_kind && !!member?.card_code });
+  const links = q.data || {};
+  if (!links.google && !links.apple) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2" data-dica="federacao-carteira-celular">
+      {links.apple && (
+        <V2Button asChild size="sm" variant="secondary">
+          <a href={links.apple}><Wallet className="h-4 w-4" />{t('Adicionar ao Apple Wallet')}</a>
+        </V2Button>
+      )}
+      {links.google && (
+        <V2Button asChild size="sm" variant="secondary">
+          <a href={links.google} target="_blank" rel="noopener noreferrer"><Wallet className="h-4 w-4" />{t('Adicionar ao Google Wallet')}</a>
+        </V2Button>
+      )}
+      <span className="text-xs text-gray-500">{t('Na carteira do celular ela se atualiza sozinha: suspensa ou vencida, aparece assim.')}</span>
+    </div>
+  );
+}
+
 export default function MemberCardDialog({ open, onOpenChange, member, federation, plan = null }) {
   const cardRef = useRef(null);
   const [busy, setBusy] = useState('');
@@ -148,6 +178,7 @@ export default function MemberCardDialog({ open, onOpenChange, member, federatio
           <V2Button type="button" size="sm" variant="secondary" onClick={imprimir}><Printer className="h-4 w-4" />{t('Imprimir / PDF')}</V2Button>
           {card.code && <CopyCodeButton code={card.code} size="sm" successMessage={t('Código da carteirinha copiado.')} />}
         </div>
+        <WalletButtons member={member} />
         <p className="flex items-start gap-2 text-xs text-gray-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{t('O código muda quando a filiação é renovada ou suspensa: uma carteirinha antiga deixa de verificar.')}</p>
         {open && typeof document !== 'undefined' && createPortal(
           <div className="cartao-folha-raiz hidden" aria-hidden="true">

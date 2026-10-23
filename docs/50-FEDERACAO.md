@@ -3964,3 +3964,71 @@ financeiro confirma.
 ### 43.4 Ajuda
 
 - **Artigo:** `federacao-pix-automatico`.
+
+## 44. Carteirinha no Apple Wallet e no Google Wallet (rodada 3, Bloco 6b, 2026-10-23)
+
+**Regra de ouro: sem credencial configurada, nada muda** — a carteirinha
+digital da plataforma segue igual e os botões de carteira não aparecem.
+
+### 44.1 Configurar (admin da plataforma)
+
+- **Painel admin → Federações → Configuração → Carteira do celular**
+  (`AdminFedWallet`, `?parte=carteira`). As credenciais são da **plataforma**
+  (um emissor no Google, um Pass Type ID na Apple), não de cada federação: a
+  carteirinha leva o nome, a sigla, a cor e o logo da federação.
+- **Google Wallet**: ID do emissor + e-mail e chave privada de uma conta de
+  serviço com a API Google Wallet (autorizada no console do emissor).
+- **Apple Wallet**: Pass Type ID, Team ID, certificado e chave do Pass Type ID
+  em PEM (senha opcional) e o certificado intermediário WWDR (G4).
+- O servidor (`federationWallet`, `config_save`) confere antes de gravar (a
+  chave do Google abre; o certificado da Apple assina) e guarda em
+  `platform_secrets/wallet` — **sem leitura pelo navegador**, nem do admin; a
+  tela vê só o emissor e o Pass Type ID. "Desligar e apagar a credencial"
+  zera a parte escolhida.
+
+### 44.2 Adicionar e manter em dia
+
+1. O titular (ou o responsável do dependente) abre a **Carteirinha digital**
+   (`MemberCardDialog`) e vê "Adicionar ao Apple Wallet" / "Adicionar ao
+   Google Wallet" (`useMemberWalletLinks` → `links`). Filiação de clube/arena
+   e filiação sem código de carteirinha não têm botão.
+2. **Google**: o link `pay.google.com/gp/v/save/{jwt}` leva o objeto inteiro
+   (JWT RS256 assinado com a conta de serviço). O servidor marca
+   `federation_members.wallet_google = true` para saber que há objeto a
+   corrigir.
+3. **Apple**: o link `/api/carteira/apple/pass/{memberId}/{token}` (token =
+   HMAC do `token_secret` da plataforma) baixa o `.pkpass` — ZIP com
+   `pass.json`, ícones, `manifest.json` (SHA-1 de cada arquivo) e `signature`
+   (PKCS#7 destacado, SHA-256, com o certificado + WWDR, via `node-forge`).
+4. O passe leva só o que a carteirinha já mostra: nome, número, validade,
+   situação ("Em dia", "Vencida", "Suspensa") e o QR da verificação pública
+   `/f/verificar/{código}`. A situação é a de `membershipState` (a mesma da
+   carteirinha e da verificação).
+5. **Sempre atualizada** (`federationWalletOnMemberUpdate`): mudou `status`,
+   `valid_until`, `card_code`, `plan_id`, `member_number`, `user_name` ou
+   `discipline_until_ms`, o servidor corrige o objeto no Google (PATCH pela
+   API; suspensa = `INACTIVE`, vencida = `EXPIRED`) e, para cada iPhone
+   registrado, grava `wallet_updated_ms` e manda o aviso da Apple (APNs, corpo
+   vazio). O iPhone busca o passe novo pelo **serviço web da Apple**
+   (`federationWalletHook`, `/api/carteira/apple/v1/...`: registrar,
+   listar o que mudou, baixar, remover, log), autenticado por
+   `ApplePass {token}`. Suspensa: passe `voided`.
+6. Os aparelhos registrados ficam em `federation_wallet_devices` (sem regra:
+   só o servidor) — o identificador do aparelho, a filiação e o token de aviso.
+
+### 44.3 O que não pode regredir
+
+127. As credenciais só no servidor (`platform_secrets/wallet`); a tela vê só
+     emissor e Pass Type ID. Sem credencial, `links` devolve nulos e nada
+     aparece.
+128. Só o titular ou o responsável pede os links; o download e o serviço web
+     da Apple exigem o token da filiação (tempo constante).
+129. A carteira não mostra nada além da carteirinha: nome, número, validade,
+     situação e o QR da verificação. A situação sai de `membershipState`.
+130. Mudou o que a carteira mostra, a carteira muda (Google pela API, Apple
+     pelo aviso + serviço web); `wallet_updated_ms` e `wallet_google` não são
+     campos vigiados (não disparam de novo).
+
+### 44.4 Ajuda
+
+- **Artigo:** `federacao-carteira-celular`.

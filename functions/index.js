@@ -1367,6 +1367,9 @@ exports.federationAcervo = federationCallable('federationAcervo', (ctx, actor, d
 // Pix com baixa automática (Mercado Pago/Asaas da conta da federação) — `functions/federationPayments.js`.
 const federationPayments = require('./federationPayments');
 exports.federationPayments = federationCallable('federationPayments', federationPayments.payments);
+// Carteirinha no Apple Wallet e no Google Wallet (credenciais da plataforma) — `functions/federationWallet.js`.
+const federationWallet = require('./federationWallet');
+exports.federationWallet = federationCallable('federationWallet', federationWallet.wallet);
 // Calendário oficial (agenda esportiva e institucional): só o servidor grava — `functions/federationAgenda.js`.
 const federationAgenda = require('./federationAgenda');
 exports.federationAgenda = federationCallable('federationAgenda', federationAgenda.agenda);
@@ -1767,6 +1770,36 @@ exports.federationPixHook = onRequest(
     if (!m) { res.status(404).end(); return; }
     const status = await federationPayments.hook(fedCtx(), { fedId: m[1], token: m[2], body: req.body || {}, query: req.query || {} });
     res.status(status).end();
+  },
+);
+
+// Carteirinha no Apple Wallet: o download do `.pkpass` (link com token por
+// filiação) e o serviço web da Apple (`/api/carteira/apple/v1/...`), que cada
+// iPhone chama para registrar o aparelho e buscar o passe atualizado.
+exports.federationWalletHook = onRequest(
+  { region: REGION, maxInstances: 5, memory: '256MiB', invoker: 'public' },
+  async (req, res) => {
+    try {
+      const r = await federationWallet.hook(fedCtx(), { method: req.method, path: req.path, headers: req.headers || {}, body: req.body || {}, query: req.query || {} });
+      Object.entries(r.headers || {}).forEach(([k, v]) => res.set(k, v));
+      res.status(r.status).send(r.body === undefined ? '' : r.body);
+    } catch (err) {
+      logger.error('federationWalletHook falhou', err);
+      res.status(500).end();
+    }
+  },
+);
+
+// A carteirinha na carteira acompanha a filiação: situação, validade, código
+// ou plano mudou ⇒ corrige o objeto do Google e avisa os iPhones (APNs).
+exports.federationWalletOnMemberUpdate = onDocumentUpdated(
+  { document: 'federation_members/{memberId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 60 },
+  async (event) => {
+    try {
+      await federationWallet.onMemberChange(fedCtx(), antes(event), depois(event), event.params.memberId);
+    } catch (err) {
+      logger.error('federationWalletOnMemberUpdate falhou', err);
+    }
   },
 );
 

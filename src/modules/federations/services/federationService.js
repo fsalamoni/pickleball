@@ -1440,3 +1440,10 @@ export function uploadAcervoFile({ uid, file, onProgress }) {
  * `pix`/`check` (quem paga) e `gateway_status`/`gateway_save`/`gateway_off` (financeiro).
  */
 export const federationPayments = (payload) => chamar('federationPayments', payload);
+
+/**
+ * Carteirinha no Apple Wallet e no Google Wallet (rodada 3, Bloco 6b —
+ * `functions/federationWallet.js`): `links` (o titular) e, para o admin da
+ * plataforma, `config_status`/`config_save` das credenciais.
+ */
+export const federationWallet = (payload) => chamar('federationWallet', payload);

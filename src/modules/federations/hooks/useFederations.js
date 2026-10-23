@@ -516,3 +516,21 @@ export function useChargeGatewayPix(chargeId, { enabled = true } = {}) {
     retry: false,
   });
 }
+
+/* ------------------------------------- Bloco 6b: carteirinha no Wallet do celular -- */
+
+/** Os links "Adicionar à carteira" da filiação (nulos sem credencial configurada). */
+export function useMemberWalletLinks(memberId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: [...fedKeys.all, 'wallet', memberId],
+    queryFn: () => svc.federationWallet({ action: 'links', memberId }),
+    enabled: !!memberId && enabled,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+}
+
+/** As credenciais das carteiras configuradas (só o resumo) — admin da plataforma. */
+export function useWalletConfig({ enabled = true } = {}) {
+  return useQuery({ queryKey: [...fedKeys.all, 'wallet-config'], queryFn: () => svc.federationWallet({ action: 'config_status' }), enabled });
+}

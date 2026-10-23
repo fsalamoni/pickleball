@@ -54,6 +54,13 @@
           }
         },
         {
+          "source": "/api/carteira/**",
+          "function": {
+            "functionId": "federationWalletHook",
+            "region": "southamerica-east1"
+          }
+        },
+        {
           "source": "/api/mensagens/**",
           "function": {
             "functionId": "messagingHook",

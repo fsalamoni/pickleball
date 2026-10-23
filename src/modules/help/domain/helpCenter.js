@@ -1022,6 +1022,26 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-carteira-celular',
+      flags: ['federations'],
+      title: tk('Carteirinha na carteira do celular'),
+      summary: tk('Adicionar a carteirinha ao Apple Wallet ou ao Google Wallet; ela se atualiza sozinha quando a filiação muda.'),
+      keywords: ['federação', 'carteirinha', 'apple wallet', 'google wallet', 'carteira', 'celular', 'iphone', 'android', 'filiação'],
+      blocks: [
+        p(tk('Além da carteirinha digital da plataforma, o filiado pode guardá-la na carteira do próprio celular, ao lado dos cartões e ingressos — abre sem internet e sem entrar no app.')),
+        steps(
+          tk('ADICIONAR — abra a carteirinha (Minha filiação → Carteirinha digital) e toque em "Adicionar ao Apple Wallet" ou "Adicionar ao Google Wallet".'),
+          tk('SEMPRE EM DIA — renovou, venceu ou foi suspensa: a carteirinha na carteira muda sozinha. O QR leva à mesma verificação pública de sempre.'),
+          tk('SÓ VOCÊ — os botões aparecem só para o titular (ou para o responsável, no caso de dependente).'),
+        ),
+        list(
+          tk('NÃO APARECEU O BOTÃO? — a plataforma ainda não configurou a carteira daquele celular; a carteirinha digital continua valendo igual.'),
+          tk('ADMIN DA PLATAFORMA — as credenciais (emissor do Google e Pass Type ID da Apple) ficam em Painel admin → Federações → Configuração → Carteira do celular. Só o servidor as guarda.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+      ],
+    },
+    {
       id: 'federacao-contas',
       flags: ['federations'],
       guias: ['federacao-contas'],
