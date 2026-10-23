@@ -144,6 +144,18 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Contratos de patrocínio e patrimônio** (`docs/50` §34, módulos `sponsors`
+  e `assets`): `federation_sponsor_contracts` e `federation_assets` **só o
+  servidor grava** (callable `federationManagement` em
+  `functions/federationManagement.js`, mais a varredura); régua em
+  `domain/management.js` com cópia e paridade em
+  `functions/federationManagementPolicy.js`. A parcela recebida entra nas
+  contas UMA vez, derivada (`sponsorIncome` → `accountItems({ extraIncome })`,
+  nos dois lados), não muda nem some numa edição e respeita o período fechado.
+  Quem recebe empréstimo é texto, nunca uid. Telas em `management/` (seção
+  Administração da Central). O **relatório anual** (`domain/annualReport.js`)
+  e as **planilhas** (`domain/exports.js`) são zero banco: fonte que falhou é
+  dita, nunca zero. Regras em `tests/rules/federationManagement.rules.test.js`.
 - **Licença de professor e proteção de menores** (`docs/50` §33, módulos
   `coach_licenses` e `safeguarding`, permissão `safeguarding`): licença
   (`federation_coach_licenses`), selo público (`federation_coach_badges`) e

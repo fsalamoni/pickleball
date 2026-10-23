@@ -58,6 +58,8 @@ const FedSelectionPanel = lazy(() => import('@/v2/components/federations/manage/
 const FedCoachingPanel = lazy(() => import('@/v2/components/federations/coaching/FedCoachingPanel'));
 const FedSafeguardingPanel = lazy(() => import('@/v2/components/federations/coaching/FedSafeguardingPanel'));
 
+const FedAnnualReportPanel = lazy(() => import('@/v2/components/federations/manage/FedAnnualReportPanel'));
+const FedManagementPanel = lazy(() => import('@/v2/components/federations/manage/FedManagementPanel'));
 const FedInsurancePanel = lazy(() => import('@/v2/components/federations/manage/FedInsurancePanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
@@ -123,8 +125,9 @@ function Central({ federationId }) {
   // Acervo oficial: a permissão do acervo ou o admin (o admin master antigo não tem `docs` gravado).
   const podeAcervo = (perms.includes(FED_PERMISSION.DOCS) || admin) && fedModuleOn(fq.data, 'official_docs');
   const docsQ = useFederationDocsAll(federationId, { enabled: papel.isStaff && podeAcervo });
-  // Conformidade: a agenda pública só quando a aba abre (as assembleias do ano).
-  const eventsQ = useFederationEvents(federationId, 'public', { enabled: papel.isStaff && admin && tab === 'conformidade' && fedModuleOn(fq.data, 'calendar') });
+  // Conformidade e relatório anual: a agenda pública e o orçamento só quando a aba abre (as assembleias do ano).
+  const abaDoAdmin = tab === 'conformidade' || tab === 'relatorio-anual';
+  const eventsQ = useFederationEvents(federationId, 'public', { enabled: papel.isStaff && admin && abaDoAdmin && fedModuleOn(fq.data, 'calendar') });
   // Contas: financeiro, conselho fiscal e admin (as prestações alimentam o "Precisa de você").
   const podeContas = (admin || podeFinanceiro || perms.includes(FED_PERMISSION.FISCAL)) && fedModuleOn(fq.data, 'accounts');
   const accountReportsQ = useFederationAccountReports(federationId, { enabled: papel.isStaff && podeContas });
@@ -135,7 +138,7 @@ function Central({ federationId }) {
   // Eleições: o admin vê todas (a comissão conduz pela página da federação).
   const podeEleicoes = admin && fedModuleOn(fq.data, 'elections');
   const electionsQ = useFederationElections(federationId, { enabled: papel.isStaff && podeEleicoes });
-  const budgetsQ = useFederationBudgets(federationId, { enabled: papel.isStaff && admin && tab === 'conformidade' && fedModuleOn(fq.data, 'accounts') });
+  const budgetsQ = useFederationBudgets(federationId, { enabled: papel.isStaff && admin && abaDoAdmin && fedModuleOn(fq.data, 'accounts') });
   const candidaciesQ = useFederationCandidacies(federationId, { enabled: papel.isStaff && podeEleicoes });
   // Licença de professor (cursos ou admin) e proteção de menores (só o responsável): alimentam o "Precisa de você".
   const podeLicencas = (perms.includes(FED_PERMISSION.COURSES) || admin) && fedModuleOn(fq.data, 'coach_licenses');
@@ -208,8 +211,10 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
         {secaoAtiva.id === 'selecao' && <FedSelectionPanel federation={f} tab={tab} perms={perms} />}
         {secaoAtiva.id === 'financeiro' &&<FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
-        {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} budgetsQ={budgetsQ} accountReportsQ={accountReportsQ} electionsQ={electionsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
-        {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
+        {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} budgetsQ={budgetsQ} accountReportsQ={accountReportsQ} electionsQ={electionsQ} tournamentsQ={tournamentsQ} abas={abasExistentes} onIrParaAba={irParaAba} />}
+        {tab === 'relatorio-anual' && <FedAnnualReportPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} tournamentsQ={tournamentsQ} resultsQ={resultsQ} coursesQ={coursesQ} reportsQ={reportsQ} sanctionsQ={sanctionsQ} accountReportsQ={accountReportsQ} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} budgetsQ={budgetsQ} electionsQ={electionsQ} />}
+        {secaoAtiva.id === 'administracao' && <FedManagementPanel federation={f} perms={perms} tab={tab} />}
+        {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && tab !== 'relatorio-anual' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'contas' && <FedAccountsPanel federation={f} perms={perms} tab={tab} reportsQ={accountReportsQ} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
         {(secaoAtiva.id === 'config' || secaoAtiva.id === 'pagina-publica') && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}

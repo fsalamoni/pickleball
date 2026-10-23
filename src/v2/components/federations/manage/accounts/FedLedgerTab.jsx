@@ -1,6 +1,6 @@
 /**
  * Contas → Lançamentos: as receitas e despesas do ano. As cobranças pagas
- * entram SOZINHAS (marcadas "Cobrança paga"); o resto o financeiro lança,
+ * entram SOZINHAS (marcadas "Cobrança paga", "Diária de arbitragem", "Parcela de patrocínio"…); o resto o financeiro lança,
  * com a nota ou o recibo anexado. Lançamento não se apaga: ESTORNA, com
  * motivo — e o período com prestação enviada fica fechado.
  */
@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { accountsAction } from '@/modules/federations/services/accountsService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import {
-  AUTO_LABELS, ENTRY_KIND, ENTRY_STATUS, canPrepareAccounts, categoriesOf, categoryLabel, chargeIncomeItems, closedPeriodFor, ledgerCsv, validateEntryInput,
+  AUTO_LABELS, ENTRY_KIND, ENTRY_STATUS, canPrepareAccounts, categoriesOf, categoryLabel, closedPeriodFor, ledgerCsv, validateEntryInput,
 } from '@/modules/federations/domain/accounts';
 import { parseBrlCents } from '@/modules/federations/domain/charges';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface } from '@/v2/ui/primitives';
@@ -84,19 +84,20 @@ function Valor({ x }) {
   return <span className={`font-semibold tabular-nums ${cor}`}>{x.kind === ENTRY_KIND.EXPENSE ? '−' : '+'} {reais(x.amount_cents)}</span>;
 }
 
-export default function FedLedgerTab({ federation, perms, items, ledger, charges, budgets, reports, hoje }) {
+export default function FedLedgerTab({ federation, perms, items, ledger, budgets, reports, hoje }) {
   const prep = canPrepareAccounts(perms);
   const anoAtual = Number(hoje.slice(0, 4));
   const [ano, setAno] = useState(anoAtual);
   const anos = useMemo(() => accountYears(items, budgets, anoAtual), [items, budgets, anoAtual]);
   const [tipo, setTipo] = useState('todos');
   const [origem, setOrigem] = useState('todas');
-  // Manuais (com os estornados, marcados) + automáticos (cobranças pagas).
-  const linhas = useMemo(() => [...ledger.map((x) => ({ ...x, id: x.id })), ...chargeIncomeItems(charges)]
+  // Manuais (com os estornados, marcados) + TODOS os automáticos da conta (cobranças pagas, diárias da
+  // arbitragem, custos da seleção e dos editais, parcelas de patrocínio): a mesma lista que soma os totais.
+  const linhas = useMemo(() => [...ledger.map((x) => ({ ...x, id: x.id })), ...(items || []).filter((x) => x.auto)]
     .filter((x) => String(x.date || '').startsWith(String(ano)))
     .filter((x) => tipo === 'todos' || x.kind === tipo)
     .filter((x) => origem === 'todas' || (origem === 'auto' ? Boolean(x.auto) : origem === 'bank' ? x.source === 'bank' : !x.auto))
-    .sort((a, b) => String(b.date).localeCompare(String(a.date))), [ledger, charges, ano, tipo, origem]);
+    .sort((a, b) => String(b.date).localeCompare(String(a.date))), [ledger, items, ano, tipo, origem]);
   const busca = useBuscaLista(linhas, (x) => `${x.description} ${x.counterparty || ''} ${categoryLabel(x.kind, x.category)}`);
   const [novo, setNovo] = useState(false);
   const [extrato, setExtrato] = useState(false);

@@ -105,4 +105,22 @@ describe('complianceChecklist', () => {
     const s = complianceSummary([{ status: 'ok' }, { status: 'attention' }, { status: 'unknown' }, { status: 'ok' }]);
     expect(s).toEqual({ ok: 2, attention: 1, unknown: 1, total: 4 });
   });
+
+  it('premiação: só os chancelados aprovados do ano; diferença pede atenção', () => {
+    const ch = (name, prize, extra = {}) => ({ name, starts_at: '2026-05-01', federation_sanction: { status: 'approved', prize }, ...extra });
+    expect(porId(complianceChecklist({ federation: {}, nowMs: NOW })).prize_equality.status).toBe('unknown');
+    expect(porId(complianceChecklist({ federation: {}, tournaments: [], nowMs: NOW })).prize_equality.status).toBe('unknown');
+    const igual = porId(complianceChecklist({ federation: {}, tournaments: [ch('A', { female_cents: 500, male_cents: 500 }), ch('B', null)], nowMs: NOW }));
+    expect(igual.prize_equality.status).toBe('ok');
+    const desigual = porId(complianceChecklist({ federation: {}, tournaments: [ch('A', { female_cents: 300, male_cents: 500 })], nowMs: NOW }));
+    expect(desigual.prize_equality).toMatchObject({ status: 'attention', tab: 'chancelas' });
+    expect(desigual.prize_equality.detail).toContain('A');
+    const outros = porId(complianceChecklist({ federation: {}, tournaments: [ch('A', { female_cents: 300, male_cents: 500 }, { starts_at: '2025-05-01' }), { name: 'B', starts_at: '2026-05-01', federation_sanction: { status: 'pending', prize: { female_cents: 1, male_cents: 9 } } }], nowMs: NOW }));
+    expect(outros.prize_equality.status).toBe('unknown');
+  });
+
+  it('proteção de menores: módulo ligado é em dia', () => {
+    expect(porId(complianceChecklist({ federation: {}, nowMs: NOW })).safeguarding).toMatchObject({ status: 'attention', tab: 'modulos' });
+    expect(porId(complianceChecklist({ federation: { modules: { safeguarding: true } }, nowMs: NOW })).safeguarding).toMatchObject({ status: 'ok', tab: 'protecao' });
+  });
 });

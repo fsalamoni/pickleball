@@ -231,6 +231,8 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_comment_reports: 'A denúncia é sobre o comentário de outra pessoa e serve à moderação; guarda só o motivo e o uid de quem denunciou.',
   federation_budgets: 'O orçamento é da federação (valores por categoria, aprovação), não da pessoa; quem criou é só o uid de equipe.',
   federation_ledger: 'O lançamento é da contabilidade da federação (receita, despesa, comprovante), não dado da pessoa; quem lançou é só o uid de equipe.',
+  federation_sponsor_contracts: 'O contrato de patrocínio é da federação com uma empresa (vigência, parcelas, contrapartidas), não dado da pessoa; quem lançou é só o uid de equipe.',
+  federation_assets: 'O bem é do patrimônio da federação, emprestado a clube, arena ou evento (nunca a uma pessoa); quem emprestou é só o uid de equipe.',
   federation_account_reports: 'A prestação de contas é da federação (totais, parecer, assembleia), não dado da pessoa; quem abriu é só o uid de equipe.',
   federation_elections: 'O edital é ato da federação (cargos, calendário, pesos), não dado da pessoa; a participação dela sai como eleitor e nas chapas.',
   federation_ballots: 'A cédula é SECRETA e não tem uid: não há como ligá-la a ninguém, e por isso ela não sai na exportação.',

@@ -5153,6 +5153,19 @@ service cloud.firestore {
       allow read: if fedAcc(od().federation_id);
       allow write: if false;
     }
+    // CONTRATOS DE PATROCÍNIO (módulo `sponsors`) e PATRIMÔNIO (módulo
+    // `assets`), Bloco 5. Só o SERVIDOR grava (`federationManagement`): a
+    // parcela recebida vira receita nas contas e o período fechado não muda.
+    // Contrato: financeiro, admin e conselho fiscal (`fedAcc`). Patrimônio:
+    // os mesmos e as competições (o material vai aos eventos). Nada público.
+    match /federation_sponsor_contracts/{id} {
+      allow read: if fedAcc(od().federation_id);
+      allow write: if false;
+    }
+    match /federation_assets/{id} {
+      allow read: if fedAcc(od().federation_id) || fedHas(od().federation_id, 'competitions');
+      allow write: if false;
+    }
     // ARBITRAGEM (módulo `referees`): o quadro (`{fed}_{uid}`) e as escalas.
     // Só o SERVIDOR grava (`federationReferees`): os alertas da convocação
     // leem dados de outras pessoas, e a diária paga vira despesa. Lê a equipe

@@ -174,6 +174,16 @@ function extraExpenseItems(extra) {
   })).filter((x) => x.date && x.amount_cents > 0);
 }
 
+function extraIncomeItems(extra) {
+  return lista(extra).map((x) => ({
+    id: `extra:${String((x && x.ref) || '')}`, kind: 'income',
+    category: INCOME.includes(x && x.category) ? x.category : 'other_income',
+    date: ISO_RE.test(String((x && x.date) || '')) ? x.date : '', amount_cents: cents(x && x.amount_cents),
+    description: line(x && x.description, DESCRIPTION_MAX), counterparty: line(x && x.counterparty, COUNTERPARTY_MAX),
+    auto: typeof (x && x.auto) === 'string' ? x.auto : 'derived', ref: String((x && x.ref) || ''),
+  })).filter((x) => x.date && x.amount_cents > 0);
+}
+
 function ledgerItems(ledger) {
   return lista(ledger).filter((e) => e && e.status !== 'void').map((e) => ({
     id: String(e.id || ''), kind: e.kind === 'expense' ? 'expense' : 'income', category: String(e.category || ''),
@@ -181,8 +191,8 @@ function ledgerItems(ledger) {
   }));
 }
 
-function accountItems({ ledger, charges, extraExpenses } = {}) {
-  return [...ledgerItems(ledger), ...chargeIncomeItems(charges), ...extraExpenseItems(extraExpenses)]
+function accountItems({ ledger, charges, extraExpenses, extraIncome } = {}) {
+  return [...ledgerItems(ledger), ...chargeIncomeItems(charges), ...extraIncomeItems(extraIncome), ...extraExpenseItems(extraExpenses)]
     .sort((a, b) => (a.date === b.date ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.date < b.date ? 1 : -1));
 }
 
@@ -232,5 +242,5 @@ module.exports = {
   INCOME, EXPENSE, LINE_KEYS, CHARGE_ORIGIN_CATEGORY, BUDGET_STATUS, REPORT_STATUS, VERDICTS, ASSEMBLY_RESULTS, STATEMENT_KINDS,
   UPLOAD_RE, OFFICIAL_RE, dateBR, isValidPeriod, isAnnualPeriod, periodRange, legalDeadline,
   validateEntry, validateBudget, validateStatements, validateOpinion, validateAssembly,
-  chargePaidDate, chargeIncomeItems, extraExpenseItems, ledgerItems, accountItems, itemsInPeriod, totalsByCategory, buildSnapshot, closedPeriodFor,
+  chargePaidDate, chargeIncomeItems, extraExpenseItems, extraIncomeItems, ledgerItems, accountItems, itemsInPeriod, totalsByCategory, buildSnapshot, closedPeriodFor,
 };

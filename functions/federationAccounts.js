@@ -99,17 +99,19 @@ async function despesasDerivadas(ctx, fed) {
   return [...a, ...s];
 }
 
-/** Tudo o que entra na conta da federação: manual + cobranças pagas + derivadas. */
+/** Tudo o que entra na conta da federação: manual + cobranças pagas + derivadas (as parcelas de patrocínio recebidas inclusive). */
 async function itensDaConta(ctx, fed) {
-  const [led, chg, extra] = await Promise.all([
+  const [led, chg, extra, receitas] = await Promise.all([
     ctx.db.collection(LEDGER).where('federation_id', '==', fed.id).get(),
     ctx.db.collection(f.C.charges).where('federation_id', '==', fed.id).get(),
     despesasDerivadas(ctx, fed),
+    require('./federationManagement.js').receitas(ctx, fed),
   ]);
   return A.accountItems({
     ledger: led.docs.map((d) => ({ id: d.id, ...d.data() })),
     charges: chg.docs.map((d) => ({ id: d.id, ...d.data() })),
     extraExpenses: extra,
+    extraIncome: receitas,
   });
 }
 

@@ -12,7 +12,7 @@
  */
 import React, { lazy, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FolderOpen, Inbox, Settings2, Users } from 'lucide-react';
+import { Download, FolderOpen, Inbox, Settings2, Users } from 'lucide-react';
 import { useFederationPlatformSettings } from '@/modules/federations/hooks/useFederations';
 import { membershipState, memberCounts, sortMembersForStaff } from '@/modules/federations/domain/membership';
 import { MEMBER_STATUS, PLAN_TIER_LABELS, FED_PERMISSION } from '@/modules/federations/domain/constants';
@@ -20,6 +20,7 @@ import { MEMBER_CATEGORY_LABELS, MEMBER_ENTITY_LABELS, memberTypeName, personTyp
 import { REGISTRY_ALL, REGISTRY_BOND, REGISTRY_BOND_LABELS, bondCounts, memberBond, plansOfType, registryList, registryTabs } from '@/modules/federations/domain/registry';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
+import { membersCsv } from '@/modules/federations/domain/exports';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
@@ -27,6 +28,7 @@ import { MemberStatusBadge, quando } from '../federationUi';
 import { DocsStateBadge } from '../FedRegularity';
 import { ConvidarPessoas, ConvitesEnviados } from './FedInvites';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
+import { baixarCsv } from './naoSalvo';
 import { MemberActions } from './memberShared';
 
 const FedMemberFolder = lazy(() => import('./FedMemberFolder'));
@@ -177,7 +179,10 @@ export default function FedMembersPanel({ federation, membersQ, documentsQ, plan
           <h2 className="font-display text-xl font-bold text-ink">{t('Filiados e cadastrados')}</h2>
           <p className="text-sm text-gray-500">{tn(vinculos.federated, '{n} filiado', '{n} filiados')} · {tn(vinculos.registered, '{n} cadastrado', '{n} cadastrados')} · {tn(contas.expiring, '{n} vencendo em 30 dias', '{n} vencendo em 30 dias')}</p>
         </div>
-        <BuscaLista id="fed-filiados-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, número ou plano')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          {busca.filtrados.length > 0 && <V2Button type="button" size="sm" variant="secondary" data-dica="federacao-filiados-csv" onClick={() => baixarCsv(membersCsv(busca.filtrados, { catalog }), `filiados-${(federation.acronym || 'federacao').toLowerCase()}.csv`)}><Download className="h-4 w-4" />{t('Baixar planilha (CSV)')}</V2Button>}
+          <BuscaLista id="fed-filiados-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, número ou plano')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
+        </div>
       </div>
       <V2SubTabs ariaLabel={t('Tipos de filiação')} dica="federacao-tipos" tabs={abas.map((a) => ({ value: a.id, label: `${a.id === REGISTRY_ALL ? t('Todos') : memberTypeName(a.type)} (${a.count})` }))} activeValue={abaTipo.id} onSelect={(x) => setTipo(x.value)} />
       {abaTipo.id !== REGISTRY_ALL && <TipoConfig tipo={abaTipo} plans={plans} plansQ={plansQ} podePlanos={perms.includes(FED_PERMISSION.ADMIN)} federation={federation} onIrParaAba={onIrParaAba} />}

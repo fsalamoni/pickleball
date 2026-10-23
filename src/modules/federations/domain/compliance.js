@@ -15,7 +15,8 @@ import { transparencyChecklist } from './acervo';
 import { convocationNotice } from './meeting';
 import { normalizeFederationRules, fedModuleOn } from './federation';
 import { staffPerms } from './staff';
-import { FED_PERMISSION, STAFF_ROLE } from './constants';
+import { FED_PERMISSION, SANCTION_STATUS, STAFF_ROLE } from './constants';
+import { prizeParity } from './competitions';
 
 export const COMPLIANCE_STATUS = Object.freeze({ OK: 'ok', ATTENTION: 'attention', UNKNOWN: 'unknown' });
 
@@ -34,12 +35,13 @@ export const ELECTION_LEAD_DAYS = 180;
 const somaDias = (iso, d) => new Date(Date.parse(`${iso}T00:00:00Z`) + d * 86400000).toISOString().slice(0, 10);
 
 /**
- * @param {{ federation: object, staff?: object[], docs?: object[], events?: object[], budgets?: object[], accountReports?: object[], elections?: object[], nowMs?: number }} fontes
+ * @param {{ federation: object, staff?: object[], docs?: object[], events?: object[], budgets?: object[], accountReports?: object[], elections?: object[], tournaments?: object[], nowMs?: number }} fontes
  *   Fonte ausente (undefined) = não carregou ⇒ o item fica "não deu para conferir".
- *   `budgets`/`accountReports` só valem com o módulo `accounts`; `elections` com `elections`.
+ *   `budgets`/`accountReports` só valem com o módulo `accounts`; `elections` com `elections`;
+ *   `tournaments` (os torneios com a federação) dá a isonomia de premiação.
  * @returns {Array<{ id, label, basis, tab, status, detail }>}
  */
-export function complianceChecklist({ federation, staff, docs, events, budgets, accountReports, elections, nowMs = Date.now() } = {}) {
+export function complianceChecklist({ federation, staff, docs, events, budgets, accountReports, elections, tournaments, nowMs = Date.now() } = {}) {
   const f = federation || {};
   const g = f.governance || {};
   const hoje = hojeIso(nowMs);
@@ -186,6 +188,31 @@ export function complianceChecklist({ federation, staff, docs, events, budgets, 
   const temAtleta = board.some((b) => /atleta/i.test(String(b?.role || '')));
   out.push(item('athletes', tk('Atletas na direção'), tk('Lei 14.597/2023, art. 36, X, h'), 'governanca', temAtleta ? 'ok' : 'attention',
     temAtleta ? t('A diretoria tem cargo de representante dos atletas.') : t('Inclua na diretoria o representante dos atletas (a lei pede atletas nos órgãos e no colégio eleitoral).')));
+
+  // 10. Isonomia de premiação entre gêneros nos torneios chancelados do ano.
+  const lp = [tk('Premiação igual entre gêneros'), tk('Lei 14.597/2023, art. 36, IX; Lei 14.611/2023')];
+  if (!Array.isArray(tournaments)) {
+    out.push(item('prize_equality', ...lp, 'chancelas', 'unknown', t('Não deu para ler os torneios chancelados.')));
+  } else {
+    const doAno = tournaments.filter((x) => x?.federation_sanction?.status === SANCTION_STATUS.APPROVED
+      && String(x.starts_at || '').slice(0, 4) === String(ano));
+    const desiguais = doAno.filter((x) => prizeParity(x.federation_sanction.prize).state === 'unequal');
+    const declarados = doAno.filter((x) => ['equal', 'none', 'unequal'].includes(prizeParity(x.federation_sanction.prize).state));
+    if (desiguais.length) {
+      out.push(item('prize_equality', ...lp, 'chancelas', 'attention', t('{n} torneio(s) chancelado(s) em {ano} com premiação diferente entre feminino e masculino: {lista}.', { n: desiguais.length, ano, lista: desiguais.slice(0, 3).map((x) => x.name).join(', ') })));
+    } else if (declarados.length) {
+      out.push(item('prize_equality', ...lp, 'chancelas', 'ok', t('Os {n} torneios chancelados em {ano} que declararam a premiação pagam igual.', { n: declarados.length, ano })));
+    } else {
+      out.push(item('prize_equality', ...lp, 'chancelas', 'unknown', doAno.length
+        ? t('Nenhum torneio chancelado em {ano} declarou a premiação por gênero. O organizador informa no pedido de chancela.', { ano })
+        : t('Nenhum torneio chancelado em {ano} ainda.', { ano })));
+    }
+  }
+
+  // 11. Proteção de crianças e adolescentes (curso e certidão de quem trabalha com menores).
+  const sg = fedModuleOn(f, 'safeguarding');
+  out.push(item('safeguarding', tk('Proteção de crianças e adolescentes'), tk('Boa prática (ECA, Lei 8.069/1990)'), sg ? 'protecao' : 'modulos', sg ? 'ok' : 'attention',
+    sg ? t('Professores, árbitros e diretores que trabalham com menores precisam do curso de proteção e da certidão conferida.') : t('Ligue o módulo de proteção de menores: ele exige curso e certidão de antecedentes de quem trabalha com crianças e abre a denúncia prioritária.')));
 
   return out;
 }
