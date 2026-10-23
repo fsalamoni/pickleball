@@ -28,6 +28,8 @@ import { useFederationAccountReports, useFederationBudgets } from '@/modules/fed
 import { useFederationAssignments, useScalableEvents } from '@/modules/federations/hooks/useReferees';
 import { useFederationCandidacies, useFederationElections } from '@/modules/federations/hooks/useElections';
 import { useFederationCoachLicenses, useMinorReports, useSafeguardingOverview } from '@/modules/federations/hooks/useCoaching';
+import { useConfederationLinks, useDuesOwed, useDuesReceivable, useHomologations, useMyNationalLinks } from '@/modules/federations/hooks/useNational';
+import { canHomologate, canManageDues, isConfederation, nationalBodyOf } from '@/modules/federations/domain/national';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
@@ -61,6 +63,7 @@ const FedSafeguardingPanel = lazy(() => import('@/v2/components/federations/coac
 const FedAnnualReportPanel = lazy(() => import('@/v2/components/federations/manage/FedAnnualReportPanel'));
 const FedManagementPanel = lazy(() => import('@/v2/components/federations/manage/FedManagementPanel'));
 const FedInsurancePanel = lazy(() => import('@/v2/components/federations/manage/FedInsurancePanel'));
+const FedNationalPanel = lazy(() => import('@/v2/components/federations/manage/FedNationalPanel'));
 
 const ABAS_SECRETARIA = ['transferencias', 'documentos', 'importar'];
 
@@ -145,6 +148,13 @@ function Central({ federationId }) {
   const coachLicensesQ = useFederationCoachLicenses(federationId, { enabled: papel.isStaff && podeLicencas });
   const podeProtecao = perms.includes(FED_PERMISSION.SAFEGUARDING) && fedModuleOn(fq.data, 'safeguarding');
   const sgOverviewQ = useSafeguardingOverview(federationId, { enabled: papel.isStaff && podeProtecao });
+  // Camada nacional: o "Precisa de você" de cada lado (só quem pode agir consulta).
+  const ehConf = isConfederation(fq.data);
+  const confLinksQ = useConfederationLinks(federationId, { enabled: papel.isStaff && ehConf && admin });
+  const homologationsQ = useHomologations(federationId, { enabled: papel.isStaff && ehConf && canHomologate(perms) });
+  const duesReceivableQ = useDuesReceivable(federationId, { enabled: papel.isStaff && ehConf && canManageDues(perms) });
+  const myLinksQ = useMyNationalLinks(federationId, { enabled: papel.isStaff && Boolean(fq.data) && !ehConf && admin });
+  const duesOwedQ = useDuesOwed(federationId, { enabled: papel.isStaff && Boolean(nationalBodyOf(fq.data)) && canManageDues(perms) });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -185,7 +195,7 @@ function Central({ federationId }) {
 
       <FedHiddenBanner federation={f} canPublish={admin} onOpen={() => setTab('publicacao')} />
 
-      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} assignmentsQ={assignmentsQ} refEvents={refEventsQ.incompleto ? undefined : refEventsQ.events} refRules={f.referee_rules} electionsQ={electionsQ} candidaciesQ={candidaciesQ} coachLicensesQ={coachLicensesQ} minorReportsQ={minorReportsQ} sgOverviewQ={sgOverviewQ} uid={user?.uid || null} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
+      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} assignmentsQ={assignmentsQ} refEvents={refEventsQ.incompleto ? undefined : refEventsQ.events} refRules={f.referee_rules} electionsQ={electionsQ} candidaciesQ={candidaciesQ} coachLicensesQ={coachLicensesQ} minorReportsQ={minorReportsQ} sgOverviewQ={sgOverviewQ} nationalQs={{ confLinks: confLinksQ, homologations: homologationsQ, duesReceivable: duesReceivableQ, myLinks: myLinksQ, duesOwed: duesOwedQ }} uid={user?.uid || null} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
 
       <div className="space-y-3">
         <V2SectionNav ariaLabel={t('Seções da Central da federação')} dica="federacao-secoes" sections={sections} grupos={FED_SECTION_GROUPS} activeId={secaoAtiva.id} onSelect={(s) => setTab(s.tabs[0].value)} />
@@ -217,6 +227,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'indicadores' && tab !== 'conformidade' && tab !== 'relatorio-anual' && <FedIndicatorsPanel federation={f} membersQ={membersQ} chargesQ={chargesQ} perms={perms} />}
         {secaoAtiva.id === 'contas' && <FedAccountsPanel federation={f} perms={perms} tab={tab} reportsQ={accountReportsQ} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'equipe' && <FedStaffPanel federation={f} staffQ={staffQ} papel={papel} tab={tab} />}
+        {(secaoAtiva.id === 'rede' || secaoAtiva.id === 'confederacao') && <FedNationalPanel federation={f} perms={perms} tab={tab} />}
         {(secaoAtiva.id === 'config' || secaoAtiva.id === 'pagina-publica') && <FedSettingsPanel federation={f} plansQ={plansQ} tab={tab} />}
       </Suspense>
       <ConfirmDialog

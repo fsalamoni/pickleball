@@ -21,10 +21,10 @@ import { LIVE_MEMBER_STATUSES, isoDate } from '@/modules/federations/domain/memb
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useFederationMutation, useMyDocuments, useMySanctions, useMyTransfers, useOrgDocuments, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { docLabel, requiredDocs, requiredDocsStatus, submittedDocKey, validateDocumentFile } from '@/modules/federations/domain/privateData';
-import { canRequestTransfer, isReleaseOverdue, sortTransfers, transferReleaseDays, transferSummary, validateTransferInput } from '@/modules/federations/domain/transfers';
+import { canRequestTransfer, homologationSummary, isReleaseOverdue, sortTransfers, transferReleaseDays, transferSummary, validateTransferInput } from '@/modules/federations/domain/transfers';
 import { canAppeal, sanctionInForce, sortSanctions } from '@/modules/federations/domain/discipline';
 import { formatBrlCents } from '@/modules/federations/domain/charges';
-import { MEMBER_STATUS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { MEMBER_STATUS, DISCIPLINE_KIND, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, DOC_STATUS_LABELS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_OPEN, TRANSFER_STATUS_LABELS, TRANSFER_STATUS_TONE } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from './federationUi';
@@ -200,7 +200,7 @@ export function FedTransferDialog({ member, federation, onClose }) {
         )}
         {minhas.length > 0 && (
           <ul className="space-y-1 border-t border-gray-100 pt-3 text-xs text-gray-600">
-            {sortTransfers(minhas).slice(0, 5).map((x) => <li key={x.id} className="flex flex-wrap items-center gap-2">{t(TRANSFER_KIND_LABELS[x.kind] || x.kind)} {transferSummary(x)} · {quando(x.requested_at)}<V2Badge tone={{ pending: 'amber', approved: 'green', rejected: 'red' }[x.status] || 'neutral'}>{t(TRANSFER_STATUS_LABELS[x.status] || x.status)}</V2Badge>{isReleaseOverdue(x) && <span>{t('prazo vencido · libera sozinha')}</span>}{x.status === TRANSFER_STATUS.PENDING && <CancelarTransferencia tr={x} />}</li>)}
+            {sortTransfers(minhas).slice(0, 5).map((x) => <li key={x.id} className="flex flex-wrap items-center gap-2">{t(TRANSFER_KIND_LABELS[x.kind] || x.kind)} {transferSummary(x)} · {quando(x.requested_at)}<V2Badge tone={TRANSFER_STATUS_TONE[x.status] || 'neutral'}>{t(TRANSFER_STATUS_LABELS[x.status] || x.status)}</V2Badge>{isReleaseOverdue(x) && <span>{t('prazo vencido · libera sozinha')}</span>}{homologationSummary(x) && <span>{homologationSummary(x)}</span>}{x.deny_reason && <span className="text-red-600">{t('Motivo: {motivo}', { motivo: x.deny_reason })}</span>}{TRANSFER_OPEN.includes(x.status) && <CancelarTransferencia tr={x} />}</li>)}
           </ul>
         )}
       </DialogContent>

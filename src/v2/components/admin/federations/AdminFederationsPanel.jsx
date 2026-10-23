@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { BadgeCheck, Ban, CheckCircle2, ExternalLink, Eye, KeyRound, Landmark, ShieldCheck, XCircle } from 'lucide-react';
+import { BadgeCheck, Ban, CheckCircle2, ExternalLink, Eye, KeyRound, Landmark, ShieldCheck, XCircle, Network } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { reviewFederation } from '@/modules/federations/services/federationService';
 import { useAdminFederations, useFederationAccessLogs, useFederationMutation, useFederationPrivate } from '@/modules/federations/hooks/useFederations';
@@ -89,6 +89,8 @@ function FederationRow({ f }) {
           {acoes.includes('verify') && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir('verify', t('Selo "Verificada" concedido.'))}><BadgeCheck className="h-4 w-4" />{t('Marcar verificada')}</V2Button>}
           {acoes.includes('unverify') && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir('unverify', t('Selo "Verificada" retirado.'))}>{t('Tirar "Verificada"')}</V2Button>}
           {acoes.includes('official') && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir('official', t('Selo "Oficial" concedido.'))}><ShieldCheck className="h-4 w-4" />{t('Marcar oficial')}</V2Button>}
+          {acoes.includes('confederation') && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir('confederation', t('Marcada como confederação. A administração dela já pode convidar as federações estaduais.'))}><Network className="h-4 w-4" />{t('Marcar confederação')}</V2Button>}
+          {acoes.includes('unconfederation') && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir('unconfederation', t('Deixou de ser confederação.'))}>{t('Tirar "Confederação"')}</V2Button>}
           {acoes.includes('unofficial') && <V2Button type="button" size="sm" variant="ghost" disabled={m.isPending} onClick={() => agir('unofficial', t('Selo "Oficial" retirado.'))}>{t('Tirar "Oficial"')}</V2Button>}
           <V2Button type="button" size="sm" variant="ghost" onClick={() => setPrivados((v) => !v)}><Eye className="h-4 w-4" />{privados ? t('Ocultar dados da entidade') : t('Dados da entidade')}</V2Button>
           <V2Button asChild size="sm" variant="ghost"><Link to={fedPath(f)}>{t('Abrir no app')}</Link></V2Button>

@@ -255,6 +255,9 @@ const RETAINED_AS_IS = Object.freeze([
   // Bloco 5: o contrato e o bem são da federação (quem lançou é só o uid de equipe).
   { col: 'federation_sponsor_contracts', field: 'created_by', label: 'Contratos de patrocínio de federação que lançou (como equipe; o contrato é da federação)' },
   { col: 'federation_assets', field: 'created_by', label: 'Bens do patrimônio de federação que cadastrou (como equipe; o bem é da federação)' },
+  // Bloco 6: o vínculo nacional e a anuidade são entre duas federações (quem agiu é só o uid de equipe).
+  { col: 'federation_national_links', field: 'opened_by', label: 'Pedidos e convites de filiação à confederação que abriu (como equipe; o vínculo é entre as federações)' },
+  { col: 'federation_dues', field: 'issued_by', label: 'Anuidades da confederação que lançou (como equipe; o repasse é entre as federações)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */

@@ -35,6 +35,9 @@ import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import { normalizaBusca } from './manage/listTools';
 import { baixarCsv } from './manage/naoSalvo';
 import { rankingCsv } from '@/modules/federations/domain/exports';
+import { isConfederation } from '@/modules/federations/domain/national';
+import { useAffiliatedFederations, useNationalRanking } from '@/modules/federations/hooks/useNational';
+import { FedLogo, fedPublicPath } from './federationUi';
 
 /* ------------------------------------------------------- filiados (orgs) -- */
 
@@ -222,7 +225,7 @@ function Linha({ l, destaque, logado }) {
         <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2 text-xs">
           {detalhes.map((r) => (
             <li key={r.entry_id || `${r.tournament_id}_${r.date}`} className={`flex flex-wrap items-baseline justify-between gap-2 ${r.counts === false ? 'text-gray-500' : 'text-ink'}`}>
-              <span className="min-w-0">{diaBR(r.date)} · {r.tournament_name}{r.modality_name ? ` · ${r.modality_name}` : ''}{r.position ? ` · ${t('{n}º', { n: r.position })}` : ''}</span>
+              <span className="min-w-0">{diaBR(r.date)} · {r.federation_acronym ? `${r.federation_acronym} · ` : ''}{r.tournament_name}{r.modality_name ? ` · ${r.modality_name}` : ''}{r.position ? ` · ${t('{n}º', { n: r.position })}` : ''}</span>
               <span className="tabular-nums font-semibold">{r.points}{r.counts === false ? ` · ${t('não conta')}` : ''}</span>
             </li>
           ))}
@@ -247,14 +250,21 @@ function SeasonStatus({ season }) {
  * `meUid` destaca a linha da pessoa.
  */
 export function FedRankingBlock({ federation, meUid = null, titulo = true, compacto = false, exportavel = false }) {
-  const ligado = fedModuleOn(federation, 'ranking');
+  const proprio = fedModuleOn(federation, 'ranking');
+  // Confederação (Bloco 6): o ranking NACIONAL soma as filiadas; o próprio fica a um toque, se o módulo está ligado.
+  const conf = isConfederation(federation);
+  const ligado = proprio || conf;
+  const [escopo, setEscopo] = useState(conf ? 'nacional' : 'proprio');
+  const nacional = conf && escopo === 'nacional';
   const anos = useMemo(() => rankingSeasons(federation), [federation]);
   const [season, setSeason] = useState(anos[0]);
   const [classe, setClasse] = useState('geral');
   const [limite, setLimite] = useState(compacto ? 10 : 25);
   const [busca, setBusca] = useState('');
   const { isAuthenticated } = useAuth();
-  const q = useFederationRanking(federation?.id, season, { enabled: ligado });
+  const qProprio = useFederationRanking(federation?.id, season, { enabled: proprio && !nacional });
+  const qNacional = useNationalRanking(federation?.id, season, { enabled: nacional });
+  const q = nacional ? qNacional : qProprio;
   const dados = q.isSuccess ? q.data : null;
   const linhas = useMemo(() => {
     if (!dados) return [];
@@ -267,8 +277,9 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
   return (
     <section aria-labelledby="fed-ranking" className="space-y-3" data-dica="federacao-ranking-oficial">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        {titulo && <h2 id="fed-ranking" className="font-display text-xl font-bold text-ink">{t('Ranking oficial')}</h2>}
+        {titulo && <h2 id="fed-ranking" className="font-display text-xl font-bold text-ink">{nacional ? t('Ranking nacional') : t('Ranking oficial')}</h2>}
         <div className="flex flex-wrap gap-2">
+          {conf && proprio && <V2Select aria-label={t('Qual ranking')} className="h-10 min-w-40" value={escopo} onChange={(e) => { setEscopo(e.target.value); setClasse('geral'); }} options={[{ value: 'nacional', label: t('Nacional (com as filiadas)') }, { value: 'proprio', label: t('Só os torneios da {sigla}', { sigla: federation.acronym || '' }) }]} />}
           <V2Select aria-label={t('Temporada')} className="h-10 w-28" value={season} onChange={(e) => { setSeason(Number(e.target.value)); setClasse('geral'); }} options={anos.map((a) => ({ value: a, label: String(a) }))} />
           <V2Select aria-label={t('Classe')} className="h-10 min-w-40" value={classe} onChange={(e) => setClasse(e.target.value)} options={[{ value: 'geral', label: t('Geral') }, ...(dados?.categories || []).map((c) => ({ value: c.key, label: classeLabel(c) }))]} />
           {exportavel && dados && <V2Button type="button" variant="secondary" className="h-10" data-dica="federacao-ranking-csv" onClick={() => baixarCsv(rankingCsv(dados, { classLabel: classeLabel }), `ranking-${(federation.acronym || 'federacao').toLowerCase()}-${season}.csv`)}><Download className="h-4 w-4" />{t('Baixar planilha (CSV)')}</V2Button>}
@@ -301,8 +312,40 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
           </p>
         </>
       )}
-      {!q.isLoading && !q.isError && <p className="flex items-center gap-1 text-xs text-gray-500"><Landmark className="h-3.5 w-3.5" aria-hidden="true" />{t('Ranking oficial da {sigla}: soma só torneios chancelados por ela. O ranking da plataforma segue à parte.', { sigla: federation?.acronym || federation?.name })}</p>}
+      {!q.isLoading && !q.isError && <p className="flex items-center gap-1 text-xs text-gray-500"><Landmark className="h-3.5 w-3.5" aria-hidden="true" />{nacional
+        ? t('Ranking nacional da {sigla}: soma os pontos lançados pelos torneios chancelados das federações filiadas e da própria confederação. O ranking da plataforma segue à parte.', { sigla: federation?.acronym || federation?.name })
+        : t('Ranking oficial da {sigla}: soma só torneios chancelados por ela. O ranking da plataforma segue à parte.', { sigla: federation?.acronym || federation?.name })}</p>}
       {!compacto && <FedTierList federation={federation} />}
+    </section>
+  );
+}
+
+/**
+ * As federações filiadas a uma CONFEDERAÇÃO (Bloco 6): saem do espelho
+ * `national_body` das próprias federações, só as publicadas.
+ */
+export function FedNationalNetworkSection({ federation }) {
+  const q = useAffiliatedFederations(federation?.id, { enabled: isConfederation(federation) });
+  if (!isConfederation(federation)) return null;
+  return (
+    <section aria-labelledby="fed-rede" className="space-y-3" data-dica="federacao-rede-publica">
+      <h2 id="fed-rede" className="font-display text-xl font-bold text-ink">{t('Federações filiadas')}</h2>
+      <p className="text-sm text-gray-500">{t('As federações estaduais filiadas à {sigla}. Os pontos que elas lançam somam no ranking nacional.', { sigla: federation.acronym || federation.name })}</p>
+      {q.isError && <V2ErrorState inline title={t('Não carregaram as federações filiadas')} onRetry={() => q.refetch()} />}
+      {q.isLoading && <V2Skeleton lines={3} />}
+      {q.isSuccess && q.data.length === 0 && <p className="text-sm text-gray-500">{t('Nenhuma federação filiada com página pública ainda.')}</p>}
+      {q.isSuccess && q.data.length > 0 && (
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {q.data.map((x) => (
+            <li key={x.id}>
+              <Link to={fedPublicPath(x)} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 transition-colors hover:border-gray-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
+                <FedLogo federation={x} size="sm" />
+                <span className="min-w-0"><span className="block truncate font-semibold text-ink">{x.name}</span><span className="block text-xs text-gray-500">{[x.acronym, x.state].filter(Boolean).join(' · ')}</span></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

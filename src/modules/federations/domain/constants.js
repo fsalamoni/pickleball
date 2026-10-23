@@ -53,6 +53,8 @@ export const FED_COLLECTIONS = Object.freeze({
   safeguarding: 'federation_safeguarding',
   sponsorContracts: 'federation_sponsor_contracts',
   assets: 'federation_assets',
+  nationalLinks: 'federation_national_links',
+  dues: 'federation_dues',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -533,13 +535,20 @@ export const DOC_MAX_BYTES = 5 * 1024 * 1024;
 export const TRANSFER_KIND = Object.freeze({ CLUB: 'club', FEDERATION: 'federation' });
 export const TRANSFER_KIND_LABELS = Object.freeze({ club: tk('Troca de clube'), federation: tk('Troca de federação') });
 
-export const TRANSFER_STATUS = Object.freeze({ PENDING: 'pending', APPROVED: 'approved', REJECTED: 'rejected', CANCELLED: 'cancelled' });
+export const TRANSFER_STATUS = Object.freeze({ PENDING: 'pending', HOMOLOGATION: 'homologation', APPROVED: 'approved', REJECTED: 'rejected', DENIED: 'denied', CANCELLED: 'cancelled' });
+/** Ainda em aberto: a antiga não respondeu, ou liberou e a confederação homologa. */
+export const TRANSFER_OPEN = Object.freeze(['pending', 'homologation']);
 export const TRANSFER_STATUS_LABELS = Object.freeze({
   pending: tk('Aguardando a federação'),
+  homologation: tk('Aguardando a homologação da confederação'),
   approved: tk('Aprovada'),
   rejected: tk('Recusada'),
+  denied: tk('Negada pela confederação'),
   cancelled: tk('Cancelada'),
 });
+
+/** A cor do selo de cada situação. */
+export const TRANSFER_STATUS_TONE = Object.freeze({ pending: 'amber', homologation: 'amber', approved: 'green', rejected: 'red', denied: 'red', cancelled: 'neutral' });
 
 /** Prazo para a federação antiga responder; silêncio = liberada (D9). */
 export const TRANSFER_RELEASE_DAYS = 15;

@@ -3125,3 +3125,125 @@ os inclui (isenção no guarda `exclusaoCobreColecoes`).
 Guias: `federacao-administracao` e `federacao-relatorio-anual`. Artigos:
 `federacao-administracao`, `federacao-relatorio-anual` e
 `federacao-conformidade` (atualizado).
+
+## 35. Confederação e rede nacional (Bloco 6 das próximas frentes, 2026-10-23)
+
+A camada nacional: a **confederação** tem as federações estaduais como
+filiadas. Quem marca uma federação como confederação é o **admin da
+plataforma** (Painel admin → Federações → "Marcar confederação", ações
+`confederation`/`unconfederation` da revisão; tirar a marca de quem tem
+filiadas o servidor recusa). Tudo é gravado **só pelo servidor**
+(`functions/federationNational.js`: callable `federationNational` + varredura
+diária dentro de `federationMembershipSweep`). A régua tem cópia em
+`functions/federationNationalPolicy.js`, gerada de
+`src/modules/federations/domain/national.js` (do `export const DUES_AMOUNT_MAX`
+em diante), com paridade em `functions/federationNational.parity.test.js`.
+
+Campos novos (todos opcionais, travados em `fedLocked()` — a federação não os
+grava pelo navegador, nem na criação):
+
+- `federations.confederation` (`true` = confederação);
+- `federations.national_body` `{ id, name, acronym, slug, since_ms }` — o
+  espelho do vínculo aprovado, de onde saem o selo "Filiada à {sigla}" e a
+  lista pública das filiadas (consulta `national_body.id ==` + aprovada +
+  publicada, sem login);
+- `federations.national_config` — as regras da rede (§35.4).
+
+### 35.1 Vínculo (`federation_national_links/{conf}_{fed}`)
+
+A estadual **pede** (Central → Confederação → "Pedir filiação") ou a
+confederação **convida** (Rede nacional → Filiadas → "Convidar"); o outro lado
+aceita ou recusa. Só a administração (`admin`) de cada lado age. Estados
+(`LINK_STATUS`): `pending` (pedido), `invited` (convite), `approved`,
+`rejected`, `cancelled`, `left` (a estadual saiu) e `removed` (a confederação
+desligou) — sair e desligar exigem motivo. Uma estadual tem **uma**
+confederação só (`canOpenLink`), uma confederação não se filia a outra, e as
+duas precisam estar aprovadas. Cada passo entra em `history[]` (até 50) e avisa
+a administração do outro lado. Lê o vínculo qualquer cargo das duas
+federações.
+
+### 35.2 Ranking nacional (`federation_rankings/{conf}_nacional_{ano}`)
+
+Soma os pontos **lançados** (`federation_points`) pela confederação e por cada
+filiada aprovada, pela mesma `aggregateSeason` do ranking oficial, com
+`scope: 'national'` e a lista das federações que entraram. É refeito quando
+qualquer uma delas soma o ano (`recomputeSeason` → `afterSeason`) e quando uma
+estadual entra ou sai (os anos abertos). Valem as regras do §6.2: o ano fecha
+em 31/01 do ano seguinte e não muda depois; mudar a tabela não é retroativo.
+Na página pública a confederação mostra o nacional por padrão e, com o módulo
+`ranking` ligado, "Só os torneios da {sigla}" a um toque; cada linha de
+resultado leva a sigla da federação que lançou.
+
+### 35.3 Homologação da transferência entre estados
+
+Quando a troca é entre duas estaduais da **mesma** confederação e a regra dela
+pede (`national_config.homologate_transfers`, padrão sim), a liberação da
+federação de origem passa a transferência a `homologation`
+(`homologation_by`, `homologation_conf_acronym`, `homologation_deadline` =
+hoje + `homologation_days`, padrão 15, máximo 60). A confederação (`members` ou
+`admin`) homologa (`homologated_by`, `auto_homologated`) ou nega com motivo
+(`denied`, `deny_reason`). Sem resposta no prazo, a varredura de
+`federationTransfers` homologa. Lê a transferência também quem homologa
+(`homologation_by` na regra). Na tela, `TRANSFER_OPEN` = `pending` +
+`homologation` e `TRANSFER_STATUS_TONE` dá a cor em todo lugar.
+
+### 35.4 Regras da rede e anuidade (`federation_dues/{conf}_{fed}_{ano}`)
+
+Rede nacional → Regras (só `admin`): homologar ou não, prazo, valor fixo por
+federação, valor por filiado ativo e o dia/mês do vencimento (padrão 31/03). O
+financeiro da confederação lança o ano (anterior, atual ou próximo): cada
+filiada recebe a sua, com a contagem de filiados ativos do dia
+(`member_count`); quem já tem a do ano não recebe outra. A estadual declara o
+pagamento (`declared`); a confederação confirma com a data (`paid`), reabre ou
+dispensa (`waived`) — os dois últimos com motivo. Confirmar, reabrir ou
+dispensar uma paga respeita o período fechado (prestação enviada) **das duas**.
+A paga vira item DERIVADO das contas (`duesIncome` na confederação,
+`duesExpenses` na estadual, rótulo "Anuidade da confederação"), na prévia da
+tela e no retrato congelado da prestação (`contas`, lido por
+`federationAccounts`). A varredura avisa uma vez a anuidade vencida
+(`warned_for`). Lê a anuidade o financeiro, o conselho fiscal e a
+administração das duas.
+
+### 35.5 Central, página e pendências
+
+- Confederação: seção **Rede nacional** (`?aba=rede-filiadas`,
+  `rede-homologacoes`, `rede-anuidades`, `rede-regras`).
+- Estadual: seção **Confederação** (`?aba=confederacao`,
+  `confederacao-anuidades`).
+- "Precisa de você" (`nationalPendingItems`): pedidos de filiação, convites,
+  homologações, anuidades declaradas para confirmar e anuidades vencidas.
+  Fonte que não carregou some, nunca vira zero.
+- Página pública: aba "Federações filiadas" (`PROFILE_TAB.NETWORK`, âncora
+  `fed-rede`) e selos "Confederação" / "Filiada à {sigla}" (`FedBadges`).
+
+### 35.6 Exclusão e exportação
+
+Vínculos e anuidades são entre **federações**, não da pessoa: a exclusão de
+conta só tira `opened_by`/`issued_by` (`functions/accountDeletion.js`) e a
+exportação não os inclui (isenção no guarda `exclusaoCobreColecoes`).
+
+### 35.7 Não pode regredir
+
+87. `federation_national_links` e `federation_dues` só o servidor grava, e a
+    federação não grava `confederation`/`national_body`/`national_config`
+    (teste de regra `tests/rules/federationNational.rules.test.js`).
+88. A régua da rede muda nos dois lados ao mesmo tempo (paridade
+    `functions/federationNational.parity.test.js`); código novo em
+    `national.js` depois de `DUES_AMOUNT_MAX` vai junto para a cópia.
+89. Uma estadual tem uma confederação; o ranking nacional soma lançamentos,
+    nunca recalcula pontos, e ano fechado não muda.
+90. A anuidade paga entra nas contas **uma vez**, derivada, nas duas
+    federações; período fechado não aceita confirmar, reabrir nem dispensar.
+91. Os ids gravados (`LINK_STATUS`, `DUES_STATUS`, `homologation`, `denied`,
+    `scope: 'national'`) e os valores `?aba=` acima são contrato.
+
+### 35.8 Âncoras e guias
+
+Âncoras: `federacao-secao-rede`, `federacao-secao-confederacao`,
+`federacao-aba-rede-filiadas`, `federacao-aba-rede-homologacoes`,
+`federacao-aba-rede-anuidades`, `federacao-aba-rede-regras`,
+`federacao-aba-confederacao`, `federacao-aba-confederacao-anuidades`,
+`federacao-pub-rede`, `federacao-rede-publica`.
+
+Guia `federacao-confederacao`; artigo `federacao-confederacao` (com pergunta
+frequente).

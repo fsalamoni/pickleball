@@ -18,6 +18,8 @@ import { usePublicCallups, usePublicGrants } from '@/modules/federations/hooks/u
 import { callupExpenses, grantExpenses } from '@/modules/federations/domain/selection';
 import { useSponsorContracts } from '@/modules/federations/hooks/useManagement';
 import { sponsorIncome } from '@/modules/federations/domain/management';
+import { useDuesOwed, useDuesReceivable } from '@/modules/federations/hooks/useNational';
+import { duesExpenses, duesIncome, isConfederation } from '@/modules/federations/domain/national';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import {
@@ -102,13 +104,19 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
   const grantsQ = usePublicGrants(federation);
   const daSelecao = [...(callupsQ.isSuccess ? callupExpenses(callupsQ.data) : []), ...(grantsQ.isSuccess ? grantExpenses(grantsQ.data) : [])];
   const semSelecao = callupsQ.isError || grantsQ.isError;
-  const extras = [...diarias, ...daSelecao];
+  // Anuidade da rede nacional (Bloco 6): a confederação recebe, a estadual paga. Quem lê as contas lê as anuidades (mesma regra).
+  const ehConf = isConfederation(federation);
+  const duesInQ = useDuesReceivable(id, { enabled: ehConf });
+  const duesOutQ = useDuesOwed(id, { enabled: !ehConf });
+  const duesQ = ehConf ? duesInQ : duesOutQ;
+  const semAnuidades = duesQ.isError;
+  const extras = [...diarias, ...daSelecao, ...(!ehConf && duesOutQ.isSuccess ? duesExpenses(duesOutQ.data) : [])];
   // Parcelas recebidas dos contratos de patrocínio (módulo `sponsors`): quem lê as contas lê os contratos (mesma regra).
   const contratosOn = fedModuleOn(federation, 'sponsors');
   const contractsQ = useSponsorContracts(id, { enabled: contratosOn });
-  const patrocinio = contratosOn && contractsQ.isSuccess ? sponsorIncome(contractsQ.data) : [];
+  const patrocinio = [...(contratosOn && contractsQ.isSuccess ? sponsorIncome(contractsQ.data) : []), ...(ehConf && duesInQ.isSuccess ? duesIncome(duesInQ.data) : [])];
   const semPatrocinio = contratosOn && contractsQ.isError;
-  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: extras, extraIncome: patrocinio }), [ledgerQ.data, chargesQ.data, extras.length, callupsQ.data, grantsQ.data, assignmentsQ.data, contractsQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: extras, extraIncome: patrocinio }), [ledgerQ.data, chargesQ.data, extras.length, callupsQ.data, grantsQ.data, assignmentsQ.data, contractsQ.data, duesQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
   if (qs.some((q) => q.isError)) return <V2ErrorState title={t('As contas não carregaram')} onRetry={() => qs.forEach((q) => { if (q.isError) q.refetch(); })} />;
   if (qs.some((q) => q.isLoading || !q.isSuccess)) return <V2Skeleton lines={6} />;
   const leitura = !canPrepareAccounts(perms);
@@ -125,6 +133,12 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
         <p className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {t('As diárias pagas da arbitragem não aparecem nesta prévia (seu cargo não lê as escalas, ou elas não carregaram). A prestação de contas as soma no envio ao conselho fiscal.')}
+        </p>
+      )}
+      {semAnuidades && (
+        <p className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {t('As anuidades da confederação não carregaram nesta prévia. A prestação de contas as soma no envio ao conselho fiscal.')}
         </p>
       )}
       {semSelecao && (

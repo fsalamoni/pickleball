@@ -14,6 +14,7 @@ import { commissionTodo } from './elections.js';
 import { directorStage, finalInviteOpen } from './competitions.js';
 import { addDaysISO, licenseState, pendingLicenseRequests } from './coachLicenses.js';
 import { openMinorReports, pendingBackgrounds } from './safeguarding.js';
+import { DUES_STATUS, LINK_STATUS, canHomologate, canManageDues, canManageNetwork, duesState } from './national.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
@@ -92,6 +93,35 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
     const impug = soma('judge_challenges');
     if (chapas) itens.push({ id: 'chapas', count: chapas, aba: 'eleicoes', label: plural(chapas, tk('chapa eleitoral para analisar'), tk('chapas eleitorais para analisar')) });
     if (impug) itens.push({ id: 'impugnacoes', count: impug, aba: 'eleicoes', label: plural(impug, tk('impugnação de chapa para julgar'), tk('impugnações de chapa para julgar')) });
+  }
+  itens.push(...nationalPendingItems(fontes, perms, { hoje }));
+  return itens;
+}
+
+/**
+ * Camada nacional (Bloco 6): o lado da CONFEDERAÇÃO (`confLinks`,
+ * `homologations`, `duesReceivable`) e o da ESTADUAL (`myLinks`, `duesOwed`).
+ * Cada fonte só chega carregada para quem a lê; ausente, o item some.
+ */
+export function nationalPendingItems(fontes = {}, perms = [], { hoje = isoDate() } = {}) {
+  const itens = [];
+  const { confLinks, homologations, duesReceivable, myLinks, duesOwed } = fontes;
+  const conta = (lista, fn) => (Array.isArray(lista) ? lista.filter(fn).length : 0);
+  if (canManageNetwork(perms)) {
+    const pedidos = conta(confLinks, (l) => l.status === LINK_STATUS.PENDING);
+    if (pedidos) itens.push({ id: 'rede-pedidos', count: pedidos, aba: 'rede-filiadas', label: plural(pedidos, tk('federação pedindo filiação à confederação'), tk('federações pedindo filiação à confederação')) });
+    const convites = conta(myLinks, (l) => l.status === LINK_STATUS.INVITED);
+    if (convites) itens.push({ id: 'confederacao-convite', count: convites, aba: 'confederacao', label: plural(convites, tk('convite de confederação para responder'), tk('convites de confederação para responder')) });
+  }
+  if (canHomologate(perms)) {
+    const n = conta(homologations, (x) => x.status === TRANSFER_STATUS.HOMOLOGATION);
+    if (n) itens.push({ id: 'rede-homologacoes', count: n, aba: 'rede-homologacoes', label: plural(n, tk('transferência entre estados para homologar'), tk('transferências entre estados para homologar')) });
+  }
+  if (canManageDues(perms)) {
+    const informadas = conta(duesReceivable, (d) => d.status === DUES_STATUS.DECLARED);
+    if (informadas) itens.push({ id: 'rede-anuidades', count: informadas, aba: 'rede-anuidades', label: plural(informadas, tk('anuidade de filiada informada para confirmar'), tk('anuidades de filiadas informadas para confirmar')) });
+    const devidas = conta(duesOwed, (d) => duesState(d, hoje) === 'overdue');
+    if (devidas) itens.push({ id: 'confederacao-anuidades', count: devidas, aba: 'confederacao-anuidades', label: plural(devidas, tk('anuidade da confederação vencida'), tk('anuidades da confederação vencidas')) });
   }
   return itens;
 }

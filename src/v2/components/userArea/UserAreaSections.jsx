@@ -43,7 +43,7 @@ import { isoDate, membershipState } from '@/modules/federations/domain/membershi
 import { finalInviteOpen } from '@/modules/federations/domain/competitions';
 import { MyDirectedTournaments, MyFinalInvites } from '@/v2/components/federations/competitions/MyCompetitions';
 import { MyCallupInvites, MyGrantApplications } from '@/v2/components/federations/selection/MySelection';
-import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
+import { CHARGE_STATUS, COURSE_KIND_LABELS, MEMBER_STATUS, TRANSFER_KIND_LABELS, TRANSFER_OPEN, TRANSFER_STATUS_LABELS, isInvitePending } from '@/modules/federations/domain/constants';
 import { credentialState } from '@/modules/federations/domain/courses';
 import { staffRoleName } from '@/modules/federations/domain/staff';
 import { verifyPath } from '@/modules/federations/domain/card';
@@ -675,7 +675,7 @@ function FederacoesSecao({ ctx }) {
   const papeis = rolesQ.data || [];
   const dependentes = dependentsQ?.data || [];
   const credenciais = credentialsQ?.data || [];
-  const transferencias = (transfersQ?.data || []).filter((x) => x.status === TRANSFER_STATUS.PENDING);
+  const transferencias = (transfersQ?.data || []).filter((x) => TRANSFER_OPEN.includes(x.status));
   // Licença e proteção de menores: as federações em que a pessoa é filiada, licenciada ou árbitra (o servidor diz o que está ligado).
   const licencas = coachLicQ?.data || [];
   const fedsTrabalho = [...new Map([...filiacoes.filter((m) => m.status === MEMBER_STATUS.ACTIVE && m.user_id === ctx.uid), ...licencas, ...(rostersQ?.data || [])]

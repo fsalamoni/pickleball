@@ -156,6 +156,7 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   Administração da Central). O **relatório anual** (`domain/annualReport.js`)
   e as **planilhas** (`domain/exports.js`) são zero banco: fonte que falhou é
   dita, nunca zero. Regras em `tests/rules/federationManagement.rules.test.js`.
+- **Camada nacional (Bloco 6, `docs/50` §35):** a confederação (`federations.confederation`, marcada pelo admin da plataforma) tem as estaduais como filiadas. `federation_national_links` (vínculo) e `federation_dues` (anuidade) **só o servidor grava** (`functions/federationNational.js`; régua em `domain/national.js` com cópia e paridade em `functions/federationNationalPolicy.js`). O espelho `federations.national_body` dá o selo "Filiada à" e a aba pública "Federações filiadas"; o ranking nacional (`federation_rankings/{conf}_nacional_{ano}`) soma os lançamentos das filiadas; a troca entre estaduais da mesma rede passa por `homologation` (`TRANSFER_OPEN`); a anuidade paga é item derivado das contas das duas (`duesIncome`/`duesExpenses`). Telas: `FedNationalPanel.jsx` (seções Rede nacional e Confederação da Central).
 - **Licença de professor e proteção de menores** (`docs/50` §33, módulos
   `coach_licenses` e `safeguarding`, permissão `safeguarding`): licença
   (`federation_coach_licenses`), selo público (`federation_coach_badges`) e

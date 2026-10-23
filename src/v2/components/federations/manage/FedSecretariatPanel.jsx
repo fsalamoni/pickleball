@@ -16,12 +16,12 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { fetchDocumentContent, importMembers, reviewDocument, transferAction } from '@/modules/federations/services/federationService';
 import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
-import { isReleaseOverdue, sortTransfers, transferSummary } from '@/modules/federations/domain/transfers';
+import { homologationSummary, isReleaseOverdue, sortTransfers, transferSummary } from '@/modules/federations/domain/transfers';
 import { parseMembersCsv } from '@/modules/federations/domain/importMembers';
 import { docLabel, submittedDocKey } from '@/modules/federations/domain/privateData';
 import { defaultValidUntil } from '@/modules/federations/domain/regularity';
 import { isoDate } from '@/modules/federations/domain/membership';
-import { DOC_STATUS, DOC_STATUS_LABELS, IMPORT_MAX_ROWS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS } from '@/modules/federations/domain/constants';
+import { DOC_STATUS, DOC_STATUS_LABELS, IMPORT_MAX_ROWS, TRANSFER_KIND, TRANSFER_KIND_LABELS, TRANSFER_STATUS, TRANSFER_STATUS_LABELS, TRANSFER_STATUS_TONE } from '@/modules/federations/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
@@ -30,7 +30,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 import { baixarCsv } from './naoSalvo';
 
-const TOM = { pending: 'amber', approved: 'green', rejected: 'red', cancelled: 'neutral' };
 
 /* ---------------------------------------------------------- transferências -- */
 
@@ -63,7 +62,7 @@ function TransferRow({ tr, federation, chegando = false }) {
       <V2Surface variant="compacto" className="space-y-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{tr.user_name}<V2Badge tone={TOM[tr.status] || 'neutral'}>{t(TRANSFER_STATUS_LABELS[tr.status] || tr.status)}</V2Badge>{atrasada && !chegando && <V2Badge tone="red">{t('prazo vencido · libera sozinha')}</V2Badge>}</p>
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">{tr.user_name}<V2Badge tone={TRANSFER_STATUS_TONE[tr.status] || 'neutral'}>{t(TRANSFER_STATUS_LABELS[tr.status] || tr.status)}</V2Badge>{atrasada && !chegando && <V2Badge tone="red">{t('prazo vencido · libera sozinha')}</V2Badge>}</p>
             <p className="text-xs text-gray-500">
               {t(TRANSFER_KIND_LABELS[tr.kind] || tr.kind)} {transferSummary(tr)} · {t('pedida em {data}', { data: quando(tr.requested_at) })}
               {chegando ? ` · ${t('vinda da {sigla}', { sigla: tr.federation_acronym || '' })}` : ''}
@@ -71,6 +70,8 @@ function TransferRow({ tr, federation, chegando = false }) {
             </p>
             {tr.reason && <p className="mt-1 text-sm text-gray-700">“{tr.reason}”</p>}
             {tr.reject_reason && <p className="mt-1 text-sm text-red-600">{t('Motivo: {motivo}', { motivo: tr.reject_reason })}</p>}
+            {homologationSummary(tr) && <p className="mt-1 text-xs text-gray-500">{homologationSummary(tr)}</p>}
+            {tr.deny_reason && <p className="mt-1 text-sm text-red-600">{t('A {conf} negou: {motivo}', { conf: tr.homologation_conf_acronym || '', motivo: tr.deny_reason })}</p>}
           </div>
         </div>
         {!chegando && tr.status === TRANSFER_STATUS.PENDING && (
@@ -104,10 +105,12 @@ function TransferRow({ tr, federation, chegando = false }) {
 /** `pendentes` é contrato: a faixa "Precisa de você" abre `?aba=transferencias&filtro=pendentes`. */
 const FILTROS_TRANSF = [
   { id: 'pendentes', status: TRANSFER_STATUS.PENDING, label: () => t('Aguardando') },
+  { id: 'homologacao', status: TRANSFER_STATUS.HOMOLOGATION, label: () => t('Na confederação') },
   { id: 'aprovadas', status: TRANSFER_STATUS.APPROVED, label: () => t('Aprovadas') },
-  { id: 'recusadas', status: TRANSFER_STATUS.REJECTED, label: () => t('Recusadas') },
+  { id: 'recusadas', statuses: [TRANSFER_STATUS.REJECTED, TRANSFER_STATUS.DENIED], label: () => t('Recusadas') },
   { id: 'todas', label: () => t('Todas') },
 ];
+const naOpcao = (f, x) => (f.statuses ? f.statuses.includes(x.status) : !f.status || x.status === f.status);
 const BUSCA_TRANSF = (x) => `${x.user_name} ${transferSummary(x)}`;
 
 /** Os chips de filtro com a contagem no rótulo. */
@@ -123,7 +126,7 @@ function TransferenciasTab({ federation, transfersQ, incomingQ }) {
   const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'pendentes', FILTROS_TRANSF.map((f) => f.id));
   const todas = useMemo(() => sortTransfers(transfersQ.data || []), [transfersQ.data]);
   const opcao = FILTROS_TRANSF.find((f) => f.id === filtro) || FILTROS_TRANSF[0];
-  const doFiltro = useMemo(() => (opcao.status ? todas.filter((x) => x.status === opcao.status) : todas), [todas, opcao]);
+  const doFiltro = useMemo(() => todas.filter((x) => naOpcao(opcao, x)), [todas, opcao]);
   const busca = useBuscaLista(doFiltro, BUSCA_TRANSF);
   if (transfersQ.isError) return <V2ErrorState title={t('Não carregaram as transferências')} onRetry={() => transfersQ.refetch()} />;
   if (transfersQ.isLoading) return <V2Skeleton lines={5} />;
@@ -134,7 +137,7 @@ function TransferenciasTab({ federation, transfersQ, incomingQ }) {
       <div><h2 className="font-display text-xl font-bold text-ink">{t('Transferências')}</h2><p className="text-sm text-gray-500">{t('Troca de clube representado (você decide) e saída para outra federação (você libera; sem resposta em {dias} dias, libera sozinha).', { dias: federation?.rules?.transfer_release_days || 15 })}</p></div>
       {todas.length > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <Filtros opcoes={FILTROS_TRANSF} ativo={filtro} onChange={setFiltro} contar={(f) => (f.status ? todas.filter((x) => x.status === f.status).length : todas.length)} />
+          <Filtros opcoes={FILTROS_TRANSF} ativo={filtro} onChange={setFiltro} contar={(f) => todas.filter((x) => naOpcao(f, x)).length} />
           <BuscaLista id="fed-transf-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome')} total={doFiltro.length} achados={busca.filtrados.length} className="sm:w-72" />
         </div>
       )}

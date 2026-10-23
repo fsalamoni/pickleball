@@ -1483,11 +1483,17 @@ exports.federationMinorReportNotify = onDocumentCreated(
 const federationManagement = require('./federationManagement');
 exports.federationManagement = federationCallable('federationManagement', federationManagement.management);
 
+// Camada nacional (Bloco 6): vínculo das estaduais com a confederação, regras
+// da rede e repasse da anuidade; o ranking nacional é refeito junto com o
+// ranking de cada filiada — `functions/federationNational.js`.
+const federationNational = require('./federationNational');
+exports.federationNational = federationCallable('federationNational', federationNational.national);
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx()), federationManagement.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx()), federationManagement.sweep(fedCtx()), federationNational.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

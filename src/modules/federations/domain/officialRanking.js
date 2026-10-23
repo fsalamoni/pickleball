@@ -376,7 +376,7 @@ export function aggregateSeason({ entries = [], config = {}, season } = {}) {
       if (e.result_id) resultados.add(e.result_id);
       const key = e.category || rankingCategoryKey(e);
       if (!classes.has(key)) classes.set(key, { key, gender_category: e.gender_category || 'open', age_category: e.age_category || 'open', format: e.format || 'doubles', pessoas: new Map() });
-      const item = { entry_id: e.id || `${e.result_id}_${e.uid}`, result_id: e.result_id || null, points: Number(e.points), position: e.position ?? null, tournament_id: e.tournament_id || null, tournament_name: e.tournament_name || '', modality_name: e.modality_name || '', date: e.date || '', category: key };
+      const item = { entry_id: e.id || `${e.result_id}_${e.uid}`, result_id: e.result_id || null, points: Number(e.points), position: e.position ?? null, tournament_id: e.tournament_id || null, tournament_name: e.tournament_name || '', modality_name: e.modality_name || '', date: e.date || '', category: key, federation_acronym: e.federation_acronym || '' };
       entra(classes.get(key).pessoas, e, item);
       entra(geral, e, item);
     });

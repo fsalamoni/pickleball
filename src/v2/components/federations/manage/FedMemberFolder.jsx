@@ -22,7 +22,7 @@ import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { levelLabel, normalizeRefereeRules, REFEREE_STATUS_LABELS } from '@/modules/federations/domain/referees';
 import {
   CHARGE_STATUS, CREDENTIAL_STATUS_LABELS, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, ENROLLMENT_STATUS_LABELS, FED_PERMISSION,
-  MEMBER_STATUS, PLAN_TIER_LABELS, POINTS_CANCEL_REASON_LABELS, TRANSFER_KIND_LABELS, TRANSFER_STATUS_LABELS,
+  MEMBER_STATUS, PLAN_TIER_LABELS, POINTS_CANCEL_REASON_LABELS, TRANSFER_KIND_LABELS, TRANSFER_STATUS_LABELS, TRANSFER_STATUS_TONE,
 } from '@/modules/federations/domain/constants';
 import { V2Avatar, V2BackLink, V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
@@ -340,7 +340,7 @@ function Historico({ member: mb, fontes, documentos, transfers }) {
           <Titulo>{t('Transferências')}</Titulo>
           <ul className="space-y-2">{transfers.map((tr) => (
             <li key={tr.id} className="rounded-2xl border border-gray-100 px-4 py-3 text-sm">
-              <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{t(TRANSFER_KIND_LABELS[tr.kind] || tr.kind)}<V2Badge tone={{ pending: 'amber', approved: 'green', rejected: 'red' }[tr.status] || 'neutral'}>{t(TRANSFER_STATUS_LABELS[tr.status] || tr.status)}</V2Badge></p>
+              <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{t(TRANSFER_KIND_LABELS[tr.kind] || tr.kind)}<V2Badge tone={TRANSFER_STATUS_TONE[tr.status] || 'neutral'}>{t(TRANSFER_STATUS_LABELS[tr.status] || tr.status)}</V2Badge></p>
               <p className="text-xs text-gray-500">{transferSummary(tr)} · {t('pedida em {data}', { data: quando(tr.requested_at) })}</p>
             </li>
           ))}</ul>

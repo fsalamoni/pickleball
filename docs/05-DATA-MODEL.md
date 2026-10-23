@@ -2166,6 +2166,39 @@ returned_by, return_condition, return_note, warned_for }`, `history[]` (últimos
 `fedAcc` e `competitions`. Zero índice. Na exclusão de conta só sai
 `created_by`; fora da exportação. Módulo novo `modules.assets` em `federations`.
 
+### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
+`conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,
+`federation_name`, `federation_acronym`, `federation_slug`, `federation_state`,
+`status` (`pending|invited|approved|rejected|cancelled|left|removed`),
+`opened_by_side` (`state|national`), `opened_by`, `opened_at_ms`, `message`,
+`reason`, `decided_by`, `decided_at_ms`, `since_ms`, `history[]` (últimos 50),
+`updated_at_ms`. Só o servidor grava (`federationNational`). Lê qualquer cargo
+das duas federações (e o admin com acesso justificado). Consultas de uma ou
+duas igualdades (`conf_id`/`federation_id` + `status`), zero índice. Dado entre
+federações: na exclusão de conta só sai `opened_by`; fora da exportação.
+
+### `federation_dues/{conf}_{fed}_{ano}` (NOVO — anuidade da rede, `docs/50` §35.4)
+`conf_id`, `conf_name`, `conf_acronym`, `federation_id`, `federation_name`,
+`federation_acronym`, `year`, `due` (ISO), `status`
+(`open|declared|paid|waived`), `fixed_cents`, `per_member_cents`,
+`member_count`, `amount_cents`, `paid_at`, `warned_for`, `declared_by`,
+`declared_at_ms`, `declared_note`, `confirmed_by`, `confirmed_at_ms`, `reason`,
+`issued_by`, `issued_at_ms`, `history[]`, `updated_at_ms`. Só o servidor grava.
+Leem: financeiro, conselho fiscal e admin das duas (`fedAcc`). Zero índice. A
+paga vira item derivado das contas das duas. Na exclusão de conta só sai
+`issued_by`; fora da exportação.
+
+### Camada nacional (Bloco 6): campos novos e opcionais
+Em `federations` (travados em `fedLocked()`, só admin da plataforma/servidor):
+`confederation` (bool), `national_body { id, name, acronym, slug, since_ms }`
+(espelho do vínculo aprovado) e `national_config { homologate_transfers,
+homologation_days, dues_fixed_cents, dues_per_member_cents, dues_due_md }`. Em
+`federation_transfers`: status novos `homologation` e `denied`, e
+`homologation_by`, `homologation_conf_acronym`, `homologation_deadline`,
+`homologated_by`, `homologated_at_ms`, `auto_homologated`, `deny_reason`. Em
+`federation_rankings`: o documento `{conf}_nacional_{ano}` com
+`scope: 'national'` e `federations[]`.
+
 ### Licença e proteção (Bloco 4): campos novos e opcionais
 Em `federations`: `coach_rules { levels[] { id, label, requires_credential,
 update_hours, valid_months } }`, `safeguarding_rules { required_for[],
@@ -2187,7 +2220,7 @@ servidor, `checked_at_ms`, `director_uid`, `director_name`,
 ### `federation_transfers/{id}` (PR 3, só o servidor — `federationTransfer`)
 `federation_id`, `member_id`, `user_id`, `guardian_uid`, `user_name`, `kind`
 (`club|federation`), `to_club_id`/`to_club_name` ou `to_federation_id`/
-`to_federation_name`, `reason`, `status` (`pending|approved|rejected|cancelled`),
+`to_federation_name`, `reason`, `status` (`pending|homologation|approved|rejected|denied|cancelled` — os dois do meio, Bloco 6),
 `requested_at`, `requested_at_ms`, `deadline` (ISO; só na troca de
 federação), `decided_by`, `decided_at_ms`, `auto_released` (liberada pela
 varredura), `updated_at_ms`. Leem: o dono, a equipe
