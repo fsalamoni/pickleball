@@ -523,8 +523,8 @@ export const FEATURE_FLAG_META = Object.freeze({
     description: tk('Liga o envio dos avisos por e-mail, WhatsApp e SMS e mostra a cada pessoa o cartão "E-mail e celular" em Configurações. Cada canal só envia depois de configurado e testado em Painel admin → Comunicações. Desligada, nada sai da plataforma e o push segue como sempre.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
-    label: tk('DUPR oficial (fase 2 — reservado)'),
-    description: tk('Reservado para a integração OFICIAL com o DUPR (puxar rating por ID e enviar partidas). Exige acesso de parceiro/clube DUPR e backend com credenciais. Sem efeito enquanto a integração não for implementada.'),
+    label: tk('DUPR oficial (conexão da conta e rating)'),
+    description: tk('Liga a integração oficial com o DUPR: cada pessoa conecta a própria conta pelo login do DUPR (Perfil → Editar perfil), o ID, o rating e o selo "Verificada pelo DUPR" passam a vir do DUPR e se atualizam sozinhos, e o ID e o rating digitados à mão saem da tela. Exige as credenciais de parceiro gravadas no servidor (Actions → "DUPR — conferir e configurar a integração"). Desligada, o cadastro segue como sempre.'),
   },
 });
 

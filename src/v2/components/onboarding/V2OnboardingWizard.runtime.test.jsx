@@ -14,7 +14,8 @@ const estado = { essencial: false, perfil: null };
 const updateUserProfile = vi.fn(async () => {});
 
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({
-  useFeatureFlag: () => estado.essencial,
+  // Só a flag do cadastro essencial é ligada aqui; a do DUPR oficial fica desligada.
+  useFeatureFlag: (flag) => flag !== 'dupr_official_sync' && estado.essencial,
 }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({ userProfile: estado.perfil, updateUserProfile }),

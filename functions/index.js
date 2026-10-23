@@ -1906,3 +1906,45 @@ exports.messagingHook = onRequest(
     }
   },
 );
+
+// =====================================================================
+// DUPR OFICIAL (flag `dupr_official_sync`) — vínculo da conta pelo SSO, rating
+// por webhook e assinaturas. Ver `functions/dupr.js` e `docs/51-DUPR.md`.
+// =====================================================================
+const duprOficial = require('./dupr');
+
+const duprCtx = () => ({ db: getFirestore(getApp(), DATABASE_ID), FieldValue: FieldValueDel, Timestamp, now: Date.now(), logger });
+
+/** `action`: `config` (URL do login + situação), `link`, `unlink`, `status`. */
+exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 60, maxInstances: 3 }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
+  const token = req.auth.token || {};
+  const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '' };
+  const data = req.data || {};
+  const acoes = { config: duprOficial.config, link: duprOficial.link, unlink: duprOficial.unlink, status: duprOficial.status };
+  const fn = acoes[data.action];
+  if (!fn) throw new HttpsError('invalid-argument', 'Ação desconhecida.');
+  try {
+    return await fn(duprCtx(), actor, data);
+  } catch (err) {
+    if (err instanceof duprOficial.DuprServiceError) throw new HttpsError(err.code, err.message);
+    logger.error('duprIntegration falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});
+
+// Eventos de rating do DUPR (`/api/dupr/webhook?k=<token>`, rewrite no hosting).
+// Responde 200 depressa; o token da URL é o que separa o DUPR de qualquer outro.
+exports.duprWebhook = onRequest(
+  { region: REGION, maxInstances: 5, memory: '256MiB', invoker: 'public' },
+  async (req, res) => {
+    try {
+      const r = await duprOficial.webhook(duprCtx(), { method: req.method, query: req.query || {}, body: req.body || {} });
+      res.set('Cache-Control', 'no-store');
+      res.status(r.status).json(r.body);
+    } catch (err) {
+      logger.error('duprWebhook falhou', err);
+      res.status(500).end();
+    }
+  },
+);

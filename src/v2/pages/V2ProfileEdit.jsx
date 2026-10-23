@@ -31,11 +31,16 @@ import {
   HERO_TITLE,
 } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import DuprConnectCard from '@/v2/components/rating/DuprConnectCard';
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const { track } = useFunnel();
   const coachDirectoryOn = true;
+  // Conexão oficial com o DUPR: o ID e o rating digitados à mão dão lugar ao login do DUPR.
+  const duprOficial = useFeatureFlag(FEATURE_FLAG.DUPR_OFFICIAL_SYNC);
   // Perfil completo de professor (coleção coaches) — fonte para pré-preencher
   // e para manter em sincronia com o "Sou professor" do perfil.
   const { data: myCoach } = useCoach(user?.uid);
@@ -153,8 +158,8 @@ export default function V2ProfileEdit() {
         phone: phone.trim(),
         pickleball_experience: pickleballExperience,
         competition_gender: competitionGender || null,
-        dupr_id: duprId.trim() || null,
-        dupr_rating: parseDuprRating(duprRating),
+        // Com a conexão oficial ligada o ID e o rating vêm do DUPR (servidor).
+        ...(duprOficial ? {} : { dupr_id: duprId.trim() || null, dupr_rating: parseDuprRating(duprRating) }),
         court_side: courtSide || null,
       });
       toast.success(t('Perfil atualizado.'));
@@ -366,10 +371,13 @@ export default function V2ProfileEdit() {
                 {Object.entries(COMPETITION_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
               </V2Select>
             </V2Field>
-            <V2Field label={t('ID DUPR (opcional)')} hint={t('Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.')}>
-              <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder={t('Ex.: ABC123')} />
-            </V2Field>
-            {skillRatingOn && (
+            {duprOficial && <DuprConnectCard />}
+            {!duprOficial && (
+              <V2Field label={t('ID DUPR (opcional)')} hint={t('Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.')}>
+                <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder={t('Ex.: ABC123')} />
+              </V2Field>
+            )}
+            {skillRatingOn && !duprOficial && (
               <V2Field label={t('Meu rating DUPR atual (opcional)')} hint={t('Se você já tem um rating DUPR, informe-o (2.000 a 8.000) para servir de ponto de partida no ranking de nível da plataforma. Opcional — se vazio, usamos o seu nivelamento.')}>
                 <V2Input value={duprRating} onChange={(e) => setDuprRating(e.target.value)} inputMode="decimal" maxLength={6} placeholder={t('Ex.: 3.500')} />
               </V2Field>

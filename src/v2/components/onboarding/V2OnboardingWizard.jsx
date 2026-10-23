@@ -30,6 +30,8 @@ import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreferen
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tk } from '@/core/i18n';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 /** Quando a pessoa adiou os interesses — no navegador, por uid (zero banco). */
 const PREF_ADIADO = 'onboarding:adiado';
@@ -88,6 +90,7 @@ export default function V2OnboardingWizard() {
   const [interests, setInterests] = useState([]);
   const [levelMode, setLevelMode] = useState(null); // null | 'choose'
   const [levelCode, setLevelCode] = useState('');
+  const duprOficial = useFeatureFlag(FEATURE_FLAG.DUPR_OFFICIAL_SYNC);
   const [duprId, setDuprId] = useState('');
   const [duprRating, setDuprRating] = useState('');
   const [retorno, setRetorno] = useState(false);
@@ -253,8 +256,9 @@ export default function V2OnboardingWizard() {
    * ou um rating DUPR (melhor que as duas). O ID DUPR é opcional.
    */
   async function saveEssentialLevel() {
-    const rating = parseDuprRating(duprRating);
-    const temRatingDigitado = String(duprRating || '').trim() !== '';
+    // Com a conexão oficial, ID e rating vêm do login do DUPR (Perfil → Editar), não daqui.
+    const rating = duprOficial ? null : parseDuprRating(duprRating);
+    const temRatingDigitado = !duprOficial && String(duprRating || '').trim() !== '';
     const next = {};
     if (temRatingDigitado && rating === null) next.duprRating = t('Use o formato do DUPR, entre 2.000 e 8.000 (ex.: 3.500).');
     if (!levelCode && rating === null) next.level = t('Escolha o seu nível na lista (ou informe o seu rating DUPR).');
@@ -269,7 +273,7 @@ export default function V2OnboardingWizard() {
           leveling_method: 'manual',
           leveling_manual_level: levelCode,
         } : {}),
-        ...(duprId.trim() ? { dupr_id: duprId.trim() } : {}),
+        ...(!duprOficial && duprId.trim() ? { dupr_id: duprId.trim() } : {}),
         ...(rating !== null ? { dupr_rating: rating } : {}),
         onboarding_completed_at: Timestamp.now(),
       });
@@ -524,6 +528,12 @@ export default function V2OnboardingWizard() {
               </p>
             )}
 
+            {duprOficial && (
+              <p className="rounded-2xl border border-gray-100 bg-paper p-4 text-xs leading-5 text-gray-500">
+                {t('Tem conta no DUPR? Depois do cadastro, conecte-a em Perfil → Editar perfil: o seu ID e o seu rating oficiais entram sozinhos.')}
+              </p>
+            )}
+            {!duprOficial && (
             <div className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
               <p className="text-sm font-semibold text-ink">
                 {t('Tem DUPR?')} <span className="font-normal text-gray-500">{t('Opcional, mas ajuda muito.')}</span>
@@ -540,6 +550,7 @@ export default function V2OnboardingWizard() {
                 {t('Com o rating DUPR, o sorteio usa o seu número de verdade — e ele vale no lugar da escolha acima.')}
               </p>
             </div>
+            )}
 
             <div className="flex items-center justify-between pt-1">
               {voltar}

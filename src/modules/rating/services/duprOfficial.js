@@ -1,55 +1,36 @@
 /**
- * DUPR OFICIAL — espaço reservado (FASE 2). Ainda SEM rede.
+ * DUPR OFICIAL — chamadas ao servidor (`duprIntegration`).
  *
- * Aqui entrará a integração OFICIAL com o DUPR quando houver acesso de
- * PARCEIRO/CLUBE aprovado (credenciais). Objetivos da fase 2:
- *   1) verificar/puxar o rating oficial de um atleta pelo `dupr_id`
- *      (para semear/《verificar》o rating estilo DUPR local);
- *   2) ENVIAR ao DUPR as partidas finalizadas da plataforma, para contarem
- *      oficialmente.
- *
- * IMPORTANTE (segurança/ToS):
- *   - Não existe API pública anônima do DUPR. Ler rating verificado e enviar
- *     partidas exige a API de PARCEIROS (aprovação de clube + credenciais).
- *   - As credenciais DUPR NUNCA podem ir para o cliente. A integração deve
- *     rodar no BACKEND (Cloud Function) com os segredos protegidos.
- *   - Usar login pessoal/token do app para raspar dados viola os Termos do DUPR
- *     e é frágil — não deve ser usado.
- *
- * Enquanto a fase 2 não existe, o ranking "estilo DUPR" é 100% local
- * (`duprRatingService`), semeado pelo nível de nivelamento e/ou pelo rating
- * DUPR informado manualmente no perfil (`dupr_rating`).
- *
- * A flag `DUPR_OFFICIAL_SYNC` (default OFF) fica reservada para ligar esta fase.
+ * As credenciais do parceiro e os tokens da pessoa ficam SÓ no servidor; aqui
+ * trafega apenas o que o login do DUPR (SSO) entregou, uma vez, no vínculo.
+ * Ver docs/51-DUPR.md.
  */
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/core/config/firebase';
+import { t } from '@/core/i18n';
 
-/** Estado da integração oficial (fase 2 ainda não implementada). */
-export const DUPR_OFFICIAL_STATUS = Object.freeze({
-  available: false,
-  reason: 'Requer acesso de parceiro/clube DUPR (aprovação) e backend com credenciais protegidas.',
-});
-
-/**
- * FASE 2 (stub): puxar o rating oficial pelo ID DUPR. Ainda não implementado —
- * lança para deixar explícito que depende do acesso de parceiro + backend.
- * @param {string} _duprId
- * @returns {Promise<never>}
- */
-export async function fetchOfficialDuprRating(_duprId) {
-  throw new Error(
-    'Integração oficial com o DUPR ainda não configurada. '
-    + 'Requer acesso de parceiro/clube DUPR e uma Cloud Function com credenciais protegidas (fase 2).',
-  );
+async function chamar(action, payload = {}) {
+  if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
+  try {
+    const { data } = await httpsCallable(functions, 'duprIntegration', { timeout: 60_000 })({ action, ...payload });
+    return data;
+  } catch (err) {
+    // O servidor já escreve a mensagem em português; só ela chega à tela.
+    const generica = !err?.message || /^internal$/i.test(err.message);
+    const e = new Error(generica ? t('Não foi possível falar com o DUPR agora. Tente de novo em instantes.') : err.message);
+    e.code = err?.code;
+    throw e;
+  }
 }
 
-/**
- * FASE 2 (stub): enviar uma partida finalizada ao DUPR. Ainda não implementado.
- * @param {object} _match
- * @returns {Promise<never>}
- */
-export async function submitMatchToDupr(_match) {
-  throw new Error(
-    'Envio de partidas ao DUPR ainda não configurado. '
-    + 'Requer acesso de parceiro/clube DUPR e uma Cloud Function com credenciais protegidas (fase 2).',
-  );
-}
+/** `{ enabled, configured, env, linked, ssoUrl? }` — o que a tela precisa para oferecer o vínculo. */
+export const getDuprConfig = () => chamar('config');
+
+/** Vincula a conta DUPR com os tokens do login (SSO). */
+export const linkDuprAccount = ({ accessToken, refreshToken, duprId }) => chamar('link', { accessToken, refreshToken, duprId });
+
+/** Desvincula (cancela a assinatura de rating e apaga os tokens). */
+export const unlinkDuprAccount = () => chamar('unlink');
+
+/** Resumo do vínculo, com as assinaturas renovadas se passou de 24 h. */
+export const getDuprStatus = () => chamar('status');

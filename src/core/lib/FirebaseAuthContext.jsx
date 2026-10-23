@@ -334,6 +334,15 @@ export const AuthProvider = ({ children }) => {
     await syncAthleteProfile(user, nextProfile);
   };
 
+  // Relê o cadastro do banco. Usado quando o SERVIDOR muda campos da conta
+  // (ex.: vínculo com o DUPR grava ID, rating e selo): sem isso, o próximo
+  // "salvar perfil" regravaria o valor velho do contexto no espelho público.
+  const refreshUserProfile = async () => {
+    if (!user) return;
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) setUserProfile((prev) => ({ ...(prev || {}), uid: user.uid, ...snap.data() }));
+  };
+
   const value = {
     user,
     userProfile,
@@ -353,6 +362,7 @@ export const AuthProvider = ({ children }) => {
     sendPasswordReset,
     signOut,
     updateUserProfile,
+    refreshUserProfile,
     // Admin EFETIVO: respeita o modo "ver como usuário" — assim todo o app
     // (nav, rotas, permissões de UI) trata o admin como usuário comum quando
     // o modo está ativo. O admin REAL é exposto à parte, só para o botão.

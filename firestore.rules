@@ -13,6 +13,12 @@ service cloud.firestore {
     function me() { return request.auth.uid; }
     function chg() { return request.resource.data.diff(resource.data).affectedKeys(); }  // o que o update muda
     function isOwner(uid) { return isAuthed() && uid == me(); }
+    // DUPR verificado (update do DONO): não mexe no selo e, com ele, não reescreve ID nem ratings.
+    function duprSeloIntacto() {
+      return !chg().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
+        && !(od().get('dupr_verified', false) == true
+             && chg().hasAny(['dupr_id', 'dupr_rating', 'dupr_rating_singles']));
+    }
     function isPlatformAdmin() {
       return isAuthed()
         && exists(/databases/$(database)/documents/users/$(me()))
@@ -1248,6 +1254,8 @@ service cloud.firestore {
           && !nd().keys().hasAny(['account_status', 'status_reason', 'status_until', 'status_set_at', 'status_set_by'])
           // O número CONFIRMADO do celular só o servidor grava (código por SMS).
           && !nd().keys().hasAny(['phone_verified_number', 'phone_verified_at'])
+          // O SELO "DUPR verificado" só o servidor concede (`duprIntegration`).
+          && !nd().keys().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
         )
       );
 
@@ -1274,6 +1282,9 @@ service cloud.firestore {
           // número de outra pessoa.
           && !chg()
                 .hasAny(['phone_verified_number', 'phone_verified_at'])
+          // DUPR VERIFICADO: o selo é do servidor, e com ele o ID e os ratings
+          // vêm do DUPR — o dono não os reescreve à mão (desvincular libera).
+          && duprSeloIntacto()
         )
         || (isOwner(userId) && isPlatformOwnerEmail())
         || (isPlatformAdmin()
@@ -1811,14 +1822,32 @@ service cloud.firestore {
       // desfaz — nem gravando `hidden: false`, nem apagando e recriando.
       allow create: if (isPlatformAdmin() && contatosMarcados(nd()))
         || (isOwner(uid) && nd().get('hidden', false) == false
+            && !nd().keys().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
             && contatosDoDonoPermitidos(uid, nd()));
       allow update: if (isPlatformAdmin()
             && (!mexeEmContato() || contatosMarcados(nd())))
         || (isOwner(uid) && !chg()
               .hasAny(['hidden', 'hidden_at', 'hidden_by'])
+            && duprSeloIntacto()
             && contatosDoDonoPermitidos(uid, nd()));
       allow delete: if isPlatformAdmin()
         || (isOwner(uid) && od().get('hidden', false) != true);
+    }
+
+    // ---- DUPR oficial (flag `dupr_official_sync`) ------------------------
+    // Escrita SÓ do servidor (`duprIntegration` / `duprWebhook`, Admin SDK).
+    // `dupr_links`: resumo do vínculo (sem token) — o dono e o admin leem.
+    // `dupr_link_tokens` (tokens do login no DUPR) e `dupr_ids` (um ID, uma
+    // conta) ficam fechados ao navegador.
+    match /dupr_links/{uid} {
+      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow write: if false;
+    }
+    match /dupr_link_tokens/{uid} {
+      allow read, write: if false;
+    }
+    match /dupr_ids/{duprId} {
+      allow read, write: if false;
     }
 
     // ---- Clubs -----------------------------------------------------------

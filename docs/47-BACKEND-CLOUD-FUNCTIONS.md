@@ -246,6 +246,16 @@ Signature V4 própria, zero dependência nova), `messagingTemplates.js` e
 | `messagingAuthEmail` | callable sem login | "Esqueci a senha" pelo nosso provedor, quando `email.login_emails` está ligado; nunca diz se o e-mail existe |
 | `messagingHook` | HTTP público, `/api/mensagens/**` (`firebase.json`) | Retornos dos provedores (assinatura conferida em cada um), PARAR, páginas de descadastro e denúncia (links assinados; GET mostra, POST confirma) |
 
+### 5.2 DUPR oficial (flag `dupr_official_sync`)
+
+Código em `functions/duprClient.js` (API) e `functions/dupr.js` (regra). Doc: [`51-DUPR.md`](./51-DUPR.md).
+
+| Função | Gatilho | O que faz |
+|---|---|---|
+| `duprIntegration` | callable, quem está logado | `config` (flag, credenciais, endereço do login), `link` (confirma a pessoa pelo DUPR, exige `BASIC_L1`, reserva o ID, assina o rating e grava `dupr_links` + selo), `unlink`, `status` (renova assinaturas em 24 h). Audita em `audit_logs` |
+| `duprWebhook` | HTTP público, `/api/dupr/webhook?k=…` (`firebase.json`) | Eventos `RATING`/`RATING_SEED` do DUPR; o token da URL separa o DUPR de qualquer outro chamador; responde 200 depressa |
+
+
 **Testes**: `functions/messaging.test.js`, `messagingAdmin.test.js`,
 `messagingProviders.test.js`, `messagingTemplates.test.js`,
 `messagingPolicy.test.js`, `messagingPolicy.parity.test.js` e
