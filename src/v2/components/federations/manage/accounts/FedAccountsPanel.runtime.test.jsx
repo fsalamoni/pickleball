@@ -45,6 +45,8 @@ vi.mock('@/modules/federations/hooks/useSelection', () => ({
 vi.mock('@/modules/federations/hooks/useNational', () => ({
   useDuesOwed: () => fontes.duesOwed || q([]),
   useDuesReceivable: () => fontes.duesIn || q([]),
+  useRepassesOut: () => fontes.repOut || q([]),
+  useRepassesIn: () => fontes.repIn || q([]),
 }));
 
 const { default: FedAccountsPanel } = await import('./FedAccountsPanel');
@@ -121,7 +123,7 @@ describe('FedAccountsPanel', () => {
     expect(container.textContent).toContain(`Anuidade ${ano} · FPP`);
     fontes.duesOwed = { isSuccess: false, isLoading: false, isError: true, data: undefined, refetch: vi.fn() };
     await montar({ perms: ['finance'], tab: 'orcamento' });
-    expect(container.textContent).toContain('As anuidades da confederação não carregaram');
+    expect(container.textContent).toContain('As anuidades ou os repasses da rede não carregaram');
   });
 
   it('fonte que falhou vira erro com "Tentar de novo", nunca um zero', async () => {

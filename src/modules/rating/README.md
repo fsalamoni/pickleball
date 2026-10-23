@@ -53,6 +53,11 @@ publicações não depende do resultado do recálculo.
 
 ## Governança DUPR — exportação de partidas (flag `dupr_match_export`)
 
+> **Torneio chancelado por federação** (`docs/50` §45): quem manda as
+> partidas dele ao DUPR é a federação (Central → Competições → "Planilha
+> DUPR", `loadTournamentDuprExport` + `tournamentDuprExport`). A exportação
+> geral abaixo as deixa de fora (`sentByFederation`) e diz quantas.
+
 Aba **Admin → Governança → Exportar DUPR**
 (`src/v2/components/admin/AdminDuprExportTab.jsx`). Duas listas com
 papéis distintos:

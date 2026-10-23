@@ -4032,3 +4032,97 @@ digital da plataforma segue igual e os botões de carteira não aparecem.
 ### 44.4 Ajuda
 
 - **Artigo:** `federacao-carteira-celular`.
+
+## 45. Resultados dos torneios chancelados no DUPR (rodada 3, Bloco 6c, 2026-10-23)
+
+**Zero banco.** Cada torneio com chancela aprovada ganha **"Planilha DUPR"**
+em Central → Competições → Chancelas (`DuprSheetButton`, permissão
+`competitions`). É o mesmo CSV de importação de partidas de clube do DUPR que
+a plataforma já gera (`duprMatchExport`: `normalizeExportMatches`,
+`buildDuprEntries`, `buildDuprCsv`), recortado para UM torneio
+(`tournamentDuprExport`).
+
+- **O que lê** (`loadTournamentDuprExport`, em `rating/services/duprExportService.js`):
+  o torneio, os jogos (`tournament_matches`, `tournament_id ==`, situação
+  decidida filtrada em memória), as inscrições (`tournament_registrations`,
+  `tournament_id ==`) e os perfis públicos (`athlete_profiles`) só de quem
+  jogou (`tournamentMatchUids`) — tudo leitura que a equipe já tem; nenhum
+  índice novo, nada gravado.
+- **O que vai**: só partidas com placar por game e com o **ID DUPR de todos os
+  jogadores**; a tela lista quem está sem ID. Arquivo sem BOM (o BOM quebra a
+  primeira coluna no DUPR). A federação sobe o arquivo na conta DUPR dela.
+- **Um remetente por partida** (`sentByFederation`): partida de torneio com
+  `federation_id` e chancela `approved` sai da exportação geral do admin
+  (Painel admin → Governança → Exportar DUPR), que diz quantas ficaram com a
+  federação. Assim o mesmo jogo não entra duas vezes no DUPR.
+- **Envio automático** pela API do DUPR depende de acesso de parceiro, que o
+  DUPR concede caso a caso; a flag `dupr_official_sync` segue reservada.
+
+131. Partida de torneio chancelado (aprovado) é da federação no DUPR: a
+     exportação geral não a leva (`sentByFederation`, uma regra só).
+132. A planilha da federação usa o mesmo formato e as mesmas regras da
+     exportação da plataforma (só pronta, sem BOM) — nunca um CSV paralelo.
+
+- **Artigo:** `federacao-dupr`.
+
+## 46. Cobrança dividida e troca de plano (rodada 3, Bloco 6d, 2026-10-23)
+
+**Uma coleção nova, uma função nova, uma regra nova.** O filiado faz UM
+pagamento só, à federação; o plano diz quanto disso é do clube que ele
+representa e quanto é da confederação.
+
+- **No plano** (`plan.split = { club_pct, confederation_pct }`, campo
+  opcional, `validatePlanInput` → `validateSplit`): inteiros de 0 a 50 cada,
+  somados até 90 (a federação fica com uma parte). Plano de entidade não tem
+  parte do clube. Central → Configurações → Planos → "Repasses (cobrança
+  dividida)", só em plano de filiado. Ausente = nada é repassado (como hoje).
+- **Anotar** (`anotarRepasses`, em `functions/federations.js`): quando o
+  servidor confirma uma cobrança de filiação, renovação ou troca de plano
+  (`SPLIT_ORIGINS`), grava `federation_repasses/{cobrança}_{club|confederation}`
+  "a repassar", com o valor de `splitShares` (cada parte arredondada para
+  baixo; o centavo que sobra é da federação). O clube só entra se estiver
+  **filiado à federação** (`federation_affiliations/{fed}_club_{id}` aprovado,
+  pelo `represented_club_id` do filiado); a confederação é
+  `federations.national_body`. Destino ausente ⇒ a parte fica com a
+  federação. Falha ao anotar é registrada e **nunca** desfaz o pagamento.
+- **Marcar** (`federationSplit`, `functions/federationSplit.js`, financeiro ou
+  admin da federação que recebeu): `pay` ("Repassado" na data; avisa o
+  financeiro e o admin da confederação) e `reopen` (desfazer, com motivo).
+  Histórico no documento; auditoria `federation_repasse_*`. Período com
+  prestação de contas enviada — de quem repassa ou da confederação — recusa
+  os dois.
+- **Nas contas**, só o repassado e pela data do repasse: despesa DERIVADA de
+  quem repassou (`repasseExpenses`, categoria `other_expense`) e receita
+  DERIVADA da confederação (`repasseIncome`, `memberships`), nos dois lados
+  (`itensDaConta` no servidor, `FedAccountsPanel` na tela). O clube não tem
+  módulo de contas: o repasse dele é só a despesa da federação.
+- **Telas**: Financeiro → Recebidos → Repasses (`FedRepasses`: os da federação
+  e, numa confederação, "Repasses das filiadas"). A confederação consulta por
+  `to_id ==` **e** `to == 'confederation'` — sem a segunda igualdade a regra
+  não é provável para a consulta.
+- **Regra**: `federation_repasses` lê `fedAcc` da federação que repassa e,
+  quando o destino é a confederação, `fedAcc` dela; `write: if false`. Na
+  exclusão de conta fica como está (`paid_by` é quem marcou, não dado pessoal
+  do filiado) e não entra na exportação de dados do titular.
+
+**Troca de plano** (ação `upgrade` de `federationMembership`, botão "Trocar de
+plano" na aba Minha filiação, `FedChangePlan`): filiação **ativa**, sem
+cobrança em aberto, para outro plano ativo da mesma federação, do **mesmo
+período** (mensal × anual), da mesma natureza e tipo de pessoa, vínculo
+Filiado (`upgradeBlocker`), dentro da faixa de idade. Paga só a **diferença**
+entre os dois planos com os descontos de sempre (`valorDoPlano` dos dois,
+`upgradeDifference`); diferença zero ou negativa é recusada — descer de plano
+é com a federação, porque a renovação segue no mesmo plano. A cobrança tem
+`origin: 'upgrade'` (`from_plan_id`/`from_plan_name`); confirmada, troca
+`plan_id`/`plan_name`/`tier`/`billing` numa transação, **mantém
+`valid_until`**, espelha a filiação e anota os repasses sobre a diferença.
+
+133. Repasse é obrigação, não receita: entra nas contas só quando marcado
+     "Repassado", pela data do repasse; "a repassar" nunca vira número.
+134. O clube só recebe se estiver filiado à federação; sem destino, a parte
+     fica com ela. A conta (`domain/split.js`) tem cópia no servidor
+     (`federationSplitPolicy.js`, paridade `federationSplit.parity.test.js`).
+135. A troca de plano nunca mexe na validade e nunca devolve dinheiro: só
+     sobe, pagando a diferença.
+
+- **Artigo:** `federacao-cobranca-dividida`.

@@ -2398,6 +2398,19 @@ Leem: financeiro, conselho fiscal e admin das duas (`fedAcc`). Zero índice. A
 paga vira item derivado das contas das duas. Na exclusão de conta só sai
 `issued_by`; fora da exportação.
 
+### `federation_repasses/{cobrança}_{club|confederation}` (NOVO — cobrança dividida, `docs/50` §46)
+`federation_id`, `federation_name`, `federation_acronym`, `charge_id`,
+`origin` (`membership|renewal|upgrade`), `plan_name`, `base_cents`, `to`
+(`club|confederation`), `to_id`, `to_name`, `pct`, `amount_cents`, `status`
+(`pending|paid`), `paid_at` (ISO), `paid_by`, `charge_paid_at`,
+`created_at_ms`, `history[]`. Só o servidor grava (anotado ao confirmar a
+cobrança; marcado por `federationSplit`). Leem: `fedAcc` de quem repassa e,
+destino confederação, `fedAcc` dela. Zero índice. O repassado vira item
+derivado das contas. Na exclusão fica como está; fora da exportação.
+Campos novos e opcionais: `federation_plans.split { club_pct,
+confederation_pct }`; `federation_charges.origin = 'upgrade'` com
+`from_plan_id`/`from_plan_name`; `federation_members.plan_changed_at_ms`.
+
 ### Camada nacional (Bloco 6): campos novos e opcionais
 Em `federations` (travados em `fedLocked()`, só admin da plataforma/servidor):
 `confederation` (bool), `national_body { id, name, acronym, slug, since_ms }`

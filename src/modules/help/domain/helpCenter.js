@@ -1022,6 +1022,47 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-dupr',
+      flags: ['federations'],
+      title: tk('Resultados dos torneios chancelados no DUPR'),
+      summary: tk('Baixar a planilha de partidas do torneio chancelado no formato do DUPR e subir na conta DUPR da federação.'),
+      keywords: ['federação', 'dupr', 'planilha', 'csv', 'resultados', 'chancela', 'torneio', 'rating'],
+      blocks: [
+        p(tk('Cada torneio chancelado ganha a "Planilha DUPR" em Central → Competições → Chancelas. É o mesmo formato de importação de partidas que a plataforma já usa, com o placar de cada game.')),
+        steps(
+          tk('BAIXAR — toque em "Planilha DUPR" no torneio chancelado. Vão as partidas com placar em que todos os jogadores têm o ID DUPR no perfil.'),
+          tk('QUEM FALTA — a tela diz os nomes sem ID DUPR; peça que eles informem o ID no perfil e baixe de novo.'),
+          tk('SUBIR — na conta DUPR da federação (clube ou parceiro), use a importação de partidas e envie o arquivo.'),
+        ),
+        list(
+          tk('UM REMETENTE — as partidas de torneio chancelado saem da exportação geral da plataforma: quem manda é a federação, para o mesmo jogo não entrar duas vezes.'),
+          tk('ENVIO AUTOMÁTICO — mandar direto, sem planilha, depende de acesso de parceiro à API do DUPR, que o DUPR concede caso a caso.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+      ],
+    },
+    {
+      id: 'federacao-cobranca-dividida',
+      flags: ['federations'],
+      title: tk('Cobrança dividida e troca de plano'),
+      summary: tk('Repassar ao clube e à confederação a parte deles em cada filiação paga, e o filiado trocar para um plano mais caro pagando só a diferença.'),
+      keywords: ['federação', 'repasse', 'cobrança dividida', 'confederação', 'clube', 'troca de plano', 'upgrade', 'diferença'],
+      blocks: [
+        p(tk('O filiado faz um pagamento só, à federação. No plano, a federação diz quanto vai para o clube que o filiado representa e quanto vai para a confederação.')),
+        steps(
+          tk('PORCENTAGENS — em Central → Configurações → Planos, abra o plano de filiado e preencha "Ao clube (%)" e "À confederação (%)". Cada parte vai até 50%, e as duas juntas até 90%.'),
+          tk('A REPASSAR — confirmado o pagamento, cada parte aparece em Financeiro → Recebidos → Repasses. Clube que não é filiado à federação e federação sem confederação não recebem: a parte fica com a federação.'),
+          tk('REPASSADO — faça a transferência e toque em "Marcar repassado". Aí o repasse entra nas contas, como despesa da federação e receita da confederação. Marcou por engano? "Desfazer", com o motivo.'),
+        ),
+        list(
+          tk('TROCA DE PLANO — com a filiação em dia, o filiado toca em "Trocar de plano" na aba Minha filiação e paga só a diferença para um plano mais caro do mesmo período. A validade continua a mesma.'),
+          tk('PLANO MAIS BARATO — a renovação segue no mesmo plano; para descer de plano, fale com a federação.'),
+          tk('PERÍODO FECHADO — depois da prestação de contas enviada, o repasse daquele período não muda.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+      ],
+    },
+    {
       id: 'federacao-carteira-celular',
       flags: ['federations'],
       title: tk('Carteirinha na carteira do celular'),

@@ -235,6 +235,7 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_budgets: 'O orçamento é da federação (valores por categoria, aprovação), não da pessoa; quem criou é só o uid de equipe.',
   federation_ledger: 'O lançamento é da contabilidade da federação (receita, despesa, comprovante), não dado da pessoa; quem lançou é só o uid de equipe.',
   federation_national_links: 'O vínculo nacional é entre duas federações (pedido, convite, aprovação), não dado da pessoa; quem agiu é só o uid de equipe.',
+  federation_repasses: 'O repasse da cobrança dividida é entre a federação e o clube ou a confederação (valor, porcentagem, data), sem o nome de quem pagou; não é dado da pessoa.',
   federation_dues: 'A anuidade é repasse entre a federação estadual e a confederação (valor, vencimento, pagamento), não dado da pessoa.',
   federation_sponsor_contracts: 'O contrato de patrocínio é da federação com uma empresa (vigência, parcelas, contrapartidas), não dado da pessoa; quem lançou é só o uid de equipe.',
   federation_equipment: 'O equipamento (marca, modelo, situação) é da lista pública de homologação da federação, não dado da pessoa; quem cadastrou é só o uid de equipe.',
