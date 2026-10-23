@@ -24,6 +24,7 @@ import { t, tk } from '@/core/i18n';
 import AdminFedDocKinds from './AdminFedDocKinds';
 import AdminFedTierTemplates from './AdminFedTierTemplates';
 import AdminFedDefaultModules from './AdminFedDefaultModules';
+import AdminFedWallet from './AdminFedWallet';
 
 /** O rascunho editável: o nome aparece por extenso (o pronto, traduzido) e volta ao padrão se ficar igual. */
 const paraRascunho = (catalog) => catalog.map((x) => ({ ...x, label: memberTypeName(x), novo: false }));
@@ -141,6 +142,7 @@ const PARTES = [
   { value: 'documentos', label: tk('Documentos sugeridos'), dica: 'admin-federacoes-parte-documentos', Comp: AdminFedDocKinds },
   { value: 'categorias', label: tk('Categorias de torneio'), dica: 'admin-federacoes-parte-categorias', Comp: AdminFedTierTemplates },
   { value: 'modulos', label: tk('Módulos iniciais'), dica: 'admin-federacoes-parte-modulos', Comp: AdminFedDefaultModules },
+  { value: 'carteira', label: tk('Carteira do celular'), dica: 'admin-federacoes-parte-carteira', Comp: AdminFedWallet },
 ];
 
 export default function AdminFederationsConfig() {

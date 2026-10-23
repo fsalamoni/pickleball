@@ -1909,6 +1909,19 @@ Firestore nega): nem o navegador nem o admin leem — só o servidor
 `federations.payment_gateway = { provider, enabled, since_ms }` (em
 `fedLocked()`; desligado: `{ provider: '', enabled: false, off_at_ms }`).
 
+### `platform_secrets/wallet` e `federation_wallet_devices` (Bloco 6b)
+`platform_secrets/wallet`: as credenciais da carteira do celular, da
+PLATAFORMA — `{ google: { issuer_id, client_email, private_key } | null,
+apple: { pass_type_id, team_id, cert_pem, key_pem, key_passphrase, wwdr_pem }
+| null, token_secret, updated_at_ms, updated_by }`. Sem leitura pelo
+navegador (como todo `platform_secrets`); só o servidor (`federationWallet`).
+`federation_wallet_devices/{hash}`: cada iPhone que guardou uma carteirinha —
+`{ device, serial (= id da filiação), push_token, created_at_ms,
+updated_at_ms }`. Sem regra (nega tudo); só o serviço web da Apple
+(`federationWalletHook`) grava. Em `federation_members`, dois campos opcionais
+só do servidor: `wallet_google` (há objeto no Google a corrigir) e
+`wallet_updated_ms` (a última mudança que a carteira precisa buscar).
+
 ### `federation_card_index/{code}` (NOVO)
 `{ member_id, federation_id, created_at_ms }` ou, para credencial de curso
 (PR 3), `{ kind: 'credential', credential_id, federation_id, created_at_ms }`.

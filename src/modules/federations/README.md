@@ -247,6 +247,12 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   (`usesGatewayPix`, `useChargeGatewayPix`) e o aviso do provedor dá a baixa
   pelo servidor (`functions/federationPayments.js`), conferindo o pagamento no
   provedor. Sem chave, tudo como antes (Pix estático + "Já paguei").
+- **Carteirinha no Apple Wallet e no Google Wallet** (`docs/50` §44, Bloco
+  6b): com as credenciais da plataforma (Painel admin → Federações →
+  Configuração → Carteira do celular, `AdminFedWallet`), o titular vê
+  "Adicionar ao Apple/Google Wallet" na carteirinha (`useMemberWalletLinks`)
+  e a carteira se atualiza sozinha (`functions/federationWallet.js`). Sem
+  credencial, nada aparece.
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da
