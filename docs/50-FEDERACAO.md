@@ -3811,3 +3811,94 @@ mora em `domain/adapted.js` com cópia em `functions/federationAdaptedPolicy.js`
   `federacao-adaptado-categorias`, `federacao-meu-adaptado`,
   `federacao-modalidade-adaptada`, `federacao-pub-adaptado`.
 - **Guia:** `federacao-adaptado`. **Artigo:** `federacao-adaptado`.
+
+## 42. Seguro: termo aceito na filiação e certificado para eventos (rodada 3, Bloco 5, 2026-10-23)
+
+Dentro do módulo `insurance` ("Seguro e ocorrências", §30.4). Uma coleção nova,
+`federation_insurance_certificates`, e dois campos opcionais. Quem grava é
+`federationInsurance` (`functions/federationInsurance.js`) e, no pedido e na
+renovação da filiação, `federationMembership`. A régua mora em
+`domain/insurance.js` com cópia em `functions/federationInsurancePolicy.js`
+(paridade em `federationInsurance.parity.test.js`).
+
+### 42.1 O termo do seguro
+
+- `federations.insurance.require_term` (bool) e `term_text` (40 a 6.000
+  letras), no mesmo objeto da apólice, editados em **Filiados → Seguro e
+  ocorrências → Editar a apólice** (âncora `federacao-seguro-termo`).
+- A **versão** do termo é o FNV-1a de 32 bits do texto com os espaços
+  juntados (`termVersion`): o mesmo texto dá a mesma versão; mudar o texto
+  pede um aceite novo de todos.
+- Quem aceita (`termRequired`): só **pessoa** (clube e arena não), só com o
+  módulo e o termo ligados e escrito, e só quem a apólice cobre — com
+  `covers: 'federated_only'`, o cadastrado não aceita.
+- **No pedido** (`V2FederationJoin`): a caixa "Li e aceito" abre o texto
+  inteiro (`InsuranceTermBox`, âncora `federacao-termo-seguro`); sem ela o
+  formulário não segue. O servidor recusa o pedido sem
+  `insuranceTermVersion` igual à versão em vigor (`aceiteDoTermo`).
+- **Na renovação** (Minha filiação, Minha área): o termo abre num diálogo
+  antes da cobrança (`useInsuranceTermGate`); o servidor recusa a renovação
+  de quem ainda não aceitou a versão de hoje.
+- **Depois** (`term_accept`): o titular ou o responsável aceita em Minha
+  filiação → Seguro ("Ler e aceitar"), quando falta ou o texto mudou.
+- O aceite grava em `federation_members`: `insurance_term { version,
+  accepted_at_ms, by }` e `insurance_term_log[]` (os últimos 10). A regra
+  não deixa o filiado gravar esses campos (só a lista fechada de
+  preferências).
+- A aba mostra quantos filiados em dia já aceitaram a versão de hoje e quem
+  falta (`TermoResumo`, âncora `federacao-seguro-aceites`).
+
+### 42.2 O certificado de seguro para eventos
+
+- **Pedir** (`cert_request`): quem gere um clube ou uma arena com filiação
+  **aprovada** (`gereOrg`), na parte Federação da gestão
+  (`OrgInsuranceCertBlock`, âncora `org-certificado-seguro`): nome do evento,
+  local, cidade, datas (até 31 dias, nunca no passado), participantes (1 a
+  5.000) e observação. A equipe `members`/`admin` é avisada. Quem pediu
+  pode **retirar** enquanto está em análise (`cert_withdraw`).
+- **Emitir** (`cert_issue`): `members`/`admin`, nunca quem também gere a
+  organização que pediu, e só se a apólice estiver em vigor e cobrir todas as
+  datas (`certificateIssueError`). Grava o código (`novoCodigo`), copia a
+  apólice (`policy { insurer, policy, valid_from, valid_until, coverage }`) e
+  escreve `federation_card_index/{código} { kind: 'insurance_certificate',
+  certificate_id, federation_id }`. Quem pediu é avisado.
+- **Recusar** (`cert_decline`) e **cancelar** (`cert_cancel`) pedem motivo
+  (3+ letras), que vai no aviso. O cancelado continua no índice: a
+  verificação diz "Certificado cancelado".
+- **O documento** (`InsuranceCertificateDialog`): folha para imprimir com a
+  federação, a organização, o evento, a apólice e o QR para
+  `/f/verificar/{código}`.
+- **A verificação pública** (`federationVerify` → `verifyCertificate`,
+  `publicCertificateVerification`): válido, "Evento já encerrado" (depois do
+  `date_to`) ou cancelado, com o evento, a organização, as datas e a
+  seguradora — nunca quem pediu.
+- **Central → Filiados → Seguro e ocorrências → Certificados para eventos**
+  (âncora `federacao-seguro-certificados`, filtro "Pedidos e vigentes" /
+  "Todos"); aparece para `members`/`admin`.
+
+### 42.3 Dados pessoais
+
+- O certificado é da organização; guarda só o uid de quem pediu
+  (`requested_by`). Exclusão de conta: os pedidos em que a pessoa é
+  `requested_by` entram na lista da exclusão (o certificado fica, é da
+  organização).
+
+### 42.4 O que não pode regredir
+
+119. `federation_insurance_certificates` só o servidor grava; leem quem gere a
+     organização (`fedOrgManager`) e `members`/`admin` da federação (o
+     financeiro não).
+120. O aceite do termo é do servidor: pedido e renovação sem a versão em vigor
+     são recusados, e o filiado não grava `insurance_term` pelo navegador.
+121. Só emite quem não gere a organização que pediu, e só com a apólice
+     cobrindo as datas; cancelado continua verificável como cancelado.
+122. `CERT_STATUS` e o `kind: 'insurance_certificate'` do índice são gravados:
+     nunca os renomeie.
+
+### 42.5 Âncoras e guias
+
+- **Âncoras:** `federacao-seguro-termo`, `federacao-seguro-aceites`,
+  `federacao-seguro-certificados`, `federacao-termo-seguro`,
+  `org-certificado-seguro`.
+- **Guia:** `federacao-seguro-termo-certificado`. **Artigo:**
+  `federacao-seguro-termo-certificado`.

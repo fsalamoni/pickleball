@@ -241,6 +241,7 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_certificates: 'A certidão negativa é da própria federação (CND, FGTS, CNDT), não dado da pessoa; quem anexou é só o uid de equipe.',
   federation_club_seals: 'O pedido de selo é do clube ou da arena (evidências da organização); quem pediu é só o uid de quem a gere, guardado para o histórico.',
   federation_host_bids: 'O edital de sede é da federação (evento, critérios, resultado público sem uid); quem o criou é só o uid de equipe.',
+  federation_insurance_certificates: 'O certificado de seguro do evento é do clube ou da arena; quem pediu é só o uid de quem a gere, guardado para o histórico.',
   federation_host_entries: 'A candidatura a sede é do clube ou da arena (carta e proposta da organização); quem mandou é só o uid de quem a gere.',
   federation_host_scores: 'A nota da comissão é ato da federação sobre a proposta de uma organização; o avaliador é só o uid de equipe.',
   federation_cups: 'A Copa das Federações é da confederação; a lista pública dos elencos não tem uid e perde o nome na exclusão de conta.',

@@ -21,6 +21,7 @@
  */
 import { t, tk } from '@/core/i18n';
 import { addMonthsISO, daysBetween } from './membership.js';
+import { validateInsuranceTerm } from './insurance.js';
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const str = (v, max = 300) => String(v ?? '').trim().slice(0, max);
@@ -166,14 +167,16 @@ export const INSURANCE_COVERS_LABELS = Object.freeze({
   federated_only: tk('Só os filiados (pagantes) em dia'),
 });
 
-/** A apólice da federação: seguradora, número, vigência, cobertura e como acionar. */
+/** A apólice da federação: seguradora, número, vigência, cobertura, como acionar e o termo (`docs/50` §42). */
 export function validateInsurance(input = {}) {
-  const errors = {};
+  const termo = validateInsuranceTerm(input);
+  const errors = { ...termo.errors };
   const v = {
     insurer: str(input.insurer, 80), policy: str(input.policy, 40),
     valid_from: str(input.valid_from, 10) || null, valid_until: str(input.valid_until, 10),
     coverage: str(input.coverage, 800), phone: str(input.phone, 30), how_to_claim: str(input.how_to_claim, 800),
     covers: Object.values(INSURANCE_COVERS).includes(input.covers) ? input.covers : INSURANCE_COVERS.ACTIVE,
+    ...termo.value,
   };
   if (v.insurer.length < 2) errors.insurer = t('Informe a seguradora.');
   if (!isIsoDate(v.valid_until)) errors.valid_until = t('Informe até quando a apólice vale.');

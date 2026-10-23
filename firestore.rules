@@ -5206,6 +5206,14 @@ service cloud.firestore {
       allow read: if fedOrgManager(od().kind, od().org_id) || fedAny(od().federation_id, ['members', 'admin']);
       allow write: if false;
     }
+    // SEGURO (rodada 3, Bloco 5): o certificado de seguro do evento do clube ou
+    // da arena — leem quem gere a organização e a secretaria/admin; a
+    // verificação pública passa pela função. Só o servidor grava
+    // (`federationInsurance`).
+    match /federation_insurance_certificates/{id} {
+      allow read: if fedOrgManager(od().kind, od().org_id) || fedAny(od().federation_id, ['members', 'admin']);
+      allow write: if false;
+    }
     // SEDES E COPA (rodada 3, Bloco 3): o edital de sede e a Copa das
     // Federações são públicos depois de publicados (o rascunho só a equipe);
     // a candidatura (carta, proposta) só quem gere a organização e a equipe;

@@ -37,6 +37,7 @@ import FedMyPoints from './FedMyPoints';
 import MyAmbassadorship from '../development/MyAmbassadorship';
 import MyAdaptedClassification from '../adapted/MyAdaptedClassification';
 import { MemberRegularity } from '../FedRegularity';
+import { useInsuranceTermGate } from '../insurance/InsuranceTerm';
 import { t, tn } from '@/core/i18n';
 
 /** A filiação e as cobranças abertas desta federação (as mesmas consultas nos três). */
@@ -162,11 +163,12 @@ export function FedMyMembership({ federation, plans }) {
   const [transferindo, setTransferindo] = useState(false);
   const [declaracao, setDeclaracao] = useState(false);
   const [recibo, setRecibo] = useState(null);
-  const renovar = useFederationMutation(() => membershipAction({ federationId: federation.id, action: 'renew' }));
+  const renovar = useFederationMutation((v) => membershipAction({ federationId: federation.id, action: 'renew', ...(v ? { insuranceTermVersion: v } : {}) }));
   const m = s.membro;
   const st = membershipState(m);
   const plano = (plans || []).find((p) => p.id === m?.plan_id) || null;
   const cartao = useCartao(m, federation, plano);
+  const termo = useInsuranceTermGate(federation, m, { confirmLabel: t('Aceitar e renovar'), loading: renovar.isPending });
   if (s.isError) return <V2ErrorState inline title={t('Não carregou a sua situação nesta federação')} onRetry={s.retry} />;
   if (!s.pronto) return <V2Skeleton lines={4} />;
   return (
@@ -190,11 +192,12 @@ export function FedMyMembership({ federation, plans }) {
             <V2Button type="button" variant="secondary" onClick={() => setDeclaracao(true)} data-dica="federacao-declaracao"><FileText className="h-4 w-4" />{t('Declaração de vínculo')}</V2Button>
           )}
           {st.canRenew && s.cobrancas.length === 0 && (
-            <V2Button type="button" variant="secondary" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: () => toast.success(t('Renovação pedida. Pague a cobrança para seguir em dia.')), onError: (e) => toast.error(e.message) })}>
+            <V2Button type="button" variant="secondary" disabled={renovar.isPending} onClick={() => termo.run((v) => renovar.mutate(v, { onSuccess: () => toast.success(t('Renovação pedida. Pague a cobrança para seguir em dia.')), onError: (e) => toast.error(e.message) }))}>
               {st.status === MEMBER_STATUS.EXPIRED ? t('Renovar a filiação') : t('Renovar antes de vencer')}
             </V2Button>
           )}
         </div>
+        {termo.dialog}
         {renewalOpensOn(m) && <p className="text-sm text-gray-500">{t('A renovação abre em {data}, {n} dias antes de vencer. Você recebe um aviso.', { data: quando(renewalOpensOn(m)), n: RENEWAL_WINDOW_DAYS })}</p>}
         {m.docs_block && <p className="text-sm font-semibold text-red-600">{t('Documento vencido: inscrição em torneio da federação fica bloqueada até você enviar o novo e a secretaria aceitar.')}</p>}
         <FedMemberDocuments member={m} plan={plano} />

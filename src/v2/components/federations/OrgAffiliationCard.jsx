@@ -26,6 +26,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t } from '@/core/i18n';
 import OrgSealBlock from './development/OrgSealBlock';
 import OrgHostBidsBlock from './hosting/OrgHostBidsBlock';
+import OrgInsuranceCertBlock from './insurance/OrgInsuranceCertBlock';
 
 const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red', invited: 'blue' };
 // Âncoras das dicas (literais, para o guarda `dicas.test.js` as encontrar).
@@ -129,6 +130,7 @@ export default function OrgAffiliationCard({ kind, org }) {
       {minhas.isSuccess && feds.isSuccess && (
         <>
           <OrgSealBlock kind={kind} org={org} federations={(feds.data || []).filter((f) => (minhas.data || []).some((a) => a.federation_id === f.id && affiliationState(a).approved))} />
+          <OrgInsuranceCertBlock kind={kind} org={org} federations={(feds.data || []).filter((f) => (minhas.data || []).some((a) => a.federation_id === f.id && affiliationState(a).approved))} />
           <OrgHostBidsBlock kind={kind} org={org} federations={feds.data || []} affiliatedIds={(minhas.data || []).filter((a) => affiliationState(a).approved).map((a) => a.federation_id)} />
         </>
       )}

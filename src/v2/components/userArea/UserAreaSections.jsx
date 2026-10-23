@@ -69,6 +69,7 @@ import { MyArenaEnrollments, MyTaughtArenaClasses } from '@/v2/components/arenas
 import { MiniStat } from './ProfileShowcase';
 import MyRefereeAssignments from '@/v2/components/federations/referees/MyRefereeAssignments';
 import { MyCoachingFed } from '@/v2/components/federations/coaching/MyCoaching';
+import { useInsuranceTermGate } from '@/v2/components/federations/insurance/InsuranceTerm';
 import { t, tn } from '@/core/i18n';
 
 /* ------------------------------- peças ------------------------------- */
@@ -613,9 +614,11 @@ function FiliacaoRow({ m }) {
   const [cartao, setCartao] = useState(false);
   const [declaracao, setDeclaracao] = useState(false);
   // O dependente não tem página própria: a renovação dele sai daqui, pelo id da filiação (o servidor confere o responsável).
-  const renovar = useFederationMutation(() => membershipAction({ federationId: m.federation_id, action: 'renew', memberId: m.id }));
-  const fq = useFederation(cartao || declaracao ? m.federation_id : null);
+  const renovar = useFederationMutation((v) => membershipAction({ federationId: m.federation_id, action: 'renew', memberId: m.id, ...(v ? { insuranceTermVersion: v } : {}) }));
   const st = membershipState(m);
+  // A federação vem também para renovar o dependente: o termo do seguro pode precisar de aceite antes.
+  const fq = useFederation(cartao || declaracao || (st.canRenew && !m.user_id) ? m.federation_id : null);
+  const termo = useInsuranceTermGate(fq.data, m, { confirmLabel: t('Aceitar e renovar'), loading: renovar.isPending });
   const f = { id: m.federation_id, name: m.federation_name || t('Federação'), acronym: m.federation_acronym || '' };
   const temCartao = [MEMBER_STATUS.ACTIVE, MEMBER_STATUS.EXPIRED].includes(st.status) && m.card_code;
   return (
@@ -633,7 +636,8 @@ function FiliacaoRow({ m }) {
       {temCartao && <V2Button type="button" size="sm" variant="secondary" onClick={() => setCartao(true)} data-dica="minha-area-carteirinha"><IdCard className="h-4 w-4" aria-hidden="true" />{t('Carteirinha')}</V2Button>}
       {st.status === MEMBER_STATUS.ACTIVE && m.card_code && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDeclaracao(true)} data-dica="minha-area-declaracao"><FileText className="h-4 w-4" aria-hidden="true" />{t('Declaração')}</V2Button>}
       {st.canRenew && m.user_id && <V2Button asChild size="sm" variant="ghost"><Link to={`${fedPath(f)}?aba=minha`}>{t('Renovar')}</Link></V2Button>}
-      {st.canRenew && !m.user_id && <V2Button type="button" size="sm" variant="ghost" disabled={renovar.isPending} onClick={() => renovar.mutate(undefined, { onSuccess: (r) => toast.success(r?.chargeId ? t('Cobrança de renovação criada. O Pix está em "Pagamentos da federação", nesta página.') : t('Filiação renovada.')), onError: (e) => toast.error(e.message) })}>{t('Renovar')}</V2Button>}
+      {st.canRenew && !m.user_id && <V2Button type="button" size="sm" variant="ghost" disabled={renovar.isPending} onClick={() => termo.run((v) => renovar.mutate(v, { onSuccess: (r) => toast.success(r?.chargeId ? t('Cobrança de renovação criada. O Pix está em "Pagamentos da federação", nesta página.') : t('Filiação renovada.')), onError: (e) => toast.error(e.message) }))}>{t('Renovar')}</V2Button>}
+      {termo.dialog}
       {!m.user_id && <FedCancelMembership member={m} />}
       {cartao && <MemberCardDialog open onOpenChange={setCartao} member={m} federation={fq.data || f} />}
       {declaracao && <MembershipDeclarationDialog open onOpenChange={setDeclaracao} member={m} federationQ={fq} selfService />}

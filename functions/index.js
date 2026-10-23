@@ -1531,6 +1531,12 @@ exports.federationAdapted = federationCallable('federationAdapted', (ctx, actor,
   return federationAdapted.adapted({ ...ctx, bucket }, actor, data);
 }, { timeoutSeconds: 120, memory: '512MiB' });
 
+// Seguro (rodada 3, Bloco 5): o aceite do termo do seguro e o certificado de
+// seguro para eventos de clube/arena, com QR de verificação pública —
+// `functions/federationInsurance.js`.
+const federationInsurance = require('./federationInsurance');
+exports.federationInsurance = federationCallable('federationInsurance', federationInsurance.insurance);
+
 // Camada nacional (Bloco 6): vínculo das estaduais com a confederação, regras
 // da rede e repasse da anuidade; o ranking nacional é refeito junto com o
 // ranking de cada filiada — `functions/federationNational.js`.

@@ -59,6 +59,7 @@ export const FED_COLLECTIONS = Object.freeze({
   ambassadors: 'federation_ambassadors',
   clubSeals: 'federation_club_seals',
   adaptedClassifications: 'federation_adapted_classifications',
+  insuranceCertificates: 'federation_insurance_certificates',
   hostBids: 'federation_host_bids',
   hostEntries: 'federation_host_entries',
   hostScores: 'federation_host_scores',

@@ -37,6 +37,7 @@ const P = require('./federationStaffPolicy.js');
 const O = require('./federationOrgMembers.js');
 const { resolveMemberType } = require('./federationMemberTypes.js');
 const RG = require('./federationRegularityPolicy.js');
+const IP = require('./federationInsurancePolicy.js');
 
 class FederationError extends Error {
   constructor(code, message) { super(message); this.code = code; this.name = 'FederationError'; }
@@ -122,6 +123,19 @@ const staffIds = async (ctx, fedId, perm) => {
 };
 
 const novoCodigo = () => m.cardCodeFromBytes(crypto.randomBytes(m.CARD_CODE_LENGTH));
+
+/**
+ * O termo do seguro (módulo `insurance`, `docs/50` §42) no pedido e na
+ * renovação: exigido, a tela manda a versão que mostrou; devolve o que gravar
+ * (`{}` se já aceitou a de hoje, `null` se não é exigido).
+ */
+function aceiteDoTermo(fed, member, data, uid, now) {
+  const st = IP.termState(member, fed);
+  if (!st.required) return null;
+  if (st.accepted) return {};
+  if (String((data && data.insuranceTermVersion) || '') !== st.version) falha('failed-precondition', 'Leia e aceite o termo do seguro para continuar (ele pode ter mudado agora há pouco).');
+  return IP.termAcceptancePatch(member, st.version, uid, now);
+}
 
 /* ------------------------------------------------------------- review -- */
 
@@ -408,6 +422,8 @@ async function membership(ctx, actor, data) {
     const st = m.membershipState(member, hoje, ctx.now);
     if (!st.canRenew) falha('failed-precondition', 'A renovação abre 30 dias antes do vencimento.');
     if (!p || p.active === false) falha('failed-precondition', 'O plano desta filiação não está mais disponível. Fale com a federação.');
+    const termo = aceiteDoTermo(fed, member, data, actor.uid, ctx.now);
+    if (termo && Object.keys(termo).length) await memberRef.update(termo);
     const aberta = await ctx.db.collection(C.charges).where('member_id', '==', memberRef.id).get();
     if (aberta.docs.some((d) => ['open', 'declared'].includes(d.data().status) && d.data().origin === 'renewal')) falha('already-exists', 'Já existe uma cobrança de renovação em aberto.');
     const valor = Number(p.price_cents) > 0 ? await valorDoPlano(ctx, fed, member, p, hoje) : 0;
@@ -641,6 +657,8 @@ async function pedirFiliacao(ctx, actor, data, { fed, hoje }) {
   // Consentimentos (LGPD) marcados no pedido: cada um com a hora do servidor e quem marcou.
   const consentimentos = RG.consentsPatch(fed, null, data.consents, uid, ctx.now);
   if (consentimentos) Object.assign(doc, { consents: consentimentos.consents, consents_log: consentimentos.consents_log });
+  const termo = aceiteDoTermo(fed, doc, data, uid, ctx.now);
+  if (termo) Object.assign(doc, termo);
   const privRef = memberRef.collection('private').doc('data');
   const gravaPrivado = (w) => {
     if (Object.keys(privado).length) w.set(privRef, { ...privado, updated_at_ms: ctx.now }, { merge: true });
@@ -900,6 +918,7 @@ async function verify(ctx, data) {
   const fs = await ctx.db.collection(C.federations).doc(i.federation_id).get();
   if (!fs.exists || fs.data().status !== 'approved') return { found: false };
   const hoje = m.isoDateBR(ctx.now);
+  if (i.kind === 'insurance_certificate') return require('./federationInsurance.js').verifyCertificate(ctx, i, fs.data(), hoje);
   if (i.kind === 'credential') {
     const cs = await ctx.db.collection(C.credentials).doc(i.credential_id).get();
     return cs.exists ? m.publicCredentialVerification(cs.data(), fs.data(), hoje) : { found: false };
