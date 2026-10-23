@@ -13,12 +13,6 @@ name: DUPR — conferir e configurar a integração
 #   user     mostra os ratings públicos de um jogador (informe o ID DUPR)
 
 on:
-  # TEMPORÁRIO (remover antes do merge): a sessão de desenvolvimento não
-  # consegue disparar workflow, então o smoke (só leitura) roda a cada push
-  # desta branch.
-  push:
-    branches: [claude/project-thread-4hbq67]
-    paths: ['scripts/dupr-uat.cjs', 'functions/duprClient.js', '.github/workflows/dupr-uat.yml']
   workflow_dispatch:
     inputs:
       acao:
@@ -49,7 +43,7 @@ jobs:
     timeout-minutes: 10
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-      DUPR_ENV: ${{ inputs.ambiente || 'uat' }}
+      DUPR_ENV: ${{ inputs.ambiente }}
     steps:
       - uses: actions/checkout@v5
 
@@ -74,6 +68,6 @@ jobs:
         env:
           DUPR_CLIENT_KEY: ${{ secrets.DUPR_CLIENT_KEY }}
           DUPR_CLIENT_SECRET: ${{ secrets.DUPR_CLIENT_SECRET }}
-          ACAO: ${{ inputs.acao || 'smoke' }}
+          ACAO: ${{ inputs.acao }}
           DUPR_ID: ${{ inputs.dupr_id }}
         run: node scripts/dupr-uat.cjs "$ACAO" "$DUPR_ID"
