@@ -645,6 +645,19 @@ O teto é a CLI fixada nos workflows: a `firebase-tools@13` vai até o Node.js
 no runtime de produção com `npx vitest run functions` num Node.js 22. Guarda em
 `src/core/guards/deployFunctions.test.js` ("runtime das Cloud Functions").
 
+**Uma função não muda de TIPO com o mesmo nome.** Se o registro no Firebase
+diz HTTPS (callable) e o código exporta um gatilho com o mesmo nome — ou o
+contrário —, a CLI recusa ("Changing from an HTTPS function to a background
+triggered function is not allowed") e **aborta o deploy de TODAS as funções**.
+O passo é não fatal, então o site sai e o erro fica só no log. 🐞 Foi o que
+aconteceu do PR #315 ao #321: `federationDocumentsSync` ficou registrada como
+HTTPS (criação do gatilho que falhou no meio), e nenhuma função nova dos
+blocos da federação chegou ao ar até o gatilho ganhar nome novo
+(`federationDocumentsOnWrite`). Saída: **dê nome novo** à função; o registro
+antigo fica órfão (sem uso) até alguém apagá-lo pelo console, por nome — nunca
+com `--force` (§9.1). Depois de cada deploy, confira no log do passo "Deploy
+Cloud Functions" que não há `Error:`.
+
 ### 9.6 Emulators (dev local)
 
 ```bash

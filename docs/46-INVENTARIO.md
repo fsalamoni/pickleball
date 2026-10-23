@@ -370,7 +370,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `federationReferees` | federationCallable |  |
 | `federationRefereesPublic` | chamável (callable) |  |
 | `federationRegularity` | federationCallable |  |
-| `federationDocumentsSync` | gatilho Firestore | `federation_documents_submitted/{docId}` |
+| `federationDocumentsOnWrite` | gatilho Firestore | `federation_documents_submitted/{docId}` |
 | `federationCompetition` | federationCallable |  |
 | `federationSanctionSync` | gatilho Firestore | `tournaments/{tournamentId}` |
 | `federationSelection` | federationCallable |  |

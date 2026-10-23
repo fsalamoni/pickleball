@@ -1416,13 +1416,13 @@ exports.federationRefereesPublic = onCall({ region: REGION, timeoutSeconds: 30 }
 // validade dos documentos: só o servidor grava — `functions/federationRegularity.js`.
 const federationRegularity = require('./federationRegularity');
 exports.federationRegularity = federationCallable('federationRegularity', federationRegularity.regularity);
-exports.federationDocumentsSync = onDocumentWritten(
+exports.federationDocumentsOnWrite = onDocumentWritten(
   { document: 'federation_documents_submitted/{docId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 60 },
   async (event) => {
     try {
       await federationRegularity.onDocumentWritten(fedCtx(), antes(event), depois(event));
     } catch (err) {
-      logger.error('federationDocumentsSync falhou', err);
+      logger.error('federationDocumentsOnWrite falhou', err);
     }
   },
 );

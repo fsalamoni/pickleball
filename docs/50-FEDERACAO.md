@@ -2519,7 +2519,7 @@ paridade contra `src/modules/federations/domain/regularity.js`
   (até 30 dias), `valid_until` e `newer` (envio novo em análise). A pasta, a
   lista de filiados e "Minha filiação" mostram isso. Documento vencido ou
   vencendo, sem envio novo, oferece "Enviar o novo".
-- O gatilho `federationDocumentsSync` (escrita em
+- O gatilho `federationDocumentsOnWrite` (escrita em
   `federation_documents_submitted`) refaz o resumo da filiação
   (`federation_members.docs_state`) e a trava `docs_block`. Só grava se algo
   mudou.
