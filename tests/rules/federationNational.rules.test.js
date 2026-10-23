@@ -49,6 +49,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'federation_staff', `fgp_${GPSEC}`), { federation_id: 'fgp', user_id: GPSEC, role: 'custom', perms: ['members'] });
     await setDoc(doc(db, 'federation_national_links', 'cbp_fgp'), { conf_id: 'cbp', federation_id: 'fgp', status: 'approved' });
     await setDoc(doc(db, 'federation_dues', 'cbp_fgp_2026'), { conf_id: 'cbp', federation_id: 'fgp', year: 2026, status: 'open', amount_cents: 1000 });
+    await setDoc(doc(db, 'federation_repasses', 'ch1_confederation'), { federation_id: 'fgp', to: 'confederation', to_id: 'cbp', status: 'pending', amount_cents: 200 });
+    await setDoc(doc(db, 'federation_repasses', 'ch1_club'), { federation_id: 'fgp', to: 'club', to_id: 'c1', status: 'pending', amount_cents: 100 });
     await setDoc(doc(db, 'federation_transfers', 't1'), { federation_id: 'fpp', to_federation_id: 'fgx', member_id: 'fpp_ana', user_id: 'ana', status: 'homologation', homologation_by: 'cbp' });
   });
 });
@@ -70,6 +72,18 @@ describe('anuidade', () => {
     await assertFails(getDoc(doc(como(GPSEC), 'federation_dues', 'cbp_fgp_2026')));
     await assertFails(getDoc(doc(como(CBSEC), 'federation_dues', 'cbp_fgp_2026')));
     await assertFails(getDoc(doc(como(ZE), 'federation_dues', 'cbp_fgp_2026')));
+  });
+});
+
+describe('repasses da cobrança dividida (Bloco 6d)', () => {
+  it('2b. as contas de quem repassa leem tudo; a confederação só o que vai para ela; ninguém grava', async () => {
+    await assertSucceeds(getDocs(query(collection(como(GPFIN), 'federation_repasses'), where('federation_id', '==', 'fgp'))));
+    await assertSucceeds(getDocs(query(collection(como(CB), 'federation_repasses'), where('to_id', '==', 'cbp'), where('to', '==', 'confederation'))));
+    await assertFails(getDocs(query(collection(como(CB), 'federation_repasses'), where('to_id', '==', 'cbp'))));
+    await assertFails(getDoc(doc(como(CB), 'federation_repasses', 'ch1_club')));
+    await assertFails(getDoc(doc(como(GPSEC), 'federation_repasses', 'ch1_club')));
+    await assertFails(getDoc(doc(como(ZE), 'federation_repasses', 'ch1_confederation')));
+    await assertFails(updateDoc(doc(como(GPFIN), 'federation_repasses', 'ch1_club'), { status: 'paid' }));
   });
 });
 

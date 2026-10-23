@@ -64,6 +64,7 @@ import {
   buildDuprCsv,
   entriesToRows,
   duprCsvFilename,
+  sentByFederation,
 } from '@/modules/rating/domain/duprMatchExport';
 import {
   EXPORT_STATUS,
@@ -178,7 +179,16 @@ export default function AdminDuprExportTab() {
 
   const set = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }));
 
-  const matches = useMemo(() => data?.matches || [], [data]);
+  // Partidas de torneio chancelado vão ao DUPR pela FEDERAÇÃO (Central →
+  // Competições → Planilha DUPR): ficam fora daqui, um remetente por partida.
+  const doFederacao = useMemo(
+    () => (data?.matches || []).filter((m) => sentByFederation(m, data?.maps?.tournamentById)).length,
+    [data],
+  );
+  const matches = useMemo(
+    () => (data?.matches || []).filter((m) => !sentByFederation(m, data?.maps?.tournamentById)),
+    [data],
+  );
   const profileById = data?.profileById;
   const maps = data?.maps;
 
@@ -432,6 +442,11 @@ export default function AdminDuprExportTab() {
             <p className="mt-1">
               {t('O DUPR exige o')} <strong>{t('ID DUPR')}</strong> {t('de cada jogador. Partidas com algum atleta sem ID ficam marcadas como')} <em>{t('incompletas')}</em> {t('e não entram na lista de exportação — peça a esses atletas para cadastrar o ID no perfil.')}
             </p>
+            {doFederacao > 0 && (
+              <p className="mt-1">
+                {tn(doFederacao, '{n} partida de torneio chancelado fica de fora: quem a manda ao DUPR é a federação (Central → Competições → Planilha DUPR).', '{n} partidas de torneios chancelados ficam de fora: quem as manda ao DUPR é a federação (Central → Competições → Planilha DUPR).')}
+              </p>
+            )}
           </div>
         </div>
       </V2Surface>

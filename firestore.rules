@@ -5261,6 +5261,13 @@ service cloud.firestore {
       allow read: if fedAcc(od().federation_id) || fedAcc(od().conf_id);
       allow write: if false;
     }
+    // REPASSES da cobrança dividida (Bloco 6d): a parte do clube e da confederação
+    // numa filiação paga. Só o SERVIDOR grava (`federations.js` anota, `federationSplit`
+    // marca repassado); lê quem lê as contas de quem repassa e da confederação que recebe.
+    match /federation_repasses/{id} {
+      allow read: if fedAcc(od().federation_id) || (od().to == 'confederation' && fedAcc(od().to_id));
+      allow write: if false;
+    }
     // ARBITRAGEM (módulo `referees`): o quadro (`{fed}_{uid}`) e as escalas.
     // Só o SERVIDOR grava (`federationReferees`): os alertas da convocação
     // leem dados de outras pessoas, e a diária paga vira despesa. Lê a equipe

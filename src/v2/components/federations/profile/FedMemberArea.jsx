@@ -38,6 +38,8 @@ import MyAmbassadorship from '../development/MyAmbassadorship';
 import MyAdaptedClassification from '../adapted/MyAdaptedClassification';
 import { MemberRegularity } from '../FedRegularity';
 import { useInsuranceTermGate } from '../insurance/InsuranceTerm';
+import { upgradeTargets } from '@/modules/federations/domain/split';
+import FedChangePlan from './FedChangePlan';
 import { t, tn } from '@/core/i18n';
 
 /** A filiação e as cobranças abertas desta federação (as mesmas consultas nos três). */
@@ -213,6 +215,10 @@ export function FedMyMembership({ federation, plans }) {
           <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Outras ações')}</p>
           {LIVE_MEMBER_STATUSES.includes(st.status) && st.status !== MEMBER_STATUS.PENDING && (
             <V2Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => setTransferindo(true)} data-dica="federacao-transferencia"><ArrowLeftRight className="h-4 w-4" />{t('Transferência')}</V2Button>
+          )}
+          {/* Troca de plano (Bloco 6d): em dia, sem cobrança em aberto, para um plano mais caro do mesmo período e tipo. */}
+          {st.status === MEMBER_STATUS.ACTIVE && s.cobrancas.length === 0 && plano && (
+            <FedChangePlan federation={federation} member={m} current={plano} targets={upgradeTargets(plans, m, plano)} />
           )}
           <V2Button asChild variant="ghost" size="sm" className="w-full justify-start"><Link to={`/federacoes/${federation.id}/filiar?dependente=1`}><Users className="h-4 w-4" />{t('Filiar um dependente')}</Link></V2Button>
           <V2Button asChild variant="ghost" size="sm" className="w-full justify-start"><Link to="/perfil?secao=federacoes">{t('Minhas federações')}</Link></V2Button>

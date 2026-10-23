@@ -19,6 +19,7 @@ import { ChargeStatusBadge, quando } from '../federationUi';
 import { ChargeProofButton, temComprovante } from '../ChargeProof';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
 import { baixarCsv } from './naoSalvo';
+import FedRepasses from './FedRepasses';
 
 /**
  * Uma cobrança na visão da equipe. `podeDecidir` (financeiro) mostra confirmar e
@@ -121,6 +122,7 @@ export default function FedFinancePanel({ federation, chargesQ, tab }) {
         {pagas.length > 0 && <BuscaLista id="fed-recebidos-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome ou plano')} total={pagas.length} achados={busca.filtrados.length} className="sm:max-w-sm" />}
         {!pagas.length ? <V2EmptyState icon={Wallet} title={t('Nenhum pagamento confirmado ainda')} description={t('Quando você confirmar um pagamento em Cobranças, ele aparece aqui.')} />
           : !busca.filtrados.length ? semAchados : lista}
+        <FedRepasses federation={federation} />
       </section>
     );
   }

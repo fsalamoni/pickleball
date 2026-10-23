@@ -594,3 +594,41 @@ export function duprCsvFilename(filters = {}) {
   const suffix = [from, to].filter(Boolean).join('-');
   return suffix ? `dupr-partidas-${suffix}.csv` : 'dupr-partidas.csv';
 }
+
+/* ------------------------- torneios chancelados --------------------------- */
+
+/**
+ * Torneio chancelado por uma federação (rodada 3, Bloco 6c): quem manda as
+ * partidas dele ao DUPR é a FEDERAÇÃO (Central → Competições → "Planilha
+ * DUPR"). A exportação geral do admin as deixa de fora — um remetente por
+ * partida, senão o mesmo jogo entra duas vezes no DUPR.
+ */
+export function sentByFederation(match, tournamentById) {
+  if (!match || !match.tournament_id) return false;
+  const t = mapGet(tournamentById, match.tournament_id);
+  return !!(t && t.federation_id && t.federation_sanction && t.federation_sanction.status === 'approved');
+}
+
+/**
+ * As linhas DUPR de UM torneio (a planilha da federação): as partidas com
+ * placar, os inscritos e os perfis públicos (`athlete_profiles`, onde está o
+ * ID DUPR). Puro: o serviço só lê.
+ *
+ * @returns {{ entries: Array<object>, rows: Array<object>, summary: object, missing: string[] }}
+ */
+export function tournamentDuprExport({ tournament, matches = [], regById, profilesById, scoreType } = {}) {
+  const tournamentById = new Map(tournament && tournament.id ? [[tournament.id, tournament]] : []);
+  const normalized = normalizeExportMatches({ tournamentMatches: matches, regById, tournamentById });
+  const entries = buildDuprEntries(normalized, buildExportProfileIndex(new Map(), profilesById), { scoreType });
+  const missing = [...new Set(entries.flatMap((e) => e.missing))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  return { entries, rows: entriesToRows(entries, { readyOnly: true }), summary: summarizeEntries(entries), missing };
+}
+
+/** Os uids das partidas de um torneio (para ler só esses perfis). */
+export function tournamentMatchUids(matches = [], regById) {
+  const uids = new Set();
+  matches.forEach((m) => [m.side_a_ids, m.side_b_ids].forEach((side) => {
+    registrationSideUids(side, regById).uids.forEach((u) => uids.add(u));
+  }));
+  return [...uids];
+}

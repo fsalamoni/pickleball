@@ -1548,6 +1548,10 @@ exports.federationInsurance = federationCallable('federationInsurance', federati
 // ranking de cada filiada — `functions/federationNational.js`.
 const federationNational = require('./federationNational');
 exports.federationNational = federationCallable('federationNational', federationNational.national);
+// Repasses da cobrança dividida (rodada 3, Bloco 6d): o financeiro marca o que repassou ao clube
+// e à confederação — `functions/federationSplit.js`.
+const federationSplit = require('./federationSplit');
+exports.federationSplit = federationCallable('federationSplit', federationSplit.split);
 
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },

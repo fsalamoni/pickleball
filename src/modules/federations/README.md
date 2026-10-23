@@ -247,6 +247,17 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   (`usesGatewayPix`, `useChargeGatewayPix`) e o aviso do provedor dá a baixa
   pelo servidor (`functions/federationPayments.js`), conferindo o pagamento no
   provedor. Sem chave, tudo como antes (Pix estático + "Já paguei").
+- **Planilha DUPR do torneio chancelado** (`docs/50` §45, Bloco 6c): botão
+  em Competições → Chancelas (`DuprSheetButton`), mesmo CSV da exportação da
+  plataforma, só as partidas prontas; a exportação geral do admin deixa essas
+  partidas de fora (`sentByFederation`). Zero banco.
+- **Cobrança dividida e troca de plano** (`docs/50` §46, Bloco 6d): o plano
+  diz quanto vai ao clube e à confederação (`plan.split`); confirmada a
+  cobrança, o servidor anota `federation_repasses` "a repassar" e o
+  financeiro marca "Repassado" em Recebidos → Repasses (`FedRepasses`,
+  função `federationSplit`), quando vira item derivado das contas. O filiado
+  em dia troca para plano mais caro pagando a diferença (`FedChangePlan`,
+  ação `upgrade`); a validade não muda. Régua em `domain/split.js`.
 - **Carteirinha no Apple Wallet e no Google Wallet** (`docs/50` §44, Bloco
   6b): com as credenciais da plataforma (Painel admin → Federações →
   Configuração → Carteira do celular, `AdminFedWallet`), o titular vê

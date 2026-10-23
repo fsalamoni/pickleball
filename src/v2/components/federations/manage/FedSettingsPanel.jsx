@@ -50,7 +50,7 @@ function useRascunho(inicial) {
 
 /* ---------------------------------------------------------------- planos -- */
 
-const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN_PERSON_TYPE.ATHLETE, tier: PLAN_TIER.FEDERATED, billing: PLAN_BILLING.ANNUAL, validity: PLAN_VALIDITY.ROLLING, rollover_mmdd: '12-31', calendar_grace_days: 60, preco: '0,00', age_min: '', age_max: '', discounts: { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 }, requires_docs: [], other_docs: [], auto_approve: false, active: true, sort: 0 };
+const PLANO_VAZIO = { name: '', description: '', benefits: '', person_type: PLAN_PERSON_TYPE.ATHLETE, tier: PLAN_TIER.FEDERATED, billing: PLAN_BILLING.ANNUAL, validity: PLAN_VALIDITY.ROLLING, rollover_mmdd: '12-31', calendar_grace_days: 60, preco: '0,00', age_min: '', age_max: '', discounts: { minor_pct: 0, senior_pct: 0, family_pct: 0, family_from: 2 }, requires_docs: [], other_docs: [], auto_approve: false, active: true, sort: 0, split: { club_pct: 0, confederation_pct: 0 } };
 // Plano antigo com "Outro documento" sem nome: o campo do nome já abre, para a federação dizer qual é.
 const outrosIniciais = (plano) => (plano.other_docs?.length ? plano.other_docs : (plano.requires_docs || []).includes(DOC_KIND.OTHER) ? [novoOutroDoc()] : []);
 
@@ -78,7 +78,7 @@ function OutrosDocumentos({ lista, erro, onChange, entidade = false }) {
 
 function PlanoForm({ federationId, plano, onFechar }) {
   const { user } = useAuth();
-  const [f, setF] = useRascunho(plano ? { ...PLANO_VAZIO, ...plano, preco: reais(plano.price_cents), age_min: plano.age_min ?? '', age_max: plano.age_max ?? '', discounts: { ...PLANO_VAZIO.discounts, ...(plano.discounts || {}) }, other_docs: outrosIniciais(plano) } : PLANO_VAZIO);
+  const [f, setF] = useRascunho(plano ? { ...PLANO_VAZIO, ...plano, preco: reais(plano.price_cents), age_min: plano.age_min ?? '', age_max: plano.age_max ?? '', discounts: { ...PLANO_VAZIO.discounts, ...(plano.discounts || {}) }, other_docs: outrosIniciais(plano), split: { ...PLANO_VAZIO.split, ...(plano.split || {}) } } : PLANO_VAZIO);
   const [erros, setErros] = useState({});
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
   const setDesc = (patch) => set({ discounts: { ...f.discounts, ...patch } });
@@ -131,6 +131,16 @@ function PlanoForm({ federationId, plano, onFechar }) {
         <V2Field label={t('Desconto menor de 18 (%)')} htmlFor="pl-dmenor"><V2Input id="pl-dmenor" inputMode="numeric" value={f.discounts.minor_pct} onChange={(e) => setDesc({ minor_pct: e.target.value })} /></V2Field>
         <V2Field label={t('Desconto 60+ (%)')} htmlFor="pl-dsenior"><V2Input id="pl-dsenior" inputMode="numeric" value={f.discounts.senior_pct} onChange={(e) => setDesc({ senior_pct: e.target.value })} /></V2Field>
       </div>}
+      {f.tier === PLAN_TIER.FEDERATED && (
+        <fieldset className="space-y-2" data-dica="federacao-plano-repasse">
+          <legend className="text-sm font-semibold text-ink">{t('Repasses (cobrança dividida)')}</legend>
+          <p className="text-xs text-gray-500">{t('Quem paga faz um pagamento só, à federação. Confirmado o pagamento, a parte do clube que o filiado representa (se filiado à federação) e a da confederação aparecem em Recebidos → Repasses para você transferir. Sem clube ou sem confederação, a parte fica com a federação.')}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {!entidade && <V2Field label={t('Ao clube (%)')} htmlFor="pl-rclube" error={erros.split}><V2Input id="pl-rclube" inputMode="numeric" value={f.split.club_pct} onChange={(e) => set({ split: { ...f.split, club_pct: e.target.value } })} /></V2Field>}
+            <V2Field label={t('À confederação (%)')} htmlFor="pl-rconf" error={entidade ? erros.split : undefined}><V2Input id="pl-rconf" inputMode="numeric" value={f.split.confederation_pct} onChange={(e) => set({ split: { ...f.split, confederation_pct: e.target.value } })} /></V2Field>
+          </div>
+        </fieldset>
+      )}
       <V2Field label={t('Descrição')} htmlFor="pl-desc"><V2Textarea id="pl-desc" rows={2} maxLength={600} value={f.description} onChange={(e) => set({ description: e.target.value })} /></V2Field>
       <V2Field label={t('Benefícios (um por linha)')} htmlFor="pl-benef"><V2Textarea id="pl-benef" rows={3} maxLength={1200} value={f.benefits} onChange={(e) => set({ benefits: e.target.value })} /></V2Field>
       <fieldset className="space-y-2">

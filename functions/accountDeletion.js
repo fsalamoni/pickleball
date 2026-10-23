@@ -274,6 +274,8 @@ const RETAINED_AS_IS = Object.freeze([
   // Bloco 6: o vínculo nacional e a anuidade são entre duas federações (quem agiu é só o uid de equipe).
   { col: 'federation_national_links', field: 'opened_by', label: 'Pedidos e convites de filiação à confederação que abriu (como equipe; o vínculo é entre as federações)' },
   { col: 'federation_dues', field: 'issued_by', label: 'Anuidades da confederação que lançou (como equipe; o repasse é entre as federações)' },
+  // Bloco 6d: o repasse da cobrança dividida é entre a federação e o clube/a confederação (quem marcou é só o uid de equipe).
+  { col: 'federation_repasses', field: 'paid_by', label: 'Repasses de filiação que marcou como feitos (como equipe; o repasse é entre as organizações)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */

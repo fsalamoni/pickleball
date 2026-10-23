@@ -2281,3 +2281,18 @@ Geral do Esporte, art. 36, IX) entrou na aba Transparência e na Governança. A
 federação informa só QUANTAS pessoas da diretoria são mulheres — nunca quem —
 e a página pública não mostra o número. É aviso, não trava: quem responde
 pela composição da diretoria é a federação. `docs/50-FEDERACAO.md` §14.5.
+
+## Federações — integrações: Pix automático, Wallet, DUPR e cobrança dividida (2026-10-23)
+
+Rodada 3, Bloco 6 (PRs #331, #332, #333). O que a federação fazia à mão passou
+a ser da plataforma, sempre com "sem chave, funciona como hoje": **Pix com
+baixa automática** pela conta da federação no Mercado Pago ou no Asaas (o aviso
+do provedor nunca é confiado; o servidor confere o pagamento e dá a baixa pelo
+mesmo caminho do financeiro); **carteirinha no Apple Wallet e no Google
+Wallet**, atualizada quando muda a situação; **Planilha DUPR** dos torneios
+chancelados (um remetente por partida: o que a federação manda sai da
+exportação geral do admin); e **cobrança dividida** — o plano diz quanto vai ao
+clube e à confederação, o repasse marcado como feito entra nas contas das duas
+pontas — com a **troca para plano mais caro pagando só a diferença**, mesma
+validade. Plano mais barato segue pela federação, porque a renovação mantém o
+plano. Detalhe em `docs/50-FEDERACAO.md` §43–§46.
