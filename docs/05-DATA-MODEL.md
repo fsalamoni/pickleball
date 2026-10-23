@@ -545,8 +545,11 @@ Leitura pública; escrita só do admin da plataforma. Singletons:
 `training`, `messaging` (configuração dos avisos por e-mail/celular, sem
 segredo: provedores, domínio, remetente, matriz área × canal, horários,
 limites, `push.vapid_public_key` — ver `docs/49`), `messaging_status` (estado
-do domínio e dos modelos, escrito pelo servidor) e `ranking_worker` (este
-escrito pelo servidor). Não há migração de
+do domínio e dos modelos, escrito pelo servidor), `ranking_worker` (este
+escrito pelo servidor) e `functions_health` (escrito pela vigilância e pelo
+deploy das funções, `scripts/functions-health.cjs`: `check` com esperadas,
+publicadas e os nomes que faltam; `deploy` com `ok`, erro, commit e
+`last_ok_at` — o cartão "Funções no ar" do painel admin lê). Não há migração de
 flags: `normalizeFeatureFlags` lê só as chaves de `FEATURE_FLAG` (ausente ⇒
 `false`), ignora as desconhecidas — inclusive as chaves antigas das
 funcionalidades incorporadas — e as de `PERMANENT_FEATURE` valem sempre `true`.

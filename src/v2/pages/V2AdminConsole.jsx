@@ -77,6 +77,7 @@ import { FEATURE_FLAG_META, countFlags } from '@/core/featureFlags';
 import { setFeatureFlag, setHomePromosEnabled } from '@/core/services/platformSettingsService';
 import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
 import RankingAutomatico from '@/modules/admin/components/RankingAutomatico';
+import FunctionsHealthCard from '@/modules/admin/components/FunctionsHealthCard';
 import {
   cancelAndArchiveTournament,
   deleteTournamentCascading,
@@ -995,6 +996,7 @@ function ToolsTab({ navigate }) {
         </div>
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <FunctionsHealthCard />
         {itens.map((i) => (
           <button key={i.titulo} type="button" onClick={i.ir} className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink">
             <i.icon className={cn('h-4 w-4', i.aviso ? 'text-amber-500' : 'text-gray-500')} />

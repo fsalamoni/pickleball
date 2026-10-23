@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  listAllPlatformUsers, revokeAccountPowers, updateUserRecordAsAdmin,
+  listAllPlatformUsers, revokeAccountPowers, updateUserRecordAsAdmin, getFunctionsHealth,
 } from '../services/adminService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { previewAccountDeletion, deleteAccounts } from '../services/accountDeletionService';
@@ -123,4 +123,9 @@ export function useSetAccountStatus() {
 /** Revela dados de contato com registro de leitura (servidor). */
 export function useSupportReveal() {
   return useMutation({ mutationFn: (p) => supportReveal(p) });
+}
+
+/** "Funções no ar": o registro da vigilância e do deploy das Cloud Functions. */
+export function useFunctionsHealth() {
+  return useQuery({ queryKey: ['admin', 'functions-health'], queryFn: getFunctionsHealth, staleTime: 60_000 });
 }

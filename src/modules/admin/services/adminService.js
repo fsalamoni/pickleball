@@ -218,3 +218,15 @@ export async function updateUserRecordAsAdmin(uid, patch, actor, meta = {}) {
 
   return { changes, ignored };
 }
+
+/**
+ * O registro das Cloud Functions (`platform_settings/functions_health`), que a
+ * vigilância e o deploy gravam (`scripts/functions-health.cjs`), ou null
+ * quando ainda não há. Uma leitura que FALHA lança: quem chama distingue "não
+ * sei" de "não existe" (docs/27-FALHA-NAO-E-VAZIO.md).
+ */
+export async function getFunctionsHealth() {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, 'platform_settings', 'functions_health'));
+  return snap.exists() ? snap.data() : null;
+}

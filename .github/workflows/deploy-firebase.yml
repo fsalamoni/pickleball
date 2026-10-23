@@ -300,8 +300,23 @@ jobs:
           echo "$OUT"
           if [ $RC -eq 0 ]; then
             echo "Cloud Functions deployed (recálculo automático do ranking no servidor)."
+            node scripts/functions-health.cjs deploy ok
             exit 0
           fi
+          # 🐞 Do #315 ao #321 este passo falhou calado (ele é não fatal) e as
+          # funções novas não subiram. A falha agora vai em destaque no resumo
+          # do deploy e no painel admin (Sistema → Diagnóstico → "Funções no ar").
+          ERRO=$(echo "$OUT" | grep -m1 -E "^Error:|Error:" | cut -c1-400)
+          node scripts/functions-health.cjs deploy falhou "${ERRO:-veja o log do passo}"
+          {
+            echo "## ⚠️ As Cloud Functions NÃO foram publicadas"
+            echo ""
+            echo "Site e regras saíram; as funções seguem na versão anterior até o próximo deploy que der certo."
+            echo ""
+            echo '```'
+            echo "${ERRO:-Sem linha de erro reconhecível: veja o log do passo Deploy Cloud Functions.}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           if echo "$OUT" | grep -qiE "Your project .* must be on the Blaze"; then
             echo "::warning title=Blaze necessário::As Cloud Functions exigem o plano Blaze. Sem elas, os rankings NÃO recalculam (só o servidor escreve ranking)."
           elif echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission|iam.serviceAccounts"; then
