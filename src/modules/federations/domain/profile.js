@@ -65,6 +65,7 @@ const ANCHOR_TAB = Object.freeze({
   'fed-eleicoes': PROFILE_TAB.ELECTIONS,
   'fed-minha-filiacao': PROFILE_TAB.MINE,
   'fed-rede': PROFILE_TAB.NETWORK,
+  'fed-adaptado': PROFILE_TAB.COMPETITIONS,
   'fed-equipamentos': PROFILE_TAB.INTEGRITY,
   'fed-antidopagem': PROFILE_TAB.INTEGRITY,
 });
@@ -89,7 +90,7 @@ export function profileTabs(federation, { member = false } = {}) {
     member && { id: PROFILE_TAB.MINE, dica: 'federacao-pub-minha', label: tk('Minha filiação') },
     on('news') && { id: PROFILE_TAB.NEWS, dica: 'federacao-pub-noticias', label: tk('Notícias') },
     on('calendar') && { id: PROFILE_TAB.AGENDA, dica: 'federacao-pub-agenda', label: tk('Agenda') },
-    (on('tournaments') || on('ranking') || isConfederation(federation) || on('referees') || on('selection') || on('grants') || on('host_bids')) && { id: PROFILE_TAB.COMPETITIONS, dica: 'federacao-pub-competicoes', label: tk('Competições') },
+    (on('tournaments') || on('ranking') || isConfederation(federation) || on('referees') || on('selection') || on('grants') || on('host_bids') || on('adapted')) && { id: PROFILE_TAB.COMPETITIONS, dica: 'federacao-pub-competicoes', label: tk('Competições') },
     (on('official_docs') || on('accounts') || hasGovernance(federation.governance)) && { id: PROFILE_TAB.DOCUMENTS, dica: 'federacao-pub-documentos', label: tk('Documentos') },
     on('elections') && { id: PROFILE_TAB.ELECTIONS, dica: 'federacao-pub-eleicoes', label: tk('Eleições') },
     (on('courses') || on('coach_licenses')) && { id: PROFILE_TAB.COURSES, dica: 'federacao-pub-cursos', label: tk('Cursos') },

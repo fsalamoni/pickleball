@@ -67,6 +67,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
           <li><strong className="text-ink">{t('Categoria de gênero:')}</strong> {GENDER_CATEGORY_LABELS[modality.gender_category]}</li>
           <li><strong className="text-ink">{t('Faixa etária:')}</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-gray-500">{t('(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)')}</span></li>
           <li><strong className="text-ink">{t('Nível recomendado:')}</strong> {SKILL_LEVEL_LABELS[modality.skill_level]}</li>
+          {modality.adapted_class && <li><strong className="text-ink">{t('Pickleball adaptado:')}</strong> {modality.adapted_class_label || modality.adapted_class} <span className="text-xs text-gray-500">{t('(para atletas classificados nesta categoria pela federação; peça a classificação na aba "Minha filiação" da federação)')}</span></li>}
           <li className="flex items-center gap-1"><Wallet className="h-3 w-3" /> <strong className="text-ink">{t('Taxa de inscrição:')}</strong> {fee > 0 ? formatBRL(fee) : t('Gratuita')}</li>
         </ul>
       </section>

@@ -4710,7 +4710,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config', 'ambassadors_public'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config', 'ambassadors_public', 'adapted_classes'];
     }
 
     match /federations/{fedId} {
@@ -5180,6 +5180,15 @@ service cloud.firestore {
     }
     match /federation_incentive_projects/{id} {
       allow read: if fedAcc(od().federation_id);
+      allow write: if false;
+    }
+    // PICKLEBALL ADAPTADO (rodada 3, Bloco 4b): a classificação do atleta
+    // (categoria, revisão, o caminho do laudo) só a pessoa e a comissão
+    // (competições/admin) leem — o laudo em si fica numa pasta fechada do
+    // Storage e abre pela função. Só o servidor grava (`federationAdapted`);
+    // as categorias da federação (`adapted_classes`) estão em `fedLocked()`.
+    match /federation_adapted_classifications/{id} {
+      allow read: if isOwner(od().user_id) || fedAny(od().federation_id, ['competitions', 'admin']);
       allow write: if false;
     }
     // REDE E DESENVOLVIMENTO (rodada 3, Bloco 3): a candidatura e o mandato de

@@ -3717,3 +3717,97 @@ régua mora em `domain/referees.js` com cópia em
   `federacao-arbitragem-progressao`.
 - **Guia:** `federacao-arbitragem` (passo da seção cita as regras novas).
 - **Artigo:** `federacao-arbitragem` (avaliador, progressão, vencimento).
+
+## 41. Pickleball adaptado: categorias, classificação e laudo (rodada 3, Bloco 4b, 2026-10-23)
+
+Módulo novo `adapted` ("Pickleball adaptado"), ligável em Configurações →
+Módulos. Uma coleção nova, `federation_adapted_classifications/{fed}_{uid}`,
+gravada só por `federationAdapted` (`functions/federationAdapted.js`). A régua
+mora em `domain/adapted.js` com cópia em `functions/federationAdaptedPolicy.js`
+(paridade em `federationAdapted.parity.test.js`).
+
+### 41.1 As categorias da federação
+
+- `federations.adapted_classes[] { id, label, description }`, até 10, travado
+  em `fedLocked()` — só o servidor grava (ação `classes_save`, equipe
+  `competitions`/`admin`).
+- Ausente, valem as três padrão (`DEFAULT_ADAPTED_CLASSES`): `wheelchair`
+  (cadeira de rodas), `standing` (em pé, deficiência física) e `intellectual`
+  (deficiência intelectual). O `id` nasce do nome (sem acento) e é gravado nas
+  classificações e nas modalidades: renomear mantém o código; tirar uma
+  categoria não apaga quem já foi classificado nela.
+- **Central → Competições → Adaptado** (`AdaptedManager`): editor das
+  categorias e os pedidos, os classificados e o histórico. A seção
+  Competições aparece também só com este módulo, para quem vê competições.
+
+### 41.2 O pedido do atleta e a decisão da comissão
+
+- **Minha filiação → Pickleball adaptado** (`MyAdaptedClassification`, "Só
+  você vê"): o filiado **em dia** escolhe a categoria e envia o laudo médico
+  ou funcional (PDF, JPEG, PNG ou WebP, até 5 MB). O navegador sobe o arquivo
+  para a própria pasta `federacao/{uid}/`; o servidor (`request`) **move** o
+  arquivo para `federacao-laudos/{uid}/{fed}_{nome}.{ext}`, pasta que nenhum
+  cliente lê (catch-all do `storage.rules`), e apaga o original. Um pedido em
+  análise por vez; a comissão é avisada pelo sino.
+- A comissão decide (`decide`): **classificar** (categoria e data de revisão
+  opcional, depois de hoje) ou **recusar** com motivo (3+ letras). Quem pediu
+  não decide o próprio pedido. Classificar troca o laudo vigente e apaga o
+  antigo; recusar apaga o laudo do pedido e **mantém** a classificação que a
+  pessoa já tinha. **Cancelar** (`revoke`) exige motivo e apaga o laudo. O
+  atleta é avisado em cada caso.
+- O laudo abre só pelo servidor (`report_file`, base64): o próprio atleta ou a
+  comissão. Cada abertura da equipe vai para a auditoria
+  (`federation_adapted_report_view`).
+- O atleta pode **desistir** do pedido (`withdraw`): o laudo enviado é
+  apagado e a classificação anterior continua.
+- `classificationState` responde `active`, `expired`, `pending`, `expiring`
+  (30 dias) e `daysLeft`; pedido em análise não tira a classificação vigente.
+- **Varredura diária** (`federationAdapted.sweep`): avisa antes da revisão
+  (uma vez por data, `warned_for`) e quando ela passa (`expired_notified_for`).
+
+### 41.3 No torneio chancelado
+
+- `tournament_modalities.adapted_class` / `adapted_class_label` (opcionais;
+  ausente = não é adaptada). O seletor aparece no formulário da modalidade só
+  num torneio de federação com o módulo ligado (`useAdaptedOptions`); o valor
+  já gravado continua aparecendo mesmo sem a lista.
+- O cartão da modalidade mostra o selo "Adaptada: {categoria}" e, para quem
+  organiza, **"Conferir classificação"** (`check`, sem `contexto`): o servidor
+  aceita o criador do torneio, quem está em `tournament_admins` ou a comissão,
+  e devolve por inscrição ativa a situação de cada atleta (`ok`,
+  `other_class`, `expired`, `pending`, `missing`, `no_account`) — **nunca** o
+  laudo. Retirar ou manter a inscrição é decisão de quem organiza.
+- O resumo da modalidade para o atleta (`V2ModalityInfoContent`) diz que ela é
+  adaptada e onde pedir a classificação.
+
+### 41.4 Na página pública
+
+- A aba Competições mostra as categorias e como pedir (`AdaptedPublic`,
+  âncora `#fed-adaptado`). Nenhuma classificação é pública.
+
+### 41.5 Dados pessoais
+
+- O laudo é dado de saúde: fica em pasta fechada, só o titular e a comissão
+  abrem, pelo servidor, com auditoria.
+- Exclusão de conta: as classificações do titular são apagadas e a pasta
+  `federacao-laudos/{uid}/` sai do Storage. Exportação: sim
+  (`listMyAdaptedClassifications`, sem o arquivo).
+
+### 41.6 O que não pode regredir
+
+115. `federation_adapted_classifications` só o servidor grava; lê só o próprio
+     atleta e `competitions`/`admin` da federação (o financeiro não).
+116. O laudo nunca fica na pasta do atleta depois do pedido nem aparece para
+     quem organiza o torneio; a conferência devolve só a situação.
+117. Recusar ou desistir nunca tira a classificação vigente; quem pediu não
+     decide o próprio pedido.
+118. Os ids das categorias (`wheelchair`, `standing`, `intellectual` e os da
+     federação), `CLASS_STATUS` e `ADAPTED_CHECK` são gravados: nunca os
+     renomeie.
+
+### 41.7 Âncoras e guias
+
+- **Âncoras:** `federacao-aba-adaptado`, `federacao-adaptado`,
+  `federacao-adaptado-categorias`, `federacao-meu-adaptado`,
+  `federacao-modalidade-adaptada`, `federacao-pub-adaptado`.
+- **Guia:** `federacao-adaptado`. **Artigo:** `federacao-adaptado`.

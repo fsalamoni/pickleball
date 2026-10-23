@@ -152,7 +152,9 @@ Registro auditável de aceites legais (LGPD).
 Modalidade dentro de um torneio: `tournament_id`, formato
 (`single | doubles | americana/whist`), nível (iniciante→elite), categoria
 (gênero/idade), capacidade (até 500), taxa opcional, e o array `stages[]` com
-a configuração de cada FASE.
+a configuração de cada FASE. Opcionais do pickleball adaptado (`docs/50` §41):
+`adapted_class` (id da categoria adaptada da federação) e
+`adapted_class_label`; ausentes = modalidade não adaptada.
 
 #### `stages[]` — a configuração de cada fase
 
@@ -2303,6 +2305,21 @@ servidor grava. Leitura: os atletas do elenco (`athlete_uids`) e
 `federation_id ==` e `athlete_uids array-contains`, zero índice. Exclusão de
 conta: o atleta vira "Atleta removido" e sai de `athlete_uids`; exportação:
 sim (`listMyCupTeams`).
+
+### `federation_adapted_classifications/{fed}_{uid}` (NOVO — pickleball adaptado, `docs/50` §41)
+`federation_id`, `federation_acronym`, `user_id`, `name`, `status`
+(`pending|classified|declined|revoked`), `class_id`, `class_label`,
+`valid_until` (ISO, opcional), `classified_at`, `report { path, name, size,
+content_type }` (laudo vigente, em `federacao-laudos/{uid}/`), `request {
+class_id, class_label, note, report, at_ms }` (pedido em análise),
+`decision { decision, note, by, at_ms }`, `warned_for`, `expired_notified_for`,
+`history[]` (últimos 30), `created_at_ms`, `updated_at_ms`. Só o servidor
+grava (`federationAdapted`). Leem o próprio atleta e `competitions`/`admin`
+da federação. Consultas `user_id ==` e `federation_id ==`, zero índice.
+Exclusão de conta: apagada, com a pasta `federacao-laudos/{uid}/`;
+exportação: sim (`listMyAdaptedClassifications`). Em `federations`, o campo
+opcional `adapted_classes[] { id, label, description }` (até 10, em
+`fedLocked()`; ausente = as três padrão).
 
 ### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
 `conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,

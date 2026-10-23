@@ -216,6 +216,7 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_coach_licenses: ['listMyCoachLicenses'],
   federation_safeguarding: ['listMySafeguarding'],
   federation_ambassadors: ['listMyAmbassadorships'],
+  federation_adapted_classifications: ['listMyAdaptedClassifications'],
   federation_cup_teams: ['listMyCupTeams'],
   federation_election_voters: ['listMyElectionVoters'],
   federation_candidacies: ['listMyCandidacies'],

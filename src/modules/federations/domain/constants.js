@@ -58,6 +58,7 @@ export const FED_COLLECTIONS = Object.freeze({
   incentiveProjects: 'federation_incentive_projects',
   ambassadors: 'federation_ambassadors',
   clubSeals: 'federation_club_seals',
+  adaptedClassifications: 'federation_adapted_classifications',
   hostBids: 'federation_host_bids',
   hostEntries: 'federation_host_entries',
   hostScores: 'federation_host_scores',
@@ -249,6 +250,7 @@ export const FED_MODULE = Object.freeze({
   CLUB_SEAL: 'club_seal',
   HOST_BIDS: 'host_bids',
   FEDERATION_CUP: 'federation_cup',
+  ADAPTED: 'adapted',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -279,6 +281,7 @@ export const FED_MODULE_META = Object.freeze({
   host_bids: { label: tk('Edital de sede'), description: tk('A federação publica o campeonato que precisa de sede, com critérios e pesos. Clubes e arenas filiados mandam a carta de intenção, os escolhidos mandam a proposta, a comissão dá notas e o resultado sai publicado.'), status: 'available', central: tk('Seleção e editais → Sedes'), tab: 'sedes', page: tk('Aba Competições: os editais de sede e o resultado') },
   federation_cup: { label: tk('Copa das Federações'), description: tk('Só da confederação: abre a competição entre as estaduais, com categorias e tamanho do elenco. Cada estadual inscreve os filiados em dia e a confederação aprova ou devolve.'), status: 'available', confederationOnly: true, central: tk('Rede nacional → Copa'), tab: 'copa', page: tk('Aba Competições: a Copa e os elencos aprovados') },
   incentive_projects: { label: tk('Lei de Incentivo ao Esporte'), description: tk('Os projetos incentivados: valor aprovado, prazo de captação, cada aporte de patrocinador ou doador e a prestação de contas, com os aportes entrando sozinhos nas contas.'), status: 'available', central: tk('Certidões e incentivo → Lei de Incentivo'), tab: 'lei-incentivo', page: tk('Não aparece na página: é controle interno') },
+  adapted: { label: tk('Pickleball adaptado'), description: tk('Categorias adaptadas (cadeira de rodas, em pé, deficiência intelectual ou as da federação) nas modalidades dos torneios chancelados e a classificação do atleta pela comissão, com o laudo guardado como documento privado.'), status: 'available', central: tk('Competições → Adaptado'), tab: 'adaptado', page: tk('Aba Competições: as categorias adaptadas') },
   safeguarding: { label: tk('Proteção de menores'), description: tk('Quem trabalha com menores precisa de curso de proteção e certidão de antecedentes em dia; a ouvidoria ganha a denúncia de proteção, prioritária e de acesso restrito.'), status: 'available', central: tk('Proteção de menores'), tab: 'protecao', page: tk('Aba Contato: a denúncia de proteção de menor') },
 });
 

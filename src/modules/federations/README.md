@@ -228,6 +228,12 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   pela ficha da Central), progressão de nível (`promotionProgress`, pedido do
   árbitro, decisão da equipe, `level_history`) e vencimento da credencial
   configurável (`credentialStanding`), barrado no servidor e na varredura.
+- **Pickleball adaptado** (`docs/50` §41, módulo `adapted`): categorias da
+  federação (`adaptedClassesOf`, três padrão), pedido do filiado com laudo
+  (movido pelo servidor para `federacao-laudos/`), decisão da comissão
+  (`federationAdapted`), revisão com aviso (`classificationState`) e a
+  conferência dos inscritos na modalidade adaptada (`adaptedPlayerCheck`),
+  sem expor o laudo. Telas em `src/v2/components/federations/adapted/`.
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da
