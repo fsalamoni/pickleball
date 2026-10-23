@@ -34,6 +34,7 @@ import { CHARGE_ORIGIN_LABELS } from '@/modules/federations/domain/constants';
 import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDialog } from '../FedMemberExtras';
 import FedElectionNotice from '../elections/FedElectionNotice';
 import FedMyPoints from './FedMyPoints';
+import MyAmbassadorship from '../development/MyAmbassadorship';
 import { MemberRegularity } from '../FedRegularity';
 import { t, tn } from '@/core/i18n';
 
@@ -200,6 +201,7 @@ export function FedMyMembership({ federation, plans }) {
         <FedPayments charges={(s.cq.data || []).filter((c) => c.federation_id === federation.id && c.status === CHARGE_STATUS.PAID)} onRecibo={setRecibo} />
         <FedMySanctions federationId={federation.id} />
         <FedMyPoints federation={federation} uid={user?.uid} />
+        <MyAmbassadorship federation={federation} memberActive={st.status === MEMBER_STATUS.ACTIVE} />
       </V2Surface>
       <aside className="space-y-3 lg:col-span-4">
         <V2Surface variant="compacto" className="space-y-2 p-4">

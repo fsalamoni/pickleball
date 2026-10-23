@@ -1121,6 +1121,33 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-embaixadores-selo',
+      flags: ['federations'],
+      guias: ['federacao-embaixadores-selo'],
+      title: tk('Embaixadores regionais e selo de clube certificado'),
+      summary: tk('Filiados que representam a federação numa região, e o selo que clubes e arenas ganham ao cumprir os critérios da federação.'),
+      keywords: ['federação', 'embaixador', 'região', 'código de conduta', 'relatório', 'selo', 'clube certificado', 'certificação', 'arena', 'critérios'],
+      blocks: [
+        p(tk('Com os módulos "Embaixadores regionais" e "Selo de clube certificado" ligados, a Central ganha a seção "Rede e desenvolvimento". A secretaria e a administração cuidam dela.')),
+        steps(
+          tk('REGRAS — Rede e desenvolvimento → Embaixadores → Regras do programa: abrir ou fechar as candidaturas, de quantos em quantos meses vem o relatório e o código de conduta. Mudar o texto do código pede a cada embaixador que aceite de novo.'),
+          tk('CANDIDATURA — o filiado em dia toca em "Quero ser embaixador" na aba "Minha filiação", diz a região, conta por que quer e aceita o código de conduta.'),
+          tk('NOMEAÇÃO — na Central, "Nomear": a região que aparece na página e, se quiser, o fim do mandato. A filiação em dia e, se a federação exige, a proteção de menores são conferidas na hora. Ninguém nomeia a si mesmo.'),
+          tk('RELATÓRIO — o embaixador é lembrado quando o relatório vence e manda pela área dele. A equipe lê na Central; atrasado aparece em destaque.'),
+          tk('SELO — Rede e desenvolvimento → Selo de clubes → Regras do selo: o nome, a validade em meses e os critérios, cada um obrigatório ou opcional.'),
+          tk('PEDIDO — quem gere um clube ou arena filiado pede pelo cartão "Federação" da organização, mandando explicação ou arquivo para cada critério.'),
+          tk('DECISÃO — a equipe abre as evidências, marca o que atende e concede, recusa (com o motivo) ou, mais tarde, cassa. Quem gere a organização não decide o próprio selo.'),
+        ),
+        list(
+          tk('PÁGINA PÚBLICA — os embaixadores aparecem na Visão geral com nome, foto e região, nunca com contato. O selo em dia aparece ao lado do nome em "Clubes e arenas".'),
+          tk('CONFERÊNCIA AUTOMÁTICA — para arena, a plataforma confere sozinha dois critérios: ter sediado torneio chancelado nos últimos 12 meses e ter professor com licença da federação em dia.'),
+          tk('VALIDADE — 30 dias antes de vencer, quem gere a organização é avisado para pedir a renovação; vencido, o selo sai da página sozinho.'),
+          tk('ARQUIVOS — a evidência fica na pasta de quem enviou e só a equipe da federação a abre.'),
+        ),
+        tip(tk('Comece por poucos critérios que a federação consegue conferir de verdade: proteção de menores e professor licenciado.')),
+      ],
+    },
+    {
       id: 'federacao-confederacao',
       flags: ['federations'],
       guias: ['federacao-confederacao'],

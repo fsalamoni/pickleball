@@ -69,7 +69,7 @@ describe('relatório de proteção da infância', () => {
       { kind: 'conduct', status: 'open', created_at_ms: Date.UTC(2026, 5, 1) },
     ];
     const r = safeguardingAnnualReport({ rows, reports, year: 2026 });
-    expect(r.staff).toEqual({ people: 3, required: 2, cleared: 1, pendingReview: 1, trainingOk: 2, backgroundOk: 1, byRole: { coach: 2, referee: 1, director: 0, staff: 1 } });
+    expect(r.staff).toEqual({ people: 3, required: 2, cleared: 1, pendingReview: 1, trainingOk: 2, backgroundOk: 1, byRole: { coach: 2, referee: 1, director: 0, staff: 1, ambassador: 0 } });
     expect(r.reports).toEqual({ received: 2, open: 1, inReview: 0, closed: 1, anonymous: 1 });
     expect(JSON.stringify(r)).not.toMatch(/name/);
     expect(safeguardingAnnualReport({ year: 2026 })).toEqual({ year: 2026, staff: null, reports: null });

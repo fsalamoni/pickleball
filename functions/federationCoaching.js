@@ -117,7 +117,7 @@ async function refreshClearance(ctx, fed, uid) {
   return s.until;
 }
 
-const PAPEL = { coach: 'professor', referee: 'árbitro', director: 'diretor de torneio', staff: 'equipe' };
+const PAPEL = { coach: 'professor', referee: 'árbitro', director: 'diretor de torneio', staff: 'equipe', ambassador: 'embaixador' };
 
 /** O que impede a pessoa de trabalhar com menores neste papel (`null` = nada). */
 async function clearanceBlocker(ctx, fed, uid, role) {
@@ -463,7 +463,8 @@ async function sgOverview(ctx, actor, data, c) {
   exigeProtecao(c);
   const { fed, hoje, sgRules: regra } = c;
   const daFed = (col) => ctx.db.collection(col).where('federation_id', '==', fed.id).get();
-  const [lics, refs, creds, staff, recs] = await Promise.all([daFed(LIC), daFed('federation_referees'), daFed(f.C.credentials), daFed(f.C.staff), daFed(SG)]);
+  const mods = fed.modules || {};
+  const [lics, refs, creds, staff, recs, ambs] = await Promise.all([daFed(LIC), daFed('federation_referees'), daFed(f.C.credentials), daFed(f.C.staff), daFed(SG), mods.ambassadors === true ? daFed('federation_ambassadors') : null]);
   const pessoas = new Map();
   const add = (uid, role, name, photo) => {
     if (!uid) return;
@@ -473,7 +474,6 @@ async function sgOverview(ctx, actor, data, c) {
     if (!p.name && name) p.name = texto(name, 120);
     if (!p.photo_url && photo) p.photo_url = texto(photo, 500);
   };
-  const mods = fed.modules || {};
   if (mods.coach_licenses === true) lics.docs.map((d) => d.data()).filter((l) => ['pending', 'active'].includes(l.status)).forEach((l) => add(l.user_id, 'coach', l.name, l.photo_url));
   refs.docs.map((d) => d.data()).filter((r) => r.status === 'active').forEach((r) => {
     add(r.user_id, 'referee', r.name, r.photo_url);
@@ -481,6 +481,8 @@ async function sgOverview(ctx, actor, data, c) {
   });
   const credList = creds.docs.map((d) => d.data());
   credList.filter((x) => x.kind === 'director' && P.credentialValid(x, hoje)).forEach((x) => add(x.user_id, 'director', x.user_name, x.photo_url));
+  // Embaixadores (rodada 3, Bloco 3): candidatos e nomeados entram no quadro de quem trabalha com menores.
+  if (ambs) ambs.docs.map((d) => d.data()).filter((a) => ['applied', 'appointed'].includes(a.status)).forEach((a) => add(a.user_id, 'ambassador', a.user_name, a.photo_url));
   if (regra.required_for.includes('staff')) staff.docs.map((d) => d.data()).forEach((s) => add(s.user_id, 'staff', s.user_name, s.photo_url));
   const porUid = new Map(recs.docs.map((d) => [d.data().user_id, d.data()]));
   porUid.forEach((r, uid) => add(uid, null, r.name, r.photo_url));

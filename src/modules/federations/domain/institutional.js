@@ -220,7 +220,7 @@ export function safeguardingAnnualReport({ rows, reports, year } = {}) {
       cleared: exigidos.filter((r) => r.ok).length, pendingReview: rows.filter((r) => r.pending).length,
       trainingOk: exigidos.filter((r) => r.training_ok).length,
       backgroundOk: exigidos.filter((r) => r.background?.valid === true).length,
-      byRole: { coach: conta(rows, 'coach'), referee: conta(rows, 'referee'), director: conta(rows, 'director'), staff: conta(rows, 'staff') },
+      byRole: { coach: conta(rows, 'coach'), referee: conta(rows, 'referee'), director: conta(rows, 'director'), staff: conta(rows, 'staff'), ambassador: conta(rows, 'ambassador') },
     };
   })() : null;
   const denuncias = Array.isArray(reports) ? (() => {

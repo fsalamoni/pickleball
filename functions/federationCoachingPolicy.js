@@ -114,8 +114,8 @@ function badgeOf(lic, fed, hoje) {
 
 /* ---------------------------------------------------- proteção de menores -- */
 
-const SG_ROLES = Object.freeze(['coach', 'referee', 'director', 'staff']);
-const SG_DEFAULT_REQUIRED = Object.freeze(['coach', 'referee', 'director']);
+const SG_ROLES = Object.freeze(['coach', 'referee', 'director', 'staff', 'ambassador']);
+const SG_DEFAULT_REQUIRED = Object.freeze(['coach', 'referee', 'director', 'ambassador']);
 const BACKGROUND_STATUS = Object.freeze({ PENDING: 'pending', VALID: 'valid', REJECTED: 'rejected', REVOKED: 'revoked' });
 const SG_LIMITS = Object.freeze({ MONTHS_MIN: 1, MONTHS_MAX: 60, MONTHS_DEFAULT: 12, NOTE_MAX: 500, REASON_MIN: 5 });
 const SG_FOREVER = '9999-12-31';

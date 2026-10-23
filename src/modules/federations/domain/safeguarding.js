@@ -17,13 +17,13 @@ import { addMonthsISO } from './membership.js';
 import { addDaysISO } from './coachLicenses.js';
 
 /** Quem trabalha com menores. */
-export const SG_ROLE = Object.freeze({ COACH: 'coach', REFEREE: 'referee', DIRECTOR: 'director', STAFF: 'staff' });
+export const SG_ROLE = Object.freeze({ COACH: 'coach', REFEREE: 'referee', DIRECTOR: 'director', STAFF: 'staff', AMBASSADOR: 'ambassador' });
 export const SG_ROLES = Object.freeze(Object.values(SG_ROLE));
 export const SG_ROLE_LABELS = Object.freeze({
-  coach: tk('Professores licenciados'), referee: tk('Árbitros do quadro'), director: tk('Diretores de torneio'), staff: tk('Equipe da federação'),
+  coach: tk('Professores licenciados'), referee: tk('Árbitros do quadro'), director: tk('Diretores de torneio'), staff: tk('Equipe da federação'), ambassador: tk('Embaixadores regionais'),
 });
-export const SG_ROLE_SHORT = Object.freeze({ coach: tk('Professor'), referee: tk('Árbitro'), director: tk('Diretor de torneio'), staff: tk('Equipe') });
-export const SG_DEFAULT_REQUIRED = Object.freeze(['coach', 'referee', 'director']);
+export const SG_ROLE_SHORT = Object.freeze({ coach: tk('Professor'), referee: tk('Árbitro'), director: tk('Diretor de torneio'), staff: tk('Equipe'), ambassador: tk('Embaixador') });
+export const SG_DEFAULT_REQUIRED = Object.freeze(['coach', 'referee', 'director', 'ambassador']);
 
 export const BACKGROUND_STATUS = Object.freeze({ PENDING: 'pending', VALID: 'valid', REJECTED: 'rejected', REVOKED: 'revoked' });
 export const BACKGROUND_STATUS_LABELS = Object.freeze({

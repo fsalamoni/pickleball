@@ -7,7 +7,7 @@ import {
   listAffiliationsRequestedBy, listFederationsCreatedBy, listMyAcervoFollows, listMyCharges, listMyFederationComments, listMyFederationInvites, listMyCredentials, listMyDependents, listMyDocuments, listMyEnrollments, listMyMemberships,
   listMyMembersPrivate, listMyAssignments, listMyIncidents, listMyRefereeRosters, listMyReports, listMySanctions, listMyStaffRoles, listMyTransfers, listResultsWith,
   listMyCandidacies, listMyElectionEndorsements, listMyElectionVoters, listMyFederationPoints, listMyFinalInvites, listMyDirectedReports,
-  listMyCallupInvites, listMyGrantApplications, listMyCoachLicenses, listMySafeguarding,
+  listMyCallupInvites, listMyGrantApplications, listMyCoachLicenses, listMySafeguarding, listMyAmbassadorships,
 } from './federationService.js';
 
 /** @returns {Promise<{ federations: object, incomplete: string[] }>} */
@@ -35,6 +35,7 @@ export async function collectFederationExport(uid) {
     ['referee_rosters', 'Seu cadastro nos quadros de arbitragem', () => listMyRefereeRosters(uid)],
     ['referee_assignments', 'Suas escalas de arbitragem (convocações, súmulas, avaliações e diárias)', () => listMyAssignments(uid)],
     ['coach_licenses', 'Suas licenças de professor (nível, validade, pedidos e decisões)', () => listMyCoachLicenses(uid)],
+    ['ambassadorships', 'Suas candidaturas e mandatos de embaixador regional (motivação, região, relatórios, aceite do código de conduta)', () => listMyAmbassadorships(uid)],
     ['safeguarding', 'Sua proteção de menores (curso, conferência da certidão e validade)', () => listMySafeguarding(uid)],
     ['election_voters', 'Eleições em que você está no colégio eleitoral (se votou — nunca em quem: o voto é secreto)', () => listMyElectionVoters(uid)],
     ['candidacies', 'Chapas eleitorais de que você faz parte', () => listMyCandidacies(uid)],

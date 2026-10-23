@@ -3429,3 +3429,96 @@ relatório e publicá-lo no acervo é decisão da federação.
   `federacao-projeto-novo`.
 - **Guia:** `federacao-certidoes-incentivo`.
 - **Artigo:** `federacao-certidoes-incentivo`.
+
+## 38. Embaixadores regionais e selo de clube certificado (rodada 3, Bloco 3a, 2026-10-23)
+
+Duas ferramentas para a federação crescer fora da capital, cada uma com o seu
+módulo em `FED_MODULE_META`, desligado por padrão: `ambassadors`
+("Embaixadores regionais") e `club_seal` ("Selo de clube certificado"). Com
+qualquer um deles ligado, a Central ganha a seção **Rede e desenvolvimento**
+(`desenvolvimento`), com as abas `embaixadores` e `selo-clubes`. Quem cuida é
+a secretaria (permissão `members`) e o admin. As **regras** dos dois programas
+(`federations.ambassador_rules` e `federations.club_seal`) o admin grava
+direto, com auditoria; todo o resto passa pela função `federationDevelopment`.
+
+### 38.1 Embaixadores (`federation_ambassadors/{fed}_{uid}`)
+
+- **Regras:** candidaturas abertas ou fechadas, relatório a cada 1, 3, 6 ou 12
+  meses e o código de conduta (texto da federação; em branco, vale o padrão).
+  Mudar o texto sobe a `conduct_version` (`ambassadorRulesToSave`), e cada
+  embaixador nomeado vê "Falta aceitar o código novo" até aceitar (`amb_accept`).
+- **Candidatura:** só filiado em dia, pela aba "Minha filiação" da página da
+  federação (`MyAmbassadorship`). Ele diz a região, a motivação (mínimo de 20
+  letras) e aceita o código; ficam registrados a versão e o momento.
+  Desistir apaga a candidatura.
+- **Nomeação:** a equipe nomeia com a região que vai a público e, se quiser, o
+  fim do mandato. Na hora, o servidor confere a filiação em dia e a **proteção
+  de menores** (`clearanceBlocker(…, 'ambassador')`). O papel `ambassador`
+  entrou em `safeguarding.required_for` e vem marcado por padrão. **Ninguém
+  nomeia a si mesmo.** Recusar e encerrar exigem motivo e avisam a pessoa.
+- **Relatório:** vence `report_months` depois da nomeação e de cada envio
+  (`next_report_due`). A varredura avisa o embaixador uma vez por vencimento
+  (`warned_for`). A equipe lê na Central, e o atrasado aparece em destaque.
+- **Fim do mandato:** com `term_until` vencido, a varredura encerra o mandato
+  e agradece. A pessoa também pode deixar o mandato; os relatórios ficam.
+- **Página pública:** a lista `federations.ambassadors_public` (nome, foto,
+  região e `key` = `rosterKey(id)`, **sem uid nem contato**, até 60) é refeita
+  pelo servidor a cada nomeação, edição ou encerramento e aparece na Visão
+  geral (`AmbassadorsPublic`). O campo está em `fedLocked()`.
+
+### 38.2 Selo de clube certificado (`federation_club_seals/{fed}_{kind}_{org}`)
+
+- **Regras:** o nome do selo, a validade (6 a 36 meses) e até 12 critérios,
+  cada um obrigatório ou opcional. O critério pode ter **conferência
+  automática**, que só vale para arena porque é o que a plataforma sabe dela:
+  `hosted_event` (sediou torneio chancelado nos últimos 12 meses) e
+  `licensed_coach` (tem professor de `arena_coaches` com licença da federação
+  em dia). Mudar os critérios não mexe nos selos já concedidos, porque cada
+  pedido guarda uma cópia (`criteria`, `seal_name`).
+- **Pedido:** quem gere o clube ou a arena **filiado** (`federation_affiliations`
+  aprovado) pede pelo cartão "Federação" da organização (`OrgSealBlock`). Para
+  cada critério manda uma explicação e/ou um arquivo. O arquivo fica em
+  `federacao/{uid}/` de quem envia e abre pela ação `seal_file`, para a equipe
+  (com auditoria) e para quem gere a organização. A renovação abre 60 dias
+  antes do fim; retirar a renovação mantém o selo até a validade.
+- **Decisão:** a equipe vê as evidências, refaz a conferência automática
+  (`seal_recheck`), marca o que atende e concede. Faltando critério
+  obrigatório, o servidor recusa (`sealDecision`). Também pode recusar ou
+  cassar, sempre com motivo. **Quem gere a organização não decide o próprio
+  selo** (`gereOrg`).
+- **Na página:** o selo concedido é copiado para a filiação
+  (`federation_affiliations.seal = { name, valid_until, granted_at }`), que a
+  aba "Clubes e arenas" já lê. Ao lado do nome aparece o selo enquanto
+  `valid_until ≥ hoje` (`affiliationSealValid`). Cassar limpa a cópia. O
+  pedido de filiação feito pelo navegador **não pode trazer `seal`** (regra).
+- **Aviso de vencimento:** 30 dias antes, a varredura avisa quem pediu, uma
+  vez por validade (`warned_until`), dizendo se a renovação já está em análise.
+
+### 38.3 O que não pode regredir
+
+100. `federation_ambassadors` e `federation_club_seals` **só o servidor
+     grava** (`functions/federationDevelopment.js`; régua em
+     `domain/development.js` com cópia e paridade em
+     `functions/federationDevelopmentPolicy.js`). Leitura: a própria pessoa
+     (ou quem gere a organização), a secretaria e o admin.
+101. A lista pública de embaixadores e o selo copiado na filiação **nunca
+     levam uid nem contato**. `ambassadors_public` está em `fedLocked()`, e
+     `seal` só o servidor grava na filiação.
+102. Ninguém nomeia a si mesmo, e quem gere a organização não decide o próprio
+     selo. A proteção de menores do embaixador é conferida na nomeação.
+103. Os status (`applied|appointed|rejected|ended` e
+     `applied|granted|rejected|revoked`), os ids dos critérios e os valores
+     `?aba=embaixadores` e `?aba=selo-clubes` são gravados ou contrato de link:
+     nunca os renomeie.
+104. Na exclusão de conta, a candidatura/mandato sai (e a pessoa sai da lista
+     pública). O pedido de selo é da organização: fica, e só os arquivos da
+     pasta de quem enviou somem com ela.
+
+### 38.4 Âncoras e guias
+
+- **Âncoras:** `federacao-secao-desenvolvimento`, `federacao-aba-embaixadores`,
+  `federacao-aba-selo-clubes`, `federacao-embaixadores`,
+  `federacao-selo-clubes`, `federacao-meu-embaixador`, `org-selo-clube`,
+  `federacao-pub-embaixadores` e `federacao-pub-selo`.
+- **Guia:** `federacao-embaixadores-selo`.
+- **Artigo:** `federacao-embaixadores-selo`.

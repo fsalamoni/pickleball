@@ -32,6 +32,7 @@ import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip,
 import { safeHttpUrl } from '@/core/domain/externalUrl';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import { t, tn } from '@/core/i18n';
+import AmbassadorsPublic from '../development/AmbassadorsPublic';
 
 // A aba Eleições (edital, chapas, voto e a área da comissão) baixa só quando abre.
 const ElectionsPublic = lazy(() => import('../elections/ElectionsPublic'));
@@ -117,6 +118,7 @@ function Visao({ federation: f, plansQ, memberOf, irPara, tabs, planAction }) {
         <FedPromosSection federation={f} />
         {tem(PROFILE_TAB.NEWS) && <FedNewsSection federation={f} memberOf={memberOf} limite={3} onVerTodas={() => irPara(PROFILE_TAB.NEWS)} />}
         {tem(PROFILE_TAB.AGENDA) && <FedAgendaBlock federation={f} limite={3} />}
+        <AmbassadorsPublic federation={f} />
         <FedSponsorsStrip federation={f} />
       </div>
       <aside className="space-y-3 lg:col-span-4">
