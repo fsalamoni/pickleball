@@ -736,9 +736,18 @@ async function chargeConfirm(ctx, actor, data) {
   const charge = { id: snap.id, ...snap.data() };
   const fed = await federacao(ctx, charge.federation_id);
   await exigePerm(ctx, fed.id, actor, 'finance');
+  return fecharCobranca(ctx, actor, { fed, snap, charge, action: data.action, note: texto(data.note, 300) });
+}
+
+/**
+ * Os EFEITOS de confirmar/cancelar uma cobrança, por origem — um caminho só,
+ * usado pelo financeiro (`chargeConfirm`) e pela baixa automática do Pix
+ * (`federationPayments.js`, ator `gateway`). Quem chama confere a permissão.
+ */
+async function fecharCobranca(ctx, actor, { fed, snap, charge, action, note = '' }) {
+  const data = { action };
   if (!['open', 'declared'].includes(charge.status)) falha('failed-precondition', 'Esta cobrança já foi fechada.');
   const hoje = m.isoDateBR(ctx.now);
-  const note = texto(data.note, 300);
   // Cobrança de CURSO de quem não é filiado não tem `member_id` — `doc(null)` derrubava a função.
   const memberRef = charge.member_id ? ctx.db.collection(C.members).doc(charge.member_id) : null;
   if (!['confirm', 'cancel'].includes(data.action)) falha('invalid-argument', 'Ação desconhecida.');
@@ -929,7 +938,7 @@ async function verify(ctx, data) {
 }
 
 module.exports = {
-  FederationError, PERMS, REVIEW, LIVE, C, MINOR_AGE, review, membership, chargeConfirm, sweep, verify, idadeDe,
+  FederationError, PERMS, REVIEW, LIVE, C, MINOR_AGE, review, membership, chargeConfirm, fecharCobranca, sweep, verify, idadeDe,
   // Compartilhado com os módulos do PR 3 (`federationTransfers.js`, `federationCourses.js`, `federationDiscipline.js`, `federationSecretariat.js`).
   falha, texto, aviso, auditoria, flagLigada, staffPerms, exigePerm, federacao, publicada, staffIds, plano, novoCodigo, novoId, novaCobranca, destinatario, encerrarFiliacao, ativar, idadeDoMembro, exigeSemOutraFederacao,
 };

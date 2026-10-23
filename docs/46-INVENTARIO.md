@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 232 |
 | Blocos `match` (raiz + subcoleções) | 252 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 97 |
+| Cloud Functions exportadas | 99 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 7 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 9 |
-| Arquivos de teste (`*.test.js(x)`) | 818 |
+| Arquivos de teste (`*.test.js(x)`) | 820 |
 | Workflows do GitHub Actions | 7 |
 | Documentos/pastas em `docs/` | 56 |
 
@@ -361,6 +361,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `federationStaff` | federationCallable |  |
 | `federationAdminAccess` | federationCallable |  |
 | `federationAcervo` | federationCallable |  |
+| `federationPayments` | federationCallable |  |
 | `federationAgenda` | federationCallable |  |
 | `federationAccounts` | federationCallable |  |
 | `federationElections` | federationCallable |  |
@@ -399,6 +400,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `marketArenaStockSync` | gatilho Firestore | `arena_inventory_products/{productId}` |
 | `clientErrorReport` | onRequest |  |
 | `federationAgendaFeed` | onRequest |  |
+| `federationPixHook` | onRequest |  |
 | `messagingOnNotificationCreate` | gatilho Firestore | `notifications/{notifId}` |
 | `messagingQueue` | agendada | `every 10 minutes` |
 | `messagingAdmin` | chamável (callable) |  |

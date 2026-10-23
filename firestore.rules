@@ -4710,7 +4710,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config', 'ambassadors_public', 'adapted_classes'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config', 'ambassadors_public', 'adapted_classes', 'payment_gateway'];
     }
 
     match /federations/{fedId} {

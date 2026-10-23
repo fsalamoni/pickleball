@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chargeReceipt, canConfirmCharge, canDeclarePayment, chargeDueDate, chargePixPayload, chargeTxid, chargesCsv, financeSummary, isChargeOverdue, parseBrlCents, sortChargesForStaff } from './charges.js';
+import { chargeReceipt, canConfirmCharge, canDeclarePayment, chargeDueDate, chargePixPayload, chargeTxid, chargesCsv, financeSummary, gatewayOn, isChargeOverdue, parseBrlCents, sortChargesForStaff, usesGatewayPix } from './charges.js';
 
 const fed = { name: 'Federação Gaúcha', acronym: 'FGP', city: 'Porto Alegre', payment: { pix_key: 'a@b.co', receiver_name: 'FGP' } };
 
@@ -84,5 +84,23 @@ describe('chargeReceipt', () => {
     expect(r.amount).toMatch(/150,00/);
     expect(r.confirmedBy).toBe('Caio');
     expect(chargeReceipt({ id: 'x', status: 'paid', payer_name: 'Ana', member_name: 'Ana' }).member).toBe('');
+  });
+});
+
+describe('Pix com baixa automática (Bloco 6a)', () => {
+  const ligada = { ...fed, payment_gateway: { provider: 'mercadopago', enabled: true } };
+  const aberta = { id: 'c', payer_uid: 'ana', status: 'open', amount_cents: 100 };
+  it('só com o sinal do servidor ligado', () => {
+    expect(gatewayOn(ligada)).toBe(true);
+    expect(gatewayOn({ ...fed, payment_gateway: { enabled: false } })).toBe(false);
+    expect(gatewayOn(fed)).toBe(false);
+  });
+  it('só para quem paga, cobrança aberta/informada e com valor', () => {
+    expect(usesGatewayPix(aberta, ligada, 'ana')).toBe(true);
+    expect(usesGatewayPix({ ...aberta, status: 'declared' }, ligada, 'ana')).toBe(true);
+    expect(usesGatewayPix(aberta, ligada, 'ze')).toBe(false);
+    expect(usesGatewayPix({ ...aberta, status: 'paid' }, ligada, 'ana')).toBe(false);
+    expect(usesGatewayPix({ ...aberta, amount_cents: 0 }, ligada, 'ana')).toBe(false);
+    expect(usesGatewayPix(aberta, fed, 'ana')).toBe(false);
   });
 });

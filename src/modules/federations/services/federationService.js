@@ -1434,3 +1434,9 @@ export function uploadAcervoFile({ uid, file, onProgress }) {
       () => resolve({ name: String(file.name || 'arquivo').slice(0, 120), path, size: Number(file.size) || 0, content_type: file.type }));
   });
 }
+
+/**
+ * Pix com baixa automática (rodada 3, Bloco 6a — `functions/federationPayments.js`):
+ * `pix`/`check` (quem paga) e `gateway_status`/`gateway_save`/`gateway_off` (financeiro).
+ */
+export const federationPayments = (payload) => chamar('federationPayments', payload);

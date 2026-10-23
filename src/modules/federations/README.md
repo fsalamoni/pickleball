@@ -241,6 +241,12 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
   apólice cobrindo as datas (`certificateIssueError`, `federationInsurance`),
   com QR de verificação pública. Telas em
   `src/v2/components/federations/insurance/`.
+- **Pix com baixa automática** (`docs/50` §43, Bloco 6a): com a chave da
+  conta da federação no Mercado Pago ou no Asaas (Central → Configurações →
+  Recebimento, `FedPaymentGateway`), quem paga recebe o Pix do provedor
+  (`usesGatewayPix`, `useChargeGatewayPix`) e o aviso do provedor dá a baixa
+  pelo servidor (`functions/federationPayments.js`), conferindo o pagamento no
+  provedor. Sem chave, tudo como antes (Pix estático + "Já paguei").
 - **Aprovada não é pública**: pública = `approved` **e** `published == true`
   (ausente = oculta), a mesma régua na regra (`fedPublic`/`fedSees`), no
   cliente (`isFederationPublic`) e no servidor (`publicada`). Só o admin da

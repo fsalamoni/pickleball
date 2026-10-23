@@ -46,6 +46,20 @@ export function chargePixPayload(charge, federation) {
   });
 }
 
+/**
+ * A federação recebe pelo Pix com BAIXA AUTOMÁTICA (Bloco 6a)? O sinal é do
+ * servidor (`payment_gateway`, em `fedLocked()`); sem ele vale o Pix da chave.
+ */
+export function gatewayOn(federation) {
+  return federation?.payment_gateway?.enabled === true;
+}
+
+/** Quem paga recebe o Pix do provedor: cobrança aberta/informada, com valor. */
+export function usesGatewayPix(charge, federation, uid) {
+  return gatewayOn(federation) && !!uid && charge?.payer_uid === uid
+    && ['open', 'declared'].includes(charge?.status) && Number(charge?.amount_cents) > 0;
+}
+
 /** Vencimento padrão de uma cobrança criada em `fromISO`. */
 export function chargeDueDate(fromISO, dias = CHARGE_DUE_DAYS) {
   const base = new Date(`${fromISO}T12:00:00`);

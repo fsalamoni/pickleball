@@ -8,9 +8,9 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { CheckCircle2, Clock, QrCode } from 'lucide-react';
 import { CHARGE_STATUS, CHARGE_ORIGIN_LABELS } from '@/modules/federations/domain/constants';
-import { canDeclarePayment, chargePixPayload, formatBrlCents, isChargeOverdue } from '@/modules/federations/domain/charges';
-import { declarePayment } from '@/modules/federations/services/federationService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { canDeclarePayment, chargePixPayload, formatBrlCents, isChargeOverdue, usesGatewayPix } from '@/modules/federations/domain/charges';
+import { declarePayment, federationPayments } from '@/modules/federations/services/federationService';
+import { useChargeGatewayPix, useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { V2Button, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ChargeProofButton, ChargeProofField, temComprovante } from './ChargeProof';
@@ -19,9 +19,16 @@ import { t } from '@/core/i18n';
 import { ChargeStatusBadge, quando, useQrDataUrl } from './federationUi';
 
 export default function PixChargeBlock({ charge, federation, compact = false }) {
-  const payload = chargePixPayload(charge, federation);
-  const qr = useQrDataUrl(payload, { width: 280 });
   const { user } = useAuth();
+  // Bloco 6a: com o provedor da federação ligado, quem paga recebe o Pix DELE e a
+  // baixa é automática; o provedor falhando, vale o Pix da chave de sempre.
+  const automatico = !compact && usesGatewayPix(charge, federation, user?.uid);
+  const gw = useChargeGatewayPix(charge.id, { enabled: automatico });
+  const viaProvedor = automatico && gw.data?.mode === 'gateway';
+  const gerando = automatico && gw.isLoading;
+  const payload = viaProvedor ? gw.data.payload : (gerando ? null : chargePixPayload(charge, federation));
+  const qr = useQrDataUrl(payload, { width: 280 });
+  const conferir = useFederationMutation(() => federationPayments({ action: 'check', chargeId: charge.id }));
   const [nota, setNota] = useState('');
   const [arquivo, setArquivo] = useState(null);
   // Já informado sem comprovante: anexar depois mantém a observação que a pessoa deu.
@@ -29,7 +36,7 @@ export default function PixChargeBlock({ charge, federation, compact = false }) 
   const m = useFederationMutation(() => declarePayment(charge, { note: declarado ? charge.declared_note : nota, file: arquivo, uid: user?.uid }));
   const atrasada = isChargeOverdue(charge);
   const pago = charge.status === CHARGE_STATUS.PAID;
-  const semPix = !payload && !pago && charge.status !== CHARGE_STATUS.CANCELLED;
+  const semPix = !payload && !gerando && !pago && charge.status !== CHARGE_STATUS.CANCELLED;
   // Do dependente: quem paga é o responsável, e a cobrança diz de quem é (senão parece a própria).
   const para = charge.member_name && charge.member_name !== charge.payer_name ? charge.member_name : '';
   const instrucoes = String(federation?.payment?.instructions || '').trim();
@@ -55,6 +62,7 @@ export default function PixChargeBlock({ charge, federation, compact = false }) 
           {qr ? <img src={qr} alt={t('QR Pix da cobrança')} className="order-2 mx-auto h-44 w-44 rounded-2xl bg-white p-2 shadow-sm sm:order-1" /> : <span className="order-2 mx-auto flex h-44 w-44 items-center justify-center rounded-2xl bg-paper sm:order-1"><QrCode className="h-8 w-8 text-gray-500" aria-hidden="true" /></span>}
           <div className="order-1 space-y-2 text-sm sm:order-2">
             <p className="text-gray-700">{t('Pague pelo app do seu banco: copie o código "Pix copia e cola" ou leia o QR. O valor já vai preenchido.')}</p>
+            {viaProvedor && <p className="flex items-center gap-1.5 text-xs font-semibold text-green-700"><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />{t('Confirmação automática: pago o Pix, a cobrança fica paga sozinha.')}</p>}
             <CopyCodeButton code={payload} label={t('Copiar o código Pix copia e cola')} successMessage={t('Código Pix copiado. Cole no app do banco.')} className="max-w-full truncate" />
             <p className="text-xs text-gray-500">{t('Recebedor: {nome}', { nome: federation?.payment?.receiver_name || federation?.name })}</p>
           </div>
@@ -66,9 +74,23 @@ export default function PixChargeBlock({ charge, federation, compact = false }) 
           <p className="whitespace-pre-line">{instrucoes}</p>
         </div>
       )}
+      {gerando && !pago && <p className="text-sm text-gray-500" role="status">{t('Gerando o Pix…')}</p>}
+      {automatico && gw.data?.mode === 'paid' && <p className="text-sm text-green-700" role="status">{t('Recebemos o pagamento. A cobrança é atualizada em instantes.')}</p>}
       {semPix && <p className="text-sm text-amber-700">{t('A federação ainda não cadastrou a chave Pix. Fale com a secretaria para pagar.')}</p>}
 
-      {!compact && canDeclarePayment(charge) && (
+      {viaProvedor && (
+        <V2Button
+          type="button" size="sm" variant="secondary" disabled={conferir.isPending}
+          onClick={() => conferir.mutate(undefined, {
+            onSuccess: (r) => (r?.paid ? toast.success(t('Pagamento confirmado. Obrigado!')) : toast.info(t('Ainda não recebemos o pagamento. Assim que o banco confirmar, a cobrança fica paga sozinha.'))),
+            onError: (er) => toast.error(er.message),
+          })}
+        >
+          <CheckCircle2 className="h-4 w-4" />{conferir.isPending ? t('Conferindo…') : t('Já paguei — conferir agora')}
+        </V2Button>
+      )}
+
+      {!compact && !viaProvedor && !gerando && canDeclarePayment(charge) && (
         <form
           className="space-y-2"
           onSubmit={(e) => {
