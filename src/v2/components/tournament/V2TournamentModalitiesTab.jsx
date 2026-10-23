@@ -39,6 +39,7 @@ import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
 import TeamModalityConfig, { defaultTeamConfig } from '@/v2/components/tournament/TeamModalityConfig';
 import { normalizeTeamConfig } from '@/modules/tournament/domain/teamFormat';
 import { V2Badge, V2Button, V2EmptyState, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { AdaptedClassField, AdaptedModalityBadge, useAdaptedOptions } from '@/v2/components/federations/adapted/AdaptedModality';
 import { t, fmtLista } from '@/core/i18n';
 
 const PREVIEW_PLAYER_COUNT = 8;
@@ -63,6 +64,8 @@ const emptyForm = {
   notes: '',
   team_enabled: false,
   team_config: defaultTeamConfig(),
+  adapted_class: '',
+  adapted_class_label: '',
 };
 
 function buildFormState(modality) {
@@ -89,6 +92,8 @@ function buildFormState(modality) {
     play_start_time: modality.play_start_time || '',
     play_end_time: modality.play_end_time || '',
     notes: modality.notes || '',
+    adapted_class: modality.adapted_class || '',
+    adapted_class_label: modality.adapted_class_label || '',
   };
 }
 
@@ -101,6 +106,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
   const createMutation = useCreateModality(tournament.id);
   const updateMutation = useUpdateModality(tournament.id);
   const deleteMutation = useDeleteModality(tournament.id);
+  const adaptadas = useAdaptedOptions(tournament);
   const [open, setOpen] = useState(false);
   const [editingModality, setEditingModality] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -247,6 +253,9 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       notes: form.notes.trim() || null,
       // Equipes: grava a config quando marcado; senão null (limpa se desmarcado).
       team_config: teamOn ? form.team_config : null,
+      // Pickleball adaptado (federação com o módulo `adapted`): vazio = não é adaptada.
+      adapted_class: form.adapted_class || null,
+      adapted_class_label: form.adapted_class ? form.adapted_class_label || null : null,
     };
 
     try {
@@ -351,6 +360,11 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               </select>
             </div>
           </div>
+          {(adaptadas.length > 0 || form.adapted_class) && (
+            <div className="mt-4">
+              <AdaptedClassField options={adaptadas} value={form.adapted_class} label={form.adapted_class_label} onChange={(id, label) => setForm((f) => ({ ...f, adapted_class: id, adapted_class_label: label }))} />
+            </div>
+          )}
         </V2Surface>
 
         <V2Surface className="p-5 sm:p-6">
@@ -493,6 +507,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                     <V2Badge tone={m.team_config ? 'acid' : 'neutral'}>{m.team_config ? t('Equipes') : MODALITY_FORMAT_LABELS[m.format]}</V2Badge>
                     <V2Badge tone="neutral">{SKILL_LEVEL_LABELS[m.skill_level]}</V2Badge>
                     <V2Badge tone="neutral">{GENDER_CATEGORY_LABELS[m.gender_category]}</V2Badge>
+                    <AdaptedModalityBadge tournament={tournament} modality={m} canCheck={isAdmin} />
                   </div>
                   <h4 className="font-display text-lg font-bold text-ink">{m.name}</h4>
                   <div className="mt-2 space-y-1">

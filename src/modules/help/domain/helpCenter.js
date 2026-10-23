@@ -879,6 +879,29 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-adaptado',
+      flags: ['federations'],
+      guias: ['federacao-adaptado'],
+      title: tk('Pickleball adaptado: categorias, classificação e laudo'),
+      summary: tk('Modalidades adaptadas nos torneios chancelados (cadeira de rodas, em pé, deficiência intelectual) e a classificação do atleta pela comissão, com o laudo privado.'),
+      keywords: ['federação', 'adaptado', 'paralímpico', 'cadeira de rodas', 'deficiência', 'PcD', 'classificação', 'laudo', 'inclusão', 'acessibilidade'],
+      blocks: [
+        p(tk('Com o módulo "Pickleball adaptado" ligado (Configurações → Módulos), a aba Adaptado aparece em Competições para a equipe de competições e a presidência. Pedir, classificar, recusar e cancelar passam pelo servidor, que confere quem pode.')),
+        steps(
+          tk('CATEGORIAS — a federação começa com três (cadeira de rodas, em pé e deficiência intelectual) e pode renomear, descrever, tirar ou criar as suas, até dez. O código de cada uma fica gravado: renomear mantém quem já foi classificado.'),
+          tk('O PEDIDO — o filiado em dia abre a página da federação → Minha filiação → "Pickleball adaptado", escolhe a categoria e envia o laudo médico ou funcional (PDF ou foto, até 5 MB). A comissão é avisada pelo sino.'),
+          tk('A DECISÃO — na aba Adaptado, a comissão abre o laudo (cada abertura fica registrada), classifica com uma data de revisão opcional ou recusa com o motivo. Quem pediu não decide o próprio pedido.'),
+          tk('NO TORNEIO — no torneio chancelado, quem organiza marca a modalidade como adaptada e escolhe a categoria. "Conferir classificação" mostra a situação de cada inscrito (classificado, outra categoria, vencida, em análise ou sem classificação) sem mostrar o laudo.'),
+        ),
+        list(
+          tk('LAUDO PRIVADO — o arquivo sai da pasta do atleta para uma pasta fechada: só ele e a comissão abrem, pelo servidor. Reclassificar troca o laudo e apaga o antigo; cancelar ou recusar apaga o laudo do pedido.'),
+          tk('REVISÃO — a varredura diária avisa o atleta antes da data de revisão e quando ela passa. Pedido em análise não tira a classificação que a pessoa já tem.'),
+          tk('NA PÁGINA PÚBLICA — a aba Competições mostra as categorias adaptadas e como pedir. Ninguém de fora vê quem é classificado.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+      ],
+    },
+    {
       id: 'federacao-licencas',
       flags: ['federations'],
       guias: ['federacao-licencas', 'federacao-minha-licenca'],
@@ -2760,6 +2783,7 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Como a federação vende uniforme e material pelo Mercado?'), section: HELP_SECTION.ATHLETE, article: 'federacao-comunicacao' },
   { q: tk('Fui convocado para apitar. Onde confirmo e mando a súmula?'), section: HELP_SECTION.ATHLETE, article: 'federacao-arbitragem' },
   { q: tk('Como subo de nível na arbitragem da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-arbitragem' },
+  { q: tk('Jogo em cadeira de rodas. Como entro nas modalidades adaptadas?'), section: HELP_SECTION.ATHLETE, article: 'federacao-adaptado' },
   { q: tk('Como peço a licença de professor da federação e ganho o selo no perfil?'), section: HELP_SECTION.ATHLETE, article: 'federacao-licencas' },
   { q: tk('Onde denuncio um risco a criança ou adolescente na federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-protecao-menores' },
   { q: tk('Como a federação faz o orçamento e publica a prestação de contas?'), section: HELP_SECTION.ATHLETE, article: 'federacao-contas' },

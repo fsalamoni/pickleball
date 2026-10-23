@@ -35,6 +35,7 @@ import { FedCancelMembership, FedMemberDocuments, FedMySanctions, FedTransferDia
 import FedElectionNotice from '../elections/FedElectionNotice';
 import FedMyPoints from './FedMyPoints';
 import MyAmbassadorship from '../development/MyAmbassadorship';
+import MyAdaptedClassification from '../adapted/MyAdaptedClassification';
 import { MemberRegularity } from '../FedRegularity';
 import { t, tn } from '@/core/i18n';
 
@@ -202,6 +203,7 @@ export function FedMyMembership({ federation, plans }) {
         <FedMySanctions federationId={federation.id} />
         <FedMyPoints federation={federation} uid={user?.uid} />
         <MyAmbassadorship federation={federation} memberActive={st.status === MEMBER_STATUS.ACTIVE} />
+        <MyAdaptedClassification federation={federation} memberActive={st.status === MEMBER_STATUS.ACTIVE} />
       </V2Surface>
       <aside className="space-y-3 lg:col-span-4">
         <V2Surface variant="compacto" className="space-y-2 p-4">

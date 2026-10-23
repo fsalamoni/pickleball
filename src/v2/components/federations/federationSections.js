@@ -10,7 +10,7 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen, Network, MapPin } from 'lucide-react';
+import { Accessibility, ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen, Network, MapPin } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -139,13 +139,15 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         ...(modulo('discipline') ? [{ value: 'ouvidoria', label: tk('Ouvidoria'), icon: MessageSquareWarning }] : []),
       ],
     },
-    pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking') || residual.tournaments) && {
+    // Pickleball adaptado (rodada 3, Bloco 4b): a classificação é da comissão de competições e do admin.
+    ((pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || modulo('ranking') || residual.tournaments)) || (veCompeticoes && modulo('adapted'))) && {
       id: 'competicoes', grupo: 'atender', label: tk('Competições'), icon: Trophy, dica: 'federacao-secao-competicoes',
       tabs: [
-        ...(modulo('tournaments') || residual.tournaments ? [{ value: 'chancelas', label: tk('Chancelas'), icon: Trophy, dica: 'federacao-tab-chancelas' }] : []),
-        ...(modulo('tournaments') ? [{ value: 'resultados', label: tk('Resultados'), icon: ClipboardList, dica: 'federacao-tab-resultados' }] : []),
+        ...(pode(FED_PERMISSION.COMPETITIONS) && (modulo('tournaments') || residual.tournaments) ? [{ value: 'chancelas', label: tk('Chancelas'), icon: Trophy, dica: 'federacao-tab-chancelas' }] : []),
+        ...(pode(FED_PERMISSION.COMPETITIONS) && modulo('tournaments') ? [{ value: 'resultados', label: tk('Resultados'), icon: ClipboardList, dica: 'federacao-tab-resultados' }] : []),
         // Sem o módulo de ranking a aba segue existindo como "Categorias": é nela que se criam as categorias (FGP 1000 · G1) dos torneios.
-        ...(modulo('ranking') || modulo('tournaments') ? [{ value: 'ranking', label: modulo('ranking') ? tk('Ranking') : tk('Categorias'), icon: Medal, dica: 'federacao-tab-ranking' }] : []),
+        ...(pode(FED_PERMISSION.COMPETITIONS) && (modulo('ranking') || modulo('tournaments')) ? [{ value: 'ranking', label: modulo('ranking') ? tk('Ranking') : tk('Categorias'), icon: Medal, dica: 'federacao-tab-ranking' }] : []),
+        ...(veCompeticoes && modulo('adapted') ? [{ value: 'adaptado', label: tk('Adaptado'), icon: Accessibility, dica: 'federacao-aba-adaptado' }] : []),
       ],
     },
     // Seleção e editais: a equipe de competições prepara; o financeiro registra custos pagos e pagamentos dos editais.

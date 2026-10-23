@@ -44,6 +44,7 @@ vi.mock('@/v2/components/tournament/TeamModalityConfig', () => ({
   defaultTeamConfig: () => ({}),
 }));
 vi.mock('@/components/ui/confirm-dialog', () => ({ ConfirmDialog: () => null }));
+vi.mock('@/v2/components/federations/adapted/AdaptedModality', () => ({ useAdaptedOptions: () => [], AdaptedClassField: () => null, AdaptedModalityBadge: () => null }));
 
 const { toast } = await import('sonner');
 const { default: V2TournamentModalitiesTab } = await import('./V2TournamentModalitiesTab.jsx');

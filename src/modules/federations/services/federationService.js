@@ -426,6 +426,13 @@ export async function listMyAmbassadorships(uid) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/** As classificações da pessoa no pickleball adaptado (todas as federações) — Minha filiação e exportação. */
+export async function listMyAdaptedClassifications(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.adaptedClassifications), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 /** Os elencos da Copa das Federações em que a pessoa entrou (todas as confederações) — exportação. */
 export async function listMyCupTeams(uid) {
   if (!uid) return [];

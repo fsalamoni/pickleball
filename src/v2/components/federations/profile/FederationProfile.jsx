@@ -34,6 +34,7 @@ import { useHashScroll } from '@/v2/ui/useHashScroll';
 import { t, tn } from '@/core/i18n';
 import AmbassadorsPublic from '../development/AmbassadorsPublic';
 import { CupPublic, HostBidsPublic } from '../hosting/HostingPublic';
+import AdaptedPublic from '../adapted/AdaptedPublic';
 
 // A aba Eleições (edital, chapas, voto e a área da comissão) baixa só quando abre.
 const ElectionsPublic = lazy(() => import('../elections/ElectionsPublic'));
@@ -194,6 +195,7 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
             <FedGrantsBlock federation={f} meUid={meUid} />
             <HostBidsPublic federation={f} />
             <CupPublic federation={f} />
+            <AdaptedPublic federation={f} />
           </div>
         )}
         {aba === PROFILE_TAB.DOCUMENTS && (

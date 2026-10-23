@@ -64,6 +64,7 @@ const FedAnnualReportPanel = lazy(() => import('@/v2/components/federations/mana
 const FedManagementPanel = lazy(() => import('@/v2/components/federations/manage/FedManagementPanel'));
 const FedIntegrityPanel = lazy(() => import('@/v2/components/federations/manage/FedIntegrityPanel'));
 const FedDevelopmentPanel = lazy(() => import('@/v2/components/federations/manage/FedDevelopmentPanel'));
+const AdaptedManager = lazy(() => import('@/v2/components/federations/adapted/AdaptedManager'));
 const FedInsurancePanel = lazy(() => import('@/v2/components/federations/manage/FedInsurancePanel'));
 const FedInstitutionalPanel = lazy(() => import('@/v2/components/federations/manage/FedInstitutionalPanel'));
 const FedNationalPanel = lazy(() => import('@/v2/components/federations/manage/FedNationalPanel'));
@@ -221,7 +222,7 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'acervo' && tab !== 'comentarios' && <FedAcervoPanel federation={f} docsQ={docsQ} tab={tab} isAdmin={admin} />}
         {secaoAtiva.id === 'agenda' && tab !== 'comentarios' && <FedAgendaPanel federation={f} perms={perms} />}
         {secaoAtiva.id === 'eleicoes' && <FedElectionsPanel federation={f} electionsQ={electionsQ} candidaciesQ={candidaciesQ} />}
-        {secaoAtiva.id === 'competicoes' && <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />}
+        {secaoAtiva.id === 'competicoes' && (tab === 'adaptado' ? <AdaptedManager federation={f} /> : <FedCompetitionsPanel federation={f} tournamentsQ={tournamentsQ} resultsQ={resultsQ} tab={tab} />)}
         {secaoAtiva.id === 'selecao' && <FedSelectionPanel federation={f} tab={tab} perms={perms} />}
         {secaoAtiva.id === 'financeiro' &&<FedFinancePanel federation={f} chargesQ={chargesQ} tab={tab} />}
         {tab === 'conformidade' && <FedCompliancePanel federation={f} staffQ={staffQ} docsQ={docsQ} eventsQ={eventsQ} budgetsQ={budgetsQ} accountReportsQ={accountReportsQ} electionsQ={electionsQ} tournamentsQ={tournamentsQ} sections={sections} abas={abasExistentes} onIrParaAba={irParaAba} />}

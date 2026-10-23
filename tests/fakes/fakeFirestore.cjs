@@ -81,6 +81,7 @@ class FakeQuery {
         const valor = String(f).split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), data);
         if (op === '==') return valor === v;
         if (op === 'array-contains') return Array.isArray(valor) && valor.includes(v);
+        if (op === 'in') return Array.isArray(v) && v.includes(valor);
         // Faixas: como no Firestore, campo ausente ou de outro tipo não entra.
         if (['>', '>=', '<', '<='].includes(op)) {
           if (typeof valor !== typeof v || valor === null || valor === undefined) return false;
