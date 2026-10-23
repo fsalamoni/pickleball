@@ -5197,6 +5197,30 @@ service cloud.firestore {
       allow read: if fedOrgManager(od().kind, od().org_id) || fedAny(od().federation_id, ['members', 'admin']);
       allow write: if false;
     }
+    // SEDES E COPA (rodada 3, Bloco 3): o edital de sede e a Copa das
+    // Federações são públicos depois de publicados (o rascunho só a equipe);
+    // a candidatura (carta, proposta) só quem gere a organização e a equipe;
+    // as notas da comissão só a equipe; o elenco da Copa as duas equipes e o
+    // próprio atleta (`athlete_uids`, a exportação dele lê dali). Só o servidor
+    // grava (`federationHosting`) — sem `allow write`, nada passa.
+    function fedComp(f) {
+      return fedAny(f, ['admin', 'competitions']);
+    }
+    match /federation_host_bids/{id} {
+      allow read: if (od().status != 'draft' && fedSees(od().federation_id)) || fedComp(od().federation_id);
+    }
+    match /federation_host_entries/{id} {
+      allow read: if fedOrgManager(od().kind, od().org_id) || fedComp(od().federation_id);
+    }
+    match /federation_host_scores/{id} {
+      allow read: if fedComp(od().federation_id);
+    }
+    match /federation_cups/{id} {
+      allow read: if (od().status != 'draft' && fedSees(od().federation_id)) || fedComp(od().federation_id);
+    }
+    match /federation_cup_teams/{id} {
+      allow read: if me() in od().athlete_uids || fedComp(od().conf_id) || fedComp(od().federation_id);
+    }
     // JOGO LIMPO (rodada 3, Bloco 1): a lista de equipamentos homologados é
     // pública com o módulo ligado (a estadual mostra também a da confederação);
     // a equipe de competições e o admin leem sempre. Só o servidor grava

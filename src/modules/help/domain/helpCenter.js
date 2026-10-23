@@ -1121,6 +1121,28 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-sedes-copa',
+      flags: ['federations'],
+      guias: ['federacao-sedes', 'federacao-copa'],
+      title: tk('Edital de sede e Copa das Federações'),
+      summary: tk('Escolher a sede dos campeonatos com regra pública, e a competição entre as federações estaduais da rede da confederação.'),
+      keywords: ['federação', 'confederação', 'sede', 'edital de sede', 'carta de intenção', 'proposta', 'comissão', 'nota', 'copa', 'elenco', 'clube', 'arena'],
+      blocks: [
+        p(tk('Com o módulo "Edital de sede" ligado, a Central ganha a aba Seleção e editais → Sedes. A Copa das Federações é um módulo só da confederação: Rede nacional → Copa.')),
+        steps(
+          tk('EDITAL — "Novo edital de sede": o evento, as datas, até quando chegam as cartas e as propostas, o que a sede precisa ter e os critérios de avaliação com peso. Publicado, as regras ficam como foram anunciadas; só os prazos podem ser estendidos, com motivo, e quem já se candidatou é avisado.'),
+          tk('CARTA — quem gere um clube ou arena filiado vê o edital no cartão "Federação" da organização e manda a carta de intenção. Edital da confederação recebe carta dos clubes e arenas filiados às estaduais da rede.'),
+          tk('SELEÇÃO — a equipe marca quem segue para a proposta. Todos são avisados: os escolhidos com o prazo, os demais de que não seguiram.'),
+          tk('PROPOSTA — a escolhida responde a cada critério e anexa planta, fotos e cartas de apoio. Os arquivos ficam na pasta de quem mandou e só quem gere a organização e a equipe da federação abrem.'),
+          tk('NOTAS — no prazo, as propostas fecham sozinhas. Cada avaliador dá nota de 0 a 10 em cada critério; a nota da proposta é a média ponderada pelos pesos.'),
+          tk('RESULTADO — escolher outra que não a maior nota exige justificativa, que sai publicada. A página mostra a sede escolhida e a nota de cada proposta; quem mandou proposta é avisado.'),
+          tk('COPA — a confederação cria a Copa com as categorias e o tamanho do elenco. Aberta, as estaduais da rede são avisadas e inscrevem os filiados em dia em Confederação → Copa das Federações. A confederação aprova ou devolve, com motivo; o elenco aprovado aparece na página e cada atleta é avisado.'),
+        ),
+        link('/federacoes', tk('Ver as federações')),
+        tip(tk('Abra o edital com folga: a sede precisa de tempo para reservar quadras e buscar apoio local.')),
+      ],
+    },
+    {
       id: 'federacao-embaixadores-selo',
       flags: ['federations'],
       guias: ['federacao-embaixadores-selo'],

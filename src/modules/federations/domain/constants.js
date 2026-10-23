@@ -58,6 +58,11 @@ export const FED_COLLECTIONS = Object.freeze({
   incentiveProjects: 'federation_incentive_projects',
   ambassadors: 'federation_ambassadors',
   clubSeals: 'federation_club_seals',
+  hostBids: 'federation_host_bids',
+  hostEntries: 'federation_host_entries',
+  hostScores: 'federation_host_scores',
+  cups: 'federation_cups',
+  cupTeams: 'federation_cup_teams',
   nationalLinks: 'federation_national_links',
   dues: 'federation_dues',
 });
@@ -242,6 +247,8 @@ export const FED_MODULE = Object.freeze({
   INCENTIVE_PROJECTS: 'incentive_projects',
   AMBASSADORS: 'ambassadors',
   CLUB_SEAL: 'club_seal',
+  HOST_BIDS: 'host_bids',
+  FEDERATION_CUP: 'federation_cup',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -269,6 +276,8 @@ export const FED_MODULE_META = Object.freeze({
   certificates: { label: tk('Certidões da federação'), description: tk('O cofre das certidões negativas (federal, FGTS, trabalhista, estadual e municipal), com arquivo, validade e aviso 30, 7 e 1 dia antes de vencer. Certidão vencida aparece na Conformidade.'), status: 'available', central: tk('Certidões e incentivo → Certidões'), tab: 'certidoes', page: tk('Não aparece na página: é controle interno') },
   ambassadors: { label: tk('Embaixadores regionais'), description: tk('O filiado se candidata aceitando o código de conduta, a federação confere a proteção de menores e nomeia para uma região. O embaixador manda um relatório periódico e aparece na página.'), status: 'available', central: tk('Rede e desenvolvimento → Embaixadores'), tab: 'embaixadores', page: tk('Visão geral: os embaixadores por região') },
   club_seal: { label: tk('Selo de clube certificado'), description: tk('Critérios definidos pela federação (proteção de menores, professor licenciado, seguro, quadras). Parte a plataforma confere sozinha, parte vem de evidência enviada. O selo tem validade e aparece na lista de clubes e arenas.'), status: 'available', requires: 'affiliations', central: tk('Rede e desenvolvimento → Selo de clubes'), tab: 'selo-clubes', page: tk('Aba Clubes e arenas: o selo ao lado do nome') },
+  host_bids: { label: tk('Edital de sede'), description: tk('A federação publica o campeonato que precisa de sede, com critérios e pesos. Clubes e arenas filiados mandam a carta de intenção, os escolhidos mandam a proposta, a comissão dá notas e o resultado sai publicado.'), status: 'available', central: tk('Seleção e editais → Sedes'), tab: 'sedes', page: tk('Aba Competições: os editais de sede e o resultado') },
+  federation_cup: { label: tk('Copa das Federações'), description: tk('Só da confederação: abre a competição entre as estaduais, com categorias e tamanho do elenco. Cada estadual inscreve os filiados em dia e a confederação aprova ou devolve.'), status: 'available', confederationOnly: true, central: tk('Rede nacional → Copa'), tab: 'copa', page: tk('Aba Competições: a Copa e os elencos aprovados') },
   incentive_projects: { label: tk('Lei de Incentivo ao Esporte'), description: tk('Os projetos incentivados: valor aprovado, prazo de captação, cada aporte de patrocinador ou doador e a prestação de contas, com os aportes entrando sozinhos nas contas.'), status: 'available', central: tk('Certidões e incentivo → Lei de Incentivo'), tab: 'lei-incentivo', page: tk('Não aparece na página: é controle interno') },
   safeguarding: { label: tk('Proteção de menores'), description: tk('Quem trabalha com menores precisa de curso de proteção e certidão de antecedentes em dia; a ouvidoria ganha a denúncia de proteção, prioritária e de acesso restrito.'), status: 'available', central: tk('Proteção de menores'), tab: 'protecao', page: tk('Aba Contato: a denúncia de proteção de menor') },
 });

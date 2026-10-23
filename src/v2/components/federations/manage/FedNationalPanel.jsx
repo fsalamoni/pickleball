@@ -34,6 +34,8 @@ import { isoDate } from '@/modules/federations/domain/membership';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from '../federationUi';
+import CupManager from '../hosting/CupManager';
+import CupTeamEntry from '../hosting/CupTeamEntry';
 
 const dataBR = (iso) => (iso ? String(iso).split('-').reverse().join('/') : '—');
 const sigla = (x, campo = 'federation') => x?.[`${campo}_acronym`] || x?.[`${campo}_name`] || '';
@@ -429,5 +431,7 @@ export default function FedNationalPanel({ federation, perms, tab }) {
   if (tab === 'rede-anuidades') return <AnuidadesTab federation={federation} perms={perms} lado="conf" />;
   if (tab === 'rede-regras') return <RegrasTab federation={federation} />;
   if (tab === 'confederacao-anuidades') return <AnuidadesTab federation={federation} perms={perms} lado="state" />;
+  if (tab === 'copa') return <CupManager federation={federation} />;
+  if (tab === 'copa-inscricao') return <CupTeamEntry federation={federation} />;
   return <MinhaConfederacaoTab federation={federation} perms={perms} />;
 }

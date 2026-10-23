@@ -18,6 +18,7 @@ import { isOrgEntity, memberTypeName, memberTypeOf, personTypeLabel } from '@/mo
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
 import { planPeriodLabel, validatePlanInput } from '@/modules/federations/domain/plans';
 import { fedModuleOn, isFederationPublic, normalizeFederationRules, slugifyName, validateFederationPayment, validateFederationPublicInput } from '@/modules/federations/domain/federation';
+import { isConfederation } from '@/modules/federations/domain/national';
 import { DOC_KIND, DOC_KIND_LABELS, FED_MODULE_META, PLAN_BILLING, PLAN_BILLING_LABELS, PLAN_PERSON_TYPE, PLAN_TIER, PLAN_TIER_LABELS, PLAN_VALIDITY, PLAN_VALIDITY_LABELS } from '@/modules/federations/domain/constants';
 import { PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { BRAND_DEFAULT_COLOR } from '@/modules/arenas/domain/whiteLabel';
@@ -398,7 +399,8 @@ function ModuloCard({ federation, id, meta }) {
 }
 
 function ModulosTab({ federation }) {
-  const entradas = Object.entries(FED_MODULE_META);
+  // O módulo da confederação (Copa) não aparece para a estadual.
+  const entradas = Object.entries(FED_MODULE_META).filter(([, meta]) => !meta.confederationOnly || isConfederation(federation));
   const ligados = entradas.filter(([id, meta]) => meta.status === 'available' && federation.modules?.[id] === true).length;
   return (
     <section className="space-y-4" aria-label={t('Módulos da federação')} data-dica="federacao-modulos">

@@ -426,6 +426,13 @@ export async function listMyAmbassadorships(uid) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/** Os elencos da Copa das Federações em que a pessoa entrou (todas as confederações) — exportação. */
+export async function listMyCupTeams(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.cupTeams), where('athlete_uids', 'array-contains', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
 /** O registro da proteção de menores da pessoa (todas as federações) — exportação. */
 export async function listMySafeguarding(uid) {
   if (!uid) return [];

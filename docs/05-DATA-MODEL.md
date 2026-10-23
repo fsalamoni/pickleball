@@ -2242,6 +2242,60 @@ validity_months, criteria[] { id, label, description, required, auto } }`
 (o admin grava). O selo concedido é copiado para
 `federation_affiliations.seal`.
 
+### `federation_host_bids/{id}` (NOVO — edital de sede, `docs/50` §39.1)
+`federation_id`, `federation_name`, `federation_acronym`, `scope`
+(`state|national`), `title`, `event_name`, `event_start`, `event_end`,
+`description`, `requirements`, `intent_until`, `proposal_until`, `criteria[]
+{ id, label, description, weight }`, `status`
+(`draft|intent|proposal|review|result|cancelled`), `counts { intents,
+proposals }`, `warned_intent`, `result { winner_entry_id, winner_name,
+winner_city, ranking[] { org_name, org_city, org_state, total, winner }, note,
+published_at }` (sem uid), `cancel_reason`, `created_by`, `history[]`,
+`created_at_ms`, `updated_at_ms`. Só o servidor grava (`federationHosting`).
+Leitura: publicado por quem lê a federação (`fedSees`), rascunho por
+`competitions`/`admin`. Consultas `federation_id ==` (+ `status in`) e
+`status ==` (varredura), zero índice. Exclusão de conta: fica (`created_by`
+retido); fora da exportação. Módulo `modules.host_bids`.
+
+### `federation_host_entries/{bid}_{kind}_{org}` (NOVO — candidatura a sede)
+`bid_id`, `federation_id`, `kind` (`club|arena`), `org_id`,
+`via_federation_id`, `org_name`, `org_city`, `org_state`, `applicant_uid`,
+`intent { text, at_ms }`, `proposal { text, files[] { path, name }, by,
+at_ms }`, `stage`
+(`intent|shortlisted|not_shortlisted|proposal|withdrawn|winner|not_selected`),
+`history[]`, `created_at_ms`, `updated_at_ms`. Só o servidor grava. Leitura:
+quem gere a organização e `competitions`/`admin`. Consultas `bid_id == +
+federation_id ==` e `kind == + org_id ==`, zero índice. Exclusão de conta:
+fica (é da organização; `applicant_uid` retido); fora da exportação.
+
+### `federation_host_scores/{entry}_{uid}` (NOVO — nota da comissão)
+`federation_id`, `bid_id`, `entry_id`, `evaluator_uid`, `evaluator_name`,
+`scores { <critério>: 0–10 }`, `note`, `total`, `at_ms`. Só o servidor grava;
+só `competitions`/`admin` leem. Consulta `bid_id == + federation_id ==`.
+Exclusão de conta: fica (`evaluator_uid` retido); fora da exportação.
+
+### `federation_cups/{id}` (NOVO — Copa das Federações, `docs/50` §39.2)
+`federation_id` (a confederação), `federation_name`, `federation_acronym`,
+`title`, `year`, `starts_at`, `ends_at`, `location`, `description`,
+`entries_until`, `categories[] { id, label, roster_max }`, `status`
+(`draft|open|closed|cancelled`), `teams_public[] { federation_name, acronym,
+athletes[] { key, name, category_id } }` (sem uid), `counts { approved,
+teams }`, `cancel_reason`, `created_by`, `history[]`, `created_at_ms`,
+`updated_at_ms`. Só o servidor grava. Leitura como o edital. Módulo
+`modules.federation_cup` (só confederação). Exclusão de conta: fica; o nome
+do atleta em `teams_public` vira "Atleta removido".
+
+### `federation_cup_teams/{cup}_{fed}` (NOVO — elenco de uma estadual na Copa)
+`cup_id`, `conf_id`, `federation_id`, `federation_name`, `acronym`,
+`athletes[] { member_id, category_id, uid, name }`, `athlete_uids[]`,
+`status` (`draft|submitted|approved|returned|withdrawn`), `decision { action,
+reason, by, at_ms }`, `history[]`, `created_at_ms`, `updated_at_ms`. Só o
+servidor grava. Leitura: os atletas do elenco (`athlete_uids`) e
+`competitions`/`admin` da confederação ou da estadual. Consultas `conf_id ==`,
+`federation_id ==` e `athlete_uids array-contains`, zero índice. Exclusão de
+conta: o atleta vira "Atleta removido" e sai de `athlete_uids`; exportação:
+sim (`listMyCupTeams`).
+
 ### `federation_national_links/{conf}_{fed}` (NOVO — vínculo nacional, `docs/50` §35.1)
 `conf_id`, `conf_name`, `conf_acronym`, `conf_slug`, `federation_id`,
 `federation_name`, `federation_acronym`, `federation_slug`, `federation_state`,
