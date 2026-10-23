@@ -125,3 +125,21 @@ describe('dupr_links, dupr_link_tokens e dupr_ids', () => {
     await assertFails(setDoc(doc(como(ADMIN), 'platform_secrets', 'dupr'), { client_key: 'x' }));
   });
 });
+
+describe('piloto do DUPR (dupr_pilot_players, dupr_pilot_matches)', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'dupr_pilot_players', 'p1'), { name: 'Piloto 1', dupr_id: 'PIL001' });
+      await setDoc(doc(ctx.firestore(), 'dupr_pilot_matches', 'm1'), { status: 'sent' });
+    });
+  });
+
+  it('só o admin lê; ninguém escreve (só o servidor)', async () => {
+    for (const [col, id] of [['dupr_pilot_players', 'p1'], ['dupr_pilot_matches', 'm1']]) {
+      await assertSucceeds(getDoc(doc(como(ADMIN), col, id)));
+      await assertFails(getDoc(doc(como(ANA), col, id)));
+      await assertFails(setDoc(doc(como(ADMIN), col, 'novo'), { name: 'x' }));
+      await assertFails(deleteDoc(doc(como(ADMIN), col, id)));
+    }
+  });
+});

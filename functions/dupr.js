@@ -304,5 +304,5 @@ async function webhook(ctx, req) {
 }
 
 module.exports = {
-  FLAG, DuprServiceError, parseRating, tournamentEntitlements, config, link, unlink, status, webhook,
+  FLAG, DuprServiceError, parseRating, tournamentEntitlements, clienteDuprDe, config, link, unlink, status, webhook,
 };

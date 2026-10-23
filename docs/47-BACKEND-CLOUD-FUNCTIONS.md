@@ -252,7 +252,7 @@ Código em `functions/duprClient.js` (API) e `functions/dupr.js` (regra). Doc: [
 
 | Função | Gatilho | O que faz |
 |---|---|---|
-| `duprIntegration` | callable, quem está logado | Vale só para o público da política (`platform_settings/dupr_policy.audience`: `admins` = piloto, padrão; `all`), conferido por `liberadaPara`. `config` (flag, credenciais, endereço do login), `link` (confirma a pessoa pelo DUPR, exige `BASIC_L1`, reserva o ID, assina o rating e grava `dupr_links` + selo), `unlink`, `status` (renova assinaturas em 24 h). Audita em `audit_logs` |
+| `duprIntegration` | callable, quem está logado | Vale só para o público da política (`platform_settings/dupr_policy.audience`: `admins` = piloto, padrão; `all`), conferido por `liberadaPara`. Ações `pilot_*` (só admin, sem depender da flag; partidas só no UAT): `pilot_player_save|refresh|remove|invite`, `pilot_match_send|delete` — `functions/duprPilot.js`, escreve só `dupr_pilot_*` e `audit_logs`. `config` (flag, credenciais, endereço do login), `link` (confirma a pessoa pelo DUPR, exige `BASIC_L1`, reserva o ID, assina o rating e grava `dupr_links` + selo), `unlink`, `status` (renova assinaturas em 24 h). Audita em `audit_logs` |
 | `duprWebhook` | HTTP público, `/api/dupr/webhook?k=…` (`firebase.json`) | Eventos `RATING`/`RATING_SEED` do DUPR; o token da URL separa o DUPR de qualquer outro chamador; responde 200 depressa |
 
 

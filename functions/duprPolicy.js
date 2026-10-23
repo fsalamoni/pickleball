@@ -140,7 +140,7 @@ function duprReadiness(uids, links) {
   return { ok: missing.length === 0 && noEntitlement.length === 0, missing, noEntitlement };
 }
 
-const DUPR_ID_KIND = Object.freeze({ TOURNAMENT_MATCH: 'tm', GAME_DAY_GAME: 'gd' });
+const DUPR_ID_KIND = Object.freeze({ TOURNAMENT_MATCH: 'tm', GAME_DAY_GAME: 'gd', PILOT: 'pl' });
 
 function duprIdentifier(kind, id) {
   const limpo = String(id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80);

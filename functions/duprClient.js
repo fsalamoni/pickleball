@@ -128,6 +128,8 @@ function createDuprClient(cfg) {
     // ---- API de parceiro
     getUser: (duprId) => partner('GET', `/user/${V}/${encodeURIComponent(duprId)}`),
     getUsersBatch: (duprIds) => partner('POST', `/user/${V}/batch`, { duprIds }),
+    /** Pré-gera o ID DUPR e convida (`fullName`, `email`, `isoCode`, `identifier`). Exige `USER::INVITE`. */
+    inviteUser: (body) => partner('POST', `/user/${V}/invite`, body),
     registerWebhook: (webhookUrl, topics = ['RATING']) => partner('POST', `/${V}/webhook`, { webhookUrl, topics }),
     subscribeRating: (duprIds) => partner('POST', `/user/${V}/subscribe/webhook-event`, { duprIds, topic: 'RATING' }),
     unsubscribeRating: (duprIds) => partner('DELETE', `/user/${V}/subscribe/webhook-event`, { duprIds, topic: 'RATING' }),

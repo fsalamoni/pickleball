@@ -134,3 +134,32 @@ só contas com o selo, ordem por `buildOfficialDuprRanking`), o selo DUPR no per
 o nível DUPR em Encontrar jogadores e na lista de alunos do professor. O servidor
 segue calculando o próprio em silêncio; desligar a flag (ou voltar ao piloto) traz
 tudo de volta. O ranking de duplas por aproveitamento não é rating e continua.
+
+## 7. Piloto no Painel admin (ambiente de teste)
+
+**Painel admin → DUPR → Piloto** (`AdminDuprPilotTab`, só o admin da plataforma).
+Um ambiente fechado para testar o envio ao DUPR **sem mudar nada para ninguém**:
+funciona com a flag `dupr_official_sync` desligada e não lê nem escreve nenhuma
+outra coleção (fora `audit_logs`). Ranking, perfis, telas dos usuários e a
+exportação CSV não enxergam o piloto.
+
+* **Jogadores do piloto** (`dupr_pilot_players`): existem só aqui. Nascem com o
+  nome e, se quiser, o e-mail da conta de teste ("aguardando conta DUPR"). O ID
+  DUPR entra depois — digitado e **conferido no DUPR** (`GET /user/{id}`, guarda o
+  ID canônico, nome e ratings) — ou gerado por **Criar conta no DUPR**
+  (`POST /user/invite`, que o DUPR só libera com a permissão `USER::INVITE`; sem
+  ela a tela explica o caminho manual). Um ID DUPR vale para um jogador só.
+* **Partidas de teste** (`dupr_pilot_matches`): simples ou duplas, até 5 games,
+  side-out ou rally. O servidor valida com `duprMatchEligibility` (sem game
+  empatado, sem jogador repetido, lados iguais), monta o corpo do DUPR com
+  `duprMatchPayload` (a mesma montagem que o envio automático vai usar;
+  `matchSource: PARTNER`, sem `clubId`, `identifier` = `pr:pl:{id}`) e envia.
+  Fica o `matchCode`, ou a recusa com a mensagem do DUPR. **Apagar no DUPR**
+  chama `DELETE /match/delete` com `identifier` + `matchCode`.
+* **Só no UAT**: com as credenciais de produção, o piloto não envia (partida de
+  quem não conectou a conta fere o contrato).
+* Quem escreve é o servidor: ações `pilot_*` de `duprIntegration`
+  (`functions/duprPilot.js`, testes em `duprPilot.test.js`). A regra deixa só o
+  admin ler as duas coleções e ninguém escrever (`tests/rules/dupr.rules.test.js`).
+* A aba **Exportar DUPR** (CSV) mudou de Sistema para a mesma seção DUPR; o id da
+  aba (`?tab=dupr`) não mudou.

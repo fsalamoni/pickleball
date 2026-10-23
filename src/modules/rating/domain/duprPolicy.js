@@ -206,7 +206,7 @@ export function duprReadiness(uids, links) {
 }
 
 /** Origens do identificador (curtas: o DUPR guarda o texto). */
-export const DUPR_ID_KIND = Object.freeze({ TOURNAMENT_MATCH: 'tm', GAME_DAY_GAME: 'gd' });
+export const DUPR_ID_KIND = Object.freeze({ TOURNAMENT_MATCH: 'tm', GAME_DAY_GAME: 'gd', PILOT: 'pl' });
 
 /**
  * Identificador ÚNICO e determinístico da partida no DUPR: o mesmo jogo sempre
