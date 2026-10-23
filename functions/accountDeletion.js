@@ -252,6 +252,9 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'federation_budgets', field: 'created_by', label: 'Orçamentos de federação que criou (como equipe; o orçamento é da federação)' },
   { col: 'federation_ledger', field: 'created_by', label: 'Lançamentos de receita e despesa de federação que fez (como equipe; a conta é da federação)' },
   { col: 'federation_account_reports', field: 'opened_by', label: 'Prestações de contas de federação que abriu (como equipe; as contas são da federação)' },
+  // Bloco 5: o contrato e o bem são da federação (quem lançou é só o uid de equipe).
+  { col: 'federation_sponsor_contracts', field: 'created_by', label: 'Contratos de patrocínio de federação que lançou (como equipe; o contrato é da federação)' },
+  { col: 'federation_assets', field: 'created_by', label: 'Bens do patrimônio de federação que cadastrou (como equipe; o bem é da federação)' },
 ]);
 
 /* ------------------------------------------------------- federações ----- */

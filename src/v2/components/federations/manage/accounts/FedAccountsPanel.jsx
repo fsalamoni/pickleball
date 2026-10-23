@@ -16,6 +16,8 @@ import { useFederationAssignments } from '@/modules/federations/hooks/useReferee
 import { refereeFeesAsExpenses } from '@/modules/federations/domain/referees';
 import { usePublicCallups, usePublicGrants } from '@/modules/federations/hooks/useSelection';
 import { callupExpenses, grantExpenses } from '@/modules/federations/domain/selection';
+import { useSponsorContracts } from '@/modules/federations/hooks/useManagement';
+import { sponsorIncome } from '@/modules/federations/domain/management';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { FED_PERMISSION } from '@/modules/federations/domain/constants';
 import {
@@ -101,7 +103,12 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
   const daSelecao = [...(callupsQ.isSuccess ? callupExpenses(callupsQ.data) : []), ...(grantsQ.isSuccess ? grantExpenses(grantsQ.data) : [])];
   const semSelecao = callupsQ.isError || grantsQ.isError;
   const extras = [...diarias, ...daSelecao];
-  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: extras }), [ledgerQ.data, chargesQ.data, extras.length, callupsQ.data, grantsQ.data, assignmentsQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Parcelas recebidas dos contratos de patrocínio (módulo `sponsors`): quem lê as contas lê os contratos (mesma regra).
+  const contratosOn = fedModuleOn(federation, 'sponsors');
+  const contractsQ = useSponsorContracts(id, { enabled: contratosOn });
+  const patrocinio = contratosOn && contractsQ.isSuccess ? sponsorIncome(contractsQ.data) : [];
+  const semPatrocinio = contratosOn && contractsQ.isError;
+  const items = useMemo(() => accountItems({ ledger: ledgerQ.data, charges: chargesQ.data, extraExpenses: extras, extraIncome: patrocinio }), [ledgerQ.data, chargesQ.data, extras.length, callupsQ.data, grantsQ.data, assignmentsQ.data, contractsQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
   if (qs.some((q) => q.isError)) return <V2ErrorState title={t('As contas não carregaram')} onRetry={() => qs.forEach((q) => { if (q.isError) q.refetch(); })} />;
   if (qs.some((q) => q.isLoading || !q.isSuccess)) return <V2Skeleton lines={6} />;
   const leitura = !canPrepareAccounts(perms);
@@ -126,9 +133,15 @@ export default function FedAccountsPanel({ federation, perms, tab, reportsQ, onI
           {t('Os custos das convocações e os pagamentos dos editais não carregaram nesta prévia. A prestação de contas os soma no envio ao conselho fiscal.')}
         </p>
       )}
+      {semPatrocinio && (
+        <p className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Eye className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {t('As parcelas recebidas dos contratos de patrocínio não carregaram nesta prévia. A prestação de contas as soma no envio ao conselho fiscal.')}
+        </p>
+      )}
       {tab === 'orcamento' && <Overview {...comum} onIrParaAba={onIrParaAba} />}
       {tab === 'orcamento-anual' && <FedBudgetTab {...comum} />}
-      {tab === 'lancamentos' && <FedLedgerTab {...comum} charges={chargesQ.data} />}
+      {tab === 'lancamentos' && <FedLedgerTab {...comum} />}
       {tab === 'prestacao-contas' && <FedReportsTab {...comum} />}
     </section>
   );

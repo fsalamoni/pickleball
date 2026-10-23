@@ -288,6 +288,17 @@ export function extraExpenseItems(extra) {
   })).filter((x) => x.date && x.amount_cents > 0);
 }
 
+/** Receitas derivadas de outro módulo (as parcelas recebidas dos contratos de patrocínio), no mesmo formato. */
+export function extraIncomeItems(extra) {
+  return lista(extra).map((x) => ({
+    id: `extra:${String(x?.ref || '')}`, kind: ENTRY_KIND.INCOME,
+    category: INCOME_CATEGORIES.some((c) => c.id === x?.category) ? x.category : 'other_income',
+    date: ISO_RE.test(String(x?.date || '')) ? x.date : '', amount_cents: cents(x?.amount_cents),
+    description: line(x?.description, ACCOUNT_DESCRIPTION_MAX), counterparty: line(x?.counterparty, ACCOUNT_COUNTERPARTY_MAX),
+    auto: typeof x?.auto === 'string' ? x.auto : 'derived', ref: String(x?.ref || ''),
+  })).filter((x) => x.date && x.amount_cents > 0);
+}
+
 /** Os lançamentos manuais que valem (o estornado sai da conta, mas fica na lista). */
 export function ledgerItems(ledger) {
   return lista(ledger).filter((e) => e && e.status !== ENTRY_STATUS.VOID).map((e) => ({
@@ -296,9 +307,9 @@ export function ledgerItems(ledger) {
   }));
 }
 
-/** Tudo o que entra na conta: manual + cobranças pagas + despesas derivadas, do mais recente ao mais antigo. */
-export function accountItems({ ledger, charges, extraExpenses } = {}) {
-  return [...ledgerItems(ledger), ...chargeIncomeItems(charges), ...extraExpenseItems(extraExpenses)]
+/** Tudo o que entra na conta: manual + cobranças pagas + receitas e despesas derivadas, do mais recente ao mais antigo. */
+export function accountItems({ ledger, charges, extraExpenses, extraIncome } = {}) {
+  return [...ledgerItems(ledger), ...chargeIncomeItems(charges), ...extraIncomeItems(extraIncome), ...extraExpenseItems(extraExpenses)]
     .sort((a, b) => (a.date === b.date ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.date < b.date ? 1 : -1));
 }
 
@@ -479,7 +490,7 @@ export function categoryLabel(kind, id) {
   return c ? t(c.label) : String(id || '');
 }
 
-export const AUTO_LABELS = Object.freeze({ charge: tk('Cobrança paga'), referees: tk('Diária de arbitragem'), derived: tk('Automático') });
+export const AUTO_LABELS = Object.freeze({ charge: tk('Cobrança paga'), referees: tk('Diária de arbitragem'), sponsor: tk('Parcela de patrocínio'), derived: tk('Automático') });
 
 /** A planilha dos lançamentos (manuais, estornados marcados, e os automáticos). */
 export function ledgerCsv(rows = []) {

@@ -2142,6 +2142,30 @@ decisão), `last_rejection { reason, by, at_ms }`, `training_until` e
 Só o servidor grava. Leem: a pessoa e a permissão `safeguarding`. Zero índice.
 Apagado na exclusão de conta; entra na exportação.
 
+### `federation_sponsor_contracts/{id}` (NOVO — contrato de patrocínio, `docs/50` §34.4)
+`federation_id`, `sponsor_name`, `sponsor_doc` (CNPJ), `tier`
+(`main|support|partner`), `start`, `end` (ISO), `installments[] { id, due,
+amount_cents, received_at, received_by }`, `counterparts[] { id, text, due,
+done_at, done_by }`, `total_cents`, `notes`, `status` (`active|cancelled`),
+`cancelled_reason`, `cancelled_at_ms`, `warned { expiry_for, installments[],
+counterparts[] }`, `history[]`, `created_by`, `created_at_ms`, `updated_at_ms`.
+Só o servidor grava (`federationManagement`). Leem: financeiro, conselho
+fiscal e admin (`fedAcc`). Zero índice. É dado da federação: na exclusão de
+conta só sai `created_by`; fora da exportação. A parcela recebida vira receita
+derivada nas contas (`sponsorIncome`).
+
+### `federation_assets/{id}` (NOVO — patrimônio, `docs/50` §34.5)
+`federation_id`, `name`, `category` (`nets|scoreboards|balls|paddles|court_kits|
+electronics|furniture|uniforms|other`), `code`, `quantity`, `location`,
+`condition` (`new|good|fair|damaged`), `acquired_at`, `value_cents`, `notes`,
+`status` (`active|retired`), `retired_at`, `retired_reason`, `loans[] { id,
+borrower_kind (club|arena|event|other), borrower_name, borrower_ref, quantity,
+out_at, due_at, note, lent_by, lent_by_name, lent_at_ms, returned_at,
+returned_by, return_condition, return_note, warned_for }`, `history[]` (últimos 100; os abertos sempre),
+`created_by`, `created_at_ms`, `updated_at_ms`. Só o servidor grava. Leem:
+`fedAcc` e `competitions`. Zero índice. Na exclusão de conta só sai
+`created_by`; fora da exportação. Módulo novo `modules.assets` em `federations`.
+
 ### Licença e proteção (Bloco 4): campos novos e opcionais
 Em `federations`: `coach_rules { levels[] { id, label, requires_credential,
 update_hours, valid_months } }`, `safeguarding_rules { required_for[],

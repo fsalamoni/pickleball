@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Ban, CheckCircle2, ClipboardList, FileText, Lock, Medal, Plus, RotateCcw, Trophy, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, ClipboardList, Download, FileText, Lock, Medal, Plus, RotateCcw, Trophy, XCircle } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { decideSanction, reviewFederationResult, updateRankingConfig } from '@/modules/federations/services/federationService';
@@ -23,7 +23,8 @@ import { t, tn } from '@/core/i18n';
 import { FedRankingBlock, classeLabel } from '../FedPublicBlocks';
 import { quando } from '../federationUi';
 import { BuscaLista, MostrarMais, useBuscaLista, useFiltroNaUrl } from './listTools';
-import { useAvisoNaoSalvo } from './naoSalvo';
+import { baixarCsv, useAvisoNaoSalvo } from './naoSalvo';
+import { resultsCsv } from '@/modules/federations/domain/exports';
 import FedTiersEditor from './FedTiersEditor';
 import FedTierRequirements from '../FedTierRequirements';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -286,7 +287,10 @@ function ResultadosTab({ resultsQ }) {
       <p className="text-sm text-gray-600">{t('Cada categoria encerrada de um torneio chancelado chega aqui quando o organizador envia, e os pontos de quem pontua são lançados no histórico de cada atleta. Recusar cancela esses lançamentos na hora (com o motivo); readmitir lança de novo. Depois de 31/01 do ano seguinte, o ano fecha e nada muda.')}</p>
       {lista.length === 0 ? <V2EmptyState icon={ClipboardList} title={t('Nenhum resultado enviado ainda')} description={t('O organizador envia na tela de resultados do torneio, categoria a categoria.')} /> : (
         <>
-          <BuscaLista id="res-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por torneio, categoria ou atleta do pódio')} total={lista.length} achados={busca.filtrados.length} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <BuscaLista id="res-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por torneio, categoria ou atleta do pódio')} total={lista.length} achados={busca.filtrados.length} className="flex-1" />
+            {busca.filtrados.length > 0 && <V2Button type="button" size="sm" variant="secondary" data-dica="federacao-resultados-csv" onClick={() => baixarCsv(resultsCsv(busca.filtrados), 'resultados-federacao.csv')}><Download className="h-4 w-4" />{t('Baixar planilha (CSV)')}</V2Button>}
+          </div>
           {!busca.filtrados.length ? <V2EmptyState icon={ClipboardList} title={t('Nenhum resultado com esse termo')} /> : <ul className="space-y-3">{busca.visiveis.map((r) => <ResultadoRow key={r.id} result={r} />)}</ul>}
           <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
         </>
@@ -378,7 +382,7 @@ function RankingTab({ federation }) {
       </V2Surface>
       {comRanking && (
         <V2Surface>
-          <FedRankingBlock federation={federation} meUid={user?.uid} />
+          <FedRankingBlock federation={federation} meUid={user?.uid} exportavel />
         </V2Surface>
       )}
     </section>

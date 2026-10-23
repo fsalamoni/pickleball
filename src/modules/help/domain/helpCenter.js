@@ -1035,11 +1035,61 @@ const ATLETA = {
       blocks: [
         p(tk('Em Central → Indicadores → Conformidade, a presidência vê o que a Lei 14.597/2023 e a boa governança pedem a uma federação, conferido contra o que já está na plataforma. Nada é gravado e nada trava: é um aviso para arrumar a casa.')),
         list(
-          tk('O QUE CONFERE — estatuto publicado; ao menos 30% de mulheres na direção; mandato informado, de até 4 anos e em vigor; eleição marcada até 180 dias antes do fim do mandato; conselho fiscal nomeado; assembleia ordinária do ano convocada no prazo do estatuto; contas do ano anterior publicadas; orçamento do ano aprovado; página de transparência; ouvidoria e disciplina; atletas na direção.'),
-          tk('RESOLVER — cada item diz o fundamento e leva à aba que resolve: governança, equipe, eleições, agenda, contas ou acervo.'),
+          tk('O QUE CONFERE — estatuto publicado; ao menos 30% de mulheres na direção; mandato informado, de até 4 anos e em vigor; eleição marcada até 180 dias antes do fim do mandato; conselho fiscal nomeado; assembleia ordinária do ano convocada no prazo do estatuto; contas do ano anterior publicadas; orçamento do ano aprovado; página de transparência; ouvidoria e disciplina; atletas na direção; premiação igual entre gêneros nos torneios chancelados do ano; e o módulo de proteção de crianças e adolescentes ligado.'),
+          tk('RESOLVER — cada item diz o fundamento e leva à aba que resolve: governança, equipe, eleições, agenda, contas, acervo, chancelas ou módulos.'),
+          tk('PREMIAÇÃO — o organizador declara no pedido de chancela quanto paga em cada gênero. Torneio que não declarou não reprova: o item diz que falta a declaração.'),
           tk('NÃO DEU PARA CONFERIR — se uma informação não carregou, o item diz isso, em vez de reprovar. A plataforma não sabe o que a federação guarda fora dela.'),
         ),
         tip(tk('Comece pelos itens vermelhos que dependem só de cadastro, como o mandato e a quantidade de mulheres na direção: em poucos minutos o placar muda.')),
+      ],
+    },
+    {
+      id: 'federacao-administracao',
+      flags: ['federations'],
+      guias: ['federacao-administracao'],
+      title: tk('Contratos de patrocínio e patrimônio da federação'),
+      summary: tk('A vigência, as parcelas e as contrapartidas de cada patrocinador, com a receita nas contas; e o inventário com empréstimos e devoluções.'),
+      keywords: ['federação', 'patrocínio', 'patrocinador', 'contrato', 'parcela', 'contrapartida', 'vencimento', 'patrimônio', 'inventário', 'bem', 'equipamento', 'empréstimo', 'devolução'],
+      blocks: [
+        p(tk('Com o módulo Patrocinadores (contratos) ou Patrimônio ligado, a Central ganha a seção Administração. Os contratos ficam com a presidência e o financeiro; o patrimônio, também com a equipe de competições; o conselho fiscal consulta os dois. Só a administração da federação cancela ou apaga.')),
+        steps(
+          tk('CONTRATO — Administração → Contratos de patrocínio → "Novo contrato": patrocinador, cota, vigência e valor. Divida em parcelas mensais com um toque ou monte à mão, e liste o que a federação prometeu entregar (logo no uniforme, faixa no torneio, post) com o prazo de cada entrega.'),
+          tk('RECEBER — quando o dinheiro cair, marque a parcela como recebida com a data. Ela entra nas contas como receita de patrocínio, sem lançar de novo. Período de contas já fechado não aceita recebimento nem desfazer.'),
+          tk('CONTRAPARTIDAS — marque cada entrega feita. O que passou do prazo sem entrega aparece em vermelho e avisa a administração.'),
+          tk('AVISOS — a plataforma avisa a administração e o financeiro 30 dias antes do fim do contrato, e o financeiro quando uma parcela vence sem ser recebida. Cada aviso sai uma vez.'),
+          tk('PATRIMÔNIO — Administração → Patrimônio → "Novo bem": nome, categoria, quantidade, código, local, estado, data e valor de aquisição.'),
+          tk('EMPRESTAR — escolha o bem, a quantidade, para quem vai (clube, arena, evento) e a data para voltar. Na volta, registre a data e o estado em que chegou: chegou com defeito, o bem fica marcado assim. Empréstimo vencido avisa quem emprestou.'),
+          tk('BAIXA — bem perdido, doado ou sem uso sai do inventário com motivo e pode ser reativado; o histórico fica. Apagar só o que nunca foi emprestado.'),
+        ),
+        list(
+          tk('PLANILHA — "Baixar planilha (CSV)" no Patrimônio entrega o inventário para a contabilidade e o balanço.'),
+          tk('PRIVACIDADE — contratos e patrimônio ficam só na Central. Quem recebe um empréstimo é uma entidade ou evento escrito à mão, nunca uma pessoa da plataforma.'),
+        ),
+        tip(tk('Cadastre o contrato assim que ele for assinado: as parcelas e as contrapartidas viram a agenda de cobrança e de entrega da federação.')),
+      ],
+    },
+    {
+      id: 'federacao-relatorio-anual',
+      flags: ['federations'],
+      guias: ['federacao-relatorio-anual'],
+      title: tk('Relatório anual e planilhas da federação'),
+      summary: tk('O retrato do ano para a assembleia, para imprimir ou salvar em PDF, e as planilhas de filiados, resultados, ranking e patrimônio.'),
+      keywords: ['federação', 'relatório anual', 'relatório de atividades', 'assembleia', 'PDF', 'imprimir', 'planilha', 'CSV', 'Excel', 'exportar', 'filiados', 'ranking'],
+      blocks: [
+        p(tk('Em Central → Indicadores → Relatório anual, a administração da federação escolhe o ano e vê o retrato pronto: diretoria, filiados, competições, ranking, cursos, disciplina, finanças e conformidade. Nada é gravado: o relatório sai do que a Central já leu.')),
+        list(
+          tk('FINANÇAS — com a prestação de contas do ano enviada, valem os números congelados nela. Sem ela, o relatório mostra o que entrou pela plataforma e diz que a prestação ainda não foi enviada.'),
+          tk('NÃO CARREGOU — se uma parte não carregou, o relatório diz qual, em vez de mostrar zero. Um zero falso numa assembleia é uma afirmação sobre a federação.'),
+          tk('SEM NOMES — disciplina e ouvidoria entram só como contagens.'),
+          tk('IMPRIMIR — "Imprimir ou salvar em PDF" abre a impressão do navegador, com a folha limpa e clara.'),
+        ),
+        steps(
+          tk('FILIADOS — Filiados → Cadastro: "Baixar planilha (CSV)" com a lista filtrada, situação de hoje, plano e validade.'),
+          tk('RESULTADOS — Competições → Resultados: uma linha por atleta em cada categoria, na ordem de colocação.'),
+          tk('RANKING — na aba Ranking da página, quem é da equipe baixa o geral e cada classe do ano escolhido.'),
+          tk('PATRIMÔNIO — Administração → Patrimônio, o inventário inteiro.'),
+        ),
+        tip(tk('As planilhas abrem no Excel e no Google Planilhas com acentos e vírgula decimal. Nenhuma leva telefone, e-mail ou documento de ninguém.')),
       ],
     },
     {
@@ -2309,7 +2359,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
   { pattern: '/federacoes/*/gerir', label: tk('a Central da federação'),
-    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao'], [HELP_SECTION.ATHLETE, 'federacao-comentarios'], [HELP_SECTION.ATHLETE, 'federacao-arbitragem'], [HELP_SECTION.ATHLETE, 'federacao-licencas'], [HELP_SECTION.ATHLETE, 'federacao-protecao-menores'], [HELP_SECTION.ATHLETE, 'federacao-contas'], [HELP_SECTION.ATHLETE, 'federacao-eleicoes'], [HELP_SECTION.ATHLETE, 'federacao-conformidade']] },
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao'], [HELP_SECTION.ATHLETE, 'federacao-comentarios'], [HELP_SECTION.ATHLETE, 'federacao-arbitragem'], [HELP_SECTION.ATHLETE, 'federacao-licencas'], [HELP_SECTION.ATHLETE, 'federacao-protecao-menores'], [HELP_SECTION.ATHLETE, 'federacao-contas'], [HELP_SECTION.ATHLETE, 'federacao-eleicoes'], [HELP_SECTION.ATHLETE, 'federacao-conformidade'], [HELP_SECTION.ATHLETE, 'federacao-administracao'], [HELP_SECTION.ATHLETE, 'federacao-relatorio-anual']] },
   { pattern: '/federacoes/*/filiar', label: tk('a filiação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar']] },
   { pattern: '/federacoes/*', label: tk('esta federação'),
@@ -2588,6 +2638,8 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Como voto na eleição da federação? O meu voto é secreto?'), section: HELP_SECTION.ATHLETE, article: 'federacao-eleicoes' },
   { q: tk('Como registro uma chapa na eleição da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-eleicoes' },
   { q: tk('A federação cumpre a Lei Geral do Esporte? Onde confiro?'), section: HELP_SECTION.ATHLETE, article: 'federacao-conformidade' },
+  { q: tk('Como controlo os contratos de patrocínio e os equipamentos da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-administracao' },
+  { q: tk('Como tiro o relatório anual da federação para a assembleia?'), section: HELP_SECTION.ATHLETE, article: 'federacao-relatorio-anual' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: tk('Como a plataforma me mostra onde tocar?'), section: HELP_SECTION.START, article: 'dicas' },
 ]);

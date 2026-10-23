@@ -83,8 +83,8 @@ describe('paridade: orçamento e prestação de contas', () => {
   });
 
   it('as mesmas receitas e despesas derivadas, os mesmos totais e o mesmo retrato congelado', () => {
-    const itensS = s.accountItems({ ledger: LEDGER, charges: CHARGES, extraExpenses: EXTRA });
-    const itensC = c.accountItems({ ledger: LEDGER, charges: CHARGES, extraExpenses: EXTRA });
+    const itensS = s.accountItems({ ledger: LEDGER, charges: CHARGES, extraExpenses: EXTRA, extraIncome: [{ ref: 'sponsor:k:p1', date: '2026-05-02', amount_cents: 7000, category: 'sponsorship', auto: 'sponsor', description: ' Parcela ', counterparty: 'S' }, { ref: 'x', date: 'ruim', amount_cents: 5 }] });
+    const itensC = c.accountItems({ ledger: LEDGER, charges: CHARGES, extraExpenses: EXTRA, extraIncome: [{ ref: 'sponsor:k:p1', date: '2026-05-02', amount_cents: 7000, category: 'sponsorship', auto: 'sponsor', description: ' Parcela ', counterparty: 'S' }, { ref: 'x', date: 'ruim', amount_cents: 5 }] });
     expect(itensS).toEqual(itensC);
     expect(s.totalsByCategory(itensS)).toEqual(c.totalsByCategory(itensC));
     const budget = { status: 'approved', lines: { 'income.memberships': 20000 } };

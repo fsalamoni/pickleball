@@ -1477,11 +1477,17 @@ exports.federationMinorReportNotify = onDocumentCreated(
   },
 );
 
+// Contratos de patrocínio e patrimônio (Bloco 5): parcelas recebidas entram
+// nas contas como receita, contrapartidas com entrega, inventário de bens com
+// empréstimo e devolução — `functions/federationManagement.js`.
+const federationManagement = require('./federationManagement');
+exports.federationManagement = federationCallable('federationManagement', federationManagement.management);
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx()), federationManagement.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

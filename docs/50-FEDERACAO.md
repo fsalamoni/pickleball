@@ -2975,3 +2975,153 @@ varredura diária). A régua tem cópia em
 Guias: `federacao-licencas`, `federacao-protecao` e
 `federacao-minha-licenca`. Artigos: `federacao-licencas` e
 `federacao-protecao-menores`.
+
+## 34. Conformidade, relatório anual, planilhas, contratos de patrocínio e patrimônio (Bloco 5 das próximas frentes, 2026-10-23)
+
+Cinco entregas da administração da federação. Duas são **zero banco**
+(relatório anual e planilhas), uma estende a Conformidade (§25) e duas usam
+coleções novas, gravadas **só pelo servidor** (`functions/federationManagement.js`:
+callable `federationManagement` + varredura diária dentro de
+`federationMembershipSweep`). A régua tem cópia em
+`functions/federationManagementPolicy.js`, gerada de
+`src/modules/federations/domain/management.js`, com paridade em
+`functions/federationManagement.parity.test.js`.
+
+### 34.1 Conformidade: dois itens novos
+
+`complianceChecklist` (`domain/compliance.js`) ganhou:
+
+- **Premiação igual entre gêneros** (`prize_equality`, Lei 14.597/2023 art.
+  36, IX; Lei 14.611/2023): os torneios chancelados (aprovados) que começam no
+  ano e cuja chancela declarou a premiação (`prizeParity`). Algum desigual ⇒
+  atenção, com até três nomes; todos iguais ⇒ em dia; ninguém declarou (ou
+  nenhum torneio) ⇒ "não deu para conferir", nunca reprovação. A Central
+  passa os torneios que já lê (`tournamentsQ`); falhando, o item diz isso.
+- **Proteção de crianças e adolescentes** (`safeguarding`, boa prática ECA):
+  em dia com o módulo de proteção de menores (§33.2) ligado; senão leva à aba
+  de módulos.
+
+### 34.2 Relatório anual de atividades
+
+Central → Indicadores → **Relatório anual** (`?aba=relatorio-anual`, só a
+administração). `annualReport` (`domain/annualReport.js`) monta, para um dos
+cinco últimos anos (`annualReportYears`), as seções: diretoria e governança,
+filiados (em dia hoje, entraram no ano pelo número da filiação, venceram no
+ano sem renovar, dependentes, por tipo), competições (chancelados, realizados
+pela federação, premiação igual, categorias com resultado, atletas com
+colocação), ranking (os cinco primeiros do geral), cursos, disciplina e
+ouvidoria (**só contagens**), finanças e conformidade. Módulo desligado ⇒ a
+seção não aparece.
+
+- **Finanças**: com a prestação de contas do ano **enviada** (não rascunho),
+  valem os números congelados no `snapshot`; sem ela, o que entrou pela
+  plataforma (cobranças pagas no ano, por origem), dizendo que a prestação
+  não foi enviada.
+- **Fonte que não carregou** entra em `missing` da seção e aparece como "Não
+  deu para conferir: …", nunca zero (docs/27).
+- **Imprimir ou salvar em PDF** (`FedAnnualReportPanel`): `window.print()`
+  com a folha num portal claro (`imprimindo-cartao` + `recibo-folha
+  tema-claro`), o mesmo padrão do recibo e da carteirinha.
+
+### 34.3 Planilhas (CSV)
+
+`domain/exports.js`, todas com `csvCell` (separador `;`, fórmula neutralizada
+com `'`) e `baixarCsv`:
+
+- `membersCsv` — Filiados → Cadastro, a lista **filtrada** (nome, número,
+  filiado/cadastrado, tipo, plano, situação de hoje, validade).
+- `resultsCsv` — Competições → Resultados, uma linha por atleta, por
+  colocação.
+- `rankingCsv` — aba Ranking da página, para a equipe: o geral e cada classe.
+- `assetsCsv` — Administração → Patrimônio.
+
+Nenhuma leva telefone, e-mail, CPF ou documento.
+
+### 34.4 Contratos de patrocínio (módulo `sponsors`)
+
+Coleção `federation_sponsor_contracts` (leitura `fedAcc`: financeiro, conselho
+fiscal, admin; escrita `false`). A aba **Administração → Contratos de
+patrocínio** (`?aba=contratos-patrocinio`) aparece com o módulo `sponsors`;
+quem grava é o **financeiro e a administração** (`canManageContracts`).
+
+- **O contrato** (`validateContract`): patrocinador, CNPJ, cota
+  (`main`/`support`/`partner`), vigência, até 60 **parcelas**
+  (vencimento + valor; o total é a soma) e até 30 **contrapartidas** (texto +
+  prazo). Ids das linhas estáveis (`comIds`: a linha nova não toma o id de
+  uma que já existe). `splitInstallments` divide o total em parcelas mensais
+  sem perder centavos.
+- **Ações** (`contract_save`, `contract_receive`, `contract_unreceive` com
+  motivo, `contract_deliver` com `undo`, `contract_cancel`): parcela recebida
+  **não muda** de data nem de valor nem some numa edição
+  (`mergeContractEdit`); recebimento com data no futuro é recusado; com o
+  módulo de contas ligado, **período com prestação enviada fica fechado**
+  (`closedPeriodFor`) para receber e desfazer. Cancelar e apagar só `admin`;
+  apagar só sem parcela recebida.
+- **Receita nas contas**: cada parcela recebida vira item derivado de receita
+  `sponsorship` (`sponsorIncome` → `accountItems({ extraIncome })`, rótulo
+  "Parcela de patrocínio", ref `sponsor:{contrato}:{parcela}`), nos dois lados:
+  a prévia da tela (`FedAccountsPanel`) e a prestação congelada no servidor
+  (`federationAccounts.itensDaConta` → `federationManagement.receitas`).
+- **Avisos da varredura** (`contractAlerts`, uma vez cada, em `warned`): fim
+  da vigência a 30 dias (admin + financeiro; mudar o `end` reabre o aviso),
+  parcela vencida sem receber (financeiro) e contrapartida com prazo vencido
+  (admin).
+
+### 34.5 Patrimônio (módulo `assets`)
+
+Módulo novo `assets` ("Patrimônio", `FED_MODULE.ASSETS`, controle interno, não
+aparece na página). Coleção `federation_assets` (leitura `fedAcc` ou
+`competitions`; escrita `false`). Aba **Administração → Patrimônio**
+(`?aba=patrimonio`); grava quem tem financeiro, competições ou admin
+(`canManageAssets`).
+
+- **O bem** (`validateAsset`): nome, categoria (`nets`, `scoreboards`,
+  `balls`, `paddles`, `court_kits`, `electronics`, `furniture`, `uniforms`,
+  `other`), quantidade (1–9999, nunca abaixo do que está emprestado), código,
+  local, estado (`new`, `good`, `fair`, `damaged`), aquisição e valor.
+- **Empréstimo** (`asset_loan`, `validateLoan`): quantidade disponível, quem
+  recebe (`club`/`arena`/`event`/`other`, **nome escrito à mão — nunca uma
+  pessoa da plataforma**), saída e devolução combinada. **Devolução**
+  (`asset_return`): data e estado; voltou danificado ⇒ o bem fica
+  `damaged`. Ficam os últimos 100 empréstimos (`trimLoans`, os abertos
+  sempre).
+- **Baixa** (`asset_retire`): com motivo, sem empréstimo aberto; `undo`
+  reativa; `remove` apaga (só admin, nunca emprestado).
+- **Aviso**: empréstimo vencido avisa quem emprestou (ou a administração),
+  uma vez por data combinada (`warned_for`).
+
+### 34.6 Exclusão e exportação
+
+Contratos e bens são dados da **federação**, não da pessoa: a exclusão de
+conta só tira `created_by` (`functions/accountDeletion.js`) e a exportação não
+os inclui (isenção no guarda `exclusaoCobreColecoes`).
+
+### 34.7 Não pode regredir
+
+81. `federation_sponsor_contracts` e `federation_assets` só o servidor grava
+    (teste de regra `tests/rules/federationManagement.rules.test.js`).
+82. A régua de contratos e patrimônio muda nos dois lados ao mesmo tempo
+    (paridade `functions/federationManagement.parity.test.js`).
+83. Parcela recebida entra nas contas **uma vez**, derivada — nunca como
+    lançamento manual — e não muda nem some numa edição; período fechado não
+    aceita receber nem desfazer.
+84. Quem recebe um empréstimo é texto livre, nunca uid.
+85. Relatório anual e planilhas são **zero banco**; fonte que falhou é dita,
+    nunca zero; disciplina e ouvidoria só como contagens.
+86. Os ids gravados (`CONTRACT_TIERS`, `CONTRACT_STATUS`, `ASSET_CATEGORIES`,
+    `ASSET_CONDITIONS`, `ASSET_STATUS`, `BORROWER_KINDS`, `assets`,
+    `prize_equality`, `safeguarding`) e os valores
+    `?aba=relatorio-anual|contratos-patrocinio|patrimonio` são contrato.
+
+### 34.8 Âncoras e guias
+
+Âncoras: `federacao-aba-relatorio-anual`, `federacao-relatorio-anual`,
+`federacao-relatorio-imprimir`, `federacao-filiados-csv`,
+`federacao-resultados-csv`, `federacao-ranking-csv`,
+`federacao-secao-administracao`, `federacao-aba-contratos`,
+`federacao-aba-patrimonio`, `federacao-contratos`, `federacao-contrato-novo`,
+`federacao-patrimonio`, `federacao-patrimonio-novo`.
+
+Guias: `federacao-administracao` e `federacao-relatorio-anual`. Artigos:
+`federacao-administracao`, `federacao-relatorio-anual` e
+`federacao-conformidade` (atualizado).

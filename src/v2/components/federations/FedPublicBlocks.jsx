@@ -11,7 +11,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, GraduationCap, Landmark, Lock, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
+import { Building2, Download, GraduationCap, Landmark, Lock, Medal, MessageSquareWarning, Trophy, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -33,6 +33,8 @@ import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2SearchIn
 import { fmtData, t, tn } from '@/core/i18n';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import { normalizaBusca } from './manage/listTools';
+import { baixarCsv } from './manage/naoSalvo';
+import { rankingCsv } from '@/modules/federations/domain/exports';
 
 /* ------------------------------------------------------- filiados (orgs) -- */
 
@@ -244,7 +246,7 @@ function SeasonStatus({ season }) {
  * torneios chancelados daquele ano, e o ano encerrado não muda mais.
  * `meUid` destaca a linha da pessoa.
  */
-export function FedRankingBlock({ federation, meUid = null, titulo = true, compacto = false }) {
+export function FedRankingBlock({ federation, meUid = null, titulo = true, compacto = false, exportavel = false }) {
   const ligado = fedModuleOn(federation, 'ranking');
   const anos = useMemo(() => rankingSeasons(federation), [federation]);
   const [season, setSeason] = useState(anos[0]);
@@ -269,6 +271,7 @@ export function FedRankingBlock({ federation, meUid = null, titulo = true, compa
         <div className="flex flex-wrap gap-2">
           <V2Select aria-label={t('Temporada')} className="h-10 w-28" value={season} onChange={(e) => { setSeason(Number(e.target.value)); setClasse('geral'); }} options={anos.map((a) => ({ value: a, label: String(a) }))} />
           <V2Select aria-label={t('Classe')} className="h-10 min-w-40" value={classe} onChange={(e) => setClasse(e.target.value)} options={[{ value: 'geral', label: t('Geral') }, ...(dados?.categories || []).map((c) => ({ value: c.key, label: classeLabel(c) }))]} />
+          {exportavel && dados && <V2Button type="button" variant="secondary" className="h-10" data-dica="federacao-ranking-csv" onClick={() => baixarCsv(rankingCsv(dados, { classLabel: classeLabel }), `ranking-${(federation.acronym || 'federacao').toLowerCase()}-${season}.csv`)}><Download className="h-4 w-4" />{t('Baixar planilha (CSV)')}</V2Button>}
         </div>
       </div>
       <SeasonStatus season={season} />

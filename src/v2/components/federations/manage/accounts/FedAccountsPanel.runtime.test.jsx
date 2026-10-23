@@ -31,6 +31,9 @@ vi.mock('@/modules/federations/hooks/useFederations', async () => {
     useVisibleAgenda: () => ({ ligado: false, items: [] }),
   };
 });
+vi.mock('@/modules/federations/hooks/useManagement', () => ({
+  useSponsorContracts: () => fontes.contracts || q([]),
+}));
 vi.mock('@/modules/federations/hooks/useSelection', () => ({
   usePublicCallups: () => fontes.callups || q([]),
   usePublicGrants: () => fontes.grants || q([]),
@@ -43,15 +46,16 @@ const ano = new Date().getFullYear();
 let container, root;
 beforeEach(() => {
   accountsAction.mockClear();
+  fontes.contracts = undefined;
   fontes.budgets = q([]);
   fontes.ledger = q([{ id: 'l1', kind: 'expense', category: 'travel', date: `${ano}-01-10`, amount_cents: 12000, status: 'posted', description: 'Passagem do árbitro' }]);
   fontes.charges = q([{ id: 'c1', status: 'paid', origin: 'membership', amount_cents: 15000, paid_at: `${ano}-01-05` }]);
   container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
 });
 afterEach(() => { act(() => root.unmount()); container.remove(); });
-const montar = async ({ perms, tab, reports = [] }) => {
+const montar = async ({ perms, tab, reports = [], federation = fed }) => {
   await act(async () => {
-    root.render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><FedAccountsPanel federation={fed} perms={perms} tab={tab} reportsQ={q(reports)} onIrParaAba={vi.fn()} /></QueryClientProvider></MemoryRouter>);
+    root.render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><FedAccountsPanel federation={federation} perms={perms} tab={tab} reportsQ={q(reports)} onIrParaAba={vi.fn()} /></QueryClientProvider></MemoryRouter>);
   });
 };
 const botao = (texto) => [...document.body.querySelectorAll('button')].find((b) => b.textContent.includes(texto) || b.getAttribute('aria-label') === texto);
@@ -70,6 +74,17 @@ describe('FedAccountsPanel', () => {
     expect(container.textContent).toContain('30,00');
     expect(container.textContent).toContain('em leitura');
     expect(botao('Abrir o orçamento')).toBeTruthy();
+  });
+
+  it('patrocínio: a parcela recebida do contrato entra na receita; contratos que falharam são ditos', async () => {
+    const comPatrocinio = { ...fed, modules: { accounts: true, sponsors: true } };
+    fontes.contracts = q([{ id: 'k1', sponsor_name: 'Raquetes Sul', installments: [{ id: 'p1', due: `${ano}-01-01`, amount_cents: 7000, received_at: `${ano}-01-03` }, { id: 'p2', due: `${ano}-02-01`, amount_cents: 7000 }] }]);
+    await montar({ perms: ['finance'], tab: 'lancamentos', federation: comPatrocinio });
+    expect(container.textContent).toContain('Parcela de patrocínio');
+    expect(container.textContent).toContain('Raquetes Sul');
+    fontes.contracts = { isSuccess: false, isLoading: false, isError: true, data: undefined, refetch: vi.fn() };
+    await montar({ perms: ['finance'], tab: 'lancamentos', federation: comPatrocinio });
+    expect(container.textContent).toContain('não carregaram nesta prévia');
   });
 
   it('fonte que falhou vira erro com "Tentar de novo", nunca um zero', async () => {

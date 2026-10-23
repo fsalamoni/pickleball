@@ -51,6 +51,8 @@ export const FED_COLLECTIONS = Object.freeze({
   coachLicenses: 'federation_coach_licenses',
   coachBadges: 'federation_coach_badges',
   safeguarding: 'federation_safeguarding',
+  sponsorContracts: 'federation_sponsor_contracts',
+  assets: 'federation_assets',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -226,6 +228,7 @@ export const FED_MODULE = Object.freeze({
   GRANTS: 'grants',
   COACH_LICENSES: 'coach_licenses',
   SAFEGUARDING: 'safeguarding',
+  ASSETS: 'assets',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -235,7 +238,7 @@ export const FED_MODULE_META = Object.freeze({
   courses: { label: tk('Cursos e credenciais'), description: tk('Cursos de arbitragem e capacitação, com certificado verificável.'), status: 'available', central: tk('Cursos (cursos e credenciais)'), tab: 'cursos', page: tk('Aba Cursos') },
   discipline: { label: tk('Disciplina e ouvidoria'), description: tk('Sanções com efeito nas inscrições e canal de denúncia com protocolo.'), status: 'available', central: tk('Disciplina (sanções e ouvidoria)'), tab: 'sancoes', page: tk('Aba Contato e ouvidoria') },
   news: { label: tk('Notícias e avisos'), description: tk('Notícias na página pública e avisos aos filiados.'), status: 'available', central: tk('Comunicação → Notícias'), tab: 'noticias', page: tk('Aba Notícias e a visão geral') },
-  sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha.'), status: 'available', central: tk('Comunicação → Patrocinadores'), tab: 'patrocinadores', page: tk('Visão geral e carteirinha') },
+  sponsors: { label: tk('Patrocinadores'), description: tk('Logos dos patrocinadores na página e na carteirinha, e os contratos (vigência, parcelas que entram nas contas, contrapartidas e aviso antes de vencer).'), status: 'available', central: tk('Comunicação → Patrocinadores; Administração → Contratos de patrocínio'), tab: 'patrocinadores', page: tk('Visão geral e carteirinha') },
   store: { label: tk('Loja oficial no Mercado'), description: tk('A federação vende uniforme e material pelo Mercado.'), status: 'available', central: tk('Configurações → Loja'), tab: 'loja', page: tk('Visão geral: o link da loja oficial') },
   promos: { label: tk('Cupons e campanhas'), description: tk('Cupons de desconto e vales para filiados, banners na página e na tela inicial.'), status: 'available', central: tk('Comunicação → Cupons e campanhas'), tab: 'divulgacao', page: tk('Visão geral e tela inicial') },
   official_docs: { label: tk('Acervo oficial e transparência'), description: tk('Normas, regulamentos, atos numerados, atas, editais e prestação de contas, com versões, código de integridade e página de transparência.'), status: 'available', central: tk('Acervo oficial (documentos e transparência)'), tab: 'acervo', page: tk('Aba Documentos e a página de transparência') },
@@ -247,6 +250,7 @@ export const FED_MODULE_META = Object.freeze({
   selection: { label: tk('Seleção e delegações'), description: tk('Convocação para campeonatos nacionais pelo ranking oficial do ano ou a dedo, com prazo para responder, suplente chamado sozinho, documentos de viagem, uniforme e custos lançados nas contas.'), status: 'available', central: tk('Seleção e editais → Convocações'), tab: 'convocacoes', page: tk('Aba Competições: as convocações e a delegação') },
   grants: { label: tk('Editais de apoio ao atleta'), description: tk('Auxílio-viagem, bolsa e material: edital com critérios, inscrição com documentos, resultado, recurso e pagamento nas contas e na transparência.'), status: 'available', central: tk('Seleção e editais → Editais'), tab: 'editais', page: tk('Aba Competições: os editais abertos e os resultados') },
   coach_licenses: { label: tk('Licença de professor'), description: tk('Licença por nível com curso de formação, horas de atualização por ano e renovação; o professor licenciado ganha o selo da federação no perfil.'), status: 'available', central: tk('Professores → Licenças'), tab: 'licencas', page: tk('Aba Cursos: os professores credenciados') },
+  assets: { label: tk('Patrimônio'), description: tk('Inventário dos bens da federação (redes, placares, bolas) e o empréstimo a clubes, arenas e eventos, com devolução registrada e aviso de atraso.'), status: 'available', central: tk('Administração → Patrimônio'), tab: 'patrimonio', page: tk('Não aparece na página: é controle interno') },
   safeguarding: { label: tk('Proteção de menores'), description: tk('Quem trabalha com menores precisa de curso de proteção e certidão de antecedentes em dia; a ouvidoria ganha a denúncia de proteção, prioritária e de acesso restrito.'), status: 'available', central: tk('Proteção de menores'), tab: 'protecao', page: tk('Aba Contato: a denúncia de proteção de menor') },
 });
 

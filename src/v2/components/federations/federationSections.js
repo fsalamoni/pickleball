@@ -10,7 +10,7 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -58,6 +58,9 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
   // A moderação dos comentários (docs ou admin) mora no Acervo; sem acervo, na Agenda.
   const moderaComentarios = admin || pode(FED_PERMISSION.DOCS);
   const abaComentarios = { value: 'comentarios', label: tk('Comentários'), icon: MessageSquare };
+  // Administração (Bloco 5): contratos de patrocínio (financeiro/admin; o conselho fiscal lê) e patrimônio (também competições).
+  const veContratos = modulo('sponsors') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL));
+  const veBens = modulo('assets') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL) || pode(FED_PERMISSION.COMPETITIONS));
   return [
     { id: 'hoje', grupo: 'atender', label: tk('Hoje'), icon: Sun, tabs: [{ value: 'hoje', label: tk('Hoje'), icon: Sun }] },
     pode(FED_PERMISSION.MEMBERS) && {
@@ -184,6 +187,15 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'indicadores', label: tk('Indicadores'), icon: BarChart3 },
         // A conformidade com a Lei Geral do Esporte (zero banco): só o admin.
         ...(admin ? [{ value: 'conformidade', label: tk('Conformidade'), icon: Scale, dica: 'federacao-aba-conformidade' }] : []),
+        // O relatório anual (PDF para a assembleia): só o admin, das leituras que a Central já faz.
+        ...(admin ? [{ value: 'relatorio-anual', label: tk('Relatório anual'), icon: BookOpen, dica: 'federacao-aba-relatorio-anual' }] : []),
+      ],
+    },
+    (veContratos || veBens) && {
+      id: 'administracao', grupo: 'gerir', label: tk('Administração'), icon: Package, dica: 'federacao-secao-administracao',
+      tabs: [
+        ...(veContratos ? [{ value: 'contratos-patrocinio', label: tk('Contratos de patrocínio'), icon: FileSignature, dica: 'federacao-aba-contratos' }] : []),
+        ...(veBens ? [{ value: 'patrimonio', label: tk('Patrimônio'), icon: Package, dica: 'federacao-aba-patrimonio' }] : []),
       ],
     },
     // Tudo o que muda o que o PÚBLICO vê, num lugar só (separado de planos, Pix, módulos e regras).
