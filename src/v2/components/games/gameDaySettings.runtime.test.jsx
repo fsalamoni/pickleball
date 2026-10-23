@@ -22,6 +22,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 const auth = { user: { uid: 'u1' }, userProfile: {} };
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/v2/components/rating/DuprSubmitChoice', () => ({ default: () => null }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 
 const arenasGeridas = { lista: [] };

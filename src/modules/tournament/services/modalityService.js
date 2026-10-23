@@ -76,6 +76,8 @@ export async function createModality(tournamentId, data, actor) {
     /** Pickleball adaptado (`docs/50` §41): a categoria da federação; ausente = não é adaptada. */
     adapted_class: data.adapted_class || null,
     adapted_class_label: data.adapted_class ? data.adapted_class_label || null : null,
+    /** Enviar os resultados ao DUPR (escolha de quem cria; null = padrão da plataforma). `docs/51` §8. */
+    dupr_submit: typeof data.dupr_submit === 'boolean' ? data.dupr_submit : null,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   };

@@ -154,7 +154,10 @@ Modalidade dentro de um torneio: `tournament_id`, formato
 (gênero/idade), capacidade (até 500), taxa opcional, e o array `stages[]` com
 a configuração de cada FASE. Opcionais do pickleball adaptado (`docs/50` §41):
 `adapted_class` (id da categoria adaptada da federação) e
-`adapted_class_label`; ausentes = modalidade não adaptada.
+`adapted_class_label`; ausentes = modalidade não adaptada. `dupr_submit`
+(opcional, `true|false|null`): quem cria escolhe se os resultados vão ao DUPR,
+quando a política deixa essa escolha com ele (`docs/51` §8); `null`/ausente =
+padrão da plataforma.
 
 #### `stages[]` — a configuração de cada fase
 
@@ -735,6 +738,9 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 - `open_game_id` — convite público vinculado em `open_games` (`kind='game_day'`)
 - `publish_to_ranking`, `published_count`, `published_at`, `published_by`
 - `status: 'active'|'archived'`, `created_at_ms`
+- `dupr_submit` (**opcional**, `true|false|null`) — enviar os resultados ao
+  DUPR, escolha de quem configura o dia (cartão de configurações); `null` =
+  padrão da plataforma. Ver `docs/51` §8
 - `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
   operar as partidas (sortear, criar próxima partida, substituir jogador, marcar
   indisponível, vincular dupla, incluir/excluir participante). **Ausente, nulo ou
@@ -1944,7 +1950,8 @@ updated_by }`. Ausente = padrão (piloto, envio desligado); lido por
 `dupr_pilot_players/{id}` e `dupr_pilot_matches/{id}` (Piloto do DUPR, Painel
 admin → DUPR): só o admin lê, só o servidor (`functions/duprPilot.js`) escreve.
 Jogador: `{ name, email|null, dupr_id|null, dupr_name, ratings: { singles, doubles }|null,
-status: waiting|ready, checked_ms, invited_ms?, created_at_ms, created_by, updated_at_ms }`.
+status: waiting|consent|ready, checked_ms, invited_ms?, consent_ms?, created_at_ms, created_by, updated_at_ms }`
+(`consent` = ID guardado, a conta ainda não autorizou a plataforma pelo login do DUPR).
 Partida: `{ identifier ('pr:pl:{id}'), payload (o corpo enviado ao DUPR), side_a[],
 side_b[] ({ player_id, name, dupr_id }), env: 'uat', status: sent|failed|deleted,
 match_code|null, error|null, sent_at_ms?, deleted_at_ms?, created_at_ms, created_by }`.

@@ -76,6 +76,8 @@ import {
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
+import { duprBucket } from '@/modules/rating/domain/duprPolicy';
+import DuprSubmitChoice from '@/v2/components/rating/DuprSubmitChoice';
 import { t, tn } from '@/core/i18n';
 
 const CAMPOS_DE_IDENTIDADE = [
@@ -326,6 +328,13 @@ export default function GameDaySettingsCard({ gameDay }) {
               )}
             </div>
           </div>
+          <DuprSubmitChoice
+            id={`gds-dupr-${gdId}`}
+            bucket={duprBucket({ origin: 'game_day', gameDayFormat: format })}
+            value={gameDay.dupr_submit}
+            disabled={update.isPending}
+            onChange={(v) => gravar({ dupr_submit: v }, v ? t('Os resultados vão ao DUPR.') : t('Os resultados não vão ao DUPR.'))}
+          />
         </section>
 
         {/* --------------------------------------------- 2. quem organiza */}

@@ -75,6 +75,32 @@ describe('duprPilot — jogadores', () => {
     expect(e.message).toContain('USER::INVITE');
   });
 
+  it('conta que ainda não autorizou (403): guarda o ID e espera a autorização', async () => {
+    const client = clienteFalso({ getUser: vi.fn(async () => { throw new DuprError('DUPR recusou (403): consent', { status: 403 }); }) });
+    const { ctx, cliente } = cenario({ client });
+    const p = await piloto.savePlayer(ctx, ADMIN, { name: 'Flavio', duprId: 'ddq0kl' }, cliente);
+    expect(p).toMatchObject({ dupr_id: 'DDQ0KL', status: 'consent', ratings: null });
+    const e = await erro(piloto.refreshPlayer(ctx, ADMIN, { id: p.id }, cliente));
+    expect(e.message).toContain('Autorizar pelo login do DUPR');
+  });
+
+  it('autorizar pelo login: o ID vem do DUPR, confere o cadastro e fica pronto', async () => {
+    const client = clienteFalso({ basicUserInfo: vi.fn(async () => ({ results: [{ duprId: 'DDQ0KL', fullName: 'Flávio' }] })) });
+    const { ctx, db, cliente } = cenario({ client, seed: { 'dupr_pilot_players/p1': { name: 'F', dupr_id: 'DDQ0KL', status: 'consent' } } });
+    await piloto.ssoPlayer(ctx, ADMIN, { id: 'p1', accessToken: 'tok' }, cliente);
+    expect(client.basicUserInfo).toHaveBeenCalledWith('tok');
+    expect(db.store.docs.get('dupr_pilot_players/p1')).toMatchObject({ dupr_id: 'DDQ0KL', status: 'ready', ratings: { singles: 3.1 } });
+    expect(JSON.stringify(db.store.docs.get('dupr_pilot_players/p1'))).not.toContain('tok');
+  });
+
+  it('autorizar com a conta errada: recusa sem mexer no jogador', async () => {
+    const client = clienteFalso({ basicUserInfo: vi.fn(async () => ({ results: [{ duprId: 'OUTRA1' }] })) });
+    const { ctx, db, cliente } = cenario({ client, seed: { 'dupr_pilot_players/p1': { name: 'F', dupr_id: 'DDQ0KL', status: 'consent' } } });
+    const e = await erro(piloto.ssoPlayer(ctx, ADMIN, { id: 'p1', accessToken: 'tok' }, cliente));
+    expect(e.message).toContain('OUTRA1');
+    expect(db.store.docs.get('dupr_pilot_players/p1').status).toBe('consent');
+  });
+
   it('convite aceito: o jogador ganha o ID gerado pelo DUPR', async () => {
     const { ctx, db, cliente } = cenario({ seed: { 'dupr_pilot_players/p1': { name: 'P', email: 'p@x.com', dupr_id: null } } });
     await piloto.invitePlayer(ctx, ADMIN, { id: 'p1' }, cliente);
@@ -119,6 +145,8 @@ describe('duprPilot — partidas', () => {
     expect((await erro(piloto.sendMatch(ctx, ADMIN, { ...DUPLAS, games: [{ a: 10, b: 10 }] }, cliente))).message).toContain('empatado');
     expect((await erro(piloto.sendMatch(ctx, ADMIN, { ...DUPLAS, sideB: ['b1', 'sem'] }, cliente))).message).toContain('Sem conta');
     expect((await erro(piloto.sendMatch(ctx, ADMIN, { ...DUPLAS, date: '2026-10-30' }, cliente))).message).toContain('futuro');
+    const semAutorizar = cenario({ seed: { ...QUATRO, 'dupr_pilot_players/b2': { name: 'B2', dupr_id: 'BBB222', status: 'consent' } } });
+    expect((await erro(piloto.sendMatch(semAutorizar.ctx, ADMIN, DUPLAS, semAutorizar.cliente))).message).toContain('Falta autorizar');
     const prod = cenario({ env: 'prod', seed: QUATRO });
     expect((await erro(piloto.sendMatch(prod.ctx, ADMIN, DUPLAS, prod.cliente))).message).toContain('UAT');
     expect(client.createMatch).not.toHaveBeenCalled();

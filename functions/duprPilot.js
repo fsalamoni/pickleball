@@ -109,6 +109,9 @@ async function conferirNoDupr(client, duprId) {
   return { dupr_id: id, dupr_name: texto(u.fullName), ratings: { singles: nota(ratings.singles), doubles: nota(ratings.doubles) } };
 }
 
+/** O DUPR recusou porque a conta ainda não autorizou a plataforma (login SSO). */
+const semConsentimento = (err) => err instanceof DuprError && err.status === 403;
+
 async function idEmUso(ctx, duprId, excetoId) {
   const snap = await ctx.db.collection(PLAYERS).where('dupr_id', '==', duprId).get();
   return snap.docs.some((d) => d.id !== excetoId);
@@ -131,16 +134,28 @@ async function savePlayer(ctx, actor, data, cliente) {
   const velho = atual ? atual.data() : {};
 
   let dupr = { dupr_id: null, dupr_name: '', ratings: null };
+  let status = 'waiting';
   if (duprIdIn) {
-    if (duprIdIn === velho.dupr_id) dupr = { dupr_id: velho.dupr_id, dupr_name: velho.dupr_name || '', ratings: velho.ratings || null };
-    else {
-      try { dupr = await conferirNoDupr((await cliente()).client, duprIdIn); } catch (err) { throw explica(err); }
+    if (duprIdIn === velho.dupr_id) {
+      dupr = { dupr_id: velho.dupr_id, dupr_name: velho.dupr_name || '', ratings: velho.ratings || null };
+      status = velho.status === 'consent' ? 'consent' : 'ready';
+    } else {
+      try {
+        dupr = await conferirNoDupr((await cliente()).client, duprIdIn);
+        status = 'ready';
+      } catch (err) {
+        // O DUPR só mostra a conta depois que ela autoriza a plataforma pelo
+        // login (SSO). Guarda o ID e espera a autorização.
+        if (!semConsentimento(err)) throw explica(err);
+        dupr = { dupr_id: duprIdIn, dupr_name: '', ratings: null };
+        status = 'consent';
+      }
     }
     if (await idEmUso(ctx, dupr.dupr_id, ref.id)) falha('already-exists', 'Esse ID DUPR já está em outro jogador do piloto.');
   }
   const doc = {
     name, email: email || null, ...dupr,
-    status: dupr.dupr_id ? 'ready' : 'waiting',
+    status,
     checked_ms: dupr.dupr_id ? (dupr.dupr_id === velho.dupr_id ? velho.checked_ms || ctx.now : ctx.now) : null,
     created_at_ms: velho.created_at_ms || ctx.now, created_by: velho.created_by || actor.uid, updated_at_ms: ctx.now,
   };
@@ -156,9 +171,54 @@ async function refreshPlayer(ctx, actor, data, cliente) {
   const snap = await ref.get();
   if (!snap.exists || !snap.data().dupr_id) falha('failed-precondition', 'Esse jogador ainda não tem ID DUPR.');
   let dupr;
-  try { dupr = await conferirNoDupr((await cliente()).client, snap.data().dupr_id); } catch (err) { throw explica(err); }
-  await ref.update({ dupr_name: dupr.dupr_name, ratings: dupr.ratings, checked_ms: ctx.now, updated_at_ms: ctx.now });
-  return { id: ref.id, ...snap.data(), ...dupr, checked_ms: ctx.now };
+  try {
+    dupr = await conferirNoDupr((await cliente()).client, snap.data().dupr_id);
+  } catch (err) {
+    if (semConsentimento(err)) falha('failed-precondition', 'Essa conta ainda não autorizou a plataforma no DUPR. Use "Autorizar pelo login do DUPR".');
+    throw explica(err);
+  }
+  await ref.update({ dupr_name: dupr.dupr_name, ratings: dupr.ratings, status: 'ready', checked_ms: ctx.now, updated_at_ms: ctx.now });
+  return { id: ref.id, ...snap.data(), ...dupr, status: 'ready', checked_ms: ctx.now };
+}
+
+/** O endereço do login do DUPR (SSO), para autorizar as contas de teste. */
+async function ssoConfig(ctx, actor, data, cliente) {
+  exigeAdmin(actor);
+  const { client, secrets } = await cliente();
+  return { ssoUrl: client.ssoUrl(), env: texto(secrets.env).toLowerCase() === 'prod' ? 'prod' : 'uat' };
+}
+
+/**
+ * Autoriza a conta de teste: o admin entra no DUPR (iframe) COM A CONTA DO
+ * JOGADOR e o login devolve um token dela. O servidor pergunta ao DUPR quem é
+ * (o ID vem do DUPR, não da tela) e, com a autorização dada, confere o
+ * cadastro. O token não é guardado: o piloto só precisa do consentimento.
+ */
+async function ssoPlayer(ctx, actor, data, cliente) {
+  exigeAdmin(actor);
+  const accessToken = texto(data.accessToken);
+  if (!accessToken || accessToken.length > 4096) falha('invalid-argument', 'Não recebi o login do DUPR. Tente de novo.');
+  const ref = ctx.db.collection(PLAYERS).doc(texto(data.id));
+  const snap = await ref.get();
+  if (!snap.exists) falha('not-found', 'Esse jogador do piloto não existe mais.');
+  const p = snap.data();
+  const { client } = await cliente();
+  let quem;
+  try {
+    const info = await client.basicUserInfo(accessToken);
+    quem = info && Array.isArray(info.results) ? info.results[0] : null;
+  } catch (err) { throw explica(err); }
+  const duprId = texto(quem && quem.duprId).toUpperCase();
+  if (!duprId) falha('permission-denied', 'O DUPR não confirmou a conta que entrou.');
+  if (p.dupr_id && p.dupr_id !== duprId) {
+    falha('failed-precondition', `Entrou a conta DUPR ${duprId}, mas este jogador é ${p.dupr_id}. Saia da conta no quadro do DUPR e entre com a conta certa.`);
+  }
+  if (await idEmUso(ctx, duprId, ref.id)) falha('already-exists', `A conta DUPR ${duprId} já está em outro jogador do piloto.`);
+  let dupr = { dupr_id: duprId, dupr_name: texto(quem.fullName), ratings: p.ratings || null };
+  try { dupr = await conferirNoDupr(client, duprId); } catch { /* autorizado agora; os ratings vêm no "Atualizar" */ }
+  await ref.update({ ...dupr, status: 'ready', consent_ms: ctx.now, checked_ms: ctx.now, updated_at_ms: ctx.now });
+  await auditoria(ctx, actor, 'dupr_pilot_player_authorized', { player_id: ref.id, dupr_id: duprId });
+  return { id: ref.id, ...p, ...dupr, status: 'ready' };
 }
 
 async function removePlayer(ctx, actor, data) {
@@ -218,6 +278,8 @@ async function sendMatch(ctx, actor, data, cliente) {
   const jogadores = Object.fromEntries(snaps.map((s) => [s.id, s.exists ? s.data() : null]));
   const semId = snaps.filter((s) => !s.exists || !s.data().dupr_id);
   if (semId.length) falha('failed-precondition', `Sem ID DUPR: ${semId.map((s) => (s.exists ? s.data().name : s.id)).join(', ')}.`);
+  const semAutorizar = snaps.filter((s) => s.data().status === 'consent');
+  if (semAutorizar.length) falha('failed-precondition', `Falta autorizar no DUPR: ${semAutorizar.map((s) => s.data().name).join(', ')}.`);
   // UTC está à frente de Brasília: comparar com o "hoje" de lá nunca recusa o hoje daqui.
   if (texto(data.date) > new Date(ctx.now).toISOString().slice(0, 10)) falha('invalid-argument', 'A data não pode ser no futuro.');
 
@@ -274,4 +336,5 @@ async function deleteMatch(ctx, actor, data, cliente) {
 
 module.exports = {
   PilotError, duprMatchPayload, savePlayer, refreshPlayer, removePlayer, invitePlayer, sendMatch, deleteMatch,
+  ssoConfig, ssoPlayer,
 };
