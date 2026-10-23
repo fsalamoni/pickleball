@@ -133,6 +133,9 @@ const REVIEW = Object.freeze({
   unverify: { from: ['approved'], patch: { verified: false } },
   official: { from: ['approved'], patch: { official: true } },
   unofficial: { from: ['approved'], patch: { official: false } },
+  // Bloco 6: a confederação recebe as estaduais como filiadas (`federationNational.js`).
+  confederation: { from: ['approved'], patch: { confederation: true } },
+  unconfederation: { from: ['approved'], patch: { confederation: false } },
 });
 
 /**
@@ -155,6 +158,12 @@ async function review(ctx, actor, data) {
   if (acao.needsReason && reason.length < 3) falha('invalid-argument', 'Diga o motivo.');
   const fed = await federacao(ctx, data.federationId);
   if (!acao.from.includes(fed.status)) falha('failed-precondition', 'A federação já mudou de estado. Atualize a página.');
+  if (data.action === 'confederation' && fed.national_body && fed.national_body.id) falha('failed-precondition', 'Esta federação é filiada a uma confederação. Ela se desfilia antes de virar confederação.');
+  if (data.action === 'unconfederation') {
+    // Tirar o papel com estaduais filiadas deixaria o selo "Filiada à" apontando para quem não é mais confederação.
+    const filiadas = await ctx.db.collection('federation_national_links').where('conf_id', '==', fed.id).where('status', '==', 'approved').get();
+    if (!filiadas.empty) falha('failed-precondition', `A confederação tem ${filiadas.size} federação(ões) filiada(s). Elas se desfiliam (ou são desligadas) antes.`);
+  }
 
   if (data.action === 'approve' && fed.slug) {
     // O endereço público (`/f/:slug`) é único entre as APROVADAS — duas no ar com o mesmo slug é uma página só.
@@ -194,6 +203,7 @@ async function review(ctx, actor, data) {
     suspend: [tx('{sigla} foi suspensa'), tx('Motivo: {motivo}. A página e as filiações ficam fora do ar até a revisão.')],
     verify: [tx('{sigla} recebeu o selo de verificada'), tx('O CNPJ e o estatuto foram conferidos pela plataforma.')],
     official: [tx('{sigla} foi marcada como oficial'), tx('A federação aparece com o selo de oficial no diretório e na página.')],
+    confederation: [tx('{sigla} agora é uma confederação'), tx('As federações estaduais podem se filiar a ela. Convide-as e defina as regras da rede na Central, em Rede nacional.')],
   };
   if (avisos[data.action] && fed.created_by) {
     const [title, message] = avisos[data.action];

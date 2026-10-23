@@ -4710,7 +4710,7 @@ service cloud.firestore {
     }
     // Campos da federação que só o admin da plataforma (ou o servidor) muda.
     function fedLocked() {
-      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules'];
+      return ['status', 'verified', 'official', 'member_counter', 'member_count', 'created_by', 'created_by_name', 'created_at', 'review', 'cnpj_masked', 'staff_roles', 'doc_numbers', 'referee_rules', 'confederation', 'national_body', 'national_config'];
     }
 
     match /federations/{fedId} {
@@ -4727,7 +4727,7 @@ service cloud.firestore {
         && nd().status == 'pending'
         && nd().get('verified', false) == false
         && nd().get('official', false) == false
-        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles', 'published'])
+        && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles', 'published', 'confederation', 'national_body', 'national_config'])
         && fedProfileOk();
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
       // Publicar e tirar do ar: só o admin, e só a federação aprovada.
@@ -4889,7 +4889,10 @@ service cloud.firestore {
       allow read: if fedMemberOwner(od())
         || fedAny(od().federation_id, ['members', 'admin'])
         || (od().get('to_federation_id', null) is string
-          && (fedAny(od().to_federation_id, ['members', 'admin'])));
+          && (fedAny(od().to_federation_id, ['members', 'admin'])))
+        // Bloco 6: a confederação que homologa a troca entre duas filiadas.
+        || (od().get('homologation_by', null) is string
+          && fedAny(od().homologation_by, ['members', 'admin']));
       allow write: if false;
     }
 
@@ -5164,6 +5167,20 @@ service cloud.firestore {
     }
     match /federation_assets/{id} {
       allow read: if fedAcc(od().federation_id) || fedHas(od().federation_id, 'competitions');
+      allow write: if false;
+    }
+    // CAMADA NACIONAL (Bloco 6): só o SERVIDOR grava (`federationNational`).
+    // O vínculo da estadual com a confederação (`{conf}_{fed}`): qualquer
+    // cargo das duas lê (a lista pública das filiadas sai do espelho
+    // `federations.national_body`). A anuidade (`{conf}_{fed}_{ano}`): as
+    // contas das duas (financeiro, conselho fiscal, admin).
+    match /federation_national_links/{id} {
+      allow read: if fedPlat(od().federation_id) || fedPerms(od().federation_id).size() > 0
+        || fedPlat(od().conf_id) || fedPerms(od().conf_id).size() > 0;
+      allow write: if false;
+    }
+    match /federation_dues/{id} {
+      allow read: if fedAcc(od().federation_id) || fedAcc(od().conf_id);
       allow write: if false;
     }
     // ARBITRAGEM (módulo `referees`): o quadro (`{fed}_{uid}`) e as escalas.

@@ -490,7 +490,7 @@ export function categoryLabel(kind, id) {
   return c ? t(c.label) : String(id || '');
 }
 
-export const AUTO_LABELS = Object.freeze({ charge: tk('Cobrança paga'), referees: tk('Diária de arbitragem'), sponsor: tk('Parcela de patrocínio'), derived: tk('Automático') });
+export const AUTO_LABELS = Object.freeze({ charge: tk('Cobrança paga'), referees: tk('Diária de arbitragem'), sponsor: tk('Parcela de patrocínio'), dues: tk('Anuidade da confederação'), derived: tk('Automático') });
 
 /** A planilha dos lançamentos (manuais, estornados marcados, e os automáticos). */
 export function ledgerCsv(rows = []) {

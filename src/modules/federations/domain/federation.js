@@ -152,7 +152,8 @@ export function publicationChecklist(f, plans) {
 export function federationReviewActions(f) {
   switch (f?.status) {
     case FEDERATION_STATUS.PENDING: return ['approve', 'reject'];
-    case FEDERATION_STATUS.APPROVED: return ['suspend', f.verified ? 'unverify' : 'verify', f.official ? 'unofficial' : 'official'];
+    // Confederação (Bloco 6): a filiada a uma confederação não vira confederação; desmarcar com filiadas o servidor recusa.
+    case FEDERATION_STATUS.APPROVED: return ['suspend', f.verified ? 'unverify' : 'verify', f.official ? 'unofficial' : 'official', ...(f.confederation === true ? ['unconfederation'] : f.national_body?.id ? [] : ['confederation'])];
     case FEDERATION_STATUS.SUSPENDED: return ['approve'];
     case FEDERATION_STATUS.REJECTED: return ['approve'];
     default: return [];

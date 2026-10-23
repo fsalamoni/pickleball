@@ -12,7 +12,7 @@
  */
 import React, { Suspense, lazy, useMemo } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { BadgeCheck, BookOpen, CalendarDays, Globe, Home, IdCard, Instagram, Library, Mail, MessageCircle, Newspaper, Phone, Share2, Trophy, Building2, Users, Vote } from 'lucide-react';
+import { BadgeCheck, BookOpen, CalendarDays, Globe, Home, IdCard, Instagram, Library, Mail, MessageCircle, Newspaper, Phone, Share2, Trophy, Building2, Users, Vote, Network } from 'lucide-react';
 import { PROFILE_TAB, profileTabs, resolveProfileTab, whatsappLink } from '@/modules/federations/domain/profile';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
@@ -23,7 +23,7 @@ import PlansList from '../PlansList';
 import { FedAcervoBlock } from '../acervo/AcervoPublic';
 import { FedAgendaBlock } from '../agenda/AgendaPublic';
 import FedAccountsPublic from '../accounts/FedAccountsPublic';
-import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '../FedPublicBlocks';
+import { FedAffiliatesSection, FedCoursesSection, FedNationalNetworkSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '../FedPublicBlocks';
 import { FedRefereesBoard } from '../referees/RefereesPublic';
 import { FedCredentialedCoaches } from '../coaching/CoachBadges';
 import { FedCallupsBlock, FedGrantsBlock } from '../selection/SelectionPublic';
@@ -46,6 +46,7 @@ const ICONE = {
   [PROFILE_TAB.CLUBS]: Building2,
   [PROFILE_TAB.CONTACT]: MessageCircle,
   [PROFILE_TAB.ELECTIONS]: Vote,
+  [PROFILE_TAB.NETWORK]: Network,
 };
 
 /** O contato público (e-mail, telefone, site, Instagram, CNPJ mascarado). */
@@ -203,6 +204,7 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
           </div>
         )}
         {aba === PROFILE_TAB.CLUBS && <FedAffiliatesSection federation={f} />}
+        {aba === PROFILE_TAB.NETWORK && <FedNationalNetworkSection federation={f} />}
         {aba === PROFILE_TAB.ELECTIONS && <Suspense fallback={<V2Skeleton lines={5} />}><ElectionsPublic federation={f} meUid={meUid} memberOf={memberOf} /></Suspense>}
         {aba === PROFILE_TAB.CONTACT && (
           <div className="grid gap-6 lg:grid-cols-12">

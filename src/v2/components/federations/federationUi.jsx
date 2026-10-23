@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { BadgeCheck, Landmark } from 'lucide-react';
+import { BadgeCheck, Landmark, Network } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { instanteDoDiaEmMs } from '@/core/domain/instant';
@@ -18,6 +18,7 @@ import { normalizeHex, readableInk, BRAND_DEFAULT_COLOR } from '@/modules/arenas
 import {
   CHARGE_STATUS, CHARGE_STATUS_LABELS, FEDERATION_LEVEL_LABELS, MEMBER_STATUS, MEMBER_STATUS_LABELS,
 } from '@/modules/federations/domain/constants';
+import { isConfederation, nationalBodyOf } from '@/modules/federations/domain/national';
 import { V2Badge, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { fmtData, t } from '@/core/i18n';
@@ -60,7 +61,7 @@ export function FedLogo({ federation, size = 'md', className }) {
   );
 }
 
-/** Oficial · Verificada · Estadual (UF). Só mostra o que é verdade. */
+/** Oficial · Verificada · Estadual (UF) · Confederação ou "Filiada à". Só mostra o que é verdade. */
 export function FedBadges({ federation, className }) {
   if (!federation) return null;
   const nivel = t(FEDERATION_LEVEL_LABELS[federation.level] || FEDERATION_LEVEL_LABELS.state);
@@ -69,6 +70,8 @@ export function FedBadges({ federation, className }) {
       {federation.official && <V2Badge tone="ink"><Landmark className="mr-1 h-3 w-3" aria-hidden="true" />{t('Oficial')}</V2Badge>}
       {federation.verified && <V2Badge tone="blue"><BadgeCheck className="mr-1 h-3 w-3" aria-hidden="true" />{t('Verificada')}</V2Badge>}
       <V2Badge tone="neutral">{federation.state ? `${nivel} · ${federation.state}` : nivel}</V2Badge>
+      {isConfederation(federation) && <V2Badge tone="ink"><Network className="mr-1 h-3 w-3" aria-hidden="true" />{t('Confederação')}</V2Badge>}
+      {nationalBodyOf(federation) && <V2Badge tone="neutral"><Network className="mr-1 h-3 w-3" aria-hidden="true" />{t('Filiada à {sigla}', { sigla: nationalBodyOf(federation).acronym || nationalBodyOf(federation).name || '' })}</V2Badge>}
     </span>
   );
 }

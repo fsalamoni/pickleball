@@ -10,12 +10,13 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen, Network } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { sanctionInForce } from '@/modules/federations/domain/discipline';
 import { sanctionState } from '@/modules/federations/domain/sanction';
+import { canHomologate, canManageNetwork, canSeeDues, isConfederation, nationalBodyOf } from '@/modules/federations/domain/national';
 
 /**
  * O que ficou em aberto num módulo DESLIGADO (ver `residual` abaixo). Lista
@@ -61,6 +62,17 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
   // Administração (Bloco 5): contratos de patrocínio (financeiro/admin; o conselho fiscal lê) e patrimônio (também competições).
   const veContratos = modulo('sponsors') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL));
   const veBens = modulo('assets') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL) || pode(FED_PERMISSION.COMPETITIONS));
+  // Camada nacional (Bloco 6): a confederação gere a REDE; a estadual vê a confederação dela. Sem módulo: vale pela marca da plataforma.
+  const conf = isConfederation(federation);
+  const rede = conf ? [
+    ...(canManageNetwork(perms) || canHomologate(perms) || canSeeDues(perms) ? [{ value: 'rede-filiadas', label: tk('Filiadas'), icon: Network, dica: 'federacao-aba-rede-filiadas' }] : []),
+    ...(canHomologate(perms) ? [{ value: 'rede-homologacoes', label: tk('Homologações'), icon: ArrowLeftRight, dica: 'federacao-aba-rede-homologacoes' }] : []),
+    ...(canSeeDues(perms) ? [{ value: 'rede-anuidades', label: tk('Anuidades'), icon: Receipt, dica: 'federacao-aba-rede-anuidades' }] : []),
+    ...(canManageNetwork(perms) ? [{ value: 'rede-regras', label: tk('Regras'), icon: Settings2, dica: 'federacao-aba-rede-regras' }] : []),
+  ] : [
+    ...(admin ? [{ value: 'confederacao', label: tk('Vínculo'), icon: Landmark, dica: 'federacao-aba-confederacao' }] : []),
+    ...(canSeeDues(perms) && nationalBodyOf(federation) ? [{ value: 'confederacao-anuidades', label: tk('Anuidades'), icon: Receipt, dica: 'federacao-aba-confederacao-anuidades' }] : []),
+  ];
   return [
     { id: 'hoje', grupo: 'atender', label: tk('Hoje'), icon: Sun, tabs: [{ value: 'hoje', label: tk('Hoje'), icon: Sun }] },
     pode(FED_PERMISSION.MEMBERS) && {
@@ -198,6 +210,9 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         ...(veBens ? [{ value: 'patrimonio', label: tk('Patrimônio'), icon: Package, dica: 'federacao-aba-patrimonio' }] : []),
       ],
     },
+    rede.length > 0 && (conf
+      ? { id: 'rede', grupo: 'gerir', label: tk('Rede nacional'), icon: Network, dica: 'federacao-secao-rede', tabs: rede }
+      : { id: 'confederacao', grupo: 'gerir', label: tk('Confederação'), icon: Landmark, dica: 'federacao-secao-confederacao', tabs: rede }),
     // Tudo o que muda o que o PÚBLICO vê, num lugar só (separado de planos, Pix, módulos e regras).
     admin && {
       id: 'pagina-publica', grupo: 'gerir', label: tk('Página pública'), icon: Globe, dica: 'federacao-secao-pagina-publica',

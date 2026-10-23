@@ -6,7 +6,7 @@
  * feitos. Lógica pura; quem grava é o servidor (`functions/federationTransfers.js`).
  */
 import { t } from '@/core/i18n';
-import { TRANSFER_COOLDOWN_DAYS, TRANSFER_KIND, TRANSFER_RELEASE_DAYS, TRANSFER_STATUS } from './constants.js';
+import { TRANSFER_COOLDOWN_DAYS, TRANSFER_KIND, TRANSFER_OPEN, TRANSFER_RELEASE_DAYS, TRANSFER_STATUS } from './constants.js';
 import { daysBetween, isoDate, LIVE_MEMBER_STATUSES } from './membership.js';
 
 /** Dias de carência desta federação (padrão 90; 0 = sem carência). */
@@ -28,7 +28,7 @@ export const transferReleaseDays = (federation) => {
  */
 export function canRequestTransfer(member, { pending = [], federation = null, hoje = isoDate() } = {}) {
   if (!member || !LIVE_MEMBER_STATUSES.includes(member.status)) return { ok: false, reason: t('Só quem tem filiação nesta federação pede transferência.') };
-  if (pending.some((x) => x.status === TRANSFER_STATUS.PENDING)) return { ok: false, reason: t('Já existe uma transferência aguardando resposta.') };
+  if (pending.some((x) => TRANSFER_OPEN.includes(x.status))) return { ok: false, reason: t('Já existe uma transferência aguardando resposta.') };
   const dias = transferCooldownDays(federation);
   const ultima = String(member.last_transfer_at || '');
   if (dias > 0 && ultima && daysBetween(ultima, hoje) < dias) {
@@ -58,9 +58,16 @@ export function transferSummary(tr) {
   return t('para a {sigla}', { sigla: tr.to_federation_acronym || tr.to_federation_name || '' });
 }
 
+/** Na homologação: quem homologa e até quando (silêncio = homologada). */
+export function homologationSummary(tr) {
+  if (tr?.status !== TRANSFER_STATUS.HOMOLOGATION) return '';
+  const prazo = String(tr.homologation_deadline || '').split('-').reverse().join('/');
+  return t('a {conf} homologa até {data}; sem resposta, fica homologada', { conf: tr.homologation_conf_acronym || '', data: prazo });
+}
+
 /** Pendentes primeiro, depois as mais recentes. */
 export function sortTransfers(list = []) {
-  const peso = { pending: 0, approved: 1, rejected: 2, cancelled: 3 };
+  const peso = { pending: 0, homologation: 0, approved: 1, rejected: 2, denied: 2, cancelled: 3 };
   return [...list].sort((a, b) => (peso[a.status] ?? 9) - (peso[b.status] ?? 9) || (b.requested_at_ms || 0) - (a.requested_at_ms || 0));
 }
 

@@ -63,6 +63,9 @@ describe('Pix e revisão', () => {
     expect(federationReviewActions({ status: 'pending' })).toEqual(['approve', 'reject']);
     expect(federationReviewActions({ status: 'approved', verified: true })).toContain('unverify');
     expect(federationReviewActions({ status: 'suspended' })).toEqual(['approve']);
+    expect(federationReviewActions({ status: 'approved' })).toContain('confederation');
+    expect(federationReviewActions({ status: 'approved', confederation: true })).toContain('unconfederation');
+    expect(federationReviewActions({ status: 'approved', national_body: { id: 'cbp' } })).not.toContain('confederation');
   });
 });
 

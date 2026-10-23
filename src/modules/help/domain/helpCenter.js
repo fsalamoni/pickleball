@@ -1069,6 +1069,29 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-confederacao',
+      flags: ['federations'],
+      guias: ['federacao-confederacao'],
+      title: tk('Confederação e rede nacional'),
+      summary: tk('A confederação tem as federações estaduais como filiadas: ranking nacional, homologação das transferências entre estados e anuidade da rede.'),
+      keywords: ['federação', 'confederação', 'nacional', 'estadual', 'rede', 'filiada', 'ranking nacional', 'homologação', 'transferência', 'anuidade', 'repasse'],
+      blocks: [
+        p(tk('A plataforma marca uma federação como confederação (no Painel admin). A partir daí ela convida as federações estaduais, ou aceita o pedido delas, e a Central das duas ganha uma seção nova: "Rede nacional" na confederação e "Confederação" na estadual. Cada estadual se filia a uma confederação só.')),
+        steps(
+          tk('FILIAR — a administração da estadual pede em Confederação → "Pedir filiação"; ou a confederação convida em Rede nacional → Federações filiadas → "Convidar". O outro lado aceita ou recusa. Sair ou desfiliar pede motivo, e o histórico fica.'),
+          tk('RANKING NACIONAL — os pontos que cada filiada lança pelos torneios chancelados (e os da própria confederação) somam no ranking nacional do ano, na página pública da confederação. Ele segue as mesmas regras do ranking oficial: fecha em 31/01 do ano seguinte e mudar a tabela não é retroativo.'),
+          tk('HOMOLOGAÇÃO — quando a troca é entre duas estaduais da mesma confederação, depois que a federação de origem libera, a confederação homologa ou nega com motivo. Sem resposta no prazo das regras (padrão 15 dias), fica homologada. A confederação pode desligar a homologação nas regras.'),
+          tk('ANUIDADE — a confederação define nas regras um valor fixo, um valor por filiado ativo e o vencimento, e lança o ano para cada filiada. A estadual declara que pagou; a confederação confirma com a data, reabre ou dispensa com motivo. A paga entra sozinha nas contas das duas: despesa da estadual e receita da confederação.'),
+        ),
+        list(
+          tk('QUEM VÊ — a rede é da administração; a homologação, de quem cuida dos filiados; a anuidade, do financeiro e do conselho fiscal. Ninguém de fora lê os vínculos nem as anuidades.'),
+          tk('PÁGINA PÚBLICA — a confederação mostra a aba "Federações filiadas" (só as que têm página pública) e cada filiada leva o selo "Filiada à" com a sigla.'),
+          tk('AVISOS — pedido, convite, decisão, homologação e anuidade vencida avisam a outra federação e aparecem em "Precisa de você" na Central.'),
+        ),
+        tip(tk('Defina as regras da rede antes de lançar a primeira anuidade: o valor é calculado com o número de filiados ativos da estadual no dia do lançamento.')),
+      ],
+    },
+    {
       id: 'federacao-relatorio-anual',
       flags: ['federations'],
       guias: ['federacao-relatorio-anual'],
@@ -2359,7 +2382,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
   { pattern: '/federacoes/*/gerir', label: tk('a Central da federação'),
-    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao'], [HELP_SECTION.ATHLETE, 'federacao-comentarios'], [HELP_SECTION.ATHLETE, 'federacao-arbitragem'], [HELP_SECTION.ATHLETE, 'federacao-licencas'], [HELP_SECTION.ATHLETE, 'federacao-protecao-menores'], [HELP_SECTION.ATHLETE, 'federacao-contas'], [HELP_SECTION.ATHLETE, 'federacao-eleicoes'], [HELP_SECTION.ATHLETE, 'federacao-conformidade'], [HELP_SECTION.ATHLETE, 'federacao-administracao'], [HELP_SECTION.ATHLETE, 'federacao-relatorio-anual']] },
+    refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir'], [HELP_SECTION.ATHLETE, 'federacao-equipe'], [HELP_SECTION.ATHLETE, 'federacao-torneios'], [HELP_SECTION.ATHLETE, 'federacao-comunicacao'], [HELP_SECTION.ATHLETE, 'federacao-acervo'], [HELP_SECTION.ATHLETE, 'federacao-agenda'], [HELP_SECTION.ATHLETE, 'federacao-reuniao'], [HELP_SECTION.ATHLETE, 'federacao-comentarios'], [HELP_SECTION.ATHLETE, 'federacao-arbitragem'], [HELP_SECTION.ATHLETE, 'federacao-licencas'], [HELP_SECTION.ATHLETE, 'federacao-protecao-menores'], [HELP_SECTION.ATHLETE, 'federacao-contas'], [HELP_SECTION.ATHLETE, 'federacao-eleicoes'], [HELP_SECTION.ATHLETE, 'federacao-conformidade'], [HELP_SECTION.ATHLETE, 'federacao-administracao'], [HELP_SECTION.ATHLETE, 'federacao-confederacao'], [HELP_SECTION.ATHLETE, 'federacao-relatorio-anual']] },
   { pattern: '/federacoes/*/filiar', label: tk('a filiação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacoes-filiar']] },
   { pattern: '/federacoes/*', label: tk('esta federação'),
@@ -2639,6 +2662,7 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Como registro uma chapa na eleição da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-eleicoes' },
   { q: tk('A federação cumpre a Lei Geral do Esporte? Onde confiro?'), section: HELP_SECTION.ATHLETE, article: 'federacao-conformidade' },
   { q: tk('Como controlo os contratos de patrocínio e os equipamentos da federação?'), section: HELP_SECTION.ATHLETE, article: 'federacao-administracao' },
+  { q: tk('Como a federação estadual se filia à confederação e entra no ranking nacional?'), section: HELP_SECTION.ATHLETE, article: 'federacao-confederacao' },
   { q: tk('Como tiro o relatório anual da federação para a assembleia?'), section: HELP_SECTION.ATHLETE, article: 'federacao-relatorio-anual' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: tk('Como a plataforma me mostra onde tocar?'), section: HELP_SECTION.START, article: 'dicas' },

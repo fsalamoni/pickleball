@@ -39,6 +39,11 @@ vi.mock('@/modules/federations/hooks/useSelection', () => ({
   usePublicGrants: () => fontes.grants || q([]),
 }));
 
+vi.mock('@/modules/federations/hooks/useNational', () => ({
+  useDuesOwed: () => fontes.duesOwed || q([]),
+  useDuesReceivable: () => fontes.duesIn || q([]),
+}));
+
 const { default: FedAccountsPanel } = await import('./FedAccountsPanel');
 
 const fed = { id: 'fpp', acronym: 'FPP', modules: { accounts: true } };
@@ -47,6 +52,8 @@ let container, root;
 beforeEach(() => {
   accountsAction.mockClear();
   fontes.contracts = undefined;
+  fontes.duesOwed = undefined;
+  fontes.duesIn = undefined;
   fontes.budgets = q([]);
   fontes.ledger = q([{ id: 'l1', kind: 'expense', category: 'travel', date: `${ano}-01-10`, amount_cents: 12000, status: 'posted', description: 'Passagem do árbitro' }]);
   fontes.charges = q([{ id: 'c1', status: 'paid', origin: 'membership', amount_cents: 15000, paid_at: `${ano}-01-05` }]);
@@ -85,6 +92,20 @@ describe('FedAccountsPanel', () => {
     fontes.contracts = { isSuccess: false, isLoading: false, isError: true, data: undefined, refetch: vi.fn() };
     await montar({ perms: ['finance'], tab: 'lancamentos', federation: comPatrocinio });
     expect(container.textContent).toContain('não carregaram nesta prévia');
+  });
+
+  it('anuidade da rede: paga vira despesa da estadual e receita da confederação; a que falhou é dita', async () => {
+    const paga = { id: 'cbp_fpp_x', status: 'paid', paid_at: `${ano}-02-01`, amount_cents: 50000, year: ano, conf_acronym: 'CBP', conf_name: 'Confederação', federation_acronym: 'FPP', federation_name: 'Federação Paulista' };
+    fontes.duesOwed = q([paga, { ...paga, id: 'aberta', status: 'open', paid_at: null }]);
+    await montar({ perms: ['finance'], tab: 'lancamentos' });
+    expect(container.textContent).toContain('Anuidade da confederação');
+    expect(container.textContent).toContain(`Anuidade ${ano} · CBP`);
+    fontes.duesIn = q([paga]);
+    await montar({ perms: ['finance'], tab: 'lancamentos', federation: { ...fed, id: 'cbp', confederation: true } });
+    expect(container.textContent).toContain(`Anuidade ${ano} · FPP`);
+    fontes.duesOwed = { isSuccess: false, isLoading: false, isError: true, data: undefined, refetch: vi.fn() };
+    await montar({ perms: ['finance'], tab: 'orcamento' });
+    expect(container.textContent).toContain('As anuidades da confederação não carregaram');
   });
 
   it('fonte que falhou vira erro com "Tentar de novo", nunca um zero', async () => {

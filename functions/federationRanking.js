@@ -237,7 +237,7 @@ function aggregateSeason({ entries = [], config = {}, season } = {}) {
       if (e.result_id) resultados.add(e.result_id);
       const key = e.category || rankingCategoryKey(e);
       if (!classes.has(key)) classes.set(key, { key, gender_category: e.gender_category || 'open', age_category: e.age_category || 'open', format: e.format || 'doubles', pessoas: new Map() });
-      const item = { entry_id: e.id || `${e.result_id}_${e.uid}`, result_id: e.result_id || null, points: Number(e.points), position: e.position == null ? null : e.position, tournament_id: e.tournament_id || null, tournament_name: e.tournament_name || '', modality_name: e.modality_name || '', date: e.date || '', category: key };
+      const item = { entry_id: e.id || `${e.result_id}_${e.uid}`, result_id: e.result_id || null, points: Number(e.points), position: e.position == null ? null : e.position, tournament_id: e.tournament_id || null, tournament_name: e.tournament_name || '', modality_name: e.modality_name || '', date: e.date || '', category: key, federation_acronym: e.federation_acronym || '' };
       entra(classes.get(key).pessoas, e, item);
       entra(geral, e, item);
     });
@@ -317,7 +317,7 @@ function ledgerDiff({ resultId, antes, depois, awards = [], existing = [], nowMs
 
 /** O documento gravado em `federation_rankings` (sem o detalhe de cada resultado além de 12 — fica leve e público). */
 function rankingDocument(fedId, calc, agoraMs) {
-  const enxuga = (rows) => rows.map((l) => ({ uid: l.uid, name: l.name, photo_url: l.photo_url || null, points: l.points, events: l.events, titles: l.titles, position: l.position, results: l.results.slice(0, 12).map((r) => ({ entry_id: r.entry_id, points: r.points, position: r.position, counts: r.counts, tournament_id: r.tournament_id, tournament_name: r.tournament_name, modality_name: r.modality_name, date: r.date })) }));
+  const enxuga = (rows) => rows.map((l) => ({ uid: l.uid, name: l.name, photo_url: l.photo_url || null, points: l.points, events: l.events, titles: l.titles, position: l.position, results: l.results.slice(0, 12).map((r) => ({ entry_id: r.entry_id, points: r.points, position: r.position, counts: r.counts, tournament_id: r.tournament_id, tournament_name: r.tournament_name, modality_name: r.modality_name, date: r.date, ...(r.federation_acronym ? { federation_acronym: r.federation_acronym } : {}) })) }));
   return {
     federation_id: fedId,
     season: calc.season,
@@ -373,6 +373,8 @@ async function recomputeSeason(ctx, fedId, season) {
   if (!entries.length && !(await ref.get()).exists) return calc;
   await ref.set(rankingDocument(fedId, calc, agora));
   if (ctx.logger) ctx.logger.info('federationRanking: temporada somada', { fedId, season, lancamentos: calc.entries_count, categorias: calc.categories.length });
+  // Filiada a uma confederação (ou a própria): o ranking NACIONAL do ano soma de novo. require tardio: o nacional usa este arquivo.
+  await require('./federationNational.js').afterSeason(ctx, fed, fedId, Number(season));
   return calc;
 }
 

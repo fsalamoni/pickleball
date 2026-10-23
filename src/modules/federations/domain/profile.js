@@ -12,6 +12,7 @@
  * `#fed-ouvidoria` — `resolveProfileTab` acha a aba que contém a seção.
  */
 import { tk } from '@/core/i18n';
+import { isConfederation } from './national.js';
 import { fedModuleOn } from './federation';
 import { hasGovernance } from './governance';
 
@@ -33,6 +34,7 @@ export const PROFILE_TAB = Object.freeze({
   CLUBS: 'clubes',
   CONTACT: 'contato',
   ELECTIONS: 'eleicoes',
+  NETWORK: 'rede',
 });
 
 /** A seção (id do título, `fed-*`) → a aba onde ela mora. */
@@ -59,6 +61,7 @@ const ANCHOR_TAB = Object.freeze({
   'fed-contato': PROFILE_TAB.CONTACT,
   'fed-eleicoes': PROFILE_TAB.ELECTIONS,
   'fed-minha-filiacao': PROFILE_TAB.MINE,
+  'fed-rede': PROFILE_TAB.NETWORK,
 });
 
 /** A aba de uma âncora (`#fed-cursos`, com ou sem o `#`), ou null. */
@@ -81,10 +84,11 @@ export function profileTabs(federation, { member = false } = {}) {
     member && { id: PROFILE_TAB.MINE, dica: 'federacao-pub-minha', label: tk('Minha filiação') },
     on('news') && { id: PROFILE_TAB.NEWS, dica: 'federacao-pub-noticias', label: tk('Notícias') },
     on('calendar') && { id: PROFILE_TAB.AGENDA, dica: 'federacao-pub-agenda', label: tk('Agenda') },
-    (on('tournaments') || on('ranking') || on('referees') || on('selection') || on('grants')) && { id: PROFILE_TAB.COMPETITIONS, dica: 'federacao-pub-competicoes', label: tk('Competições') },
+    (on('tournaments') || on('ranking') || isConfederation(federation) || on('referees') || on('selection') || on('grants')) && { id: PROFILE_TAB.COMPETITIONS, dica: 'federacao-pub-competicoes', label: tk('Competições') },
     (on('official_docs') || on('accounts') || hasGovernance(federation.governance)) && { id: PROFILE_TAB.DOCUMENTS, dica: 'federacao-pub-documentos', label: tk('Documentos') },
     on('elections') && { id: PROFILE_TAB.ELECTIONS, dica: 'federacao-pub-eleicoes', label: tk('Eleições') },
     (on('courses') || on('coach_licenses')) && { id: PROFILE_TAB.COURSES, dica: 'federacao-pub-cursos', label: tk('Cursos') },
+    isConfederation(federation) && { id: PROFILE_TAB.NETWORK, dica: 'federacao-pub-rede', label: tk('Federações filiadas') },
     on('affiliations') && { id: PROFILE_TAB.CLUBS, dica: 'federacao-pub-clubes', label: tk('Clubes e arenas') },
     { id: PROFILE_TAB.CONTACT, dica: 'federacao-pub-contato', label: on('discipline') ? tk('Contato e ouvidoria') : tk('Contato') },
   ].filter(Boolean);

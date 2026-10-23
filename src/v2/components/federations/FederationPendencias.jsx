@@ -13,7 +13,7 @@ import { t } from '@/core/i18n';
 
 const dado = (q) => (q?.isSuccess ? q.data : undefined);
 
-export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, accountReportsQ, assignmentsQ, refEvents, refRules, electionsQ, candidaciesQ, coachLicensesQ, minorReportsQ, sgOverviewQ, uid = null, perms, abas, onIrParaAba }) {
+export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ, tournamentsQ, transfersQ, documentsQ, sanctionsQ, reportsQ, accountReportsQ, assignmentsQ, refEvents, refRules, electionsQ, candidaciesQ, coachLicensesQ, minorReportsQ, sgOverviewQ, nationalQs = {}, uid = null, perms, abas, onIrParaAba }) {
   const elections = dado(electionsQ);
   const candidacies = dado(candidaciesQ);
   const members = dado(membersQ);
@@ -29,7 +29,12 @@ export default function FederationPendencias({ membersQ, chargesQ, affiliationsQ
   const coachLicenses = dado(coachLicensesQ);
   const minorReports = dado(minorReportsQ);
   const safeguardingRows = dado(sgOverviewQ)?.rows;
-  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, refereeAssignments: assignments, refereeEvents: refEvents, refereeRules: refRules, elections, candidacies, coachLicenses, minorReports, safeguardingRows }, perms, { uid }), [members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, assignments, refEvents, refRules, elections, candidacies, coachLicenses, minorReports, safeguardingRows, uid, perms]);
+  const confLinks = dado(nationalQs.confLinks);
+  const homologations = dado(nationalQs.homologations);
+  const duesReceivable = dado(nationalQs.duesReceivable);
+  const myLinks = dado(nationalQs.myLinks);
+  const duesOwed = dado(nationalQs.duesOwed);
+  const itens = useMemo(() => federationPendingItems({ members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, refereeAssignments: assignments, refereeEvents: refEvents, refereeRules: refRules, elections, candidacies, coachLicenses, minorReports, safeguardingRows, confLinks, homologations, duesReceivable, myLinks, duesOwed }, perms, { uid }), [confLinks, homologations, duesReceivable, myLinks, duesOwed, members, charges, affiliations, tournaments, transfers, documents, sanctions, reports, accountReports, assignments, refEvents, refRules, elections, candidacies, coachLicenses, minorReports, safeguardingRows, uid, perms]);
   // A consulta desligada guarda o dado em cache: a pendência de um módulo que
   // acabou de desligar (aba que não existe mais) não vira um botão morto.
   const visiveis = abas ? itens.filter((i) => abas.has(i.aba)) : itens;
