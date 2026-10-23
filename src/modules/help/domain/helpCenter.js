@@ -1094,6 +1094,33 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-certidoes-incentivo',
+      flags: ['federations'],
+      guias: ['federacao-certidoes-incentivo'],
+      title: tk('Certidões da federação e Lei de Incentivo'),
+      summary: tk('O cofre das certidões negativas, o dossiê do art. 36, o relatório de proteção da infância e os projetos da Lei de Incentivo ao Esporte.'),
+      keywords: ['federação', 'regularidade', 'certidão', 'CND', 'FGTS', 'CNDT', 'certidão negativa', 'TCU', 'art. 36', 'dossiê', 'Lei de Incentivo', 'Lei 11.438', 'captação', 'aporte', 'patrocínio', 'doação', 'proteção da infância'],
+      blocks: [
+        p(tk('Para receber verba pública (convênio, loteria, Lei de Incentivo) a federação precisa provar a regularidade. Com os módulos "Certidões da federação" e "Lei de Incentivo ao Esporte" ligados, a Central ganha a seção "Certidões e incentivo". O financeiro e a administração cuidam; o conselho fiscal vê tudo em leitura.')),
+        steps(
+          tk('CERTIDÕES — Certidões e incentivo → Certidões → "Anexar certidão": o tipo (CND federal, FGTS, CNDT, estadual, municipal ou outra), o número, a emissão, a validade e o arquivo (PDF ou imagem, até 9 MB).'),
+          tk('AVISO — a administração e o financeiro recebem aviso 30, 7 e 1 dia antes de vencer e no dia em que vence. "Anexar a nova" guarda a renovada; a antiga fica no histórico.'),
+          tk('CONFORMIDADE — certidão vencida ou faltando (CND federal, FGTS e CNDT) aparece em Indicadores → Conformidade, porque trava o repasse público (Acórdão TCU 2331/2025).'),
+          tk('DOSSIÊ DO ART. 36 — na Conformidade, "Dossiê do art. 36" monta uma folha com cada exigência da Lei Geral do Esporte, a situação e onde ela está na Central. Imprima ou salve em PDF.'),
+          tk('LEI DE INCENTIVO — Certidões e incentivo → Lei de Incentivo → "Novo projeto": o nome, o processo, o valor aprovado, o prazo de captação e a conta vinculada.'),
+          tk('APORTES — "Registrar aporte" a cada depósito de patrocinador ou doador. O aporte entra sozinho em Contas como receita de convênios e repasses; o lançado errado sai por "Estornar", com o motivo.'),
+          tk('ETAPAS — captação, execução, prestação de contas (com a data de envio e o protocolo) e encerrado (com o resultado). Voltar uma etapa pede o motivo; projeto sem aporte pode ser cancelado.'),
+        ),
+        list(
+          tk('PRAZO DE CAPTAÇÃO — 30 dias antes do fim, a federação é avisada com quanto já captou, para pedir a prorrogação a tempo.'),
+          tk('PERÍODO FECHADO — com a prestação de contas do período já enviada ao conselho fiscal, aporte novo e estorno daquele período são recusados.'),
+          tk('PROTEÇÃO DA INFÂNCIA — em Proteção de menores → Relatório anual, a folha com os números do ano: quem trabalha com menores, quantos estão em dia e as denúncias recebidas. Só números, nenhum nome.'),
+          tk('ARQUIVOS — a certidão fica numa pasta fechada do servidor e só abre pela Central, para quem pode ver.'),
+        ),
+        tip(tk('Comece pelas três certidões que todo repasse federal pede: CND federal, FGTS e CNDT.')),
+      ],
+    },
+    {
       id: 'federacao-confederacao',
       flags: ['federations'],
       guias: ['federacao-confederacao'],

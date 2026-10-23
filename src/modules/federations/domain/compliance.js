@@ -17,6 +17,7 @@ import { normalizeFederationRules, fedModuleOn } from './federation';
 import { staffPerms } from './staff';
 import { FED_PERMISSION, SANCTION_STATUS, STAFF_ROLE } from './constants';
 import { prizeParity } from './competitions';
+import { CERT_KIND_LABELS, certificatesSummary } from './institutional';
 
 export const COMPLIANCE_STATUS = Object.freeze({ OK: 'ok', ATTENTION: 'attention', UNKNOWN: 'unknown' });
 
@@ -38,10 +39,11 @@ const somaDias = (iso, d) => new Date(Date.parse(`${iso}T00:00:00Z`) + d * 86400
  * @param {{ federation: object, staff?: object[], docs?: object[], events?: object[], budgets?: object[], accountReports?: object[], elections?: object[], tournaments?: object[], nowMs?: number }} fontes
  *   Fonte ausente (undefined) = não carregou ⇒ o item fica "não deu para conferir".
  *   `budgets`/`accountReports` só valem com o módulo `accounts`; `elections` com `elections`;
- *   `tournaments` (os torneios com a federação) dá a isonomia de premiação.
+ *   `tournaments` (os torneios com a federação) dá a isonomia de premiação; `certificates` (o cofre)
+ *   só vale com o módulo `certificates`.
  * @returns {Array<{ id, label, basis, tab, status, detail }>}
  */
-export function complianceChecklist({ federation, staff, docs, events, budgets, accountReports, elections, tournaments, nowMs = Date.now() } = {}) {
+export function complianceChecklist({ federation, staff, docs, events, budgets, accountReports, elections, tournaments, certificates, nowMs = Date.now() } = {}) {
   const f = federation || {};
   const g = f.governance || {};
   const hoje = hojeIso(nowMs);
@@ -213,6 +215,22 @@ export function complianceChecklist({ federation, staff, docs, events, budgets, 
   const sg = fedModuleOn(f, 'safeguarding');
   out.push(item('safeguarding', tk('Proteção de crianças e adolescentes'), tk('Boa prática (ECA, Lei 8.069/1990)'), sg ? 'protecao' : 'modulos', sg ? 'ok' : 'attention',
     sg ? t('Professores, árbitros e diretores que trabalham com menores precisam do curso de proteção e da certidão conferida.') : t('Ligue o módulo de proteção de menores: ele exige curso e certidão de antecedentes de quem trabalha com crianças e abre a denúncia prioritária.')));
+
+  // 12. Certidões negativas em dia (módulo `certificates`): repasse público exige regularidade fiscal e trabalhista.
+  if (fedModuleOn(f, 'certificates')) {
+    const lc = [tk('Certidões negativas em dia'), tk('Lei 14.597/2023, art. 36; Acórdão TCU 2331/2025')];
+    if (!Array.isArray(certificates)) out.push(item('certificates', ...lc, 'certidoes', 'unknown', t('Não deu para ler o cofre de certidões.')));
+    else {
+      const sc = certificatesSummary(certificates, hoje);
+      const nomeC = (c) => (c.kind === 'other' ? c.label : t(CERT_KIND_LABELS[c.kind] || c.kind));
+      const faltam = ['cnd_federal', 'fgts', 'cndt'].filter((k) => !sc.current.some((c) => c.kind === k));
+      out.push(item('certificates', ...lc, 'certidoes', sc.expired.length || faltam.length ? 'attention' : 'ok',
+        sc.expired.length ? t('Vencida: {lista}. Emita a nova e anexe no cofre.', { lista: sc.expired.map(nomeC).join(', ') })
+          : faltam.length ? t('Falta no cofre: {lista}.', { lista: faltam.map((k) => t(CERT_KIND_LABELS[k])).join(', ') })
+            : sc.expiring.length ? t('Todas em dia; vencem nos próximos 30 dias: {lista}.', { lista: sc.expiring.map(nomeC).join(', ') })
+              : t('As {n} certidões do cofre estão em dia.', { n: sc.current.length })));
+    }
+  }
 
   return out;
 }

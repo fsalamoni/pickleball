@@ -5169,6 +5169,19 @@ service cloud.firestore {
       allow read: if fedAcc(od().federation_id) || fedHas(od().federation_id, 'competitions');
       allow write: if false;
     }
+    // REGULARIDADE DA PRÓPRIA FEDERAÇÃO (rodada 3, Bloco 2): o cofre de
+    // certidões e os projetos da Lei de Incentivo. Financeiro, admin e
+    // conselho fiscal leem; só o servidor grava (`federationInstitutional`).
+    // O arquivo da certidão fica numa pasta do Storage sem regra (fechada) e
+    // sai pela função.
+    match /federation_certificates/{id} {
+      allow read: if fedAcc(od().federation_id);
+      allow write: if false;
+    }
+    match /federation_incentive_projects/{id} {
+      allow read: if fedAcc(od().federation_id);
+      allow write: if false;
+    }
     // JOGO LIMPO (rodada 3, Bloco 1): a lista de equipamentos homologados é
     // pública com o módulo ligado (a estadual mostra também a da confederação);
     // a equipe de competições e o admin leem sempre. Só o servidor grava

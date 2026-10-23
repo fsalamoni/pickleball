@@ -34,6 +34,9 @@ vi.mock('@/modules/federations/hooks/useFederations', async () => {
 vi.mock('@/modules/federations/hooks/useManagement', () => ({
   useSponsorContracts: () => fontes.contracts || q([]),
 }));
+vi.mock('@/modules/federations/hooks/useInstitutional', () => ({
+  useIncentiveProjects: () => fontes.projects || q([]),
+}));
 vi.mock('@/modules/federations/hooks/useSelection', () => ({
   usePublicCallups: () => fontes.callups || q([]),
   usePublicGrants: () => fontes.grants || q([]),
@@ -52,6 +55,7 @@ let container, root;
 beforeEach(() => {
   accountsAction.mockClear();
   fontes.contracts = undefined;
+  fontes.projects = undefined;
   fontes.duesOwed = undefined;
   fontes.duesIn = undefined;
   fontes.budgets = q([]);
@@ -92,6 +96,18 @@ describe('FedAccountsPanel', () => {
     fontes.contracts = { isSuccess: false, isLoading: false, isError: true, data: undefined, refetch: vi.fn() };
     await montar({ perms: ['finance'], tab: 'lancamentos', federation: comPatrocinio });
     expect(container.textContent).toContain('não carregaram nesta prévia');
+  });
+
+  it('Lei de Incentivo: o aporte recebido entra na receita, o estornado não; projetos que falharam são ditos', async () => {
+    const comLie = { ...fed, modules: { accounts: true, incentive_projects: true } };
+    fontes.projects = q([{ id: 'p', title: 'Escolas', status: 'capturing', receipts: [{ id: 'r1', donor_name: 'Raquetes Sul', amount_cents: 4200, date: `${ano}-01-04` }, { id: 'r2', donor_name: 'Estornado SA', amount_cents: 999, date: `${ano}-01-05`, voided_at: `${ano}-01-06` }] }]);
+    await montar({ perms: ['finance'], tab: 'lancamentos', federation: comLie });
+    expect(container.textContent).toContain('Aporte da Lei de Incentivo');
+    expect(container.textContent).toContain('Escolas · Raquetes Sul');
+    expect(container.textContent).not.toContain('Estornado SA');
+    fontes.projects = { isSuccess: false, isLoading: false, isError: true, data: undefined, refetch: vi.fn() };
+    await montar({ perms: ['finance'], tab: 'lancamentos', federation: comLie });
+    expect(container.textContent).toContain('Lei de Incentivo não carregaram');
   });
 
   it('anuidade da rede: paga vira despesa da estadual e receita da confederação; a que falhou é dita', async () => {

@@ -257,6 +257,9 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'federation_assets', field: 'created_by', label: 'Bens do patrimônio de federação que cadastrou (como equipe; o bem é da federação)' },
   // Rodada 3: o equipamento homologado é da lista pública da federação.
   { col: 'federation_equipment', field: 'created_by', label: 'Equipamentos homologados que cadastrou (como equipe; a lista é da federação)' },
+  // Rodada 3, Bloco 2: a certidão e o projeto incentivado são da própria federação.
+  { col: 'federation_certificates', field: 'created_by', label: 'Certidões negativas de federação que anexou (como equipe; a certidão é da federação)' },
+  { col: 'federation_incentive_projects', field: 'created_by', label: 'Projetos da Lei de Incentivo de federação que registrou (como equipe; o projeto é da federação)' },
   // Bloco 6: o vínculo nacional e a anuidade são entre duas federações (quem agiu é só o uid de equipe).
   { col: 'federation_national_links', field: 'opened_by', label: 'Pedidos e convites de filiação à confederação que abriu (como equipe; o vínculo é entre as federações)' },
   { col: 'federation_dues', field: 'issued_by', label: 'Anuidades da confederação que lançou (como equipe; o repasse é entre as federações)' },

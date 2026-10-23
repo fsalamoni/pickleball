@@ -61,6 +61,8 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
   const abaComentarios = { value: 'comentarios', label: tk('Comentários'), icon: MessageSquare };
   // Administração (Bloco 5): contratos de patrocínio (financeiro/admin; o conselho fiscal lê) e patrimônio (também competições).
   const veContratos = modulo('sponsors') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL));
+  const veCertidoes = modulo('certificates') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL));
+  const veIncentivo = modulo('incentive_projects') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL));
   const veBens = modulo('assets') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL) || pode(FED_PERMISSION.COMPETITIONS));
   // Camada nacional (Bloco 6): a confederação gere a REDE; a estadual vê a confederação dela. Sem módulo: vale pela marca da plataforma.
   const conf = isConfederation(federation);
@@ -121,6 +123,7 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       tabs: modulo('safeguarding') ? [
         { value: 'protecao', label: tk('Quem trabalha com menores'), icon: Users, dica: 'federacao-aba-protecao' },
         ...(modulo('discipline') || residual.minorReportsOpen ? [{ value: 'protecao-denuncias', label: tk('Denúncias'), icon: MessageSquareWarning, dica: 'federacao-aba-protecao-denuncias' }] : []),
+        { value: 'protecao-relatorio', label: tk('Relatório anual'), icon: FileText, dica: 'federacao-aba-protecao-relatorio' },
         { value: 'protecao-regras', label: tk('Regras'), icon: Settings2, dica: 'federacao-aba-protecao-regras' },
       ] : [{ value: 'protecao-denuncias', label: tk('Denúncias'), icon: MessageSquareWarning, dica: 'federacao-aba-protecao-denuncias' }],
     },
@@ -216,6 +219,14 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       tabs: [
         ...(veContratos ? [{ value: 'contratos-patrocinio', label: tk('Contratos de patrocínio'), icon: FileSignature, dica: 'federacao-aba-contratos' }] : []),
         ...(veBens ? [{ value: 'patrimonio', label: tk('Patrimônio'), icon: Package, dica: 'federacao-aba-patrimonio' }] : []),
+      ],
+    },
+    // Certidões e Lei de Incentivo da própria federação (rodada 3, Bloco 2): financeiro, admin e conselho fiscal.
+    (veCertidoes || veIncentivo) && {
+      id: 'institucional', grupo: 'gerir', label: tk('Certidões e incentivo'), icon: BadgeCheck, dica: 'federacao-secao-institucional',
+      tabs: [
+        ...(veCertidoes ? [{ value: 'certidoes', label: tk('Certidões'), icon: FileText, dica: 'federacao-aba-certidoes' }] : []),
+        ...(veIncentivo ? [{ value: 'lei-incentivo', label: tk('Lei de Incentivo'), icon: Handshake, dica: 'federacao-aba-lei-incentivo' }] : []),
       ],
     },
     rede.length > 0 && (conf

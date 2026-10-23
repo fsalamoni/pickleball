@@ -61,7 +61,7 @@ export function ReasonField({ id, value, onChange, hint }) {
  * Escolher e enviar um arquivo (PDF ou imagem, até 9 MB) para a pasta de
  * quem envia. `value` = o arquivo enviado (`{ name, path, size, content_type }`).
  */
-export function AccountFileInput({ id, value, onChange, label }) {
+export function AccountFileInput({ id, value, onChange, label, hint }) {
   const { user } = useAuth();
   const ref = useRef(null);
   const [progresso, setProgresso] = useState(null);
@@ -82,7 +82,7 @@ export function AccountFileInput({ id, value, onChange, label }) {
     }
   };
   return (
-    <V2Field label={label || t('Anexo (opcional)')} htmlFor={id} error={erro} hint={t('Nota fiscal, recibo ou comprovante: PDF ou imagem de até 9 MB.')}>
+    <V2Field label={label || t('Anexo (opcional)')} htmlFor={id} error={erro} hint={hint || t('Nota fiscal, recibo ou comprovante: PDF ou imagem de até 9 MB.')}>
       <div className="flex flex-wrap items-center gap-2">
         <input ref={ref} id={id} type="file" accept={ACCOUNT_FILE_TYPES.join(',')} className="sr-only" onChange={(e) => escolher(e.target.files?.[0])} />
         <V2Button type="button" variant="secondary" size="sm" disabled={progresso != null} onClick={() => ref.current?.click()}><Paperclip className="h-4 w-4" />{progresso != null ? t('Enviando… {p}%', { p: Math.round(progresso * 100) }) : value ? t('Trocar arquivo') : t('Escolher arquivo')}</V2Button>

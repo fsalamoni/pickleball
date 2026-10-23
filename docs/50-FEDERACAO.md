@@ -3333,3 +3333,99 @@ padrão: **`equipment`** (Equipamentos homologados) e **`antidoping`**
 `torneio-jogo-limpo`.
 
 Guia `federacao-jogo-limpo`; artigo `federacao-jogo-limpo`.
+
+## 37. Certidões, dossiê do art. 36, relatório de proteção e Lei de Incentivo (rodada 3, Bloco 2, 2026-10-23)
+
+Para receber verba pública (convênio, loteria, Lei de Incentivo), a federação
+precisa **provar** que está regular: é o que exigem a Lei 14.597/2023, art. 36,
+e o Acórdão TCU 2331/2025. Para isso há dois módulos novos em `FED_MODULE_META`,
+desligados por padrão: `certificates` ("Certidões da federação") e
+`incentive_projects` ("Lei de Incentivo ao Esporte"). Com qualquer um deles
+ligado, a Central ganha a seção **Certidões e incentivo** (`institucional`),
+com as abas `certidoes` e `lei-incentivo`. O financeiro e o admin gerem, o
+conselho fiscal (`fiscal`) só lê e apenas o `admin` apaga.
+
+### 37.1 Cofre de certidões (`federation_certificates`)
+
+- **Tipos gravados:** `cnd_federal`, `fgts`, `cndt`, `state`, `municipal` e
+  `other` (este com `label`). Cada certidão guarda número, emissão, validade,
+  observação e o **arquivo** (PDF ou imagem de até 9 MB).
+- **Onde o arquivo fica:** ele sobe para a pasta de quem envia
+  (`federacao-contas/{uid}/`, a mesma das contas) e o servidor o **move** para
+  `federacao-certidoes/{fed}/{cert}/`. Essa pasta é fechada à regra do
+  Storage: o arquivo só abre pela ação `cert_file`, para o financeiro, o admin
+  e o conselho fiscal.
+- **Certidão atual:** é a mais recente de cada tipo (`currentCertificates`).
+  As anteriores ficam no histórico como "Substituída". Renovar é anexar a nova.
+- **Avisos:** os gestores (admin e financeiro) são avisados **30, 7 e 1 dia
+  antes** do vencimento e no próprio dia, uma vez em cada passo
+  (`warned_steps`). Uma validade nova recomeça os passos. Quem avisa é a
+  varredura diária `federationInstitutional.sweep`.
+- **Conformidade:** ganha o item `certificates`, que só aparece com o módulo
+  ligado. Fica em "atenção" quando há certidão vencida ou quando falta a CND
+  federal, o FGTS ou a CNDT. Se a fonte não carregou, mostra "não deu para
+  conferir".
+
+### 37.2 Dossiê do art. 36 (zero banco)
+
+Na aba Conformidade, o botão "Dossiê do art. 36" monta uma folha com cada item
+cuja base cita o art. 36. Para cada um, a folha mostra a exigência, a situação
+e **onde ela está na Central** (seção e aba, lidas das próprias seções).
+"Imprimir / PDF" usa a folha comum `PrintSheet`, com cabeçalho de logo, nome e
+CNPJ. "Sem dado para conferir" não significa reprovação.
+
+### 37.3 Relatório anual de proteção da infância (zero banco)
+
+Fica em Proteção de menores → **Relatório anual** (`?aba=protecao-relatorio`).
+A função `safeguardingAnnualReport` trabalha sobre o quadro de quem trabalha
+com menores e sobre as denúncias `minor_protection` do ano escolhido. O
+relatório traz **só números**, sem nenhum nome e sem nenhum relato. Quando uma
+fonte falha, aparece um aviso no lugar dos números, nunca um zero. Imprimir o
+relatório e publicá-lo no acervo é decisão da federação.
+
+### 37.4 Lei de Incentivo (`federation_incentive_projects`)
+
+- **Dados do projeto:** nome, processo, manifestação, valor aprovado, data
+  final da captação, período de execução (opcional), conta vinculada e
+  observações.
+- **Etapas:** `capturing` → `executing` → `reporting` (com `sent_at` e
+  `protocol`) → `closed`. O encerramento registra o `result` (`approved`,
+  `approved_caveats` ou `rejected`), a data e uma nota. O projeto avança uma
+  etapa por vez, e voltar ou cancelar exige motivo. Projeto que já recebeu
+  aporte não pode ser cancelado nem apagado.
+- **Aportes (`receipts[]`, até 300):** cada um registra se é patrocínio ou
+  doação incentivada, quem aportou, CPF/CNPJ (opcional), valor e data do
+  depósito. Estornar exige motivo e mantém o aporte na lista, riscado.
+- **Nas contas:** o aporte recebido vira **receita DERIVADA**
+  (`incentiveIncome`), na categoria de convênios e repasses, com o rótulo
+  "Aporte da Lei de Incentivo". A conta é a mesma nos dois lados:
+  `federationAccounts` lê `federationInstitutional.receitas`. Depois que a
+  prestação do período é enviada ao conselho fiscal, aporte novo e estorno
+  naquele período são recusados.
+- **Aviso de captação:** os gestores são avisados 30 dias antes do fim da
+  captação, uma vez por data (`warned_capture_for`).
+
+### 37.5 O que não pode regredir
+
+96. `federation_certificates` e `federation_incentive_projects` **só o
+    servidor grava**, em `functions/federationInstitutional.js`. A régua mora
+    em `domain/institutional.js`, com cópia e paridade em
+    `functions/federationInstitutionalPolicy.js`. A leitura é `fedAcc`.
+97. O arquivo da certidão só pode vir da pasta de quem salva e mora numa pasta
+    fechada. Nunca gere link público para ele.
+98. Os ids `kind`, `status`, `result` e o tipo de aporte são gravados no banco:
+    nunca os renomeie. `?aba=certidoes`, `?aba=lei-incentivo` e
+    `?aba=protecao-relatorio` são contrato de link.
+99. O relatório de proteção e o dossiê não usam banco próprio e não levam nome
+    nem relato. Fonte que falhou é dita na tela.
+100. As duas coleções entram na exclusão de conta (por `created_by`, como as
+     da equipe).
+
+### 37.6 Âncoras e guias
+
+- **Âncoras:** `federacao-secao-institucional`, `federacao-aba-certidoes`,
+  `federacao-aba-lei-incentivo`, `federacao-aba-protecao-relatorio`,
+  `federacao-dossie-art36`, `federacao-lei-incentivo` e
+  `federacao-projeto-novo`.
+- **Guia:** `federacao-certidoes-incentivo`.
+- **Artigo:** `federacao-certidoes-incentivo`.
