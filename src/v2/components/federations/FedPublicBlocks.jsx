@@ -459,6 +459,7 @@ function OuvidoriaDialog({ federation, uid, onClose }) {
   const [erros, setErros] = useState({});
   const [enviada, setEnviada] = useState(null);
   const m = useFederationMutation(() => createReport({ federation, uid, input: f }));
+  const assuntos = Object.values(REPORT_KIND).filter((k) => k !== REPORT_KIND.MINOR_PROTECTION || fedModuleOn(federation, 'safeguarding'));
   const enviar = (e) => {
     e.preventDefault();
     const r = validateReportInput(f);
@@ -479,7 +480,10 @@ function OuvidoriaDialog({ federation, uid, onClose }) {
           </div>
         ) : (
           <form onSubmit={enviar} noValidate className="space-y-4">
-            <V2Field label={t('Assunto')} htmlFor="ouv-tipo"><V2Select id="ouv-tipo" value={f.kind} onChange={(e) => setF((x) => ({ ...x, kind: e.target.value }))}>{Object.values(REPORT_KIND).map((k) => <option key={k} value={k}>{t(REPORT_KIND_LABELS[k])}</option>)}</V2Select></V2Field>
+            <V2Field label={t('Assunto')} htmlFor="ouv-tipo"><V2Select id="ouv-tipo" value={f.kind} onChange={(e) => setF((x) => ({ ...x, kind: e.target.value }))}>{assuntos.map((k) => <option key={k} value={k}>{t(REPORT_KIND_LABELS[k])}</option>)}</V2Select></V2Field>
+            {f.kind === REPORT_KIND.MINOR_PROTECTION && (
+              <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-800" role="note">{t('Vai direto ao responsável pela proteção de menores da federação, com prioridade e acesso restrito. Se a criança ou o adolescente corre perigo agora, ligue 190; violação de direitos também pode ser denunciada no Disque 100 ou ao Conselho Tutelar.')}</p>
+            )}
             <V2Field label={t('Torneio relacionado (opcional)')} htmlFor="ouv-torneio"><V2Input id="ouv-torneio" maxLength={120} value={f.tournament_name} onChange={(e) => setF((x) => ({ ...x, tournament_name: e.target.value }))} /></V2Field>
             <V2Field label={t('O que aconteceu')} htmlFor="ouv-texto" error={erros.body} required hint={t('Até {n} caracteres. Não inclua dado pessoal de terceiros além do necessário.', { n: REPORT_MAX_CHARS })}><V2Textarea id="ouv-texto" rows={5} maxLength={REPORT_MAX_CHARS} value={f.body} onChange={(e) => { setF((x) => ({ ...x, body: e.target.value })); setErros({}); }} /></V2Field>
             <V2Toggle id="ouv-anon" checked={f.anonymous} onChange={(v) => setF((x) => ({ ...x, anonymous: v }))} label={t('Enviar anonimamente')} hint={t('Nem a federação nem a plataforma saberão quem enviou. Só o protocolo acompanha.')} />

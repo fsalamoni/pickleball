@@ -4643,7 +4643,7 @@ service cloud.firestore {
     // cópia das permissões em `perms` — só o servidor (`federationStaff`).
     function fedRolePerms(role) {
       return role == 'president' || role == 'director'
-        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal']
+        ? ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal', 'safeguarding']
         : (role == 'secretary' ? ['members', 'docs']
         : (role == 'treasurer' ? ['finance']
         : (role == 'competitions' ? ['competitions']
@@ -4654,14 +4654,14 @@ service cloud.firestore {
     }
     // As permissões do cargo com o MANDATO valendo (`term_end_ms` 0 = sem
     // prazo). O admin master segura: a federação nunca fica sem ninguém, e o
-    // servidor só o tira quando sobra outro. Mesma conta de `staffPerms` no
-    // cliente e de `permsOf` no servidor.
+    // servidor só o tira quando sobra outro. O admin master é "tudo" — inclusive
+    // as permissões criadas depois de o cargo ser gravado. Mesma conta de
+    // `staffPerms` no cliente e de `permsOf` no servidor.
     function fedPerms(fedId) {
-      return isAuthed() && exists(fedStaffPath(fedId))
-        && (fedStaff(fedId).get('is_master', fedStaff(fedId).role == 'president')
-          || fedStaff(fedId).get('term_end_ms', 0) == 0
-          || fedStaff(fedId).term_end_ms > request.time.toMillis())
-        ? fedStaff(fedId).get('perms', fedRolePerms(fedStaff(fedId).role)) : [];
+      return !(isAuthed() && exists(fedStaffPath(fedId))) ? []
+        : (fedStaff(fedId).get('is_master', fedStaff(fedId).role == 'president') ? fedRolePerms('president')
+        : (fedStaff(fedId).get('term_end_ms', 0) == 0 || fedStaff(fedId).term_end_ms > request.time.toMillis()
+          ? fedStaff(fedId).get('perms', fedRolePerms(fedStaff(fedId).role)) : []));
     }
     // O admin da plataforma só administra uma federação com o acesso
     // JUSTIFICADO valendo: motivo e prazo (até 8 h) registrados pelo servidor
@@ -4920,7 +4920,7 @@ service cloud.firestore {
         && nd().name is string
         && nd().name.size() >= 3
         && nd().name.size() <= 120
-        && nd().kind in ['referee', 'coach', 'clinic', 'workshop', 'director']
+        && nd().kind in ['referee', 'coach', 'clinic', 'workshop', 'director', 'safeguarding']
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled']
         && nd().price_cents is int
         && nd().price_cents >= 0
@@ -5011,17 +5011,26 @@ service cloud.firestore {
     // Ouvidoria (PR 3): qualquer conta logada abre uma manifestação, anônima
     // ou não — anônima NÃO grava `reporter_uid`. O protocolo é o id do
     // documento: quem o tem acompanha (get, nunca list). Trata a disciplina.
+    // A denúncia de PROTEÇÃO DE MENOR (`minor_protection`, Bloco 4) é de acesso
+    // restrito: só a permissão `safeguarding` (o admin master a tem) a lê e
+    // trata — a disciplina e o admin comum, não (consultam `kind in` os demais).
+    function fedRepStaff(rep) {
+      return rep.kind == 'minor_protection'
+        ? fedAny(rep.federation_id, ['safeguarding'])
+        : fedAny(rep.federation_id, ['discipline', 'admin']);
+    }
     match /federation_reports/{repId} {
       allow get: if (isAuthed() && od().get('anonymous', false) == true)
         || (isAuthed() && od().get('reporter_uid', null) == me())
-        || fedAny(od().federation_id, ['discipline', 'admin']);
+        || fedRepStaff(od());
       allow list: if (isAuthed() && od().get('reporter_uid', null) == me())
-        || fedAny(od().federation_id, ['discipline', 'admin']);
+        || fedRepStaff(od());
       allow create: if fedOn() && isAuthed()
         && fedModuleOn(nd().federation_id, 'discipline')
         && fedSees(nd().federation_id)
         && nd().status == 'open'
-        && nd().kind in ['conduct', 'referee', 'organization', 'other']
+        && (nd().kind in ['conduct', 'referee', 'organization', 'other']
+          || (nd().kind == 'minor_protection' && fedModuleOn(nd().federation_id, 'safeguarding')))
         && nd().body is string
         && nd().body.size() >= 20
         && nd().body.size() <= 2000
@@ -5031,10 +5040,29 @@ service cloud.firestore {
           : nd().reporter_uid == me())
         && !nd().keys().hasAny(['notes', 'handled_by']);
       allow update: if fedOn()
-        && (fedAny(od().federation_id, ['discipline', 'admin']))
+        && fedRepStaff(od())
         && chg().hasOnly(['status', 'notes', 'handled_by', 'updated_at'])
         && nd().status in ['open', 'in_review', 'closed'];
       allow delete: if fedPlat(od().federation_id);
+    }
+
+    // LICENÇA DE PROFESSOR e PROTEÇÃO DE MENORES (Bloco 4) — só o servidor
+    // grava (`federationCoaching`). A licença: o professor e a equipe de cursos
+    // (ou o admin). O SELO (`federation_coach_badges/{uid}`) é público: só as
+    // licenças válidas que o professor deixou aparecer, de federação publicada.
+    // O registro da proteção (certidão conferida, curso válido): a pessoa e a
+    // permissão `safeguarding` — o resultado da certidão nunca sai daqui.
+    match /federation_coach_licenses/{id} {
+      allow read: if isOwner(od().user_id) || fedAny(od().federation_id, ['courses', 'admin']);
+      allow write: if false;
+    }
+    match /federation_coach_badges/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /federation_safeguarding/{id} {
+      allow read: if isOwner(od().user_id) || fedAny(od().federation_id, ['safeguarding']);
+      allow write: if false;
     }
 
     // PR 4: NOTÍCIAS E AVISOS (módulo `news`). A equipe de comunicação

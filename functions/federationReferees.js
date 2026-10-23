@@ -123,6 +123,13 @@ async function recontar(ctx, fed, uids) {
   }
 }
 
+/**
+ * Proteção de menores (Bloco 4): com o módulo ligado e o papel exigido na
+ * régua da federação, quem não está em dia (curso + certidão) não é escalado.
+ * O diretor do torneio responde como diretor; as demais funções, como árbitro.
+ */
+const semProtecao = (ctx, fed, uid, fn) => require('./federationCoaching.js').clearanceBlocker(ctx, fed, uid, fn === 'tournament_director' ? 'director' : 'referee');
+
 function centavos(v, padrao) {
   if (v == null || v === '') return padrao;
   const n = R.normalizeCents(v);
@@ -243,7 +250,8 @@ async function assign(ctx, actor, data, c) {
   for (const uid of uids) {
     // eslint-disable-next-line no-await-in-loop
     const [{ referee }, suas] = await Promise.all([cadastro(ctx, fed, uid), escalasDe(ctx, uid)]);
-    const bloqueio = R.assignBlocker({ referee, event, fn, assignments: suas });
+    // eslint-disable-next-line no-await-in-loop
+    const bloqueio = R.assignBlocker({ referee, event, fn, assignments: suas }) || await semProtecao(ctx, fed, uid, fn);
     if (bloqueio) { skipped.push({ uid, reason: bloqueio }); continue; }
     const warnings = R.assignmentWarnings({ referee, event, fn, assignments: suas, athleteUids: atletas, rules });
     const ref = ctx.db.collection(ASSIGN).doc();
@@ -266,7 +274,7 @@ async function reassign(ctx, actor, data, c) {
   const uid = texto(data.userId, 128);
   if (!uid || uid === a.referee_uid) falha('invalid-argument', 'Escolha outra pessoa.');
   const [{ referee }, suas, atletas] = await Promise.all([cadastro(ctx, fed, uid), escalasDe(ctx, uid), atletasDo(ctx, a.event)]);
-  const bloqueio = R.assignBlocker({ referee, event: a.event, fn: a.function, assignments: suas });
+  const bloqueio = R.assignBlocker({ referee, event: a.event, fn: a.function, assignments: suas }) || await semProtecao(ctx, fed, uid, a.function);
   if (bloqueio) falha('failed-precondition', bloqueio);
   const warnings = R.assignmentWarnings({ referee, event: a.event, fn: a.function, assignments: suas, athleteUids: atletas, rules });
   const respondBy = R.defaultRespondBy(a.event, rules, hoje);

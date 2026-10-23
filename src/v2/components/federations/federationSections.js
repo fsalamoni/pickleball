@@ -21,8 +21,12 @@ import { sanctionState } from '@/modules/federations/domain/sanction';
  * O que ficou em aberto num módulo DESLIGADO (ver `residual` abaixo). Lista
  * que não carregou (`undefined`) não abre nada.
  */
-export function residualModules(federation, { sanctions, tournaments } = {}) {
+export function residualModules(federation, { sanctions, tournaments, minorReports } = {}) {
   return {
+    safeguarding: !fedModuleOn(federation, 'safeguarding') && Array.isArray(minorReports)
+      && minorReports.some((r) => r.status !== 'closed'),
+    // A ouvidoria desligada não some com a denúncia de proteção que ainda está aberta.
+    minorReportsOpen: Array.isArray(minorReports) && minorReports.some((r) => r.status !== 'closed'),
     discipline: !fedModuleOn(federation, 'discipline') && Array.isArray(sanctions)
       && sanctions.some((s) => s.status === DISCIPLINE_STATUS.APPEALED || sanctionInForce(s)),
     tournaments: !fedModuleOn(federation, 'tournaments') && Array.isArray(tournaments)
@@ -86,6 +90,24 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
         { value: 'arbitragem-diarias', label: tk('Diárias'), icon: Banknote },
         { value: 'arbitragem-regras', label: tk('Regras e níveis'), icon: Settings2 },
       ],
+    },
+    // Licença de professor (Bloco 4): quem cuida dos cursos (`courses`) ou o admin.
+    (pode(FED_PERMISSION.COURSES) || admin) && modulo('coach_licenses') && {
+      id: 'professores', grupo: 'atender', label: tk('Professores'), icon: BadgeCheck, dica: 'federacao-secao-professores',
+      tabs: [
+        { value: 'licencas', label: tk('Licenças'), icon: BadgeCheck, dica: 'federacao-aba-licencas' },
+        { value: 'licencas-niveis', label: tk('Níveis da licença'), icon: Settings2, dica: 'federacao-aba-licencas-niveis' },
+      ],
+    },
+    // Proteção de menores (Bloco 4): só quem tem a permissão própria — a certidão e a denúncia são sensíveis.
+    // Desligado com denúncia em aberto: fica só a aba das denúncias, até a última ser concluída.
+    pode(FED_PERMISSION.SAFEGUARDING) && (modulo('safeguarding') || residual.safeguarding) && {
+      id: 'protecao', grupo: 'atender', label: tk('Proteção de menores'), icon: ShieldCheck, dica: 'federacao-secao-protecao',
+      tabs: modulo('safeguarding') ? [
+        { value: 'protecao', label: tk('Quem trabalha com menores'), icon: Users, dica: 'federacao-aba-protecao' },
+        ...(modulo('discipline') || residual.minorReportsOpen ? [{ value: 'protecao-denuncias', label: tk('Denúncias'), icon: MessageSquareWarning, dica: 'federacao-aba-protecao-denuncias' }] : []),
+        { value: 'protecao-regras', label: tk('Regras'), icon: Settings2, dica: 'federacao-aba-protecao-regras' },
+      ] : [{ value: 'protecao-denuncias', label: tk('Denúncias'), icon: MessageSquareWarning, dica: 'federacao-aba-protecao-denuncias' }],
     },
     pode(FED_PERMISSION.DISCIPLINE) && (modulo('discipline') || residual.discipline) && {
       id: 'disciplina', grupo: 'atender', label: tk('Disciplina'), icon: Gavel, dica: 'federacao-secao-disciplina',

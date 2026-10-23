@@ -24,4 +24,28 @@ describe('federationPendingItems', () => {
   it('as pendências da pessoa', () => {
     expect(myFederationPending([{ status: 'active', valid_until: '2026-01-01' }], undefined, { hoje: '2026-10-18' })).toEqual({ pagar: undefined, vencendo: 0, vencida: 1 });
   });
+  it('licença e proteção de menores: cada fila só para quem resolve; a denúncia de proteção sai da ouvidoria comum', () => {
+    const fontes = {
+      reports: [{ status: 'open', kind: 'conduct' }, { status: 'open', kind: 'minor_protection' }],
+      coachLicenses: [{ status: 'pending' }, { status: 'active', valid_until: '2027-01-01', renewal_requested_at_ms: 1 }, { status: 'active', valid_until: '2027-01-01' }],
+      minorReports: [{ kind: 'minor_protection', status: 'open' }],
+      safeguardingRows: [{ pending: { issued_at: '2026-10-01' } }, {}],
+    };
+    const ids = (perms) => federationPendingItems(fontes, perms, { hoje: '2026-10-18' }).map((i) => [i.id, i.count]);
+    expect(ids(['discipline'])).toEqual([['ouvidoria', 1]]);
+    expect(ids(['courses'])).toEqual([['licencas', 2]]);
+    expect(ids(['safeguarding'])).toEqual([['protecao-denuncias', 1], ['protecao-certidoes', 1]]);
+    expect(federationPendingItems({ coachLicenses: undefined, minorReports: undefined }, ['courses', 'safeguarding'], { hoje: '2026-10-18' })).toEqual([]);
+  });
+  it('a licença da pessoa: vence em 30 dias sem pedido, ou venceu há até 30 dias', () => {
+    const lics = [
+      { status: 'active', valid_until: '2026-11-01' },
+      { status: 'active', valid_until: '2026-11-01', renewal_requested_at_ms: 1 },
+      { status: 'active', valid_until: '2026-10-01' },
+      { status: 'active', valid_until: '2026-08-01' },
+      { status: 'active', valid_until: '2027-06-01' },
+    ];
+    expect(myFederationPending(undefined, undefined, { hoje: '2026-10-18', coachLicenses: lics }).licenca).toBe(2);
+    expect(myFederationPending(undefined, undefined, { hoje: '2026-10-18' }).licenca).toBeUndefined();
+  });
 });

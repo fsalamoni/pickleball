@@ -42,6 +42,7 @@ import { myFederationPending } from '@/modules/federations/domain/federationPend
 import { useMyAssignments, useMyRefereeRosters } from '@/modules/federations/hooks/useReferees';
 import { useMyDirectedReports, useMyFinalInvites } from '@/modules/federations/hooks/useCompetitions';
 import { useMyCallupInvites, useMyGrantApplications } from '@/modules/federations/hooks/useSelection';
+import { useMyCoachLicenses } from '@/modules/federations/hooks/useCoaching';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifiedLevel';
 import {
@@ -99,13 +100,15 @@ export default function UserArea() {
   // Seleção e editais: as convocações e as inscrições em editais.
   const fedCallupsQ = useMyCallupInvites({ enabled: federacoesOn });
   const fedGrantAppsQ = useMyGrantApplications({ enabled: federacoesOn });
-  const fedQs = [fedMembersQ, fedChargesQ, fedRolesQ, fedInvitesQ, fedRostersQ, fedAssignmentsQ, fedFinalsQ, fedDirectedQ, fedCallupsQ, fedGrantAppsQ];
+  // Licença de professor: a que vence ou venceu pede renovação.
+  const fedCoachLicQ = useMyCoachLicenses({ enabled: federacoesOn });
+  const fedQs = [fedMembersQ, fedChargesQ, fedRolesQ, fedInvitesQ, fedRostersQ, fedAssignmentsQ, fedFinalsQ, fedDirectedQ, fedCallupsQ, fedGrantAppsQ, fedCoachLicQ];
   // Dependentes, credenciais e transferências só quando a seção Federações abre.
   const fedSecaoAberta = federacoesOn && params.get('secao') === 'federacoes';
   const fedDependentsQ = useMyDependents({ enabled: fedSecaoAberta });
   const fedCredentialsQ = useMyCredentials({ enabled: fedSecaoAberta });
   const fedTransfersQ = useMyTransfers({ enabled: fedSecaoAberta });
-  const temFederacao = (fedMembersQ.data || []).some((m) => !['cancelled', 'rejected'].includes(m.status)) || (fedRolesQ.data || []).length > 0 || (fedInvitesQ.data || []).some((inv) => isInvitePending(inv)) || (fedRostersQ.data || []).length > 0 || (fedAssignmentsQ.data || []).length > 0 || (fedFinalsQ.data || []).length > 0 || (fedDirectedQ.data || []).length > 0 || (fedCallupsQ.data || []).length > 0 || (fedGrantAppsQ.data || []).length > 0;
+  const temFederacao = (fedMembersQ.data || []).some((m) => !['cancelled', 'rejected'].includes(m.status)) || (fedRolesQ.data || []).length > 0 || (fedInvitesQ.data || []).some((inv) => isInvitePending(inv)) || (fedRostersQ.data || []).length > 0 || (fedAssignmentsQ.data || []).length > 0 || (fedFinalsQ.data || []).length > 0 || (fedDirectedQ.data || []).length > 0 || (fedCallupsQ.data || []).length > 0 || (fedGrantAppsQ.data || []).length > 0 || (fedCoachLicQ.data || []).length > 0;
 
   // Mercado (flag `marketplace`). As vendas só se consultam para quem já vende.
   // ponytail: só a ficha pessoal (`athlete_{uid}`); vendas como professor,
@@ -168,7 +171,7 @@ export default function UserArea() {
       myOrders: myOrdersQ.isSuccess ? myOrdersQ.data : undefined,
       myOffers: myOffersQ.isSuccess ? myOffersQ.data : undefined,
     }) : undefined,
-    federacoes: federacoesOn ? myFederationPending(fedMembersQ.isSuccess ? fedMembersQ.data : undefined, fedChargesQ.isSuccess ? fedChargesQ.data : undefined, { invites: fedInvitesQ.isSuccess ? fedInvitesQ.data : undefined, assignments: fedAssignmentsQ.isSuccess ? fedAssignmentsQ.data : undefined, finalInvites: fedFinalsQ.isSuccess ? fedFinalsQ.data : undefined, directedReports: fedDirectedQ.isSuccess ? fedDirectedQ.data : undefined, callupInvites: fedCallupsQ.isSuccess ? fedCallupsQ.data : undefined }) : undefined,
+    federacoes: federacoesOn ? myFederationPending(fedMembersQ.isSuccess ? fedMembersQ.data : undefined, fedChargesQ.isSuccess ? fedChargesQ.data : undefined, { invites: fedInvitesQ.isSuccess ? fedInvitesQ.data : undefined, assignments: fedAssignmentsQ.isSuccess ? fedAssignmentsQ.data : undefined, finalInvites: fedFinalsQ.isSuccess ? fedFinalsQ.data : undefined, directedReports: fedDirectedQ.isSuccess ? fedDirectedQ.data : undefined, callupInvites: fedCallupsQ.isSuccess ? fedCallupsQ.data : undefined, coachLicenses: fedCoachLicQ.isSuccess ? fedCoachLicQ.data : undefined }) : undefined,
   });
   const falhas = [
     arenasQ.isError && t('as suas arenas'),
@@ -188,7 +191,7 @@ export default function UserArea() {
     if (balancos.isError) balancos.refetch();
   };
 
-  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ, finalsQ: fedFinalsQ, directedQ: fedDirectedQ, callupsQ: fedCallupsQ, grantAppsQ: fedGrantAppsQ } };
+  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ, finalsQ: fedFinalsQ, directedQ: fedDirectedQ, callupsQ: fedCallupsQ, grantAppsQ: fedGrantAppsQ, coachLicQ: fedCoachLicQ } };
 
   return (
     <V2Page className="space-y-6">

@@ -263,7 +263,7 @@ describe('⭐ ouvidoria', () => {
     await assertFails(getDoc(doc(como(CAIO), 'federation_reports', 'rep1')));
     await assertSucceeds(getDoc(doc(como(DISC), 'federation_reports', 'rep1')));
     await assertFails(getDoc(doc(como(SEC), 'federation_reports', 'rep1')));
-    await assertSucceeds(getDocs(query(collection(como(DISC), 'federation_reports'), where('federation_id', '==', FED))));
+    await assertSucceeds(getDocs(query(collection(como(DISC), 'federation_reports'), where('federation_id', '==', FED), where('kind', 'in', ['conduct', 'referee', 'organization', 'other']))));
     await assertFails(getDocs(query(collection(como(CAIO), 'federation_reports'), where('federation_id', '==', FED))));
     await assertSucceeds(getDocs(query(collection(como(ANA), 'federation_reports'), where('reporter_uid', '==', ANA))));
   });

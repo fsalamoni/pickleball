@@ -230,7 +230,7 @@ describe('contas: prestação de contas', () => {
 
   it('o admin pode dar o parecer, e fica registrado que foi o admin', async () => {
     const c = cenario();
-    c.db.store.docs.set('federation_staff/fpp_pres', { federation_id: 'fpp', user_id: 'pres', role: 'president', perms: ['admin', 'finance'] });
+    c.db.store.docs.set('federation_staff/fpp_pres', { federation_id: 'fpp', user_id: 'pres', role: 'director', is_master: false, perms: ['admin', 'finance'] });
     const { reportId } = await enviada(c);
     await chamar(c, PRES, { action: 'opinion', reportId, opinion: { verdict: 'approve', text: 'Conselho sem quórum; parecer da diretoria.' } });
     expect(doc(c, `federation_account_reports/${reportId}`).fiscal_opinion.by_admin).toBe(true);

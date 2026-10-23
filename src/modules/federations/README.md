@@ -144,6 +144,20 @@ em coleção existente são os opcionais `tournaments.federation_id`/`federation
 
 ## O que não pode regredir
 
+- **Licença de professor e proteção de menores** (`docs/50` §33, módulos
+  `coach_licenses` e `safeguarding`, permissão `safeguarding`): licença
+  (`federation_coach_licenses`), selo público (`federation_coach_badges`) e
+  registro da proteção (`federation_safeguarding`) **só o servidor grava**
+  (callable `federationCoaching` em `functions/federationCoaching.js`, mais a
+  varredura e o gatilho `federationMinorReportNotify`); régua em
+  `domain/coachLicenses.js` e `domain/safeguarding.js` com cópia e paridade em
+  `functions/federationCoachingPolicy.js`. A proteção de menores nunca se
+  dispensa na licença; o arquivo da certidão é apagado na decisão; a denúncia
+  `minor_protection` só a permissão `safeguarding` lê (a lista da disciplina
+  filtra `kind in [...]`). Sem estar em dia, escala de arbitragem, licença e
+  chancela com diretor são recusadas (`clearanceBlocker`). Telas em
+  `coaching/` (Central, Minha área, selo no perfil do professor e aba Cursos);
+  regras em `tests/rules/federationCoaching.rules.test.js`.
 - **Seleção e editais** (`docs/50` §32, módulos `selection` e `grants`):
   convocação (`federation_callups`), convite (`federation_callup_members`),
   edital (`federation_grants`) e inscrição (`federation_grant_applications`)

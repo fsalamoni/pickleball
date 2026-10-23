@@ -78,6 +78,11 @@ async function conferirPedido(ctx, tid, t) {
   if (!recusa && !equipe && rules.sanction_requires_director === true && !diretor) {
     recusa = `A ${sigla(fed)} exige um diretor de torneio credenciado: informe o código de uma credencial de diretor ativa da federação e peça de novo.`;
   }
+  // Proteção de menores (Bloco 4): o diretor credenciado precisa estar em dia, se a federação exige para diretor.
+  if (!recusa && !equipe && diretor) {
+    const falta = await require('./federationCoaching.js').clearanceBlocker(ctx, fed, diretor.uid, 'director');
+    if (falta) recusa = `${falta} Peça de novo quando o diretor estiver em dia.`;
+  }
   const fee = !recusa && !equipe ? P.tierFeeCents(fed, s.tier) : 0;
   // A taxa que já existe vale se cobre ESTE pedido: paga com valor suficiente, ou aberta com o mesmo
   // valor. Aberta com outro valor (o pedido mudou de categoria) é cancelada e sai uma nova.

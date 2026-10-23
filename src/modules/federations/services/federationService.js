@@ -22,7 +22,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { t } from '@/core/i18n';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
-  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, RESULT_STATUS, fedRankingDocId, fedResultDocId, fedUserDocId,
+  AFFILIATION_STATUS, FED_COLLECTIONS as C, FED_PERMISSION, FEDERATION_STATUS, NEWS_AUDIENCE, NEWS_STATUS, REPORT_KIND, REPORT_KINDS_DISCIPLINE, RESULT_STATUS, fedRankingDocId, fedResultDocId, fedUserDocId,
 } from '../domain/constants.js';
 import { isoDate } from '../domain/membership.js';
 import { affiliationAcceptPatch, affiliationDecision, affiliationState, buildAffiliationInvite, buildAffiliationRequest, canInviteOrg } from '../domain/affiliations.js';
@@ -409,6 +409,20 @@ export async function listMyRefereeRosters(uid) {
 export async function listMyAssignments(uid) {
   if (!uid) return [];
   const q = query(collection(db, C.assignments), where('referee_uid', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** As licenças de professor da pessoa (todas as federações) — Minha área e exportação. */
+export async function listMyCoachLicenses(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.coachLicenses), where('user_id', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+/** O registro da proteção de menores da pessoa (todas as federações) — exportação. */
+export async function listMySafeguarding(uid) {
+  if (!uid) return [];
+  const q = query(collection(db, C.safeguarding), where('user_id', '==', uid));
   return (await getDocs(q)).docs.map(toDoc);
 }
 
@@ -1162,11 +1176,15 @@ export async function createReport({ federation, uid, input }) {
   if (!fedModuleOn(federation, 'discipline')) throw new FederationError(t('Esta federação não tem ouvidoria ligada.'));
   const r = validateReportInput(input);
   if (!r.ok) throw new FederationError(t('Confira os campos destacados.'), r.errors);
+  const protecao = r.value.kind === REPORT_KIND.MINOR_PROTECTION;
+  if (protecao && !fedModuleOn(federation, 'safeguarding')) throw new FederationError(t('Esta federação não tem a proteção de menores ligada.'));
   const data = {
     federation_id: federation.id, federation_acronym: federation.acronym || '', kind: r.value.kind, body: r.value.body, tournament_name: r.value.tournament_name,
     anonymous: r.value.anonymous, reporter_uid: r.value.anonymous ? null : uid, status: 'open', created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
   };
   const ref = await addDoc(collection(db, C.reports), data);
+  // Proteção de menor: quem avisa é o servidor, e só o responsável pela proteção (a disciplina não lê).
+  if (protecao) return { id: ref.id, ...data };
   const equipe = await staffUidsWith(federation.id, FED_PERMISSION.DISCIPLINE).catch(() => []);
   await notifyUsers(equipe, {
     type: NOTIFICATION_TYPE.FEDERATION, title: t('Nova manifestação na ouvidoria'),
@@ -1189,8 +1207,13 @@ export async function listMyReports(uid) {
   return (await getDocs(query(collection(db, C.reports), where('reporter_uid', '==', uid)))).docs.map(toDoc);
 }
 
+/**
+ * A ouvidoria da disciplina. O tipo entra na consulta: a denúncia de proteção
+ * de menor é só do responsável pela proteção (`listMinorReports`), e sem o
+ * filtro a regra não prova a leitura para a disciplina.
+ */
 export async function listFederationReports(fedId) {
-  return (await getDocs(query(collection(db, C.reports), where('federation_id', '==', fedId)))).docs.map(toDoc);
+  return (await getDocs(query(collection(db, C.reports), where('federation_id', '==', fedId), where('kind', 'in', REPORT_KINDS_DISCIPLINE)))).docs.map(toDoc);
 }
 
 /** A disciplina muda o estado e anota (as anotações só a equipe lê — quem enviou vê só o estado). */

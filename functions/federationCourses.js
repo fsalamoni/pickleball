@@ -156,6 +156,8 @@ async function course(ctx, actor, data) {
         : { title: tx('Resultado do curso {curso}', { curso: c.name }), message: tx('A {sigla} registrou que você não foi aprovado desta vez.', { sigla: fed.acronym }), link: '/perfil?secao=federacoes' });
     }
     await batch.commit();
+    // Curso de proteção de menores aprovado: a liberação (curso + certidão) da pessoa é refeita na hora.
+    if (acao === 'pass' && c.kind === 'safeguarding') await require('./federationCoaching.js').refreshClearance(ctx, fed, uid);
     await f.auditoria(ctx, actor, `federation_course_${acao}`, { federation_id: fed.id, course_id: c.id, user_id: uid, credential_id: credentialId });
     return { ok: true, credentialId };
   }

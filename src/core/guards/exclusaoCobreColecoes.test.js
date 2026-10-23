@@ -213,6 +213,8 @@ const FEDERACOES_EXPORTADAS_POR = {
   federation_comments: ['listMyFederationComments'],
   federation_referees: ['listMyRefereeRosters'],
   federation_assignments: ['listMyAssignments'],
+  federation_coach_licenses: ['listMyCoachLicenses'],
+  federation_safeguarding: ['listMySafeguarding'],
   federation_election_voters: ['listMyElectionVoters'],
   federation_candidacies: ['listMyCandidacies'],
   federation_election_endorsements: ['listMyElectionEndorsements'],
@@ -234,6 +236,7 @@ const FEDERACOES_FORA_DA_EXPORTACAO = {
   federation_ballots: 'A cédula é SECRETA e não tem uid: não há como ligá-la a ninguém, e por isso ela não sai na exportação.',
   federation_callups: 'A convocação é ato da federação (campeonato, critério, custos), não da pessoa; a lista pública só leva nomes e o convite exportado já diz a convocação.',
   federation_grants: 'O edital é ato da federação (regras, vagas, resultado); a inscrição exportada já diz o edital, a decisão e o pagamento.',
+  federation_coach_badges: 'O selo é uma cópia pública e derivada das licenças válidas (só o servidor grava); a licença exportada já diz nível e validade.',
   federation_admin_grants: 'Acesso de suporte do admin da plataforma a uma federação: registro interno e temporário (até 8 h), não é dado do titular.',
 };
 

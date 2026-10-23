@@ -12,6 +12,8 @@ import { accountsPendingItems } from './accounts.js';
 import { myPendingAssignments, refereeStaffPending } from './referees.js';
 import { commissionTodo } from './elections.js';
 import { directorStage, finalInviteOpen } from './competitions.js';
+import { addDaysISO, licenseState, pendingLicenseRequests } from './coachLicenses.js';
+import { openMinorReports, pendingBackgrounds } from './safeguarding.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
@@ -49,7 +51,8 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
     if (n) itens.push({ id: 'recursos', count: n, aba: 'sancoes', filtro: 'recurso', label: plural(n, tk('recurso de sanção para decidir'), tk('recursos de sanção para decidir')) });
   }
   if (pode(FED_PERMISSION.DISCIPLINE) && Array.isArray(reports)) {
-    const n = reports.filter((x) => x.status === REPORT_STATUS.OPEN).length;
+    // A denúncia de proteção de menor não é da ouvidoria comum: é do responsável pela proteção (abaixo).
+    const n = reports.filter((x) => x.status === REPORT_STATUS.OPEN && x.kind !== 'minor_protection').length;
     if (n) itens.push({ id: 'ouvidoria', count: n, aba: 'ouvidoria', filtro: 'abertas', label: plural(n, tk('manifestação na ouvidoria sem resposta'), tk('manifestações na ouvidoria sem resposta')) });
   }
   if (pode(FED_PERMISSION.COMPETITIONS) && Array.isArray(tournaments)) {
@@ -60,6 +63,17 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
     const r = refereeStaffPending({ assignments: refereeAssignments, events: refereeEvents, rules: refereeRules, hoje });
     if (r.semResposta) itens.push({ id: 'arbitragem-resposta', count: r.semResposta, aba: 'arbitragem', filtro: 'sem-resposta', label: plural(r.semResposta, tk('convocação de arbitragem sem resposta'), tk('convocações de arbitragem sem resposta')) });
     if (r.semCobertura) itens.push({ id: 'arbitragem-cobertura', count: r.semCobertura, aba: 'arbitragem', filtro: 'sem-cobertura', label: plural(r.semCobertura, tk('evento em 7 dias sem arbitragem completa'), tk('eventos em 7 dias sem arbitragem completa')) });
+  }
+  // Licença de professor e proteção de menores (Bloco 4).
+  if (pode(FED_PERMISSION.COURSES) || pode(FED_PERMISSION.ADMIN)) {
+    const n = pendingLicenseRequests(fontes.coachLicenses);
+    if (n) itens.push({ id: 'licencas', count: n, aba: 'licencas', filtro: 'pedidos', label: plural(n, tk('pedido de licença de professor para analisar'), tk('pedidos de licença de professor para analisar')) });
+  }
+  if (pode(FED_PERMISSION.SAFEGUARDING)) {
+    const denuncias = openMinorReports(fontes.minorReports);
+    if (denuncias) itens.push({ id: 'protecao-denuncias', count: denuncias, aba: 'protecao-denuncias', label: plural(denuncias, tk('denúncia de proteção de menor em aberto'), tk('denúncias de proteção de menor em aberto')) });
+    const certidoes = pendingBackgrounds(fontes.safeguardingRows);
+    if (certidoes) itens.push({ id: 'protecao-certidoes', count: certidoes, aba: 'protecao', filtro: 'conferir', label: plural(certidoes, tk('certidão de antecedentes para conferir'), tk('certidões de antecedentes para conferir')) });
   }
   if (pode(FED_PERMISSION.FINANCE) && Array.isArray(charges)) {
     const n = charges.filter((c) => c.status === CHARGE_STATUS.DECLARED).length;
@@ -88,8 +102,15 @@ export function federationPendingItems(fontes = {}, perms = [], { hoje = isoDate
  * @param {object[]|undefined} charges as cobranças da pessoa
  * @param {{ hoje?: string, invites?: object[], now?: number }} [opts] `invites`: os convites para filiar recebidos
  */
-export function myFederationPending(members, charges, { hoje = isoDate(), invites, assignments, finalInvites, directedReports, callupInvites, now = Date.now() } = {}) {
-  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined, escalas: myPendingAssignments(assignments, hoje), finais: undefined, diretor: undefined, convocacoes: undefined };
+export function myFederationPending(members, charges, { hoje = isoDate(), invites, assignments, finalInvites, directedReports, callupInvites, coachLicenses, now = Date.now() } = {}) {
+  const out = { pagar: undefined, vencendo: undefined, vencida: undefined, convites: undefined, escalas: myPendingAssignments(assignments, hoje), finais: undefined, diretor: undefined, convocacoes: undefined, licenca: undefined };
+  // Licença de professor (Bloco 4): vence em 30 dias sem pedido de renovação, ou venceu há até 30 dias.
+  if (Array.isArray(coachLicenses)) {
+    out.licenca = coachLicenses.filter((l) => {
+      const s = licenseState(l, hoje);
+      return (s.expiring && !s.renewing) || (s.status === 'expired' && String(l.valid_until) >= addDaysISO(hoje, -30));
+    }).length;
+  }
   // Competições (Bloco 2): convite da final esperando resposta; torneio que a pessoa dirige com checklist ou relatório faltando.
   if (Array.isArray(finalInvites)) out.finais = finalInvites.filter((i) => finalInviteOpen(i, now)).length;
   // Seleção (Bloco 3): convocação esperando resposta (o mesmo prazo do convite da final).

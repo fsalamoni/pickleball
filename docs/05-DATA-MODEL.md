@@ -2110,6 +2110,46 @@ Na exclusão de conta: contemplada ou paga, fica sem nome, texto nem arquivos
 (é registro contábil da federação); as demais são apagadas. Entra na
 exportação (`listMyGrantApplications`).
 
+### `federation_coach_licenses/{fed}_{uid}` (NOVO — licença de professor, `docs/50` §33.1)
+`federation_id`, `federation_acronym`, `federation_name`, `user_id`, `name`,
+`photo_url`, `city`, `state`, `level` (id do nível), `level_label`, `status`
+(`pending|active|declined|suspended|revoked`; vencida é `active` com
+`valid_until` no passado), `valid_until` (ISO), `requested_level`,
+`requested_level_label`, `request_note`, `requested_at_ms`,
+`renewal_requested_at_ms`, `granted_at_ms`, `renewed_at_ms`, `granted_by`,
+`waiver { missing[] (credential|hours), reason, by, at_ms }`,
+`decision_reason`, `public_listing` (o selo aparece; ausente = sim),
+`history[]` (últimos 30 eventos), `expiry_warned_for`, `badge_expired_for`,
+`safeguarding_until` (cópia do "em dia"), `created_at_ms`, `updated_at_ms`. Só o servidor grava.
+Leem: o professor e `courses`/`admin`. Zero índice. Apagada na exclusão de
+conta; entra na exportação.
+
+### `federation_coach_badges/{uid}` (NOVO — o selo público, `docs/50` §33.1)
+`user_id`, `name`, `photo_url`, `badges[]` (`federation_id`, `acronym`,
+`name`, `slug`, `level_id`, `level_label`, `valid_until`), `federation_ids[]`,
+`updated_at_ms`; sem selo válido, o documento é apagado. Só as licenças válidas de
+federação publicada que o professor deixou aparecer. Só o servidor grava;
+leitura pública. Apagado na exclusão de conta.
+
+### `federation_safeguarding/{fed}_{uid}` (NOVO — proteção de menores, `docs/50` §33.2)
+`federation_id`, `federation_acronym`, `user_id`, `name`, `photo_url`,
+`pending_background { issued_at, valid_until, file_path, submitted_at_ms }`
+(a certidão enviada, até a decisão), `background { status (valid|revoked),
+issued_at, valid_until, verified_by, verified_at_ms, expiry_warned_for,
+revoked_reason, revoked_by, revoked_at_ms }` (sem arquivo: ele é apagado na
+decisão), `last_rejection { reason, by, at_ms }`, `training_until` e
+`cleared_until` (curso válido; em dia até), `created_at_ms`, `updated_at_ms`.
+Só o servidor grava. Leem: a pessoa e a permissão `safeguarding`. Zero índice.
+Apagado na exclusão de conta; entra na exportação.
+
+### Licença e proteção (Bloco 4): campos novos e opcionais
+Em `federations`: `coach_rules { levels[] { id, label, requires_credential,
+update_hours, valid_months } }`, `safeguarding_rules { required_for[],
+background_months }` e os módulos `modules.coach_licenses`/`modules.safeguarding`.
+Em `federation_reports`: `kind: 'minor_protection'` (só com `safeguarding`
+ligado; lida só pela permissão `safeguarding`). Em `federation_referees`:
+`safeguarding_until` (cópia do "em dia", gravada pelo servidor).
+
 ### Chancela (Bloco 2): campos novos e opcionais
 `tournaments.federation_sanction` ganha, do organizador, `requested_by_name`,
 `director_code` e `prize { female_cents, male_cents, note }`; e, só do

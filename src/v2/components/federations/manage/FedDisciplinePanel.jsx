@@ -221,7 +221,7 @@ function SancoesTab({ federation, membersQ, sanctionsQ }) {
 
 const TOM_REL = { open: 'amber', in_review: 'ink', closed: 'green' };
 
-function RelatoRow({ rep }) {
+export function RelatoRow({ rep }) {
   const { user } = useAuth();
   const [notas, setNotas] = useState(rep.notes || '');
   const [concluindo, setConcluindo] = useState(false);

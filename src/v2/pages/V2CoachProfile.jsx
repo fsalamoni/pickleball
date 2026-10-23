@@ -26,6 +26,7 @@ import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
 import { V2FavoriteCoachButton, V2CoachShareButton } from '@/v2/components/coach/V2CoachActions';
 import V2CoachAvailabilityCalendar from '@/v2/components/coach/V2CoachAvailabilityCalendar';
+import { CoachFederationBadges } from '@/v2/components/federations/coaching/CoachBadges';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
@@ -167,6 +168,7 @@ export default function V2CoachProfile() {
                 <V2Badge key={m} tone="blue">{m}</V2Badge>
               ))}
             </div>
+            <CoachFederationBadges uid={coachId} />
             {coach.regions?.length > 0 && (
               <div className="mt-2 flex items-center gap-1 text-sm text-gray-500">
                 <MapPin className="h-4 w-4" /> {coach.regions.join(' · ')}

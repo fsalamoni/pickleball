@@ -28,10 +28,24 @@ describe('seções da Central × módulos', () => {
     const hoje = new Date().toISOString().slice(0, 10);
     const sancoes = [{ status: 'appealed', kind: 'warning' }];
     const torneios = [{ federation_id: 'fpp', federation_sanction: { status: 'pending' } }];
-    expect(residualModules(fed({}), { sanctions: sancoes, tournaments: torneios })).toEqual({ discipline: true, tournaments: true });
+    expect(residualModules(fed({}), { sanctions: sancoes, tournaments: torneios })).toMatchObject({ discipline: true, tournaments: true });
     // Ligado não é resíduo; sem nada em aberto também não; leitura que não veio não inventa.
-    expect(residualModules(fed({ discipline: true, tournaments: true }), { sanctions: sancoes, tournaments: torneios })).toEqual({ discipline: false, tournaments: false });
-    expect(residualModules(fed({}), { sanctions: [{ status: 'revoked', kind: 'suspension', ends_at: hoje }], tournaments: [{ federation_id: 'fpp', federation_sanction: { status: 'approved' } }] })).toEqual({ discipline: false, tournaments: false });
-    expect(residualModules(fed({}), {})).toEqual({ discipline: false, tournaments: false });
+    expect(residualModules(fed({ discipline: true, tournaments: true }), { sanctions: sancoes, tournaments: torneios })).toMatchObject({ discipline: false, tournaments: false });
+    expect(residualModules(fed({}), { sanctions: [{ status: 'revoked', kind: 'suspension', ends_at: hoje }], tournaments: [{ federation_id: 'fpp', federation_sanction: { status: 'approved' } }] })).toMatchObject({ discipline: false, tournaments: false });
+    expect(residualModules(fed({}), {})).toMatchObject({ discipline: false, tournaments: false });
+  });
+
+  it('proteção de menores: só quem tem a permissão vê; desligada com denúncia aberta, sobra só a aba de tratar', () => {
+    const on = fed({ safeguarding: true, discipline: true, coach_licenses: true, courses: true });
+    expect(abas(buildFederationSections(todas, on))).toEqual(expect.arrayContaining(['protecao', 'protecao-denuncias', 'protecao-regras', 'licencas']));
+    expect(abas(buildFederationSections(todas.filter((p) => p !== FED_PERMISSION.SAFEGUARDING), on))).not.toContain('protecao');
+    const abertas = [{ kind: 'minor_protection', status: 'open' }];
+    const residual = residualModules(fed({}), { minorReports: abertas });
+    expect(residual).toMatchObject({ safeguarding: true, minorReportsOpen: true });
+    const a = abas(buildFederationSections(todas, fed({}), { residual }));
+    expect(a).toContain('protecao-denuncias');
+    expect(a).not.toContain('protecao-regras');
+    expect(residualModules(fed({}), { minorReports: [{ status: 'closed' }] }).safeguarding).toBe(false);
+    expect(residualModules(fed({}), {}).safeguarding).toBe(false);
   });
 });

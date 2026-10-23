@@ -7,7 +7,7 @@
  * `federationStaff.parity.test.js`. A regra do Firestore tem a mesma conta
  * em `fedPerms`/`fedRolePerms`.
  */
-const ALL = Object.freeze(['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal']);
+const ALL = Object.freeze(['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal', 'safeguarding']);
 
 /** Papel antigo → permissões (documento sem `perms`). */
 const PERMS = Object.freeze({
@@ -46,6 +46,8 @@ function termActive(doc, now) {
 
 function permsOf(doc, now) {
   if (!termActive(doc, now)) return [];
+  // Admin master é "tudo", inclusive o que foi criado depois de o cargo ser gravado.
+  if (isMaster(doc)) return [...ALL];
   return [...(Array.isArray(doc.perms) ? doc.perms : (PERMS[doc.role] || []))];
 }
 

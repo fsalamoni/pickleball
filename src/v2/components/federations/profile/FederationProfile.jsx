@@ -25,6 +25,7 @@ import { FedAgendaBlock } from '../agenda/AgendaPublic';
 import FedAccountsPublic from '../accounts/FedAccountsPublic';
 import { FedAffiliatesSection, FedCoursesSection, FedCredentialsDirectory, FedOmbudsmanBlock, FedRankingBlock, FedSanctionedTournaments } from '../FedPublicBlocks';
 import { FedRefereesBoard } from '../referees/RefereesPublic';
+import { FedCredentialedCoaches } from '../coaching/CoachBadges';
 import { FedCallupsBlock, FedGrantsBlock } from '../selection/SelectionPublic';
 import { FedGovernanceBlock, FedNewsSection, FedPromosSection, FedSponsorsStrip, FedStoreLink } from '../FedCommsBlocks';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
@@ -198,6 +199,7 @@ export default function FederationProfile({ federation: f, plansQ, actions = nul
           <div className="space-y-8">
             <FedCoursesSection federation={f} />
             <FedCredentialsDirectory federation={f} />
+            <FedCredentialedCoaches federation={f} />
           </div>
         )}
         {aba === PROFILE_TAB.CLUBS && <FedAffiliatesSection federation={f} />}
