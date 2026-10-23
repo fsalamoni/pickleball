@@ -11,7 +11,8 @@ import { ClipboardCheck, FileText } from 'lucide-react';
 import { CHECKLIST_ITEMS, CHECKLIST_LABELS, directorStage, validateEventReport } from '@/modules/federations/domain/competitions';
 import { isoDate } from '@/modules/federations/domain/membership';
 import { competitionAction } from '@/modules/federations/services/competitionsService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { useFederation, useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { V2Badge, V2Button, V2Field, V2Input, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { quando } from '../federationUi';
@@ -30,8 +31,13 @@ export default function DirectorReportForm({ report, readOnly = false }) {
   const [f, setF] = useState(() => ({
     entrants: r?.entrants ?? '', walkovers: r?.walkovers ?? '', injuries: r?.injuries ?? '', complaints: r?.complaints ?? '',
     incidents_text: r?.incidents_text || '', injuries_text: r?.injuries_text || '', complaints_text: r?.complaints_text || '', notes: r?.notes || '',
+    equipment_checked: r?.equipment_checked === true, antidoping_clauses: r?.antidoping_clauses === true,
   }));
   const [editando, setEditando] = useState(false);
+  // Jogo limpo: as duas confirmações só aparecem com o módulo ligado na federação.
+  const fq = useFederation(report.federation_id);
+  const pedeEquip = fedModuleOn(fq.data, 'equipment');
+  const pedeDoping = fedModuleOn(fq.data, 'antidoping');
   const salvarChecklist = useFederationMutation(() => competitionAction(report.federation_id, 'checklist', { tournamentId: report.id, items: itens, notes: notas }));
   const enviar = useFederationMutation(() => competitionAction(report.federation_id, 'report', { tournamentId: report.id, ...f }));
   const validado = validateEventReport(f);
@@ -76,6 +82,8 @@ export default function DirectorReportForm({ report, readOnly = false }) {
               {r.injuries_text && <p><strong>{t('Lesões')}:</strong> {r.injuries_text}</p>}
               {r.complaints_text && <p><strong>{t('Reclamações')}:</strong> {r.complaints_text}</p>}
               {r.notes && <p><strong>{t('Observações')}:</strong> {r.notes}</p>}
+              {(pedeEquip || r.equipment_checked) && <p>{r.equipment_checked ? t('✓ Equipamentos conferidos com a lista homologada') : t('Equipamentos não conferidos com a lista homologada')}</p>}
+              {(pedeDoping || r.antidoping_clauses) && <p>{r.antidoping_clauses ? t('✓ Cláusulas de antidopagem no regulamento') : t('Cláusulas de antidopagem não confirmadas')}</p>}
               <p className="text-xs text-gray-500">{t('Entregue em {data} por {nome}', { data: quando(r.submitted_at_ms), nome: r.by_name || '' })}</p>
               {!readOnly && <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditando(true)}>{t('Corrigir relatório')}</V2Button>}
             </div>
@@ -104,6 +112,8 @@ export default function DirectorReportForm({ report, readOnly = false }) {
               <V2Field label={t('Observações')} htmlFor={`rel-${report.id}-obs`}>
                 <V2Textarea id={`rel-${report.id}-obs`} rows={2} maxLength={2000} value={f.notes} onChange={set('notes')} />
               </V2Field>
+              {pedeEquip && <V2Toggle id={`rel-${report.id}-equip`} checked={f.equipment_checked} onChange={(v) => setF((x) => ({ ...x, equipment_checked: v }))} label={t('Conferi os equipamentos com a lista homologada')} />}
+              {pedeDoping && <V2Toggle id={`rel-${report.id}-doping`} checked={f.antidoping_clauses} onChange={(v) => setF((x) => ({ ...x, antidoping_clauses: v }))} label={t('O regulamento trouxe as cláusulas de antidopagem e a lista de inscritos saiu 30 dias antes')} />}
               <div className="flex justify-end gap-2">
                 {editando && <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditando(false)}>{t('Cancelar')}</V2Button>}
                 <V2Button type="submit" size="sm" disabled={enviar.isPending}>{t('Entregar relatório')}</V2Button>

@@ -4923,7 +4923,7 @@ service cloud.firestore {
         && nd().name is string
         && nd().name.size() >= 3
         && nd().name.size() <= 120
-        && nd().kind in ['referee', 'coach', 'clinic', 'workshop', 'director', 'safeguarding']
+        && nd().kind in ['referee', 'coach', 'clinic', 'workshop', 'director', 'safeguarding', 'antidoping']
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled']
         && nd().price_cents is int
         && nd().price_cents >= 0
@@ -5167,6 +5167,15 @@ service cloud.firestore {
     }
     match /federation_assets/{id} {
       allow read: if fedAcc(od().federation_id) || fedHas(od().federation_id, 'competitions');
+      allow write: if false;
+    }
+    // JOGO LIMPO (rodada 3, Bloco 1): a lista de equipamentos homologados é
+    // pública com o módulo ligado (a estadual mostra também a da confederação);
+    // a equipe de competições e o admin leem sempre. Só o servidor grava
+    // (`federationIntegrity`).
+    match /federation_equipment/{id} {
+      allow read: if (fedSees(od().federation_id) && fedModuleOn(od().federation_id, 'equipment'))
+        || fedAny(od().federation_id, ['competitions', 'admin']);
       allow write: if false;
     }
     // CAMADA NACIONAL (Bloco 6): só o SERVIDOR grava (`federationNational`).

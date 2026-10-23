@@ -35,6 +35,7 @@ export const PROFILE_TAB = Object.freeze({
   CONTACT: 'contato',
   ELECTIONS: 'eleicoes',
   NETWORK: 'rede',
+  INTEGRITY: 'jogo-limpo',
 });
 
 /** A seção (id do título, `fed-*`) → a aba onde ela mora. */
@@ -62,6 +63,8 @@ const ANCHOR_TAB = Object.freeze({
   'fed-eleicoes': PROFILE_TAB.ELECTIONS,
   'fed-minha-filiacao': PROFILE_TAB.MINE,
   'fed-rede': PROFILE_TAB.NETWORK,
+  'fed-equipamentos': PROFILE_TAB.INTEGRITY,
+  'fed-antidopagem': PROFILE_TAB.INTEGRITY,
 });
 
 /** A aba de uma âncora (`#fed-cursos`, com ou sem o `#`), ou null. */
@@ -88,6 +91,7 @@ export function profileTabs(federation, { member = false } = {}) {
     (on('official_docs') || on('accounts') || hasGovernance(federation.governance)) && { id: PROFILE_TAB.DOCUMENTS, dica: 'federacao-pub-documentos', label: tk('Documentos') },
     on('elections') && { id: PROFILE_TAB.ELECTIONS, dica: 'federacao-pub-eleicoes', label: tk('Eleições') },
     (on('courses') || on('coach_licenses')) && { id: PROFILE_TAB.COURSES, dica: 'federacao-pub-cursos', label: tk('Cursos') },
+    (on('equipment') || on('antidoping')) && { id: PROFILE_TAB.INTEGRITY, dica: 'federacao-pub-jogo-limpo', label: tk('Jogo limpo') },
     isConfederation(federation) && { id: PROFILE_TAB.NETWORK, dica: 'federacao-pub-rede', label: tk('Federações filiadas') },
     on('affiliations') && { id: PROFILE_TAB.CLUBS, dica: 'federacao-pub-clubes', label: tk('Clubes e arenas') },
     { id: PROFILE_TAB.CONTACT, dica: 'federacao-pub-contato', label: on('discipline') ? tk('Contato e ouvidoria') : tk('Contato') },

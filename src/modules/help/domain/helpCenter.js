@@ -1069,6 +1069,31 @@ const ATLETA = {
       ],
     },
     {
+      id: 'federacao-jogo-limpo',
+      flags: ['federations'],
+      guias: ['federacao-jogo-limpo'],
+      title: tk('Jogo limpo: equipamentos homologados e antidopagem'),
+      summary: tk('A lista pública de equipamentos que valem nos torneios chancelados e o que a federação publica sobre antidopagem.'),
+      keywords: ['federação', 'jogo limpo', 'equipamento', 'homologação', 'homologado', 'descertificado', 'raquete', 'bola', 'rede', 'antidopagem', 'doping', 'ABCD', 'ADEL', 'JogoLimpo'],
+      blocks: [
+        p(tk('Com o módulo "Equipamentos homologados" ou "Antidopagem" ligado, a página da federação ganha a aba "Jogo limpo" e a Central, a seção de mesmo nome. A equipe de competições cuida da lista; o texto da antidopagem é da administração.')),
+        steps(
+          tk('EQUIPAMENTOS — Jogo limpo → Equipamentos → "Cadastrar equipamento": tipo, marca, modelo, referência do fabricante e de onde veio o ensaio. A lista é pública, com busca.'),
+          tk('SITUAÇÃO — "Mudar situação" troca entre homologado, reprovado e descertificado, com a data e o motivo (o motivo aparece na lista). Cada mudança fica no histórico.'),
+          tk('DESCERTIFICAR, NÃO APAGAR — um modelo que deixou de valer continua na lista com a data, para ninguém ser surpreendido no torneio. Só a administração apaga, e só o que entrou por engano.'),
+          tk('CONFEDERAÇÃO — a federação estadual filiada mostra também a lista da confederação, marcada como tal.'),
+          tk('ANTIDOPAGEM — Jogo limpo → Antidopagem: o texto da página (em branco, vale o padrão do #JogoLimpo), um contato e até cinco links. Os links da ABCD e da Agência Mundial aparecem sempre.'),
+        ),
+        list(
+          tk('TORNEIO CHANCELADO — a página do torneio mostra a lista de equipamentos da federação e as cláusulas-padrão de antidopagem, inclusive a lista de inscritos publicada 30 dias antes.'),
+          tk('RELATÓRIO DO DIRETOR — com o módulo ligado, o relatório pede duas confirmações: equipamentos conferidos e cláusulas no regulamento.'),
+          tk('SUSPENSÃO POR DOPING — na Disciplina, a suspensão ou a exclusão pode ser marcada como "Cumpre decisão de antidopagem". O efeito é o da suspensão de sempre: a pessoa não se inscreve em torneio "só filiados" até o fim do prazo.'),
+          tk('CURSO ADEL — em Cursos, o tipo "Antidopagem (ADEL)" vira credencial com validade, como os demais cursos.'),
+        ),
+        tip(tk('Comece pelas bolas oficiais dos torneios chancelados: é o equipamento que mais gera dúvida na inscrição.')),
+      ],
+    },
+    {
       id: 'federacao-confederacao',
       flags: ['federations'],
       guias: ['federacao-confederacao'],

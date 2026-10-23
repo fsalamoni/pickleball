@@ -8,7 +8,7 @@
  * manifestação anônima, com protocolo. Lógica pura.
  */
 import { t } from '@/core/i18n';
-import { DISCIPLINE_KIND, DISCIPLINE_STATUS, REPORT_KIND, REPORT_MAX_CHARS } from './constants.js';
+import { DISCIPLINE_BASIS, DISCIPLINE_KIND, DISCIPLINE_STATUS, REPORT_KIND, REPORT_MAX_CHARS } from './constants.js';
 import { isoDate } from './membership.js';
 
 const str = (v, max = 500) => String(v ?? '').trim().slice(0, max);
@@ -42,9 +42,12 @@ export function validateSanctionInput(input = {}, { hoje = isoDate() } = {}) {
   return {
     ok: Object.keys(errors).length === 0,
     errors,
-    value: { kind, reason, starts_at, ends_at, fine_cents, tournament_id: str(input.tournament_id, 80) || null, tournament_name: str(input.tournament_name, 120) },
+    value: { kind, reason, starts_at, ends_at, fine_cents, basis: sanctionBasis(kind, input.basis), tournament_id: str(input.tournament_id, 80) || null, tournament_name: str(input.tournament_name, 120) },
   };
 }
+
+/** A base antidopagem só cabe na suspensão e na exclusão (a mesma conta do servidor). */
+export const sanctionBasis = (kind, basis) => (basis === DISCIPLINE_BASIS.ANTIDOPING && [DISCIPLINE_KIND.SUSPENSION, DISCIPLINE_KIND.EXCLUSION].includes(kind) ? basis : '');
 
 /** A sanção ainda produz efeito? (em vigor ou com recurso pendente, dentro do prazo) */
 export function sanctionInForce(s, hoje = isoDate()) {

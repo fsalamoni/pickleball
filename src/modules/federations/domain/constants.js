@@ -53,6 +53,7 @@ export const FED_COLLECTIONS = Object.freeze({
   safeguarding: 'federation_safeguarding',
   sponsorContracts: 'federation_sponsor_contracts',
   assets: 'federation_assets',
+  equipment: 'federation_equipment',
   nationalLinks: 'federation_national_links',
   dues: 'federation_dues',
 });
@@ -231,6 +232,8 @@ export const FED_MODULE = Object.freeze({
   COACH_LICENSES: 'coach_licenses',
   SAFEGUARDING: 'safeguarding',
   ASSETS: 'assets',
+  EQUIPMENT: 'equipment',
+  ANTIDOPING: 'antidoping',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -253,6 +256,8 @@ export const FED_MODULE_META = Object.freeze({
   grants: { label: tk('Editais de apoio ao atleta'), description: tk('Auxílio-viagem, bolsa e material: edital com critérios, inscrição com documentos, resultado, recurso e pagamento nas contas e na transparência.'), status: 'available', central: tk('Seleção e editais → Editais'), tab: 'editais', page: tk('Aba Competições: os editais abertos e os resultados') },
   coach_licenses: { label: tk('Licença de professor'), description: tk('Licença por nível com curso de formação, horas de atualização por ano e renovação; o professor licenciado ganha o selo da federação no perfil.'), status: 'available', central: tk('Professores → Licenças'), tab: 'licencas', page: tk('Aba Cursos: os professores credenciados') },
   assets: { label: tk('Patrimônio'), description: tk('Inventário dos bens da federação (redes, placares, bolas) e o empréstimo a clubes, arenas e eventos, com devolução registrada e aviso de atraso.'), status: 'available', central: tk('Administração → Patrimônio'), tab: 'patrimonio', page: tk('Não aparece na página: é controle interno') },
+  equipment: { label: tk('Equipamentos homologados'), description: tk('A lista pública de raquetes, bolas e redes homologadas, reprovadas ou descertificadas, com data e busca. A confederação publica a lista da rede, que aparece também nas estaduais filiadas.'), status: 'available', central: tk('Jogo limpo → Equipamentos'), tab: 'equipamentos', page: tk('Aba Jogo limpo: a lista com busca') },
+  antidoping: { label: tk('Antidopagem (#JogoLimpo)'), description: tk('Texto e links da ABCD na página pública, as cláusulas antidopagem no regulamento dos torneios chancelados, o curso ADEL como credencial e a suspensão por antidopagem barrando a inscrição.'), status: 'available', central: tk('Jogo limpo → Antidopagem'), tab: 'antidopagem', page: tk('Aba Jogo limpo e a página do torneio chancelado') },
   safeguarding: { label: tk('Proteção de menores'), description: tk('Quem trabalha com menores precisa de curso de proteção e certidão de antecedentes em dia; a ouvidoria ganha a denúncia de proteção, prioritária e de acesso restrito.'), status: 'available', central: tk('Proteção de menores'), tab: 'protecao', page: tk('Aba Contato: a denúncia de proteção de menor') },
 });
 
@@ -561,7 +566,7 @@ export const IMPORT_MAX_ROWS = 500;
 
 /* ----------------------------------------------------------- PR 3: cursos -- */
 
-export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop', DIRECTOR: 'director', SAFEGUARDING: 'safeguarding' });
+export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop', DIRECTOR: 'director', SAFEGUARDING: 'safeguarding', ANTIDOPING: 'antidoping' });
 export const COURSE_KIND_LABELS = Object.freeze({
   referee: tk('Arbitragem'),
   coach: tk('Formação de treinador'),
@@ -569,6 +574,7 @@ export const COURSE_KIND_LABELS = Object.freeze({
   workshop: tk('Workshop'),
   director: tk('Diretor de torneio'),
   safeguarding: tk('Proteção de menores'),
+  antidoping: tk('Antidopagem (ADEL)'),
 });
 
 export const COURSE_STATUS = Object.freeze({ DRAFT: 'draft', OPEN: 'open', CLOSED: 'closed', DONE: 'done', CANCELLED: 'cancelled' });
@@ -608,6 +614,14 @@ export const DISCIPLINE_KIND_LABELS = Object.freeze({
   sanction: tk('Taxa de chancela'),
   exclusion: tk('Exclusão'),
 });
+
+/**
+ * A base da sanção (opcional, gravada): `antidoping` marca a suspensão ou a
+ * exclusão que cumpre uma decisão antidopagem (ABCD / JAD). O efeito é o da
+ * sanção de sempre — a suspensão barra a inscrição na regra.
+ */
+export const DISCIPLINE_BASIS = Object.freeze({ ANTIDOPING: 'antidoping' });
+export const DISCIPLINE_BASIS_LABELS = Object.freeze({ antidoping: tk('Antidopagem') });
 
 /** A sanção: aplicada → (recurso) → mantida / revertida; `ended` quando acaba antes. */
 export const DISCIPLINE_STATUS = Object.freeze({ ACTIVE: 'active', APPEALED: 'appealed', UPHELD: 'upheld', OVERTURNED: 'overturned', ENDED: 'ended' });

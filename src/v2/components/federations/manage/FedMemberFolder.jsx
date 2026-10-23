@@ -21,7 +21,7 @@ import { transferSummary } from '@/modules/federations/domain/transfers';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { levelLabel, normalizeRefereeRules, REFEREE_STATUS_LABELS } from '@/modules/federations/domain/referees';
 import {
-  CHARGE_STATUS, CREDENTIAL_STATUS_LABELS, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, ENROLLMENT_STATUS_LABELS, FED_PERMISSION,
+  CHARGE_STATUS, CREDENTIAL_STATUS_LABELS, DISCIPLINE_BASIS_LABELS, DISCIPLINE_KIND_LABELS, DISCIPLINE_STATUS_LABELS, ENROLLMENT_STATUS_LABELS, FED_PERMISSION,
   MEMBER_STATUS, PLAN_TIER_LABELS, POINTS_CANCEL_REASON_LABELS, TRANSFER_KIND_LABELS, TRANSFER_STATUS_LABELS, TRANSFER_STATUS_TONE,
 } from '@/modules/federations/domain/constants';
 import { V2Avatar, V2BackLink, V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -316,7 +316,7 @@ function Sancoes({ fonte, onIrParaAba }) {
         {(lista = []) => (!lista.length ? <Vazio>{t('Nenhuma sanção registrada.')}</Vazio> : (
           <ul className="space-y-2">{[...lista].sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0)).map((s) => (
             <li key={s.id} className="rounded-2xl border border-gray-100 px-4 py-3 text-sm">
-              <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{t(DISCIPLINE_KIND_LABELS[s.kind] || s.kind)}<V2Badge tone={s.status === 'active' ? 'red' : s.status === 'appealed' ? 'amber' : 'neutral'}>{t(DISCIPLINE_STATUS_LABELS[s.status] || s.status)}</V2Badge></p>
+              <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{t(DISCIPLINE_KIND_LABELS[s.kind] || s.kind)}<V2Badge tone={s.status === 'active' ? 'red' : s.status === 'appealed' ? 'amber' : 'neutral'}>{t(DISCIPLINE_STATUS_LABELS[s.status] || s.status)}</V2Badge>{s.basis === 'antidoping' && <V2Badge tone="purple">{t(DISCIPLINE_BASIS_LABELS.antidoping)}</V2Badge>}</p>
               <p className="text-xs text-gray-500">{[quando(s.created_at_ms), s.starts_at && s.ends_at ? t('de {ini} a {fim}', { ini: quando(s.starts_at), fim: quando(s.ends_at) }) : null, s.fine_cents ? formatBrlCents(s.fine_cents) : null, s.tournament_name].filter(Boolean).join(' · ')}</p>
               {s.reason && <p className="mt-1 text-gray-700">{s.reason}</p>}
             </li>
