@@ -10,7 +10,7 @@
  * Transparência); "Configurações" fica com o funcionamento (planos, Pix,
  * módulos, regras, loja). As abas mudaram de seção, não de valor.
  */
-import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen, Network } from 'lucide-react';
+import { ArrowLeftRight, BadgeCheck, Calculator, CalendarCheck, CalendarDays, Flag, Settings2, Star, Banknote, Eye, Globe, Library, ScrollText, BarChart3, Building2, ClipboardList, CreditCard, FileText, FileUp, Gavel, GraduationCap, Handshake, Landmark, Medal, Megaphone, MessageSquare, MessageSquareWarning, Newspaper, Puzzle, Scale, ShieldCheck, SlidersHorizontal, Store, Sun, Tag, Trophy, Upload, UserCog, Users, Wallet, Inbox, LifeBuoy, ListChecks, Receipt, Vote, Plane, FileSignature, Package, BookOpen, Network, MapPin } from 'lucide-react';
 import { tk } from '@/core/i18n';
 import { DISCIPLINE_STATUS, FED_PERMISSION } from '@/modules/federations/domain/constants';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
@@ -66,7 +66,11 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
   const veBens = modulo('assets') && (admin || pode(FED_PERMISSION.FINANCE) || pode(FED_PERMISSION.FISCAL) || pode(FED_PERMISSION.COMPETITIONS));
   // Camada nacional (Bloco 6): a confederação gere a REDE; a estadual vê a confederação dela. Sem módulo: vale pela marca da plataforma.
   const conf = isConfederation(federation);
+  // Sedes e Copa (rodada 3, Bloco 3b): competições e o admin.
+  const veCompeticoes = admin || pode(FED_PERMISSION.COMPETITIONS);
+  const veSedes = veCompeticoes && modulo('host_bids');
   const rede = conf ? [
+    ...(veCompeticoes && modulo('federation_cup') ? [{ value: 'copa', label: tk('Copa'), icon: Trophy, dica: 'federacao-aba-copa' }] : []),
     ...(canManageNetwork(perms) || canHomologate(perms) || canSeeDues(perms) ? [{ value: 'rede-filiadas', label: tk('Filiadas'), icon: Network, dica: 'federacao-aba-rede-filiadas' }] : []),
     ...(canHomologate(perms) ? [{ value: 'rede-homologacoes', label: tk('Homologações'), icon: ArrowLeftRight, dica: 'federacao-aba-rede-homologacoes' }] : []),
     ...(canSeeDues(perms) ? [{ value: 'rede-anuidades', label: tk('Anuidades'), icon: Receipt, dica: 'federacao-aba-rede-anuidades' }] : []),
@@ -74,6 +78,7 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
   ] : [
     ...(admin ? [{ value: 'confederacao', label: tk('Vínculo'), icon: Landmark, dica: 'federacao-aba-confederacao' }] : []),
     ...(canSeeDues(perms) && nationalBodyOf(federation) ? [{ value: 'confederacao-anuidades', label: tk('Anuidades'), icon: Receipt, dica: 'federacao-aba-confederacao-anuidades' }] : []),
+    ...(veCompeticoes && nationalBodyOf(federation) ? [{ value: 'copa-inscricao', label: tk('Copa das Federações'), icon: Trophy, dica: 'federacao-aba-copa-inscricao' }] : []),
   ];
   return [
     { id: 'hoje', grupo: 'atender', label: tk('Hoje'), icon: Sun, tabs: [{ value: 'hoje', label: tk('Hoje'), icon: Sun }] },
@@ -144,11 +149,12 @@ export function buildFederationSections(perms = [], federation = null, { isMaste
       ],
     },
     // Seleção e editais: a equipe de competições prepara; o financeiro registra custos pagos e pagamentos dos editais.
-    (pode(FED_PERMISSION.COMPETITIONS) || admin || pode(FED_PERMISSION.FINANCE)) && (modulo('selection') || modulo('grants')) && {
+    (((pode(FED_PERMISSION.COMPETITIONS) || admin || pode(FED_PERMISSION.FINANCE)) && (modulo('selection') || modulo('grants'))) || veSedes) && {
       id: 'selecao', grupo: 'atender', label: tk('Seleção e editais'), icon: Plane, dica: 'federacao-secao-selecao',
       tabs: [
         ...(modulo('selection') ? [{ value: 'convocacoes', label: tk('Convocações'), icon: Plane, dica: 'federacao-tab-convocacoes' }] : []),
         ...(modulo('grants') ? [{ value: 'editais', label: tk('Editais'), icon: FileSignature, dica: 'federacao-tab-editais' }] : []),
+        ...(veSedes ? [{ value: 'sedes', label: tk('Sedes'), icon: MapPin, dica: 'federacao-tab-sedes' }] : []),
       ],
     },
     // Jogo limpo: equipamentos homologados (competições e admin) e o texto da antidopagem na página (só o admin).

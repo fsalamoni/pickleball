@@ -3522,3 +3522,114 @@ direto, com auditoria; todo o resto passa pela função `federationDevelopment`.
   `federacao-pub-embaixadores` e `federacao-pub-selo`.
 - **Guia:** `federacao-embaixadores-selo`.
 - **Artigo:** `federacao-embaixadores-selo`.
+
+## 39. Edital de sede e Copa das Federações (rodada 3, Bloco 3b, 2026-10-23)
+
+Dois módulos novos em `FED_MODULE_META`, desligados por padrão: `host_bids`
+("Edital de sede", para qualquer federação) e `federation_cup` ("Copa das
+Federações", com `confederationOnly: true` — a aba Módulos só o oferece a uma
+confederação). Toda escrita é da função `federationHosting`
+(`functions/federationHosting.js`, régua em `domain/hosting.js` com cópia e
+paridade em `functions/federationHostingPolicy.js`). Quem conduz é a equipe de
+competições (permissão `competitions`) e o admin (`canManageHosting`; na regra,
+`fedComp`).
+
+### 39.1 Edital de sede (`federation_host_bids`, `_entries`, `_scores`)
+
+- **Onde:** Central → Seleção e editais → **Sedes** (`?aba=sedes`,
+  `HostBidsManager`). A seção Seleção e editais aparece também só com este
+  módulo ligado.
+- **Edital:** título, evento, datas, prazo das cartas (`intent_until`), prazo
+  das propostas (`proposal_until`), descrição, o que a sede precisa ter e até
+  10 critérios com peso de 1 a 10 (padrão: quadras, acesso, apoio local,
+  experiência e contrapartida — `DEFAULT_HOST_CRITERIA`). Nasce `draft`; só o
+  rascunho se edita ou apaga. **Publicado, as regras não mudam**: só os prazos
+  se estendem (`bid_extend`, nunca para trás, com motivo, e quem se candidatou
+  é avisado). Publicar avisa quem gere os clubes e arenas filiados (na
+  confederação, as equipes das estaduais da rede).
+- **Carta de intenção** (`entry_intent`, mínimo de 20 letras): quem gere um
+  clube ou arena **filiado** manda pelo cartão "Federação" da organização
+  (`OrgHostBidsBlock`). No edital de uma **confederação** vale a filiação a
+  uma estadual com vínculo aprovado à confederação. Uma candidatura por
+  organização (`{bid}_{kind}_{org}`); desistir (`entry_withdraw`) permite
+  mandar de novo enquanto as cartas estão abertas.
+- **Seleção** (`bid_shortlist`): na fase das cartas, a equipe marca quem segue.
+  O edital passa a `proposal`; os escolhidos são avisados com o prazo, os
+  demais de que não seguiram. A varredura avisa a equipe quando o prazo das
+  cartas passa (`warned_intent`).
+- **Proposta** (`entry_proposal`, mínimo de 50 letras e até 6 arquivos): os
+  arquivos ficam em `federacao/{uid}/` de quem manda e abrem pela ação
+  `entry_file` — para a equipe (com auditoria) e para quem gere a organização.
+  Mandar de novo substitui a proposta anterior.
+- **Avaliação:** no prazo das propostas a varredura passa o edital a `review`
+  (a equipe pode fechar antes, `bid_review`). Cada avaliador dá nota inteira de
+  0 a 10 por critério (`bid_score`, um documento por avaliador e proposta); a
+  nota é a média ponderada (`weightedScore`) e a classificação, a média dos
+  avaliadores (`hostRanking`). **Quem gere a organização não avalia a proposta
+  dela.**
+- **Resultado** (`bid_result`): toda proposta precisa de ao menos uma nota.
+  Escolher outra que não a maior nota **exige justificativa**, que sai
+  publicada. O edital guarda `result` (sede, cidade, classificação com nome,
+  cidade e nota — **sem uid**) e quem mandou proposta é avisado.
+- **Cancelar** (`bid_cancel`) só depois de publicado, com motivo, que vai para
+  a página e para o aviso.
+- **Página pública:** aba Competições, bloco "Editais de sede"
+  (`HostBidsPublic`, `#fed-sedes`): prazos, requisitos, critérios com o peso em
+  porcentagem, quantas candidaturas e o resultado.
+
+### 39.2 Copa das Federações (`federation_cups`, `federation_cup_teams`)
+
+- **Na confederação:** Rede nacional → **Copa** (`?aba=copa`, `CupManager`):
+  título, ano (atual ou um dos dois próximos), datas, local, regulamento
+  resumido, prazo de inscrição e até 12 categorias com o tamanho do elenco (até
+  20). Nasce rascunho; **aberta, as categorias não mudam** — só o prazo de
+  inscrição se estende, com motivo. Abrir avisa as equipes de competições das
+  estaduais da rede. A varredura encerra as inscrições no prazo; a equipe
+  também pode encerrar ou cancelar (com motivo, avisando as federações
+  inscritas e os atletas aprovados).
+- **Na estadual:** Confederação → **Copa das Federações**
+  (`?aba=copa-inscricao`, `CupTeamEntry`): o elenco com os **seus filiados em
+  dia**, por categoria, até o teto de cada uma (`team_save`), e o envio
+  (`team_submit`). Enviado, não muda até a confederação decidir; devolvido,
+  ajusta e manda de novo; pode retirar a inscrição.
+- **Decisão:** a confederação aprova (`team_approve`) ou devolve com motivo
+  (`team_return`). O elenco aprovado entra em `federation_cups.teams_public`
+  (federação, categoria e nome do atleta — **sem uid**) e cada atleta é
+  avisado. Retirar ou devolver um elenco aprovado refaz a lista pública.
+- **Página pública da confederação:** aba Competições, bloco "Copa das
+  Federações" (`CupPublic`, `#fed-copa`).
+
+### 39.3 O que não pode regredir
+
+105. As cinco coleções (`federation_host_bids`, `federation_host_entries`,
+     `federation_host_scores`, `federation_cups`, `federation_cup_teams`) **só
+     o servidor grava** (`functions/federationHosting.js`, paridade
+     `federationHosting.parity.test.js`). Leitura: edital e Copa publicados por
+     quem lê a federação (`fedSees`), o rascunho só por `fedComp`; candidatura
+     por quem gere a organização e `fedComp`; **notas só `fedComp`**; elenco
+     pelos atletas dele e por `fedComp` da confederação ou da estadual.
+106. Publicado, o edital não troca de critério nem de peso, e a Copa não troca
+     de categoria: só os prazos se estendem, com motivo e aviso.
+107. O resultado do edital e a lista pública da Copa **nunca levam uid**; o
+     resultado fora da maior nota sempre traz a justificativa.
+108. Quem gere a organização não avalia a proposta dela; o elenco só leva
+     filiados da própria estadual em dia (conferido no servidor).
+109. Status (`draft|intent|proposal|review|result|cancelled`,
+     `intent|shortlisted|not_shortlisted|proposal|withdrawn|winner|not_selected`,
+     `draft|open|closed|cancelled`, `draft|submitted|approved|returned|withdrawn`),
+     ids dos critérios e categorias e os valores `?aba=sedes`, `?aba=copa` e
+     `?aba=copa-inscricao` são gravados ou contrato de link: nunca os renomeie.
+110. Na exclusão de conta, o elenco da Copa troca o atleta por "Atleta
+     removido" (no documento e na lista pública) e o uid sai de
+     `athlete_uids`; editais, candidaturas e notas são da federação ou da
+     organização e ficam. Os elencos em que a pessoa foi inscrita entram na
+     exportação (`listMyCupTeams`).
+
+### 39.4 Âncoras e guias
+
+- **Âncoras:** `federacao-tab-sedes`, `federacao-aba-sedes`,
+  `federacao-novo-edital-sede`, `federacao-aba-copa`, `federacao-copa-lista`,
+  `federacao-aba-copa-inscricao`, `federacao-copa-elenco`, `org-editais-sede`,
+  `federacao-pub-sedes` e `federacao-pub-copa`.
+- **Guias:** `federacao-sedes` e `federacao-copa`.
+- **Artigo:** `federacao-sedes-copa`.

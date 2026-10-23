@@ -25,6 +25,7 @@ import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surfa
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { t } from '@/core/i18n';
 import OrgSealBlock from './development/OrgSealBlock';
+import OrgHostBidsBlock from './hosting/OrgHostBidsBlock';
 
 const TOM = { pending: 'amber', approved: 'green', rejected: 'red', suspended: 'red', invited: 'blue' };
 // Âncoras das dicas (literais, para o guarda `dicas.test.js` as encontrar).
@@ -126,7 +127,10 @@ export default function OrgAffiliationCard({ kind, org }) {
         </ul>
       )}
       {minhas.isSuccess && feds.isSuccess && (
-        <OrgSealBlock kind={kind} org={org} federations={(feds.data || []).filter((f) => (minhas.data || []).some((a) => a.federation_id === f.id && affiliationState(a).approved))} />
+        <>
+          <OrgSealBlock kind={kind} org={org} federations={(feds.data || []).filter((f) => (minhas.data || []).some((a) => a.federation_id === f.id && affiliationState(a).approved))} />
+          <OrgHostBidsBlock kind={kind} org={org} federations={feds.data || []} affiliatedIds={(minhas.data || []).filter((a) => affiliationState(a).approved).map((a) => a.federation_id)} />
+        </>
       )}
       {/* Desfiliar apaga o vínculo: voltar é um pedido novo, com nova aprovação. Por isso pergunta antes. */}
       <ConfirmDialog
