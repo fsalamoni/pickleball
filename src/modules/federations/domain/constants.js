@@ -48,6 +48,9 @@ export const FED_COLLECTIONS = Object.freeze({
   callupMembers: 'federation_callup_members',
   grants: 'federation_grants',
   grantApplications: 'federation_grant_applications',
+  coachLicenses: 'federation_coach_licenses',
+  coachBadges: 'federation_coach_badges',
+  safeguarding: 'federation_safeguarding',
 });
 
 /** O convite para filiar vale por 30 dias (a mesma conta do servidor). */
@@ -118,6 +121,8 @@ export const FED_PERMISSION = Object.freeze({
   STAFF: 'staff',
   /** Conselho fiscal: lê o orçamento e as contas e registra o parecer; não lança nada. */
   FISCAL: 'fiscal',
+  /** Proteção de menores: certidões, quem trabalha com menores e as denúncias de proteção (acesso restrito). */
+  SAFEGUARDING: 'safeguarding',
 });
 
 /** O que cada permissão abre — é o que aparece ao montar um cargo. */
@@ -132,6 +137,7 @@ export const FED_PERMISSION_META = Object.freeze({
   docs: { label: tk('Acervo oficial'), description: tk('Normas, atos, atas, editais e documentos de transparência: rascunho, publicação, retificação e visibilidade.') },
   staff: { label: tk('Equipe'), description: tk('Nomeia pessoas para cargos sem poder de admin master, prorroga mandatos e tira da equipe.') },
   fiscal: { label: tk('Conselho fiscal'), description: tk('Lê o orçamento, os lançamentos e as prestações de contas e registra o parecer. Não lança nem aprova pagamento.') },
+  safeguarding: { label: tk('Proteção de menores'), description: tk('Confere as certidões de antecedentes, acompanha quem trabalha com menores e trata as denúncias de proteção, que só ela vê.') },
 });
 
 /** Mandato: o máximo que o cargo pode durar sem alerta (Lei 14.597/2023, art. 36: até 4 anos). */
@@ -218,6 +224,8 @@ export const FED_MODULE = Object.freeze({
   INSURANCE: 'insurance',
   SELECTION: 'selection',
   GRANTS: 'grants',
+  COACH_LICENSES: 'coach_licenses',
+  SAFEGUARDING: 'safeguarding',
 });
 
 export const FED_MODULE_META = Object.freeze({
@@ -238,6 +246,8 @@ export const FED_MODULE_META = Object.freeze({
   accounts: { label: tk('Orçamento e prestação de contas'), description: tk('Orçamento anual por categoria, receitas e despesas lançadas, orçado × realizado, parecer do conselho fiscal e contas publicadas na transparência.'), status: 'available', central: tk('Contas (orçamento e prestação de contas)'), tab: 'orcamento', page: tk('Página de transparência: orçamento e contas') },
   selection: { label: tk('Seleção e delegações'), description: tk('Convocação para campeonatos nacionais pelo ranking oficial do ano ou a dedo, com prazo para responder, suplente chamado sozinho, documentos de viagem, uniforme e custos lançados nas contas.'), status: 'available', central: tk('Seleção e editais → Convocações'), tab: 'convocacoes', page: tk('Aba Competições: as convocações e a delegação') },
   grants: { label: tk('Editais de apoio ao atleta'), description: tk('Auxílio-viagem, bolsa e material: edital com critérios, inscrição com documentos, resultado, recurso e pagamento nas contas e na transparência.'), status: 'available', central: tk('Seleção e editais → Editais'), tab: 'editais', page: tk('Aba Competições: os editais abertos e os resultados') },
+  coach_licenses: { label: tk('Licença de professor'), description: tk('Licença por nível com curso de formação, horas de atualização por ano e renovação; o professor licenciado ganha o selo da federação no perfil.'), status: 'available', central: tk('Professores → Licenças'), tab: 'licencas', page: tk('Aba Cursos: os professores credenciados') },
+  safeguarding: { label: tk('Proteção de menores'), description: tk('Quem trabalha com menores precisa de curso de proteção e certidão de antecedentes em dia; a ouvidoria ganha a denúncia de proteção, prioritária e de acesso restrito.'), status: 'available', central: tk('Proteção de menores'), tab: 'protecao', page: tk('Aba Contato: a denúncia de proteção de menor') },
 });
 
 /* ---------------------------------------------------- PR 4: notícias -- */
@@ -538,13 +548,14 @@ export const IMPORT_MAX_ROWS = 500;
 
 /* ----------------------------------------------------------- PR 3: cursos -- */
 
-export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop', DIRECTOR: 'director' });
+export const COURSE_KIND = Object.freeze({ REFEREE: 'referee', COACH: 'coach', CLINIC: 'clinic', WORKSHOP: 'workshop', DIRECTOR: 'director', SAFEGUARDING: 'safeguarding' });
 export const COURSE_KIND_LABELS = Object.freeze({
   referee: tk('Arbitragem'),
   coach: tk('Formação de treinador'),
   clinic: tk('Clínica'),
   workshop: tk('Workshop'),
   director: tk('Diretor de torneio'),
+  safeguarding: tk('Proteção de menores'),
 });
 
 export const COURSE_STATUS = Object.freeze({ DRAFT: 'draft', OPEN: 'open', CLOSED: 'closed', DONE: 'done', CANCELLED: 'cancelled' });
@@ -596,13 +607,20 @@ export const DISCIPLINE_STATUS_LABELS = Object.freeze({
 });
 
 /** Ouvidoria: o assunto da manifestação. */
-export const REPORT_KIND = Object.freeze({ CONDUCT: 'conduct', REFEREE: 'referee', ORGANIZATION: 'organization', OTHER: 'other' });
+/**
+ * Ouvidoria: o assunto da manifestação. `minor_protection` (com o módulo
+ * `safeguarding`) é prioritária e só a proteção de menores lê — a disciplina
+ * consulta só os demais (`REPORT_KINDS_DISCIPLINE`).
+ */
+export const REPORT_KIND = Object.freeze({ CONDUCT: 'conduct', REFEREE: 'referee', ORGANIZATION: 'organization', OTHER: 'other', MINOR_PROTECTION: 'minor_protection' });
 export const REPORT_KIND_LABELS = Object.freeze({
   conduct: tk('Conduta de atleta ou dirigente'),
   referee: tk('Arbitragem'),
   organization: tk('Organização de torneio'),
   other: tk('Outro assunto'),
+  minor_protection: tk('Proteção de criança ou adolescente'),
 });
+export const REPORT_KINDS_DISCIPLINE = Object.freeze(['conduct', 'referee', 'organization', 'other']);
 
 export const REPORT_STATUS = Object.freeze({ OPEN: 'open', IN_REVIEW: 'in_review', CLOSED: 'closed' });
 export const REPORT_STATUS_LABELS = Object.freeze({ open: tk('Recebida'), in_review: tk('Em apuração'), closed: tk('Concluída') });

@@ -271,6 +271,8 @@ describe('⭐ a cascata com as especificações REAIS', () => {
       'club_event_rsvps/e1_x',
       'club_events/e1/date_rsvps/d_x',
       'club_forum_threads/f1/poll_votes/x',
+      // O selo público de professor credenciado é da própria pessoa (id = uid).
+      'federation_coach_badges/x',
       'users/x',
     ].sort());
   });

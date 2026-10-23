@@ -1454,11 +1454,34 @@ exports.federationSanctionSync = onDocumentWritten(
 const federationSelection = require('./federationSelection');
 exports.federationSelection = federationCallable('federationSelection', federationSelection.selection);
 
+// Licença de professor e proteção de menores (Bloco 4): concessão com
+// requisitos conferidos, selo público no perfil do professor, certidão de
+// antecedentes conferida pelo responsável (o arquivo é apagado depois) e a
+// denúncia de proteção de menor avisando na hora — `functions/federationCoaching.js`.
+const federationCoaching = require('./federationCoaching');
+exports.federationCoaching = federationCallable('federationCoaching', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('federationCoaching: Storage indisponível.', err); }
+  return federationCoaching.coaching({ ...ctx, bucket }, actor, data);
+});
+exports.federationMinorReportNotify = onDocumentCreated(
+  { document: 'federation_reports/{reportId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 60 },
+  async (event) => {
+    const d = event.data && event.data.data();
+    if (!d || d.kind !== 'minor_protection') return;
+    try {
+      await federationCoaching.onReportCreated(fedCtx(), d);
+    } catch (err) {
+      logger.error('federationMinorReportNotify falhou', err);
+    }
+  },
+);
+
 exports.federationMembershipSweep = onSchedule(
   { schedule: 'every day 06:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a das transferências não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([federations.sweep(fedCtx()), federationTransfers.sweep(fedCtx()), federationDiscipline.sweep(fedCtx()), federationStaff.sweep(fedCtx()), federationReferees.sweep(fedCtx()), federationRegularity.sweep(fedCtx()), federationCompetitions.sweep(fedCtx()), federationSelection.sweep(fedCtx()), federationCoaching.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('federationMembershipSweep: uma varredura falhou', r.reason));
   },
 );

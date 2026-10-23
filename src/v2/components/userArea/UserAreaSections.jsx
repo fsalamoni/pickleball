@@ -10,7 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeftRight, Award, BarChart3, FileSignature, Flag, Plane, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
+  ArrowLeftRight, Award, BadgeCheck, BarChart3, FileSignature, Flag, Plane, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
   HandCoins, Heart, HelpCircle, Inbox, MailPlus, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
   Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
@@ -68,6 +68,7 @@ import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
 import { MyArenaEnrollments, MyTaughtArenaClasses } from '@/v2/components/arenas/classes/MyArenaClasses';
 import { MiniStat } from './ProfileShowcase';
 import MyRefereeAssignments from '@/v2/components/federations/referees/MyRefereeAssignments';
+import { MyCoachingFed } from '@/v2/components/federations/coaching/MyCoaching';
 import { t, tn } from '@/core/i18n';
 
 /* ------------------------------- peças ------------------------------- */
@@ -659,8 +660,8 @@ function CredencialRow({ c }) {
 }
 
 function FederacoesSecao({ ctx }) {
-  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ, callupsQ, grantAppsQ } = ctx.federacoes;
-  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ, callupsQ, grantAppsQ].filter((q) => q?.isError);
+  const { membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ, callupsQ, grantAppsQ, coachLicQ } = ctx.federacoes;
+  const falhas = [membersQ, chargesQ, rolesQ, invitesQ, dependentsQ, credentialsQ, transfersQ, rostersQ, assignmentsQ, finalsQ, directedQ, callupsQ, grantAppsQ, coachLicQ].filter((q) => q?.isError);
   // Convocações: as abertas e as aceitas de eventos que ainda vêm; inscrições em editais: as do último ano.
   const convocacoes = (callupsQ?.data || []).filter((i) => finalInviteOpen(i) || (i.status === 'accepted' && (!i.starts_at || i.starts_at >= isoDate())));
   const editais = (grantAppsQ?.data || []).filter((a) => (a.created_at_ms || 0) > Date.now() - 365 * 86400000);
@@ -675,6 +676,10 @@ function FederacoesSecao({ ctx }) {
   const dependentes = dependentsQ?.data || [];
   const credenciais = credentialsQ?.data || [];
   const transferencias = (transfersQ?.data || []).filter((x) => x.status === TRANSFER_STATUS.PENDING);
+  // Licença e proteção de menores: as federações em que a pessoa é filiada, licenciada ou árbitra (o servidor diz o que está ligado).
+  const licencas = coachLicQ?.data || [];
+  const fedsTrabalho = [...new Map([...filiacoes.filter((m) => m.status === MEMBER_STATUS.ACTIVE && m.user_id === ctx.uid), ...licencas, ...(rostersQ?.data || [])]
+    .filter((x) => x.federation_id).map((x) => [x.federation_id, { id: x.federation_id, name: x.federation_name || '', acronym: x.federation_acronym || '' }])).values()];
   return (
     <div className="space-y-6">
       {falhas.length > 0 && <V2ErrorState inline title={t('Não carregaram as suas federações')} onRetry={() => falhas.forEach((q) => q.refetch())} />}
@@ -706,6 +711,11 @@ function FederacoesSecao({ ctx }) {
       {arbitra && (
         <Bloco id="federacoes-escalas" icon={Flag} title={t('Minhas escalas de arbitragem')}>
           <MyRefereeAssignments rosters={rostersQ.data || []} assignments={assignmentsQ.data || []} />
+        </Bloco>
+      )}
+      {fedsTrabalho.length > 0 && (ctx.isCoach || licencas.length > 0 || arbitra) && (
+        <Bloco id="federacoes-licenca" icon={BadgeCheck} title={t('Licença de professor e proteção de menores')}>
+          <ul className="space-y-3">{fedsTrabalho.map((f) => <MyCoachingFed key={f.id} fed={f} isCoach={Boolean(ctx.isCoach)} hasLicense={licencas.some((l) => l.federation_id === f.id)} />)}</ul>
         </Bloco>
       )}
       {abertas.length > 0 && (

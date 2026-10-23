@@ -2846,3 +2846,132 @@ varredura diária). A régua tem cópia em
 
 Guias: `federacao-convocacao`, `federacao-editais` e
 `federacao-edital-inscricao`. Artigo: `federacao-selecao`.
+
+## 33. Licença de professor e proteção de menores (Bloco 4 das próximas frentes, 2026-10-22)
+
+Dois módulos novos, ligáveis por federação: **Licença de professor**
+(`coach_licenses`) e **Proteção de menores** (`safeguarding`, no modelo
+SafeSport/Safe Play). Uma permissão nova da equipe, **`safeguarding`**, que vai a um cargo
+próprio (`federations.staff_roles`) — a presidência, a diretoria e o admin
+master têm todas, como sempre. Tudo é gravado **pelo servidor** (`functions/federationCoaching.js`:
+callable `federationCoaching`, o gatilho `federationMinorReportNotify` e a
+varredura diária). A régua tem cópia em
+`functions/federationCoachingPolicy.js`, com paridade contra
+`src/modules/federations/domain/coachLicenses.js` e `safeguarding.js`
+(`federationCoaching.parity.test.js`).
+
+### 33.1 Licença de professor
+
+- **Níveis** (`federations.coach_rules.levels[]`, `license_rules`, equipe
+  `courses`/`admin`): até 8, cada um com `id` (gravado), nome, se exige a
+  **credencial do curso de formação** (`requires_credential`: credencial
+  `kind: 'coach'` da federação cujo `level` é o nome ou o id do nível), as
+  **horas de atualização** dos últimos 12 meses (`update_hours`, somadas das
+  inscrições aprovadas em cursos da federação, pelas `hours` do curso) e a
+  validade em meses (1–60). Sem níveis gravados valem três padrão (Nível 1, 2
+  e 3: 8, 12 e 16 h, 12 meses). Mudar um nível não muda licença concedida.
+- **Pedir** (`license_apply`): o professor, em Minha área → Federações →
+  "Licença de professor e proteção de menores", vê os requisitos de cada nível
+  (`me`) e pede com um recado opcional; licenciado, pede a **renovação**
+  (`renewal_requested_at_ms`). A equipe é avisada.
+- **Conceder** (`license_check` + `license_grant`): o servidor confere os três
+  requisitos. Falta de credencial ou horas só passa com **dispensa e motivo**
+  (≥ 10 letras, gravado na licença e na auditoria); falta de proteção de
+  menores **nunca** se dispensa. Ninguém concede a própria licença. A validade
+  conta da data atual ou, numa renovação em dia, do vencimento anterior.
+- **Decidir**: `license_decline`, `license_suspend`, `license_reinstate` e
+  `license_revoke` (motivo obrigatório, menos na reativação), com o professor
+  avisado; o `history` guarda os últimos 30 eventos.
+- **O selo** (`federation_coach_badges/{uid}`, leitura pública): as licenças
+  **válidas** de federações **publicadas** que o professor deixou aparecer
+  (`license_prefs` → `public_listing`). Aparece no perfil do professor
+  (`CoachFederationBadges`, "Professor credenciado pela {sigla}") e na aba
+  **Cursos** da página da federação (`FedCredentialedCoaches`). Recalculado a
+  cada decisão e pela varredura, que tira o selo vencido.
+- **Avisos da varredura**: 30 dias antes do vencimento e no vencimento.
+
+### 33.2 Proteção de menores
+
+- **Regras** (`federations.safeguarding_rules`, `sg_rules`): quem precisa
+  estar em dia (`required_for` entre `coach`, `referee`, `director`, `staff`;
+  padrão os três primeiros) e a validade da certidão em meses a partir da
+  emissão (`background_months`, padrão 12).
+- **Em dia** = **curso de proteção** válido (credencial `kind:
+  'safeguarding'` da federação, emitida ao aprovar um curso desse tipo) **e**
+  **certidão de antecedentes conferida** dentro da validade
+  (`federation_safeguarding/{fed}_{uid}.cleared_until`, recalculado por
+  `refreshClearance` ao aprovar o curso, ao conferir ou revogar a certidão e
+  na varredura).
+- **A certidão**: a pessoa envia em Minha área (`sg_submit`, arquivo da pasta
+  `federacao/{uid}/` dela, PDF ou foto). O responsável (`safeguarding`) abre
+  pelo `sg_file` (auditado em `federation_safeguarding_file_view`) e decide
+  (`sg_verify`: conferida, com a validade, ou não aceita, com motivo; ninguém
+  confere a própria). Na
+  decisão o **arquivo é apagado** do Storage: fica a data de emissão, a
+  validade e quem conferiu. `sg_revoke` revoga com motivo. A pessoa é avisada
+  em cada passo e 30 dias antes de vencer.
+- **O efeito** (`clearanceBlocker`): sem estar em dia, o servidor recusa a
+  **escala de arbitragem** (`federationReferees`), a **licença de professor**
+  e a **chancela com diretor de torneio credenciado**
+  (`federationCompetitions`), com a mensagem do que falta.
+- **Quem trabalha com menores** (`sg_overview`): professores licenciados,
+  árbitros do quadro, diretores de torneio e quem enviou certidão, com o
+  curso, a certidão e se pode trabalhar.
+
+### 33.3 Denúncia de proteção de menor
+
+- A ouvidoria (§6.6) ganha o assunto **`minor_protection`** ("Proteção de
+  criança ou adolescente"), oferecido só com `safeguarding` ligado (a regra
+  também exige). O formulário mostra o 190, o Disque 100 e o Conselho
+  Tutelar.
+- **Acesso restrito**: só a permissão `safeguarding` lê e trata
+  (`fedRepStaff`); a disciplina, `admin` comum e a ouvidoria comum **não**.
+  A lista da disciplina consulta `kind in [conduct, referee, organization,
+  other]` e a de proteção `kind == 'minor_protection'` (a consulta precisa
+  ser provável pela regra).
+- **Prioridade**: o gatilho `federationMinorReportNotify` avisa o responsável
+  na hora (sem o conteúdo, que fica só na Central), e a faixa "Precisa de
+  você" conta as denúncias em aberto e as certidões para conferir.
+- Desligar `safeguarding` com denúncia em aberto mantém a aba Denúncias
+  (`residualModules`) até concluir.
+
+### 33.4 Leitura, exclusão e exportação
+
+- `federation_coach_licenses`: o professor e `courses`/`admin`.
+  `federation_safeguarding`: a pessoa e `safeguarding`. As três coleções:
+  `allow write: if false`.
+- Exclusão de conta: licença, selo e registro da proteção são **apagados**
+  (o arquivo da certidão sai com a pasta). Exportação: os três.
+
+### 33.5 Não pode regredir
+
+75. A régua (requisitos da licença, estado, selo, clearance, validade da
+    certidão) muda nos dois lados ao mesmo tempo, senão a paridade quebra.
+76. A proteção de menores **nunca** entra nas dispensas da licença.
+77. O arquivo da certidão é apagado na decisão; o registro guarda só datas,
+    status e quem conferiu.
+78. A denúncia `minor_protection` só é lida por `safeguarding` (teste de
+    regra); a disciplina não a vê nem por consulta sem filtro de `kind`.
+79. O selo só mostra licença válida de federação publicada que o professor
+    deixou aparecer.
+80. Os ids gravados (níveis, `LICENSE_STATUS`, `BACKGROUND_STATUS`,
+    `SG_ROLES`, `minor_protection`) e os valores
+    `?aba=licencas|licencas-niveis|protecao|protecao-denuncias|protecao-regras`
+    são contrato — nunca renomeie.
+
+### 33.6 Âncoras e guias
+
+Âncoras: `federacao-secao-professores`, `federacao-aba-licencas`,
+`federacao-aba-licencas-niveis`, `federacao-licencas`,
+`federacao-licencas-niveis`, `federacao-licencas-conceder`,
+`federacao-professores`, `federacao-professores-credenciados`,
+`professor-selo-federacao`, `federacao-secao-protecao`,
+`federacao-aba-protecao`, `federacao-aba-protecao-denuncias`,
+`federacao-aba-protecao-regras`, `federacao-protecao`,
+`federacao-protecao-conferir`, `federacao-protecao-denuncias`,
+`federacao-protecao-regras`, `federacao-protecao-painel`,
+`minha-area-licenca-pedir`, `minha-area-certidao`.
+
+Guias: `federacao-licencas`, `federacao-protecao` e
+`federacao-minha-licenca`. Artigos: `federacao-licencas` e
+`federacao-protecao-menores`.

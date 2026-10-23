@@ -27,6 +27,7 @@ import FederationPendencias from '@/v2/components/federations/FederationPendenci
 import { useFederationAccountReports, useFederationBudgets } from '@/modules/federations/hooks/useAccounts';
 import { useFederationAssignments, useScalableEvents } from '@/modules/federations/hooks/useReferees';
 import { useFederationCandidacies, useFederationElections } from '@/modules/federations/hooks/useElections';
+import { useFederationCoachLicenses, useMinorReports, useSafeguardingOverview } from '@/modules/federations/hooks/useCoaching';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FedSupportAccessBanner, FedSupportAccessGate } from '@/v2/components/federations/manage/FedSupportAccess';
 import { FedHiddenBanner } from '@/v2/components/federations/manage/FedPublication';
@@ -54,6 +55,8 @@ const FedAccountsPanel = lazy(() => import('@/v2/components/federations/manage/a
 const FedRefereesPanel = lazy(() => import('@/v2/components/federations/manage/FedRefereesPanel'));
 const FedElectionsPanel = lazy(() => import('@/v2/components/federations/manage/FedElectionsPanel'));
 const FedSelectionPanel = lazy(() => import('@/v2/components/federations/manage/FedSelectionPanel'));
+const FedCoachingPanel = lazy(() => import('@/v2/components/federations/coaching/FedCoachingPanel'));
+const FedSafeguardingPanel = lazy(() => import('@/v2/components/federations/coaching/FedSafeguardingPanel'));
 
 const FedInsurancePanel = lazy(() => import('@/v2/components/federations/manage/FedInsurancePanel'));
 
@@ -69,7 +72,9 @@ function Central({ federationId }) {
   const podeCompeticoes = perms.includes(FED_PERMISSION.COMPETITIONS);
   const sanctionsQ = useFederationSanctions(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.DISCIPLINE) });
   const tournamentsQ = useFederationTournaments(federationId, { enabled: papel.isStaff && podeCompeticoes });
-  const residual = useMemo(() => residualModules(fq.data, { sanctions: sanctionsQ.isSuccess ? sanctionsQ.data : undefined, tournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined }), [fq.data, sanctionsQ.isSuccess, sanctionsQ.data, tournamentsQ.isSuccess, tournamentsQ.data]);
+  // Denúncias de proteção de menor: só o responsável (a regra exige `safeguarding`); com o módulo desligado, a aberta mantém a aba.
+  const minorReportsQ = useMinorReports(federationId, { enabled: papel.isStaff && perms.includes(FED_PERMISSION.SAFEGUARDING) });
+  const residual = useMemo(() => residualModules(fq.data, { sanctions: sanctionsQ.isSuccess ? sanctionsQ.data : undefined, tournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined, minorReports: minorReportsQ.isSuccess ? minorReportsQ.data : undefined }), [fq.data, sanctionsQ.isSuccess, sanctionsQ.data, tournamentsQ.isSuccess, tournamentsQ.data, minorReportsQ.isSuccess, minorReportsQ.data]);
   const sections = useMemo(() => buildFederationSections(perms, fq.data, { isMaster: papel.isMaster, residual }), [perms, fq.data, papel.isMaster, residual]);
   const abasExistentes = useMemo(() => new Set(sections.flatMap((s) => s.tabs.map((x) => x.value))), [sections]);
   const [params, setParams] = useSearchParams();
@@ -132,6 +137,11 @@ function Central({ federationId }) {
   const electionsQ = useFederationElections(federationId, { enabled: papel.isStaff && podeEleicoes });
   const budgetsQ = useFederationBudgets(federationId, { enabled: papel.isStaff && admin && tab === 'conformidade' && fedModuleOn(fq.data, 'accounts') });
   const candidaciesQ = useFederationCandidacies(federationId, { enabled: papel.isStaff && podeEleicoes });
+  // Licença de professor (cursos ou admin) e proteção de menores (só o responsável): alimentam o "Precisa de você".
+  const podeLicencas = (perms.includes(FED_PERMISSION.COURSES) || admin) && fedModuleOn(fq.data, 'coach_licenses');
+  const coachLicensesQ = useFederationCoachLicenses(federationId, { enabled: papel.isStaff && podeLicencas });
+  const podeProtecao = perms.includes(FED_PERMISSION.SAFEGUARDING) && fedModuleOn(fq.data, 'safeguarding');
+  const sgOverviewQ = useSafeguardingOverview(federationId, { enabled: papel.isStaff && podeProtecao });
 
   if (fq.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou a federação')} onRetry={() => { fq.refetch(); papel.refetch(); }} /></V2Page>;
   if (fq.isLoading || papel.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-24" /><V2Skeleton className="h-16" /><V2Skeleton className="h-64" /></V2Page>;
@@ -172,7 +182,7 @@ function Central({ federationId }) {
 
       <FedHiddenBanner federation={f} canPublish={admin} onOpen={() => setTab('publicacao')} />
 
-      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} assignmentsQ={assignmentsQ} refEvents={refEventsQ.incompleto ? undefined : refEventsQ.events} refRules={f.referee_rules} electionsQ={electionsQ} candidaciesQ={candidaciesQ} uid={user?.uid || null} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
+      <FederationPendencias membersQ={membersQ} chargesQ={chargesQ} affiliationsQ={affiliationsQ} tournamentsQ={tournamentsQ} transfersQ={transfersQ} documentsQ={documentsQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} accountReportsQ={accountReportsQ} assignmentsQ={assignmentsQ} refEvents={refEventsQ.incompleto ? undefined : refEventsQ.events} refRules={f.referee_rules} electionsQ={electionsQ} candidaciesQ={candidaciesQ} coachLicensesQ={coachLicensesQ} minorReportsQ={minorReportsQ} sgOverviewQ={sgOverviewQ} uid={user?.uid || null} perms={perms} abas={abasExistentes} onIrParaAba={irParaAba} />
 
       <div className="space-y-3">
         <V2SectionNav ariaLabel={t('Seções da Central da federação')} dica="federacao-secoes" sections={sections} grupos={FED_SECTION_GROUPS} activeId={secaoAtiva.id} onSelect={(s) => setTab(s.tabs[0].value)} />
@@ -187,6 +197,8 @@ function Central({ federationId }) {
         {secaoAtiva.id === 'filiados' && tab !== 'filiados-orgs' && tab !== 'ocorrencias' && !ABAS_SECRETARIA.includes(tab) && <FedMembersPanel federation={f} membersQ={membersQ} documentsQ={documentsQ} plansQ={plansQ} transfersQ={transfersQ} perms={perms} tab={tab} onIrParaAba={irParaAba} />}
         {secaoAtiva.id === 'cursos' && <FedCoursesPanel federation={f} coursesQ={coursesQ} credentialsQ={credentialsQ} tab={tab} perms={perms} />}
         {secaoAtiva.id === 'arbitragem' && <FedRefereesPanel federation={f} tab={tab} />}
+        {secaoAtiva.id === 'professores' && <FedCoachingPanel federation={f} tab={tab} licensesQ={coachLicensesQ} />}
+        {secaoAtiva.id === 'protecao' && <FedSafeguardingPanel federation={f} tab={tab} overviewQ={sgOverviewQ} minorReportsQ={minorReportsQ} />}
         {secaoAtiva.id === 'disciplina' && <FedDisciplinePanel federation={f} membersQ={membersQ} sanctionsQ={sanctionsQ} reportsQ={reportsQ} tab={tab} />}
         {secaoAtiva.id === 'comunicacao' && <FedCommsPanel federation={f} newsQ={newsQ} tab={tab} />}
         {tab === 'comentarios' && <FedCommentsPanel federation={f} />}

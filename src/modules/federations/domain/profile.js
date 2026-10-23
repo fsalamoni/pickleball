@@ -84,7 +84,7 @@ export function profileTabs(federation, { member = false } = {}) {
     (on('tournaments') || on('ranking') || on('referees') || on('selection') || on('grants')) && { id: PROFILE_TAB.COMPETITIONS, dica: 'federacao-pub-competicoes', label: tk('Competições') },
     (on('official_docs') || on('accounts') || hasGovernance(federation.governance)) && { id: PROFILE_TAB.DOCUMENTS, dica: 'federacao-pub-documentos', label: tk('Documentos') },
     on('elections') && { id: PROFILE_TAB.ELECTIONS, dica: 'federacao-pub-eleicoes', label: tk('Eleições') },
-    on('courses') && { id: PROFILE_TAB.COURSES, dica: 'federacao-pub-cursos', label: tk('Cursos') },
+    (on('courses') || on('coach_licenses')) && { id: PROFILE_TAB.COURSES, dica: 'federacao-pub-cursos', label: tk('Cursos') },
     on('affiliations') && { id: PROFILE_TAB.CLUBS, dica: 'federacao-pub-clubes', label: tk('Clubes e arenas') },
     { id: PROFILE_TAB.CONTACT, dica: 'federacao-pub-contato', label: on('discipline') ? tk('Contato e ouvidoria') : tk('Contato') },
   ].filter(Boolean);

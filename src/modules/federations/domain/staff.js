@@ -54,6 +54,8 @@ export function staffTermActive(doc, nowMs = Date.now()) {
 /** As permissões que a pessoa tem AGORA — a mesma conta de `fedPerms` na regra. */
 export function staffPerms(doc, nowMs = Date.now()) {
   if (!staffTermActive(doc, nowMs)) return [];
+  // Admin master é "tudo": ganha também as permissões criadas depois de o cargo ser gravado (ex.: proteção de menores).
+  if (staffIsMaster(doc)) return [...ALL_PERMISSIONS];
   return [...(Array.isArray(doc.perms) ? doc.perms : (STAFF_ROLE_PERMISSIONS[doc.role] || []))];
 }
 

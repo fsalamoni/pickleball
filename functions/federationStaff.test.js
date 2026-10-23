@@ -19,7 +19,7 @@ const PRES = { uid: 'pres' };
 const GES = { uid: 'ges' };
 const SEC = { uid: 'sec' };
 const ADMIN = { uid: 'admin', email: 'admin@x', isPlatformAdmin: true };
-const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal'];
+const TODAS = ['admin', 'members', 'finance', 'competitions', 'courses', 'discipline', 'comms', 'docs', 'staff', 'fiscal', 'safeguarding'];
 
 function cenario() {
   return createFakeDb({

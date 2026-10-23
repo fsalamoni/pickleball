@@ -50,6 +50,7 @@ function aplicarUpdate(store, ref, data) {
       antes = antes && typeof antes === 'object' ? antes[p] : undefined;
     });
     const ult = partes[partes.length - 1];
+    if (v && typeof v === 'object' && v.__delete) { delete alvo[ult]; return; }
     alvo[ult] = v && typeof v === 'object' && '__increment' in v ? (Number(antes?.[ult]) || 0) + v.__increment : v;
   });
   store.docs.set(ref.path, novo);
@@ -97,6 +98,7 @@ class FakeQuery {
 const FakeFieldValue = {
   increment: (n) => ({ __increment: n }),
   serverTimestamp: () => ({ __serverTimestamp: true }),
+  delete: () => ({ __delete: true }),
 };
 
 function createFakeDb(seed = {}) {
