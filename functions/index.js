@@ -2004,6 +2004,14 @@ exports.clubAssociation = federationCallable('clubAssociation', (ctx, actor, dat
 const clubStaff = require('./clubStaff');
 exports.clubStaff = federationCallable('clubStaff', (ctx, actor, data) => clubStaff.staff(ctx, actor, data));
 
+// Contas do clube (orçamento, lançamentos, prestação com parecer do conselho fiscal): só o servidor grava — `functions/clubAccounts.js`.
+const clubAccounts = require('./clubAccounts');
+exports.clubAccounts = federationCallable('clubAccounts', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('clubAccounts: Storage indisponível.', err); }
+  return clubAccounts.accounts({ ...ctx, bucket }, actor, data);
+});
+
 // Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
 const clubContent = require('./clubContent');
 exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));

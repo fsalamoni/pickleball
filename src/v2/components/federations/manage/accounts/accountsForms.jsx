@@ -61,7 +61,7 @@ export function ReasonField({ id, value, onChange, hint }) {
  * Escolher e enviar um arquivo (PDF ou imagem, até 9 MB) para a pasta de
  * quem envia. `value` = o arquivo enviado (`{ name, path, size, content_type }`).
  */
-export function AccountFileInput({ id, value, onChange, label, hint }) {
+export function AccountFileInput({ id, value, onChange, label, hint, folder }) {
   const { user } = useAuth();
   const ref = useRef(null);
   const [progresso, setProgresso] = useState(null);
@@ -71,7 +71,7 @@ export function AccountFileInput({ id, value, onChange, label, hint }) {
     setErro('');
     setProgresso(0);
     try {
-      const enviado = await uploadAccountFile({ uid: user?.uid, file, onProgress: setProgresso });
+      const enviado = await uploadAccountFile({ uid: user?.uid, file, onProgress: setProgresso, folder });
       if (value?.path) discardAccountUpload(value.path);
       onChange(enviado);
     } catch (e) {

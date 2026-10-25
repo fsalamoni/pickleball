@@ -31,6 +31,7 @@ const ClubIndicatorsPanel = lazy(() => import('@/v2/components/clubs/manage/Club
 const ClubSettingsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSettingsPanel'));
 const ClubCommsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubCommsPanel'));
 const ClubStorePanel = lazy(() => import('@/v2/components/clubs/manage/ClubStorePanel'));
+const ClubAccountsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAccountsPanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
@@ -41,6 +42,7 @@ function Central({ clubId }) {
   const admin = perms.includes(CLUB_PERM.ADMIN);
   const podeMembros = admin || perms.includes(CLUB_PERM.MEMBERS);
   const podeFinancas = admin || perms.includes(CLUB_PERM.FINANCE);
+  const podeContas = podeFinancas || perms.includes(CLUB_PERM.FISCAL); // o conselho fiscal vê as contas e dá o parecer
   const [params, setParams] = useSearchParams();
 
   // Só quem tem a permissão consulta: a regra recusaria a leitura, e a falha
@@ -130,6 +132,7 @@ function Central({ clubId }) {
             associados={(affiliationsQ.data || []).filter((a) => a.status === 'active').length}
           />
         )}
+        {podeContas && ['contas', 'orcamento', 'lancamentos', 'prestacao'].includes(tab) && <ClubAccountsPanel club={club} perms={perms} tab={tab} onIrParaAba={irParaAba} />}
         {tab === 'loja' && podeFinancas && <ClubStorePanel club={club} />}
         {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}

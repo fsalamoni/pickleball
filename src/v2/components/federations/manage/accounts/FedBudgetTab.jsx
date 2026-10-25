@@ -7,8 +7,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CheckCircle2, Globe, Save, Send, Undo2 } from 'lucide-react';
-import { accountsAction } from '@/modules/federations/services/accountsService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { callAccounts, isClubScope, useAccountsMutation } from './accountsScope';
 import {
   BUDGET_STATUS, BUDGET_STATUS_LABELS, EXPENSE_CATEGORIES, INCOME_CATEGORIES, budgetActions, budgetTotals, itemsInPeriod, lineKey, totalsByCategory, validateAssemblyInput, validateBudgetInput,
 } from '@/modules/federations/domain/accounts';
@@ -75,7 +74,7 @@ export default function FedBudgetTab({ federation, perms, items, budgets, hoje }
   const [motivo, setMotivo] = useState('');
   const [aprov, setAprov] = useState({ date: hoje, event_id: '', note: '' });
   const fechar = () => { setDialogo(null); setMotivo(''); };
-  const m = useFederationMutation((payload) => accountsAction({ federationId: federation.id, ...payload }));
+  const m = useAccountsMutation(federation, (payload) => callAccounts(federation, payload));
   const rodar = (payload, okMsg) => m.mutate(payload, { onSuccess: () => { toast.success(okMsg); fechar(); }, onError: (e) => toast.error(e.message) });
 
   const salvar = (reason) => {
@@ -132,7 +131,7 @@ export default function FedBudgetTab({ federation, perms, items, budgets, hoje }
           <V2Field label={t('Observação (opcional)')} htmlFor="orc-aprov-nota"><V2Textarea id="orc-aprov-nota" rows={2} maxLength={2000} value={aprov.note} onChange={(e) => setAprov((x) => ({ ...x, note: e.target.value }))} /></V2Field>
         </div>
       </ConfirmDialog>
-      <ConfirmDialog open={dialogo === 'publicar'} onOpenChange={(o) => { if (!o) fechar(); }} title={t('Publicar o orçamento de {ano}?', { ano })} description={t('Aparece na página da federação (aba Documentos) para todo mundo que vê a federação. Publicado não sai: uma reformulação aprovada substitui.')} confirmLabel={t('Publicar')} loading={m.isPending} onConfirm={() => rodar({ action: 'budget_publish', year: ano }, t('Orçamento publicado na transparência.'))} />
+      <ConfirmDialog open={dialogo === 'publicar'} onOpenChange={(o) => { if (!o) fechar(); }} title={t('Publicar o orçamento de {ano}?', { ano })} description={isClubScope(federation) ? t('Aparece na página do clube para todo mundo que a vê. Publicado não sai: uma reformulação aprovada substitui.') : t('Aparece na página da federação (aba Documentos) para todo mundo que vê a federação. Publicado não sai: uma reformulação aprovada substitui.')} confirmLabel={t('Publicar')} loading={m.isPending} onConfirm={() => rodar({ action: 'budget_publish', year: ano }, t('Orçamento publicado na transparência.'))} />
     </div>
   );
 }

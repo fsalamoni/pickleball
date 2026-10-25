@@ -8,8 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { FileUp, Upload } from 'lucide-react';
-import { accountsAction } from '@/modules/federations/services/accountsService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { callAccounts, useAccountsMutation } from './accountsScope';
 import { BANK_IMPORT_MAX, ENTRY_KIND, categoriesOf, closedPeriodFor } from '@/modules/federations/domain/accounts';
 import { bankImportPayload, decodeBankFile, parseBankStatement, reviewBankRows } from '@/modules/federations/domain/bankStatement';
 import { V2Badge, V2Button, V2Select } from '@/v2/ui/primitives';
@@ -30,7 +29,7 @@ export default function FedBankImport({ federation, ledger, reports, hoje, onFec
   const [linhas, setLinhas] = useState([]);
   const marcadas = linhas.filter((r) => r.selected && !r.problem);
   useAvisoNaoSalvo(marcadas.length > 0);
-  const m = useFederationMutation((entries) => accountsAction({ federationId: federation.id, action: 'entry_import', entries }));
+  const m = useAccountsMutation(federation, (entries) => callAccounts(federation, { action: 'entry_import', entries }));
 
   const ler = async (file) => {
     if (!file) return;

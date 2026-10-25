@@ -5837,4 +5837,6 @@ export default {
   "Repasse recebido da {sigla}": "Transfer received from {sigla}",
   "Sua filiação passou para o plano {plano}. A validade continua a mesma.": "Your membership moved to the {plano} plan. The expiry date stays the same.",
   "{valor} de uma filiação no plano {plano}. Já entra nas contas.": "{valor} from a membership on the {plano} plan. It is already in the accounts.",
+  "Aparece na página do clube para todo mundo que a vê. Publicado não sai: uma reformulação aprovada substitui.": "It appears on the club page for everyone who can see it. Once published it stays: an approved reformulation replaces it.",
+  "Aparece na página do clube, com os totais e o parecer do conselho fiscal. Publicado não sai.": "It appears on the club page, with the totals and the audit board's opinion. Once published it stays.",
 };

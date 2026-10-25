@@ -35,8 +35,11 @@ dia de jogo, ranking interno, página pública.
 > o clube é emissor do módulo `promo` (`PROMO_ISSUER.CLUB`) — aba Cupons e
 > campanhas da Central (`?aba=divulgacao`) e "Promoções do clube" na página
 > (`ClubPromosSection`), só na página do clube. **Bloco C3**: a loja do clube no
-> Mercado (`club_{id}`, aba `?aba=loja`, `storeClubs`, `ClubStoreCard`). Ver
-> `docs/52-CLUBE-ASSOCIACAO.md` §5.1.
+> Mercado (`club_{id}`, aba `?aba=loja`, `storeClubs`, `ClubStoreCard`).
+> **Bloco D1**: as contas do clube — seção Contas da Central (`ClubAccountsPanel`,
+> as abas da federação pelo escopo `accountsScope`), `services/clubAccountsService.js`,
+> `hooks/useClubAccounts.js`, `functions/clubAccounts.js` e a transparência na página
+> (`ClubAccountsPublic`). Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.3.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,

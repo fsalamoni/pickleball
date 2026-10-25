@@ -38,16 +38,16 @@ const EXT = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png',
 
 /**
  * Envia a nota/recibo/demonstração para `federacao-contas/{uid}/{id}.{ext}`
- * (só quem envia lê). Ao lançar ou salvar, o servidor copia para a pasta
+ * (ou `clube-contas/…` nas contas do clube; só quem envia lê). Ao lançar ou salvar, o servidor copia para a pasta
  * oficial e apaga este.
  */
-export function uploadAccountFile({ uid, file, onProgress }) {
+export function uploadAccountFile({ uid, file, onProgress, folder = 'federacao-contas' }) {
   if (!file || !ACCOUNT_FILE_TYPES.includes(file.type) || !(file.size > 0) || file.size > ACCOUNT_FILE_MAX) {
     const msg = t('Anexo inválido: PDF ou imagem de até 9 MB.');
     return Promise.reject(new FederationError(msg, { file: msg }));
   }
   if (!storage || !uid) return Promise.reject(new FederationError(t('Firebase não está configurado neste ambiente.')));
-  const path = `federacao-contas/${uid}/${doc(collection(db, C.ledger)).id}.${EXT[file.type]}`;
+  const path = `${folder}/${uid}/${doc(collection(db, C.ledger)).id}.${EXT[file.type]}`;
   const tarefa = uploadBytesResumable(storageRef(storage, path), file, { contentType: file.type });
   return new Promise((resolve, reject) => {
     tarefa.on('state_changed',
@@ -59,6 +59,6 @@ export function uploadAccountFile({ uid, file, onProgress }) {
 
 /** Desfaz um envio que não chegou a ser lançado (só a pasta de quem enviou). */
 export async function discardAccountUpload(path) {
-  if (!storage || !/^federacao-contas\//.test(String(path || ''))) return;
+  if (!storage || !/^(federacao|clube)-contas\//.test(String(path || ''))) return;
   await deleteObject(storageRef(storage, path)).catch(() => {});
 }

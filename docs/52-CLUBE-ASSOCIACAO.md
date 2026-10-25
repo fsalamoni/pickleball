@@ -4,8 +4,9 @@
 > Central do clube), **Bloco B** (diretoria com cargos e mandatos, indicadores,
 > importação de associados, declaração de associação), **Bloco C1**
 > (vantagens do associado, comunicados e patrocinadores), **C2** (cupons e
-> campanhas) e **C3** (loja do clube no Mercado) estão no código. Os blocos D–G
-> (financeiro completo e documentos, atletas e seleção, torneios do clube,
+> campanhas), **C3** (loja do clube no Mercado) e **D1** (contas: orçamento,
+> lançamentos e prestação de contas) estão no código. Os blocos D2–G
+> (documentos e agenda oficial, atletas e seleção, torneios do clube,
 > assembleias e eleições) estão no plano
 > (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
 > existem** — este documento só descreve o que há no código.
@@ -44,6 +45,9 @@ pessoa do clube.
 | `bsec` | o que é **só do associado em dia**: "como usar" e código da vantagem (mesmo id de `benefits`) | `comms` — o associado em dia recebe pelo servidor | `comms` |
 | `news` | comunicado (rascunho/publicado/arquivado; `audience` público ou só associados; `public` derivado) | público lê os `public: true` de clube publicado; **qualquer membro do clube** lê os "só associados" publicados; `comms` lê tudo | `comms` |
 | `sponsors` | um documento por patrocinador (até 12): nome, faixa, logo, site, `public`, `active` | público lê os `public: true` de clube publicado; `comms` lê tudo | `comms` |
+| `budgets` | orçamento do ano (`{ano}`, rascunho → enviado → aprovado) e a **cópia publicada** (`{ano}_pub`, `pub: true`, `copy_of`) | `finance`/`fiscal`/admin; o público lê só `pub: true` de clube publicado | **só o servidor** (`clubAccounts`) |
+| `ledger` | lançamento financeiro (receita/despesa, categoria, valor em centavos, anexo, `status` lançado/estornado) | `finance`/`fiscal`/admin | **só o servidor** |
+| `reports` | prestação de contas do período (`{ano}` ou `{ano}-S1`…): retrato **congelado**, parecer do conselho fiscal, assembleia; a cópia pública tem `pub: true` | `finance`/`fiscal`/admin; o público lê só `pub: true` de clube publicado | **só o servidor** |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
 filiação; **o código gira** a cada ativação, renovação e suspensão. Campos novos
@@ -212,6 +216,33 @@ oferta, avaliação e disputa são o Mercado de sempre, com Pix direto ao vended
 - **Falha não é vazio**: a Central diz que a loja não carregou; o cartão da
   página simplesmente não aparece (não há o que afirmar nem oferecer).
 
+### 5.3 Contas do clube (Bloco D1)
+
+Central do clube → **Contas** (`?aba=contas|orcamento|lancamentos|prestacao`,
+permissão `finance` ou `fiscal`): **Visão geral**, **Orçamento**,
+**Lançamentos** (com importação de extrato OFX/CSV e estorno com motivo) e
+**Prestação de contas**. São as **mesmas abas da federação** (`federations/manage/accounts`)
+com o clube no lugar dela: `accountsScope.js` troca só a função do servidor
+(`clubAccounts`), a invalidação (árvore `assocKeys.all`) e a pasta do anexo
+(`clube-contas/{uid}/`). A conta é a mesma — `functions/federationAccountsPolicy.js`
+↔ `domain/accounts.js` — e a receita das **mensalidades pagas** (`charges`) entra
+sozinha, sem lançar.
+
+- **Quem faz o quê**: o financeiro (ou a administração) prepara; o **conselho
+  fiscal** vê tudo em leitura (lê também `charges` para conferir a receita) e dá
+  o parecer depois do envio; o aviso do envio e do parecer é do servidor.
+- **Prestação**: o envio **congela** o retrato; reformular reabre um rascunho que
+  nunca vai a público; publicar copia para `{id}_pub` (`pub: true`). Publicado não
+  sai. Período fechado não aceita lançamento nem estorno.
+- **Transparência**: a página do clube (e a aba Comunicados do associado) mostra,
+  com a associação aberta ao público, o **publicado** — execução do último ano,
+  prestações com o parecer e orçamentos aprovados (`ClubAccountsPublic`, carregada
+  sob demanda). Sem nada publicado a seção não aparece; consulta que falhou diz
+  que não carregou.
+- **Conta excluída**: lançamentos, orçamentos e prestações ficam (o clube presta
+  contas), sem o nome de quem os preparou (`created_by_name`/`opened_by_name` →
+  "Usuário removido").
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -255,6 +286,16 @@ oferta, avaliação e disputa são o Mercado de sempre, com Pix direto ao vended
     lugares** (§5.2): `isMarketOperator`, `operatorUids` e `storeClubs`. Mexer num
     só deixa o aviso do pedido indo para quem não opera, ou a loja oferecida a
     quem a regra recusa.
+18. **Orçamento, lançamentos e prestação são só do servidor** (`clubAccounts`,
+    `write: if false`); a receita das mensalidades é DERIVADA das cobranças
+    pagas, nunca digitada; o retrato da prestação é congelado no envio; o
+    publicado não sai (reformulação aprovada substitui). A conta é uma só para
+    federação e clube: mexer em `federationAccountsPolicy.js` sem `domain/accounts.js`
+    (ou o contrário) quebra a paridade.
+19. **O anexo do clube vive em `clube-contas/{uid}/`** (Storage; o servidor só
+    aceita o da pasta de quem salva e o move para `clube-contas-oficial/`). As abas
+    compartilhadas recebem a entidade pelo escopo (`accountsScope`) — não
+    escreva `accountsAction` direto nelas: use `callAccounts`/`useAccountsMutation`.
 
 ## 7. Testes
 
@@ -264,6 +305,10 @@ só), `src/modules/clubs/domain/content.test.js`,
 comunicação, comunicado "só associados" para o membro),
 `tests/rules/clubStore.rules.test.js` (emulador: quem abre e opera a loja do clube, Pix só da equipe) e `functions/clubStore.test.js`,
 `tests/rules/clubPromo.rules.test.js` (emulador: cupom e campanha do clube — quem emite, página publicada, emissor imutável) e o bloco "clube como emissor" de `src/modules/promo/domain/promo.test.js`,
+`functions/clubAccounts.test.js` (orçamento, lançamentos, prestação, parecer, anexo),
+`tests/rules/clubAccounts.rules.test.js` (emulador: quem lê, ninguém grava, consulta
+pública `pub == true`, conselho fiscal lê cobranças) e
+`ClubAccountsPanel.runtime.test.jsx`,
 `functions/clubAssociation.test.js` (ciclo completo no servidor, incluindo a
 importação), `functions/clubStaff.test.js` (diretoria, mandato, varredura) e
 `functions/clubStaff.parity.test.js`, `functions/accountDeletion.clubes.test.js`,

@@ -438,4 +438,9 @@ export default {
   "Anúncios, pedidos, perguntas e o Pix ficam no painel do vendedor do Mercado, com o clube escolhido em \"Vendendo como\".": "Listings, orders, questions and the Pix are in the Marketplace seller panel, with the club chosen under \"Selling as\".",
   "Abra a loja no painel do Mercado: dê um nome, cadastre o Pix e publique o primeiro produto.": "Open the store in the Marketplace panel: give it a name, register the Pix and publish the first product.",
   "Abrir a loja do clube": "Open the club store",
+  "Contas do clube": "Club accounts",
+  "{clube}: prestação de contas para o seu parecer": "{clube}: accounts report awaiting your opinion",
+  "{clube}: chegou o parecer do conselho fiscal": "{clube}: the audit board's opinion has arrived",
+  "Período {periodo}. Os totais estão congelados: confira os lançamentos e registre o parecer do conselho fiscal.": "Period {periodo}. The totals are frozen: check the entries and record the audit board's opinion.",
+  "Prestação de contas de {periodo}. Leve à assembleia e publique na transparência.": "Accounts report for {periodo}. Take it to the assembly and publish it in the transparency section.",
 };

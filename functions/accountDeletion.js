@@ -497,7 +497,8 @@ async function coletarFederacoes(db, uid) {
  * Associação de clube (`club_x/{clube}/…`, flag `club_association`): a
  * filiação e as cobranças FICAM (o clube tem de prestar contas), sem o nome; a
  * filiação viva ENCERRA e o código da carteirinha é APAGADO (a carteirinha de
- * uma conta excluída não verifica); o cargo na equipe do clube é APAGADO. As
+ * uma conta excluída não verifica); o cargo na equipe do clube é APAGADO; os
+ * lançamentos, orçamentos e prestações que a pessoa preparou ficam, sem o nome. As
  * espécies moram sob o clube — o que está no caminho são os clubes que ligaram
  * a associação (poucos), e a pessoa só consta nos que ela frequentou.
  */
@@ -523,6 +524,14 @@ async function coletarAssociacoesDeClube(db, uid) {
     });
     const cargo = await base.collection('staff').doc(uid).get();
     if (cargo.exists) { total += 1; deletes.push(cargo.ref); }
+    // As contas do clube (Bloco D1) ficam (o clube presta contas), sem o nome de quem as preparou.
+    for (const [kind, campo, nome] of [['ledger', 'created_by', 'created_by_name'], ['budgets', 'created_by', 'created_by_name'], ['reports', 'opened_by', 'opened_by_name']]) {
+      const feitos = await base.collection(kind).where(campo, '==', uid).limit(QUERY_LIMIT + 1).get(); // eslint-disable-line no-await-in-loop
+      feitos.docs.slice(0, QUERY_LIMIT).forEach((d) => {
+        total += 1;
+        itens.push({ ref: d.ref, patch: { [nome]: REMOVED_USER } });
+      });
+    }
   }
   return { itens, deletes, truncated: clubes.size > QUERY_LIMIT, count: total };
 }
