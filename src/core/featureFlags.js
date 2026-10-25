@@ -89,6 +89,20 @@ export const FEATURE_FLAG = Object.freeze({
   FEDERATIONS: 'federations',
 
   /**
+   * ASSOCIAÇÃO DO CLUBE — o clube como associação (filiação paga ou gratuita).
+   *
+   * Cada clube liga para si (Gestão do clube → Configurações → Associação) e a
+   * abre ao público quando quiser: planos mensais/anuais/gratuitos, pedido de
+   * filiação, Pix direto ao clube, carteirinha digital com verificação pública,
+   * vantagens e gestão (secretaria, financeiro, cargos).
+   *
+   * Desligada, nada aparece e a REGRA recusa toda escrita em `club_x`
+   * (`cxOn()` no `firestore.rules`); os clubes e membros de hoje seguem como
+   * estão. Ver `docs/52-CLUBE-ASSOCIACAO.md`.
+   */
+  CLUB_ASSOCIATION: 'club_association',
+
+  /**
    * VÁRIOS IDIOMAS — português (padrão), inglês e espanhol.
    *
    * Cada pessoa escolhe o idioma em Configurações (e na tela de entrada); na
@@ -516,6 +530,10 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.FEDERATIONS]: {
     label: tk('Federações'),
     description: tk('Abre a gestão de federação em /federacoes: a federação pede abertura (o admin da plataforma aprova), define planos de filiação mensais ou anuais, aprova filiados, confirma o Pix e emite a carteirinha digital com verificação pública. As funcionalidades internas (torneios chancelados, ranking oficial, clubes e arenas filiados, cursos, disciplina) cada federação liga para si. Desligada, tudo some e a regra recusa toda escrita; nada é apagado.'),
+  },
+  [FEATURE_FLAG.CLUB_ASSOCIATION]: {
+    label: tk('Associação de clubes'),
+    description: tk('Deixa o clube virar associação: cada clube liga para si, define planos de filiação gratuitos, mensais ou anuais, recebe o pedido, confirma o Pix e emite a carteirinha digital com verificação pública, além de vantagens, cargos e financeiro. Desligada, tudo some e a regra recusa toda escrita; os clubes e membros de hoje não mudam.'),
   },
   [FEATURE_FLAG.MULTI_LANGUAGE]: {
     label: tk('Vários idiomas (português, inglês, espanhol)'),

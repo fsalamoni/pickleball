@@ -13,12 +13,51 @@ import { Building2, MapPin, Mail, Phone, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getClub } from '@/modules/clubs/services/clubService';
 import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { isAssociationOpen, normalizeAssociation } from '@/modules/clubs/domain/association';
+import { usePublicPlans } from '@/modules/clubs/hooks/useClubAssociation';
+import ClubPlansList from '@/v2/components/clubs/association/ClubPlansList';
 import { t } from '@/core/i18n';
+
+/** Os planos de associação na vitrine: quem chega pelo link vê o que ganha e entra para se associar. */
+function PublicClubPlans({ club, isAuthenticated }) {
+  const plansQ = usePublicPlans(club.id);
+  const cfg = normalizeAssociation(club);
+  const destino = isAuthenticated ? `/clubes/${club.id}` : '/login';
+  return (
+    <section className="mt-6 space-y-4 rounded-4xl border border-gray-100 bg-paper-pure p-6" aria-label={t('Associe-se')}>
+      <div>
+        <h2 className="font-display text-2xl font-bold text-ink">{t('Associe-se ao {clube}', { clube: club.name })}</h2>
+        {cfg.intro && <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-gray-700">{cfg.intro}</p>}
+      </div>
+      {plansQ.isLoading && <p className="text-sm text-gray-500">{t('Carregando…')}</p>}
+      {plansQ.isError && (
+        <p className="text-sm text-gray-700">
+          {t('Não foi possível carregar os planos.')}{' '}
+          <button type="button" onClick={() => plansQ.refetch()} className="font-semibold text-ink underline">{t('Tentar de novo')}</button>
+        </p>
+      )}
+      {plansQ.isSuccess && (
+        <ClubPlansList
+          plans={plansQ.data}
+          color={cfg.color}
+          action={() => (
+            <Link to={destino} className="inline-flex min-h-11 items-center rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white">
+              {isAuthenticated ? t('Associar-se') : t('Entre para se associar')}
+            </Link>
+          )}
+        />
+      )}
+    </section>
+  );
+}
 
 export default function PublicClub() {
   const { clubId } = useParams();
   const publicOn = true;
   const { isAuthenticated } = useAuth();
+  const associationFlag = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
   const { data: club, isLoading, isError, refetch } = useQuery({
     queryKey: ['public-club', clubId],
     queryFn: () => getClub(clubId),
@@ -34,6 +73,7 @@ export default function PublicClub() {
 
   const location = club ? [club.city, club.state].filter(Boolean).join(' / ') : '';
   const isPublic = club && club.is_public === true;
+  const associationOpen = associationFlag && isAssociationOpen(club);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -95,6 +135,7 @@ export default function PublicClub() {
             </div>
           </div>
         )}
+        {isPublic && associationOpen && <PublicClubPlans club={club} isAuthenticated={isAuthenticated} />}
       </div>
     </div>
   );

@@ -513,6 +513,21 @@ em `functions/federationRanking.parity.test.js`; o documento gravado corta os
 seguinte (00:00 de Brasília), derivado da data — nenhuma tarefa agendada. Não
 avisa ninguém e não grava auditoria (é derivado).
 
+## 8b. Associação de clubes (flag `club_association`)
+
+Lógica em `functions/clubAssociation.js` (testes em `clubAssociation.test.js`);
+as três funções usam o mesmo contexto e a mesma conta de permissões da
+federação. Doc: [`52-CLUBE-ASSOCIACAO.md`](./52-CLUBE-ASSOCIACAO.md).
+
+| Função | Tipo / gatilho | O que faz | Quem chama |
+|---|---|---|---|
+| `clubAssociation` | callable | ações `request`, `declare`, `charge_confirm`, `grant`, `adopt`, `approve`, `reject`, `renew`, `cancel`, `leave`, `suspend`, `reinstate`; única escrita em `club_x/{clube}/aff` e `/charges` e em `club_card_index` | telas da página do clube e da Central |
+| `clubAssociationVerify` | callable, sem login | verificação pública da carteirinha (devolve só nome, clube, plano, número, validade e situação) | `/c/verificar/:codigo` |
+| `clubAssociationSweep` | agendada (diária) | marca filiações vencidas e avisa antes/no dia/depois do vencimento | agendador |
+
+A exclusão de conta (`functions/accountDeletion.js`) cobre as coleções da
+camada (`club_x`, `club_card_index`).
+
 ## 9. Motores duplicados e testes de paridade
 
 O pacote de Functions não importa `src/`, então estas regras existem **duas

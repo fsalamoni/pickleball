@@ -12,6 +12,17 @@ dia de jogo, ranking interno, página pública.
 > ela mora num lugar só (`v2/components/clubs/ClubGameDayTab.jsx`).
 > Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5.
 
+> ⭐ **Clube como associação (flag `club_association`, default OFF).** Camada
+> opt-in por clube: planos de filiação (grátis, mensal, anual), pedido pela
+> página do clube, Pix direto para o clube, carteirinha digital com verificação
+> pública e a **Central do clube** (`/clubes/:clubId/gerir`). Código:
+> `domain/association.js` (puro, com teste), `services/associationService.js`,
+> `hooks/useClubAssociation.js` (`useMyClubRole` dá as permissões),
+> `v2/components/clubs/{association,manage}/`. Filiação, cobrança e carteirinha
+> só o **servidor** grava (`functions/clubAssociation.js`); perder a filiação não
+> tira ninguém do clube. Dados em `club_x/{clubId}/{plans,aff,charges,staff,cfg}`
+> e `club_card_index`. Ver `docs/52-CLUBE-ASSOCIACAO.md`.
+
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,
   `V2ClubPublicPage` (Onda 8b)

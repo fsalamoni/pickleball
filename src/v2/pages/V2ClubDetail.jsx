@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
-  Globe2, ListChecks, Trophy,
+  Globe2, IdCard, LayoutDashboard, ListChecks, Trophy,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
@@ -23,6 +23,11 @@ import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2Bac
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 import { OrgAffiliationBadges } from '@/v2/components/federations/FedTags';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { isAssociationOpen } from '@/modules/clubs/domain/association';
+import { useMyAffiliation } from '@/modules/clubs/hooks/useClubAssociation';
+import ClubAssociationTab from '@/v2/components/clubs/association/ClubAssociationTab';
 
 // Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
@@ -64,6 +69,11 @@ export default function V2ClubDetail() {
   const isMember = !!membership;
   const isAdmin = membership?.role === CLUB_ROLE.ADMIN;
   const { data: inviteCode } = useClubInviteCode(club, { enabled: isAdmin && inviteLinkOn });
+  const associationFlag = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
+  const assocOpen = associationFlag && isAssociationOpen(club);
+  const myAff = useMyAffiliation(clubId, { enabled: associationFlag && !assocOpen && isMember });
+  // Fechada ao público, a aba segue para quem já tem filiação (a situação e a carteirinha dela).
+  const showAssocTab = associationFlag && isMember && (assocOpen || Boolean(myAff.data));
 
   const handleJoin = async (e) => {
     e.preventDefault();
@@ -120,13 +130,14 @@ export default function V2ClubDetail() {
   const tabs = [
     { value: 'members', label: t('Membros'), icon: Users },
     { value: 'events', label: t('Eventos'), icon: CalendarDays },
+    ...(showAssocTab ? [{ value: 'associacao', label: t('Associação'), icon: IdCard, dica: 'clube-aba-associacao' }] : []),
     ...(clubRankingOn ? [{ value: 'ranking', label: t('Ranking'), icon: Medal }] : []),
     { value: 'feed', label: t('Mural'), icon: MessageSquare },
     { value: 'forums', label: t('Fóruns'), icon: MessagesSquare },
     ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: t('Atividade'), icon: Trophy, dica: 'clube-aba-atividade' }] : []),
     ...(isAdmin ? [{ value: 'admin', label: t('Administração'), icon: Settings }] : []),
   ];
-  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn)
+  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn) || (activeTab === 'associacao' && !showAssocTab)
     ? 'members' : activeTab;
 
   return (
@@ -166,6 +177,11 @@ export default function V2ClubDetail() {
                 <Share2 className="h-4 w-4" /> {t('Copiar link de convite')}
               </V2Button>
             )}
+            {associationFlag && isAdmin && (
+              <V2Button asChild size="sm" variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40" data-dica="clube-central">
+                <Link to={`/clubes/${club.id}/gerir`}><LayoutDashboard className="h-4 w-4" /> {t('Central do clube')}</Link>
+              </V2Button>
+            )}
             {isMember && (
               <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
                 {t('Sair do clube')}
@@ -182,6 +198,9 @@ export default function V2ClubDetail() {
           {club.contact_phone && <InfoChip icon={Phone}>{club.contact_phone}</InfoChip>}
         </div>
       </div>
+
+      {/* Clube-associação aberto ao público: quem ainda não é membro vê os planos primeiro. */}
+      {!isMember && assocOpen && <div className="mt-6"><ClubAssociationTab club={club} /></div>}
 
       {/* Non-member: join */}
       {!isMember && (
@@ -244,6 +263,7 @@ export default function V2ClubDetail() {
           <div className="mt-6">
             {safeTab === 'members' && <V2ClubMembers clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
+            {safeTab === 'associacao' && showAssocTab && <ClubAssociationTab club={club} />}
             {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
