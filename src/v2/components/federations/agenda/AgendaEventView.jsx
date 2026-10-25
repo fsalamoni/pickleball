@@ -10,11 +10,12 @@ import { Link } from 'react-router-dom';
 import { CalendarPlus, Clock, Copy, History, Landmark, Lock, MapPin, Share2, Video } from 'lucide-react';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks';
-import { EVENT_CHANGE_LABELS, EVENT_VISIBILITY, EVENT_VISIBILITY_LABELS, agendaPublicPath, eventKind, googleCalendarUrl, mapUrl, placeText } from '@/modules/federations/domain/agenda';
-import { docPublicPath } from '@/modules/federations/domain/acervo';
+import { EVENT_CHANGE_LABELS, EVENT_VISIBILITY, eventKind, googleCalendarUrl, mapUrl, placeText } from '@/modules/federations/domain/agenda';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
 import { fmtData, t } from '@/core/i18n';
 import { AcervoFollowButton } from '../acervo/AcervoPublic';
+import { docPathFor, visibilityLabelFor } from '../acervo/acervoScope';
+import { agendaPathFor, hasComments, hasFollow, hasMeetings } from './agendaScope';
 import MeetingBlock from './MeetingBlock';
 import CommentsSection from '../comments/CommentsSection';
 import { StatusBadge, StatusBanner, baixarIcs, dataCurta, dataDoEvento, horarioDoEvento, urlDoEvento } from './agendaUi';
@@ -43,12 +44,12 @@ export default function AgendaEventView({ federation, ev }) {
   const historico = Array.isArray(ev.history) ? [...ev.history].reverse() : [];
   return (
     <article className="space-y-5">
-      <Link to={agendaPublicPath(federation)} className="text-sm font-semibold text-gray-500 underline-offset-2 hover:underline print:hidden">{t('← Toda a agenda')}</Link>
+      <Link to={agendaPathFor(federation)} className="text-sm font-semibold text-gray-500 underline-offset-2 hover:underline print:hidden">{t('← Toda a agenda')}</Link>
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {kind && <span className="font-bold uppercase tracking-wider text-gray-500">{t(kind.label)}</span>}
           <StatusBadge ev={ev} />
-          {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(EVENT_VISIBILITY_LABELS[ev.visibility])}</V2Badge>}
+          {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(visibilityLabelFor(federation, ev.visibility))}</V2Badge>}
         </div>
         <h1 className={`font-display text-2xl font-bold text-ink break-words sm:text-3xl ${cancelado ? 'line-through' : ''}`}>{ev.title}</h1>
       </header>
@@ -60,14 +61,14 @@ export default function AgendaEventView({ federation, ev }) {
         {ev.organ && <Linha icone={Landmark}>{ev.organ}</Linha>}
       </section>
       {ev.description && <div className="whitespace-pre-line text-base leading-relaxed text-gray-800">{ev.description}</div>}
-      <MeetingBlock federation={federation} ev={ev} />
+      {hasMeetings(federation) && <MeetingBlock federation={federation} ev={ev} />}
       {ev.related_docs?.length > 0 && (
         <section aria-labelledby="ev-docs" className="space-y-2">
           <h2 id="ev-docs" className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Documentos ligados')}</h2>
           <ul className="space-y-1">
             {ev.related_docs.map((d) => (
               <li key={d.doc_id}>
-                <Link to={docPublicPath(federation, d.doc_id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink underline underline-offset-2">
+                <Link to={docPathFor(federation, d.doc_id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink underline underline-offset-2">
                   {d.visibility && d.visibility !== 'public' && <Lock className="h-3.5 w-3.5" aria-label={t('Restrito')} />}
                   {[d.code, d.title].filter(Boolean).join(' — ') || t('Documento')}
                 </Link>
@@ -86,7 +87,7 @@ export default function AgendaEventView({ federation, ev }) {
         <V2Button type="button" size="sm" variant="ghost" onClick={compartilhar}><Share2 className="h-4 w-4" />{t('Compartilhar')}</V2Button>
         <V2Button asChild size="sm" variant="ghost"><a href={buildWhatsAppShareUrl(`${ev.title} — ${url}`)} target="_blank" rel="noopener noreferrer">WhatsApp</a></V2Button>
         <V2Button type="button" size="sm" variant="ghost" onClick={() => copy(url, t('Link do evento copiado.'))}><Copy className="h-4 w-4" />{t('Copiar o link')}</V2Button>
-        <AcervoFollowButton federation={federation} next={agendaPublicPath(federation)} />
+        {hasFollow(federation) && <AcervoFollowButton federation={federation} next={agendaPathFor(federation)} />}
       </div>
       {historico.length > 0 && (
         <details className="rounded-2xl border border-gray-100 bg-paper-pure p-4 text-sm">
@@ -104,7 +105,7 @@ export default function AgendaEventView({ federation, ev }) {
           </ul>
         </details>
       )}
-      {!ev.derived && <div className="print:hidden"><CommentsSection federation={federation} kind="event" targetId={ev.id} /></div>}
+      {!ev.derived && hasComments(federation) && <div className="print:hidden"><CommentsSection federation={federation} kind="event" targetId={ev.id} /></div>}
     </article>
   );
 }

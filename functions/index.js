@@ -1372,6 +1372,7 @@ const federationWallet = require('./federationWallet');
 exports.federationWallet = federationCallable('federationWallet', federationWallet.wallet);
 // Calendário oficial (agenda esportiva e institucional): só o servidor grava — `functions/federationAgenda.js`.
 const federationAgenda = require('./federationAgenda');
+const clubAgenda = require('./clubAgenda'); // a agenda assinável do clube sai pelo mesmo ICS (`federationAgendaFeed`)
 exports.federationAgenda = federationCallable('federationAgenda', federationAgenda.agenda);
 // Orçamento e prestação de contas (módulo `accounts`): só o servidor grava — `functions/federationAccounts.js`.
 const federationAccounts = require('./federationAccounts');
@@ -1748,10 +1749,11 @@ exports.federationAgendaFeed = onRequest(
   { region: REGION, maxInstances: 3, memory: '256MiB', invoker: 'public' },
   async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.status(405).end(); return; }
-    const m = String(req.path || '').match(/\/api\/agenda\/([A-Za-z0-9_-]{1,80})\.ics$/);
+    // `/api/agenda/clube/{clube}.ics` é a do clube-associação; `/api/agenda/{slug}.ics`, a da federação.
+    const m = String(req.path || '').match(/\/api\/agenda\/(clube\/)?([A-Za-z0-9_-]{1,80})\.ics$/);
     if (!m) { res.status(404).end(); return; }
     try {
-      const ics = await federationAgenda.feed(fedCtx(), m[1]);
+      const ics = m[1] ? await clubAgenda.feed(fedCtx(), m[2]) : await federationAgenda.feed(fedCtx(), m[2]);
       if (!ics) { res.status(404).type('text/plain').send('Agenda não encontrada.'); return; }
       res.set('Cache-Control', 'public, max-age=900, s-maxage=900');
       res.set('Content-Disposition', `inline; filename="agenda-${m[1]}.ics"`);
@@ -2020,6 +2022,10 @@ exports.clubDocs = federationCallable('clubDocs', (ctx, actor, data) => {
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('clubDocs: Storage indisponível.', err); }
   return clubDocs.docs({ ...ctx, bucket }, actor, data);
 }, { timeoutSeconds: 540, memory: '1GiB' });
+
+// Agenda oficial do clube (competições, assembleias, reuniões, prazos): só o servidor grava — `functions/clubAgenda.js`.
+// A agenda assinável (ICS) sai por `federationAgendaFeed`, em `/api/agenda/clube/{clube}.ics`.
+exports.clubAgenda = federationCallable('clubAgenda', (ctx, actor, data) => clubAgenda.agenda(ctx, actor, data));
 
 // Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
 const clubContent = require('./clubContent');

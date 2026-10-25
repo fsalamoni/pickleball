@@ -15,6 +15,7 @@ import {
   useAllBenefits, useAllClubNews, useAllClubSponsors, useAllPlans, useClubAffiliations, useClubCharges, useClubPix, useClubRoles, useClubStaff, useMyClubRole,
 } from '@/modules/clubs/hooks/useClubAssociation';
 import { CLUB_PERM, isAssociationOpen } from '@/modules/clubs/domain/association';
+import { canUseClubAgenda } from '@/modules/clubs/domain/agenda';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { V2Avatar, V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
@@ -33,6 +34,7 @@ const ClubCommsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubComms
 const ClubStorePanel = lazy(() => import('@/v2/components/clubs/manage/ClubStorePanel'));
 const ClubAccountsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAccountsPanel'));
 const ClubDocsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubDocsPanel'));
+const ClubAgendaPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAgendaPanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
@@ -135,6 +137,7 @@ function Central({ clubId }) {
         )}
         {podeContas && ['contas', 'orcamento', 'lancamentos', 'prestacao'].includes(tab) && <ClubAccountsPanel club={club} perms={perms} tab={tab} onIrParaAba={irParaAba} />}
         {tab === 'documentos' && (admin || perms.includes(CLUB_PERM.DOCS)) && <ClubDocsPanel club={club} perms={perms} />}
+        {tab === 'agenda' && canUseClubAgenda(perms) && <ClubAgendaPanel club={club} perms={perms} />}
         {tab === 'loja' && podeFinancas && <ClubStorePanel club={club} />}
         {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}

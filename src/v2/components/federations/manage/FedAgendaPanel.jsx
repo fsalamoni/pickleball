@@ -11,10 +11,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AlertTriangle, Ban, CalendarDays, CalendarPlus, ClipboardCheck, ExternalLink, Megaphone, PauseCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { agendaAction } from '@/modules/federations/services/federationService';
-import { useFederationMutation, useVisibleAcervo, useVisibleAgenda } from '@/modules/federations/hooks/useFederations';
 import {
-  EVENT_GROUPS, EVENT_REASON_MIN, EVENT_VISIBILITY, EVENT_VISIBILITY_LABELS, agendaPublicPath, canManageKind, eventActions, eventKind, kindsFor, saveNeedsReason,
+  EVENT_GROUPS, EVENT_REASON_MIN, EVENT_VISIBILITY, canManageKind, eventActions, eventKind, kindsFor, saveNeedsReason,
   splitAgenda, validateEventInput,
 } from '@/modules/federations/domain/agenda';
 import { docDisplayTitle } from '@/modules/federations/domain/acervo';
@@ -23,16 +21,13 @@ import { normalizeFederationRules } from '@/modules/federations/domain/federatio
 import { ConveneForm, RecordForm } from './FedMeetingDialogs';
 import { MaisAcoes } from './FedAcervoForm';
 import { haAlteracaoNaoSalva, useAvisoNaoSalvo } from './naoSalvo';
+import { agendaPathFor, agendaVisibilityHint, callAgenda, eventPathFor, hasMeetings, isClubAgenda, useAgendaMutation, useScopedAcervo, useScopedAgenda } from '../agenda/agendaScope';
+import { visibilityLabelFor } from '../acervo/acervoScope';
 import { BR_UFS } from '@/core/domain/ufs';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 import { DateBadge, StatusBadge, dataDoEvento, horarioDoEvento } from '../agenda/agendaUi';
 
-const VIS_HINTS = {
-  public: tk('Aparece na página da federação, na agenda assinável e para quem segue.'),
-  members: tk('Só filiados em dia e a equipe veem.'),
-  staff: tk('Só a equipe vê. Bom para preparar antes de divulgar: enquanto só a equipe viu, dá para apagar.'),
-};
 
 /* ------------------------------------------------------------ formulário -- */
 
@@ -57,16 +52,16 @@ function EventForm({ federation, perms, ev, onFechar }) {
   const [reason, setReason] = useState('');
   useAvisoNaoSalvo(Boolean(reason.trim()) || JSON.stringify(f) !== JSON.stringify(base));
   const [tentou, setTentou] = useState(false);
-  const acervo = useVisibleAcervo(federation);
+  const acervo = useScopedAcervo(federation);
   const docs = acervo.docs || [];
   const r = validateEventInput({ ...f, related_docs: f.related_docs });
   const precisaMotivo = Boolean(ev) && saveNeedsReason(ev, r.value);
   const divulgaAgora = r.value.visibility !== EVENT_VISIBILITY.STAFF && !ev?.ever_visible;
-  const reuniao = eventKind(f.kind)?.meeting;
+  const reuniao = hasMeetings(federation) && eventKind(f.kind)?.meeting;
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const setPlace = (k, v) => setF((x) => ({ ...x, place: { ...x.place, [k]: v } }));
-  const m = useFederationMutation(() => agendaAction({
-    federationId: federation.id, action: 'save', eventId: ev?.id, event: r.value, notify: divulgaAgora && notify, reason: precisaMotivo ? reason : '',
+  const m = useAgendaMutation(federation, () => callAgenda(federation, {
+    action: 'save', eventId: ev?.id, event: r.value, notify: divulgaAgora && notify, reason: precisaMotivo ? reason : '',
   }));
   const erro = (k) => (tentou ? r.errors[k] : undefined);
   const enviar = (e) => {
@@ -76,7 +71,7 @@ function EventForm({ federation, perms, ev, onFechar }) {
     if (precisaMotivo && reason.trim().length < EVENT_REASON_MIN) { toast.error(t('Diga o motivo da mudança (mínimo {n} caracteres).', { n: EVENT_REASON_MIN })); return; }
     m.mutate(undefined, {
       onSuccess: (res) => {
-        toast.success(res?.notified ? t('Evento salvo. {n} seguidores avisados.', { n: res.notified }) : t('Evento salvo.'));
+        toast.success(res?.notified ? (isClubAgenda(federation) ? t('Evento salvo. {n} associados avisados.', { n: res.notified }) : t('Evento salvo. {n} seguidores avisados.', { n: res.notified })) : t('Evento salvo.'));
         onFechar();
       },
       onError: (er) => toast.error(er.message),
@@ -144,10 +139,12 @@ function EventForm({ federation, perms, ev, onFechar }) {
           )}
         </div>
       )}
-      <V2Field label={t('Quem vê')} htmlFor="ag-vis" hint={t(VIS_HINTS[f.visibility])}>
-        <V2Select id="ag-vis" value={f.visibility} onChange={(e) => set('visibility', e.target.value)}>{Object.values(EVENT_VISIBILITY).map((v) => <option key={v} value={v}>{t(EVENT_VISIBILITY_LABELS[v])}</option>)}</V2Select>
+      <V2Field label={t('Quem vê')} htmlFor="ag-vis" hint={t(agendaVisibilityHint(federation, f.visibility))}>
+        <V2Select id="ag-vis" value={f.visibility} onChange={(e) => set('visibility', e.target.value)}>{Object.values(EVENT_VISIBILITY).map((v) => <option key={v} value={v}>{t(visibilityLabelFor(federation, v))}</option>)}</V2Select>
       </V2Field>
-      {divulgaAgora && <V2Toggle id="ag-avisar" checked={notify} onChange={setNotify} label={t('Avisar quem segue a federação')} hint={t('Quem segue recebe um aviso com o evento.')} />}
+      {divulgaAgora && (isClubAgenda(federation)
+        ? <V2Toggle id="ag-avisar" checked={notify} onChange={setNotify} label={t('Avisar os associados')} hint={t('Os associados em dia recebem um aviso com o evento.')} />
+        : <V2Toggle id="ag-avisar" checked={notify} onChange={setNotify} label={t('Avisar quem segue a federação')} hint={t('Quem segue recebe um aviso com o evento.')} />)}
       {precisaMotivo && (
         <V2Field label={t('Motivo da mudança')} htmlFor="ag-motivo" required hint={t('O evento já foi divulgado: a mudança de data fica no histórico, com o motivo, e quem segue é avisado.')}>
           <V2Input id="ag-motivo" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -162,7 +159,7 @@ function EventForm({ federation, perms, ev, onFechar }) {
 
 function SituacaoDialog({ federation, ev, acao, onFechar }) {
   const [motivo, setMotivo] = useState('');
-  const m = useFederationMutation(() => agendaAction({ federationId: federation.id, action: acao, eventId: ev.id, reason: motivo }));
+  const m = useAgendaMutation(federation, () => callAgenda(federation, { action: acao, eventId: ev.id, reason: motivo }));
   const ok = motivo.trim().length >= EVENT_REASON_MIN;
   const adiar = acao === 'postpone';
   return (
@@ -182,7 +179,7 @@ function SituacaoDialog({ federation, ev, acao, onFechar }) {
 }
 
 function ApagarDialog({ federation, ev, onFechar }) {
-  const m = useFederationMutation(() => agendaAction({ federationId: federation.id, action: 'delete', eventId: ev.id }));
+  const m = useAgendaMutation(federation, () => callAgenda(federation, { action: 'delete', eventId: ev.id }));
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink">{t('Apagar "{titulo}"? Só a equipe viu este evento: some de vez.', { titulo: ev.title })}</p>
@@ -196,7 +193,7 @@ function ApagarDialog({ federation, ev, onFechar }) {
 function EventRow({ federation, ev, perms, onAbrir }) {
   const kind = ev.derived ? { label: tk('Torneio chancelado') } : eventKind(ev.kind);
   const a = eventActions(ev, perms);
-  const reuniao = !ev.derived && Boolean(kind?.meeting);
+  const reuniao = hasMeetings(federation) && !ev.derived && Boolean(kind?.meeting);
   const r = meetingActions(ev, { canManage: canManageKind(perms, ev.kind), isMeeting: reuniao });
   const prazo = reuniao && ev.status === 'scheduled' ? convocationNotice(ev, normalizeFederationRules(federation.rules).convocation_min_days) : null;
   // À vista, o passo da reunião (resultado ou convocação) ou, fora dela, editar; o resto vai para o "⋯".
@@ -217,7 +214,7 @@ function EventRow({ federation, ev, perms, onAbrir }) {
         <p className="flex flex-wrap items-center gap-2 text-xs">
           {kind && <span className="font-bold uppercase tracking-wider text-gray-500">{t(kind.label)}</span>}
           <StatusBadge ev={ev} />
-          {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="ink">{t(EVENT_VISIBILITY_LABELS[ev.visibility])}</V2Badge>}
+          {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="ink">{t(visibilityLabelFor(federation, ev.visibility))}</V2Badge>}
         </p>
         <p className={`font-bold text-ink ${ev.status === 'cancelled' ? 'line-through' : ''}`}>{ev.title}</p>
         <p className="text-xs text-gray-500">{ev.status === 'postponed' ? t('Nova data a definir') : `${dataDoEvento(ev)} · ${horarioDoEvento(ev)}`}</p>
@@ -233,7 +230,7 @@ function EventRow({ federation, ev, perms, onAbrir }) {
       <div className="flex flex-wrap items-center gap-2">
         {ev.derived
           ? <V2Button asChild size="sm" variant="ghost"><Link to={`/torneios/${encodeURIComponent(ev.tournament_id)}`}><ExternalLink className="h-4 w-4" />{t('Abrir o torneio')}</Link></V2Button>
-          : <V2Button asChild size="sm" variant="ghost"><Link to={`${agendaPublicPath(federation)}/${encodeURIComponent(ev.id)}`} aria-label={t('Ver {titulo}', { titulo: ev.title })}><ExternalLink className="h-4 w-4" /></Link></V2Button>}
+          : <V2Button asChild size="sm" variant="ghost"><Link to={eventPathFor(federation, ev)} aria-label={t('Ver {titulo}', { titulo: ev.title })}><ExternalLink className="h-4 w-4" /></Link></V2Button>}
         {principal && <V2Button type="button" size="sm" variant="secondary" onClick={() => onAbrir(principal.id, ev)}><principal.icon className="h-4 w-4" aria-hidden="true" />{principal.label}</V2Button>}
         <MaisAcoes nome={ev.title} itens={resto} onEscolher={(id) => onAbrir(id, ev)} />
       </div>
@@ -244,7 +241,8 @@ function EventRow({ federation, ev, perms, onAbrir }) {
 const TITULOS = { novo: tk('Marcar na agenda'), editar: tk('Editar evento'), postpone: tk('Adiar evento'), cancel: tk('Cancelar evento'), apagar: tk('Apagar evento'), convocar: tk('Convocação e pauta'), resultado: tk('Resultado da reunião') };
 
 export default function FedAgendaPanel({ federation, perms = [] }) {
-  const a = useVisibleAgenda(federation);
+  const a = useScopedAgenda(federation);
+  const club = isClubAgenda(federation);
   const [aberto, setAberto] = useState(null); // { modo, ev }
   const partes = useMemo(() => (a.items ? splitAgenda(a.items) : null), [a.items]);
   const fechar = () => setAberto(null);
@@ -257,18 +255,20 @@ export default function FedAgendaPanel({ federation, perms = [] }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold text-ink">{t('Calendário oficial')}</h2>
-          <p className="text-sm text-gray-500">{t('Competições, cursos, assembleias, reuniões de diretoria e conselhos, prazos e eventos. Público, só filiados ou só a equipe. Evento divulgado não some nem muda de data calado: adiar, cancelar e remarcar pedem motivo, ficam no histórico e avisam quem segue a federação. Os torneios chancelados entram sozinhos.')}</p>
+          <p className="text-sm text-gray-500">{club
+            ? t('Competições, treinos e cursos, assembleias, reuniões de diretoria e conselhos, prazos e eventos. Público, só associados ou só a equipe. Evento divulgado não some nem muda de data calado: adiar, cancelar e remarcar pedem motivo, ficam no histórico e avisam os associados.')
+            : t('Competições, cursos, assembleias, reuniões de diretoria e conselhos, prazos e eventos. Público, só filiados ou só a equipe. Evento divulgado não some nem muda de data calado: adiar, cancelar e remarcar pedem motivo, ficam no histórico e avisam quem segue a federação. Os torneios chancelados entram sozinhos.')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {podeMarcar && <V2Button type="button" onClick={() => abrir('novo', null)} data-dica="federacao-agenda-novo"><Plus className="h-4 w-4" />{t('Marcar na agenda')}</V2Button>}
-          <V2Button asChild variant="secondary"><Link to={agendaPublicPath(federation)}><CalendarDays className="h-4 w-4" />{t('Ver como o público vê')}</Link></V2Button>
+          <V2Button asChild variant="secondary"><Link to={agendaPathFor(federation)}><CalendarDays className="h-4 w-4" />{t('Ver como o público vê')}</Link></V2Button>
         </div>
       </div>
       {a.isError && <V2ErrorState inline title={t('Não carregou a agenda')} onRetry={a.refetch} />}
       {a.isLoading && <V2Skeleton lines={4} />}
       {a.incompleto && <p className="text-sm text-amber-700">{t('Parte da agenda (só para filiados, só para a equipe ou os torneios) não carregou agora.')}</p>}
       {partes && partes.upcoming.length === 0 && partes.past.length === 0 && !a.incompleto && (
-        <V2EmptyState icon={CalendarPlus} title={t('A agenda está vazia')} description={t('Comece pela próxima competição e pela assembleia geral ordinária do ano: são as datas que filiados e clubes mais procuram.')} />
+        <V2EmptyState icon={CalendarPlus} title={t('A agenda está vazia')} description={club ? t('Comece pela próxima competição e pela assembleia geral ordinária do ano: são as datas que os associados mais procuram.') : t('Comece pela próxima competição e pela assembleia geral ordinária do ano: são as datas que filiados e clubes mais procuram.')} />
       )}
       {partes && partes.upcoming.length > 0 && (
         <div className="space-y-2">
@@ -285,7 +285,7 @@ export default function FedAgendaPanel({ federation, perms = [] }) {
       <Dialog open={aberto != null} onOpenChange={(o) => { if (!o) fechar(); }}>
         <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto" onInteractOutside={(e) => { if (haAlteracaoNaoSalva()) e.preventDefault(); }}>
           <DialogTitle>{modo ? t(TITULOS[modo]) : ''}</DialogTitle>
-          <DialogDescription>{ev ? ev.title : t('Público, só filiados ou só a equipe.')}</DialogDescription>
+          <DialogDescription>{ev ? ev.title : (club ? t('Público, só associados ou só a equipe.') : t('Público, só filiados ou só a equipe.'))}</DialogDescription>
           {(modo === 'novo' || modo === 'editar') && <EventForm federation={federation} perms={perms} ev={modo === 'editar' ? ev : null} onFechar={fechar} />}
           {(modo === 'postpone' || modo === 'cancel') && <SituacaoDialog federation={federation} ev={ev} acao={modo} onFechar={fechar} />}
           {modo === 'apagar' && <ApagarDialog federation={federation} ev={ev} onFechar={fechar} />}

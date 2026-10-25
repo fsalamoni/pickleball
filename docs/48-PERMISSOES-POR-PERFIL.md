@@ -460,6 +460,8 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ver o orçamento e a prestação PUBLICADOS | ✔ | ✔ | ✔ | ✔ | — | rules (`budgets`/`reports` com `pub: true`, clube publicado) |
 | Preparar, publicar, retificar e avisar os documentos oficiais do clube | ✖ | ✖ | ✖ | ✔ `docs` ou admin (retirar do ar: só admin) | — | **Cloud Function** `clubDocs` (`docs`/`seq`: `write: if false`) |
 | Ver os documentos oficiais PUBLICADOS | ✔ os públicos (`pub`) | ✔ | ✔ os públicos e os "só associados" (qualquer membro do clube) | ✔ `docs`/admin leem tudo, rascunho inclusive | — | rules (`docs` com `pub`/`members`, clube publicado) e **Cloud Function** `clubDocs` (`file`) |
+| Marcar, remarcar, adiar, cancelar e apagar eventos da agenda oficial do clube | ✖ | ✖ | ✖ | ✔ `docs` ou admin (qualquer tipo); `sports` só a agenda esportiva | — | **Cloud Function** `clubAgenda` (`events`: `write: if false`) |
+| Ver a agenda oficial do clube | ✔ os eventos públicos (`pub`) e a agenda assinável | ✔ | ✔ os públicos e os "só associados" (qualquer membro do clube) | ✔ `docs`/`sports`/admin leem tudo | — | rules (`events` com `pub`/`members`, clube publicado) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |

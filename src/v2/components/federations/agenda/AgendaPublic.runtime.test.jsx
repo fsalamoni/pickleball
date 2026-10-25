@@ -12,6 +12,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const estado = { agenda: null };
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: null, isAuthenticated: false }) }));
+// O escopo da agenda também sabe servir o clube; para a federação essas consultas ficam desligadas.
+vi.mock('@/modules/clubs/hooks/useClubAgenda', () => ({ useClubEventsAll: () => ({}), useReadableClubEvents: () => ({}) }));
+vi.mock('@/modules/clubs/hooks/useClubDocs', () => ({ useClubDocsAll: () => ({}) }));
 vi.mock('@/modules/federations/hooks/useFederations', () => ({
   useVisibleAgenda: () => estado.agenda,
   useAcervoFollow: () => ({ data: null, isLoading: false }),

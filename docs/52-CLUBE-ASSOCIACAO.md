@@ -5,9 +5,9 @@
 > importação de associados, declaração de associação), **Bloco C1**
 > (vantagens do associado, comunicados e patrocinadores), **C2** (cupons e
 > campanhas), **C3** (loja do clube no Mercado) e **D1** (contas: orçamento,
-> lançamentos e prestação de contas) e **D2a** (documentos oficiais do clube)
-> estão no código. Os blocos D2b–G (agenda oficial, atletas e seleção, torneios
-> do clube, assembleias e eleições) estão no plano
+> lançamentos e prestação de contas), **D2a** (documentos oficiais do clube) e
+> **D2b** (agenda oficial do clube) estão no código. Os blocos D2c–G (atletas e
+> seleção, torneios do clube, assembleias e eleições) estão no plano
 > (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
 > existem** — este documento só descreve o que há no código.
 
@@ -50,6 +50,7 @@ pessoa do clube.
 | `reports` | prestação de contas do período (`{ano}` ou `{ano}-S1`…): retrato **congelado**, parecer do conselho fiscal, assembleia; a cópia pública tem `pub: true` | `finance`/`fiscal`/admin; o público lê só `pub: true` de clube publicado | **só o servidor** |
 | `docs` | documento oficial (estatuto, regimento, atas, resoluções…): número do ato, versão, arquivos, `visibility` (público / só associados / só equipe), `pub` e `members` (marcas de leitura mantidas pelo servidor) | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/admin leem tudo (rascunho inclusive) | **só o servidor** (`clubDocs`) |
 | `seq` | contador de numeração dos atos (`seq/docs`) | ninguém | **só o servidor** |
+| `events` | evento da agenda oficial (competição, curso, assembleia, reunião, prazo…): data, horário, local, `status` (marcado/adiado/cancelado), motivo, `history[]`, `ever_visible`, `visibility`, `pub` e `members` (marcas de leitura mantidas pelo servidor), documentos ligados | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/`sports`/admin leem tudo | **só o servidor** (`clubAgenda`) |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
 filiação; **o código gira** a cada ativação, renovação e suspensão. Campos novos
@@ -287,6 +288,44 @@ integridade (SHA-256), compartilhar — é código único (`AcervoPecas`,
   de quem o preparou e publicou (`created_by_name`/`published_by_name` →
   "Usuário removido").
 
+### 5.5 Agenda oficial do clube (Bloco D2b)
+
+Central do clube → **Agenda** (`?aba=agenda`, permissão `docs` ou `sports`): o
+calendário do clube — competições, treinos e cursos, assembleias, reuniões de
+diretoria e conselhos, prazos e eventos (14 tipos, os da federação). Como nos
+documentos, não é uma segunda agenda: é a **mesma tela da federação**
+(`FedAgendaPanel`, `AgendaBrowser`, `AgendaEventView`) com o clube no lugar dela.
+O `agendaScope.js` troca a entidade (`clubAgendaEntity(club)`, `kind: 'club'`), a
+função do servidor (`clubAgenda`), de onde vêm os eventos e os documentos
+ligados, os endereços e a invalidação; o clube **ainda não** tem convocação/ata de
+reunião, "Seguir" nem comentários (`hasMeetings`/`hasFollow`/`hasComments`
+escondem — reunião de verdade é o Bloco F).
+
+- **Quem marca o quê**: a secretaria (`docs`) e a administração, qualquer evento;
+  a diretoria esportiva (`sports`), só a agenda esportiva (competição, seleção,
+  curso, outro esporte). A régua tem cópia no servidor (`podeTipo`), com
+  paridade (`clubAgenda.parity.test.js`).
+- **Evento divulgado não some calado**: depois que alguém além da equipe viu
+  (`ever_visible`), mudar data ou horário é **remarcar**, e remarcar, reabrir,
+  adiar e cancelar pedem motivo (≥ 10 caracteres), entram em `history[]` (até 20) e
+  avisam. Apagar só o que só a equipe viu.
+- **Aviso**: os associados em dia (menos quem agiu) recebem um aviso com link
+  `/clubes/{id}?tab=agenda&evento={id}` (sem `#`).
+- **Visibilidade**: público (página do clube, vitrine `/c/:id` e agenda
+  assinável), só associados (qualquer membro) ou só equipe; as marcas
+  `pub`/`members` são do servidor, uma igualdade por consulta, zero índice.
+- **Agenda assinável**: `/api/agenda/clube/{clubId}.ics`, servida pela mesma
+  função HTTP da federação (`federationAgendaFeed`, despachada pelo prefixo
+  `clube/`); leva **só o público** de clube com a associação aberta; horário de
+  Brasília.
+- **Páginas**: aba **Agenda** do clube (`V2ClubDetail`, para membro de clube com
+  associação ligada), bloco "Agenda oficial" para o visitante e na vitrine
+  (`PublicClub`: `?evento=`, `?agenda=1`), por `ClubAgendaPublic`. Evento
+  inexistente e evento que a regra não deixa ver dizem a mesma coisa ("Evento
+  indisponível").
+- **Conta excluída**: o evento fica; sai só o nome de quem o marcou
+  (`created_by_name` → "Usuário removido").
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -357,6 +396,21 @@ integridade (SHA-256), compartilhar — é código único (`AcervoPecas`,
     e a consulta leva a igualdade `members == true`; o público, `pub == true`.
     Sem filtro a consulta é recusada — a tela da equipe lê a coleção inteira e
     a do associado/público, a filtrada.
+24. **Evento da agenda do clube é só do servidor** (`clubAgenda`, `events` com
+    `write: if false`); a régua (tipos, validação, horário, ICS) é a da federação
+    — a lista "quem marca o quê" tem cópia (`podeTipo`) com paridade. Evento
+    **já divulgado** (`ever_visible`) não muda de data nem some calado: remarcar,
+    reabrir, adiar e cancelar pedem motivo e entram em `history[]`. Ids de tipo e
+    de situação são gravados — nunca renomeie.
+25. **A agenda do clube recebe a entidade, não a copia**: não bifurque
+    `FedAgendaPanel`/`AgendaEventView`/`AgendaBrowser` — passe
+    `clubAgendaEntity(club)` e use `callAgenda`/`useAgendaMutation`/`agendaPathFor`/
+    `eventPathFor`/`feedPathFor` do `agendaScope`. Reunião, seguir e comentários só
+    existem no clube quando o Bloco F os trouxer (hoje `hasMeetings`/`hasFollow`/
+    `hasComments` são falsos).
+26. **A agenda assinável do clube não tem função própria**: o prefixo
+    `/api/agenda/clube/` é despachado dentro de `federationAgendaFeed` — não
+    crie um segundo endpoint HTTP.
 
 ## 7. Testes
 
@@ -370,6 +424,10 @@ comunicação, comunicado "só associados" para o membro),
 `functions/clubDocs.parity.test.js`, `tests/rules/clubDocs.rules.test.js` (emulador:
 equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de quem saiu),
 `ClubDocsPublic.runtime.test.jsx`,
+`functions/clubAgenda.test.js` (marcar, remarcar, adiar, cancelar, aviso, ICS),
+`functions/clubAgenda.parity.test.js`, `tests/rules/clubAgenda.rules.test.js`
+(emulador: equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de
+quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `functions/clubAccounts.test.js` (orçamento, lançamentos, prestação, parecer, anexo),
 `tests/rules/clubAccounts.rules.test.js` (emulador: quem lê, ninguém grava, consulta
 pública `pub == true`, conselho fiscal lê cobranças) e
