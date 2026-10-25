@@ -35,6 +35,17 @@ export function federationIssuer(federation) {
   };
 }
 
+/** O emissor "clube" a partir do documento do clube (cor da associação na arte). */
+export function clubIssuer(club) {
+  if (!club?.id) return null;
+  return {
+    type: PROMO_ISSUER.CLUB,
+    id: club.id,
+    name: String(club.name || 'Clube').slice(0, 80),
+    color: club.association?.color || '',
+  };
+}
+
 /** A marca do emissor para os editores de arte. */
 export function issuerBrand(issuer) {
   if (issuer?.type === PROMO_ISSUER.PLATFORM) {
@@ -43,13 +54,16 @@ export function issuerBrand(issuer) {
   if (issuer?.type === PROMO_ISSUER.FEDERATION && issuer.color) {
     return { color: issuer.color, label: t('Usar as cores da federação'), name: issuer.name || '' };
   }
+  if (issuer?.type === PROMO_ISSUER.CLUB && issuer.color) {
+    return { color: issuer.color, label: t('Usar as cores do clube'), name: issuer.name || '' };
+  }
   return { color: '', label: '', name: issuer?.name || '' };
 }
 
 /** A pasta dos envios (Storage), por emissor. */
 export function uploadFolderFor(issuer, kind) {
   const base = issuer?.type === PROMO_ISSUER.PLATFORM ? 'platform'
-    : issuer?.type === PROMO_ISSUER.FEDERATION ? 'federation' : 'coach';
+    : issuer?.type === PROMO_ISSUER.FEDERATION ? 'federation' : issuer?.type === PROMO_ISSUER.CLUB ? 'club' : 'coach';
   return `${base}-${kind === 'coupon' ? 'coupons' : 'banners'}`;
 }
 
@@ -57,6 +71,7 @@ export function uploadFolderFor(issuer, kind) {
 export function issuerDisplayName(doc) {
   if (doc?.issuer_type === PROMO_ISSUER.PLATFORM) return 'PickleRush';
   if (doc?.issuer_type === PROMO_ISSUER.FEDERATION) return doc?.issuer_name || t('Federação');
+  if (doc?.issuer_type === PROMO_ISSUER.CLUB) return doc?.issuer_name || t('Clube');
   return doc?.issuer_name || t('Professor');
 }
 
@@ -82,7 +97,9 @@ export function promoKindGroups(issuerType) {
         ? t('Um benefício entregue por você: o aluno mostra o código e você registra o uso. O vale de aula particular também entra no pedido de aula.')
         : issuerType === PROMO_ISSUER.FEDERATION
           ? t('Um benefício entregue pela federação (curso, evento, produto): a pessoa mostra o código e a equipe registra o uso.')
-          : t('Um benefício entregue pela plataforma: a pessoa mostra o código e a equipe registra o uso.'),
+          : issuerType === PROMO_ISSUER.CLUB
+            ? t('Um benefício entregue pelo clube (evento, produto, parceiro): a pessoa mostra o código e a equipe registra o uso.')
+            : t('Um benefício entregue pela plataforma: a pessoa mostra o código e a equipe registra o uso.'),
       kinds: todos.filter((k) => k.family === PROMO_FAMILY.VOUCHER),
     },
   ];

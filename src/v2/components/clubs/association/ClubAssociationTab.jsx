@@ -14,7 +14,7 @@ import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitive
 import ClubPlansList from './ClubPlansList';
 import ClubJoinDialog from './ClubJoinDialog';
 import MyAssociationPanel from './MyAssociationPanel';
-import { ClubBenefitsShowcase, ClubSponsorsStrip } from './ClubShowcase';
+import { ClubBenefitsShowcase, ClubPromosSection, ClubSponsorsStrip } from './ClubShowcase';
 import { t } from '@/core/i18n';
 
 export default function ClubAssociationTab({ club }) {
@@ -53,6 +53,7 @@ export default function ClubAssociationTab({ club }) {
       )}
       {/* O convite para se associar: o que o associado ganha e quem apoia o clube (a vitrine pública). */}
       <ClubBenefitsShowcase clubId={club.id} enabled={isAssociationOpen(club)} />
+      <ClubPromosSection clubId={club.id} enabled={isAssociationOpen(club)} />
       <ClubSponsorsStrip clubId={club.id} enabled={isAssociationOpen(club)} />
       <ClubJoinDialog open={Boolean(escolhido)} onOpenChange={(o) => { if (!o) setEscolhido(null); }} club={club} plan={escolhido?.plano} price={escolhido?.preco} />
     </section>

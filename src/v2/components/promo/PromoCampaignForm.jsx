@@ -130,6 +130,7 @@ function DetalheDoPublico({ audience, detail, onChange }) {
 export default function PromoCampaignForm({ issuer, campaign = null, onClose }) {
   const ehProfessor = issuer.type === PROMO_ISSUER.COACH;
   const ehFederacao = issuer.type === PROMO_ISSUER.FEDERATION;
+  const ehClube = issuer.type === PROMO_ISSUER.CLUB;
   // Federação não avisa pela campanha: o aviso aos filiados é a notícia.
   const podeAvisar = PROMO_AUDIENCES_BY_ISSUER[issuer.type].length > 0;
   const editando = Boolean(campaign);
@@ -159,10 +160,10 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
   const banner = bannerDoForm(f);
   const vBanner = normalizeCampaignBanner(banner);
   const vDestino = normalizePromoDestination(f.destination, issuer.type);
-  const vLugar = banner ? normalizePromoPlacement(f, { today }) : { valid: true, errors: {} };
+  const vLugar = banner ? normalizePromoPlacement(f, { today, home: !ehClube }) : { valid: true, errors: {} };
   const vAlcance = banner && f.show_home ? normalizeReach(f.reach) : { valid: true, errors: {} };
   const cta = promoDestinationCta(f.destination, f.design);
-  const pagina = ehProfessor ? t('no seu perfil') : ehFederacao ? t('na página da federação') : t('na vitrine de promoções');
+  const pagina = ehProfessor ? t('no seu perfil') : ehFederacao ? t('na página da federação') : ehClube ? t('na página do clube') : t('na vitrine de promoções');
 
   const falta = [
     ...(!editando && !f.name.trim() ? [t('o nome da campanha')] : []),
@@ -244,7 +245,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
           <Secao n={1} titulo={t('O que é')} descricao={t('O nome aparece para você na lista e é o título do aviso.')}>
             <V2Field label={t('Nome da campanha')} htmlFor="pcamp-nome" required>
               <V2Input id="pcamp-nome" maxLength={80}
-                placeholder={ehProfessor ? t('Turma nova de iniciantes') : ehFederacao ? t('Etapa estadual: inscrições abertas') : t('Inscrições abertas para o Open')}
+                placeholder={ehProfessor ? t('Turma nova de iniciantes') : ehFederacao ? t('Etapa estadual: inscrições abertas') : ehClube ? t('Torneio de fim de ano: inscrições abertas') : t('Inscrições abertas para o Open')}
                 value={f.name} onChange={(e) => set({ name: e.target.value })} />
             </V2Field>
           </Secao>
@@ -285,13 +286,14 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_on_page}
                   onChange={(e) => set({ show_on_page: e.target.checked })} />
                 <span>
-                  <span className="block text-sm font-bold text-ink">{ehProfessor ? t('No seu perfil') : ehFederacao ? t('Na página da federação') : t('Na vitrine de promoções')}</span>
+                  <span className="block text-sm font-bold text-ink">{ehProfessor ? t('No seu perfil') : ehFederacao ? t('Na página da federação') : ehClube ? t('Na página do clube') : t('Na vitrine de promoções')}</span>
                   <span className="block text-xs text-gray-500">
                     {ehProfessor ? t('No topo do seu perfil de professor — e na vitrine de promoções.')
-                      : ehFederacao ? t('Na página pública da federação — e na vitrine de promoções.') : t('A página de promoções da plataforma.')}
+                      : ehFederacao ? t('Na página pública da federação — e na vitrine de promoções.') : ehClube ? t('Na página pública do clube, para quem visita e para os associados.') : t('A página de promoções da plataforma.')}
                   </span>
                 </span>
               </label>
+              {!ehClube && (
               <label className="flex cursor-pointer items-start gap-2 rounded-2xl border border-gray-200 p-3">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_home}
                   onChange={(e) => set({ show_home: e.target.checked })} />
@@ -300,6 +302,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
                   <span className="block text-xs text-gray-500">{t('No carrossel de destaques, na região que você escolher.')}</span>
                 </span>
               </label>
+              )}
             </div>
             {f.show_home && (
               <PromoReachPicker idPrefix="pcamp-alcance" value={f.reach} onChange={(reach) => set({ reach })} />

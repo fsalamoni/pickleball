@@ -5,9 +5,11 @@
  *    só chegam ao associado em dia, pelo servidor;
  *  - Comunicados: rascunho, publicado ou arquivado, para o público ou só para
  *    quem é do clube; "Avisar os associados" chama o SERVIDOR, uma vez só;
- *  - Patrocinadores: a lista que sai na página do clube.
+ *  - Patrocinadores: a lista que sai na página do clube;
+ *  - Cupons e campanhas: o console de divulgação (`PromoMarketingConsole`) com o
+ *    clube como emissor — só na página do clube, nunca na vitrine nem no início.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Bell, Gift, Handshake, Newspaper, Pause, Pencil, Pin, Play, Plus, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -25,9 +27,13 @@ import {
   useBenefitSecret, useDeleteBenefit, useDeleteClubNews, useDeleteSponsor, useNotifyClubNews, useSaveBenefit, useSaveClubNews, useSaveSponsor, useSetBenefitActive,
 } from '@/modules/clubs/hooks/useClubAssociation';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
+import { isAssociationOpen } from '@/modules/clubs/domain/association';
+import { clubIssuer } from '@/v2/components/promo/promoUi';
 import { quando } from '@/v2/components/federations/federationUi';
 import { BuscaLista, MostrarMais, useBuscaLista } from '@/v2/components/federations/manage/listTools';
 import { useAvisoNaoSalvo } from '@/v2/components/federations/manage/naoSalvo';
+
+const PromoMarketingConsole = lazy(() => import('@/v2/components/promo/PromoMarketingConsole'));
 
 const TOM_ESTADO = { published: 'green' };
 const TOM_VANTAGEM = { live: 'green', paused: 'neutral', expired: 'amber' };
@@ -373,7 +379,29 @@ export function ClubSponsorsTab({ club, sponsorsQ }) {
   );
 }
 
+/* ---------------------------------------------------------------- divulgação -- */
+
+function ClubPromoTab({ club }) {
+  return (
+    <section className="space-y-4" aria-label={t('Cupons e campanhas do clube')} data-dica="clube-divulgacao">
+      <div>
+        <h2 className="font-display text-xl font-bold text-ink">{t('Cupons e campanhas')}</h2>
+        <p className="text-sm text-gray-500">{t('Cupons de desconto e vales (evento, produto, parceiro) e banners de campanha na página do clube. O aviso aos associados vai pelos Comunicados; o benefício só de associado fica em Vantagens.')}</p>
+      </div>
+      {isAssociationOpen(club) ? (
+        <Suspense fallback={<V2Skeleton lines={6} />}>
+          <PromoMarketingConsole issuer={clubIssuer(club)} />
+        </Suspense>
+      ) : (
+        // Cupom e campanha são legíveis por qualquer conta logada: só a página no ar divulga.
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Cupons e campanhas abrem depois que a associação for publicada (Configurações → Associação do clube): eles aparecem para quem visita a página.')}</p>
+      )}
+    </section>
+  );
+}
+
 export default function ClubCommsPanel({ club, tab, benefitsQ, newsQ, sponsorsQ, plansQ, associados }) {
+  if (tab === 'divulgacao') return <ClubPromoTab club={club} />;
   if (tab === 'vantagens') return <ClubBenefitsTab club={club} benefitsQ={benefitsQ} plansQ={plansQ} />;
   if (tab === 'patrocinadores') return <ClubSponsorsTab club={club} sponsorsQ={sponsorsQ} />;
   return <ClubNewsTab club={club} newsQ={newsQ} associados={associados} />;

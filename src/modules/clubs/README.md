@@ -31,8 +31,11 @@ dia de jogo, ranking interno, página pública.
 > de notícia e patrocínio da federação), `services/contentService.js`,
 > `functions/clubContent.js` (o associado em dia recebe o "como usar"/código; o
 > aviso do comunicado sai uma vez só), seção Comunicação da Central
-> (`ClubCommsPanel`) e a vitrine (`association/ClubShowcase.jsx`). Ver
-> `docs/52-CLUBE-ASSOCIACAO.md`.
+> (`ClubCommsPanel`) e a vitrine (`association/ClubShowcase.jsx`). **Bloco C2**:
+> o clube é emissor do módulo `promo` (`PROMO_ISSUER.CLUB`) — aba Cupons e
+> campanhas da Central (`?aba=divulgacao`) e "Promoções do clube" na página
+> (`ClubPromosSection`), só na página do clube. Ver
+> `docs/52-CLUBE-ASSOCIACAO.md` §5.1.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,

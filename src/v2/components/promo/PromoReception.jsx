@@ -96,7 +96,7 @@ export default function PromoReception({ issuer, cupom: cupomDado = null, onDone
       {buscar.isError && <p role="alert" className="mt-2 text-xs text-red-700">{t('Não foi possível conferir agora — isso não quer dizer que o código não exista. Tente de novo.')}</p>}
       {naoAchou && !buscar.isError && (
         <p className="mt-2 text-xs text-red-700">
-          {ehProfessor ? t('Nenhum cupom seu com este código.') : issuer.type === PROMO_ISSUER.FEDERATION ? t('Nenhum cupom da federação com este código.') : t('Nenhum cupom da plataforma com este código.')}
+          {ehProfessor ? t('Nenhum cupom seu com este código.') : issuer.type === PROMO_ISSUER.FEDERATION ? t('Nenhum cupom da federação com este código.') : issuer.type === PROMO_ISSUER.CLUB ? t('Nenhum cupom do clube com este código.') : t('Nenhum cupom da plataforma com este código.')}
         </p>
       )}
 

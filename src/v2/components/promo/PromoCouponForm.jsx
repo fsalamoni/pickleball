@@ -116,6 +116,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
   const issuerType = issuer.type;
   const ehProfessor = issuerType === PROMO_ISSUER.COACH;
   const ehFederacao = issuerType === PROMO_ISSUER.FEDERATION;
+  const ehClube = issuerType === PROMO_ISSUER.CLUB;
   const [kind, setKind] = useState(cupom ? (cupom.kind || COUPON_KIND.DISCOUNT) : null);
   const [form, setForm] = useState(() => estadoInicial(cupom, kind || COUPON_KIND.DISCOUNT, unitCost));
   const [art, setArt] = useState(() => cupom?.art || null);
@@ -134,7 +135,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
   const meta = kind ? PROMO_KIND_META[issuerType]?.[kind] : null;
   const Icone = kind ? PROMO_KIND_ICON[kind] : null;
   const salvando = criar.isPending || editar.isPending;
-  const onde = ehProfessor ? t('no seu perfil') : ehFederacao ? t('na página da federação') : t('na vitrine de promoções');
+  const onde = ehProfessor ? t('no seu perfil') : ehFederacao ? t('na página da federação') : ehClube ? t('na página do clube') : t('na vitrine de promoções');
 
   const escolherTipo = (k) => {
     setKind(k);
@@ -226,7 +227,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
               <V2Input id="pcup-face" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.face_value} onChange={(e) => set({ face_value: e.target.value })} />
             </V2Field>
-            <V2Field label={ehProfessor ? t('Custo para você (R$)') : ehFederacao ? t('Custo para a federação (R$)') : t('Custo para a plataforma (R$)')} htmlFor="pcup-custo"
+            <V2Field label={ehProfessor ? t('Custo para você (R$)') : ehFederacao ? t('Custo para a federação (R$)') : ehClube ? t('Custo para o clube (R$)') : t('Custo para a plataforma (R$)')} htmlFor="pcup-custo"
               hint={<span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" aria-hidden /> {t('Só você vê. Entra no controle de uso.')}</span>}>
               <V2Input id="pcup-custo" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.unit_cost} onChange={(e) => set({ unit_cost: e.target.value })} />
@@ -246,7 +247,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
 
       <V2Field label={t('Descrição')} htmlFor="pcup-desc" className="mt-3" hint={t('Aparece para quem usa o código. Diga a regra em uma linha.')}>
         <V2Input id="pcup-desc" maxLength={160}
-          placeholder={ehProfessor ? t('Para a primeira aula de quem nunca treinou comigo') : ehFederacao ? t('Para filiados, na inscrição da etapa estadual') : t('Válido no Open de Primavera')}
+          placeholder={ehProfessor ? t('Para a primeira aula de quem nunca treinou comigo') : ehFederacao ? t('Para filiados, na inscrição da etapa estadual') : ehClube ? t('Válido na inscrição do torneio de fim de ano') : t('Válido no Open de Primavera')}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
 
@@ -296,13 +297,13 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
           onChange={(e) => set({ show_public: e.target.checked, ...(e.target.checked ? {} : { show_home: false }) })}
           className="mt-0.5 h-4 w-4 rounded border-gray-300" />
         <span>
-          {ehProfessor ? t('Divulgar no meu perfil e na vitrine de promoções') : ehFederacao ? t('Divulgar na página da federação e na vitrine de promoções') : t('Divulgar na vitrine de promoções')}
+          {ehProfessor ? t('Divulgar no meu perfil e na vitrine de promoções') : ehFederacao ? t('Divulgar na página da federação e na vitrine de promoções') : ehClube ? t('Divulgar na página do clube') : t('Divulgar na vitrine de promoções')}
           <span className="block text-xs text-gray-500">
             {t('Aparece com o código, para quem quiser usar. Sem marcar, o cupom é um código que você entrega a quem quiser.')}
           </span>
         </span>
       </label>
-      {form.show_public && (
+      {form.show_public && !ehClube && (
         <div className="ml-6 mt-2 space-y-3">
           <label className="flex items-start gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.show_home} onChange={(e) => set({ show_home: e.target.checked })}

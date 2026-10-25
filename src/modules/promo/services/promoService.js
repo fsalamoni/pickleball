@@ -377,6 +377,22 @@ export async function listFederationPublicPromos(fedId) {
   return { coupons: lista(cupons), campaigns: lista(campanhas) };
 }
 
+/** O que UM clube divulga na página dele (cupons públicos + campanhas da página). */
+export async function listClubPublicPromos(clubId) {
+  if (!db || !clubId) return { coupons: [], campaigns: [] };
+  const [cupons, campanhas] = await Promise.all([
+    getDocs(query(
+      collection(db, COL_COUPONS),
+      where('issuer_type', '==', PROMO_ISSUER.CLUB), where('issuer_id', '==', clubId), where('show_public', '==', true),
+    )),
+    getDocs(query(
+      collection(db, COL_CAMPAIGNS),
+      where('issuer_type', '==', PROMO_ISSUER.CLUB), where('issuer_id', '==', clubId), where('show_on_page', '==', true),
+    )),
+  ]);
+  return { coupons: lista(cupons), campaigns: lista(campanhas) };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Campanhas                                                     */
 /* ------------------------------------------------------------------ */
@@ -428,7 +444,7 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
   if (!banner.valid) throw new Error(primeiroErro(banner.errors) || t('Confira o banner.'));
   const destino = normalizePromoDestination(input.destination || {}, e.type);
   if (!destino.valid) throw new Error(primeiroErro(destino.errors));
-  const lugar = banner.value ? normalizePromoPlacement(input, { today }) : null;
+  const lugar = banner.value ? normalizePromoPlacement(input, { today, home: e.type !== PROMO_ISSUER.CLUB }) : null;
   if (lugar && !lugar.valid) throw new Error(primeiroErro(lugar.errors));
   const alcance = normalizeReach(input.reach || {});
   if (!alcance.valid) throw new Error(primeiroErro(alcance.errors));
@@ -556,7 +572,7 @@ export async function updatePromoCampaign(campaignId, patch = {}, actor = null, 
       show_on_page: 'show_on_page' in patch ? patch.show_on_page : atual.show_on_page,
       show_home: 'show_home' in patch ? patch.show_home : atual.show_home,
       banner_until: 'banner_until' in patch ? patch.banner_until : atual.banner_until,
-    }, { today });
+    }, { today, home: e.type !== PROMO_ISSUER.CLUB });
     if (!lugar.valid) throw new Error(primeiroErro(lugar.errors));
     Object.assign(mudancas, lugar.value);
   }
@@ -566,7 +582,7 @@ export async function updatePromoCampaign(campaignId, patch = {}, actor = null, 
   // Banner novo numa campanha que só tinha aviso: nasce no ar, na página.
   if (mudancas.banner && !atual.banner) {
     if (!('banner_active' in mudancas)) mudancas.banner_active = true;
-    if (!mexeNoLugar) Object.assign(mudancas, normalizePromoPlacement({}, { today }).value);
+    if (!mexeNoLugar) Object.assign(mudancas, normalizePromoPlacement({}, { today, home: e.type !== PROMO_ISSUER.CLUB }).value);
   }
 
   await updateDoc(doc(db, COL_CAMPAIGNS, campaignId), { ...mudancas, updated_at: serverTimestamp() });

@@ -118,7 +118,7 @@ function Central({ clubId }) {
         {tab === 'planos' && <ClubPlansTab club={club} plansQ={plansQ} canEdit={podeFinancas} canAdopt={podeMembros} />}
         {tab === 'pix' && admin && <ClubPixTab club={club} />}
         {(tab === 'equipe' || tab === 'cargos') && <ClubStaffPanel club={club} staffQ={staffQ} rolesQ={rolesQ} papel={papel} tab={tab} />}
-        {emComunicacao && ['comunicados', 'vantagens', 'patrocinadores'].includes(tab) && (
+        {emComunicacao && ['comunicados', 'vantagens', 'patrocinadores', 'divulgacao'].includes(tab) && (
           <ClubCommsPanel
             club={club}
             tab={tab}

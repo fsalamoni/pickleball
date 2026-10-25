@@ -450,6 +450,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Cargo vale sem ser membro do clube | ✖ | — | — | ✖ — o cargo só conta enquanto a pessoa é membro | — | rules (`cxPerms`) e servidor (`permsDe`) |
 | Ver a vitrine pública de vantagens, os comunicados públicos e os patrocinadores | ✔ | ✔ | ✔ | ✔ | — | rules `club_x/…/{benefits,news,sponsors}` (`published` + `public`) |
 | Ver o "como usar" e o código das vantagens | ✖ | ✖ | ✔ só associado em dia, do plano que a vantagem alcança | ✔ `comms` (edita) | — | **Cloud Function** `clubContent` (`bsec`: só `comms` lê) |
+| Criar/editar/apagar cupom e campanha do clube | ✖ | ✖ | ✖ | ✔ `comms` ou administrador do clube, com a flag ligada **e** a associação publicada; o emissor não muda | — | rules (`promo_*`, `isPromoIssuer`, `promoPageOk`) |
 | Ler comunicado "só associados" | ✖ | ✖ | ✔ qualquer membro do clube | ✔ `comms` | — | rules (`news`, `audience == members` + `isClubMember`) |
 | Criar/editar/apagar vantagem, comunicado e patrocinador | ✖ | ✖ | ✖ | ✔ `comms` ou admin | — | rules (`cxWritePerms`) |
 | Avisar os associados de um comunicado | ✖ | ✖ | ✖ | ✔ `comms` ou admin — uma vez por comunicado | — | **Cloud Function** `clubContent` (`news_notify`) |
