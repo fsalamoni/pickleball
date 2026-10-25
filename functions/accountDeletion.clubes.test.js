@@ -35,6 +35,8 @@ function cenario() {
     'club_x/c1/cases/s2': { club_id: 'c1', user_id: 'bia', user_name: 'Bia', kind: 'warning', reason: 'Atraso', status: 'active' },
     'club_x/c1/ombud/o1': { club_id: 'c1', kind: 'conduct', body: 'Relato identificado', anonymous: false, reporter_uid: 'ana', status: 'open' },
     'club_x/c1/ombud/o2': { club_id: 'c1', kind: 'conduct', body: 'Relato da Bia', anonymous: false, reporter_uid: 'bia', status: 'open' },
+    'club_x/c1/assets/b1': { club_id: 'c1', name: 'Rede', created_by: 'ana', history: [{ action: 'create', by: 'ana', by_name: 'Ana' }, { action: 'loan', by: 'bia', by_name: 'Bia' }], loans: [{ id: 'x1', borrower_name: 'Arena Sol', lent_by: 'ana', lent_by_name: 'Ana' }, { id: 'x2', borrower_name: 'Liga', lent_by: 'bia', lent_by_name: 'Bia' }] },
+    'club_x/c1/assets/b2': { club_id: 'c1', name: 'Bolas', created_by: 'bia', history: [{ action: 'create', by: 'bia', by_name: 'Bia' }], loans: [] },
     'club_card_index/ABCDEFGH23': { club_id: 'c1', user_id: 'ana' },
     'club_card_index/ZZZZZZZZ22': { club_id: 'c1', user_id: 'bia' },
   });
@@ -61,6 +63,12 @@ describe('excluir a conta e a associação em clubes', () => {
     // a sanção fica no histórico do clube, sem o nome; a manifestação identificada vira anônima
     expect(db.store.docs.get('club_x/c1/cases/s1')).toMatchObject({ user_name: REMOVED_ATHLETE, kind: 'warning', status: 'active' });
     expect(db.store.docs.get('club_x/c1/ombud/o1')).toMatchObject({ reporter_uid: null, anonymous: true, body: 'Relato identificado' });
+    // o bem do patrimônio fica; só o nome dela sai do histórico e de quem emprestou (o nome da Bia, no mesmo bem, fica)
+    const bem = db.store.docs.get('club_x/c1/assets/b1');
+    expect(bem.name).toBe('Rede');
+    expect(bem.history.map((h) => h.by_name)).toEqual(['Usuário removido', 'Bia']);
+    expect(bem.loans.map((l) => l.lent_by_name)).toEqual(['Usuário removido', 'Bia']);
+    expect(bem.loans[0].borrower_name).toBe('Arena Sol');
   });
 
   it('a associação de outra pessoa não é tocada', async () => {
@@ -74,5 +82,6 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_x/c1/events/e2')).toMatchObject({ created_by_name: 'Bia' });
     expect(db.store.docs.get('club_x/c1/cases/s2')).toMatchObject({ user_name: 'Bia' });
     expect(db.store.docs.get('club_x/c1/ombud/o2')).toMatchObject({ reporter_uid: 'bia', anonymous: false });
+    expect(db.store.docs.get('club_x/c1/assets/b2').history[0].by_name).toBe('Bia');
   });
 });

@@ -16,7 +16,7 @@ import {
   ASSET_CATEGORIES, ASSET_CATEGORY_LABELS, ASSET_CONDITIONS, ASSET_CONDITION_LABELS, ASSET_QTY_MAX, BORROWER_KINDS, BORROWER_KIND_LABELS,
   assetState, validateAsset, validateLoan,
 } from '@/modules/federations/domain/management';
-import { useAssets, useManagementAction } from '@/modules/federations/hooks/useManagement';
+import { pick, useScopedAssets, useScopedManagementAction } from './managementScope';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { reais, reaisParaCampo } from '../accounts/accountsUi';
@@ -31,7 +31,7 @@ function AssetEditor({ federation, asset, onClose }) {
     condition: asset?.condition || 'good', location: asset?.location || '', acquired_at: asset?.acquired_at || '', valor: reaisParaCampo(asset?.value_cents), notes: asset?.notes || '',
   }));
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
-  const m = useManagementAction(federation.id);
+  const m = useScopedManagementAction(federation);
   const payload = { ...f, value_cents: parseBrlCents(f.valor) || 0 };
   const r = validateAsset(payload);
   return (
@@ -69,7 +69,7 @@ function LoanDialog({ federation, asset, onClose }) {
   const hoje = isoDate();
   const [f, setF] = useState({ borrower_kind: 'club', borrower_name: '', quantity: '1', out_at: hoje, due_at: '', note: '' });
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
-  const m = useManagementAction(federation.id);
+  const m = useScopedManagementAction(federation);
   const r = validateLoan(asset, f, hoje);
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -102,7 +102,7 @@ function LoanDialog({ federation, asset, onClose }) {
 function Devolucao({ federation, asset, loan, atrasado, canEdit }) {
   const [aberto, setAberto] = useState(false);
   const [f, setF] = useState({ date: isoDate(), condition: 'good', note: '' });
-  const m = useManagementAction(federation.id);
+  const m = useScopedManagementAction(federation);
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 py-2 text-sm last:border-0">
       <span>
@@ -139,7 +139,7 @@ function AssetCard({ federation, asset: a, canEdit, admin, onEdit, onLoan }) {
   const devolvidos = (a.loans || []).filter((l) => l.returned_at);
   const [acao, setAcao] = useState(null);
   const [motivo, setMotivo] = useState('');
-  const m = useManagementAction(federation.id);
+  const m = useScopedManagementAction(federation);
   return (
     <li className={`space-y-2 rounded-2xl border border-gray-200 bg-white p-4 ${st.retired ? 'opacity-70' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -190,7 +190,7 @@ function AssetCard({ federation, asset: a, canEdit, admin, onEdit, onLoan }) {
 }
 
 export default function AssetsManager({ federation, canEdit, admin }) {
-  const q = useAssets(federation.id);
+  const q = useScopedAssets(federation);
   const [editando, setEditando] = useState(null);
   const [emprestando, setEmprestando] = useState(null);
   const [verBaixados, setVerBaixados] = useState(false);
@@ -207,7 +207,7 @@ export default function AssetsManager({ federation, canEdit, admin }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><Package className="h-5 w-5" aria-hidden="true" />{t('Patrimônio')}</h2>
-          <p className="text-sm text-gray-500">{t('O que a federação tem e com quem está. Empréstimo é para clube, arena ou evento, com a devolução registrada.')}</p>
+          <p className="text-sm text-gray-500">{pick(federation, t('O que a federação tem e com quem está. Empréstimo é para clube, arena ou evento, com a devolução registrada.'), t('O que o clube tem e com quem está. Empréstimo é para outro clube, arena ou evento, com a devolução registrada.'))}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {q.isSuccess && q.data.length > 0 && <V2Button type="button" variant="ghost" onClick={() => baixarCsv(assetsCsv(q.data, hoje), `patrimonio-${federation.acronym || federation.id}-${hoje}.csv`)}><Download className="h-4 w-4" />{t('Baixar planilha (CSV)')}</V2Button>}
@@ -216,7 +216,7 @@ export default function AssetsManager({ federation, canEdit, admin }) {
       </div>
       {q.isError ? <V2ErrorState inline title={t('Não carregou o patrimônio')} onRetry={q.refetch} />
         : q.isLoading ? <V2Skeleton lines={4} />
-          : !q.data.length ? <V2EmptyState icon={Package} title={t('Nenhum bem cadastrado')} description={canEdit ? t('Cadastre redes, placares, bolas e o que mais a federação empresta aos eventos.') : t('A equipe ainda não cadastrou bens.')} />
+          : !q.data.length ? <V2EmptyState icon={Package} title={t('Nenhum bem cadastrado')} description={canEdit ? pick(federation, t('Cadastre redes, placares, bolas e o que mais a federação empresta aos eventos.'), t('Cadastre redes, placares, bolas e o que mais o clube tem para os treinos e eventos.')) : t('A equipe ainda não cadastrou bens.')} />
             : (
               <>
                 <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">

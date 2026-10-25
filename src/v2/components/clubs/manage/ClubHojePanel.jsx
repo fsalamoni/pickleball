@@ -4,9 +4,12 @@
  * informados, vencimentos). Fonte que falhou mostra "—" e um aviso — nunca zero.
  */
 import React from 'react';
-import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, Users } from 'lucide-react';
 import { affiliationCounts, financeSummary, formatBrlCents, normalizeAssociation } from '@/modules/clubs/domain/association';
 import { useClubCases, useClubOmbud } from '@/modules/clubs/hooks/useClubDiscipline';
+import { useClubAssets } from '@/modules/clubs/hooks/useClubManagement';
+import { assetState } from '@/modules/federations/domain/management';
+import { isoDate } from '@/modules/federations/domain/membership';
 import { termStatus } from '@/modules/clubs/domain/staff';
 import { V2Button, V2ErrorState, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
@@ -33,6 +36,10 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
   const ouvidoriaQ = useClubOmbud(club.id, { enabled: veDisciplina });
   const recursos = casosQ.isSuccess ? (casosQ.data || []).filter((s) => s.status === 'appealed').length : null;
   const manifestacoes = ouvidoriaQ.isSuccess ? (ouvidoriaQ.data || []).filter((r) => r.status !== 'closed').length : null;
+  // Devolução atrasada: só quem cuida do patrimônio; fonte que falhou é dita, nunca zero.
+  const vePatrimonio = admin || perms.includes('finance') || perms.includes('sports');
+  const bensQ = useClubAssets(club.id, { enabled: vePatrimonio });
+  const atrasadas = bensQ.isSuccess ? (bensQ.data || []).filter((b) => b.status !== 'retired').reduce((n, b) => n + assetState(b, isoDate()).overdue.length, 0) : 0;
   // Só o que vence em 30 dias ou já venceu e ainda não foi varrido (a varredura desfaz o cargo e avisa).
   const acabando = staffQ?.isSuccess
     ? (staffQ.data || []).map((s) => ({ s, st: termStatus(s) })).filter(({ st }) => st.kind === 'ending' || st.kind === 'expired')
@@ -86,6 +93,20 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
             {recursos > 0 && <V2Button type="button" size="sm" onClick={() => onIrParaAba('sancoes')}>{t('Decidir recursos')}</V2Button>}
             {manifestacoes > 0 && <V2Button type="button" size="sm" variant="subtle" onClick={() => onIrParaAba('ouvidoria')}>{t('Abrir a ouvidoria')}</V2Button>}
           </div>
+        </div>
+      )}
+
+      {vePatrimonio && (bensQ.isError || atrasadas > 0) && (
+        <div data-dica="clube-hoje-patrimonio">
+          <h2 className="mb-3 font-display text-lg font-bold text-ink">{t('Patrimônio')}</h2>
+          {bensQ.isError ? <V2ErrorState inline title={t('Não deu para conferir o patrimônio')} onRetry={() => bensQ.refetch()} /> : (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <V2StatCard icon={Package} label={t('Devoluções atrasadas')} value={String(atrasadas)} accent="acid" />
+              </div>
+              <V2Button type="button" size="sm" className="mt-3" onClick={() => onIrParaAba('patrimonio')}>{t('Ver os empréstimos')}</V2Button>
+            </>
+          )}
         </div>
       )}
 

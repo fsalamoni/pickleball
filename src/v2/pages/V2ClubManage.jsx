@@ -36,6 +36,7 @@ const ClubAccountsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAc
 const ClubDocsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubDocsPanel'));
 const ClubAgendaPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAgendaPanel'));
 const ClubDisciplinePanel = lazy(() => import('@/v2/components/clubs/manage/ClubDisciplinePanel'));
+const ClubAssetsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAssetsPanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
@@ -142,6 +143,7 @@ function Central({ clubId }) {
         {tab === 'documentos' && (admin || perms.includes(CLUB_PERM.DOCS)) && <ClubDocsPanel club={club} perms={perms} />}
         {tab === 'agenda' && canUseClubAgenda(perms) && <ClubAgendaPanel club={club} perms={perms} />}
         {tab === 'loja' && podeFinancas && <ClubStorePanel club={club} />}
+        {tab === 'patrimonio' && (podeContas || perms.includes(CLUB_PERM.SPORTS)) && <ClubAssetsPanel club={club} perms={perms} />}
         {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}
       </Suspense>

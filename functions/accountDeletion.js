@@ -537,8 +537,27 @@ async function coletarAssociacoesDeClube(db, uid) {
         itens.push({ ref: d.ref, patch: { [nome]: REMOVED_USER } });
       });
     }
+    // Patrimônio (Bloco E2a): o bem é do clube (emprestado a clube, arena ou evento, nunca a uma pessoa); o nome de equipe no histórico e em quem emprestou sai.
+    const bens = await base.collection('assets').limit(QUERY_LIMIT + 1).get();
+    bens.docs.slice(0, QUERY_LIMIT).forEach((d) => {
+      const patch = limparBemDe(d.data() || {}, uid);
+      if (patch) { total += 1; itens.push({ ref: d.ref, patch }); }
+    });
   }
   return { itens, deletes, truncated: clubes.size > QUERY_LIMIT, count: total };
+}
+
+/** O patch que tira o nome de `uid` do histórico e dos empréstimos de um bem (`null` = nada a tirar). */
+function limparBemDe(bem, uid) {
+  const historico = Array.isArray(bem.history) ? bem.history : [];
+  const emprestimos = Array.isArray(bem.loans) ? bem.loans : [];
+  const mexeHist = historico.some((h) => h && h.by === uid && h.by_name !== REMOVED_USER);
+  const mexeEmp = emprestimos.some((l) => l && l.lent_by === uid && l.lent_by_name !== REMOVED_USER);
+  if (!mexeHist && !mexeEmp) return null;
+  const patch = {};
+  if (mexeHist) patch.history = historico.map((h) => (h && h.by === uid ? { ...h, by_name: REMOVED_USER } : h));
+  if (mexeEmp) patch.loans = emprestimos.map((l) => (l && l.lent_by === uid ? { ...l, lent_by_name: REMOVED_USER } : l));
+  return patch;
 }
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
