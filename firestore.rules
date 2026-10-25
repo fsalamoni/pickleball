@@ -5616,7 +5616,7 @@ service cloud.firestore {
     function cxPub(c) { return gd('clubs/' + c).get('association', {}).get('published', false) == true; }
     // `roles` (lista dos cargos) e `imports` (pendentes da importação) são escritos só pelo servidor.
     function cxReadPerms(k) {
-      return {'aff': ['members', 'finance', 'discipline'], 'charges': ['finance', 'members', 'fiscal'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms'], 'budgets': ['finance', 'fiscal'], 'ledger': ['finance', 'fiscal'], 'reports': ['finance', 'fiscal'], 'docs': ['docs'], 'events': ['docs', 'sports'], 'cases': ['discipline'], 'ombud': ['discipline'], 'assets': ['finance', 'sports', 'fiscal']}.get(k, ['admin']);
+      return {'aff': ['members', 'finance', 'discipline'], 'charges': ['finance', 'members', 'fiscal'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms'], 'budgets': ['finance', 'fiscal'], 'ledger': ['finance', 'fiscal'], 'reports': ['finance', 'fiscal'], 'docs': ['docs'], 'events': ['docs', 'sports'], 'cases': ['discipline'], 'ombud': ['discipline'], 'assets': ['finance', 'sports', 'fiscal'], 'safeguard': ['discipline'], 'minors': ['discipline']}.get(k, ['admin']);
     }
     function cxWritePerms(k) {
       return {'plans': ['admin', 'finance'], 'cfg': ['admin'], 'benefits': ['comms'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms']}.get(k, []);

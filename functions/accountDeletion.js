@@ -543,6 +543,12 @@ async function coletarAssociacoesDeClube(db, uid) {
       const patch = limparBemDe(d.data() || {}, uid);
       if (patch) { total += 1; itens.push({ ref: d.ref, patch }); }
     });
+    // Proteção de menores (Bloco E2b): o registro da pessoa (compromisso, conferência da certidão) e o responsável legal do menor
+    // são dado pessoal sem prestação de contas — APAGADOS; a certidão pendente sai com a pasta `clube-protecao/{uid}/`.
+    for (const kind of ['safeguard', 'minors']) {
+      const doc = await base.collection(kind).doc(uid).get(); // eslint-disable-line no-await-in-loop
+      if (doc.exists) { total += 1; deletes.push(doc.ref); }
+    }
   }
   return { itens, deletes, truncated: clubes.size > QUERY_LIMIT, count: total };
 }
@@ -1510,7 +1516,7 @@ async function contaDeLoginExiste(auth, uid) {
  * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
  * (`federacao/`).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {

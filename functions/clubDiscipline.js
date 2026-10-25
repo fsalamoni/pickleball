@@ -32,7 +32,7 @@ const CASES = 'cases';
 const OMBUD = 'ombud';
 const KINDS = ['warning', 'suspension', 'fine', 'exclusion'];
 const EM_VIGOR = ['active', 'upheld'];
-const REPORT_KINDS = ['conduct', 'referee', 'organization', 'other'];
+const REPORT_KINDS = ['conduct', 'referee', 'organization', 'other', 'minor_protection'];
 const REPORT_STATUS = ['open', 'in_review', 'closed'];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const REASON_MIN = 10;
@@ -223,9 +223,11 @@ async function abrirManifestacao(ctx, actor, data, club) {
     club_id: club.id, kind, body, tournament_name: texto(data.tournament_name, 120), anonymous, reporter_uid: anonymous ? null : actor.uid,
     status: 'open', notes: '', created_at_ms: ctx.now, updated_at_ms: ctx.now,
   });
+  // Proteção de criança ou adolescente é prioridade: o aviso diz isso (o texto da denúncia nunca vai no aviso).
+  const protecao = kind === 'minor_protection';
   (await a.quemTem(ctx, club.id, 'discipline')).forEach((sid) => a.aviso(ctx, batch, sid, {
-    title: tx('Nova manifestação na ouvidoria do {clube}', { clube: club.name }),
-    message: tx('Chegou uma manifestação. Veja em Disciplina → Ouvidoria.'),
+    title: protecao ? tx('Denúncia de proteção de menor no {clube}', { clube: club.name }) : tx('Nova manifestação na ouvidoria do {clube}', { clube: club.name }),
+    message: protecao ? tx('Prioridade: abra e trate em Disciplina → Ouvidoria. O conteúdo fica só lá.') : tx('Chegou uma manifestação. Veja em Disciplina → Ouvidoria.'),
     link: `/clubes/${club.id}/gerir?aba=ouvidoria`,
   }));
   await batch.commit();

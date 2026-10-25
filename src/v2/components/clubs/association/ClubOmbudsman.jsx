@@ -21,6 +21,7 @@ const ASSUNTOS = Object.freeze({
   [REPORT_KIND.CONDUCT]: tk('Conduta de sócio, atleta ou dirigente'),
   [REPORT_KIND.REFEREE]: tk('Arbitragem'),
   [REPORT_KIND.ORGANIZATION]: tk('Organização de evento ou jogo'),
+  [REPORT_KIND.MINOR_PROTECTION]: tk('Proteção de criança ou adolescente'),
   [REPORT_KIND.OTHER]: tk('Outro assunto'),
 });
 

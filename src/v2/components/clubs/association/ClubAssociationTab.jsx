@@ -18,6 +18,7 @@ import { ClubBenefitsShowcase, ClubPromosSection, ClubSponsorsStrip, ClubStoreCa
 import { t } from '@/core/i18n';
 
 const ClubOmbudsman = lazy(() => import('./ClubOmbudsman'));
+const ClubMyProtection = lazy(() => import('./ClubMyProtection'));
 
 export default function ClubAssociationTab({ club }) {
   const { isAuthenticated, userProfile } = useAuth();
@@ -35,6 +36,7 @@ export default function ClubAssociationTab({ club }) {
       {cfg.intro && <V2Surface><p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">{cfg.intro}</p></V2Surface>}
 
       {isAuthenticated && <MyAssociationPanel club={club} plan={(plansQ.data || []).find((p) => p.id === mine.data?.plan_id) || null} />}
+      {isAuthenticated && <Suspense fallback={null}><ClubMyProtection clubId={club.id} /></Suspense>}
 
       {podePedir && (
         <div className="space-y-3">

@@ -5,7 +5,7 @@
  * em toda a Central (a seção ativa é achada pela aba) e é contrato de link:
  * os avisos do servidor levam a ele — nunca renomeie.
  */
-import { BarChart3, Calculator, CalendarDays, CircleDollarSign, Gavel, IdCard, Landmark, LayoutDashboard, Library, Megaphone, MessageSquareWarning, Package, Scale, Settings, Store, Tag } from 'lucide-react';
+import { BarChart3, Calculator, CalendarDays, CircleDollarSign, Gavel, IdCard, Landmark, LayoutDashboard, Library, Megaphone, MessageSquareWarning, Package, Scale, Settings, ShieldCheck, Store, Tag, Users } from 'lucide-react';
 import { CLUB_PERM } from '@/modules/clubs/domain/association';
 import { t, tk } from '@/core/i18n';
 
@@ -32,6 +32,15 @@ export function buildClubSections(perms = []) {
       tabs: [
         { value: 'sancoes', label: t('Sanções'), icon: Scale },
         { value: 'ouvidoria', label: t('Ouvidoria'), icon: MessageSquareWarning },
+      ],
+      ok: tem(perms, CLUB_PERM.DISCIPLINE),
+    },
+    {
+      id: 'protecao', label: t('Proteção de menores'), grupo: 'atender', icon: ShieldCheck, dica: 'clube-secao-protecao',
+      tabs: [
+        { value: 'protecao', label: t('Quem trabalha com menores'), icon: ShieldCheck },
+        { value: 'menores', label: t('Associados menores'), icon: Users },
+        { value: 'protecao-regras', label: t('Regras'), icon: Scale },
       ],
       ok: tem(perms, CLUB_PERM.DISCIPLINE),
     },

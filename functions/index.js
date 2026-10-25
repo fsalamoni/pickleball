@@ -2035,6 +2035,14 @@ exports.clubDiscipline = federationCallable('clubDiscipline', (ctx, actor, data)
 const clubManagement = require('./clubManagement');
 exports.clubManagement = federationCallable('clubManagement', clubManagement.management);
 
+// Proteção de menores do clube (compromisso, certidão de antecedentes, responsável do menor): só o servidor grava — `functions/clubSafeguarding.js`.
+const clubSafeguarding = require('./clubSafeguarding');
+exports.clubSafeguarding = federationCallable('clubSafeguarding', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('clubSafeguarding: Storage indisponível.', err); }
+  return clubSafeguarding.safeguarding({ ...ctx, bucket }, actor, data);
+});
+
 // Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
 const clubContent = require('./clubContent');
 exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));
@@ -2055,7 +2063,7 @@ exports.clubAssociationSweep = onSchedule(
   { schedule: 'every day 05:20', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
     // Cada varredura falha sozinha: a dos mandatos não pode ficar sem rodar porque a das filiações caiu.
-    const resultados = await Promise.allSettled([clubAssociation.sweep(fedCtx()), clubStaff.sweep(fedCtx()), clubManagement.sweep(fedCtx())]);
+    const resultados = await Promise.allSettled([clubAssociation.sweep(fedCtx()), clubStaff.sweep(fedCtx()), clubManagement.sweep(fedCtx()), clubSafeguarding.sweep(fedCtx())]);
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('clubAssociationSweep: uma varredura falhou', r.reason));
   },
 );
