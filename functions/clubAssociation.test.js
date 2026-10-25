@@ -25,6 +25,8 @@ function cenario({ flag = true, publicado = true } = {}) {
     'platform_settings/global': { feature_flags: { club_association: flag } },
     'clubs/c1': { name: 'Clube Pickle Sul', city: 'Porto Alegre', member_count: 1, association: { enabled: true, published: publicado } },
     'club_members/c1_pres': { club_id: 'c1', user_id: 'pres', role: 'admin' },
+    'club_members/c1_tes': { club_id: 'c1', user_id: 'tes', role: 'member' },
+    'club_members/c1_sec': { club_id: 'c1', user_id: 'sec', role: 'member' },
     'club_x/c1/staff/tes': { user_id: 'tes', perms: ['finance'], term_end_ms: 0 },
     'club_x/c1/staff/sec': { user_id: 'sec', perms: ['members'], term_end_ms: 0 },
     'club_x/c1/plans/anual': { club_id: 'c1', name: 'Sócio', price_cents: 12000, billing: 'annual', active: true, public: true },
@@ -217,7 +219,7 @@ describe('associação do clube no servidor', () => {
     db.store.docs.set('club_members/c1_m2', { club_id: 'c1', user_id: 'm2', user_name: 'M2', role: 'member' });
     await expect(assoc(db, SEC, { action: 'adopt', planId: 'anual' })).rejects.toMatchObject({ code: 'failed-precondition' });
     const r = await assoc(db, SEC, { action: 'adopt', planId: 'livre' });
-    expect(r).toMatchObject({ adopted: 3, remaining: 0 });
+    expect(r).toMatchObject({ adopted: 5, remaining: 0 });
     expect(doc(db, 'club_x/c1/aff/m1')).toMatchObject({ status: 'active', adopted: true });
     expect(doc(db, 'club_x/c1/aff/pres')).toBeTruthy();
     const r2 = await assoc(db, SEC, { action: 'adopt', planId: 'livre' });

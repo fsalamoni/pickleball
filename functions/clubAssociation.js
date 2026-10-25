@@ -32,12 +32,14 @@ const crypto = require('node:crypto');
 const m = require('./federationMembership.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const { FederationError } = require('./federations.js');
+const S = require('./clubStaffPolicy.js');
 
 const X = 'club_x';
 const INDEX = 'club_card_index';
-const PERMS = Object.freeze(['admin', 'members', 'finance', 'comms', 'docs', 'sports', 'discipline', 'fiscal', 'staff']);
+const PERMS = S.ALL;
 const LIVE = Object.freeze(['pending', 'awaiting_payment', 'active', 'expired', 'suspended']);
 const ADOPT_MAX = 200;
+const IMPORT_MAX = 100;
 const NEXT_CHARGE_DAYS = 7;
 
 const falha = (code, msg) => { throw new FederationError(code, msg); };
@@ -82,13 +84,10 @@ async function exigeFlag(ctx) {
  */
 async function permsDe(ctx, clubId, uid) {
   const mem = await ctx.db.collection('club_members').doc(`${clubId}_${uid}`).get();
-  if (mem.exists && mem.data().role === 'admin') return [...PERMS];
+  if (!mem.exists) return []; // cargo só vale para quem ainda é membro do clube
+  if (mem.data().role === 'admin') return [...PERMS];
   const st = await col(ctx, clubId, 'staff').doc(uid).get();
-  if (!st.exists) return [];
-  const s = st.data();
-  const fim = Number(s.term_end_ms) || 0;
-  if (fim !== 0 && fim <= ctx.now) return [];
-  return (Array.isArray(s.perms) ? s.perms : []).filter((p) => PERMS.includes(p));
+  return st.exists ? S.permsOf(st.data(), ctx.now) : [];
 }
 
 async function exigePerm(ctx, clubId, actor, ...algumas) {
@@ -104,9 +103,8 @@ async function quemTem(ctx, clubId, perm) {
   ]);
   const ids = new Set(admins.docs.map((d) => d.data().user_id).filter(Boolean));
   staff.docs.forEach((d) => {
-    const s = d.data();
-    const fim = Number(s.term_end_ms) || 0;
-    if ((fim === 0 || fim > ctx.now) && Array.isArray(s.perms) && s.perms.includes(perm)) ids.add(d.id);
+    const perms = S.permsOf(d.data(), ctx.now);
+    if (perms.includes(perm) || perms.includes('admin')) ids.add(d.id);
   });
   return [...ids];
 }
@@ -302,6 +300,7 @@ async function association(ctx, actor, data) {
   if (acao === 'charge_confirm') return confirmarCobranca(ctx, actor, data, { club, hoje });
   if (acao === 'grant') return conceder(ctx, actor, data, { club, hoje });
   if (acao === 'adopt') return adotar(ctx, actor, data, { club, hoje });
+  if (acao === 'import') return importar(ctx, actor, data, { club, hoje });
 
   const uid = propria ? actor.uid : texto(data.userId, 128);
   const ref = col(ctx, club.id, 'aff').doc(uid);
@@ -412,6 +411,7 @@ async function sairDoClube(ctx, batch, club, uid) {
     if (admins.size <= 1) falha('failed-precondition', 'Você é o único administrador. Promova outra pessoa antes de sair.');
   }
   batch.delete(mref);
+  batch.delete(col(ctx, club.id, 'staff').doc(uid)); // sair do clube também encerra o cargo
   batch.update(ctx.db.collection('clubs').doc(club.id), { member_count: ctx.FieldValue.increment(-1) });
 }
 
@@ -507,6 +507,70 @@ async function adotar(ctx, actor, data, { club, hoje }) {
   await batch.commit();
   await auditoria(ctx, actor, 'club_membership_adopt', { club_id: club.id, plan_id: p.id, adopted: lote.length });
   return { ok: true, adopted: lote.length, remaining: faltam.length - lote.length };
+}
+
+/* ------------------------------------------------------------- importação -- */
+
+const lc = (v) => String(v == null ? '' : v).trim().toLowerCase();
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+async function contaPorEmail(ctx, email) {
+  const q = await ctx.db.collection('users').where('email', '==', email).limit(1).get();
+  if (!q.empty) return q.docs[0];
+  const q2 = await ctx.db.collection('users').where('email_lc', '==', email).limit(1).get();
+  return q2.empty ? null : q2.docs[0];
+}
+
+/**
+ * O clube que já tinha lista de sócios fora da plataforma a traz (nome,
+ * e-mail, número, validade), até 100 linhas por chamada. Quem TEM conta com
+ * aquele e-mail vira associado ATIVO no plano escolhido (número da lista ou
+ * sequencial; validade da lista ou do plano), uma transação por pessoa; quem já
+ * tem filiação viva é pulado; quem não tem conta fica em `imports` (só a
+ * secretaria lê) para o clube convidar por fora. Nenhum e-mail vai para a
+ * filiação.
+ */
+async function importar(ctx, actor, data, { club, hoje }) {
+  const p = await plano(ctx, club.id, data.planId);
+  const rows = Array.isArray(data.rows) ? data.rows.slice(0, IMPORT_MAX) : [];
+  if (!rows.length) falha('invalid-argument', 'A lista está vazia.');
+  const importados = []; const pulados = []; const pendentes = []; const vistos = new Set();
+  for (const raw of rows) {
+    const email = lc(raw && raw.email);
+    const name = texto(raw && raw.name, 120);
+    const member_number = texto(raw && raw.member_number, 40);
+    const valid_until = ISO.test(String((raw && raw.valid_until) || '')) ? String(raw.valid_until) : '';
+    if (!email || !email.includes('@') || vistos.has(email)) { pulados.push({ email, reason: 'E-mail inválido ou repetido' }); continue; }
+    vistos.add(email);
+    // eslint-disable-next-line no-await-in-loop
+    const conta = await contaPorEmail(ctx, email);
+    if (!conta) { pendentes.push({ email, name, member_number, valid_until }); continue; }
+    const uid = conta.id;
+    const u = conta.data() || {};
+    const ref = col(ctx, club.id, 'aff').doc(uid);
+    // eslint-disable-next-line no-await-in-loop
+    const atual = await ref.get();
+    if (atual.exists && LIVE.includes(atual.data().status)) { pulados.push({ email, reason: 'Já tem filiação neste clube' }); continue; }
+    const doc = {
+      club_id: club.id, user_id: uid, user_name: texto(u.platform_name || u.full_name || u.display_name || name || 'Atleta', 120), photo_url: texto(u.photo_url || u.avatar_url, 500),
+      plan_id: p.id, plan_name: p.name, category: p.category || '', billing: p.billing || 'annual', free: preco(p) === 0, status: 'pending', public_badge: true,
+      note: '', imported: true, imported_by: actor.uid, requested_at_ms: ctx.now, updated_at: ctx.Timestamp.fromMillis(ctx.now),
+      member_number: member_number || (atual.exists && atual.data().member_number) || null, card_code: null, valid_from: null, valid_until: null, expiry_notified: {},
+    };
+    // eslint-disable-next-line no-await-in-loop
+    await ctx.db.runTransaction(async (tr) => {
+      const ativo = await ativar(ctx, tr, { club, ref, aff: doc, plan: p, hoje, novo: true });
+      if (valid_until && ativo.valid_until && valid_until !== ativo.valid_until) tr.update(ref, { valid_until });
+    });
+    importados.push({ email, uid });
+  }
+  const batch = ctx.db.batch();
+  const impRef = col(ctx, club.id, 'imports').doc();
+  batch.set(impRef, { club_id: club.id, plan_id: p.id, plan_name: p.name, by: actor.uid, created_at_ms: ctx.now, imported_count: importados.length, skipped: pulados, pending: pendentes, total_rows: rows.length });
+  importados.forEach(({ uid }) => aviso(ctx, batch, uid, { title: tx('Você foi associado ao {clube}', { clube: club.name }), message: tx('O clube importou seu cadastro. Veja a sua associação na página do clube.'), link: `/clubes/${club.id}?tab=associacao` }));
+  await batch.commit();
+  await auditoria(ctx, actor, 'club_members_import', { club_id: club.id, plan_id: p.id, imported: importados.length, skipped: pulados.length, pending: pendentes.length, import_id: impRef.id });
+  return { ok: true, importId: impRef.id, imported: importados.length, skipped: pulados, pending: pendentes.length };
 }
 
 /* --------------------------------------------------------------- cobrança -- */

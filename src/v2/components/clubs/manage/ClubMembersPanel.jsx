@@ -5,9 +5,9 @@
  * SERVIDOR, que muda a filiação, avisa a pessoa e registra na auditoria.
  * Fonte que falhou é "Tentar de novo" — nunca "nenhum associado".
  */
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Search, UserPlus, Users } from 'lucide-react';
+import { FileText, Search, Upload, UserPlus, Users } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { affiliationCounts, dataCurta, isFreePlan, membershipState, MEMBER_STATUS, sortAffiliationsForStaff } from '@/modules/clubs/domain/association';
@@ -18,6 +18,10 @@ import { MemberStatusBadge } from '@/v2/components/federations/federationUi';
 import { podeAfirmarVazio } from '@/core/lib/queryState';
 import { useSearchParams } from 'react-router-dom';
 import { t, tk } from '@/core/i18n';
+
+// Os diálogos pesados só baixam quando alguém os abre.
+const ClubImportDialog = lazy(() => import('./ClubImportDialog'));
+const ClubDeclarationDialog = lazy(() => import('@/v2/components/clubs/association/ClubDeclarationDialog'));
 
 const FILTROS = [
   { id: 'todos', label: tk('Todos') },
@@ -115,6 +119,9 @@ function Linha({ aff, onAcao, ocupado }) {
         {aff.status === MEMBER_STATUS.SUSPENDED && (
           <V2Button type="button" size="sm" variant="secondary" disabled={ocupado} onClick={() => onAcao('reinstate', aff)}>{t('Reativar')}</V2Button>
         )}
+        {status === MEMBER_STATUS.ACTIVE && aff.card_code && (
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => onAcao('declaration', aff)} aria-label={t('Emitir declaração de {nome}', { nome: aff.user_name || t('Associado') })}><FileText className="h-4 w-4" />{t('Declaração')}</V2Button>
+        )}
       </div>
     </li>
   );
@@ -129,6 +136,8 @@ export default function ClubMembersPanel({ club, affiliationsQ, plansQ, perms })
   const [pergunta, setPergunta] = useState(null); // { acao, aff }
   const [motivo, setMotivo] = useState('');
   const [associar, setAssociar] = useState(false);
+  const [importar, setImportar] = useState(false);
+  const [declaracao, setDeclaracao] = useState(null); // a filiação de quem recebe a declaração
   const lista = useMemo(() => (affiliationsQ.isSuccess ? sortAffiliationsForStaff(affiliationsQ.data || []) : []), [affiliationsQ.isSuccess, affiliationsQ.data]);
   const contagem = useMemo(() => (affiliationsQ.isSuccess ? affiliationCounts(affiliationsQ.data || []) : null), [affiliationsQ.isSuccess, affiliationsQ.data]);
   const visiveis = lista.filter((a) => passa(a, filtro) && (!busca.trim() || String(a.user_name || '').toLowerCase().includes(busca.trim().toLowerCase())));
@@ -137,6 +146,7 @@ export default function ClubMembersPanel({ club, affiliationsQ, plansQ, perms })
     setParams((atual) => { const n = new URLSearchParams(atual); if (id === 'todos') n.delete('filtro'); else n.set('filtro', id); return n; }, { replace: true });
   }
   function acao(a, aff) {
+    if (a === 'declaration') { setDeclaracao(aff); return; }
     if (a === 'approve') {
       agir.mutate({ action: 'approve', userId: aff.user_id }, { onSuccess: () => toast.success(t('Pedido aprovado.')), onError: (er) => toast.error(er.message) });
       return;
@@ -171,7 +181,12 @@ export default function ClubMembersPanel({ club, affiliationsQ, plansQ, perms })
         <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Filtrar por situação')}>
           {FILTROS.map((f) => <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => setFiltro(f.id)}>{t(f.label)}</V2FilterChip>)}
         </div>
-        {podeAssociar && <V2Button type="button" size="sm" onClick={() => setAssociar(true)}><UserPlus className="h-4 w-4" />{t('Associar uma pessoa')}</V2Button>}
+        {podeAssociar && (
+          <div className="flex flex-wrap gap-2">
+            <V2Button type="button" size="sm" variant="secondary" onClick={() => setImportar(true)} data-dica="clube-importar-abrir"><Upload className="h-4 w-4" />{t('Importar lista')}</V2Button>
+            <V2Button type="button" size="sm" onClick={() => setAssociar(true)}><UserPlus className="h-4 w-4" />{t('Associar uma pessoa')}</V2Button>
+          </div>
+        )}
       </div>
       <V2SearchInput icon={Search} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar associado pelo nome')} aria-label={t('Buscar associado pelo nome')} />
 
@@ -202,6 +217,10 @@ export default function ClubMembersPanel({ club, affiliationsQ, plansQ, perms })
         </V2Field>
       </ConfirmDialog>
       <GrantDialog open={associar} onOpenChange={setAssociar} clubId={clubId} plansQ={plansQ} afiliados={affiliationsQ.data} />
+      <Suspense fallback={null}>
+        {importar && <ClubImportDialog open onOpenChange={setImportar} clubId={clubId} plansQ={plansQ} />}
+        {declaracao && <ClubDeclarationDialog open onOpenChange={(o) => { if (!o) setDeclaracao(null); }} aff={declaracao} club={club} />}
+      </Suspense>
     </section>
   );
 }

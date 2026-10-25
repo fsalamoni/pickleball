@@ -5,7 +5,7 @@
  * em toda a Central (a seção ativa é achada pela aba) e é contrato de link:
  * os avisos do servidor levam a ele — nunca renomeie.
  */
-import { CircleDollarSign, IdCard, LayoutDashboard, Settings, Tag } from 'lucide-react';
+import { BarChart3, CircleDollarSign, IdCard, Landmark, LayoutDashboard, Settings, Tag } from 'lucide-react';
 import { CLUB_PERM } from '@/modules/clubs/domain/association';
 import { t, tk } from '@/core/i18n';
 
@@ -39,6 +39,19 @@ export function buildClubSections(perms = []) {
         ...(perms.includes(CLUB_PERM.ADMIN) ? [{ value: 'pix', label: t('Pix do clube') }] : []),
       ],
       ok: tem(perms, CLUB_PERM.FINANCE),
+    },
+    {
+      id: 'diretoria', label: t('Diretoria'), grupo: 'gerir', icon: Landmark, dica: 'clube-secao-diretoria',
+      tabs: [
+        { value: 'equipe', label: t('Equipe e mandatos') },
+        // Montar os cargos é da presidência: só o master tem a permissão "admin".
+        ...(perms.includes(CLUB_PERM.ADMIN) ? [{ value: 'cargos', label: t('Cargos') }] : []),
+      ],
+      ok: tem(perms, CLUB_PERM.STAFF),
+    },
+    {
+      id: 'indicadores', label: t('Indicadores'), grupo: 'gerir', icon: BarChart3, dica: 'clube-secao-indicadores',
+      tabs: [{ value: 'indicadores', label: t('Indicadores') }], ok: tem(perms, CLUB_PERM.MEMBERS, CLUB_PERM.FINANCE),
     },
     {
       id: 'config', label: t('Configurações'), grupo: 'gerir', icon: Settings, dica: 'clube-secao-config',

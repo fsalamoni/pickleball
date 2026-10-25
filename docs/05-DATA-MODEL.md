@@ -1603,8 +1603,12 @@ andamento impede a exclusão.
   flag): `plans` (planos; admin ou `finance` gravam), `aff/{clubId}_{uid}`
   (filiação: status, plano, número, validade, código da carteirinha) e `charges`
   (cobranças, com a chave Pix copiada) — **só o servidor grava** —, `staff/{uid}`
-  (cargos com `perms` e `term_end_ms`; só o servidor grava) e `cfg` (Pix e
-  instruções; só o admin). Ids de filiação são deterministas.
+  (a pessoa na diretoria: cargo, cópia das `perms`, `is_master`, mandato
+  `term_start`/`term_end_ms`, `term_history`; só o servidor grava), `roles/list`
+  (os cargos do clube, `{ roles: [...] }`; só o servidor grava), `imports/{id}`
+  (lote de importação com quem ficou sem conta; só o servidor grava) e `cfg`
+  (Pix e instruções; só o admin). Ids de filiação são deterministas. O cargo só
+  conta enquanto a pessoa existe em `club_members`.
 - `club_card_index/{codigo}` — código da carteirinha → filiação; só o servidor
   toca; o código gira em ativação, renovação e suspensão.
 - Zero índice composto. Exclusão e exportação de conta: `functions/accountDeletion.js`.

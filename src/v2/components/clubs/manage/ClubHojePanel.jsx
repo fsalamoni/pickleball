@@ -6,8 +6,9 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Users } from 'lucide-react';
 import { affiliationCounts, financeSummary, formatBrlCents, normalizeAssociation } from '@/modules/clubs/domain/association';
+import { termStatus } from '@/modules/clubs/domain/staff';
 import { V2Button, V2ErrorState, V2StatCard, V2Surface } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 function Passo({ feito, children, to, onIr, rotulo }) {
   const Icone = feito ? CheckCircle2 : AlertTriangle;
@@ -20,10 +21,15 @@ function Passo({ feito, children, to, onIr, rotulo }) {
   );
 }
 
-export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, pixQ, perms, onIrParaAba }) {
+export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, pixQ, staffQ, perms, onIrParaAba }) {
   const admin = perms.includes('admin');
   const veMembros = admin || perms.includes('members');
   const veFinancas = admin || perms.includes('finance');
+  const veEquipe = admin || perms.includes('staff');
+  // Só o que vence em 30 dias ou já venceu e ainda não foi varrido (a varredura desfaz o cargo e avisa).
+  const acabando = staffQ?.isSuccess
+    ? (staffQ.data || []).map((s) => ({ s, st: termStatus(s) })).filter(({ st }) => st.kind === 'ending' || st.kind === 'expired')
+    : [];
   const cfg = normalizeAssociation(club);
   const afs = affiliationsQ?.isSuccess ? affiliationCounts(affiliationsQ.data || []) : null;
   const fin = chargesQ?.isSuccess ? financeSummary(chargesQ.data || []) : null;
@@ -60,6 +66,20 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
           {afs?.pending > 0 && <V2Button type="button" size="sm" className="mt-3" onClick={() => onIrParaAba('associados', 'pending')}>{t('Ver os pedidos')}</V2Button>}
         </div>
       )}
+
+      {veEquipe && (staffQ?.isError ? <V2ErrorState inline title={t('Não carregaram os mandatos')} onRetry={() => staffQ.refetch()} /> : acabando.length > 0 && (
+        <V2Surface className="space-y-3" data-dica="clube-mandatos">
+          <h2 className="font-display text-lg font-bold text-ink">{t('Mandatos acabando')}</h2>
+          <ul className="space-y-1.5 text-sm text-gray-700">
+            {acabando.map(({ s, st }) => (
+              <li key={s.user_id || s.id}>
+                <span className="font-semibold text-ink">{s.user_name || t('Pessoa')}</span> · {s.role_name || t('Cargo')} · {st.kind === 'expired' ? t('mandato encerrado') : tn(st.days, 'acaba em {n} dia', 'acaba em {n} dias')}
+              </li>
+            ))}
+          </ul>
+          <V2Button type="button" size="sm" variant="subtle" onClick={() => onIrParaAba('equipe')}>{t('Abrir a diretoria')}</V2Button>
+        </V2Surface>
+      ))}
 
       {veFinancas && (
         <div>

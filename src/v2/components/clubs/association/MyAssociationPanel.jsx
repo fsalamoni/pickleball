@@ -6,7 +6,7 @@
  */
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { IdCard, RefreshCw } from 'lucide-react';
+import { FileText, IdCard, RefreshCw } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { buildClubCard, dataCurta, myAssociationView, planPriceLabel } from '@/modules/clubs/domain/association';
 import { useAssociationAction, useMyAffiliation, useMyClubCharges } from '@/modules/clubs/hooks/useClubAssociation';
@@ -15,6 +15,7 @@ import { MemberStatusBadge } from '@/v2/components/federations/federationUi';
 import ClubChargeBlock from './ClubChargeBlock';
 import { t, tk } from '@/core/i18n';
 
+const ClubDeclarationDialog = lazy(() => import('./ClubDeclarationDialog'));
 const MemberCardDialog = lazy(() => import('@/v2/components/federations/MemberCard'));
 
 const TEXTO_SITUACAO = {
@@ -34,6 +35,7 @@ export default function MyAssociationPanel({ club, plan = null }) {
   const agir = useAssociationAction(clubId);
   const [cartao, setCartao] = useState(false);
   const [encerrar, setEncerrar] = useState(false);
+  const [declaracao, setDeclaracao] = useState(false);
   const aff = mine.data;
   const view = useMemo(() => (aff ? myAssociationView(aff, charges.data || []) : null), [aff, charges.data]);
   // O pai decide se mostra os planos (quem pode pedir de novo); aqui só a situação.
@@ -67,6 +69,7 @@ export default function MyAssociationPanel({ club, plan = null }) {
         )}
         <div className="flex flex-wrap gap-2">
           {view.hasCard && <V2Button type="button" size="sm" onClick={() => setCartao(true)} data-dica="clube-carteirinha"><IdCard className="h-4 w-4" />{t('Abrir a carteirinha')}</V2Button>}
+          {aff.status === 'active' && aff.card_code && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDeclaracao(true)} data-dica="clube-declaracao"><FileText className="h-4 w-4" />{t('Declaração de associação')}</V2Button>}
           {view.canRenew && (
             <V2Button type="button" size="sm" variant="secondary" disabled={agir.isPending} onClick={() => fazer({ action: 'renew' }, t('Renovação pedida. Pague o Pix para estender a validade.'))}>
               <RefreshCw className="h-4 w-4" />{t('Renovar agora')}
@@ -92,6 +95,11 @@ export default function MyAssociationPanel({ club, plan = null }) {
         loading={agir.isPending}
         onConfirm={() => { setEncerrar(false); fazer({ action: 'cancel' }, emAndamento ? t('Pedido cancelado.') : t('Associação encerrada.')); }}
       />
+      {declaracao && (
+        <Suspense fallback={null}>
+          <ClubDeclarationDialog open onOpenChange={setDeclaracao} aff={aff} club={club} />
+        </Suspense>
+      )}
       {cartao && cardModel && (
         <Suspense fallback={null}>
           <MemberCardDialog

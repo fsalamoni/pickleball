@@ -30,7 +30,7 @@ export const CLUB_CARD_INDEX = 'club_card_index';
 
 /** As espécies de documento sob `club_x/{clube}/…` — o nome é gravado, nunca renomeie. */
 export const CLUB_X_KIND = Object.freeze({
-  plans: 'plans', aff: 'aff', charges: 'charges', staff: 'staff', cfg: 'cfg',
+  plans: 'plans', aff: 'aff', charges: 'charges', staff: 'staff', cfg: 'cfg', roles: 'roles', imports: 'imports',
 });
 
 /** Permissões de quem trabalha no clube (o administrador do clube tem todas). Gravadas em `staff/{uid}.perms`. */
@@ -63,6 +63,7 @@ export function clubPermsOf({ isClubAdmin = false, staff = null, now = Date.now(
   if (!staff) return [];
   const fim = Number(staff.term_end_ms) || 0;
   if (fim !== 0 && fim <= now) return [];
+  if (staff.is_master === true) return [...ALL_CLUB_PERMS]; // o cargo de presidência vale "tudo", inclusive o criado depois
   return (Array.isArray(staff.perms) ? staff.perms : []).filter((p) => ALL_CLUB_PERMS.includes(p));
 }
 

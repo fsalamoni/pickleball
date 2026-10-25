@@ -57,6 +57,30 @@ async function chamar(nome, payload, { timeout = 60_000 } = {}) {
  */
 export const associationAction = (clubId, action, extra = {}) => chamar('clubAssociation', { clubId, action, ...extra });
 
+/** Uma ação da diretoria no servidor: `role_save`, `role_delete`, `appoint`, `extend`, `remove`. */
+export const staffAction = (clubId, action, extra = {}) => chamar('clubStaff', { clubId, action, ...extra });
+
+export const IMPORT_CHUNK = 100;
+
+/**
+ * Importa a lista de associados em fatias de 100 (o servidor confere cada pessoa):
+ * devolve o total de quem entrou, quem foi pulado (com o motivo) e quantos ficaram
+ * sem conta. Se uma fatia falhar, as anteriores já valeram: o erro diz quantas entraram.
+ */
+export async function importMembers(clubId, planId, rows) {
+  const total = { imported: 0, skipped: [], pending: 0 };
+  for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {
+    try {
+      const r = await associationAction(clubId, 'import', { planId, rows: rows.slice(i, i + IMPORT_CHUNK) });
+      total.imported += r.imported; total.pending += r.pending; total.skipped.push(...r.skipped);
+    } catch (err) {
+      err.partial = total;
+      throw err;
+    }
+  }
+  return total;
+}
+
 /** A verificação pública de uma carteirinha pelo código (sem login). */
 export const verifyClubCard = (code) => chamar('clubAssociationVerify', { code }, { timeout: 30_000 });
 
@@ -115,6 +139,18 @@ export async function getPix(clubId) {
 export async function listStaff(clubId) {
   const snap = await getDocs(kindCol(clubId, K.staff));
   return snap.docs.map(toDoc);
+}
+
+/** Os cargos montados pelo clube (`null` quando nunca montou: valem os modelos). */
+export async function getRoles(clubId) {
+  const snap = await getDoc(doc(db, CLUB_X, clubId, K.roles, 'list'));
+  return snap.exists() && Array.isArray(snap.data().roles) ? snap.data().roles : null;
+}
+
+/** As importações já feitas (quem ficou sem conta): só a secretaria lê. */
+export async function listImports(clubId) {
+  const snap = await getDocs(kindCol(clubId, K.imports));
+  return snap.docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
 }
 
 /** O cargo da própria pessoa (para saber o que mostrar). `null` quando não tem. */

@@ -2000,6 +2000,10 @@ const clubAssociation = require('./clubAssociation');
 /** Chamada da associação do clube: confere a conta e traduz o erro para a tela. */
 exports.clubAssociation = federationCallable('clubAssociation', (ctx, actor, data) => clubAssociation.association(ctx, actor, data));
 
+// Diretoria do clube: cargos e mandatos (só o servidor grava) — `functions/clubStaff.js`.
+const clubStaff = require('./clubStaff');
+exports.clubStaff = federationCallable('clubStaff', (ctx, actor, data) => clubStaff.staff(ctx, actor, data));
+
 // Verificação pública da carteirinha do clube: sem conta (o QR é lido por qualquer um).
 exports.clubAssociationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
   try {
@@ -2015,10 +2019,8 @@ exports.clubAssociationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, a
 exports.clubAssociationSweep = onSchedule(
   { schedule: 'every day 05:20', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
   async () => {
-    try {
-      await clubAssociation.sweep(fedCtx());
-    } catch (err) {
-      logger.error('clubAssociationSweep falhou', err);
-    }
+    // Cada varredura falha sozinha: a dos mandatos não pode ficar sem rodar porque a das filiações caiu.
+    const resultados = await Promise.allSettled([clubAssociation.sweep(fedCtx()), clubStaff.sweep(fedCtx())]);
+    resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('clubAssociationSweep: uma varredura falhou', r.reason));
   },
 );

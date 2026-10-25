@@ -22,6 +22,9 @@ const VENC = 'venc1';
 const ANA = 'ana1';
 const ZE = 'ze1';
 const ADM = 'admin1';
+const DIR = 'dir1';
+const MASTER = 'master1';
+const FORA = 'fora1';
 
 let testEnv;
 beforeAll(async () => {
@@ -45,6 +48,12 @@ async function semear({ flag = true, publicado = true } = {}) {
     await setDoc(doc(db, 'club_members', `${CLUBE}_${PRES}`), { club_id: CLUBE, user_id: PRES, role: 'admin' });
     await setDoc(doc(db, 'club_members', `${CLUBE}_${ANA}`), { club_id: CLUBE, user_id: ANA, role: 'member' });
     await setDoc(doc(db, 'users', ADM), { role: 'platform_admin' });
+    await Promise.all([TES, SEC, VENC, DIR, MASTER].map((u) => setDoc(doc(db, 'club_members', `${CLUBE}_${u}`), { club_id: CLUBE, user_id: u, role: 'member' })));
+    await setDoc(x(db, 'staff', DIR), { user_id: DIR, perms: ['staff', 'members'], term_end_ms: 0 });
+    await setDoc(x(db, 'staff', MASTER), { user_id: MASTER, perms: ['admin', 'members', 'finance', 'staff'], is_master: true, term_end_ms: 0 });
+    await setDoc(x(db, 'staff', FORA), { user_id: FORA, perms: ['finance', 'members'], term_end_ms: 0 }); // tem cargo, mas não é membro
+    await setDoc(x(db, 'roles', 'list'), { roles: [{ id: 'president', name: 'Presidente' }] });
+    await setDoc(x(db, 'imports', 'i1'), { club_id: CLUBE, pending: [{ email: 'a@b.com' }] });
     await setDoc(x(db, 'staff', TES), { user_id: TES, perms: ['finance'], term_end_ms: 0 });
     await setDoc(x(db, 'staff', SEC), { user_id: SEC, perms: ['members'], term_end_ms: 9e15 });
     await setDoc(x(db, 'staff', VENC), { user_id: VENC, perms: ['finance', 'members'], term_end_ms: 1 });
@@ -148,6 +157,29 @@ describe('mandato, flag e admin', () => {
     await semear({ flag: false });
     await assertFails(setDoc(x(como(PRES), 'plans', 'novo'), { club_id: CLUBE, name: 'N', price_cents: 1, public: true }));
     await assertSucceeds(getDoc(x(como(PRES), 'plans', 'anual')));
+  });
+
+  it('14. cargo sem ser membro do clube não dá poder', async () => {
+    await semear();
+    await assertFails(getDoc(x(como(FORA), 'charges', 'c1')));
+    await assertFails(getDocs(col(como(FORA), 'aff')));
+  });
+
+  it('15. a permissão "admin" do cargo vale como administração (configuração e planos)', async () => {
+    await semear();
+    await assertSucceeds(setDoc(x(como(MASTER), 'cfg', 'pix'), { pix_key: 'nova' }));
+    await assertSucceeds(getDoc(x(como(MASTER), 'plans', 'oculto')));
+  });
+
+  it('16. a lista de cargos e os pendentes da importação: lê quem tem a permissão; ninguém grava pelo navegador', async () => {
+    await semear();
+    await assertSucceeds(getDoc(x(como(DIR), 'roles', 'list')));
+    await assertFails(getDoc(x(como(TES), 'roles', 'list')));
+    await assertSucceeds(getDoc(x(como(SEC), 'imports', 'i1')));
+    await assertFails(getDoc(x(como(TES), 'imports', 'i1')));
+    await assertFails(setDoc(x(como(PRES), 'roles', 'list'), { roles: [] }));
+    await assertFails(setDoc(x(como(MASTER), 'imports', 'i2'), { club_id: CLUBE }));
+    await assertFails(setDoc(x(como(MASTER), 'staff', ZE), { user_id: ZE, perms: ['admin'] }));
   });
 
   it('13. o admin da plataforma lê tudo', async () => {

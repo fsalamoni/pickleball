@@ -23,7 +23,7 @@ const mesLongo = (m) => fmtData(new Date(`${m}-15T12:00:00`), { month: 'long', y
  * aparece ao passar o mouse/tocar (title) e numa tabela para leitor de tela;
  * só o maior mês e o atual levam o número escrito.
  */
-function MonthBars({ titulo, dados, formatar }) {
+export function MonthBars({ titulo, dados, formatar }) {
   const max = Math.max(0, ...dados.map((d) => d.v));
   const ultimo = dados.length - 1;
   const iMax = dados.findIndex((d) => d.v === max);
@@ -54,7 +54,7 @@ function MonthBars({ titulo, dados, formatar }) {
 }
 
 /** Barras horizontais de uma divisão (rótulo, barra, número). */
-function BarList({ titulo, itens, formatar = (v) => fmtNumero(v), vazio }) {
+export function BarList({ titulo, itens, formatar = (v) => fmtNumero(v), vazio }) {
   const max = Math.max(0, ...itens.map((x) => x.v));
   return (
     <V2Surface className="space-y-3">
