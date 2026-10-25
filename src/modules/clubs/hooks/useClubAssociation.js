@@ -12,6 +12,10 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { clubPermsOf } from '../domain/association.js';
 import { useMyMembership } from './useClubs.js';
 import {
+  deleteBenefit, deleteClubNews, deleteSponsor, fetchMemberBenefits, getBenefitSecret, listAllBenefits, listAllClubNews, listAllSponsors, listMemberClubNews,
+  listPublicBenefits, listPublicClubNews, listPublicSponsors, notifyClubNews, saveBenefit, saveClubNews, saveSponsor, setBenefitActive,
+} from '../services/contentService.js';
+import {
   associationAction, getMyAffiliation, getMyStaff, getPix, getPlan, getRoles, importMembers, listAffiliations, listAllPlans, listCharges, listImports, listMyCharges,
   listPublicPlans, listStaff, saveAssociationSettings, savePix, savePlan, setPlanActive, staffAction, verifyClubCard,
 } from '../services/associationService.js';
@@ -30,6 +34,15 @@ export const assocKeys = {
   staff: (clubId) => ['club-assoc', clubId, 'staff'],
   roles: (clubId) => ['club-assoc', clubId, 'roles'],
   imports: (clubId) => ['club-assoc', clubId, 'imports'],
+  publicBenefits: (clubId) => ['club-assoc', clubId, 'public-benefits'],
+  allBenefits: (clubId) => ['club-assoc', clubId, 'all-benefits'],
+  benefitSecret: (clubId, id) => ['club-assoc', clubId, 'benefit-secret', id],
+  myBenefits: (clubId, uid) => ['club-assoc', clubId, 'my-benefits', uid],
+  publicNews: (clubId) => ['club-assoc', clubId, 'public-news'],
+  memberNews: (clubId) => ['club-assoc', clubId, 'member-news'],
+  allNews: (clubId) => ['club-assoc', clubId, 'all-news'],
+  publicSponsors: (clubId) => ['club-assoc', clubId, 'public-sponsors'],
+  allSponsors: (clubId) => ['club-assoc', clubId, 'all-sponsors'],
   verify: (code) => ['club-assoc', 'verify', code],
 };
 
@@ -112,6 +125,50 @@ export function useClubImports(clubId, { enabled = true } = {}) {
   return useQuery({ queryKey: assocKeys.imports(clubId), queryFn: () => listImports(clubId), enabled: !!clubId && enabled });
 }
 
+/* ------------------------------------------------ vantagens, comunicados, patrocinadores -- */
+
+/** A vitrine pública de vantagens. */
+export function usePublicBenefits(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.publicBenefits(clubId), queryFn: () => listPublicBenefits(clubId), enabled: !!clubId && enabled, staleTime: 60_000 });
+}
+
+/** Todas as vantagens, internas e pausadas inclusive (comunicação). */
+export function useAllBenefits(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.allBenefits(clubId), queryFn: () => listAllBenefits(clubId), enabled: !!clubId && enabled });
+}
+
+/** O "como usar" e o código de uma vantagem (comunicação, ao editar). */
+export function useBenefitSecret(clubId, id, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.benefitSecret(clubId, id), queryFn: () => getBenefitSecret(clubId, id), enabled: !!clubId && !!id && enabled });
+}
+
+/** As vantagens do associado em dia, com o segredo — do servidor (`{ eligible, items }`). */
+export function useMyBenefits(clubId, { enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({ queryKey: assocKeys.myBenefits(clubId, user?.uid), queryFn: () => fetchMemberBenefits(clubId), enabled: !!clubId && !!user?.uid && enabled, retry: 1 });
+}
+
+export function usePublicClubNews(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.publicNews(clubId), queryFn: () => listPublicClubNews(clubId), enabled: !!clubId && enabled, staleTime: 60_000 });
+}
+
+/** Os "só associados" publicados (qualquer membro do clube lê). */
+export function useMemberClubNews(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.memberNews(clubId), queryFn: () => listMemberClubNews(clubId), enabled: !!clubId && enabled });
+}
+
+export function useAllClubNews(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.allNews(clubId), queryFn: () => listAllClubNews(clubId), enabled: !!clubId && enabled });
+}
+
+export function usePublicClubSponsors(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.publicSponsors(clubId), queryFn: () => listPublicSponsors(clubId), enabled: !!clubId && enabled, staleTime: 60_000 });
+}
+
+export function useAllClubSponsors(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.allSponsors(clubId), queryFn: () => listAllSponsors(clubId), enabled: !!clubId && enabled });
+}
+
 /** A verificação pública da carteirinha (sem login). */
 export function useClubCardVerification(code) {
   return useQuery({ queryKey: assocKeys.verify(code), queryFn: () => verifyClubCard(code), enabled: !!code, retry: 1, staleTime: 30_000 });
@@ -158,6 +215,47 @@ export function useSetPlanActive(clubId) {
 export function useSavePix(clubId) {
   const { user } = useAuth();
   return useAssocMutation(clubId, (input) => savePix(clubId, input, user));
+}
+
+export function useSaveBenefit(clubId) {
+  const { user } = useAuth();
+  return useAssocMutation(clubId, ({ benefitId, input }) => saveBenefit(clubId, benefitId || null, input, user));
+}
+
+export function useDeleteBenefit(clubId) {
+  const { user } = useAuth();
+  return useAssocMutation(clubId, (benefit) => deleteBenefit(clubId, benefit, user));
+}
+
+export function useSetBenefitActive(clubId) {
+  return useAssocMutation(clubId, ({ benefitId, active }) => setBenefitActive(clubId, benefitId, active));
+}
+
+/** Salva o comunicado: `mutate({ club, input, newsId })`. */
+export function useSaveClubNews(clubId) {
+  const { user } = useAuth();
+  return useAssocMutation(clubId, ({ club, input, newsId }) => saveClubNews(club, input, { uid: user?.uid, newsId }));
+}
+
+export function useDeleteClubNews(clubId) {
+  const { user } = useAuth();
+  return useAssocMutation(clubId, (news) => deleteClubNews(clubId, news, { uid: user?.uid }));
+}
+
+/** O aviso do comunicado aos associados em dia (servidor, uma vez só): `mutate(newsId)`. */
+export function useNotifyClubNews(clubId) {
+  return useAssocMutation(clubId, (newsId) => notifyClubNews(clubId, newsId));
+}
+
+/** Salva o patrocinador: `mutate({ sponsorId, input, total })`. */
+export function useSaveSponsor(clubId) {
+  const { user } = useAuth();
+  return useAssocMutation(clubId, ({ sponsorId, input, total }) => saveSponsor(clubId, sponsorId || null, input, { actor: user, total }));
+}
+
+export function useDeleteSponsor(clubId) {
+  const { user } = useAuth();
+  return useAssocMutation(clubId, (sponsor) => deleteSponsor(clubId, sponsor, user));
 }
 
 export function useSaveAssociationSettings(clubId) {

@@ -26,7 +26,12 @@ dia de jogo, ranking interno, página pública.
 > `functions/clubStaffPolicy.js` com paridade; cargo só vale para quem ainda é
 > membro), `domain/indicators.js` (reusa as contas da federação sobre as
 > filiações e cobranças do clube), a importação CSV (`associationService.importMembers`,
-> lotes de 100) e `domain/declaration.js` (a declaração de associação). Ver
+> lotes de 100) e `domain/declaration.js` (a declaração de associação). **Bloco C1**:
+> `domain/content.js` (vantagens, comunicados e patrocinadores, reusando as regras
+> de notícia e patrocínio da federação), `services/contentService.js`,
+> `functions/clubContent.js` (o associado em dia recebe o "como usar"/código; o
+> aviso do comunicado sai uma vez só), seção Comunicação da Central
+> (`ClubCommsPanel`) e a vitrine (`association/ClubShowcase.jsx`). Ver
 > `docs/52-CLUBE-ASSOCIACAO.md`.
 
 ## Status

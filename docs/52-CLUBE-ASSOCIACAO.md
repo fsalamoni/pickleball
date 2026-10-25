@@ -1,12 +1,14 @@
 # 52 — Clube como associação (flag `club_association`)
 
 > Estado: **Bloco A** (filiação, planos, Pix, carteirinha, página pública e
-> Central do clube) e **Bloco B** (diretoria com cargos e mandatos, indicadores,
-> importação de associados, declaração de associação) estão no código. Os blocos
-> C–G (vantagens e cupons, financeiro completo e documentos, atletas e seleção,
-> torneios do clube, assembleias e eleições, patrocínio, mercado do clube)
-> estão no plano (`/mnt/project-files/clubes/plano-clube-associacao.md`) e
-> **ainda não existem** — este documento só descreve o que há no código.
+> Central do clube), **Bloco B** (diretoria com cargos e mandatos, indicadores,
+> importação de associados, declaração de associação) e **Bloco C1**
+> (vantagens do associado, comunicados e patrocinadores) estão no código. O
+> restante do bloco C (cupons dos associados e loja do clube) e os blocos D–G
+> (financeiro completo e documentos, atletas e seleção, torneios do clube,
+> assembleias e eleições) estão no plano
+> (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
+> existem** — este documento só descreve o que há no código.
 
 ## 1. O que é
 
@@ -38,6 +40,10 @@ pessoa do clube.
 | `roles` | os cargos do clube num documento só (`roles/list` = `{ roles: [...] }`); sem ele valem os oito modelos | quem tem `staff` | **só o servidor** (`clubStaff`, só o cargo master) |
 | `imports` | cada lote de importação: plano, quem entrou, quem foi pulado e **quem ficou sem conta** | `members` | **só o servidor** (ação `import`) |
 | `cfg` | Pix do clube e instruções | admin e `finance` | admin |
+| `benefits` | a **vitrine** da vantagem (título, resumo, tipo, parceiro, validade, planos, `public`, `active`, `has_secret`) | público lê as `public: true` de clube publicado; `comms`/`members` leem todas | `comms` |
+| `bsec` | o que é **só do associado em dia**: "como usar" e código da vantagem (mesmo id de `benefits`) | `comms` — o associado em dia recebe pelo servidor | `comms` |
+| `news` | comunicado (rascunho/publicado/arquivado; `audience` público ou só associados; `public` derivado) | público lê os `public: true` de clube publicado; **qualquer membro do clube** lê os "só associados" publicados; `comms` lê tudo | `comms` |
+| `sponsors` | um documento por patrocinador (até 12): nome, faixa, logo, site, `public`, `active` | público lê os `public: true` de clube publicado; `comms` lê tudo | `comms` |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
 filiação; **o código gira** a cada ativação, renovação e suspensão. Campos novos
@@ -63,6 +69,16 @@ Funções em `functions/clubAssociation.js` (testes ao lado):
   `functions/clubStaffPolicy.js`, com paridade contra `domain/staff.js`.
 - `clubAssociationSweep` também roda `clubStaff.sweep`: avisa a pessoa e quem
   tem `staff` a 30, 7 e 1 dia do fim do mandato e **desfaz** o cargo vencido.
+
+- `clubContent` (callable, `functions/clubContent.js`) — duas ações:
+  - `benefits`: as vantagens do **associado em dia** (`membershipState` = ativo, a
+    mesma conta da carteirinha), já filtradas por `active`, validade e plano, **com**
+    o "como usar" e o código lidos de `bsec`. Vencido, suspenso, sem filiação ou
+    associação desligada devolve `{ eligible: false, items: [] }` — nada do segredo;
+  - `news_notify` (permissão `comms`): o aviso do comunicado publicado aos
+    associados em dia, em lotes de 400, **uma vez só** (`notified_at`,
+    `notified_count`, `notified_by`) e com link `/clubes/{id}?tab=comunicados&noticia={id}`
+    (sem `#`). A comunicação não lê a lista de filiados — por isso o aviso é do servidor.
 
 ### 3.1 Importar associados
 
@@ -112,19 +128,26 @@ Detalhe por perfil em [`48`](./48-PERMISSOES-POR-PERFIL.md) §4.8b.
 - **Página do clube** (`V2ClubDetail`): aba **Associação** (planos, "Minha
   associação", carteirinha, renovar, encerrar) e, para o administrador, o botão
   "Central do clube". Quem não é membro vê os planos acima do convite.
+- Para o associado, a página do clube ganha as abas **Vantagens** (as dele, com
+  o "como usar" e o código copiável; em atraso, a tela diz que são de quem está em
+  dia) e **Comunicados** (públicos + "só associados"; `?noticia=` abre e rola até
+  o do aviso). Quem visita vê, abaixo dos planos, "O que o associado ganha" (só a
+  vitrine), os comunicados públicos e os patrocinadores (`ClubShowcase.jsx`).
 - **Página pública** `/c/:clubId`: seção "Associe-se" com os planos (a
-  filiação exige login); `/c/verificar/:codigo?` — verificação pública da
+  filiação exige login), a vitrine de vantagens, os comunicados e os patrocinadores; `/c/verificar/:codigo?` — verificação pública da
   carteirinha (QR), com campo para digitar.
 - **Central do clube** `/clubes/:clubId/gerir`, dois grupos como a federação e a
   arena (Atender · Gerir). `?aba=` e `?secao=` na URL; os valores são **contrato
   de link** — nunca renomeie: `hoje`, `associados`, `cobrancas`, `planos`,
-  `pix`, `equipe`, `cargos`, `indicadores`, `config`. `?filtro=` filtra os associados.
+  `pix`, `equipe`, `cargos`, `indicadores`, `config`, `comunicados`, `vantagens`,
+  `patrocinadores`. `?filtro=` filtra os associados.
   - **Hoje** — o que precisa de você + prontidão (ligar, criar plano, informar Pix, abrir ao público) + **mandatos acabando** (a quem tem `staff`).
   - **Associados** — pedidos, filtros, busca, aprovar/recusar/suspender/reativar, "Associar uma pessoa", **"Importar lista"** (CSV) e **"Declaração"** de cada associado em dia.
   - **Financeiro → Cobranças** — recebido no mês/total, vencidas, confirmar/cancelar.
   - **Planos** — criar/editar/pausar, aplicar plano gratuito a todos os membros; **Pix do clube**.
   - **Diretoria → Equipe e mandatos** — quem está na diretoria, cargo e mandato (aberto, vigente, acabando, encerrado), nomear (escolhendo entre os membros do clube), trocar de cargo, prorrogar com motivo, tirar ou sair. **Cargos** (só o master) — montar os cargos do clube, com o que cada permissão abre.
   - **Indicadores** — 12 meses de pedidos, taxa de renovação, em dia por plano e por categoria, recebido por mês e por origem, atraso; baixa a planilha CSV. Cada bloco depende da própria fonte e, sem ela, diz "não deu para medir" — nunca zero.
+  - **Comunicação** (`comms`) — **Comunicados** (escrever, publicar para todos ou só associados, fixar, "Avisar os associados" uma vez só), **Vantagens** (vitrine + "como usar"/código, planos que alcança, validade, pausar) e **Patrocinadores** (até 12, por faixa).
   - **Configurações** — ligar, abrir ao público, apresentação e cor.
 - **Declaração de associação** — a folha para escola, empregador ou patrocinador
   (`buildClubDeclaration`, `ClubDeclarationDialog`): só sai com a associação em dia
@@ -162,9 +185,24 @@ de situação, QR, `CopyCodeButton`, `ConfirmDialog` e as contas de cobrança
 11. A conta pura da diretoria tem **cópia** no servidor
     (`functions/clubStaffPolicy.js`) com teste de paridade
     (`clubStaff.parity.test.js`) — mexer num lado só quebra o teste.
+12. **O "como usar" e o código da vantagem nunca estão no documento público**:
+    moram em `bsec` (só `comms` lê) e o associado em dia os recebe do servidor
+    (`clubContent` / `benefits`). A vitrine só leva `has_secret`.
+13. **O aviso do comunicado é do servidor e sai uma vez só** (`notified_at`); a
+    comunicação não lê a lista de associados. O link do aviso nunca leva `#`.
+14. A consulta dos comunicados "só associados" precisa das **duas igualdades**
+    (`status == 'published'` e `audience == 'members'`) — só uma não é provável
+    para a regra. Com a associação fechada ao público, a tela do associado **não**
+    consulta os públicos (seria recusada) — `ClubNewsSection publicOn={…}`.
+15. Os ids de tipo de vantagem (`discount`, `partner`…) e de faixa de patrocinador
+    são gravados: nunca renomeie.
 
 ## 7. Testes
 
+`functions/clubContent.test.js` (vantagens do associado em dia, aviso uma vez
+só), `src/modules/clubs/domain/content.test.js`,
+`tests/rules/clubContent.rules.test.js` (emulador: vitrine pública, segredo só da
+comunicação, comunicado "só associados" para o membro),
 `functions/clubAssociation.test.js` (ciclo completo no servidor, incluindo a
 importação), `functions/clubStaff.test.js` (diretoria, mandato, varredura) e
 `functions/clubStaff.parity.test.js`, `functions/accountDeletion.clubes.test.js`,

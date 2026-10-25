@@ -5564,6 +5564,11 @@ service cloud.firestore {
     //  - `plans`, `benefits`, `news`, `sponsors`: públicos quando o documento
     //    tem `public: true` E o clube abriu a associação ao público
     //    (`clubs.association.published`);
+    //  - `benefits` (vantagens), `news` (comunicados), `sponsors`: a equipe de
+    //    comunicação (`comms`) grava; o "como usar"/código da vantagem mora em
+    //    `bsec` (só a equipe lê; o associado em dia o recebe do servidor); o
+    //    comunicado "só associados" (`audience == members`) qualquer membro do
+    //    clube lê;
     //  - `aff` (filiação, id = uid) e `charges` (cobrança): o titular e a
     //    equipe; escrita só do SERVIDOR (`functions/clubAssociation.js`);
     //  - `staff` (cargos): a própria pessoa lê o seu; escrita do servidor;
@@ -5587,14 +5592,15 @@ service cloud.firestore {
     function cxPub(c) { return gd('clubs/' + c).get('association', {}).get('published', false) == true; }
     // `roles` (lista dos cargos) e `imports` (pendentes da importação) são escritos só pelo servidor.
     function cxReadPerms(k) {
-      return {'aff': ['members', 'finance'], 'charges': ['finance', 'members'], 'cfg': ['finance'], 'plans': ['finance', 'members'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members']}.get(k, ['admin']);
+      return {'aff': ['members', 'finance'], 'charges': ['finance', 'members'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms']}.get(k, ['admin']);
     }
     function cxWritePerms(k) {
-      return k == 'plans' ? ['admin', 'finance'] : (k == 'cfg' ? ['admin'] : []);
+      return {'plans': ['admin', 'finance'], 'cfg': ['admin'], 'benefits': ['comms'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms']}.get(k, []);
     }
     match /club_x/{c}/{k}/{id} {
       allow get: if isAuthed() && k in ['aff', 'staff'] && id == me();
       allow read: if (k in ['plans', 'benefits', 'news', 'sponsors'] && od().get('public', false) == true && cxPub(c))
+        || (k == 'news' && od().get('status', '') == 'published' && od().get('audience', '') == 'members' && isClubMember(c))
         || (isAuthed() && k in ['aff', 'charges'] && od().get('user_id', '') == me())
         || cxHas(c, cxReadPerms(k)) || isPlatformAdmin();
       allow create, update: if cxOn() && cxHas(c, cxWritePerms(k))

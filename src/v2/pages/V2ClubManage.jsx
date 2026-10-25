@@ -12,7 +12,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Building2, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/modules/clubs/hooks/useClubs';
 import {
-  useAllPlans, useClubAffiliations, useClubCharges, useClubPix, useClubRoles, useClubStaff, useMyClubRole,
+  useAllBenefits, useAllClubNews, useAllClubSponsors, useAllPlans, useClubAffiliations, useClubCharges, useClubPix, useClubRoles, useClubStaff, useMyClubRole,
 } from '@/modules/clubs/hooks/useClubAssociation';
 import { CLUB_PERM, isAssociationOpen } from '@/modules/clubs/domain/association';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -29,6 +29,7 @@ const ClubFinancePanel = lazy(() => import('@/v2/components/clubs/manage/ClubFin
 const ClubStaffPanel = lazy(() => import('@/v2/components/clubs/manage/ClubStaffPanel'));
 const ClubIndicatorsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubIndicatorsPanel'));
 const ClubSettingsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSettingsPanel'));
+const ClubCommsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubCommsPanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
@@ -59,6 +60,13 @@ function Central({ clubId }) {
     [sections, tabPedida, secaoPedida],
   );
   const tab = secaoAtiva?.tabs.some((x) => x.value === tabPedida) ? tabPedida : secaoAtiva?.tabs[0]?.value;
+
+  // Comunicação: cada aba consulta só a sua coleção, e só quem tem `comms` (a regra recusaria os demais).
+  const emComunicacao = papel.isStaff && (admin || perms.includes(CLUB_PERM.COMMS));
+  const newsQ = useAllClubNews(clubId, { enabled: emComunicacao && tab === 'comunicados' });
+  const benefitsQ = useAllBenefits(clubId, { enabled: emComunicacao && tab === 'vantagens' });
+  const sponsorsQ = useAllClubSponsors(clubId, { enabled: emComunicacao && tab === 'patrocinadores' });
+  const planosVantagensQ = useAllPlans(clubId, { enabled: emComunicacao && tab === 'vantagens' });
 
   // `filtro` (opcional) abre a lista já filtrada; trocar de aba sem ele limpa o da aba anterior.
   const setTab = useCallback((value, filtro) => {
@@ -110,6 +118,17 @@ function Central({ clubId }) {
         {tab === 'planos' && <ClubPlansTab club={club} plansQ={plansQ} canEdit={podeFinancas} canAdopt={podeMembros} />}
         {tab === 'pix' && admin && <ClubPixTab club={club} />}
         {(tab === 'equipe' || tab === 'cargos') && <ClubStaffPanel club={club} staffQ={staffQ} rolesQ={rolesQ} papel={papel} tab={tab} />}
+        {emComunicacao && ['comunicados', 'vantagens', 'patrocinadores'].includes(tab) && (
+          <ClubCommsPanel
+            club={club}
+            tab={tab}
+            newsQ={newsQ}
+            benefitsQ={benefitsQ}
+            sponsorsQ={sponsorsQ}
+            plansQ={planosVantagensQ}
+            associados={(affiliationsQ.data || []).filter((a) => a.status === 'active').length}
+          />
+        )}
         {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}
       </Suspense>
