@@ -24,9 +24,10 @@ import { t } from '@/core/i18n';
 // A transparência das contas carrega o motor de contas: só quando a página é aberta.
 const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
 const ClubDocsPublic = lazy(() => import('@/v2/components/clubs/association/ClubDocsPublic'));
+const ClubAgendaPublic = lazy(() => import('@/v2/components/clubs/association/ClubAgendaPublic'));
 
 /** Os planos de associação na vitrine: quem chega pelo link vê o que ganha e entra para se associar. */
-function PublicClubPlans({ club, isAuthenticated, docId }) {
+function PublicClubPlans({ club, isAuthenticated, docId, eventId, agendaInteira }) {
   const plansQ = usePublicPlans(club.id);
   const cfg = normalizeAssociation(club);
   const destino = isAuthenticated ? `/clubes/${club.id}` : '/login';
@@ -57,6 +58,7 @@ function PublicClubPlans({ club, isAuthenticated, docId }) {
       <ClubBenefitsShowcase clubId={club.id} />
       <ClubNewsSection clubId={club.id} limite={3} />
       <ClubSponsorsStrip clubId={club.id} />
+      <Suspense fallback={null}><ClubAgendaPublic club={club} publica eventId={eventId} compacto={!eventId && !agendaInteira} /></Suspense>
       <Suspense fallback={null}><ClubDocsPublic club={club} publica docId={docId} compacto={!docId} /></Suspense>
       <Suspense fallback={null}><ClubAccountsPublic clubId={club.id} /></Suspense>
     </section>
@@ -67,6 +69,8 @@ export default function PublicClub() {
   const { clubId } = useParams();
   const [searchParams] = useSearchParams();
   const docId = searchParams.get('doc') || null;
+  const eventId = searchParams.get('evento') || null;
+  const agendaInteira = searchParams.get('agenda') === '1';
   const publicOn = true;
   const { isAuthenticated } = useAuth();
   const associationFlag = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
@@ -147,7 +151,7 @@ export default function PublicClub() {
             </div>
           </div>
         )}
-        {isPublic && associationOpen && <PublicClubPlans club={club} isAuthenticated={isAuthenticated} docId={docId} />}
+        {isPublic && associationOpen && <PublicClubPlans club={club} isAuthenticated={isAuthenticated} docId={docId} eventId={eventId} agendaInteira={agendaInteira} />}
       </div>
     </div>
   );

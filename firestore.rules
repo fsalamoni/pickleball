@@ -5588,6 +5588,8 @@ service cloud.firestore {
     //  - `docs` (acervo, Bloco D2): a equipe do acervo (`docs`) lê tudo; o público lê só
     //    `pub: true` (com a associação aberta) e o membro do clube só `members: true`;
     //    escrita só do SERVIDOR (`functions/clubDocs.js`); `seq` (numeração) só o servidor;
+    //  - `events` (agenda oficial, Bloco D2b): como `docs` (o público lê `pub`, o membro `members`;
+    //    `docs`/`sports`/admin leem tudo); escrita só do SERVIDOR (`functions/clubAgenda.js`);
     //  - `cfg` (Pix e regras): equipe do financeiro/admin;
     //  - quem administra o clube (`club_members.role == admin`) tem toda
     //    permissão; os demais cargos vêm de `staff/{uid}.perms`, com mandato.
@@ -5608,15 +5610,15 @@ service cloud.firestore {
     function cxPub(c) { return gd('clubs/' + c).get('association', {}).get('published', false) == true; }
     // `roles` (lista dos cargos) e `imports` (pendentes da importação) são escritos só pelo servidor.
     function cxReadPerms(k) {
-      return {'aff': ['members', 'finance'], 'charges': ['finance', 'members', 'fiscal'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms'], 'budgets': ['finance', 'fiscal'], 'ledger': ['finance', 'fiscal'], 'reports': ['finance', 'fiscal'], 'docs': ['docs']}.get(k, ['admin']);
+      return {'aff': ['members', 'finance'], 'charges': ['finance', 'members', 'fiscal'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms'], 'budgets': ['finance', 'fiscal'], 'ledger': ['finance', 'fiscal'], 'reports': ['finance', 'fiscal'], 'docs': ['docs'], 'events': ['docs', 'sports']}.get(k, ['admin']);
     }
     function cxWritePerms(k) {
       return {'plans': ['admin', 'finance'], 'cfg': ['admin'], 'benefits': ['comms'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms']}.get(k, []);
     }
     match /club_x/{c}/{k}/{id} {
       allow get: if isAuthed() && k in ['aff', 'staff'] && id == me();
-      allow read: if (k in ['plans', 'benefits', 'news', 'sponsors', 'budgets', 'reports', 'docs'] && (od().get('public', false) == true || od().get('pub', false) == true) && cxPub(c))
-        || (k == 'docs' && od().get('members', false) == true && isClubMember(c))
+      allow read: if (k in ['plans', 'benefits', 'news', 'sponsors', 'budgets', 'reports', 'docs', 'events'] && (od().get('public', false) == true || od().get('pub', false) == true) && cxPub(c))
+        || (k in ['docs', 'events'] && od().get('members', false) == true && isClubMember(c))
         || (k == 'news' && od().get('status', '') == 'published' && od().get('audience', '') == 'members' && isClubMember(c))
         || (isAuthed() && k in ['aff', 'charges'] && od().get('user_id', '') == me())
         || cxHas(c, cxReadPerms(k)) || isPlatformAdmin();

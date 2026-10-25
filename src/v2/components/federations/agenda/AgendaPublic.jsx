@@ -12,8 +12,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarClock, CalendarDays, CalendarPlus, Copy, History, Search, Share2 } from 'lucide-react';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { useVisibleAgenda } from '@/modules/federations/hooks/useFederations';
-import { EVENT_GROUPS, agendaFeedPath, agendaPublicPath, filterAgenda, groupByMonth, splitAgenda } from '@/modules/federations/domain/agenda';
+import { EVENT_GROUPS, filterAgenda, groupByMonth, splitAgenda } from '@/modules/federations/domain/agenda';
 import { V2Button, V2ErrorState, V2Input, V2Select, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
@@ -21,19 +20,20 @@ import { publicHost } from '../federationUi';
 import { AcervoFollowButton } from '../acervo/AcervoPublic';
 import { MostrarMais, POR_VEZ } from '../manage/listTools';
 import { AgendaEventItem, baixarIcs, mesAno } from './agendaUi';
+import { agendaPathFor, feedPathFor, hasFollow, isClubAgenda, useScopedAgenda } from './agendaScope';
 
 /* ------------------------------------------------- bloco na página -- */
 
 /** Os próximos eventos na página da federação. Vitrine: sem nada marcado, o bloco diz isso e segue. */
 export function FedAgendaBlock({ federation, limite = 4 }) {
-  const a = useVisibleAgenda(federation);
+  const a = useScopedAgenda(federation);
   const proximos = useMemo(() => (a.items ? splitAgenda(a.items).upcoming.slice(0, limite) : []), [a.items, limite]);
   if (!a.ligado) return null;
   return (
     <section id="federacao-agenda" aria-labelledby="fed-agenda" className="scroll-mt-4 space-y-3" data-dica="federacao-agenda-publica">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="fed-agenda" className="font-display text-xl font-bold text-ink">{t('Calendário oficial')}</h2>
-        <V2Button asChild variant="ghost" size="sm"><Link to={agendaPublicPath(federation)}><CalendarDays className="h-4 w-4" />{t('Abrir a agenda')}</Link></V2Button>
+        <V2Button asChild variant="ghost" size="sm"><Link to={agendaPathFor(federation)}><CalendarDays className="h-4 w-4" />{t('Abrir a agenda')}</Link></V2Button>
       </div>
       {a.isError && <V2ErrorState inline title={t('Não carregou a agenda')} onRetry={a.refetch} />}
       {a.isLoading && <V2Skeleton lines={3} />}
@@ -50,22 +50,26 @@ export function FedAgendaBlock({ federation, limite = 4 }) {
 export function AgendaSubscribe({ federation, items }) {
   const { copy } = useClipboard();
   const [aberto, setAberto] = useState(false);
-  const https = `https://${publicHost()}${agendaFeedPath(federation)}`;
-  const webcal = `webcal://${publicHost()}${agendaFeedPath(federation)}`;
+  const https = `https://${publicHost()}${feedPathFor(federation)}`;
+  const webcal = `webcal://${publicHost()}${feedPathFor(federation)}`;
   const publicos = (items || []).filter((ev) => !ev.visibility || ev.visibility === 'public');
   return (
     <div className="space-y-2">
       <V2Button type="button" variant="secondary" size="sm" aria-expanded={aberto} onClick={() => setAberto((x) => !x)} data-dica="federacao-agenda-assinar"><CalendarPlus className="h-4 w-4" />{t('Assinar a agenda')}</V2Button>
       {aberto && (
         <div className="space-y-3 rounded-2xl border border-gray-100 bg-paper-pure p-4 text-sm">
-          <p className="text-gray-700">{t('Assinando, os eventos públicos aparecem no calendário do seu celular e se atualizam sozinhos quando a federação marca, remarca ou cancela.')}</p>
+          <p className="text-gray-700">{isClubAgenda(federation)
+            ? t('Assinando, os eventos públicos aparecem no calendário do seu celular e se atualizam sozinhos quando o clube marca, remarca ou cancela.')
+            : t('Assinando, os eventos públicos aparecem no calendário do seu celular e se atualizam sozinhos quando a federação marca, remarca ou cancela.')}</p>
           <div className="flex flex-wrap gap-2">
             <V2Button asChild size="sm"><a href={webcal}><CalendarPlus className="h-4 w-4" />{t('Assinar no celular')}</a></V2Button>
             <V2Button asChild size="sm" variant="secondary"><a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`} target="_blank" rel="noopener noreferrer">{t('Google Agenda')}</a></V2Button>
             <V2Button type="button" size="sm" variant="ghost" onClick={() => copy(https, t('Endereço da agenda copiado.'))}><Copy className="h-4 w-4" />{t('Copiar o endereço')}</V2Button>
             {publicos.length > 0 && <V2Button type="button" size="sm" variant="ghost" onClick={() => baixarIcs(federation, publicos, `agenda-${federation.slug || federation.id}`)}>{t('Baixar o arquivo (.ics)')}</V2Button>}
           </div>
-          <p className="text-xs text-gray-500">{t('O que é só para filiados ou para a equipe não entra na agenda assinada: abra cada evento aqui e use "Adicionar ao calendário".')}</p>
+          <p className="text-xs text-gray-500">{isClubAgenda(federation)
+            ? t('O que é só para associados ou para a equipe não entra na agenda assinada: abra cada evento aqui e use "Adicionar ao calendário".')
+            : t('O que é só para filiados ou para a equipe não entra na agenda assinada: abra cada evento aqui e use "Adicionar ao calendário".')}</p>
         </div>
       )}
     </div>
@@ -78,7 +82,7 @@ const ABAS = ['proximos', 'anteriores'];
 const FILTRO_VAZIO = { q: '', group: '' };
 
 export function AgendaBrowser({ federation }) {
-  const a = useVisibleAgenda(federation);
+  const a = useScopedAgenda(federation);
   const { copy } = useClipboard();
   const [aba, setAba] = useState(() => {
     const pedida = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('aba') : '';
@@ -92,7 +96,7 @@ export function AgendaBrowser({ federation }) {
   const partes = useMemo(() => splitAgenda(a.items || []), [a.items]);
   const lista = useMemo(() => filterAgenda(aba === 'proximos' ? partes.upcoming : partes.past, filtro), [aba, partes, filtro]);
   const meses = useMemo(() => groupByMonth(lista.slice(0, quantos)), [lista, quantos]);
-  const link = typeof window !== 'undefined' ? `${window.location.origin}${agendaPublicPath(federation)}` : agendaPublicPath(federation);
+  const link = typeof window !== 'undefined' ? `${window.location.origin}${agendaPathFor(federation)}` : agendaPathFor(federation);
   const compartilhar = async () => {
     if (navigator.share) { try { await navigator.share({ title: t('Calendário oficial — {federacao}', { federacao: federation.name }), url: link }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
     copy(link, t('Link da agenda copiado.'));
@@ -107,7 +111,7 @@ export function AgendaBrowser({ federation }) {
   return (
     <div className="space-y-4" data-dica="federacao-agenda-pagina">
       <div className="flex flex-wrap items-start gap-2">
-        <AcervoFollowButton federation={federation} next={agendaPublicPath(federation)} />
+        {hasFollow(federation) && <AcervoFollowButton federation={federation} next={agendaPathFor(federation)} />}
         <V2Button type="button" variant="ghost" size="sm" onClick={compartilhar}><Share2 className="h-4 w-4" />{t('Compartilhar a agenda')}</V2Button>
         <AgendaSubscribe federation={federation} items={a.items} />
       </div>

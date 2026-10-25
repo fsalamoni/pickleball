@@ -43,7 +43,11 @@ dia de jogo, ranking interno, página pública.
 > Central (`ClubDocsPanel`, o acervo da federação com o clube no lugar dela pelo
 > escopo `acervoScope`), `domain/docs.js`, `services/clubDocsService.js`,
 > `hooks/useClubDocs.js`, `functions/clubDocs.js` e a aba/vitrine pública
-> (`ClubDocsPublic`). Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.4.
+> (`ClubDocsPublic`). **Bloco D2b**: a agenda oficial — seção Agenda da Central
+> (`ClubAgendaPanel`, a agenda da federação com o clube no lugar dela pelo escopo
+> `agendaScope`), `domain/agenda.js`, `services/clubAgendaService.js`,
+> `hooks/useClubAgenda.js`, `functions/clubAgenda.js` e a aba/vitrine pública
+> (`ClubAgendaPublic`). Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.5.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,

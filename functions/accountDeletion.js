@@ -524,8 +524,8 @@ async function coletarAssociacoesDeClube(db, uid) {
     });
     const cargo = await base.collection('staff').doc(uid).get();
     if (cargo.exists) { total += 1; deletes.push(cargo.ref); }
-    // As contas (Bloco D1) e os documentos oficiais (Bloco D2) do clube ficam (o clube presta contas e o ato publicado é registro dele), sem o nome de quem os preparou.
-    for (const [kind, campo, nome] of [['ledger', 'created_by', 'created_by_name'], ['budgets', 'created_by', 'created_by_name'], ['reports', 'opened_by', 'opened_by_name'], ['docs', 'created_by', 'created_by_name'], ['docs', 'published_by', 'published_by_name']]) {
+    // As contas (Bloco D1), os documentos oficiais (D2a) e a agenda (D2b) do clube ficam (o clube presta contas e o ato publicado é registro dele), sem o nome de quem os preparou.
+    for (const [kind, campo, nome] of [['ledger', 'created_by', 'created_by_name'], ['budgets', 'created_by', 'created_by_name'], ['reports', 'opened_by', 'opened_by_name'], ['docs', 'created_by', 'created_by_name'], ['docs', 'published_by', 'published_by_name'], ['events', 'created_by', 'created_by_name']]) {
       const feitos = await base.collection(kind).where(campo, '==', uid).limit(QUERY_LIMIT + 1).get(); // eslint-disable-line no-await-in-loop
       feitos.docs.slice(0, QUERY_LIMIT).forEach((d) => {
         total += 1;

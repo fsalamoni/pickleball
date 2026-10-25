@@ -5,7 +5,7 @@
  * em toda a Central (a seção ativa é achada pela aba) e é contrato de link:
  * os avisos do servidor levam a ele — nunca renomeie.
  */
-import { BarChart3, Calculator, CircleDollarSign, IdCard, Landmark, LayoutDashboard, Library, Megaphone, Settings, Store, Tag } from 'lucide-react';
+import { BarChart3, Calculator, CalendarDays, CircleDollarSign, IdCard, Landmark, LayoutDashboard, Library, Megaphone, Settings, Store, Tag } from 'lucide-react';
 import { CLUB_PERM } from '@/modules/clubs/domain/association';
 import { t, tk } from '@/core/i18n';
 
@@ -53,6 +53,11 @@ export function buildClubSections(perms = []) {
     {
       id: 'documentos', label: t('Documentos'), grupo: 'gerir', icon: Library, dica: 'clube-secao-documentos',
       tabs: [{ value: 'documentos', label: t('Documentos oficiais') }], ok: tem(perms, CLUB_PERM.DOCS),
+    },
+    {
+      // A secretaria (docs) marca qualquer evento; a diretoria esportiva (sports), só a agenda esportiva.
+      id: 'agenda', label: t('Agenda'), grupo: 'gerir', icon: CalendarDays, dica: 'clube-secao-agenda',
+      tabs: [{ value: 'agenda', label: t('Agenda oficial') }], ok: tem(perms, CLUB_PERM.DOCS, CLUB_PERM.SPORTS),
     },
     {
       id: 'contas', label: t('Contas'), grupo: 'gerir', icon: Calculator, dica: 'clube-secao-contas',

@@ -9,11 +9,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Lock, MapPin, Video } from 'lucide-react';
 import {
-  EVENT_CHANGE_LABELS, EVENT_STATUS, EVENT_VISIBILITY, EVENT_VISIBILITY_LABELS, buildIcs, eventKind, eventPublicPath, eventState, lastChange, placeText,
+  EVENT_CHANGE_LABELS, EVENT_STATUS, EVENT_VISIBILITY, buildIcs, eventKind, eventState, lastChange, placeText,
 } from '@/modules/federations/domain/agenda';
 import { V2Badge } from '@/v2/ui/primitives';
 import { fmtData, t, tk } from '@/core/i18n';
 import { baixarBlob } from '../acervo/acervoFiles';
+import { visibilityLabelFor } from '../acervo/acervoScope';
+import { eventPathFor } from './agendaScope';
 import { publicHost } from '../federationUi';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
@@ -90,13 +92,13 @@ export function AgendaEventItem({ federation, ev, nowMs = Date.now() }) {
   const { isAuthenticated } = useAuth(); // sem conta, o torneio abre a página pública (`/p/:id`)
   return (
     <li>
-      <Link to={eventPublicPath(federation, ev, { inApp: Boolean(isAuthenticated) })} className={`flex gap-3 rounded-2xl border border-gray-100 bg-paper-pure p-3 transition-colors hover:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${ev.status === EVENT_STATUS.CANCELLED ? 'opacity-75' : ''}`}>
+      <Link to={eventPathFor(federation, ev, { inApp: Boolean(isAuthenticated) })} className={`flex gap-3 rounded-2xl border border-gray-100 bg-paper-pure p-3 transition-colors hover:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${ev.status === EVENT_STATUS.CANCELLED ? 'opacity-75' : ''}`}>
         <DateBadge ev={ev} adiado={adiado} />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2 text-xs">
             {kind && <span className="font-bold uppercase tracking-wider text-gray-500">{t(kind.label)}</span>}
             <StatusBadge ev={ev} nowMs={nowMs} />
-            {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(EVENT_VISIBILITY_LABELS[ev.visibility])}</V2Badge>}
+            {ev.visibility && ev.visibility !== EVENT_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(visibilityLabelFor(federation, ev.visibility))}</V2Badge>}
           </span>
           <span className={`mt-0.5 block font-semibold text-ink ${ev.status === EVENT_STATUS.CANCELLED ? 'line-through' : ''}`}>{ev.title}</span>
           <span className="mt-0.5 block text-xs text-gray-500">{adiado ? t('Nova data a definir') : [dataDoEvento(ev), horarioDoEvento(ev)].filter(Boolean).join(' · ')}</span>
@@ -112,7 +114,7 @@ export function AgendaEventItem({ federation, ev, nowMs = Date.now() }) {
   );
 }
 
-const urlDoEvento = (federation, ev) => `https://${publicHost()}${eventPublicPath(federation, ev)}`;
+const urlDoEvento = (federation, ev) => `https://${publicHost()}${eventPathFor(federation, ev)}`;
 
 /** Baixa o arquivo de calendário (ICS) de um evento ou de uma lista. */
 export function baixarIcs(federation, eventos, nome) {
