@@ -630,3 +630,40 @@ describe('federação como emissora (PR 4)', () => {
     expect(homePromoItems({ coupons: [soFiliados], federationsOn: true, today: hoje, viewer: { fedIdsDoFiliado: new Set() } })).toEqual([]);
   });
 });
+
+describe('clube como emissor (Bloco C2)', () => {
+  const C = PROMO_ISSUER.CLUB;
+  it('o emissor clube é válido e tem nome padrão', () => {
+    expect(normalizeIssuer({ type: C, id: 'clubA' })).toMatchObject({ type: C, id: 'clubA', name: 'Clube' });
+    expect(promoSettingsId({ type: C, id: 'clubA' })).toBe('clubA');
+  });
+
+  it('os tipos do clube não incluem aula; o cupom nasce na página, nunca na tela inicial', () => {
+    const tipos = promoKinds(C).map((k) => k.kind);
+    expect(tipos).toContain(COUPON_KIND.EVENT);
+    expect(tipos).not.toContain(COUPON_KIND.PRIVATE_LESSON);
+    const r = normalizePromoCouponInput({
+      code: 'CAFE10', kind: COUPON_KIND.DISCOUNT, type: COUPON_TYPE.PERCENT, value: 10, show_public: true, show_home: true,
+    }, { issuerType: C });
+    expect(r.value.show_home).toBe(false);
+    expect(r.value.visibility).toBe(PROMO_VISIBILITY.ALL);
+  });
+
+  it('a campanha do clube não manda aviso (é o comunicado) e os destinos levam à página do clube', () => {
+    expect(PROMO_AUDIENCES_BY_ISSUER[C]).toEqual([]);
+    expect(PROMO_DESTINATIONS_BY_ISSUER[C]).toContain(PROMO_DESTINATION.CLUB);
+    expect(promoDestinationLink({ type: PROMO_DESTINATION.CLUB }, { issuerType: C, issuerId: 'clubA' })).toBe('/clubes/clubA');
+  });
+
+  it('o banner do clube fica só na página: home:false derruba a tela inicial', () => {
+    const r = normalizePromoPlacement({ show_on_page: true, show_home: true }, { today: HOJE, home: false });
+    expect(r.value.show_home).toBe(false);
+    expect(normalizePromoPlacement({ show_on_page: false, show_home: true }, { today: HOJE, home: false }).errors.placement).toBeTruthy();
+    expect(promoPlacementText({ issuer_type: C, banner: { source: 'design' }, show_on_page: true, banner_until: '2026-12-01' })).toMatch(/página do clube/);
+  });
+
+  it('a vitrine do início nunca mostra o clube, nem com tudo ligado', () => {
+    const cupom = { id: 'c1', issuer_type: C, issuer_id: 'clubA', active: true, show_public: true, show_home: true, code: 'C10', type: 'percent', value: 10 };
+    expect(homePromoItems({ coupons: [cupom], platformOn: true, coachesOn: true, federationsOn: true, today: '2026-10-25' })).toEqual([]);
+  });
+});

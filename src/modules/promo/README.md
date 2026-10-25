@@ -12,6 +12,14 @@ ativa naquela federação (`fedIdsOfMember`); a campanha da federação **não
 manda aviso** (`PROMO_AUDIENCES_BY_ISSUER.federation = []`); destinos: a
 página da federação e a loja oficial. Ver `docs/50-FEDERACAO.md` §6.7.
 
+**Quarto emissor (Bloco C2 dos clubes):** `PROMO_ISSUER.CLUB` (`issuer_id` = id
+do clube). Emite `comms`/administrador do clube, com a flag `club_association`
+e a associação publicada (regra `isPromoIssuer` + `promoPageOk`). Divulga **só na
+página do clube** (`normalizePromoPlacement(…, { home: false })`; nunca tela
+inicial nem vitrine geral), não tem "só associados" (leitura de qualquer conta
+logada — o exclusivo é Vantagem) e a campanha não avisa (o canal é o comunicado).
+Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1.
+
 ```
 promo/
 ├── domain/

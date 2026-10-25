@@ -2596,7 +2596,9 @@ IX; inteiro de 0 ao tamanho de `board`, ou `null`; a página pública não mostr
 só `admin`; públicos como o resto da federação).
 A federação também é **emissora** em `promo_coupons`/`promo_campaigns`/
 `promo_settings` (`issuer_type: 'federation'`, `issuer_id` = id da federação;
-equipe `comms`/`admin` com o módulo `promos`) e **vendedora** em
+equipe `comms`/`admin` com o módulo `promos`), o **clube-associação** também é emissor (`issuer_type: 'club'`,
+`issuer_id` = id do clube; `comms`/administrador, flag `club_association` e
+associação publicada; só página do clube — `show_home` sempre `false`) e a federação é **vendedora** em
 `market_sellers/federation_{id}` (`seller_type: 'federation'`; `admin`/`finance`
 com o módulo `store`).
 

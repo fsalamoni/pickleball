@@ -6,17 +6,24 @@
  *    e o código (vêm do SERVIDOR; vencido ou sem filiação, nada do segredo);
  *  - `ClubNewsSection`: os comunicados (os públicos e, para quem é do clube,
  *    os "só associados"); `?noticia=<id>` (o link do aviso) abre e rola até ele;
- *  - `ClubSponsorsStrip`: os patrocinadores.
+ *  - `ClubSponsorsStrip`: os patrocinadores;
+ *  - `ClubPromosSection`: os cupons e banners que o clube divulga (só dentro do app).
  * Falha não é vazio (`docs/27-FALHA-NAO-E-VAZIO.md`): cada fonte diz que não carregou.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronDown, ExternalLink, Gift, Lock, Newspaper, Pin, Ticket } from 'lucide-react';
+import { ChevronDown, ExternalLink, Gift, Lock, Newspaper, Pin, Tag, Ticket } from 'lucide-react';
 import { visibleClubNews, visibleClubSponsors, benefitMetaLine, liveBenefits, BENEFIT_KIND_LABELS, NEWS_AUDIENCE, SPONSOR_TIER } from '@/modules/clubs/domain/content';
 import { SPONSOR_TIER_LABELS } from '@/modules/federations/domain/constants';
 import {
   useMemberClubNews, useMyBenefits, usePublicBenefits, usePublicClubNews, usePublicClubSponsors, usePublicPlans,
 } from '@/modules/clubs/hooks/useClubAssociation';
+import { livePromoBanners, livePromoCoupons } from '@/modules/promo/domain/promo';
+import { useClubPublicPromos } from '@/modules/promo/hooks/usePromo';
+import { todayISO } from '@/modules/arenas/domain/subscription';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
+import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
 import { destinoDeAviso } from '@/core/domain/internalLink';
 import { podeAfirmarVazio } from '@/core/lib/queryState';
@@ -200,6 +207,34 @@ export function ClubSponsorsStrip({ clubId, titulo = true, enabled = true }) {
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------- divulgação -- */
+
+/**
+ * Os cupons e banners que o clube divulga na página. Cupom e campanha só a
+ * conta logada lê (`promo_*`): sem conta, nem consulta. Sem nada no ar, a seção
+ * não aparece; consulta que falhou diz que não carregou.
+ */
+export function ClubPromosSection({ clubId, enabled = true }) {
+  const { isAuthenticated } = useAuth();
+  const ligado = enabled && Boolean(isAuthenticated);
+  const q = useClubPublicPromos(clubId, { enabled: ligado });
+  const hoje = todayISO();
+  const { cupons, banners } = useMemo(() => ({
+    cupons: livePromoCoupons(q.data?.coupons || []),
+    banners: livePromoBanners(q.data?.campaigns || [], { today: hoje, lugar: 'page' }),
+  }), [q.data, hoje]);
+  if (!ligado || q.isLoading) return null;
+  if (q.isError) return <V2ErrorState inline title={t('Não carregaram as promoções do clube')} onRetry={() => q.refetch()} />;
+  if (cupons.length + banners.length === 0) return null;
+  return (
+    <section id="clube-promocoes" aria-labelledby="clube-promocoes-titulo" className="scroll-mt-4 space-y-3" data-dica="clube-promocoes">
+      <h2 id="clube-promocoes-titulo" className="flex items-center gap-2 font-display text-xl font-bold text-ink"><Tag className="h-5 w-5" aria-hidden="true" />{t('Promoções do clube')}</h2>
+      {banners.length > 0 && <div className="grid gap-4 md:grid-cols-2">{banners.map((c) => <PromoCampaignBanner key={c.id} campaign={c} />)}</div>}
+      {cupons.length > 0 && <div className="grid gap-4 md:grid-cols-2">{cupons.map((c) => <PromoCouponCard key={c.id} coupon={c} showIssuer={false} />)}</div>}
     </section>
   );
 }

@@ -46,6 +46,7 @@ export function buildClubSections(perms = []) {
         { value: 'comunicados', label: t('Comunicados') },
         { value: 'vantagens', label: t('Vantagens') },
         { value: 'patrocinadores', label: t('Patrocinadores') },
+        { value: 'divulgacao', label: t('Cupons e campanhas') },
       ],
       ok: tem(perms, CLUB_PERM.COMMS),
     },

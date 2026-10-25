@@ -13,7 +13,7 @@ import { useMyMemberships } from '@/modules/federations/hooks/useFederations';
 import { coachIdsOfStudent, fedIdsOfMember, normalizeIssuer, promoSettingsId } from '../domain/promo.js';
 import {
   createPromoCoupon, deletePromoCampaign, deletePromoCoupon, findCoachCouponByCode, findPromoCouponByCode, getPromoCampaign,
-  getPromoSettings, listCoachPublicPromos, listFederationPublicPromos, listHomePromoCampaigns, listHomePromoCoupons, listIssuerCampaigns,
+  getPromoSettings, listClubPublicPromos, listCoachPublicPromos, listFederationPublicPromos, listHomePromoCampaigns, listHomePromoCoupons, listIssuerCampaigns,
   listIssuerCoupons, listPagePromoCampaigns, listPublicPromoCoupons, publishPromoCampaign, redeemPromoCoupon,
   savePromoBannerTemplates, savePromoCouponTemplates, setPromoCouponActive, setPromoCouponUnitCost,
   updatePromoCampaign, updatePromoCoupon,
@@ -31,6 +31,7 @@ export const promoKeys = Object.freeze({
   vitrine: () => ['promo', 'vitrine'],
   doProfessor: (coachId) => ['promo', 'coach-public', coachId],
   daFederacao: (fedId) => ['promo', 'federation-public', fedId],
+  doClube: (clubId) => ['promo', 'club-public', clubId],
 });
 
 /** Depois de qualquer escrita: tudo o que mostra divulgação fica velho. */
@@ -157,6 +158,16 @@ export function useFederationPublicPromos(fedId, { enabled = true } = {}) {
     queryKey: promoKeys.daFederacao(fedId),
     queryFn: () => listFederationPublicPromos(fedId),
     enabled: enabled && !!fedId,
+    staleTime: 2 * 60_000,
+  });
+}
+
+/** O que UM clube divulga (a página dele). */
+export function useClubPublicPromos(clubId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: promoKeys.doClube(clubId),
+    queryFn: () => listClubPublicPromos(clubId),
+    enabled: enabled && !!clubId,
     staleTime: 2 * 60_000,
   });
 }

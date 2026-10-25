@@ -85,7 +85,7 @@ function CartaoCupom({ issuer, cupom, onEditar, onRegistrar, onAlternar, onApaga
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
         {cupom.show_public === true && (
           <span className="inline-flex items-center gap-1 font-bold text-ink">
-            <Eye className="h-3.5 w-3.5" aria-hidden /> {ehProfessor ? t('No seu perfil e na vitrine') : ehFederacao ? t('Na página da federação e na vitrine') : t('Na vitrine de promoções')}
+            <Eye className="h-3.5 w-3.5" aria-hidden /> {ehProfessor ? t('No seu perfil e na vitrine') : ehFederacao ? t('Na página da federação e na vitrine') : issuer.type === PROMO_ISSUER.CLUB ? t('Na página do clube') : t('Na vitrine de promoções')}
           </span>
         )}
         {cupom.show_public === true && cupom.show_home === true && (
@@ -180,7 +180,7 @@ export default function PromoCouponsPanel({ issuer }) {
           <p className="mt-0.5 text-xs text-gray-500">
             {ehProfessor
               ? t('Desconto na aula, aula experimental, clínica, brinde — para os seus alunos ou para quem ainda vai ser.')
-              : ehFederacao ? t('Desconto na inscrição, vaga em curso, produto oficial, convênio — para os filiados ou para quem ainda vai ser.') : t('Desconto, inscrição em evento, brinde, clínica — para toda a comunidade ou para uma região.')}
+              : ehFederacao ? t('Desconto na inscrição, vaga em curso, produto oficial, convênio — para os filiados ou para quem ainda vai ser.') : issuer.type === PROMO_ISSUER.CLUB ? t('Desconto na inscrição de um evento, brinde, convênio com parceiros — aparece na página do clube.') : t('Desconto, inscrição em evento, brinde, clínica — para toda a comunidade ou para uma região.')}
           </p>
         </div>
         <Alternador valor={aba} onChange={setAba} />
@@ -243,7 +243,7 @@ export default function PromoCouponsPanel({ issuer }) {
                   title={t('Nenhum cupom ainda')}
                   description={ehProfessor
                     ? t('Uma aula experimental grátis ou um desconto na primeira aula é o jeito mais direto de trazer aluno novo. Comece escolhendo o que o cupom dá.')
-                    : ehFederacao ? t('Um benefício só para filiados (desconto na etapa, vaga num curso, convênio) dá motivo para filiar e renovar. Comece escolhendo o que o cupom dá.') : t('Um cupom é o jeito mais direto de movimentar a comunidade num evento ou numa semana fraca. Comece escolhendo o que ele dá.')}
+                    : ehFederacao ? t('Um benefício só para filiados (desconto na etapa, vaga num curso, convênio) dá motivo para filiar e renovar. Comece escolhendo o que o cupom dá.') : issuer.type === PROMO_ISSUER.CLUB ? t('Um cupom de evento ou de parceiro dá motivo para conhecer o clube. Benefício só de associado vai em Vantagens. Comece escolhendo o que o cupom dá.') : t('Um cupom é o jeito mais direto de movimentar a comunidade num evento ou numa semana fraca. Comece escolhendo o que ele dá.')}
                   action={<V2Button size="sm" onClick={() => setForm('novo')}>{t('Criar o primeiro')}</V2Button>}
                 />
               )}

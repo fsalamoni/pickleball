@@ -42,6 +42,8 @@ export const PROMO_ISSUER = Object.freeze({
   COACH: 'coach',
   /** PR 4 das federações: `issuer_id` = id da federação (módulo `promos`). */
   FEDERATION: 'federation',
+  /** Clube-associação: `issuer_id` = id do clube (a equipe de comunicação emite). */
+  CLUB: 'club',
 });
 
 /** O `issuer_id` fixo da plataforma (nunca colide com um uid, que tem 28). */
@@ -66,7 +68,7 @@ export function normalizeIssuer(input = {}) {
   const id = type === PROMO_ISSUER.PLATFORM ? PLATFORM_ISSUER_ID : String(input.id || '').trim();
   if (!id) return null;
   const name = String(input.name || '').replace(/\s+/g, ' ').trim().slice(0, 80)
-    || (type === PROMO_ISSUER.PLATFORM ? 'PickleRush' : type === PROMO_ISSUER.FEDERATION ? 'Federação' : 'Professor');
+    || (type === PROMO_ISSUER.PLATFORM ? 'PickleRush' : type === PROMO_ISSUER.FEDERATION ? 'Federação' : type === PROMO_ISSUER.CLUB ? 'Clube' : 'Professor');
   return { type, id, name };
 }
 
@@ -128,6 +130,15 @@ export const PROMO_KIND_META = Object.freeze({
     [K.FOOD]: { label: tk('Comida'), hint: tk('Um lanche ou refeição num evento da federação.'), example: tk('1 lanche na etapa') },
     [K.DRINK]: { label: tk('Bebida'), hint: tk('Uma bebida num evento da federação.'), example: tk('1 água de coco') },
     [K.OTHER]: { label: tk('Outro benefício'), hint: tk('Qualquer outra vantagem (parceiros, convênios).'), example: tk('Desconto no fisioterapeuta parceiro') },
+  }),
+  [PROMO_ISSUER.CLUB]: Object.freeze({
+    [K.DISCOUNT]: { label: tk('Desconto'), hint: tk('Percentual ou valor fixo — na inscrição de um evento do clube, na loja do clube ou num parceiro. Quem usa mostra o código e a equipe registra o uso.') },
+    [K.EVENT]: { label: tk('Inscrição em evento'), hint: tk('Inscrição num torneio ou evento do clube.'), example: tk('Inscrição no torneio de fim de ano') },
+    [K.PRODUCT]: { label: tk('Produto ou brinde'), hint: tk('Um item da loja do clube ou um brinde de parceiro.'), example: tk('1 camiseta do clube') },
+    [K.RENTAL]: { label: tk('Aluguel de equipamento'), hint: tk('Raquete, bolas ou outro equipamento num evento do clube.'), example: tk('Aluguel de raquete no treino') },
+    [K.FOOD]: { label: tk('Comida'), hint: tk('Um lanche ou refeição num evento do clube.'), example: tk('1 lanche na confraternização') },
+    [K.DRINK]: { label: tk('Bebida'), hint: tk('Uma bebida num evento do clube.'), example: tk('1 água de coco') },
+    [K.OTHER]: { label: tk('Outro benefício'), hint: tk('Qualquer outra vantagem (parceiros, convênios).'), example: tk('Desconto na loja de esportes parceira') },
   }),
 });
 
@@ -300,6 +311,8 @@ export function normalizePromoCouponInput(input = {}, { issuerType } = {}) {
       min_amount: null,
       reach: alcance.value,
       visibility,
+      // O clube divulga só na página dele: nunca na tela inicial.
+      ...(issuerType === PROMO_ISSUER.CLUB ? { show_home: false } : {}),
     },
   };
 }
@@ -325,6 +338,7 @@ export function promoUseHint(coupon) {
   if (coach && couponKind(coupon) === K.DISCOUNT) return t('Informe o código ao pedir a aula.');
   if (coach) return t('Mostre o código ao professor.');
   if (coupon?.issuer_type === PROMO_ISSUER.FEDERATION) return t('Mostre o código à equipe da federação ou ao parceiro.');
+  if (coupon?.issuer_type === PROMO_ISSUER.CLUB) return t('Mostre o código à equipe do clube ou ao parceiro.');
   return t('Mostre o código para usar.');
 }
 
@@ -356,6 +370,8 @@ export const PROMO_DESTINATION = Object.freeze({
   STORE: 'store',
   /** PR 4: a página da federação emissora. */
   FEDERATION: 'federation',
+  /** Clube-associação: a página pública do clube emissor. */
+  CLUB: 'club',
   CONTENT: 'content',
 });
 
@@ -382,6 +398,7 @@ export const PROMO_DESTINATION_META = Object.freeze({
   [D.CLINICS]: { label: tk('Minhas clínicas'), hint: tk('As clínicas e workshops abertos.'), cta: tk('Ver clínicas') },
   [D.STORE]: { label: tk('Minha loja'), hint: tk('Os produtos à venda com você.'), cta: tk('Ver a loja') },
   [D.FEDERATION]: { label: tk('Página da federação'), hint: tk('A página pública da federação: planos, torneios chancelados, ranking e notícias.'), cta: tk('Conhecer a federação') },
+  [D.CLUB]: { label: tk('Página do clube'), hint: tk('A página pública do clube: planos, vantagens, comunicados e eventos.'), cta: tk('Conhecer o clube') },
   [D.CONTENT]: { label: tk('Meu conteúdo'), hint: tk('A sua biblioteca de conteúdo.'), cta: tk('Ver conteúdo') },
 });
 
@@ -396,6 +413,9 @@ export const PROMO_DESTINATIONS_BY_ISSUER = Object.freeze({
   ]),
   [PROMO_ISSUER.FEDERATION]: Object.freeze([
     D.DETAILS, D.FEDERATION, D.TOURNAMENTS, D.TOURNAMENT, D.STORE, D.PROMOS, D.MARKET,
+  ]),
+  [PROMO_ISSUER.CLUB]: Object.freeze([
+    D.DETAILS, D.CLUB, D.TOURNAMENTS, D.TOURNAMENT, D.OPEN_GAMES, D.PROMOS, D.MARKET,
   ]),
 });
 
@@ -423,8 +443,10 @@ export function promoDestinationLink(destination, { issuerType, issuerId, campai
   const tipo = destination?.type || D.DETAILS;
   const alvo = encodeURIComponent(String(destination?.target_id || '').trim());
   const federacao = issuerId && issuerType === PROMO_ISSUER.FEDERATION;
+  const clube = issuerId && issuerType === PROMO_ISSUER.CLUB;
   const perfil = issuerId && issuerType === PROMO_ISSUER.COACH ? `/coaches/${encodeURIComponent(issuerId)}`
-    : federacao ? `/federacoes/${encodeURIComponent(issuerId)}` : null;
+    : federacao ? `/federacoes/${encodeURIComponent(issuerId)}`
+      : clube ? `/clubes/${encodeURIComponent(issuerId)}` : null;
   switch (tipo) {
     case D.TOURNAMENTS: return '/torneios';
     case D.TOURNAMENT: return alvo ? `/torneios/${alvo}` : '/torneios';
@@ -442,6 +464,7 @@ export function promoDestinationLink(destination, { issuerType, issuerId, campai
       : federacao ? `/mercado/vendedor/federation_${encodeURIComponent(issuerId)}` : '/mercado';
     case D.PROFILE: return perfil || '/coaches';
     case D.FEDERATION: return perfil || '/federacoes';
+    case D.CLUB: return perfil || '/clubes';
     case D.BOOK_LESSON: return perfil ? `${perfil}?marcar=1` : '/coaches';
     case D.CLINICS: return perfil ? `${perfil}#professor-clinicas` : '/coaches';
     case D.STORE: return federacao ? `/mercado/vendedor/federation_${encodeURIComponent(issuerId)}` : perfil ? `${perfil}#professor-loja` : '/coaches';
@@ -485,10 +508,11 @@ function somaDias(iso, dias) {
  *    de promoções no caso da plataforma.
  * @returns {{ valid, errors, value: { show_on_page, show_home, banner_until } }}
  */
-export function normalizePromoPlacement(input = {}, { today } = {}) {
+export function normalizePromoPlacement(input = {}, { today, home = true } = {}) {
   const errors = {};
   const show_on_page = input.show_on_page !== false;
-  const show_home = input.show_home === true;
+  // `home: false` (clube): o banner vive só na página do emissor.
+  const show_home = home && input.show_home === true;
   let until = String(input.banner_until || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(until)) until = today ? somaDias(today, BANNER_DEFAULT_DAYS) : '';
   if (today && until < today) errors.banner_until = t('A data final já passou.');
@@ -520,7 +544,7 @@ export function livePromoBanners(campaigns = [], { today, lugar = 'home' } = {})
 /** "Banner na tela inicial e no seu perfil · leva a: Marcar aula". */
 export function promoPlacementText(campaign) {
   if (!campaign?.banner) return '';
-  const pagina = campaign.issuer_type === PROMO_ISSUER.COACH ? t('no seu perfil') : campaign.issuer_type === PROMO_ISSUER.FEDERATION ? t('na página da federação') : t('na vitrine de promoções');
+  const pagina = campaign.issuer_type === PROMO_ISSUER.COACH ? t('no seu perfil') : campaign.issuer_type === PROMO_ISSUER.FEDERATION ? t('na página da federação') : campaign.issuer_type === PROMO_ISSUER.CLUB ? t('na página do clube') : t('na vitrine de promoções');
   const onde = [
     campaign.show_home ? t('na tela inicial') : null,
     campaign.show_on_page !== false ? pagina : null,
@@ -564,6 +588,8 @@ export const PROMO_AUDIENCES_BY_ISSUER = Object.freeze({
   // A federação não avisa pela campanha (a comunicação não lê a lista de
   // filiados): o aviso aos filiados é a NOTÍCIA, pelo servidor.
   [PROMO_ISSUER.FEDERATION]: Object.freeze([]),
+  // O clube também não: o aviso aos associados é o COMUNICADO (`clubContent`).
+  [PROMO_ISSUER.CLUB]: Object.freeze([]),
 });
 
 const uniq = (lista) => [...new Set((lista || []).filter(Boolean))];

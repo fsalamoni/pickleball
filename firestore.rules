@@ -3479,7 +3479,14 @@ service cloud.firestore {
         // PR 4: a federação (módulo `promos`) emite pela equipe de comunicação.
         || (type == 'federation' && fedOn() && fedModuleOn(id, 'promos')
           && (fedAny(id, ['comms', 'admin'])))
+        // Clube-associação: a equipe de comunicação (ou o administrador do clube) emite.
+        || (type == 'club' && cxOn() && cxHas(id, ['comms']))
       );
+    }
+    // Federação e clube só divulgam com a página pública no ar.
+    function promoPageOk() {
+      return (nd().issuer_type != 'federation' || fedPublic(nd().issuer_id))
+        && (nd().issuer_type != 'club' || cxPub(nd().issuer_id));
     }
     function promoIssuerKept() {
       return nd().issuer_type == od().issuer_type
@@ -3490,16 +3497,14 @@ service cloud.firestore {
     // `promo_settings`, que só o emissor lê. O admin pode pausar/apagar (moderação).
     match /promo_coupons/{couponId} {
       allow read: if isAuthed();
-      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id)
-        && (nd().issuer_type != 'federation' || fedPublic(nd().issuer_id));
+      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id) && promoPageOk();
       allow update: if (isPromoIssuer(od().issuer_type, od().issuer_id) && promoIssuerKept())
         || isPlatformAdmin();
       allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || isPlatformAdmin();
     }
     match /promo_campaigns/{campaignId} {
       allow read: if isAuthed();
-      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id)
-        && (nd().issuer_type != 'federation' || fedPublic(nd().issuer_id));
+      allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id) && promoPageOk();
       allow update: if (isPromoIssuer(od().issuer_type, od().issuer_id) && promoIssuerKept())
         || isPlatformAdmin();
       allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || isPlatformAdmin();
@@ -3508,7 +3513,7 @@ service cloud.firestore {
     // custo interno de cada vale. Id = 'platform' ou o uid do professor.
     match /promo_settings/{issuerId} {
       allow read, write: if isPlatformAdmin()
-        || (issuerId != 'platform' && (isPromoIssuer('coach', issuerId) || isPromoIssuer('federation', issuerId)));
+        || (issuerId != 'platform' && (isPromoIssuer('coach', issuerId) || isPromoIssuer('federation', issuerId) || isPromoIssuer('club', issuerId)));
     }
 
     // ======================================================================

@@ -161,7 +161,7 @@ export default function PromoCampaignsPanel({ issuer }) {
           <p className="mt-0.5 text-xs text-gray-500">
             {ehProfessor
               ? t('Banner no seu perfil e na tela inicial, levando a marcar aula, clínicas, loja ou conteúdo — e aviso para os seus alunos.')
-              : ehFederacao ? t('Banner na página da federação, na vitrine e na tela inicial, levando a torneios chancelados, à loja ou à página da federação. O aviso aos filiados vai pelas Notícias.') : t('Banner na vitrine de promoções e na tela inicial, levando a torneios, jogos, arenas, professores e ranking — e aviso para a comunidade.')}
+              : ehFederacao ? t('Banner na página da federação, na vitrine e na tela inicial, levando a torneios chancelados, à loja ou à página da federação. O aviso aos filiados vai pelas Notícias.') : issuer.type === PROMO_ISSUER.CLUB ? t('Banner na página do clube, levando a torneios, jogos abertos ou à página do clube. O aviso aos associados vai pelos Comunicados.') : t('Banner na vitrine de promoções e na tela inicial, levando a torneios, jogos, arenas, professores e ranking — e aviso para a comunidade.')}
           </p>
         </div>
         {!form && !q.isError && !q.isLoading && (
@@ -192,7 +192,7 @@ export default function PromoCampaignsPanel({ issuer }) {
             title={t('Nenhuma campanha ainda')}
             description={ehProfessor
               ? t('Uma campanha põe um banner no seu perfil (e, se quiser, na tela inicial) e avisa os seus alunos. Comece por um dos cinco modelos.')
-              : ehFederacao ? t('Uma campanha põe um banner na página da federação (e, se quiser, na tela inicial da sua região). Comece por um dos cinco modelos.') : t('Uma campanha põe um banner na vitrine e na tela inicial e avisa a comunidade — toda ou só uma região. Comece por um dos cinco modelos.')}
+              : ehFederacao ? t('Uma campanha põe um banner na página da federação (e, se quiser, na tela inicial da sua região). Comece por um dos cinco modelos.') : issuer.type === PROMO_ISSUER.CLUB ? t('Uma campanha põe um banner na página do clube. Comece por um dos cinco modelos.') : t('Uma campanha põe um banner na vitrine e na tela inicial e avisa a comunidade — toda ou só uma região. Comece por um dos cinco modelos.')}
           />
         )
       ) : (

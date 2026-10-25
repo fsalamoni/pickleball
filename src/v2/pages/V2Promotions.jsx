@@ -56,7 +56,9 @@ export default function V2Promotions() {
 
   const { banners, cuponsPlataforma, cuponsProfessores, cuponsFederacoes, fora } = useMemo(() => {
     const emissorLigado = (d) => (d.issuer_type === PROMO_ISSUER.PLATFORM ? plataformaOn
-      : d.issuer_type === PROMO_ISSUER.FEDERATION ? federacoesOn : professoresOn);
+      : d.issuer_type === PROMO_ISSUER.FEDERATION ? federacoesOn
+        // O clube divulga só na página dele, nunca na vitrine geral.
+        : d.issuer_type === PROMO_ISSUER.CLUB ? false : professoresOn);
     const visivelSemRegiao = (d) => emissorLigado(d) && isVisibleTo(d, quem);
     const naRegiao = (d) => !filtraRegiao || reachMatchesRegion(d.reach, regiaoPromo);
     let foraDaRegiao = 0;

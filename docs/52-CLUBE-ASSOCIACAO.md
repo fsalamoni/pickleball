@@ -140,14 +140,14 @@ Detalhe por perfil em [`48`](./48-PERMISSOES-POR-PERFIL.md) §4.8b.
   arena (Atender · Gerir). `?aba=` e `?secao=` na URL; os valores são **contrato
   de link** — nunca renomeie: `hoje`, `associados`, `cobrancas`, `planos`,
   `pix`, `equipe`, `cargos`, `indicadores`, `config`, `comunicados`, `vantagens`,
-  `patrocinadores`. `?filtro=` filtra os associados.
+  `patrocinadores`, `divulgacao`. `?filtro=` filtra os associados.
   - **Hoje** — o que precisa de você + prontidão (ligar, criar plano, informar Pix, abrir ao público) + **mandatos acabando** (a quem tem `staff`).
   - **Associados** — pedidos, filtros, busca, aprovar/recusar/suspender/reativar, "Associar uma pessoa", **"Importar lista"** (CSV) e **"Declaração"** de cada associado em dia.
   - **Financeiro → Cobranças** — recebido no mês/total, vencidas, confirmar/cancelar.
   - **Planos** — criar/editar/pausar, aplicar plano gratuito a todos os membros; **Pix do clube**.
   - **Diretoria → Equipe e mandatos** — quem está na diretoria, cargo e mandato (aberto, vigente, acabando, encerrado), nomear (escolhendo entre os membros do clube), trocar de cargo, prorrogar com motivo, tirar ou sair. **Cargos** (só o master) — montar os cargos do clube, com o que cada permissão abre.
   - **Indicadores** — 12 meses de pedidos, taxa de renovação, em dia por plano e por categoria, recebido por mês e por origem, atraso; baixa a planilha CSV. Cada bloco depende da própria fonte e, sem ela, diz "não deu para medir" — nunca zero.
-  - **Comunicação** (`comms`) — **Comunicados** (escrever, publicar para todos ou só associados, fixar, "Avisar os associados" uma vez só), **Vantagens** (vitrine + "como usar"/código, planos que alcança, validade, pausar) e **Patrocinadores** (até 12, por faixa).
+  - **Comunicação** (`comms`) — **Comunicados** (escrever, publicar para todos ou só associados, fixar, "Avisar os associados" uma vez só), **Vantagens** (vitrine + "como usar"/código, planos que alcança, validade, pausar) **Patrocinadores** (até 12, por faixa) e **Cupons e campanhas** (o console de divulgação com o clube como emissor, ver §5.1).
   - **Configurações** — ligar, abrir ao público, apresentação e cor.
 - **Declaração de associação** — a folha para escola, empregador ou patrocinador
   (`buildClubDeclaration`, `ClubDeclarationDialog`): só sai com a associação em dia
@@ -159,6 +159,35 @@ Detalhe por perfil em [`48`](./48-PERMISSOES-POR-PERFIL.md) §4.8b.
 Reuso da federação: carteirinha (`MemberCardDialog` com `cardOverride`), selos
 de situação, QR, `CopyCodeButton`, `ConfirmDialog` e as contas de cobrança
 (`domain/charges.js`: resumo financeiro, vencida, "pode declarar", valor em reais).
+
+### 5.1 Cupons e campanhas do clube (Bloco C2)
+
+O clube é o **quarto emissor** do módulo `promo` (`PROMO_ISSUER.CLUB`, `issuer_id`
+= id do clube): as mesmas ferramentas da plataforma, do professor e da federação
+(`PromoMarketingConsole`, arte do cupom, cinco modelos de banner, controle de uso,
+recepção do código), sem copiar uma linha. Fica na Central → Comunicação →
+**Cupons e campanhas** e aparece na página do clube como **Promoções do clube**
+(`ClubPromosSection`, dentro do app — cupom e campanha só a conta logada lê).
+
+Diferenças do clube, todas de propósito:
+
+- **Só na página do clube.** O cupom e o banner do clube nunca vão à tela inicial
+  nem à vitrine geral de promoções: `normalizePromoPlacement(…, { home: false })`
+  e `normalizePromoCouponInput` forçam `show_home = false`, `homePromoItems` não
+  conhece o emissor `club` e `V2Promotions` o ignora. Alcance por região não existe.
+- **Não há "só associados".** `promo_*` é legível por toda conta logada (o
+  associado confere o código), então esconder ali seria só aparência — e
+  aparência que parece segurança é pior que nada. O benefício **exclusivo** de
+  associado fica em **Vantagens** (§3, `bsec` + servidor); o cupom do clube é
+  para atrair e para eventos/parceiros (inscrição, brinde, aluguel, comida, bebida).
+- **Sem aviso pela campanha** (`PROMO_AUDIENCES_BY_ISSUER.club = []`): o canal é o
+  comunicado ("Avisar os associados", uma vez só).
+- **Destinos** (lista fechada): detalhes da campanha, página do clube, torneios,
+  um torneio, jogos abertos, vitrine e Mercado. A loja do clube entra no Bloco C3.
+- **Regra**: emite quem tem `comms` (ou administra o clube), só com a flag
+  `club_association` ligada **e** a associação publicada (`promoPageOk`); o
+  emissor não muda no update; `promo_settings/{clubId}` (custo interno do vale,
+  modelos) é só dessa equipe. Auditoria: `club_promo_*`.
 
 ## 6. O que não pode regredir
 
@@ -196,6 +225,9 @@ de situação, QR, `CopyCodeButton`, `ConfirmDialog` e as contas de cobrança
     consulta os públicos (seria recusada) — `ClubNewsSection publicOn={…}`.
 15. Os ids de tipo de vantagem (`discount`, `partner`…) e de faixa de patrocinador
     são gravados: nunca renomeie.
+16. **Cupom e banner do clube só na página dele** (§5.1): nunca na tela inicial,
+    nunca na vitrine geral; e nunca ofereça "só associados" neles — a leitura é
+    de qualquer conta logada. Benefício exclusivo é Vantagem.
 
 ## 7. Testes
 
@@ -203,6 +235,7 @@ de situação, QR, `CopyCodeButton`, `ConfirmDialog` e as contas de cobrança
 só), `src/modules/clubs/domain/content.test.js`,
 `tests/rules/clubContent.rules.test.js` (emulador: vitrine pública, segredo só da
 comunicação, comunicado "só associados" para o membro),
+`tests/rules/clubPromo.rules.test.js` (emulador: cupom e campanha do clube — quem emite, página publicada, emissor imutável) e o bloco "clube como emissor" de `src/modules/promo/domain/promo.test.js`,
 `functions/clubAssociation.test.js` (ciclo completo no servidor, incluindo a
 importação), `functions/clubStaff.test.js` (diretoria, mandato, varredura) e
 `functions/clubStaff.parity.test.js`, `functions/accountDeletion.clubes.test.js`,
