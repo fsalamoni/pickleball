@@ -415,7 +415,7 @@ export const PROMO_DESTINATIONS_BY_ISSUER = Object.freeze({
     D.DETAILS, D.FEDERATION, D.TOURNAMENTS, D.TOURNAMENT, D.STORE, D.PROMOS, D.MARKET,
   ]),
   [PROMO_ISSUER.CLUB]: Object.freeze([
-    D.DETAILS, D.CLUB, D.TOURNAMENTS, D.TOURNAMENT, D.OPEN_GAMES, D.PROMOS, D.MARKET,
+    D.DETAILS, D.CLUB, D.TOURNAMENTS, D.TOURNAMENT, D.OPEN_GAMES, D.STORE, D.PROMOS, D.MARKET,
   ]),
 });
 
@@ -467,7 +467,7 @@ export function promoDestinationLink(destination, { issuerType, issuerId, campai
     case D.CLUB: return perfil || '/clubes';
     case D.BOOK_LESSON: return perfil ? `${perfil}?marcar=1` : '/coaches';
     case D.CLINICS: return perfil ? `${perfil}#professor-clinicas` : '/coaches';
-    case D.STORE: return federacao ? `/mercado/vendedor/federation_${encodeURIComponent(issuerId)}` : perfil ? `${perfil}#professor-loja` : '/coaches';
+    case D.STORE: return clube ? `/mercado/vendedor/club_${encodeURIComponent(issuerId)}` : federacao ? `/mercado/vendedor/federation_${encodeURIComponent(issuerId)}` : perfil ? `${perfil}#professor-loja` : '/coaches';
     case D.CONTENT: return perfil ? `${perfil}#professor-conteudo` : '/coaches';
     case D.DETAILS:
     default:

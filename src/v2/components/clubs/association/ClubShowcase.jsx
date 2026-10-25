@@ -7,12 +7,13 @@
  *  - `ClubNewsSection`: os comunicados (os públicos e, para quem é do clube,
  *    os "só associados"); `?noticia=<id>` (o link do aviso) abre e rola até ele;
  *  - `ClubSponsorsStrip`: os patrocinadores;
- *  - `ClubPromosSection`: os cupons e banners que o clube divulga (só dentro do app).
+ *  - `ClubPromosSection`: os cupons e banners que o clube divulga (só dentro do app);
+ *  - `ClubStoreCard`: a loja do clube no Mercado, quando ela existe e está no ar.
  * Falha não é vazio (`docs/27-FALHA-NAO-E-VAZIO.md`): cada fonte diz que não carregou.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronDown, ExternalLink, Gift, Lock, Newspaper, Pin, Tag, Ticket } from 'lucide-react';
+import { ChevronDown, ExternalLink, Gift, Lock, Newspaper, Pin, Store, Tag, Ticket } from 'lucide-react';
 import { visibleClubNews, visibleClubSponsors, benefitMetaLine, liveBenefits, BENEFIT_KIND_LABELS, NEWS_AUDIENCE, SPONSOR_TIER } from '@/modules/clubs/domain/content';
 import { SPONSOR_TIER_LABELS } from '@/modules/federations/domain/constants';
 import {
@@ -22,6 +23,9 @@ import { livePromoBanners, livePromoCoupons } from '@/modules/promo/domain/promo
 import { useClubPublicPromos } from '@/modules/promo/hooks/usePromo';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useSeller } from '@/modules/marketplace/hooks/useMarket';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
@@ -29,7 +33,7 @@ import { destinoDeAviso } from '@/core/domain/internalLink';
 import { podeAfirmarVazio } from '@/core/lib/queryState';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
-import { V2Badge, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { quando } from '@/v2/components/federations/federationUi';
 import { t } from '@/core/i18n';
 
@@ -235,6 +239,35 @@ export function ClubPromosSection({ clubId, enabled = true }) {
       <h2 id="clube-promocoes-titulo" className="flex items-center gap-2 font-display text-xl font-bold text-ink"><Tag className="h-5 w-5" aria-hidden="true" />{t('Promoções do clube')}</h2>
       {banners.length > 0 && <div className="grid gap-4 md:grid-cols-2">{banners.map((c) => <PromoCampaignBanner key={c.id} campaign={c} />)}</div>}
       {cupons.length > 0 && <div className="grid gap-4 md:grid-cols-2">{cupons.map((c) => <PromoCouponCard key={c.id} coupon={c} showIssuer={false} />)}</div>}
+    </section>
+  );
+}
+
+/* --------------------------------------------------------------------- loja -- */
+
+/**
+ * A loja do clube no Mercado: só dentro do app (o vendedor é legível por conta
+ * logada), só com o Mercado aberto e a loja no ar. Sem loja, ou com a consulta
+ * falhando, a seção não aparece — não há o que afirmar nem o que oferecer.
+ */
+export function ClubStoreCard({ clubId, enabled = true }) {
+  const { isAuthenticated } = useAuth();
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const ligado = enabled && Boolean(isAuthenticated) && mercadoOn;
+  const q = useSeller(ligado ? `club_${clubId}` : '');
+  if (!ligado || !q.data || q.data.status !== 'active') return null;
+  return (
+    <section id="clube-loja" aria-labelledby="clube-loja-titulo" className="scroll-mt-4" data-dica="clube-loja-publica">
+      <V2Surface className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-acid/30"><Store className="h-5 w-5 text-ink" aria-hidden="true" /></span>
+          <div className="min-w-0">
+            <h2 id="clube-loja-titulo" className="font-display text-lg font-bold text-ink">{t('Loja do clube')}</h2>
+            <p className="text-sm text-gray-600">{t('Uniforme, material e inscrições, direto com o clube.')}</p>
+          </div>
+        </div>
+        <V2Button asChild variant="secondary"><Link to={`/mercado/vendedor/club_${clubId}`}>{t('Ver a loja')}</Link></V2Button>
+      </V2Surface>
     </section>
   );
 }

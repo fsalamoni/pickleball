@@ -24,6 +24,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useMyFederationRoles, usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { storeFederations } from '@/modules/federations/domain/staff';
+import { useMyStoreClubs } from '@/modules/clubs/hooks/useClubAssociation';
 import { coverOf, listingCompleteness, vacationState } from '@/modules/marketplace/domain/listing';
 import { PIX_KEY_TYPES, sellerKeyFor, sellingIdentities } from '@/modules/marketplace/domain/seller';
 import {
@@ -107,7 +108,7 @@ function StartSelling({ identity, defaults }) {
   return (
     <V2Surface className="mx-auto max-w-xl space-y-4 text-center">
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-acid/30"><Store className="h-7 w-7 text-ink" /></span>
-      <h2 className="font-display text-2xl font-bold text-ink">{identity.type === 'arena' ? t('Comece a vender pela arena') : identity.type === 'federation' ? t('Abra a loja oficial da federação') : identity.type === 'coach' ? t('Comece a vender como professor') : t('Comece a vender no Mercado')}</h2>
+      <h2 className="font-display text-2xl font-bold text-ink">{identity.type === 'arena' ? t('Comece a vender pela arena') : identity.type === 'federation' ? t('Abra a loja oficial da federação') : identity.type === 'club' ? t('Abra a loja do clube') : identity.type === 'coach' ? t('Comece a vender como professor') : t('Comece a vender no Mercado')}</h2>
       <p className="text-sm text-gray-500">{t('Sem comissão. O comprador paga por Pix direto para você, depois que você aceitar o pedido.')}</p>
       <form
         className="space-y-3 text-left"
@@ -783,7 +784,10 @@ function SellPage() {
   const temPapel = federacoesOn && (papeis.data || []).length > 0;
   const feds = usePublicFederations({ enabled: temPapel });
   const federations = useMemo(() => (temPapel ? storeFederations(papeis.data, feds.data || []) : []), [temPapel, papeis.data, feds.data]);
-  const ids = useMemo(() => sellingIdentities({ uid: user?.uid, name: nome, isCoach: Boolean(coach.data), arenas, store: store.data, federations }), [user?.uid, nome, coach.data, arenas, store.data, federations]);
+  // A loja do clube-associação (Bloco C3): só com a flag, a associação publicada e papel de administração/financeiro.
+  const clubesOn = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
+  const { clubs } = useMyStoreClubs({ enabled: clubesOn });
+  const ids = useMemo(() => sellingIdentities({ uid: user?.uid, name: nome, isCoach: Boolean(coach.data), arenas, store: store.data, federations, clubs: clubesOn ? clubs : [] }), [user?.uid, nome, coach.data, arenas, store.data, federations, clubs, clubesOn]);
   const como = ids.find((i) => i.key === params.get('como')) || ids[0];
   const aba = ABAS.some((a) => a.value === params.get('aba')) ? params.get('aba') : 'resumo';
   const secao = SECOES.find((sec) => sec.abas.some((a) => a.value === aba));
@@ -792,7 +796,8 @@ function SellPage() {
 
   const arenaDe = como?.type === 'arena' ? arenas.find((a) => a.id === como.entity_id) : null;
   const fedDe = como?.type === 'federation' ? federations.find((f) => f.id === como.entity_id) : null;
-  const org = arenaDe || (fedDe && { name: fedDe.name, city: fedDe.city, state: fedDe.state, logo_url: fedDe.branding?.logo_url });
+  const clubeDe = como?.type === 'club' ? clubs.find((c) => c.id === como.entity_id) : null;
+  const org = arenaDe || (fedDe && { name: fedDe.name, city: fedDe.city, state: fedDe.state, logo_url: fedDe.branding?.logo_url }) || (clubeDe && { name: clubeDe.name, city: clubeDe.city, state: clubeDe.state, logo_url: clubeDe.logo_url });
   const defaults = { name: org?.name || nome, city: org?.city || userProfile?.city || '', state: org?.state || userProfile?.state || '', photo: org?.logo_url || userProfile?.photo_url || '' };
   let corpo;
   if (!como) corpo = <V2Skeleton className="h-64" />;

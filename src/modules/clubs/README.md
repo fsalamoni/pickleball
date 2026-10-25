@@ -34,7 +34,8 @@ dia de jogo, ranking interno, página pública.
 > (`ClubCommsPanel`) e a vitrine (`association/ClubShowcase.jsx`). **Bloco C2**:
 > o clube é emissor do módulo `promo` (`PROMO_ISSUER.CLUB`) — aba Cupons e
 > campanhas da Central (`?aba=divulgacao`) e "Promoções do clube" na página
-> (`ClubPromosSection`), só na página do clube. Ver
+> (`ClubPromosSection`), só na página do clube. **Bloco C3**: a loja do clube no
+> Mercado (`club_{id}`, aba `?aba=loja`, `storeClubs`, `ClubStoreCard`). Ver
 > `docs/52-CLUBE-ASSOCIACAO.md` §5.1.
 
 ## Status

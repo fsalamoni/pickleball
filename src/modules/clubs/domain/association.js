@@ -68,6 +68,20 @@ export function clubPermsOf({ isClubAdmin = false, staff = null, now = Date.now(
   return (Array.isArray(staff.perms) ? staff.perms : []).filter((p) => ALL_CLUB_PERMS.includes(p));
 }
 
+/**
+ * Os clubes em que a pessoa opera a LOJA no Mercado (`club_{id}`): associação
+ * publicada e administração do clube ou cargo com `admin`/`finance` — a mesma
+ * conta de `isMarketOperator` na regra e de `operatorUids` no servidor.
+ * `clubs` = meus clubes (com `my_role`); `staffByClub` = cargo de cada um (`club → staff`).
+ */
+export function storeClubs(clubs = [], staffByClub = {}, now = Date.now()) {
+  return clubs.filter((c) => {
+    if (!c || !isAssociationOpen(c)) return false;
+    const perms = clubPermsOf({ isClubAdmin: c.my_role === 'admin', staff: staffByClub[c.id] || null, now });
+    return perms.includes(CLUB_PERM.ADMIN) || perms.includes(CLUB_PERM.FINANCE);
+  });
+}
+
 export const PLAN_BILLING =Object.freeze({ MONTHLY: 'monthly', ANNUAL: 'annual' });
 
 /** Limites do plano — os mesmos da regra (`firestore.rules`) e do servidor. */

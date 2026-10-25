@@ -30,6 +30,7 @@ const ClubStaffPanel = lazy(() => import('@/v2/components/clubs/manage/ClubStaff
 const ClubIndicatorsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubIndicatorsPanel'));
 const ClubSettingsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSettingsPanel'));
 const ClubCommsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubCommsPanel'));
+const ClubStorePanel = lazy(() => import('@/v2/components/clubs/manage/ClubStorePanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
@@ -129,6 +130,7 @@ function Central({ clubId }) {
             associados={(affiliationsQ.data || []).filter((a) => a.status === 'active').length}
           />
         )}
+        {tab === 'loja' && podeFinancas && <ClubStorePanel club={club} />}
         {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}
       </Suspense>
