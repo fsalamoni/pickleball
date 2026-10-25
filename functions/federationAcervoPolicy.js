@@ -50,7 +50,8 @@ const FAMILIES = Object.freeze([
   { id: 'video', max: 100 * 1024 * 1024, re: /^video\/(mp4|webm|quicktime)$/ },
 ]);
 const familyOf = (ct) => FAMILIES.find((x) => x.re.test(String(ct || ''))) || null;
-const UPLOAD_PATH = /^federacao-acervo\/[A-Za-z0-9]+\/[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/;
+// `clube-acervo/` é a pasta do acervo do clube-associação (`clubDocs.js`, mesma régua).
+const UPLOAD_PATH = /^(federacao|clube)-acervo\/[A-Za-z0-9]+\/[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/;
 
 function videoEmbed(url) {
   const u = String(url || '').trim();

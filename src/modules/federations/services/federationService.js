@@ -1413,19 +1413,20 @@ export const fetchAcervoFile = ({ federationId, docId, path }) => acervoAction({
 
 /** Desfaz um envio que não chegou a entrar num rascunho salvo (só a pasta de quem enviou). */
 export async function discardAcervoUpload(path) {
-  if (!storage || !/^federacao-acervo\//.test(String(path || ''))) return;
+  if (!storage || !/^(federacao|clube)-acervo\//.test(String(path || ''))) return;
   await deleteObject(storageRef(storage, path)).catch(() => {});
 }
 
 /**
  * Envia o arquivo do RASCUNHO para `federacao-acervo/{uid}/{id}.{ext}` (só quem
- * envia lê). Ao publicar, o servidor copia para a pasta oficial e apaga este.
+ * envia lê; o clube-associação usa `clube-acervo`). Ao publicar, o servidor copia
+ * para a pasta oficial e apaga este.
  */
-export function uploadAcervoFile({ uid, file, onProgress }) {
+export function uploadAcervoFile({ uid, file, onProgress, folder = 'federacao-acervo' }) {
   const { error: erro } = validateAcervoFile(file);
   if (erro) return Promise.reject(new FederationError(erro, { file: erro }));
   if (!storage || !uid) return Promise.reject(new FederationError(t('Firebase não está configurado neste ambiente.')));
-  const path = acervoUploadPath(uid, doc(collection(db, C.officialDocs)).id, file.type);
+  const path = acervoUploadPath(uid, doc(collection(db, C.officialDocs)).id, file.type, folder);
   const tarefa = uploadBytesResumable(storageRef(storage, path), file, { contentType: file.type });
   return new Promise((resolve, reject) => {
     tarefa.on('state_changed',

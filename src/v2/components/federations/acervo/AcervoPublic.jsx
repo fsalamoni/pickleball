@@ -18,7 +18,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useAcervoFollow, useSetAcervoFollow, useVisibleAcervo } from '@/modules/federations/hooks/useFederations';
 import {
-  DOC_VISIBILITY, DOC_VISIBILITY_LABELS, acervoPublicPath, docCategoriesIn, docCode, docPublicPath, docType, docYears, filterDocs, isDocCurrent, isDocNew,
+  DOC_VISIBILITY, acervoPublicPath, docCategoriesIn, docCode, docPublicPath, docType, docYears, filterDocs, isDocCurrent, isDocNew,
   muralDocs, sortDocs, transparencyChecklist,
 } from '@/modules/federations/domain/acervo';
 import { V2Badge, V2Button, V2ErrorState, V2Input, V2Select, V2Skeleton } from '@/v2/ui/primitives';
@@ -26,6 +26,7 @@ import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { t, tn } from '@/core/i18n';
 import { quando } from '../federationUi';
 import { MostrarMais, POR_VEZ } from '../manage/listTools';
+import { docPathFor, visibilityLabelFor } from './acervoScope';
 
 /* ------------------------------------------------------------------ item -- */
 
@@ -35,12 +36,12 @@ export function AcervoDocItem({ federation, doc, nowMs = Date.now() }) {
   const code = docCode(doc);
   return (
     <li>
-      <Link to={docPublicPath(federation, doc.id)} className="block rounded-2xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+      <Link to={docPathFor(federation, doc.id)} className="block rounded-2xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {tipo && <span className="font-bold uppercase tracking-wider text-gray-500">{t(tipo.label)}</span>}
           {isDocNew(doc, nowMs) && <V2Badge tone="acid">{doc.version > 1 ? t('Retificado') : t('Novo')}</V2Badge>}
           {doc.revoked_by && <V2Badge tone="red">{t('Revogado')}</V2Badge>}
-          {doc.visibility !== DOC_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(DOC_VISIBILITY_LABELS[doc.visibility])}</V2Badge>}
+          {doc.visibility !== DOC_VISIBILITY.PUBLIC && <V2Badge tone="neutral"><Lock className="h-3 w-3" aria-hidden="true" />{t(visibilityLabelFor(federation, doc.visibility))}</V2Badge>}
         </div>
         <p className="mt-1 font-semibold text-ink">{code ? `${code} — ` : ''}{doc.title}</p>
         {doc.summary && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{doc.summary}</p>}
@@ -126,6 +127,53 @@ function Transparencia({ federation, docs }) {
 const ABAS = ['mural', 'documentos', 'transparencia'];
 const FILTRO_VAZIO = { q: '', category: '', year: '', onlyCurrent: false };
 
+/** Os documentos com busca e filtros: a federação (`AcervoBrowser`) e o clube (`ClubDocsPublic`) usam esta. */
+export function AcervoListagem({ federation, docs, vazio }) {
+  const [filtro, setFiltroCru] = useState(FILTRO_VAZIO);
+  const [quantos, setQuantos] = useState(POR_VEZ);
+  // Mudou o filtro, a lista volta aos primeiros.
+  const setFiltro = (fn) => { setFiltroCru(fn); setQuantos(POR_VEZ); };
+  const algumFiltro = Boolean(filtro.q || filtro.category || filtro.year || filtro.onlyCurrent);
+  const filtrados = useMemo(() => sortDocs(filterDocs(docs, filtro)), [docs, filtro]);
+  const anos = useMemo(() => docYears(docs), [docs]);
+  const categorias = useMemo(() => docCategoriesIn(docs), [docs]);
+  return (
+    <section className="space-y-3" aria-label={t('Documentos')}>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+        <label className="relative block">
+          <span className="sr-only">{t('Buscar no acervo')}</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
+          <V2Input className="pl-9" type="search" value={filtro.q} onChange={(e) => setFiltro((f) => ({ ...f, q: e.target.value }))} placeholder={t('Título, número, palavra-chave…')} />
+        </label>
+        <V2Select aria-label={t('Categoria')} value={filtro.category} onChange={(e) => setFiltro((f) => ({ ...f, category: e.target.value }))}>
+          <option value="">{t('Todas as categorias')}</option>
+          {categorias.map((c) => <option key={c.id} value={c.id}>{t(c.label)}</option>)}
+        </V2Select>
+        <V2Select aria-label={t('Ano')} value={filtro.year} onChange={(e) => setFiltro((f) => ({ ...f, year: e.target.value }))}>
+          <option value="">{t('Todos os anos')}</option>
+          {anos.map((y) => <option key={y} value={y}>{y}</option>)}
+        </V2Select>
+      </div>
+      <label className="inline-flex items-center gap-2 text-sm text-ink">
+        <input type="checkbox" checked={filtro.onlyCurrent} onChange={(e) => setFiltro((f) => ({ ...f, onlyCurrent: e.target.checked }))} />
+        {t('Só o que está em vigor (sem os revogados)')}
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-xs text-gray-500" aria-live="polite">{tn(filtrados.length, '{n} documento', '{n} documentos')}</p>
+        {algumFiltro && <button type="button" onClick={() => setFiltro(() => FILTRO_VAZIO)} className="text-xs font-semibold text-ink underline">{t('Limpar filtros')}</button>}
+      </div>
+      {docs.length === 0 ? <p className="text-sm text-gray-500">{vazio}</p>
+        : filtrados.length === 0 ? <p className="text-sm text-gray-500">{t('Nada com esses filtros.')}</p>
+          : (
+            <>
+              <ul className="space-y-2">{filtrados.slice(0, quantos).map((d) => <AcervoDocItem key={d.id} federation={federation} doc={d} />)}</ul>
+              <MostrarMais restam={filtrados.length - quantos} onClick={() => setQuantos((n) => n + POR_VEZ)} />
+            </>
+          )}
+    </section>
+  );
+}
+
 export function AcervoBrowser({ federation }) {
   const a = useVisibleAcervo(federation);
   const { copy } = useClipboard();
@@ -133,15 +181,7 @@ export function AcervoBrowser({ federation }) {
     const pedida = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('aba') : '';
     return ABAS.includes(pedida) ? pedida : 'mural';
   });
-  const [filtro, setFiltroCru] = useState(FILTRO_VAZIO);
-  const [quantos, setQuantos] = useState(POR_VEZ);
-  // Mudou o filtro, a lista volta aos primeiros.
-  const setFiltro = (fn) => { setFiltroCru(fn); setQuantos(POR_VEZ); };
-  const algumFiltro = Boolean(filtro.q || filtro.category || filtro.year || filtro.onlyCurrent);
   const docs = useMemo(() => a.docs || [], [a.docs]);
-  const filtrados = useMemo(() => sortDocs(filterDocs(docs, filtro)), [docs, filtro]);
-  const anos = useMemo(() => docYears(docs), [docs]);
-  const categorias = useMemo(() => docCategoriesIn(docs), [docs]);
   const link = typeof window !== 'undefined' ? `${window.location.origin}${acervoPublicPath(federation)}` : acervoPublicPath(federation);
   const compartilhar = async () => {
     if (navigator.share) { try { await navigator.share({ title: t('Acervo oficial — {federacao}', { federacao: federation.name }), url: link }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
@@ -178,41 +218,7 @@ export function AcervoBrowser({ federation }) {
             : <ul className="space-y-2">{muralDocs(docs, 30).map((d) => <AcervoDocItem key={d.id} federation={federation} doc={d} />)}</ul>}
         </section>
       )}
-      {a.docs && aba === 'documentos' && (
-        <section className="space-y-3" aria-label={t('Documentos')}>
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-            <label className="relative block">
-              <span className="sr-only">{t('Buscar no acervo')}</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
-              <V2Input className="pl-9" type="search" value={filtro.q} onChange={(e) => setFiltro((f) => ({ ...f, q: e.target.value }))} placeholder={t('Título, número, palavra-chave…')} />
-            </label>
-            <V2Select aria-label={t('Categoria')} value={filtro.category} onChange={(e) => setFiltro((f) => ({ ...f, category: e.target.value }))}>
-              <option value="">{t('Todas as categorias')}</option>
-              {categorias.map((c) => <option key={c.id} value={c.id}>{t(c.label)}</option>)}
-            </V2Select>
-            <V2Select aria-label={t('Ano')} value={filtro.year} onChange={(e) => setFiltro((f) => ({ ...f, year: e.target.value }))}>
-              <option value="">{t('Todos os anos')}</option>
-              {anos.map((y) => <option key={y} value={y}>{y}</option>)}
-            </V2Select>
-          </div>
-          <label className="inline-flex items-center gap-2 text-sm text-ink">
-            <input type="checkbox" checked={filtro.onlyCurrent} onChange={(e) => setFiltro((f) => ({ ...f, onlyCurrent: e.target.checked }))} />
-            {t('Só o que está em vigor (sem os revogados)')}
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-xs text-gray-500" aria-live="polite">{tn(filtrados.length, '{n} documento', '{n} documentos')}</p>
-            {algumFiltro && <button type="button" onClick={() => setFiltro(() => FILTRO_VAZIO)} className="text-xs font-semibold text-ink underline">{t('Limpar filtros')}</button>}
-          </div>
-          {docs.length === 0 ? <p className="text-sm text-gray-500">{t('A federação ainda não publicou documentos oficiais.')}</p>
-            : filtrados.length === 0 ? <p className="text-sm text-gray-500">{t('Nada com esses filtros.')}</p>
-              : (
-                <>
-                  <ul className="space-y-2">{filtrados.slice(0, quantos).map((d) => <AcervoDocItem key={d.id} federation={federation} doc={d} />)}</ul>
-                  <MostrarMais restam={filtrados.length - quantos} onClick={() => setQuantos((n) => n + POR_VEZ)} />
-                </>
-              )}
-        </section>
-      )}
+      {a.docs && aba === 'documentos' && <AcervoListagem federation={federation} docs={docs} vazio={t('A federação ainda não publicou documentos oficiais.')} />}
       {a.docs && aba === 'transparencia' && <Transparencia federation={federation} docs={docs.filter(isDocCurrent)} />}
     </div>
   );

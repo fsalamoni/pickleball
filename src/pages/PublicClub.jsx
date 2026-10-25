@@ -7,7 +7,7 @@
  */
 
 import React, { lazy, Suspense } from 'react';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, MapPin, Mail, Phone, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -23,9 +23,10 @@ import { t } from '@/core/i18n';
 
 // A transparência das contas carrega o motor de contas: só quando a página é aberta.
 const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
+const ClubDocsPublic = lazy(() => import('@/v2/components/clubs/association/ClubDocsPublic'));
 
 /** Os planos de associação na vitrine: quem chega pelo link vê o que ganha e entra para se associar. */
-function PublicClubPlans({ club, isAuthenticated }) {
+function PublicClubPlans({ club, isAuthenticated, docId }) {
   const plansQ = usePublicPlans(club.id);
   const cfg = normalizeAssociation(club);
   const destino = isAuthenticated ? `/clubes/${club.id}` : '/login';
@@ -56,6 +57,7 @@ function PublicClubPlans({ club, isAuthenticated }) {
       <ClubBenefitsShowcase clubId={club.id} />
       <ClubNewsSection clubId={club.id} limite={3} />
       <ClubSponsorsStrip clubId={club.id} />
+      <Suspense fallback={null}><ClubDocsPublic club={club} publica docId={docId} compacto={!docId} /></Suspense>
       <Suspense fallback={null}><ClubAccountsPublic clubId={club.id} /></Suspense>
     </section>
   );
@@ -63,6 +65,8 @@ function PublicClubPlans({ club, isAuthenticated }) {
 
 export default function PublicClub() {
   const { clubId } = useParams();
+  const [searchParams] = useSearchParams();
+  const docId = searchParams.get('doc') || null;
   const publicOn = true;
   const { isAuthenticated } = useAuth();
   const associationFlag = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
@@ -143,7 +147,7 @@ export default function PublicClub() {
             </div>
           </div>
         )}
-        {isPublic && associationOpen && <PublicClubPlans club={club} isAuthenticated={isAuthenticated} />}
+        {isPublic && associationOpen && <PublicClubPlans club={club} isAuthenticated={isAuthenticated} docId={docId} />}
       </div>
     </div>
   );

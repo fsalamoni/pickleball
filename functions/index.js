@@ -2012,6 +2012,15 @@ exports.clubAccounts = federationCallable('clubAccounts', (ctx, actor, data) => 
   return clubAccounts.accounts({ ...ctx, bucket }, actor, data);
 });
 
+// Acervo do clube (estatuto, atas, editais, resoluções): só o servidor grava — `functions/clubDocs.js`.
+// Publicar copia e confere arquivos de até 100 MB (SHA-256): mais tempo e memória, como o da federação.
+const clubDocs = require('./clubDocs');
+exports.clubDocs = federationCallable('clubDocs', (ctx, actor, data) => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('clubDocs: Storage indisponível.', err); }
+  return clubDocs.docs({ ...ctx, bucket }, actor, data);
+}, { timeoutSeconds: 540, memory: '1GiB' });
+
 // Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
 const clubContent = require('./clubContent');
 exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));

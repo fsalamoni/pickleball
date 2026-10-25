@@ -458,6 +458,8 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Preparar orçamento, lançamentos e prestação de contas do clube | ✖ | ✖ | ✖ | ✔ `finance` ou admin | — | **Cloud Function** `clubAccounts` (`budgets`/`ledger`/`reports`: `write: if false`) |
 | Ver as contas do clube e dar o parecer da prestação | ✖ | ✖ | ✖ | ✔ conselho fiscal (`fiscal`): lê orçamento, lançamentos, prestação e as cobranças; o parecer só depois do envio | — | rules (`cxReadPerms`) e **Cloud Function** `clubAccounts` (`opinion`) |
 | Ver o orçamento e a prestação PUBLICADOS | ✔ | ✔ | ✔ | ✔ | — | rules (`budgets`/`reports` com `pub: true`, clube publicado) |
+| Preparar, publicar, retificar e avisar os documentos oficiais do clube | ✖ | ✖ | ✖ | ✔ `docs` ou admin (retirar do ar: só admin) | — | **Cloud Function** `clubDocs` (`docs`/`seq`: `write: if false`) |
+| Ver os documentos oficiais PUBLICADOS | ✔ os públicos (`pub`) | ✔ | ✔ os públicos e os "só associados" (qualquer membro do clube) | ✔ `docs`/admin leem tudo, rascunho inclusive | — | rules (`docs` com `pub`/`members`, clube publicado) e **Cloud Function** `clubDocs` (`file`) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |
