@@ -443,6 +443,12 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Pedir associação, "Já paguei", renovar, encerrar | ✖ | ✔ (login) | ✔ só a própria | — | — | **Cloud Function** `clubAssociation` (`aff`/`charges`: `write: if false`) |
 | Aprovar/recusar/suspender/reativar, associar membro, aplicar plano gratuito | ✖ | ✖ | ✖ | ✔ `members` ou admin | — | **Cloud Function** `clubAssociation` |
 | Confirmar ou cancelar cobrança | ✖ | ✖ | ✖ | ✔ `finance` ou admin | — | **Cloud Function** `clubAssociation` |
+| Importar lista de associados (CSV) | ✖ | ✖ | ✖ | ✔ `members` ou admin | — | **Cloud Function** `clubAssociation` (ação `import`) |
+| Nomear, trocar de cargo, prorrogar mandato, tirar da diretoria | ✖ | ✖ | ✖ | ✔ master/administração; `staff` só cargos que já tem, nunca master nem a si mesmo | — | **Cloud Function** `clubStaff` (`staff`/`roles`: `write: if false`) |
+| Montar os cargos do clube | ✖ | ✖ | ✖ | ✔ só cargo master (ou administração do clube) | — | **Cloud Function** `clubStaff` |
+| Ler a diretoria e os cargos | ✖ | ✖ | ✖ | ✔ `staff`; o próprio lê o seu cargo | — | rules (`staff`, `roles`) |
+| Cargo vale sem ser membro do clube | ✖ | — | — | ✖ — o cargo só conta enquanto a pessoa é membro | — | rules (`cxPerms`) e servidor (`permsDe`) |
+| Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |
 | Verificar carteirinha por código | ✔ (só o mínimo) | ✔ | ✔ | ✔ | ✔ | **Cloud Function** `clubAssociationVerify` |

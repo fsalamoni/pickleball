@@ -12,7 +12,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Building2, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/modules/clubs/hooks/useClubs';
 import {
-  useAllPlans, useClubAffiliations, useClubCharges, useClubPix, useMyClubRole,
+  useAllPlans, useClubAffiliations, useClubCharges, useClubPix, useClubRoles, useClubStaff, useMyClubRole,
 } from '@/modules/clubs/hooks/useClubAssociation';
 import { CLUB_PERM, isAssociationOpen } from '@/modules/clubs/domain/association';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -26,6 +26,8 @@ import { t } from '@/core/i18n';
 const ClubHojePanel = lazy(() => import('@/v2/components/clubs/manage/ClubHojePanel'));
 const ClubMembersPanel = lazy(() => import('@/v2/components/clubs/manage/ClubMembersPanel'));
 const ClubFinancePanel = lazy(() => import('@/v2/components/clubs/manage/ClubFinancePanel'));
+const ClubStaffPanel = lazy(() => import('@/v2/components/clubs/manage/ClubStaffPanel'));
+const ClubIndicatorsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubIndicatorsPanel'));
 const ClubSettingsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSettingsPanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
@@ -45,6 +47,9 @@ function Central({ clubId }) {
   const chargesQ = useClubCharges(clubId, { enabled: papel.isStaff && podeFinancas });
   const plansQ = useAllPlans(clubId, { enabled: papel.isStaff && (podeMembros || podeFinancas) });
   const pixQ = useClubPix(clubId, { enabled: papel.isStaff && admin });
+  const podeEquipe = admin || perms.includes(CLUB_PERM.STAFF);
+  const staffQ = useClubStaff(clubId, { enabled: papel.isStaff && podeEquipe });
+  const rolesQ = useClubRoles(clubId, { enabled: papel.isStaff && podeEquipe });
 
   const sections = useMemo(() => buildClubSections(perms), [perms]);
   const tabPedida = params.get('aba') || '';
@@ -99,11 +104,13 @@ function Central({ clubId }) {
       </div>
 
       <Suspense fallback={<V2Skeleton lines={6} />}>
-        {tab === 'hoje' && <ClubHojePanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} plansQ={plansQ} pixQ={pixQ} perms={perms} onIrParaAba={irParaAba} />}
+        {tab === 'hoje' && <ClubHojePanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} plansQ={plansQ} pixQ={pixQ} staffQ={staffQ} perms={perms} onIrParaAba={irParaAba} />}
         {tab === 'associados' && <ClubMembersPanel club={club} affiliationsQ={affiliationsQ} plansQ={plansQ} perms={perms} />}
         {tab === 'cobrancas' && <ClubFinancePanel club={club} chargesQ={chargesQ} />}
         {tab === 'planos' && <ClubPlansTab club={club} plansQ={plansQ} canEdit={podeFinancas} canAdopt={podeMembros} />}
         {tab === 'pix' && admin && <ClubPixTab club={club} />}
+        {(tab === 'equipe' || tab === 'cargos') && <ClubStaffPanel club={club} staffQ={staffQ} rolesQ={rolesQ} papel={papel} tab={tab} />}
+        {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}
       </Suspense>
     </V2Page>

@@ -12,8 +12,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { clubPermsOf } from '../domain/association.js';
 import { useMyMembership } from './useClubs.js';
 import {
-  associationAction, getMyAffiliation, getMyStaff, getPix, getPlan, listAffiliations, listAllPlans, listCharges, listMyCharges,
-  listPublicPlans, listStaff, saveAssociationSettings, savePix, savePlan, setPlanActive, verifyClubCard,
+  associationAction, getMyAffiliation, getMyStaff, getPix, getPlan, getRoles, importMembers, listAffiliations, listAllPlans, listCharges, listImports, listMyCharges,
+  listPublicPlans, listStaff, saveAssociationSettings, savePix, savePlan, setPlanActive, staffAction, verifyClubCard,
 } from '../services/associationService.js';
 
 export const assocKeys = {
@@ -28,6 +28,8 @@ export const assocKeys = {
   charges: (clubId) => ['club-assoc', clubId, 'charges'],
   pix: (clubId) => ['club-assoc', clubId, 'pix'],
   staff: (clubId) => ['club-assoc', clubId, 'staff'],
+  roles: (clubId) => ['club-assoc', clubId, 'roles'],
+  imports: (clubId) => ['club-assoc', clubId, 'imports'],
   verify: (code) => ['club-assoc', 'verify', code],
 };
 
@@ -70,14 +72,17 @@ export function useMyClubStaff(clubId, { enabled = true } = {}) {
 export function useMyClubRole(clubId) {
   const membership = useMyMembership(clubId);
   const admin = membership.data?.role === 'admin';
-  const staff = useMyClubStaff(clubId, { enabled: membership.isSuccess && !admin });
+  // O cargo só vale para quem ainda é membro do clube (a regra e o servidor conferem o mesmo).
+  const staff = useMyClubStaff(clubId, { enabled: membership.isSuccess && !!membership.data && !admin });
   const perms = useMemo(() => clubPermsOf({ isClubAdmin: admin, staff: staff.data }), [admin, staff.data]);
-  const isLoading = membership.isLoading || (!admin && staff.isLoading);
-  const isError = membership.isError || (!admin && staff.isError);
+  const temCargo = !admin && !!membership.data;
+  const isLoading = membership.isLoading || (temCargo && staff.isLoading);
+  const isError = membership.isError || (temCargo && staff.isError);
   return {
     perms, isAdmin: admin, isStaff: perms.length > 0, isLoading, isError,
     roleName: admin ? 'admin' : (staff.data?.role_name || ''),
-    refetch: () => { membership.refetch(); if (!admin) staff.refetch(); },
+    staffDoc: temCargo ? staff.data || null : null,
+    refetch: () => { membership.refetch(); if (temCargo) staff.refetch(); },
   };
 }
 
@@ -95,6 +100,16 @@ export function useClubPix(clubId, { enabled = true } = {}) {
 
 export function useClubStaff(clubId, { enabled = true } = {}) {
   return useQuery({ queryKey: assocKeys.staff(clubId), queryFn: () => listStaff(clubId), enabled: !!clubId && enabled });
+}
+
+/** Os cargos que o clube montou (`null` = valem os modelos). Só quem tem "staff" lê. */
+export function useClubRoles(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.roles(clubId), queryFn: () => getRoles(clubId), enabled: !!clubId && enabled });
+}
+
+/** As importações já feitas, com quem ficou sem conta (secretaria). */
+export function useClubImports(clubId, { enabled = true } = {}) {
+  return useQuery({ queryKey: assocKeys.imports(clubId), queryFn: () => listImports(clubId), enabled: !!clubId && enabled });
 }
 
 /** A verificação pública da carteirinha (sem login). */
@@ -119,6 +134,16 @@ function useAssocMutation(clubId, fn) {
 /** Uma ação do servidor (pedir, renovar, declarar, aprovar…): `mutate({ action, ...extra })`. */
 export function useAssociationAction(clubId) {
   return useAssocMutation(clubId, ({ action, ...extra }) => associationAction(clubId, action, extra));
+}
+
+/** Uma ação da diretoria (nomear, prorrogar, tirar, montar cargo): `mutate({ action, ...extra })`. */
+export function useClubStaffAction(clubId) {
+  return useAssocMutation(clubId, ({ action, ...extra }) => staffAction(clubId, action, extra));
+}
+
+/** Importa a lista de associados: `mutate({ planId, rows })`. */
+export function useImportMembers(clubId) {
+  return useAssocMutation(clubId, ({ planId, rows }) => importMembers(clubId, planId, rows));
 }
 
 export function useSavePlan(clubId) {

@@ -20,8 +20,14 @@ dia de jogo, ranking interno, página pública.
 > `hooks/useClubAssociation.js` (`useMyClubRole` dá as permissões),
 > `v2/components/clubs/{association,manage}/`. Filiação, cobrança e carteirinha
 > só o **servidor** grava (`functions/clubAssociation.js`); perder a filiação não
-> tira ninguém do clube. Dados em `club_x/{clubId}/{plans,aff,charges,staff,cfg}`
-> e `club_card_index`. Ver `docs/52-CLUBE-ASSOCIACAO.md`.
+> tira ninguém do clube. Dados em `club_x/{clubId}/{plans,aff,charges,staff,roles,imports,cfg}`
+> e `club_card_index`. **Bloco B**: a diretoria (`domain/staff.js` — cargos que o
+> clube monta, mandato, cargo master; `functions/clubStaff.js` + cópia da régua em
+> `functions/clubStaffPolicy.js` com paridade; cargo só vale para quem ainda é
+> membro), `domain/indicators.js` (reusa as contas da federação sobre as
+> filiações e cobranças do clube), a importação CSV (`associationService.importMembers`,
+> lotes de 100) e `domain/declaration.js` (a declaração de associação). Ver
+> `docs/52-CLUBE-ASSOCIACAO.md`.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,

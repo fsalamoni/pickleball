@@ -521,9 +521,10 @@ federação. Doc: [`52-CLUBE-ASSOCIACAO.md`](./52-CLUBE-ASSOCIACAO.md).
 
 | Função | Tipo / gatilho | O que faz | Quem chama |
 |---|---|---|---|
-| `clubAssociation` | callable | ações `request`, `declare`, `charge_confirm`, `grant`, `adopt`, `approve`, `reject`, `renew`, `cancel`, `leave`, `suspend`, `reinstate`; única escrita em `club_x/{clube}/aff` e `/charges` e em `club_card_index` | telas da página do clube e da Central |
+| `clubAssociation` | callable | ações `request`, `declare`, `charge_confirm`, `grant`, `adopt`, `approve`, `reject`, `renew`, `cancel`, `leave`, `suspend`, `reinstate`, `import` (lista de sócios, até 100 por chamada; grava o lote em `/imports`); única escrita em `club_x/{clube}/aff`, `/charges` e `/imports` e em `club_card_index` | telas da página do clube e da Central |
+| `clubStaff` | callable | a diretoria (`functions/clubStaff.js`, régua em `clubStaffPolicy.js` com paridade): `role_save`, `role_delete` (só o cargo master), `appoint`, `extend` (com motivo), `remove`; única escrita em `club_x/{clube}/staff` e `/roles`; só nomeia quem é membro do clube | aba Diretoria da Central |
 | `clubAssociationVerify` | callable, sem login | verificação pública da carteirinha (devolve só nome, clube, plano, número, validade e situação) | `/c/verificar/:codigo` |
-| `clubAssociationSweep` | agendada (diária) | marca filiações vencidas e avisa antes/no dia/depois do vencimento | agendador |
+| `clubAssociationSweep` | agendada (diária) | marca filiações vencidas e avisa antes/no dia/depois do vencimento; também varre os mandatos (`clubStaff.sweep`: avisa a 30/7/1 dia do fim e desfaz o cargo vencido) | agendador |
 
 A exclusão de conta (`functions/accountDeletion.js`) cobre as coleções da
 camada (`club_x`, `club_card_index`).

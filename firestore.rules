@@ -5576,16 +5576,18 @@ service cloud.firestore {
     }
     function cxStaff(c) { return gd('club_x/' + c + '/staff/' + me()); }
     // Mandato vencido não dá poder (`term_end_ms` 0 = sem prazo).
+    // Cargo só vale para quem AINDA é membro do clube (sair/ser tirado do clube tira o poder).
     function cxPerms(c) {
-      return isAuthed() && ex('club_x/' + c + '/staff/' + me())
+      return isAuthed() && ex('club_x/' + c + '/staff/' + me()) && isClubMember(c)
         && (cxStaff(c).get('term_end_ms', 0) == 0 || cxStaff(c).term_end_ms > request.time.toMillis())
         ? cxStaff(c).get('perms', []) : [];
     }
     // Lista vazia = ninguém (nem o administrador): é como a escrita do servidor é fechada ao navegador.
-    function cxHas(c, ps) { return ps.size() > 0 && (isClubAdmin(c) || cxPerms(c).hasAny(ps)); }
+    function cxHas(c, ps) { return ps.size() > 0 && (isClubAdmin(c) || cxPerms(c).hasAny(ps.concat(['admin']))); }
     function cxPub(c) { return gd('clubs/' + c).get('association', {}).get('published', false) == true; }
+    // `roles` (lista dos cargos) e `imports` (pendentes da importação) são escritos só pelo servidor.
     function cxReadPerms(k) {
-      return k == 'aff' ? ['members', 'finance'] : (k == 'charges' ? ['finance', 'members'] : (k == 'cfg' ? ['finance'] : (k == 'plans' ? ['admin', 'finance', 'members'] : ['admin'])));
+      return {'aff': ['members', 'finance'], 'charges': ['finance', 'members'], 'cfg': ['finance'], 'plans': ['finance', 'members'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members']}.get(k, ['admin']);
     }
     function cxWritePerms(k) {
       return k == 'plans' ? ['admin', 'finance'] : (k == 'cfg' ? ['admin'] : []);

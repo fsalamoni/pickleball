@@ -139,7 +139,10 @@ as legadas seguem no `GameDayOrganizer`).
   planos de filiação, Pix, carteirinha e Central do clube. Telas
   `/clubes/:clubId/gerir` (Central), aba Associação em `/clubes/:clubId`,
   pública `/c/verificar/:codigo?` e seção "Associe-se" em `/c/:clubId`.
-  Coleções `club_x/{clubId}/{plans,aff,charges,staff,cfg}` e `club_card_index`.
+  Coleções `club_x/{clubId}/{plans,aff,charges,staff,roles,imports,cfg}` e `club_card_index`.
+  Bloco B: diretoria com cargos e mandatos (`domain/staff.js`, aba Diretoria),
+  indicadores (`domain/indicators.js`), importação de associados por CSV e
+  declaração de associação (`domain/declaration.js`).
   Arquivos: `domain/association.js`, `services/associationService.js`,
   `hooks/useClubAssociation.js`, `v2/components/clubs/{association,manage}/`.
 
