@@ -17,6 +17,12 @@ describe('vendedor', () => {
     expect(ids.map((i) => i.key)).toEqual(['athlete_u', 'coach_u', 'arena_a1']);
     expect(sellingIdentities({ uid: 'u', store: { status: 'active', display_name: 'X' } }).at(-1).type).toBe('store');
   });
+  it('a loja do clube é uma identidade com chave club_{id}', () => {
+    const ids = sellingIdentities({ uid: 'u', name: 'Ana', clubs: [{ id: 'c1', name: 'Clube Sul' }] });
+    expect(ids.at(-1)).toMatchObject({ key: 'club_c1', type: 'club', entity_id: 'c1' });
+    expect(sellerKeyFor('club', 'c1')).toBe('club_c1');
+    expect(parseSellerKey('club_c1')).toEqual({ type: 'club', id: 'c1' });
+  });
   it('CNPJ', () => {
     expect(isValidCnpj('11.222.333/0001-81')).toBe(true);
     expect(isValidCnpj('11.222.333/0001-82')).toBe(false);

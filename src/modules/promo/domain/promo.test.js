@@ -655,6 +655,11 @@ describe('clube como emissor (Bloco C2)', () => {
     expect(promoDestinationLink({ type: PROMO_DESTINATION.CLUB }, { issuerType: C, issuerId: 'clubA' })).toBe('/clubes/clubA');
   });
 
+  it('a loja do clube é destino da divulgação e leva ao vendedor club_{id}', () => {
+    expect(PROMO_DESTINATIONS_BY_ISSUER[C]).toContain(PROMO_DESTINATION.STORE);
+    expect(promoDestinationLink({ type: PROMO_DESTINATION.STORE }, { issuerType: C, issuerId: 'clubA' })).toBe('/mercado/vendedor/club_clubA');
+  });
+
   it('o banner do clube fica só na página: home:false derruba a tela inicial', () => {
     const r = normalizePromoPlacement({ show_on_page: true, show_home: true }, { today: HOJE, home: false });
     expect(r.value.show_home).toBe(false);

@@ -37,6 +37,8 @@ export const SELLER_TYPE = Object.freeze({
   STORE: 'store',
   // PR 4 das federações: a loja oficial (chave `federation_{id}`), operada por quem tem admin/financeiro na equipe.
   FEDERATION: 'federation',
+  // Bloco C3 dos clubes: a loja do clube-associação (chave `club_{id}`), operada por quem tem admin/financeiro.
+  CLUB: 'club',
 });
 
 export const SELLER_TYPE_LABELS = Object.freeze({
@@ -45,6 +47,7 @@ export const SELLER_TYPE_LABELS = Object.freeze({
   arena: tk('Arena'),
   store: tk('Loja'),
   federation: tk('Federação'),
+  club: tk('Clube'),
 });
 
 /** Estado do vendedor. Loja nasce `pending` até o admin aprovar. */

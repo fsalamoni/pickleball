@@ -1531,7 +1531,8 @@ aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
 `tests/rules/marketplace.rules.test.js`. Módulo: `src/modules/marketplace/README.md`.
 
 - `market_sellers/{key}` — a ficha pública de quem vende. `key` =
-  `athlete_{uid}` | `coach_{uid}` | `arena_{arenaId}` | `store_{uid}`.
+  `athlete_{uid}` | `coach_{uid}` | `arena_{arenaId}` | `store_{uid}` |
+  `federation_{id}` | `club_{clubId}`.
   `seller_type`, `entity_id`, `owner_uid`, `status`
   (`active|pending|rejected|suspended`; loja nasce `pending`), `display_name`,
   `slug`, `bio`, `city`, `state`, `logo_url`, `banner_url`, `website`,
@@ -2600,7 +2601,9 @@ equipe `comms`/`admin` com o módulo `promos`), o **clube-associação** também
 `issuer_id` = id do clube; `comms`/administrador, flag `club_association` e
 associação publicada; só página do clube — `show_home` sempre `false`) e a federação é **vendedora** em
 `market_sellers/federation_{id}` (`seller_type: 'federation'`; `admin`/`finance`
-com o módulo `store`).
+com o módulo `store`) e o clube-associação em `market_sellers/club_{clubId}`
+(`seller_type: 'club'`; administrador do clube ou cargo com `finance`, flag
+`club_association` ligada e, para criar, associação publicada).
 
 ### Avisos e auditoria
 Avisos são `notifications` com `type: 'federation'` (área `federacoes`,

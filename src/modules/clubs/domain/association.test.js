@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 import {
   affiliationCounts, benefitLines, buildClubCard, clubChargePixPayload, clubVerifyPath, isAssociationEnabled, isAssociationOpen,
-  myAssociationView, planAcceptsAge, planPriceFor, planPriceLabel, publicPlans, sortAffiliationsForStaff, validatePix, validatePlan,
+  myAssociationView, planAcceptsAge, planPriceFor, planPriceLabel, publicPlans, sortAffiliationsForStaff, storeClubs, validatePix, validatePlan,
 } from './association.js';
 
 const require = createRequire(import.meta.url);
@@ -153,5 +153,26 @@ describe('secretaria', () => {
 
   it('a fila põe o que espera a secretaria no topo', () => {
     expect(sortAffiliationsForStaff(lista, HOJE).map((a) => a.user_id)).toEqual(['b', 'c', 'd', 'a', 'e']);
+  });
+});
+
+describe('loja do clube no Mercado (Bloco C3)', () => {
+  const aberto = (id, my_role) => ({ id, my_role, association: { enabled: true, published: true } });
+  const fechado = { id: 'f', my_role: 'admin', association: { enabled: true, published: false } };
+  const agora = Date.parse('2026-10-25T12:00:00Z');
+
+  it('a administração do clube opera a loja; a associação precisa estar publicada', () => {
+    expect(storeClubs([aberto('a', 'admin'), fechado, { id: 'z', my_role: 'admin' }], {}, agora).map((c) => c.id)).toEqual(['a']);
+  });
+
+  it('cargo com financeiro ou tudo opera; secretaria, associado e mandato vencido não', () => {
+    const clubes = ['fin', 'adm', 'sec', 'venc', 'sem'].map((id) => aberto(id, 'member'));
+    const cargos = {
+      fin: { perms: ['finance'], term_end_ms: 0 },
+      adm: { perms: ['admin'], term_end_ms: 0 },
+      sec: { perms: ['members'], term_end_ms: 0 },
+      venc: { perms: ['finance'], term_end_ms: agora - 1 },
+    };
+    expect(storeClubs(clubes, cargos, agora).map((c) => c.id)).toEqual(['fin', 'adm']);
   });
 });

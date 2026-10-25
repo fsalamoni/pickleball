@@ -250,7 +250,7 @@ async function loadContext(db) {
 }
 
 function parseSellerKey(key) {
-  const m = /^(athlete|coach|arena|store|federation)_(.+)$/.exec(String(key || ''));
+  const m = /^(athlete|coach|arena|store|federation|club)_(.+)$/.exec(String(key || ''));
   return m ? { type: m[1], id: m[2] } : null;
 }
 
@@ -266,6 +266,12 @@ async function operatorUids(db, sellerKey) {
     return [...new Set(equipe.docs.map((d) => d.data())
       .filter((s) => permsOf(s, agora).some((x) => x === 'admin' || x === 'finance'))
       .map((s) => s.user_id).filter(Boolean))];
+  }
+  if (p.type === 'club') {
+    // A loja do clube: administradores do clube e cargos com `admin` ou `finance` (a mesma conta de `isMarketOperator`).
+    const { quemTem } = require('./clubAssociation.js');
+    const [fin, adm] = await Promise.all([quemTem({ db, now: Date.now() }, p.id, 'finance'), quemTem({ db, now: Date.now() }, p.id, 'admin')]);
+    return [...new Set([...fin, ...adm])];
   }
   if (p.type !== 'arena') return [p.id];
   const snap = await db.collection('arena_managers').where('arena_id', '==', p.id).get();

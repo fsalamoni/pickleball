@@ -2,9 +2,9 @@
 
 > Estado: **Bloco A** (filiação, planos, Pix, carteirinha, página pública e
 > Central do clube), **Bloco B** (diretoria com cargos e mandatos, indicadores,
-> importação de associados, declaração de associação) e **Bloco C1**
-> (vantagens do associado, comunicados e patrocinadores) estão no código. O
-> restante do bloco C (cupons dos associados e loja do clube) e os blocos D–G
+> importação de associados, declaração de associação), **Bloco C1**
+> (vantagens do associado, comunicados e patrocinadores), **C2** (cupons e
+> campanhas) e **C3** (loja do clube no Mercado) estão no código. Os blocos D–G
 > (financeiro completo e documentos, atletas e seleção, torneios do clube,
 > assembleias e eleições) estão no plano
 > (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
@@ -183,11 +183,34 @@ Diferenças do clube, todas de propósito:
 - **Sem aviso pela campanha** (`PROMO_AUDIENCES_BY_ISSUER.club = []`): o canal é o
   comunicado ("Avisar os associados", uma vez só).
 - **Destinos** (lista fechada): detalhes da campanha, página do clube, torneios,
-  um torneio, jogos abertos, vitrine e Mercado. A loja do clube entra no Bloco C3.
+  um torneio, jogos abertos, a loja do clube (§5.2), vitrine e Mercado.
 - **Regra**: emite quem tem `comms` (ou administra o clube), só com a flag
   `club_association` ligada **e** a associação publicada (`promoPageOk`); o
   emissor não muda no update; `promo_settings/{clubId}` (custo interno do vale,
   modelos) é só dessa equipe. Auditoria: `club_promo_*`.
+
+### 5.2 Loja do clube no Mercado (Bloco C3)
+
+O clube vende uniforme, material e inscrições pelo **Mercado** como vendedor
+próprio, de chave `club_{clubId}` (`SELLER_TYPE.CLUB`), a mesma ideia da loja
+oficial da federação (`federation_{id}`). Nenhum catálogo novo: anúncio, pedido,
+oferta, avaliação e disputa são o Mercado de sempre, com Pix direto ao vendedor.
+
+- **Quem opera**: a administração do clube e o cargo com `finance` — a mesma
+  resposta em três lugares: `isMarketOperator` (regra), `operatorUids`
+  (`functions/marketplace.js`, que recebe os avisos de pedido) e `storeClubs`
+  (`modules/clubs/domain/association.js`, que alimenta "Vendendo como").
+- **Quando abre**: com a flag `club_association` ligada **e** a associação
+  publicada (`cxPub`); o vendedor nasce `active`, sem selo, e não pode ser
+  criado em nome de outro clube. Depois de criado, despublicar a associação não
+  tira o poder de editar/pausar os anúncios (o cargo e o mandato seguem valendo
+  — `cxHas` exige o vínculo ao clube).
+- **Onde se vê**: Central do clube → **Loja** (`?aba=loja`, permissão
+  `finance`): estado da loja e o caminho para o painel `/mercado/vender?como=club_{id}`;
+  na página do clube (dentro do app), o cartão **Loja do clube** quando a loja
+  está no ar; a divulgação (§5.1) ganhou o destino **Minha loja** (`store`).
+- **Falha não é vazio**: a Central diz que a loja não carregou; o cartão da
+  página simplesmente não aparece (não há o que afirmar nem oferecer).
 
 ## 6. O que não pode regredir
 
@@ -228,6 +251,10 @@ Diferenças do clube, todas de propósito:
 16. **Cupom e banner do clube só na página dele** (§5.1): nunca na tela inicial,
     nunca na vitrine geral; e nunca ofereça "só associados" neles — a leitura é
     de qualquer conta logada. Benefício exclusivo é Vantagem.
+17. **A loja do clube tem uma chave só, `club_{id}`, e a mesma resposta em três
+    lugares** (§5.2): `isMarketOperator`, `operatorUids` e `storeClubs`. Mexer num
+    só deixa o aviso do pedido indo para quem não opera, ou a loja oferecida a
+    quem a regra recusa.
 
 ## 7. Testes
 
@@ -235,6 +262,7 @@ Diferenças do clube, todas de propósito:
 só), `src/modules/clubs/domain/content.test.js`,
 `tests/rules/clubContent.rules.test.js` (emulador: vitrine pública, segredo só da
 comunicação, comunicado "só associados" para o membro),
+`tests/rules/clubStore.rules.test.js` (emulador: quem abre e opera a loja do clube, Pix só da equipe) e `functions/clubStore.test.js`,
 `tests/rules/clubPromo.rules.test.js` (emulador: cupom e campanha do clube — quem emite, página publicada, emissor imutável) e o bloco "clube como emissor" de `src/modules/promo/domain/promo.test.js`,
 `functions/clubAssociation.test.js` (ciclo completo no servidor, incluindo a
 importação), `functions/clubStaff.test.js` (diretoria, mandato, varredura) e

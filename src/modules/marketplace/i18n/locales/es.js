@@ -1298,4 +1298,6 @@ export default {
   "Voltar ao carrinho": "Volver al carrito",
   "Voltar ao Mercado": "Volver al Mercado",
   "Voltar aos anúncios": "Volver a los anuncios",
+  "Pelo clube {nome}": "Por el club {nome}",
+  "Abra a loja do clube": "Abra la tienda del club",
 };

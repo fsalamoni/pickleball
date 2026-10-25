@@ -7,10 +7,10 @@
  * dado certo (`docs/27-FALHA-NAO-E-VAZIO.md`).
  */
 import { useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { clubPermsOf } from '../domain/association.js';
-import { useMyMembership } from './useClubs.js';
+import { clubPermsOf, isAssociationOpen, storeClubs } from '../domain/association.js';
+import { useMyClubs, useMyMembership } from './useClubs.js';
 import {
   deleteBenefit, deleteClubNews, deleteSponsor, fetchMemberBenefits, getBenefitSecret, listAllBenefits, listAllClubNews, listAllSponsors, listMemberClubNews,
   listPublicBenefits, listPublicClubNews, listPublicSponsors, notifyClubNews, saveBenefit, saveClubNews, saveSponsor, setBenefitActive,
@@ -97,6 +97,34 @@ export function useMyClubRole(clubId) {
     staffDoc: temCargo ? staff.data || null : null,
     refetch: () => { membership.refetch(); if (temCargo) staff.refetch(); },
   };
+}
+
+const juntarCargos = (queries) => ({
+  docs: queries.map((q) => q.data || null),
+  pendente: queries.some((q) => q.isLoading),
+  falhou: queries.some((q) => q.isError),
+});
+
+/**
+ * Os clubes em que a pessoa opera a loja no Mercado (ver `storeClubs`). O cargo
+ * só é buscado nos clubes de associação aberta em que ela não é administradora.
+ * `isError`: não dá para afirmar "nenhuma loja de clube" sem saber o cargo.
+ */
+export function useMyStoreClubs({ enabled = true } = {}) {
+  const { user } = useAuth();
+  const mine = useMyClubs({ enabled });
+  const abertos = useMemo(() => (mine.data || []).filter(isAssociationOpen), [mine.data]);
+  const semAdmin = useMemo(() => abertos.filter((c) => c.my_role !== 'admin'), [abertos]);
+  const cargos = useQueries({
+    queries: semAdmin.map((c) => ({ queryKey: assocKeys.myStaff(c.id, user?.uid), queryFn: () => getMyStaff(c.id, user?.uid), enabled: enabled && !!user?.uid, staleTime: 60_000 })),
+    combine: juntarCargos,
+  });
+  const clubs = useMemo(() => {
+    const porClube = {};
+    semAdmin.forEach((c, i) => { if (cargos.docs[i]) porClube[c.id] = cargos.docs[i]; });
+    return storeClubs(abertos, porClube);
+  }, [abertos, semAdmin, cargos.docs]);
+  return { clubs, isLoading: mine.isLoading || cargos.pendente, isError: mine.isError || cargos.falhou };
 }
 
 export function useClubAffiliations(clubId, { enabled = true } = {}) {

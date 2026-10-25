@@ -4319,7 +4319,9 @@ service cloud.firestore {
         || (key.matches('arena_[^/]+') && isArenaManager(key.replace('^arena_', '')))
         // PR 4: a loja oficial da federação (módulo `store`) — quem tem `admin` ou `finance`.
         || (key.matches('federation_[^/]+') && fedOn() && fedModuleOn(key.replace('^federation_', ''), 'store')
-          && (fedAny(key.replace('^federation_', ''), ['admin', 'finance']))));
+          && (fedAny(key.replace('^federation_', ''), ['admin', 'finance'])))
+        // Bloco C3 dos clubes: a loja do clube-associação — administração do clube ou cargo com `finance`.
+        || (key.matches('club_[^/]+') && cxOn() && cxHas(key.replace('^club_', ''), ['finance'])));
     }
     function marketSeller(key) {
       return gd('market_sellers/' + key);
@@ -4334,6 +4336,7 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow create: if marketOn() && isMarketOperator(key)
         && (!key.matches('federation_[^/]+') || fedPublic(key.replace('^federation_', '')))
+        && (!key.matches('club_[^/]+') || cxPub(key.replace('^club_', '')))
         && nd().seller_key == key
         && nd().owner_uid == me()
         && nd().display_name is string
@@ -4345,6 +4348,7 @@ service cloud.firestore {
           || (key == 'coach_' + me() && nd().seller_type == 'coach' && nd().status == 'active' && isCoachUser(me()))
           || (key.matches('arena_[^/]+') && nd().seller_type == 'arena' && nd().status == 'active')
           || (key.matches('federation_[^/]+') && nd().seller_type == 'federation' && nd().status == 'active')
+          || (key.matches('club_[^/]+') && nd().seller_type == 'club' && nd().status == 'active')
           || (key == 'store_' + me() && nd().seller_type == 'store' && nd().status == 'pending')
         );
       // A loja recusada pode pedir de novo (volta a "em análise"); fora isso,

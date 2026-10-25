@@ -430,6 +430,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Avisar os filiados de uma notícia | ✖ | ✖ | ✖ | ✔ `comms`/`admin`, uma vez por notícia | ✔ | **Cloud Function** `federationNews` |
 | Patrocinadores (`sponsors`, ≤ 12) e governança (`governance`) | ✖ | ✖ | ✖ | ✔ `admin` | ✔ | rules (`federations`) |
 | Cupom/campanha com a federação como emissora (módulo `promos`) | ✖ | ✖ | ✖ | ✔ `comms`/`admin` (o emissor não muda) | ✔ | rules (`isPromoIssuer`); a campanha da federação não manda aviso |
+| Abrir/operar a loja do clube no Mercado (`market_sellers/club_{id}`) | ✖ | ✖ | ✖ | ✔ administrador do clube ou cargo com `finance`, com a flag `club_association` ligada; criar só com a associação publicada (nasce `active`, sem selo) | ✔ | rules (`isMarketOperator`, `cxPub`); servidor `operatorUids` com a mesma resposta |
 | Abrir/operar a loja oficial no Mercado (`market_sellers/federation_{id}`, módulo `store`) | ✖ | ✖ | ✖ | ✔ `admin`/`finance` (nasce `active`, sem selo) | ✔ | rules (`isMarketOperator`); servidor `operatorUids` com a mesma resposta |
 | Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ✖ (apagar documento/resultado também exige a flag) | rules (`fedOn()`) e funções (`flagLigada`, inclusive `federationReview` e `federationVerify`) |
 | Qualquer permissão de equipe em qualquer federação | ✖ | ✖ | ✖ | — | ✔ (`fedHas` inclui o admin da plataforma; guarda `federacaoPermissoes.test.js`) | rules |
