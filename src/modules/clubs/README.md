@@ -39,7 +39,11 @@ dia de jogo, ranking interno, página pública.
 > **Bloco D1**: as contas do clube — seção Contas da Central (`ClubAccountsPanel`,
 > as abas da federação pelo escopo `accountsScope`), `services/clubAccountsService.js`,
 > `hooks/useClubAccounts.js`, `functions/clubAccounts.js` e a transparência na página
-> (`ClubAccountsPublic`). Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.3.
+> (`ClubAccountsPublic`). **Bloco D2a**: os documentos oficiais — seção Documentos da
+> Central (`ClubDocsPanel`, o acervo da federação com o clube no lugar dela pelo
+> escopo `acervoScope`), `domain/docs.js`, `services/clubDocsService.js`,
+> `hooks/useClubDocs.js`, `functions/clubDocs.js` e a aba/vitrine pública
+> (`ClubDocsPublic`). Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.4.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,

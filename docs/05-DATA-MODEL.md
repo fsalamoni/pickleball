@@ -1615,7 +1615,7 @@ andamento impede a exclusão.
   quatro gravados por `comms`, e as contas (Bloco D1): `budgets/{ano}` (+ cópia
   `{ano}_pub`), `ledger/{id}` e `reports/{período}` (retrato congelado, parecer,
   assembleia; cópia `_pub` com `pub: true`) — lidos por `finance`/`fiscal`/admin
-  (o público lê só `pub: true`) e **só o servidor grava**. Ids de filiação são deterministas. O cargo só
+  (o público lê só `pub: true`) e **só o servidor grava**; e os documentos oficiais (Bloco D2a): `docs/{id}` (ato numerado, versão, arquivos, `visibility`, marcas `pub`/`members`; o público lê `pub == true`, qualquer membro do clube lê `members == true`, `docs`/admin leem tudo) e `seq/docs` (contador de numeração; ninguém lê) — **só o servidor grava**; arquivos em `clube-acervo/{uid}/` (envio) e `clube-acervo-oficial/` (cópia oficial). Ids de filiação são deterministas. O cargo só
   conta enquanto a pessoa existe em `club_members`.
 - `club_card_index/{codigo}` — código da carteirinha → filiação; só o servidor
   toca; o código gira em ativação, renovação e suspensão.

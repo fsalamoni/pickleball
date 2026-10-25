@@ -149,6 +149,22 @@ service firebase.storage {
         && request.resource.size <= 9 * 1024 * 1024;
     }
 
+    // ACERVO DO CLUBE-ASSOCIAÇÃO (Bloco D2): a mesma pasta de rascunho da federação, para a
+    // função `clubDocs` copiar para `clube-acervo-oficial/` (fechada à regra) e apagar a origem.
+    match /clube-acervo/{uid}/{fileName} {
+      allow get, list, delete: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid && resource == null && (
+        (request.resource.contentType.matches('application/pdf|text/(plain|csv)|application/msword|application/vnd[.]ms-excel|application/vnd[.]openxmlformats-officedocument[.][a-z.]+|application/vnd[.]oasis[.]opendocument[.][a-z.]+')
+          && request.resource.size < 25 * 1024 * 1024)
+        || (request.resource.contentType.matches('image/(webp|jpeg|png)')
+          && request.resource.size < 10 * 1024 * 1024)
+        || (request.resource.contentType.matches('audio/(mpeg|mp4|ogg|wav|x-m4a|webm)')
+          && request.resource.size < 50 * 1024 * 1024)
+        || (request.resource.contentType.matches('video/(mp4|webm|quicktime)')
+          && request.resource.size < 100 * 1024 * 1024)
+      );
+    }
+
     // CONTAS DO CLUBE-ASSOCIAÇÃO (Bloco D1): mesmo desenho da pasta da federação,
     // para a função `clubAccounts` copiar para `clube-contas-oficial/` (fechada).
     match /clube-contas/{uid}/{fileName} {

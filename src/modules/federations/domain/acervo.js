@@ -144,8 +144,9 @@ export function validateAcervoFile(file) {
 }
 
 /** Onde o rascunho sobe: a pasta privada de quem envia (só ela lê; o servidor copia ao publicar). */
-export const acervoUploadPath = (uid, id, contentType) => `federacao-acervo/${uid}/${id}.${EXT[contentType] || 'bin'}`;
-const UPLOAD_PATH = /^federacao-acervo\/[A-Za-z0-9]+\/[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/;
+export const acervoUploadPath = (uid, id, contentType, folder = 'federacao-acervo') => `${folder}/${uid}/${id}.${EXT[contentType] || 'bin'}`;
+// `clube-acervo/` é a pasta do acervo do clube-associação (mesma régua, função `clubDocs`).
+const UPLOAD_PATH = /^(federacao|clube)-acervo\/[A-Za-z0-9]+\/[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/;
 
 /** YouTube ou Vimeo → endereço de incorporação (o CSP só libera youtube-nocookie e player.vimeo). */
 export function videoEmbed(url) {
@@ -165,9 +166,9 @@ const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
  * O rascunho que a tela manda ao servidor.
  * @returns {{ ok: boolean, errors: Record<string,string>, value: object }}
  */
-export function validateDocInput(input = {}) {
+export function validateDocInput(input = {}, { allowedTypes = null } = {}) {
   const errors = {};
-  const type = docType(input.type) ? input.type : '';
+  const type = docType(input.type) && (!allowedTypes || allowedTypes.includes(input.type)) ? input.type : '';
   if (!type) errors.type = t('Escolha o tipo do documento.');
   const category = type ? docType(type).category : '';
   const title = line(input.title, DOC_TITLE_MAX);

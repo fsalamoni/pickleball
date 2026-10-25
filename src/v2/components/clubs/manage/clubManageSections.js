@@ -5,7 +5,7 @@
  * em toda a Central (a seção ativa é achada pela aba) e é contrato de link:
  * os avisos do servidor levam a ele — nunca renomeie.
  */
-import { BarChart3, Calculator, CircleDollarSign, IdCard, Landmark, LayoutDashboard, Megaphone, Settings, Store, Tag } from 'lucide-react';
+import { BarChart3, Calculator, CircleDollarSign, IdCard, Landmark, LayoutDashboard, Library, Megaphone, Settings, Store, Tag } from 'lucide-react';
 import { CLUB_PERM } from '@/modules/clubs/domain/association';
 import { t, tk } from '@/core/i18n';
 
@@ -49,6 +49,10 @@ export function buildClubSections(perms = []) {
         { value: 'divulgacao', label: t('Cupons e campanhas') },
       ],
       ok: tem(perms, CLUB_PERM.COMMS),
+    },
+    {
+      id: 'documentos', label: t('Documentos'), grupo: 'gerir', icon: Library, dica: 'clube-secao-documentos',
+      tabs: [{ value: 'documentos', label: t('Documentos oficiais') }], ok: tem(perms, CLUB_PERM.DOCS),
     },
     {
       id: 'contas', label: t('Contas'), grupo: 'gerir', icon: Calculator, dica: 'clube-secao-contas',

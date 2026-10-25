@@ -1,7 +1,7 @@
 /**
  * Formulários do acervo oficial (Central → Acervo oficial):
  *  - `AcervoUploader`: envia cada arquivo para a pasta privada de quem envia
- *    (`federacao-acervo/{uid}/`), com barra de progresso; o servidor copia
+ *    (`federacao-acervo/{uid}/`, ou `clube-acervo/{uid}/` no clube), com barra de progresso; o servidor copia
  *    para a pasta oficial só ao publicar;
  *  - `DocForm`: o RASCUNHO (tipo, título, data, quem assina, texto,
  *    arquivos, vídeos por link, relações com atos publicados, visibilidade).
@@ -13,18 +13,18 @@ import { toast } from 'sonner';
 import { FileUp, Link2, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { acervoAction, discardAcervoUpload, uploadAcervoFile } from '@/modules/federations/services/federationService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { discardAcervoUpload, uploadAcervoFile } from '@/modules/federations/services/federationService';
 import {
-  ACERVO_ACCEPT, DOC_CATEGORIES, DOC_FILES_MAX, DOC_LINKS_MAX, DOC_RELATION, DOC_RELATION_LABELS, DOC_RELATIONS_MAX, DOC_RESTRICTED_FILE_MAX,
-  DOC_VISIBILITY, DOC_VISIBILITY_HINTS, DOC_VISIBILITY_LABELS, docDisplayTitle, docType, fileSizeLabel, typesOfCategory, validateAcervoFile, validateDocInput,
+  ACERVO_ACCEPT, DOC_FILES_MAX, DOC_LINKS_MAX, DOC_RELATION, DOC_RELATION_LABELS, DOC_RELATIONS_MAX, DOC_RESTRICTED_FILE_MAX,
+  DOC_VISIBILITY, docDisplayTitle, docType, fileSizeLabel, validateAcervoFile, validateDocInput,
 } from '@/modules/federations/domain/acervo';
+import { acervoFolder, allowedDocTypeIds, callAcervo, docCategoriesFor, docTypesFor, useAcervoMutation, visibilityHintFor, visibilityLabelFor } from '../acervo/acervoScope';
 import { V2Button, V2Field, V2Input, V2Select, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { useAvisoNaoSalvo } from './naoSalvo';
 
 /** Lista de arquivos já enviados + os que estão subindo agora. */
-export function AcervoUploader({ value, onAdd, onRemove, onBusy, max = DOC_FILES_MAX, restricted = false, id = 'acervo-arquivos' }) {
+export function AcervoUploader({ value, onAdd, onRemove, onBusy, max = DOC_FILES_MAX, restricted = false, id = 'acervo-arquivos', entity = null }) {
   const { user } = useAuth();
   const input = useRef(null);
   const [subindo, setSubindo] = useState([]); // { key, name, progress }
@@ -46,7 +46,7 @@ export function AcervoUploader({ value, onAdd, onRemove, onBusy, max = DOC_FILES
       fila = [...fila, { key, name: file.name, progress: 0 }];
       atualizar(fila);
       try {
-        const enviado = await uploadAcervoFile({ uid: user?.uid, file, onProgress: (p) => setSubindo((f) => f.map((x) => (x.key === key ? { ...x, progress: p } : x))) });
+        const enviado = await uploadAcervoFile({ uid: user?.uid, file, folder: acervoFolder(entity), onProgress: (p) => setSubindo((f) => f.map((x) => (x.key === key ? { ...x, progress: p } : x))) });
         if (vivo.current) onAdd(enviado);
         else discardAcervoUpload(enviado.path);
       } catch (er) {
@@ -114,13 +114,14 @@ export function MaisAcoes({ nome, itens, onEscolher }) {
 }
 
 /** O seletor de tipo, por categoria. */
-export function DocTypeSelect({ id, value, onChange, disabled }) {
+export function DocTypeSelect({ id, value, onChange, disabled, entity = null }) {
+  const tipos = docTypesFor(entity);
   return (
     <V2Select id={id} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
       <option value="">{t('Escolha…')}</option>
-      {DOC_CATEGORIES.map((c) => (
+      {docCategoriesFor(entity).map((c) => (
         <optgroup key={c.id} label={t(c.label)}>
-          {typesOfCategory(c.id).map((x) => <option key={x.id} value={x.id}>{t(x.label)}</option>)}
+          {tipos.filter((x) => x.category === c.id).map((x) => <option key={x.id} value={x.id}>{t(x.label)}</option>)}
         </optgroup>
       ))}
     </V2Select>
@@ -179,7 +180,7 @@ export function DocForm({ federation, doc = null, preset = null, publicados = []
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
-  const m = useFederationMutation((value) => acervoAction({ federationId: federation.id, action: 'save', docId: doc?.id || null, doc: value }));
+  const m = useAcervoMutation(federation, (value) => callAcervo(federation, { action: 'save', docId: doc?.id || null, doc: value }));
   const marcarSalvo = useDescarteAoFechar(f.files.filter((x) => !original.current.has(x.path)));
   useAvisoNaoSalvo(enviando || JSON.stringify(f) !== JSON.stringify(base));
   const addArquivo = (x) => { setF((s) => ({ ...s, files: [...s.files, x] })); setErros({}); };
@@ -189,7 +190,7 @@ export function DocForm({ federation, doc = null, preset = null, publicados = []
   };
   const enviar = (e) => {
     e.preventDefault();
-    const r = validateDocInput(f);
+    const r = validateDocInput(f, { allowedTypes: allowedDocTypeIds(federation) });
     if (!r.ok) { setErros(r.errors); toast.error(Object.values(r.errors)[0]); return; }
     m.mutate(r.value, {
       onSuccess: () => { marcarSalvo(); toast.success(doc ? t('Rascunho salvo.') : t('Rascunho criado. Confira e publique quando estiver pronto.')); onFechar(); },
@@ -202,9 +203,9 @@ export function DocForm({ federation, doc = null, preset = null, publicados = []
   return (
     <form onSubmit={enviar} noValidate className="space-y-4" data-dica="federacao-acervo-formulario">
       <div className="grid gap-4 sm:grid-cols-2">
-        <V2Field label={t('Tipo')} htmlFor="ac-tipo" error={erros.type} required hint={tipo?.numbered ? t('Numerado: o número sai na publicação, por tipo e ano.') : null}><DocTypeSelect id="ac-tipo" value={f.type} onChange={(type) => set({ type })} /></V2Field>
-        <V2Field label={t('Quem vê')} htmlFor="ac-visib" hint={t(DOC_VISIBILITY_HINTS[f.visibility])}>
-          <V2Select id="ac-visib" value={f.visibility} onChange={(e) => set({ visibility: e.target.value })}>{Object.values(DOC_VISIBILITY).map((v) => <option key={v} value={v}>{t(DOC_VISIBILITY_LABELS[v])}</option>)}</V2Select>
+        <V2Field label={t('Tipo')} htmlFor="ac-tipo" error={erros.type} required hint={tipo?.numbered ? t('Numerado: o número sai na publicação, por tipo e ano.') : null}><DocTypeSelect id="ac-tipo" entity={federation} value={f.type} onChange={(type) => set({ type })} /></V2Field>
+        <V2Field label={t('Quem vê')} htmlFor="ac-visib" hint={t(visibilityHintFor(federation, f.visibility))}>
+          <V2Select id="ac-visib" value={f.visibility} onChange={(e) => set({ visibility: e.target.value })}>{Object.values(DOC_VISIBILITY).map((v) => <option key={v} value={v}>{t(visibilityLabelFor(federation, v))}</option>)}</V2Select>
         </V2Field>
       </div>
       <V2Field label={t('Título')} htmlFor="ac-titulo" error={erros.title} required hint={t('Sem o número: "Dispõe sobre o calendário de 2027", "Ata da Assembleia Geral Ordinária".')}><V2Input id="ac-titulo" maxLength={200} value={f.title} onChange={(e) => set({ title: e.target.value })} /></V2Field>
@@ -215,7 +216,7 @@ export function DocForm({ federation, doc = null, preset = null, publicados = []
       <V2Field label={t('Ementa ou resumo')} htmlFor="ac-resumo" hint={t('Uma ou duas frases do que o documento decide ou contém.')}><V2Textarea id="ac-resumo" rows={2} maxLength={600} value={f.summary} onChange={(e) => set({ summary: e.target.value })} /></V2Field>
       <V2Field label={t('Texto (opcional se houver arquivo)')} htmlFor="ac-texto" error={erros.content}><V2Textarea id="ac-texto" rows={6} maxLength={30000} value={f.body} onChange={(e) => set({ body: e.target.value })} /></V2Field>
       <V2Field label={t('Arquivos')} htmlFor="acervo-arquivos" error={Object.keys(erros).some((k) => k.startsWith('files')) ? t('Um arquivo não serve. Tire-o e envie de novo.') : null}>
-        <AcervoUploader value={f.files} onAdd={addArquivo} onRemove={tirarArquivo} onBusy={setEnviando} restricted={f.visibility !== DOC_VISIBILITY.PUBLIC} />
+        <AcervoUploader entity={federation} value={f.files} onAdd={addArquivo} onRemove={tirarArquivo} onBusy={setEnviando} restricted={f.visibility !== DOC_VISIBILITY.PUBLIC} />
       </V2Field>
       <div className="space-y-2">
         <p className="text-sm font-semibold text-ink">{t('Vídeos por link')}</p>

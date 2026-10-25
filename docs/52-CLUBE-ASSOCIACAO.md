@@ -5,9 +5,9 @@
 > importação de associados, declaração de associação), **Bloco C1**
 > (vantagens do associado, comunicados e patrocinadores), **C2** (cupons e
 > campanhas), **C3** (loja do clube no Mercado) e **D1** (contas: orçamento,
-> lançamentos e prestação de contas) estão no código. Os blocos D2–G
-> (documentos e agenda oficial, atletas e seleção, torneios do clube,
-> assembleias e eleições) estão no plano
+> lançamentos e prestação de contas) e **D2a** (documentos oficiais do clube)
+> estão no código. Os blocos D2b–G (agenda oficial, atletas e seleção, torneios
+> do clube, assembleias e eleições) estão no plano
 > (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
 > existem** — este documento só descreve o que há no código.
 
@@ -48,6 +48,8 @@ pessoa do clube.
 | `budgets` | orçamento do ano (`{ano}`, rascunho → enviado → aprovado) e a **cópia publicada** (`{ano}_pub`, `pub: true`, `copy_of`) | `finance`/`fiscal`/admin; o público lê só `pub: true` de clube publicado | **só o servidor** (`clubAccounts`) |
 | `ledger` | lançamento financeiro (receita/despesa, categoria, valor em centavos, anexo, `status` lançado/estornado) | `finance`/`fiscal`/admin | **só o servidor** |
 | `reports` | prestação de contas do período (`{ano}` ou `{ano}-S1`…): retrato **congelado**, parecer do conselho fiscal, assembleia; a cópia pública tem `pub: true` | `finance`/`fiscal`/admin; o público lê só `pub: true` de clube publicado | **só o servidor** |
+| `docs` | documento oficial (estatuto, regimento, atas, resoluções…): número do ato, versão, arquivos, `visibility` (público / só associados / só equipe), `pub` e `members` (marcas de leitura mantidas pelo servidor) | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/admin leem tudo (rascunho inclusive) | **só o servidor** (`clubDocs`) |
+| `seq` | contador de numeração dos atos (`seq/docs`) | ninguém | **só o servidor** |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
 filiação; **o código gira** a cada ativação, renovação e suspensão. Campos novos
@@ -83,6 +85,12 @@ Funções em `functions/clubAssociation.js` (testes ao lado):
     associados em dia, em lotes de 400, **uma vez só** (`notified_at`,
     `notified_count`, `notified_by`) e com link `/clubes/{id}?tab=comunicados&noticia={id}`
     (sem `#`). A comunicação não lê a lista de filiados — por isso o aviso é do servidor.
+
+- `clubDocs` (callable, `functions/clubDocs.js`, política em `functions/clubDocsPolicy.js`) —
+  os documentos oficiais (§5.4): `save`, `delete` (só rascunho), `publish`,
+  `rectify`, `visibility`, `withdraw`, `notify` e `file`. Reaproveita a régua do
+  acervo da federação (`federationAcervoPolicy.js`, `oficializar`) com a lista de
+  tipos do clube.
 
 ### 3.1 Importar associados
 
@@ -243,6 +251,42 @@ sozinha, sem lançar.
   contas), sem o nome de quem os preparou (`created_by_name`/`opened_by_name` →
   "Usuário removido").
 
+### 5.4 Documentos oficiais do clube (Bloco D2a)
+
+Central do clube → **Documentos** (`?aba=documentos`, permissão `docs`): o
+**acervo oficial** do clube — estatuto, regimento, atas, resoluções, editais,
+regulamentos, modelos e vídeos por link (33 tipos, `CLUB_DOC_TYPES`). Não é um
+segundo acervo: é a **mesma tela da federação** com o clube no lugar dela. O
+`acervoScope.js` troca a entidade (`clubDocsEntity(club)`, `kind: 'club'`), a
+função do servidor (`clubDocs`), a invalidação, a pasta de envio
+(`clube-acervo/{uid}/`) e os rótulos; a lista de tipos e categorias é a do clube
+e o resto — formulário, histórico de versões, visão do documento, verificação de
+integridade (SHA-256), compartilhar — é código único (`AcervoPecas`,
+`AcervoListagem`).
+
+- **Ciclo**: rascunho → **publicar** (o servidor numera o ato — `Resolução nº
+  1/2027` — numa transação sobre `seq/docs`, copia o arquivo para
+  `clube-acervo-oficial/{clube}/{doc}/v1/` e calcula o SHA-256) → **retificar**
+  (motivo ≥ 10 caracteres; a versão anterior fica em `versions[]`, até 10) →
+  **mudar a visibilidade** (os links dos arquivos giram) → **retirar do ar**
+  (só a administração, motivo ≥ 20, nada é apagado).
+- **Visibilidade**: público (página do clube e vitrine `/c/:id`), só associados
+  (qualquer membro do clube) ou só equipe. As marcas `pub`/`members` são
+  gravadas pelo servidor e são o que a regra e as consultas leem — uma igualdade
+  só, zero índice composto.
+- **Aviso**: `notify` avisa os associados em dia **uma vez por versão**
+  (`notified_version`), com link `/clubes/{id}?tab=documentos&doc={docId}`.
+- **Arquivo**: baixa pela ação `file` (≤ 9 MB, base64) para quem pode ler o
+  documento; o do público é aberto por quem não tem conta.
+- **Página**: aba **Documentos** do clube (`V2ClubDetail`) e seção na vitrine
+  pública (`PublicClub`), por `ClubDocsPublic`. Documento inexistente e
+  documento que a regra não deixa ver dizem a mesma coisa ("Documento
+  indisponível"). O clube **não** oferece "Seguir" nem comentários (são da
+  federação).
+- **Conta excluída**: o ato publicado é registro do clube e fica; sai só o nome
+  de quem o preparou e publicou (`created_by_name`/`published_by_name` →
+  "Usuário removido").
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -296,6 +340,23 @@ sozinha, sem lançar.
     aceita o da pasta de quem salva e o move para `clube-contas-oficial/`). As abas
     compartilhadas recebem a entidade pelo escopo (`accountsScope`) — não
     escreva `accountsAction` direto nelas: use `callAccounts`/`useAccountsMutation`.
+20. **Documento do clube é só do servidor** (`clubDocs`, `docs` e `seq` com
+    `write: if false`): a numeração, a cópia oficial do arquivo, o SHA-256 e as
+    marcas `pub`/`members` nascem lá. Publicado **não se edita nem se apaga** —
+    retifica (com motivo, a versão anterior fica) ou retira do ar (só a
+    administração, sem apagar).
+21. **A lista de tipos do clube tem cópia** (`functions/clubDocsPolicy.js` ↔
+    `domain/docs.js`) e a validação é a da federação com `allowedTypes`: paridade
+    em `clubDocs.parity.test.js`. Ids de tipo e de categoria são gravados — nunca
+    renomeie. O caminho de envio aceita só `federacao-acervo/` e `clube-acervo/`
+    (a mesma expressão nos dois lados).
+22. **A tela do acervo recebe a entidade, não a copia**: não bifurque
+    `FedAcervoPanel`/`AcervoDocView` para o clube — passe `clubDocsEntity(club)`
+    e use `callAcervo`/`useAcervoMutation`/`docPathFor` do `acervoScope`.
+23. O **"só associados"** é lido por qualquer membro do clube (`isClubMember`)
+    e a consulta leva a igualdade `members == true`; o público, `pub == true`.
+    Sem filtro a consulta é recusada — a tela da equipe lê a coleção inteira e
+    a do associado/público, a filtrada.
 
 ## 7. Testes
 
@@ -305,6 +366,10 @@ só), `src/modules/clubs/domain/content.test.js`,
 comunicação, comunicado "só associados" para o membro),
 `tests/rules/clubStore.rules.test.js` (emulador: quem abre e opera a loja do clube, Pix só da equipe) e `functions/clubStore.test.js`,
 `tests/rules/clubPromo.rules.test.js` (emulador: cupom e campanha do clube — quem emite, página publicada, emissor imutável) e o bloco "clube como emissor" de `src/modules/promo/domain/promo.test.js`,
+`functions/clubDocs.test.js` (ciclo do documento, numeração, retificação, aviso uma vez só, arquivo),
+`functions/clubDocs.parity.test.js`, `tests/rules/clubDocs.rules.test.js` (emulador:
+equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de quem saiu),
+`ClubDocsPublic.runtime.test.jsx`,
 `functions/clubAccounts.test.js` (orçamento, lançamentos, prestação, parecer, anexo),
 `tests/rules/clubAccounts.rules.test.js` (emulador: quem lê, ninguém grava, consulta
 pública `pub == true`, conselho fiscal lê cobranças) e

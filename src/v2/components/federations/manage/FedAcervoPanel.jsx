@@ -1,28 +1,30 @@
 /**
  * Acervo oficial da federação (Central → Acervo oficial; permissão `docs`
- * ou `admin`, módulo `official_docs`):
+ * ou `admin`, módulo `official_docs`) E do clube-associação (`ClubDocsPanel` monta
+ * o `DocumentosTab` com o clube no formato da federação — `acervoScope.js`):
  *  - Documentos: rascunhos e publicados, com busca e filtros. Publicado não
  *    se edita: corrige-se por RETIFICAÇÃO (nova versão com motivo), ERRATA
  *    ou um ato novo que ALTERA ou REVOGA. Só o admin retira do ar.
  *  - Transparência: o que a Lei Geral do Esporte (art. 36) pede publicado,
  *    item a item, dizendo o que falta.
- * Tudo que grava passa pelo servidor (`federationAcervo`).
+ * Tudo que grava passa pelo servidor (`federationAcervo`, ou `clubDocs` no clube).
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2, CircleAlert, Copy, Eye, EyeOff, ExternalLink, FilePen, FileText, History, Library, Pencil, Plus, Send, ShieldOff, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, CircleAlert, Copy, Eye, EyeOff, ExternalLink, FilePen, FileText, History, Library, Pencil, Plus, Send, ShieldOff, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { acervoAction, discardAcervoUpload } from '@/modules/federations/services/federationService';
+import { discardAcervoUpload } from '@/modules/federations/services/federationService';
 import { abrirArquivoDoAcervo } from '../acervo/acervoFiles';
 import AcervoPosterButton from '../acervo/AcervoPoster';
 import { Link } from 'react-router-dom';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import {
-  DOC_CATEGORIES, DOC_REASON_MIN, DOC_RELATION, DOC_RELATION_INVERSE_LABELS, DOC_STATUS, DOC_STATUS_LABELS, DOC_VISIBILITY, DOC_VISIBILITY_HINTS,
-  DOC_VISIBILITY_LABELS, DOC_WITHDRAW_REASON_MIN, acervoPublicPath, docActions, docCategory, docCode, docDisplayTitle, docPublicPath, docType, docYears, fileSizeLabel, filterDocs,
+  DOC_REASON_MIN, DOC_RELATION, DOC_RELATION_INVERSE_LABELS, DOC_STATUS, DOC_STATUS_LABELS, DOC_VISIBILITY,
+  DOC_WITHDRAW_REASON_MIN, docActions, docCategory, docCode, docDisplayTitle, docType, docYears, fileSizeLabel, filterDocs,
   isDocCurrent, transparencyChecklist,
 } from '@/modules/federations/domain/acervo';
+import { canNotifyDoc, docNotified } from '@/modules/clubs/domain/docs';
+import { acervoPathFor, acervoScopeIds, callAcervo, docCategoriesFor, docPathFor, isClubDocs, useAcervoMutation, visibilityHintFor, visibilityLabelFor } from '../acervo/acervoScope';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { t, tk, tn } from '@/core/i18n';
 import { womenQuota, womenQuotaText } from '@/modules/federations/domain/governance';
@@ -32,15 +34,15 @@ import { haAlteracaoNaoSalva, useAvisoNaoSalvo } from './naoSalvo';
 
 const STATUS_TONE = { draft: 'neutral', published: 'green', withdrawn: 'red' };
 
-/** O endereço público do documento (`/f/:slug/acervo/:docId`), com a origem do site em que a pessoa está. */
-const linkPublico = (federation, doc) => `${window.location.origin}${docPublicPath(federation, doc.id)}`;
+/** O endereço público do documento (`/f/:slug/acervo/:docId`; no clube, a aba Documentos), com a origem do site em que a pessoa está. */
+const linkPublico = (federation, doc) => `${window.location.origin}${docPathFor(federation, doc.id)}`;
 
 /* --------------------------------------------------------------- detalhe -- */
 
 function ArquivosDoDoc({ federation, doc, files }) {
   const [abrindo, setAbrindo] = useState('');
   if (!files?.length) return null;
-  const abrir = async (file) => { setAbrindo(file.path); try { await abrirArquivoDoAcervo({ federationId: federation.id, doc, file }); } catch (e) { toast.error(e.message); } finally { setAbrindo(''); } };
+  const abrir = async (file) => { setAbrindo(file.path); try { await abrirArquivoDoAcervo({ ...acervoScopeIds(federation), doc, file }); } catch (e) { toast.error(e.message); } finally { setAbrindo(''); } };
   return (
     <ul className="space-y-2">
       {files.map((file) => (
@@ -66,7 +68,7 @@ function DocDetalhe({ federation, doc }) {
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap gap-2">
         <V2Badge tone={STATUS_TONE[doc.status] || 'neutral'}>{t(DOC_STATUS_LABELS[doc.status] || doc.status)}</V2Badge>
-        <V2Badge tone="ink">{t(DOC_VISIBILITY_LABELS[doc.visibility] || doc.visibility)}</V2Badge>
+        <V2Badge tone="ink">{t(visibilityLabelFor(federation, doc.visibility))}</V2Badge>
         {tipo && <V2Badge tone="neutral">{t(tipo.label)}</V2Badge>}
         {doc.version > 1 && <V2Badge tone="amber">{t('Versão {n}', { n: doc.version })}</V2Badge>}
       </div>
@@ -104,7 +106,7 @@ function DocDetalhe({ federation, doc }) {
         <div className="flex flex-wrap items-center gap-2">
           <V2Button type="button" size="sm" variant="ghost" onClick={() => copy(link, t('Link do documento copiado.'))}><Copy className="h-4 w-4" />{t('Copiar o link')}</V2Button>
           <span className="min-w-0 break-all text-xs text-gray-500">{link}</span>
-          {doc.visibility !== DOC_VISIBILITY.PUBLIC && <span className="text-xs text-gray-500">{t(DOC_VISIBILITY_HINTS[doc.visibility])}</span>}
+          {doc.visibility !== DOC_VISIBILITY.PUBLIC && <span className="text-xs text-gray-500">{t(visibilityHintFor(federation, doc.visibility))}</span>}
         </div>
       )}
     </div>
@@ -114,7 +116,7 @@ function DocDetalhe({ federation, doc }) {
 /* ---------------------------------------------------------------- ações -- */
 
 function PublicarDialog({ federation, doc, onFechar }) {
-  const m = useFederationMutation(() => acervoAction({ federationId: federation.id, action: 'publish', docId: doc.id }));
+  const m = useAcervoMutation(federation, () => callAcervo(federation, { action: 'publish', docId: doc.id }));
   const tipo = docType(doc.type);
   const publicar = () => m.mutate(undefined, {
     onSuccess: (r) => { toast.success(r?.code ? t('Publicado: {codigo}.', { codigo: r.code }) : t('Documento publicado.')); onFechar(); },
@@ -125,7 +127,7 @@ function PublicarDialog({ federation, doc, onFechar }) {
       <p className="text-ink">{t('Depois de publicado, o documento não se edita nem se apaga. Para corrigir, use retificação (nova versão com motivo), errata ou um ato novo que o altere ou revogue.')}</p>
       <ul className="space-y-1 text-gray-500">
         {tipo?.numbered && <li>{t('Ganha o próximo número de {tipo} deste ano.', { tipo: t(tipo.label) })}</li>}
-        <li>{t('Quem vê: {quem}.', { quem: t(DOC_VISIBILITY_LABELS[doc.visibility]) })}</li>
+        <li>{t('Quem vê: {quem}.', { quem: t(visibilityLabelFor(federation, doc.visibility)) })}</li>
         {(doc.files || []).length > 0 && <li>{t('Cada arquivo recebe um código de integridade (SHA-256) para conferir cópias.')}</li>}
         {(doc.relations || []).some((r) => r.kind === DOC_RELATION.REVOKES) && <li className="font-semibold text-ink">{t('O documento revogado continua no acervo, com a faixa "Revogado por".')}</li>}
       </ul>
@@ -143,8 +145,8 @@ function RetificarDialog({ federation, doc, onFechar }) {
   const marcarSalvo = useDescarteAoFechar(novos);
   useAvisoNaoSalvo(enviando || novos.length > 0 || JSON.stringify(f) !== JSON.stringify(base) || manter.size !== (doc.files || []).length);
   const tirarNovo = (p) => { discardAcervoUpload(p); setNovos((l) => l.filter((x) => x.path !== p)); };
-  const m = useFederationMutation(() => acervoAction({
-    federationId: federation.id, action: 'rectify', docId: doc.id, reason: f.reason, keep_files: [...manter],
+  const m = useAcervoMutation(federation, () => callAcervo(federation, {
+    action: 'rectify', docId: doc.id, reason: f.reason, keep_files: [...manter],
     doc: { title: f.title, summary: f.summary, body: f.body, media_links: f.media_links, files: novos },
   }));
   const enviar = (e) => {
@@ -169,7 +171,7 @@ function RetificarDialog({ federation, doc, onFechar }) {
         </fieldset>
       )}
       <V2Field label={t('Arquivos novos')} htmlFor="rt-arquivos">
-        <AcervoUploader id="rt-arquivos" value={novos} onAdd={(x) => setNovos((l) => [...l, x])} onRemove={tirarNovo} onBusy={setEnviando} restricted={doc.visibility !== DOC_VISIBILITY.PUBLIC} />
+        <AcervoUploader id="rt-arquivos" entity={federation} value={novos} onAdd={(x) => setNovos((l) => [...l, x])} onRemove={tirarNovo} onBusy={setEnviando} restricted={doc.visibility !== DOC_VISIBILITY.PUBLIC} />
       </V2Field>
       <div className="space-y-2"><p className="text-sm font-semibold text-ink">{t('Vídeos por link')}</p><MediaLinksEditor value={f.media_links} onChange={(media_links) => setF({ ...f, media_links })} /></div>
       <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="submit" disabled={m.isPending || enviando}>{m.isPending ? t('Publicando…') : t('Publicar nova versão')}</V2Button></div>
@@ -179,11 +181,11 @@ function RetificarDialog({ federation, doc, onFechar }) {
 
 function VisibilidadeDialog({ federation, doc, onFechar }) {
   const [v, setV] = useState(doc.visibility);
-  const m = useFederationMutation(() => acervoAction({ federationId: federation.id, action: 'visibility', docId: doc.id, visibility: v }));
+  const m = useAcervoMutation(federation, () => callAcervo(federation, { action: 'visibility', docId: doc.id, visibility: v }));
   return (
     <div className="space-y-4">
-      <V2Field label={t('Quem vê')} htmlFor="vs-sel" hint={t(DOC_VISIBILITY_HINTS[v])}>
-        <V2Select id="vs-sel" value={v} onChange={(e) => setV(e.target.value)}>{Object.values(DOC_VISIBILITY).map((x) => <option key={x} value={x}>{t(DOC_VISIBILITY_LABELS[x])}</option>)}</V2Select>
+      <V2Field label={t('Quem vê')} htmlFor="vs-sel" hint={t(visibilityHintFor(federation, v))}>
+        <V2Select id="vs-sel" value={v} onChange={(e) => setV(e.target.value)}>{Object.values(DOC_VISIBILITY).map((x) => <option key={x} value={x}>{t(visibilityLabelFor(federation, x))}</option>)}</V2Select>
       </V2Field>
       {doc.visibility === DOC_VISIBILITY.PUBLIC && v !== DOC_VISIBILITY.PUBLIC && <p className="text-sm text-gray-500">{t('Os links públicos dos arquivos deixam de funcionar na hora. Quem já baixou continua com a cópia.')}</p>}
       <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="button" disabled={m.isPending || v === doc.visibility} onClick={() => m.mutate(undefined, { onSuccess: () => { toast.success(t('Visibilidade alterada.')); onFechar(); }, onError: (e) => toast.error(e.message) })}>{t('Salvar')}</V2Button></div>
@@ -193,7 +195,7 @@ function VisibilidadeDialog({ federation, doc, onFechar }) {
 
 function RetirarDialog({ federation, doc, onFechar }) {
   const [motivo, setMotivo] = useState('');
-  const m = useFederationMutation(() => acervoAction({ federationId: federation.id, action: 'withdraw', docId: doc.id, reason: motivo }));
+  const m = useAcervoMutation(federation, () => callAcervo(federation, { action: 'withdraw', docId: doc.id, reason: motivo }));
   const ok = motivo.trim().length >= DOC_WITHDRAW_REASON_MIN;
   return (
     <div className="space-y-4">
@@ -218,6 +220,7 @@ function DocRow({ federation, doc, acoes, onAbrir }) {
     acoes.revoke && { id: 'revogar', icon: FileText, label: t('Revogar') },
     acoes.visibility && { id: 'visibilidade', icon: doc.visibility === DOC_VISIBILITY.PUBLIC ? Eye : EyeOff, label: t('Quem vê') },
     doc.status === DOC_STATUS.PUBLISHED && { id: 'link', icon: Copy, label: t('Copiar o link') },
+    isClubDocs(federation) && canNotifyDoc(doc) && { id: 'avisar', icon: Bell, label: t('Avisar os associados') },
     acoes.remove && { id: 'apagar', icon: Trash2, label: t('Apagar'), perigo: true },
     acoes.withdraw && { id: 'retirar', icon: ShieldOff, label: t('Retirar do ar'), perigo: true },
   ].filter(Boolean);
@@ -229,9 +232,10 @@ function DocRow({ federation, doc, acoes, onAbrir }) {
         <p className="flex flex-wrap items-center gap-2 font-bold text-ink">
           <button type="button" className="text-left hover:underline" onClick={() => onAbrir('ver', doc)}>{titulo}</button>
           <V2Badge tone={STATUS_TONE[doc.status] || 'neutral'}>{t(DOC_STATUS_LABELS[doc.status] || doc.status)}</V2Badge>
-          {doc.status === DOC_STATUS.PUBLISHED && <V2Badge tone="ink">{t(DOC_VISIBILITY_LABELS[doc.visibility] || doc.visibility)}</V2Badge>}
+          {doc.status === DOC_STATUS.PUBLISHED && <V2Badge tone="ink">{t(visibilityLabelFor(federation, doc.visibility))}</V2Badge>}
           {doc.revoked_by && <V2Badge tone="red">{t('Revogado')}</V2Badge>}
           {doc.version > 1 && <V2Badge tone="amber">{t('Versão {n}', { n: doc.version })}</V2Badge>}
+          {isClubDocs(federation) && doc.status === DOC_STATUS.PUBLISHED && docNotified(doc) && <V2Badge tone="neutral">{t('Associados avisados')}</V2Badge>}
         </p>
         <p className="text-xs text-gray-500">{[tipo ? t(tipo.label) : null, cat ? t(cat.label) : null, doc.act_date ? quando(doc.act_date) : doc.published_at_ms ? quando(doc.published_at_ms) : null, (doc.files || []).length ? tn(doc.files.length, '{n} arquivo', '{n} arquivos') : null].filter(Boolean).join(' · ')}</p>
       </div>
@@ -246,11 +250,23 @@ function DocRow({ federation, doc, acoes, onAbrir }) {
 
 const TITULOS = {
   novo: tk('Novo documento'), editar: tk('Editar rascunho'), errata: tk('Nova errata'), revogar: tk('Novo ato que revoga'), publicar: tk('Publicar documento'),
-  retificar: tk('Retificar documento'), visibilidade: tk('Quem vê o documento'), retirar: tk('Retirar do ar'), ver: tk('Documento'), apagar: tk('Apagar rascunho'),
+  retificar: tk('Retificar documento'), visibilidade: tk('Quem vê o documento'), retirar: tk('Retirar do ar'), ver: tk('Documento'), apagar: tk('Apagar rascunho'), avisar: tk('Avisar os associados'),
 };
 
+/** Só no clube: o aviso aos associados em dia sai uma vez por versão, e só quando a equipe manda. */
+function AvisarDialog({ federation, doc, onFechar }) {
+  const m = useAcervoMutation(federation, () => callAcervo(federation, { action: 'notify', docId: doc.id }));
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink">{t('Avisar os associados em dia de que "{titulo}" foi {verbo}? O aviso sai uma única vez para esta versão.', { titulo: doc.title, verbo: doc.version > 1 ? t('retificado') : t('publicado') })}</p>
+      <p className="text-sm text-gray-500">{t('Quem tem o aviso desligado nas preferências não recebe.')}</p>
+      <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="button" disabled={m.isPending} onClick={() => m.mutate(undefined, { onSuccess: (r) => { toast.success(t('Aviso enviado a {n} associados.', { n: r?.count ?? 0 })); onFechar(); }, onError: (e) => toast.error(e.message) })}><Bell className="h-4 w-4" />{t('Avisar')}</V2Button></div>
+    </div>
+  );
+}
+
 function ApagarDialog({ federation, doc, onFechar }) {
-  const m = useFederationMutation(() => acervoAction({ federationId: federation.id, action: 'delete', docId: doc.id }));
+  const m = useAcervoMutation(federation, () => callAcervo(federation, { action: 'delete', docId: doc.id }));
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink">{t('Apagar o rascunho "{titulo}" e os arquivos dele? Rascunho nunca foi público: some de vez.', { titulo: doc.title })}</p>
@@ -259,7 +275,8 @@ function ApagarDialog({ federation, doc, onFechar }) {
   );
 }
 
-function DocumentosTab({ federation, docsQ, isAdmin }) {
+export function DocumentosTab({ federation, docsQ, isAdmin }) {
+  const clube = isClubDocs(federation);
   const [filtro, setFiltro] = useState({ q: '', category: '', status: '', year: '' });
   const [aberto, setAberto] = useState(null); // { modo, doc }
   const todos = docsQ.isSuccess ? docsQ.data : null;
@@ -274,16 +291,16 @@ function DocumentosTab({ federation, docsQ, isAdmin }) {
   const preset = modo === 'errata' ? { type: 'errata', visibility: doc.visibility, title: t('Errata — {titulo}', { titulo: doc.code || doc.title }).slice(0, 200), relations: [{ kind: DOC_RELATION.ERRATA, doc_id: doc.id }] }
     : modo === 'revogar' ? { type: 'resolution', visibility: doc.visibility, relations: [{ kind: DOC_RELATION.REVOKES, doc_id: doc.id }] } : null;
   return (
-    <section className="space-y-4" aria-label={t('Documentos do acervo')} data-dica="federacao-acervo">
+    <section className="space-y-4" aria-label={t('Documentos do acervo')} data-dica={clube ? 'clube-acervo' : 'federacao-acervo'}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold text-ink">{t('Acervo oficial')}</h2>
-          <p className="text-sm text-gray-500">{t('Estatuto, regulamentos, resoluções, editais, atas, súmulas, prestação de contas, áudio e vídeo. O rascunho só a equipe vê; publicado, ganha número (quando o tipo é numerado), código de integridade e endereço próprio, e não se edita mais.')}</p>
+          <p className="text-sm text-gray-500">{clube ? t('Estatuto, regimento, atas, convocações, resoluções, prestação de contas, áudio e vídeo. O rascunho só a equipe vê; publicado, ganha número (quando o tipo é numerado), código de integridade e endereço próprio, e não se edita mais.') : t('Estatuto, regulamentos, resoluções, editais, atas, súmulas, prestação de contas, áudio e vídeo. O rascunho só a equipe vê; publicado, ganha número (quando o tipo é numerado), código de integridade e endereço próprio, e não se edita mais.')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <V2Button type="button" onClick={() => abrir('novo', null)} data-dica="federacao-acervo-novo"><Plus className="h-4 w-4" />{t('Novo documento')}</V2Button>
-          <V2Button asChild variant="secondary"><Link to={acervoPublicPath(federation)}><ExternalLink className="h-4 w-4" />{t('Ver como o público vê')}</Link></V2Button>
-          <AcervoPosterButton federation={federation} />
+          <V2Button asChild variant="secondary"><Link to={acervoPathFor(federation)}><ExternalLink className="h-4 w-4" />{t('Ver como o público vê')}</Link></V2Button>
+          {!clube && <AcervoPosterButton federation={federation} />}
         </div>
       </div>
       {docsQ.isError && <V2ErrorState inline title={t('Não carregou o acervo')} onRetry={() => docsQ.refetch()} />}
@@ -291,13 +308,13 @@ function DocumentosTab({ federation, docsQ, isAdmin }) {
       {todos && todos.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-4">
           <V2Field label={t('Buscar')} htmlFor="ac-busca" className="sm:col-span-4 lg:col-span-1"><V2Input id="ac-busca" type="search" placeholder={t('Título, número, palavra-chave')} value={filtro.q} onChange={(e) => setFiltro({ ...filtro, q: e.target.value })} /></V2Field>
-          <V2Field label={t('Assunto')} htmlFor="ac-cat"><V2Select id="ac-cat" value={filtro.category} onChange={(e) => setFiltro({ ...filtro, category: e.target.value })}><option value="">{t('Todos')}</option>{DOC_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{t(c.label)}</option>)}</V2Select></V2Field>
+          <V2Field label={t('Assunto')} htmlFor="ac-cat"><V2Select id="ac-cat" value={filtro.category} onChange={(e) => setFiltro({ ...filtro, category: e.target.value })}><option value="">{t('Todos')}</option>{docCategoriesFor(federation).map((c) => <option key={c.id} value={c.id}>{t(c.label)}</option>)}</V2Select></V2Field>
           <V2Field label={t('Situação')} htmlFor="ac-status"><V2Select id="ac-status" value={filtro.status} onChange={(e) => setFiltro({ ...filtro, status: e.target.value })}><option value="">{t('Todas')}</option>{Object.values(DOC_STATUS).map((s) => <option key={s} value={s}>{t(DOC_STATUS_LABELS[s])}</option>)}</V2Select></V2Field>
           <V2Field label={t('Ano')} htmlFor="ac-ano"><V2Select id="ac-ano" value={filtro.year} onChange={(e) => setFiltro({ ...filtro, year: e.target.value })}><option value="">{t('Todos')}</option>{anos.map((a) => <option key={a} value={a}>{a}</option>)}</V2Select></V2Field>
         </div>
       )}
       {rascunhos > 0 && <p className="text-sm text-gray-500">{tn(rascunhos, '{n} rascunho esperando publicação.', '{n} rascunhos esperando publicação.')}</p>}
-      {todos && todos.length === 0 && <V2EmptyState icon={Library} title={t('O acervo está vazio')} description={t('Comece pelo estatuto e pelo regulamento de competições: são os primeiros que filiados e órgãos públicos procuram.')} />}
+      {todos && todos.length === 0 && <V2EmptyState icon={Library} title={t('O acervo está vazio')} description={clube ? t('Comece pelo estatuto e pelo regimento: são os primeiros que os associados procuram.') : t('Comece pelo estatuto e pelo regulamento de competições: são os primeiros que filiados e órgãos públicos procuram.')} />}
       {lista && todos.length > 0 && lista.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum documento com esses filtros.')}</p>}
       {lista && lista.length > 0 && (
         <ul className="space-y-2">{lista.map((d) => <li key={d.id}><DocRow federation={federation} doc={d} acoes={docActions(d, { isAdmin })} onAbrir={abrir} /></li>)}</ul>
@@ -313,6 +330,7 @@ function DocumentosTab({ federation, docsQ, isAdmin }) {
           {modo === 'visibilidade' && <VisibilidadeDialog federation={federation} doc={doc} onFechar={fechar} />}
           {modo === 'retirar' && <RetirarDialog federation={federation} doc={doc} onFechar={fechar} />}
           {modo === 'apagar' && <ApagarDialog federation={federation} doc={doc} onFechar={fechar} />}
+          {modo === 'avisar' && <AvisarDialog federation={federation} doc={doc} onFechar={fechar} />}
         </DialogContent>
       </Dialog>
     </section>
