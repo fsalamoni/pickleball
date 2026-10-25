@@ -17,6 +17,7 @@ import { t, tk } from '@/core/i18n';
 
 const ClubDeclarationDialog = lazy(() => import('./ClubDeclarationDialog'));
 const MemberCardDialog = lazy(() => import('@/v2/components/federations/MemberCard'));
+const ClubMySanctions = lazy(() => import('./ClubMySanctions'));
 
 const TEXTO_SITUACAO = {
   pending: tk('A secretaria do clube está analisando o seu pedido. Você recebe um aviso quando for decidido.'),
@@ -83,6 +84,8 @@ export default function MyAssociationPanel({ club, plan = null }) {
       </V2Surface>
 
       {view.openCharge && <ClubChargeBlock charge={view.openCharge} club={club} />}
+
+      <Suspense fallback={null}><ClubMySanctions clubId={clubId} /></Suspense>
 
       <ConfirmDialog
         open={encerrar}

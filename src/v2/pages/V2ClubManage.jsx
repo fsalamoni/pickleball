@@ -35,6 +35,7 @@ const ClubStorePanel = lazy(() => import('@/v2/components/clubs/manage/ClubStore
 const ClubAccountsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAccountsPanel'));
 const ClubDocsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubDocsPanel'));
 const ClubAgendaPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAgendaPanel'));
+const ClubDisciplinePanel = lazy(() => import('@/v2/components/clubs/manage/ClubDisciplinePanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
@@ -50,7 +51,8 @@ function Central({ clubId }) {
 
   // Só quem tem a permissão consulta: a regra recusaria a leitura, e a falha
   // viraria "não carregou" numa seção que a pessoa nem vê.
-  const affiliationsQ = useClubAffiliations(clubId, { enabled: papel.isStaff && podeMembros });
+  const podeDisciplina = admin || perms.includes(CLUB_PERM.DISCIPLINE); // a disciplina escolhe quem sancionar na lista de associados
+  const affiliationsQ = useClubAffiliations(clubId, { enabled: papel.isStaff && (podeMembros || podeDisciplina) });
   const chargesQ = useClubCharges(clubId, { enabled: papel.isStaff && podeFinancas });
   const plansQ = useAllPlans(clubId, { enabled: papel.isStaff && (podeMembros || podeFinancas) });
   const pixQ = useClubPix(clubId, { enabled: papel.isStaff && admin });
@@ -120,6 +122,7 @@ function Central({ clubId }) {
       <Suspense fallback={<V2Skeleton lines={6} />}>
         {tab === 'hoje' && <ClubHojePanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} plansQ={plansQ} pixQ={pixQ} staffQ={staffQ} perms={perms} onIrParaAba={irParaAba} />}
         {tab === 'associados' && <ClubMembersPanel club={club} affiliationsQ={affiliationsQ} plansQ={plansQ} perms={perms} />}
+        {['sancoes', 'ouvidoria'].includes(tab) && podeDisciplina && <ClubDisciplinePanel club={club} affiliationsQ={affiliationsQ} tab={tab} />}
         {tab === 'cobrancas' && <ClubFinancePanel club={club} chargesQ={chargesQ} />}
         {tab === 'planos' && <ClubPlansTab club={club} plansQ={plansQ} canEdit={podeFinancas} canAdopt={podeMembros} />}
         {tab === 'pix' && admin && <ClubPixTab club={club} />}

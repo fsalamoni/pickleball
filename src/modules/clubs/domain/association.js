@@ -33,6 +33,7 @@ export const CLUB_X_KIND = Object.freeze({
   plans: 'plans', aff: 'aff', charges: 'charges', staff: 'staff', cfg: 'cfg', roles: 'roles', imports: 'imports',
   benefits: 'benefits', bsec: 'bsec', news: 'news', sponsors: 'sponsors',
   budgets: 'budgets', ledger: 'ledger', reports: 'reports', docs: 'docs', events: 'events',
+  cases: 'cases', ombud: 'ombud',
 });
 
 /** Permissões de quem trabalha no clube (o administrador do clube tem todas). Gravadas em `staff/{uid}.perms`. */

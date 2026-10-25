@@ -1,5 +1,6 @@
 /**
- * Disciplina da federação (permissão `discipline`, módulo `discipline`):
+ * Disciplina da federação — ou do clube-associação, pelo escopo (`disciplineScope.js`) —
+ * (permissão `discipline`, módulo `discipline`):
  *  - SANÇÕES: aplicar (advertência, suspensão com prazo, multa, exclusão) a um
  *    filiado, decidir recursos e encerrar antes do prazo — tudo pelo SERVIDOR
  *    (`disciplineAction`), que grava o efeito na filiação. Só a pessoa e a
@@ -13,8 +14,6 @@ import { toast } from 'sonner';
 import { Gavel, MessageSquareWarning, Plus } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { disciplineAction, updateReport } from '@/modules/federations/services/federationService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
 import { fedModuleOn } from '@/modules/federations/domain/federation';
 import { canAppeal, reportProtocol, sanctionInForce, sortReports, sortSanctions, validateSanctionInput } from '@/modules/federations/domain/discipline';
 import { formatBrlCents, parseBrlCents } from '@/modules/federations/domain/charges';
@@ -24,6 +23,7 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V
 import { t } from '@/core/i18n';
 import { quando } from '../federationUi';
 import { BuscaLista, MostrarMais, normalizaBusca as normaliza, useBuscaLista, useFiltroNaUrl } from './listTools';
+import { callDiscipline, callReportUpdate, isClubDiscipline, pick, useDisciplineMutation } from './disciplineScope';
 
 const cents = parseBrlCents;
 
@@ -36,51 +36,54 @@ function SancaoForm({ federation, membersQ, onFechar }) {
   const [erros, setErros] = useState({});
   const [resumo, setResumo] = useState(null);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
-  const m = useFederationMutation((payload) => disciplineAction(payload));
+  const clube = isClubDiscipline(federation);
+  const m = useDisciplineMutation(federation, (payload) => callDiscipline(federation, payload));
   const termo = normaliza(busca.trim());
   const candidatos = useMemo(() => (membersQ.data || []).filter((mb) => LIVE_MEMBER_STATUSES.includes(mb.status) && (!termo || normaliza(`${mb.user_name} ${mb.member_number || ''}`).includes(termo))).slice(0, 8), [membersQ.data, termo]);
   const alvo = (membersQ.data || []).find((mb) => mb.id === memberId) || null;
   const enviar = (e) => {
     e.preventDefault();
-    if (!alvo) { setErros({ member: t('Escolha o filiado.') }); return; }
+    if (!alvo) { setErros({ member: pick(federation, t('Escolha o filiado.'), t('Escolha o associado.')) }); return; }
     const r = validateSanctionInput({ ...f, fine_cents: cents(f.multa || '0') });
     if (!r.ok) { setErros(r.errors); return; }
     setResumo(r.value); // aplicar avisa a pessoa e mexe na filiação: pergunta antes, com o resumo
   };
   const efeito = !resumo ? '' : {
     [DISCIPLINE_KIND.WARNING]: t('Fica registrada na filiação.'),
-    [DISCIPLINE_KIND.SUSPENSION]: t('Suspensa de {ini} a {fim}: não se inscreve em torneio "só filiados" e a carteirinha mostra "Suspensa".', { ini: resumo.starts_at ? quando(resumo.starts_at) : t('hoje'), fim: quando(resumo.ends_at) }),
+    [DISCIPLINE_KIND.SUSPENSION]: clube
+      ? t('Suspensa de hoje até {fim}: a carteirinha mostra "Suspensa" e as vantagens e o voto ficam suspensos.', { fim: quando(resumo.ends_at) })
+      : t('Suspensa de {ini} a {fim}: não se inscreve em torneio "só filiados" e a carteirinha mostra "Suspensa".', { ini: resumo.starts_at ? quando(resumo.starts_at) : t('hoje'), fim: quando(resumo.ends_at) }),
     [DISCIPLINE_KIND.FINE]: t('Uma cobrança de {valor} é criada para a pessoa.', { valor: formatBrlCents(resumo.fine_cents) }),
-    [DISCIPLINE_KIND.EXCLUSION]: t('A filiação é encerrada e as cobranças abertas são canceladas.'),
+    [DISCIPLINE_KIND.EXCLUSION]: clube ? t('A filiação é encerrada e as cobranças abertas são canceladas. A pessoa continua no clube, sem as vantagens de associado.') : t('A filiação é encerrada e as cobranças abertas são canceladas.'),
   }[resumo.kind] || '';
   const aplicar = () => m.mutate({ action: 'apply', federationId: federation.id, memberId: alvo.id, ...resumo }, { onSuccess: () => { setResumo(null); toast.success(t('Sanção aplicada. A pessoa foi avisada e pode recorrer.')); onFechar(); }, onError: (er) => toast.error(er.message) });
   return (
     <form onSubmit={enviar} noValidate className="space-y-4" data-dica="federacao-sancao-formulario">
-      <V2Field label={t('Filiado')} htmlFor="sa-busca" error={erros.member} required>
+      <V2Field label={pick(federation, t('Filiado'), t('Associado'))} htmlFor="sa-busca" error={erros.member} required>
         {alvo ? (
           <div className="flex items-center gap-2 text-sm"><span className="font-bold text-ink">{alvo.user_name}</span>{alvo.member_number && <span className="text-gray-500">· {alvo.member_number}</span>}<V2Button type="button" size="sm" variant="ghost" onClick={() => setMemberId('')}>{t('Trocar')}</V2Button></div>
         ) : (
           <>
-            <V2SearchInput id="sa-busca" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Nome ou número')} aria-label={t('Buscar filiado')} />
-            {membersQ.isError && <p className="mt-1 text-xs text-red-600">{t('Não carregaram os filiados.')}</p>}
+            <V2SearchInput id="sa-busca" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Nome ou número')} aria-label={pick(federation, t('Buscar filiado'), t('Buscar associado'))} />
+            {membersQ.isError && <p className="mt-1 text-xs text-red-600">{pick(federation, t('Não carregaram os filiados.'), t('Não carregaram os associados.'))}</p>}
             {termo && candidatos.length > 0 && <ul className="mt-2 divide-y divide-gray-100 rounded-2xl border border-gray-100">{candidatos.map((mb) => <li key={mb.id}><button type="button" className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50" onClick={() => setMemberId(mb.id)}>{mb.user_name}{mb.member_number ? ` · ${mb.member_number}` : ''}</button></li>)}</ul>}
-            {termo && membersQ.isSuccess && !candidatos.length && <p className="mt-1 text-xs text-gray-500">{t('Ninguém com esse nome entre os filiados.')}</p>}
+            {termo && membersQ.isSuccess && !candidatos.length && <p className="mt-1 text-xs text-gray-500">{pick(federation, t('Ninguém com esse nome entre os filiados.'), t('Ninguém com esse nome entre os associados.'))}</p>}
           </>
         )}
       </V2Field>
       <div className="grid gap-4 sm:grid-cols-3">
         <V2Field label={t('Tipo')} htmlFor="sa-tipo" error={erros.kind}><V2Select id="sa-tipo" value={f.kind} onChange={(e) => set({ kind: e.target.value })}>{Object.values(DISCIPLINE_KIND).map((v) => <option key={v} value={v}>{t(DISCIPLINE_KIND_LABELS[v])}</option>)}</V2Select></V2Field>
-        <V2Field label={t('Início')} htmlFor="sa-ini" error={erros.starts_at} hint={t('Em branco = hoje.')}><V2Input id="sa-ini" type="date" value={f.starts_at} onChange={(e) => set({ starts_at: e.target.value })} /></V2Field>
+        {!clube && <V2Field label={t('Início')} htmlFor="sa-ini" error={erros.starts_at} hint={t('Em branco = hoje.')}><V2Input id="sa-ini" type="date" value={f.starts_at} onChange={(e) => set({ starts_at: e.target.value })} /></V2Field>}
         {f.kind === DISCIPLINE_KIND.SUSPENSION && <V2Field label={t('Fim da suspensão')} htmlFor="sa-fim" error={erros.ends_at} required><V2Input id="sa-fim" type="date" value={f.ends_at} onChange={(e) => set({ ends_at: e.target.value })} /></V2Field>}
         {f.kind === DISCIPLINE_KIND.FINE && <V2Field label={t('Valor da multa (R$)')} htmlFor="sa-multa" error={erros.fine_cents} required><V2Input id="sa-multa" inputMode="decimal" value={f.multa} onChange={(e) => set({ multa: e.target.value })} /></V2Field>}
       </div>
-      <V2Field label={t('Torneio relacionado (opcional)')} htmlFor="sa-torneio"><V2Input id="sa-torneio" maxLength={120} value={f.tournament_name} onChange={(e) => set({ tournament_name: e.target.value })} /></V2Field>
+      <V2Field label={pick(federation, t('Torneio relacionado (opcional)'), t('Evento ou jogo relacionado (opcional)'))} htmlFor="sa-torneio"><V2Input id="sa-torneio" maxLength={120} value={f.tournament_name} onChange={(e) => set({ tournament_name: e.target.value })} /></V2Field>
       <V2Field label={t('Motivo')} htmlFor="sa-motivo" error={erros.reason} required hint={t('A pessoa lê este texto no aviso. Mínimo 10 caracteres.')}><V2Textarea id="sa-motivo" rows={3} maxLength={1000} value={f.reason} onChange={(e) => set({ reason: e.target.value })} /></V2Field>
-      {(f.kind === DISCIPLINE_KIND.SUSPENSION || f.kind === DISCIPLINE_KIND.EXCLUSION) && (
+      {!clube && (f.kind === DISCIPLINE_KIND.SUSPENSION || f.kind === DISCIPLINE_KIND.EXCLUSION) && (
         <V2Toggle id="sa-doping" checked={f.basis === 'antidoping'} onChange={(v) => set({ basis: v ? 'antidoping' : '' })} label={t('Cumpre decisão de antidopagem (ABCD/JAD)')} hint={t('Registra que a sanção aplica uma decisão da Justiça Desportiva Antidopagem. O prazo e o efeito na inscrição são os mesmos.')} />
       )}
-      {f.kind === DISCIPLINE_KIND.SUSPENSION && <p className="text-xs text-gray-500">{t('Suspenso, a pessoa não se inscreve em torneio chancelado "só filiados" e a carteirinha mostra "Suspensa" até o fim do prazo.')}</p>}
-      {f.kind === DISCIPLINE_KIND.EXCLUSION && <p className="text-xs text-red-600">{t('A exclusão encerra a filiação e cancela as cobranças abertas. Recurso aceito devolve a filiação.')}</p>}
+      {f.kind === DISCIPLINE_KIND.SUSPENSION && <p className="text-xs text-gray-500">{pick(federation, t('Suspenso, a pessoa não se inscreve em torneio chancelado "só filiados" e a carteirinha mostra "Suspensa" até o fim do prazo.'), t('Suspenso, a pessoa continua no clube, mas a carteirinha mostra "Suspensa" e as vantagens e o voto ficam suspensos até o fim do prazo.'))}</p>}
+      {f.kind === DISCIPLINE_KIND.EXCLUSION && <p className="text-xs text-red-600">{pick(federation, t('A exclusão encerra a filiação e cancela as cobranças abertas. Recurso aceito devolve a filiação.'), t('A exclusão encerra a filiação (a pessoa continua no clube, sem as vantagens) e cancela as cobranças abertas. Recurso aceito devolve a filiação.'))}</p>}
       <div className="flex justify-end gap-2">
         <V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" variant="danger" disabled={m.isPending} data-dica="federacao-sancao-aplicar">{t('Aplicar sanção')}</V2Button>
@@ -103,19 +106,19 @@ function SancaoForm({ federation, membersQ, onFechar }) {
 const TOM_SANCAO = { active: 'red', appealed: 'amber', upheld: 'red', overturned: 'green', ended: 'neutral' };
 
 /** O que deixa de valer quando a sanção é anulada (recurso aceito) ou encerrada antes do prazo — o mesmo efeito no servidor. */
-function efeitoDesfeito(kind) {
+function efeitoDesfeito(kind, entity) {
   return {
     [DISCIPLINE_KIND.WARNING]: t('A advertência deixa de constar como em vigor.'),
-    [DISCIPLINE_KIND.SUSPENSION]: t('A suspensão deixa de valer hoje: a pessoa volta a se inscrever em torneio "só filiados" e a carteirinha deixa de mostrar "Suspensa".'),
+    [DISCIPLINE_KIND.SUSPENSION]: pick(entity, t('A suspensão deixa de valer hoje: a pessoa volta a se inscrever em torneio "só filiados" e a carteirinha deixa de mostrar "Suspensa".'), t('A suspensão deixa de valer hoje: a carteirinha deixa de mostrar "Suspensa" e as vantagens e o voto voltam.')),
     [DISCIPLINE_KIND.FINE]: t('A cobrança da multa é cancelada, se ainda não foi paga.'),
     [DISCIPLINE_KIND.EXCLUSION]: t('A filiação volta a valer, com um código novo na carteirinha.'),
   }[kind] || '';
 }
 
-function SancaoRow({ s }) {
+function SancaoRow({ s, federation }) {
   const [decisao, setDecisao] = useState(null); // null | 'overturn' | 'uphold' | 'end'
   const [nota, setNota] = useState('');
-  const m = useFederationMutation((payload) => disciplineAction({ ...payload, sanctionId: s.id }));
+  const m = useDisciplineMutation(federation, (payload) => callDiscipline(federation, { ...payload, sanctionId: s.id }));
   const vigente = sanctionInForce(s);
   const podeEncerrar = vigente && [DISCIPLINE_STATUS.ACTIVE, DISCIPLINE_STATUS.UPHELD].includes(s.status);
   const abrir = (d) => { setNota(''); setDecisao(d); };
@@ -123,7 +126,7 @@ function SancaoRow({ s }) {
   const dialogo = {
     overturn: {
       title: t('Aceitar o recurso de {nome}?', { nome: s.user_name }),
-      description: `${t('A sanção ({tipo}) é anulada.', { tipo })} ${efeitoDesfeito(s.kind)} ${t('A pessoa recebe um aviso com a decisão e a observação. Não dá para desfazer.')}`,
+      description: `${t('A sanção ({tipo}) é anulada.', { tipo })} ${efeitoDesfeito(s.kind, federation)} ${t('A pessoa recebe um aviso com a decisão e a observação. Não dá para desfazer.')}`,
       confirmLabel: t('Aceitar recurso'), destructive: false,
       payload: { action: 'decide_appeal', decision: 'overturn' }, ok: t('Recurso aceito: a sanção foi anulada.'),
       notaLabel: t('Observação para a pessoa (opcional)'), notaHint: t('Vai no aviso da decisão.'),
@@ -137,7 +140,7 @@ function SancaoRow({ s }) {
     },
     end: {
       title: t('Encerrar agora a sanção de {nome}?', { nome: s.user_name }),
-      description: `${t('A sanção ({tipo}) termina hoje, antes do prazo.', { tipo })} ${efeitoDesfeito(s.kind)} ${t('A pessoa recebe um aviso. Não dá para desfazer.')}`,
+      description: `${t('A sanção ({tipo}) termina hoje, antes do prazo.', { tipo })} ${efeitoDesfeito(s.kind, federation)} ${t('A pessoa recebe um aviso. Não dá para desfazer.')}`,
       confirmLabel: t('Encerrar agora'), destructive: false,
       payload: { action: 'end' }, ok: t('Sanção encerrada.'),
       notaLabel: t('Observação (opcional)'), notaHint: t('Fica no registro da sanção. Não vai no aviso.'),
@@ -203,10 +206,10 @@ function SancoesTab({ federation, membersQ, sanctionsQ }) {
   if (sanctionsQ.isLoading) return <V2Skeleton lines={5} />;
   const rotulos = { vigentes: t('Em vigor'), recurso: t('Com recurso'), todas: t('Todas') };
   return (
-    <section className="space-y-4" aria-label={t('Sanções')} data-dica="federacao-sancoes">
+    <section className="space-y-4" aria-label={t('Sanções')} data-dica={pick(federation, 'federacao-sancoes', 'clube-sancoes')}>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="font-display text-xl font-bold text-ink">{t('Sanções disciplinares')}</h2><p className="text-sm text-gray-500">{t('Só a pessoa e a federação veem. Toda sanção cabe um recurso, decidido aqui.')}</p></div>
-        {ligado && !novo && <V2Button type="button" size="sm" variant="danger" onClick={() => setNovo(true)} data-dica="federacao-sancao-nova"><Plus className="h-4 w-4" />{t('Aplicar sanção')}</V2Button>}
+        <div><h2 className="font-display text-xl font-bold text-ink">{t('Sanções disciplinares')}</h2><p className="text-sm text-gray-500">{pick(federation, t('Só a pessoa e a federação veem. Toda sanção cabe um recurso, decidido aqui.'), t('Só a pessoa e a diretoria do clube veem. Toda sanção cabe um recurso, decidido aqui.'))}</p></div>
+        {ligado && !novo && <V2Button type="button" size="sm" variant="danger" onClick={() => setNovo(true)} data-dica={pick(federation, 'federacao-sancao-nova', 'clube-sancao-nova')}><Plus className="h-4 w-4" />{t('Aplicar sanção')}</V2Button>}
       </div>
       {!ligado && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('O módulo de disciplina está desligado: não dá para aplicar sanção nova. As que já existem seguem valendo até a data, e os recursos e o encerramento antecipado continuam aqui.')}</p>}
       {novo && <V2Surface><SancaoForm federation={federation} membersQ={membersQ} onFechar={() => setNovo(false)} /></V2Surface>}
@@ -214,7 +217,7 @@ function SancoesTab({ federation, membersQ, sanctionsQ }) {
       {lista.length > 0 && <BuscaLista id="sa-lista-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por nome, motivo ou torneio')} total={lista.length} achados={busca.filtrados.length} />}
       {!busca.filtrados.length
         ? <V2EmptyState icon={Gavel} title={busca.termo.trim() && lista.length ? t('Nenhuma sanção com esse termo') : filtro === 'recurso' ? t('Nenhum recurso para decidir') : t('Nenhuma sanção neste filtro')} />
-        : <ul className="space-y-3">{busca.visiveis.map((s) => <SancaoRow key={s.id} s={s} />)}</ul>}
+        : <ul className="space-y-3">{busca.visiveis.map((s) => <SancaoRow key={s.id} s={s} federation={federation} />)}</ul>}
       <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
     </section>
   );
@@ -224,11 +227,11 @@ function SancoesTab({ federation, membersQ, sanctionsQ }) {
 
 const TOM_REL = { open: 'amber', in_review: 'ink', closed: 'green' };
 
-export function RelatoRow({ rep }) {
+export function RelatoRow({ rep, federation = null }) {
   const { user } = useAuth();
   const [notas, setNotas] = useState(rep.notes || '');
   const [concluindo, setConcluindo] = useState(false);
-  const m = useFederationMutation((payload) => updateReport(rep, { ...payload, uid: user?.uid }));
+  const m = useDisciplineMutation(federation, (payload) => callReportUpdate(federation, rep, { ...payload, uid: user?.uid }));
   const salvar = (status, ok = t('Manifestação atualizada.')) => m.mutate({ status, notes: notas }, { onSuccess: () => { toast.success(ok); setConcluindo(false); }, onError: (e) => toast.error(e.message) });
   const protocolo = reportProtocol(rep.id);
   return (
@@ -256,7 +259,7 @@ export function RelatoRow({ rep }) {
         onOpenChange={setConcluindo}
         loading={m.isPending}
         title={t('Concluir a manifestação {p}?', { p: protocolo })}
-        description={t('Quem enviou passa a ver "Concluída" ao consultar o protocolo. As anotações internas são salvas junto e continuam só com a federação. Depois de concluída, a manifestação não volta a ser editada.')}
+        description={pick(federation, t('Quem enviou passa a ver "Concluída" ao consultar o protocolo. As anotações internas são salvas junto e continuam só com a federação. Depois de concluída, a manifestação não volta a ser editada.'), t('Quem enviou passa a ver "Concluída" ao consultar o protocolo. As anotações internas são salvas junto e continuam só com o clube. Depois de concluída, a manifestação não volta a ser editada.'))}
         confirmLabel={t('Concluir')}
         cancelLabel={t('Voltar')}
         onConfirm={() => salvar(REPORT_STATUS.CLOSED, t('Manifestação concluída.'))}
@@ -275,7 +278,7 @@ const relatoNoFiltro = (r, filtro) => ({
 }[filtro]);
 const CAMPOS_RELATO = (r) => [reportProtocol(r.id), r.body, r.tournament_name, t(REPORT_KIND_LABELS[r.kind] || '')].join(' ');
 
-function OuvidoriaTab({ reportsQ }) {
+function OuvidoriaTab({ federation, reportsQ }) {
   const [filtro, setFiltro] = useFiltroNaUrl('filtro', 'atratar', FILTROS_OUVIDORIA);
   const todas = useMemo(() => sortReports(reportsQ.data || []), [reportsQ.data]);
   const lista = useMemo(() => todas.filter((r) => relatoNoFiltro(r, filtro)), [todas, filtro]);
@@ -284,13 +287,13 @@ function OuvidoriaTab({ reportsQ }) {
   if (reportsQ.isLoading) return <V2Skeleton lines={5} />;
   const rotulos = { atratar: t('A tratar'), abertas: t('Sem resposta'), concluidas: t('Concluídas'), todas: t('Todas') };
   return (
-    <section className="space-y-4" aria-label={t('Ouvidoria')} data-dica="federacao-ouvidoria">
-      <div><h2 className="font-display text-xl font-bold text-ink">{t('Ouvidoria')}</h2><p className="text-sm text-gray-500">{t('Manifestações enviadas pela página da federação. A anônima não traz quem enviou, nem para a plataforma. A pessoa acompanha pelo protocolo e vê só o estado.')}</p></div>
+    <section className="space-y-4" aria-label={t('Ouvidoria')} data-dica={pick(federation, 'federacao-ouvidoria', 'clube-ouvidoria')}>
+      <div><h2 className="font-display text-xl font-bold text-ink">{t('Ouvidoria')}</h2><p className="text-sm text-gray-500">{pick(federation, t('Manifestações enviadas pela página da federação. A anônima não traz quem enviou, nem para a plataforma. A pessoa acompanha pelo protocolo e vê só o estado.'), t('Manifestações enviadas pela página do clube. A anônima não traz quem enviou, nem para a plataforma. A pessoa acompanha pelo protocolo e vê só o estado.'))}</p></div>
       <div className="flex flex-wrap gap-2">{FILTROS_OUVIDORIA.map((id) => <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{`${rotulos[id]} (${todas.filter((r) => relatoNoFiltro(r, id)).length})`}</V2FilterChip>)}</div>
-      {lista.length > 0 && <BuscaLista id="rel-busca" value={busca.termo} onChange={busca.setTermo} placeholder={t('Buscar por protocolo, texto ou torneio')} total={lista.length} achados={busca.filtrados.length} />}
+      {lista.length > 0 && <BuscaLista id="rel-busca" value={busca.termo} onChange={busca.setTermo} placeholder={pick(federation, t('Buscar por protocolo, texto ou torneio'), t('Buscar por protocolo ou texto'))} total={lista.length} achados={busca.filtrados.length} />}
       {!busca.filtrados.length
         ? <V2EmptyState icon={MessageSquareWarning} title={busca.termo.trim() && lista.length ? t('Nenhuma manifestação com esse termo') : t('Nenhuma manifestação neste filtro')} />
-        : <ul className="space-y-3">{busca.visiveis.map((r) => <RelatoRow key={r.id} rep={r} />)}</ul>}
+        : <ul className="space-y-3">{busca.visiveis.map((r) => <RelatoRow key={r.id} rep={r} federation={federation} />)}</ul>}
       <MostrarMais restam={busca.restam} onClick={busca.mostrarMais} />
     </section>
   );
@@ -298,6 +301,6 @@ function OuvidoriaTab({ reportsQ }) {
 
 
 export default function FedDisciplinePanel({ federation, membersQ, sanctionsQ, reportsQ, tab }) {
-  if (tab === 'ouvidoria') return <OuvidoriaTab reportsQ={reportsQ} />;
+  if (tab === 'ouvidoria') return <OuvidoriaTab federation={federation} reportsQ={reportsQ} />;
   return <SancoesTab federation={federation} membersQ={membersQ} sanctionsQ={sanctionsQ} />;
 }

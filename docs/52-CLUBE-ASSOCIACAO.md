@@ -50,6 +50,8 @@ pessoa do clube.
 | `reports` | prestação de contas do período (`{ano}` ou `{ano}-S1`…): retrato **congelado**, parecer do conselho fiscal, assembleia; a cópia pública tem `pub: true` | `finance`/`fiscal`/admin; o público lê só `pub: true` de clube publicado | **só o servidor** |
 | `docs` | documento oficial (estatuto, regimento, atas, resoluções…): número do ato, versão, arquivos, `visibility` (público / só associados / só equipe), `pub` e `members` (marcas de leitura mantidas pelo servidor) | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/admin leem tudo (rascunho inclusive) | **só o servidor** (`clubDocs`) |
 | `seq` | contador de numeração dos atos (`seq/docs`) | ninguém | **só o servidor** |
+| `cases` | sanção disciplinar (advertência, suspensão, multa, exclusão): motivo, prazo, valor, `status`, recurso e decisão | `discipline`/admin; **a própria pessoa** (consulta com `user_id == eu`) | **só o servidor** (`clubDiscipline`) |
+| `ombud` | manifestação da ouvidoria: assunto, texto, `anonymous`, `reporter_uid` (nulo se anônima), `status`, anotações internas. **O id é o protocolo** (10 letras e números maiúsculos) | só `discipline`/admin; quem enviou acompanha o ESTADO pelo servidor | **só o servidor** |
 | `events` | evento da agenda oficial (competição, curso, assembleia, reunião, prazo…): data, horário, local, `status` (marcado/adiado/cancelado), motivo, `history[]`, `ever_visible`, `visibility`, `pub` e `members` (marcas de leitura mantidas pelo servidor), documentos ligados | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/`sports`/admin leem tudo | **só o servidor** (`clubAgenda`) |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
@@ -92,6 +94,12 @@ Funções em `functions/clubAssociation.js` (testes ao lado):
   `rectify`, `visibility`, `withdraw`, `notify` e `file`. Reaproveita a régua do
   acervo da federação (`federationAcervoPolicy.js`, `oficializar`) com a lista de
   tipos do clube.
+
+- `clubDiscipline` (callable, `functions/clubDiscipline.js`) — a disciplina e a ouvidoria (§5.6):
+  `apply` (permissão `discipline`), `appeal` (a própria pessoa, uma vez), `decide_appeal`,
+  `end`, `report` (qualquer conta, associação aberta), `report_status` (por protocolo) e
+  `report_update` (`discipline`). Reaproveita da associação `novaCobranca`, `encerrar` e
+  `novoCodigo` e o cálculo de suspensão da federação (`membershipState`).
 
 ### 3.1 Importar associados
 
@@ -326,6 +334,45 @@ escondem — reunião de verdade é o Bloco F).
 - **Conta excluída**: o evento fica; sai só o nome de quem o marcou
   (`created_by_name` → "Usuário removido").
 
+### 5.6 Disciplina e ouvidoria do clube (Bloco E1)
+
+Central do clube → **Disciplina** (`?aba=sancoes` e `?aba=ouvidoria`, permissão
+`discipline` ou `admin`). Também é a **mesma tela da federação** (`FedDisciplinePanel`)
+com o clube no lugar dela (`disciplineScope.js`: `clubDisciplineEntity(club)`,
+`callDiscipline`, `callReportUpdate`, `useDisciplineMutation`). Os textos que falam
+"filiado/torneio/federação" trocam por `pick(entity, …)`; o clube não tem início de
+suspensão (vale a partir de hoje), "ficar fora de torneio chancelado" nem a base
+de antidopagem.
+
+- **Quatro sanções**: advertência; suspensão (com prazo, não pode ser no passado); multa
+  (vira uma **cobrança** da associação com `origin: 'fine'` — pagar a multa **não renova**
+  a filiação); exclusão (encerra a filiação, cancela as cobranças abertas e **mantém a
+  pessoa no clube**, sem as vantagens). Motivo com ≥ 10 caracteres; a pessoa precisa ter
+  filiação viva; ninguém sanciona a si mesmo.
+- **Efeito na carteirinha**: a suspensão grava `discipline_until_ms` na filiação e a
+  verificação pública passa a dizer "Suspensa" (mesma conta `membershipState` da
+  federação); as vantagens e o voto (Bloco F) ficam suspensos.
+- **Recurso — uma vez só**, pela própria pessoa (Minha associação → "Recorrer", ≥ 20
+  caracteres). A diretoria **mantém** ou **anula**; anular desfaz o efeito (recalcula a
+  suspensão, devolve a filiação excluída com **código novo** e cancela a multa aberta).
+  Encerrar a sanção antes do prazo (`end`) faz o mesmo.
+- **Quem vê**: só a pessoa e quem tem `discipline`. A aba de associados e a lista de
+  filiações são lidas também por `discipline` (para escolher o alvo).
+- **Ouvidoria**: um botão na aba Associação da página do clube (conta obrigatória, barra
+  mensagem falsa em massa) com assunto, texto (20–2000), evento relacionado e **enviar
+  anonimamente** (`reporter_uid: null` — nem a plataforma sabe quem). **O id do documento é
+  o protocolo**: 10 letras e números maiúsculos, copiável; quem enviou vê só o ESTADO
+  (recebida / em apuração / concluída), nunca o texto nem as anotações. Protocolo
+  inexistente e protocolo de outra pessoa dizem o mesmo ("não encontrado"). Concluída não
+  volta a ser editada. A proteção de menores é do Bloco E2.
+- **Hoje**: a Central mostra "Recursos para decidir" e "Manifestações abertas" para quem
+  tem `discipline`, com as mesmas consultas (mesmas chaves) das abas.
+- **Conta excluída**: a sanção fica no histórico do clube, sem o nome; a manifestação
+  identificada vira anônima (`reporter_uid → null`).
+- **Avisos** (`origin: 'server'`, link sem `#`): à pessoa quando é sancionada, quando o
+  recurso é decidido ou a sanção é encerrada; à disciplina quando chega recurso ou
+  manifestação.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -411,6 +458,19 @@ escondem — reunião de verdade é o Bloco F).
 26. **A agenda assinável do clube não tem função própria**: o prefixo
     `/api/agenda/clube/` é despachado dentro de `federationAgendaFeed` — não
     crie um segundo endpoint HTTP.
+27. **Sanção e manifestação são só do servidor** (`clubDiscipline`, `cases` e `ombud` com
+    `write: if false`). A pessoa lê as PRÓPRIAS sanções com a consulta
+    `user_id == eu` (é o que a regra consegue provar); a ouvidoria só a disciplina lê.
+28. **A manifestação anônima nunca guarda quem enviou** (`reporter_uid: null`) e o
+    acompanhamento devolve só `{ id, status, kind, created_at_ms, anonymous }` — nunca o
+    texto. O id é o protocolo em maiúsculas; mexer na geração sem `reportProtocol`/
+    `protocolToId` quebra o "Acompanhar".
+29. **Multa não renova a filiação**: a cobrança de origem `fine` é paga pela mesma
+    confirmação (`confirmarCobranca`), mas pula `plano(...)`. Anular o recurso cancela a
+    multa aberta; a paga fica (devolver dinheiro é decisão do clube).
+30. **A disciplina do clube recebe a entidade, não a copia**: não bifurque
+    `FedDisciplinePanel` — passe `clubDisciplineEntity(club)` e use `callDiscipline`/
+    `useDisciplineMutation`. Os ids `kind`/`status` da sanção e do assunto são gravados.
 
 ## 7. Testes
 
@@ -428,6 +488,8 @@ equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de q
 `functions/clubAgenda.parity.test.js`, `tests/rules/clubAgenda.rules.test.js`
 (emulador: equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de
 quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
+`functions/clubDiscipline.test.js` (as quatro sanções, recurso uma vez, anular desfaz, multa não renova, ouvidoria anônima e protocolo),
+`tests/rules/clubDiscipline.rules.test.js` (emulador: a pessoa lê só as suas, a ouvidoria só a disciplina, ninguém grava),
 `functions/clubAccounts.test.js` (orçamento, lançamentos, prestação, parecer, anexo),
 `tests/rules/clubAccounts.rules.test.js` (emulador: quem lê, ninguém grava, consulta
 pública `pub == true`, conselho fiscal lê cobranças) e

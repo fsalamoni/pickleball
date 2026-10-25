@@ -4,8 +4,9 @@
  * informados, vencimentos). Fonte que falhou mostra "—" e um aviso — nunca zero.
  */
 import React from 'react';
-import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Users } from 'lucide-react';
 import { affiliationCounts, financeSummary, formatBrlCents, normalizeAssociation } from '@/modules/clubs/domain/association';
+import { useClubCases, useClubOmbud } from '@/modules/clubs/hooks/useClubDiscipline';
 import { termStatus } from '@/modules/clubs/domain/staff';
 import { V2Button, V2ErrorState, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
@@ -26,6 +27,12 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
   const veMembros = admin || perms.includes('members');
   const veFinancas = admin || perms.includes('finance');
   const veEquipe = admin || perms.includes('staff');
+  const veDisciplina = admin || perms.includes('discipline');
+  // Mesmas chaves do painel de Disciplina: abrir uma aba depois não consulta de novo.
+  const casosQ = useClubCases(club.id, { enabled: veDisciplina });
+  const ouvidoriaQ = useClubOmbud(club.id, { enabled: veDisciplina });
+  const recursos = casosQ.isSuccess ? (casosQ.data || []).filter((s) => s.status === 'appealed').length : null;
+  const manifestacoes = ouvidoriaQ.isSuccess ? (ouvidoriaQ.data || []).filter((r) => r.status !== 'closed').length : null;
   // Só o que vence em 30 dias ou já venceu e ainda não foi varrido (a varredura desfaz o cargo e avisa).
   const acabando = staffQ?.isSuccess
     ? (staffQ.data || []).map((s) => ({ s, st: termStatus(s) })).filter(({ st }) => st.kind === 'ending' || st.kind === 'expired')
@@ -64,6 +71,21 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
             </div>
           )}
           {afs?.pending > 0 && <V2Button type="button" size="sm" className="mt-3" onClick={() => onIrParaAba('associados', 'pending')}>{t('Ver os pedidos')}</V2Button>}
+        </div>
+      )}
+
+      {veDisciplina && (
+        <div data-dica="clube-hoje-disciplina">
+          <h2 className="mb-3 font-display text-lg font-bold text-ink">{t('Disciplina')}</h2>
+          {(casosQ.isError || ouvidoriaQ.isError) && <V2ErrorState inline title={t('Não deu para conferir a disciplina')} onRetry={() => { casosQ.refetch(); ouvidoriaQ.refetch(); }} />}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <V2StatCard icon={Gavel} label={t('Recursos para decidir')} value={recursos == null ? '—' : String(recursos)} accent={recursos ? 'acid' : 'ink'} />
+            <V2StatCard icon={MessageSquareWarning} label={t('Manifestações abertas')} value={manifestacoes == null ? '—' : String(manifestacoes)} accent={manifestacoes ? 'acid' : 'ink'} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {recursos > 0 && <V2Button type="button" size="sm" onClick={() => onIrParaAba('sancoes')}>{t('Decidir recursos')}</V2Button>}
+            {manifestacoes > 0 && <V2Button type="button" size="sm" variant="subtle" onClick={() => onIrParaAba('ouvidoria')}>{t('Abrir a ouvidoria')}</V2Button>}
+          </div>
         </div>
       )}
 

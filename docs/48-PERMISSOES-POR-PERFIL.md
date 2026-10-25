@@ -462,6 +462,9 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ver os documentos oficiais PUBLICADOS | ✔ os públicos (`pub`) | ✔ | ✔ os públicos e os "só associados" (qualquer membro do clube) | ✔ `docs`/admin leem tudo, rascunho inclusive | — | rules (`docs` com `pub`/`members`, clube publicado) e **Cloud Function** `clubDocs` (`file`) |
 | Marcar, remarcar, adiar, cancelar e apagar eventos da agenda oficial do clube | ✖ | ✖ | ✖ | ✔ `docs` ou admin (qualquer tipo); `sports` só a agenda esportiva | — | **Cloud Function** `clubAgenda` (`events`: `write: if false`) |
 | Ver a agenda oficial do clube | ✔ os eventos públicos (`pub`) e a agenda assinável | ✔ | ✔ os públicos e os "só associados" (qualquer membro do clube) | ✔ `docs`/`sports`/admin leem tudo | — | rules (`events` com `pub`/`members`, clube publicado) |
+| Aplicar, encerrar e decidir recurso de sanção disciplinar do clube | ✖ | ✖ | ✖ | ✔ `discipline` ou admin | — | **Cloud Function** `clubDiscipline` (`cases`: `write: if false`) |
+| Ver as sanções do clube e a ouvidoria | ✖ | ✖ | ✔ **as próprias sanções** (consulta com `user_id == eu`) e recorrer, uma vez | ✔ `discipline`/admin leem tudo; a ouvidoria só eles | — | rules (`cxReadPerms`: `cases`, `ombud`) e **Cloud Function** `clubDiscipline` |
+| Mandar manifestação à ouvidoria do clube e acompanhar pelo protocolo | ✖ (precisa de conta) | ✔ anônima ou identificada | ✔ | ✔ | — | **Cloud Function** `clubDiscipline` (`report`/`report_status`; só o estado) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |

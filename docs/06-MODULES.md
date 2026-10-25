@@ -139,7 +139,7 @@ as legadas seguem no `GameDayOrganizer`).
   planos de filiação, Pix, carteirinha e Central do clube. Telas
   `/clubes/:clubId/gerir` (Central), aba Associação em `/clubes/:clubId`,
   pública `/c/verificar/:codigo?` e seção "Associe-se" em `/c/:clubId`.
-  Coleções `club_x/{clubId}/{plans,aff,charges,staff,roles,imports,cfg,benefits,bsec,news,sponsors,budgets,ledger,reports}` e `club_card_index`.
+  Coleções `club_x/{clubId}/{plans,aff,charges,staff,roles,imports,cfg,benefits,bsec,news,sponsors,budgets,ledger,reports,docs,seq,events,cases,ombud}` e `club_card_index`.
   Bloco C1: vantagens do associado, comunicados e patrocinadores (`domain/content.js`,
   `services/contentService.js`, `functions/clubContent.js`, seção Comunicação da Central).
   Bloco B: diretoria com cargos e mandatos (`domain/staff.js`, aba Diretoria),
