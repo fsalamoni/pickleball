@@ -2004,6 +2004,10 @@ exports.clubAssociation = federationCallable('clubAssociation', (ctx, actor, dat
 const clubStaff = require('./clubStaff');
 exports.clubStaff = federationCallable('clubStaff', (ctx, actor, data) => clubStaff.staff(ctx, actor, data));
 
+// Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
+const clubContent = require('./clubContent');
+exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));
+
 // Verificação pública da carteirinha do clube: sem conta (o QR é lido por qualquer um).
 exports.clubAssociationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
   try {

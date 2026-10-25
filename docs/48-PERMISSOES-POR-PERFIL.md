@@ -448,6 +448,11 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Montar os cargos do clube | ✖ | ✖ | ✖ | ✔ só cargo master (ou administração do clube) | — | **Cloud Function** `clubStaff` |
 | Ler a diretoria e os cargos | ✖ | ✖ | ✖ | ✔ `staff`; o próprio lê o seu cargo | — | rules (`staff`, `roles`) |
 | Cargo vale sem ser membro do clube | ✖ | — | — | ✖ — o cargo só conta enquanto a pessoa é membro | — | rules (`cxPerms`) e servidor (`permsDe`) |
+| Ver a vitrine pública de vantagens, os comunicados públicos e os patrocinadores | ✔ | ✔ | ✔ | ✔ | — | rules `club_x/…/{benefits,news,sponsors}` (`published` + `public`) |
+| Ver o "como usar" e o código das vantagens | ✖ | ✖ | ✔ só associado em dia, do plano que a vantagem alcança | ✔ `comms` (edita) | — | **Cloud Function** `clubContent` (`bsec`: só `comms` lê) |
+| Ler comunicado "só associados" | ✖ | ✖ | ✔ qualquer membro do clube | ✔ `comms` | — | rules (`news`, `audience == members` + `isClubMember`) |
+| Criar/editar/apagar vantagem, comunicado e patrocinador | ✖ | ✖ | ✖ | ✔ `comms` ou admin | — | rules (`cxWritePerms`) |
+| Avisar os associados de um comunicado | ✖ | ✖ | ✖ | ✔ `comms` ou admin — uma vez por comunicado | — | **Cloud Function** `clubContent` (`news_notify`) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |

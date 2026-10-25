@@ -38,7 +38,7 @@ function mensagemDoServidor(err) {
   return err?.message || t('Não foi possível concluir. Tente de novo.');
 }
 
-async function chamar(nome, payload, { timeout = 60_000 } = {}) {
+export async function chamar(nome, payload, { timeout = 60_000 } = {}) {
   if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   try {
     const { data } = await httpsCallable(functions, nome, { timeout })(payload);

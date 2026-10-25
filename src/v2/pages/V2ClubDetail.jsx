@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
-  Globe2, IdCard, LayoutDashboard, ListChecks, Trophy,
+  Gift, Globe2, IdCard, LayoutDashboard, ListChecks, Newspaper, Trophy,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
@@ -28,6 +28,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { isAssociationOpen } from '@/modules/clubs/domain/association';
 import { useMyAffiliation } from '@/modules/clubs/hooks/useClubAssociation';
 import ClubAssociationTab from '@/v2/components/clubs/association/ClubAssociationTab';
+import { ClubMemberBenefits, ClubNewsSection } from '@/v2/components/clubs/association/ClubShowcase';
 
 // Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
@@ -131,13 +132,17 @@ export default function V2ClubDetail() {
     { value: 'members', label: t('Membros'), icon: Users },
     { value: 'events', label: t('Eventos'), icon: CalendarDays },
     ...(showAssocTab ? [{ value: 'associacao', label: t('Associação'), icon: IdCard, dica: 'clube-aba-associacao' }] : []),
+    ...(showAssocTab ? [
+      { value: 'vantagens', label: t('Vantagens'), icon: Gift, dica: 'clube-aba-vantagens' },
+      { value: 'comunicados', label: t('Comunicados'), icon: Newspaper, dica: 'clube-aba-comunicados' },
+    ] : []),
     ...(clubRankingOn ? [{ value: 'ranking', label: t('Ranking'), icon: Medal }] : []),
     { value: 'feed', label: t('Mural'), icon: MessageSquare },
     { value: 'forums', label: t('Fóruns'), icon: MessagesSquare },
     ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: t('Atividade'), icon: Trophy, dica: 'clube-aba-atividade' }] : []),
     ...(isAdmin ? [{ value: 'admin', label: t('Administração'), icon: Settings }] : []),
   ];
-  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn) || (activeTab === 'associacao' && !showAssocTab)
+  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn) || (['associacao', 'vantagens', 'comunicados'].includes(activeTab) && !showAssocTab)
     ? 'members' : activeTab;
 
   return (
@@ -200,7 +205,12 @@ export default function V2ClubDetail() {
       </div>
 
       {/* Clube-associação aberto ao público: quem ainda não é membro vê os planos primeiro. */}
-      {!isMember && assocOpen && <div className="mt-6"><ClubAssociationTab club={club} /></div>}
+      {!isMember && assocOpen && (
+        <div className="mt-6 space-y-5">
+          <ClubAssociationTab club={club} />
+          <ClubNewsSection clubId={clubId} limite={3} />
+        </div>
+      )}
 
       {/* Non-member: join */}
       {!isMember && (
@@ -264,6 +274,8 @@ export default function V2ClubDetail() {
             {safeTab === 'members' && <V2ClubMembers clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'associacao' && showAssocTab && <ClubAssociationTab club={club} />}
+            {safeTab === 'vantagens' && showAssocTab && <ClubMemberBenefits club={club} onVerAssociacao={() => setActiveTab('associacao')} />}
+            {safeTab === 'comunicados' && showAssocTab && <ClubNewsSection clubId={clubId} member publicOn={assocOpen} titulo={false} limite={10} />}
             {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}

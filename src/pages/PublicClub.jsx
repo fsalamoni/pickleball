@@ -18,6 +18,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { isAssociationOpen, normalizeAssociation } from '@/modules/clubs/domain/association';
 import { usePublicPlans } from '@/modules/clubs/hooks/useClubAssociation';
 import ClubPlansList from '@/v2/components/clubs/association/ClubPlansList';
+import { ClubBenefitsShowcase, ClubNewsSection, ClubSponsorsStrip } from '@/v2/components/clubs/association/ClubShowcase';
 import { t } from '@/core/i18n';
 
 /** Os planos de associação na vitrine: quem chega pelo link vê o que ganha e entra para se associar. */
@@ -49,6 +50,9 @@ function PublicClubPlans({ club, isAuthenticated }) {
           )}
         />
       )}
+      <ClubBenefitsShowcase clubId={club.id} />
+      <ClubNewsSection clubId={club.id} limite={3} />
+      <ClubSponsorsStrip clubId={club.id} />
     </section>
   );
 }

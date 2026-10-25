@@ -1607,7 +1607,11 @@ andamento impede a exclusão.
   `term_start`/`term_end_ms`, `term_history`; só o servidor grava), `roles/list`
   (os cargos do clube, `{ roles: [...] }`; só o servidor grava), `imports/{id}`
   (lote de importação com quem ficou sem conta; só o servidor grava) e `cfg`
-  (Pix e instruções; só o admin). Ids de filiação são deterministas. O cargo só
+  (Pix e instruções; só o admin), `benefits/{id}` (vitrine da vantagem do
+  associado) com o "como usar"/código em `bsec/{id}` (só `comms` lê; o associado em
+  dia recebe pelo servidor), `news/{id}` (comunicados; público ou "só associados";
+  `notified_at` marca o aviso já enviado) e `sponsors/{id}` (patrocinadores) — os
+  quatro gravados por `comms`. Ids de filiação são deterministas. O cargo só
   conta enquanto a pessoa existe em `club_members`.
 - `club_card_index/{codigo}` — código da carteirinha → filiação; só o servidor
   toca; o código gira em ativação, renovação e suspensão.

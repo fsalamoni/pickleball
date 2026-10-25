@@ -751,5 +751,5 @@ async function verify(ctx, data) {
 }
 
 module.exports = {
-  X, INDEX, PERMS, LIVE, association, sweep, verify, permsDe, exigePerm, quemTem, aberta, sigla, validade, flagLigada, falha, texto, col, aviso, auditoria, clube, plano,
+  X, INDEX, PERMS, LIVE, association, sweep, verify, permsDe, exigePerm, quemTem, aberta, sigla, validade, flagLigada, exigeFlag, falha, texto, col, aviso, auditoria, clube, plano,
 };
