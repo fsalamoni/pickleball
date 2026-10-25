@@ -31,6 +31,10 @@ function cenario() {
     'club_x/c1/docs/d2': { club_id: 'c1', status: 'published', title: 'Ata', created_by: 'bia', created_by_name: 'Bia', published_by: 'bia', published_by_name: 'Bia' },
     'club_x/c1/events/e1': { club_id: 'c1', title: 'Assembleia', created_by: 'ana', created_by_name: 'Ana', visibility: 'members' },
     'club_x/c1/events/e2': { club_id: 'c1', title: 'Torneio', created_by: 'bia', created_by_name: 'Bia', visibility: 'public' },
+    'club_x/c1/cases/s1': { club_id: 'c1', user_id: 'ana', user_name: 'Ana', kind: 'warning', reason: 'Palavrão na quadra', status: 'active' },
+    'club_x/c1/cases/s2': { club_id: 'c1', user_id: 'bia', user_name: 'Bia', kind: 'warning', reason: 'Atraso', status: 'active' },
+    'club_x/c1/ombud/o1': { club_id: 'c1', kind: 'conduct', body: 'Relato identificado', anonymous: false, reporter_uid: 'ana', status: 'open' },
+    'club_x/c1/ombud/o2': { club_id: 'c1', kind: 'conduct', body: 'Relato da Bia', anonymous: false, reporter_uid: 'bia', status: 'open' },
     'club_card_index/ABCDEFGH23': { club_id: 'c1', user_id: 'ana' },
     'club_card_index/ZZZZZZZZ22': { club_id: 'c1', user_id: 'bia' },
   });
@@ -54,6 +58,9 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_x/c1/docs/d1')).toMatchObject({ created_by_name: 'Usuário removido', published_by_name: 'Usuário removido', status: 'published', title: 'Regimento' });
     // o evento da agenda oficial também fica, sem o nome de quem o marcou
     expect(db.store.docs.get('club_x/c1/events/e1')).toMatchObject({ created_by_name: 'Usuário removido', title: 'Assembleia' });
+    // a sanção fica no histórico do clube, sem o nome; a manifestação identificada vira anônima
+    expect(db.store.docs.get('club_x/c1/cases/s1')).toMatchObject({ user_name: REMOVED_ATHLETE, kind: 'warning', status: 'active' });
+    expect(db.store.docs.get('club_x/c1/ombud/o1')).toMatchObject({ reporter_uid: null, anonymous: true, body: 'Relato identificado' });
   });
 
   it('a associação de outra pessoa não é tocada', async () => {
@@ -65,5 +72,7 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_x/c1/ledger/l2')).toMatchObject({ created_by_name: 'Bia' });
     expect(db.store.docs.get('club_x/c1/docs/d2')).toMatchObject({ created_by_name: 'Bia', published_by_name: 'Bia' });
     expect(db.store.docs.get('club_x/c1/events/e2')).toMatchObject({ created_by_name: 'Bia' });
+    expect(db.store.docs.get('club_x/c1/cases/s2')).toMatchObject({ user_name: 'Bia' });
+    expect(db.store.docs.get('club_x/c1/ombud/o2')).toMatchObject({ reporter_uid: 'bia', anonymous: false });
   });
 });

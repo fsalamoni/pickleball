@@ -2027,6 +2027,10 @@ exports.clubDocs = federationCallable('clubDocs', (ctx, actor, data) => {
 // A agenda assinável (ICS) sai por `federationAgendaFeed`, em `/api/agenda/clube/{clube}.ics`.
 exports.clubAgenda = federationCallable('clubAgenda', (ctx, actor, data) => clubAgenda.agenda(ctx, actor, data));
 
+// Disciplina e ouvidoria do clube (sanção, recurso, manifestação com protocolo): só o servidor grava — `functions/clubDiscipline.js`.
+const clubDiscipline = require('./clubDiscipline');
+exports.clubDiscipline = federationCallable('clubDiscipline', (ctx, actor, data) => clubDiscipline.discipline(ctx, actor, data));
+
 // Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
 const clubContent = require('./clubContent');
 exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));

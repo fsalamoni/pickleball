@@ -4,7 +4,7 @@
  * filiação — a situação, a carteirinha e o Pix. Só existe com a flag
  * `club_association` ligada e a associação aberta ao público (`isAssociationOpen`).
  */
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { calculateAge } from '@/core/lib/profileValidation';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -16,6 +16,8 @@ import ClubJoinDialog from './ClubJoinDialog';
 import MyAssociationPanel from './MyAssociationPanel';
 import { ClubBenefitsShowcase, ClubPromosSection, ClubSponsorsStrip, ClubStoreCard } from './ClubShowcase';
 import { t } from '@/core/i18n';
+
+const ClubOmbudsman = lazy(() => import('./ClubOmbudsman'));
 
 export default function ClubAssociationTab({ club }) {
   const { isAuthenticated, userProfile } = useAuth();
@@ -56,6 +58,7 @@ export default function ClubAssociationTab({ club }) {
       <ClubPromosSection clubId={club.id} enabled={isAssociationOpen(club)} />
       <ClubStoreCard clubId={club.id} enabled={isAssociationOpen(club)} />
       <ClubSponsorsStrip clubId={club.id} enabled={isAssociationOpen(club)} />
+      <Suspense fallback={null}><ClubOmbudsman club={club} /></Suspense>
       <ClubJoinDialog open={Boolean(escolhido)} onOpenChange={(o) => { if (!o) setEscolhido(null); }} club={club} plan={escolhido?.plano} price={escolhido?.preco} />
     </section>
   );

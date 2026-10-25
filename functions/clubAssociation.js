@@ -174,9 +174,10 @@ async function pixDoClube(ctx, clubId, club) {
   };
 }
 
-async function novaCobranca(ctx, batchOrTr, { club, aff, plan, origin, hoje, amount }) {
+async function novaCobranca(ctx, batchOrTr, { club, aff, plan, origin, hoje, amount, extra = {} }) {
   const ref = col(ctx, club.id, 'charges').doc();
   const data = {
+    ...extra,
     club_id: club.id, club_name: club.name || '', user_id: aff.user_id, member_id: aff.user_id, payer_name: aff.user_name || '', member_name: aff.user_name || '',
     origin, plan_id: plan.id, plan_name: plan.name, amount_cents: Math.max(0, Math.trunc(Number(amount) || 0)), status: 'open',
     due_date: m.chargeDueDate(hoje), payment: await pixDoClube(ctx, club.id, club),
@@ -617,6 +618,16 @@ async function confirmarCobranca(ctx, actor, data, { club, hoje }) {
     return { ok: true };
   }
 
+  // Multa disciplinar (Bloco E1): quitar a multa NÃO ativa nem renova a filiação.
+  if (charge.origin === 'fine') {
+    const batch = ctx.db.batch();
+    batch.update(cref, { status: 'paid', paid_at: hoje, paid_at_ms: ctx.now, confirmed_by: actor.uid, confirmed_by_name: actor.name || '', confirm_note: note });
+    aviso(ctx, batch, charge.user_id, { title: tx('Pagamento confirmado — {clube}', { clube: club.name }), message: tx('A multa foi quitada.'), link: linkMinha });
+    await batch.commit();
+    await auditoria(ctx, actor, 'club_charge_confirm', { club_id: club.id, charge_id: charge.id, user_id: charge.user_id, amount_cents: charge.amount_cents });
+    return { ok: true };
+  }
+
   const p = await plano(ctx, club.id, charge.plan_id);
   await ctx.db.runTransaction(async (tr) => {
     const asnap = await tr.get(aref);
@@ -735,7 +746,8 @@ async function verify(ctx, data) {
   const as = await col(ctx, i.club_id, 'aff').doc(i.user_id).get();
   if (!as.exists) return { found: false };
   const a = as.data();
-  const st = m.membershipState({ status: a.status, valid_until: a.valid_until }, m.isoDateBR(ctx.now), ctx.now);
+  // A suspensão disciplinar (`discipline_until_ms`) também aparece: a carteirinha mostra "Suspensa".
+  const st = m.membershipState({ status: a.status, valid_until: a.valid_until, discipline_until_ms: a.discipline_until_ms }, m.isoDateBR(ctx.now), ctx.now);
   const club = cs.data();
   return {
     found: true,
@@ -752,4 +764,5 @@ async function verify(ctx, data) {
 
 module.exports = {
   X, INDEX, PERMS, LIVE, association, sweep, verify, permsDe, exigePerm, quemTem, aberta, sigla, validade, flagLigada, exigeFlag, falha, texto, col, aviso, auditoria, clube, plano,
+  novaCobranca, encerrar, novoCodigo,
 };

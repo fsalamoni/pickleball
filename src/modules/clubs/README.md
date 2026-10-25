@@ -47,7 +47,7 @@ dia de jogo, ranking interno, página pública.
 > (`ClubAgendaPanel`, a agenda da federação com o clube no lugar dela pelo escopo
 > `agendaScope`), `domain/agenda.js`, `services/clubAgendaService.js`,
 > `hooks/useClubAgenda.js`, `functions/clubAgenda.js` e a aba/vitrine pública
-> (`ClubAgendaPublic`). Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.5.
+> (`ClubAgendaPublic`). **Bloco E1**: disciplina e ouvidoria — seção Disciplina da Central (`ClubDisciplinePanel`, a disciplina da federação com o clube no lugar dela pelo escopo `disciplineScope`), `ClubMySanctions` (Minha associação, com o recurso), `ClubOmbudsman` (página do clube), `services/clubDisciplineService.js`, `hooks/useClubDiscipline.js` e `functions/clubDiscipline.js`. Ver `docs/52-CLUBE-ASSOCIACAO.md` §5.1–5.6.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,

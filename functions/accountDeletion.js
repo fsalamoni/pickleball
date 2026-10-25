@@ -524,6 +524,11 @@ async function coletarAssociacoesDeClube(db, uid) {
     });
     const cargo = await base.collection('staff').doc(uid).get();
     if (cargo.exists) { total += 1; deletes.push(cargo.ref); }
+    // Disciplina (Bloco E1): a sanção fica no histórico do clube, sem o nome; a manifestação identificada vira anônima.
+    const sancoes = await base.collection('cases').where('user_id', '==', uid).limit(QUERY_LIMIT + 1).get();
+    sancoes.docs.slice(0, QUERY_LIMIT).forEach((d) => { total += 1; itens.push({ ref: d.ref, patch: { user_name: REMOVED_ATHLETE } }); });
+    const manifestacoes = await base.collection('ombud').where('reporter_uid', '==', uid).limit(QUERY_LIMIT + 1).get();
+    manifestacoes.docs.slice(0, QUERY_LIMIT).forEach((d) => { total += 1; itens.push({ ref: d.ref, patch: { reporter_uid: null, anonymous: true } }); });
     // As contas (Bloco D1), os documentos oficiais (D2a) e a agenda (D2b) do clube ficam (o clube presta contas e o ato publicado é registro dele), sem o nome de quem os preparou.
     for (const [kind, campo, nome] of [['ledger', 'created_by', 'created_by_name'], ['budgets', 'created_by', 'created_by_name'], ['reports', 'opened_by', 'opened_by_name'], ['docs', 'created_by', 'created_by_name'], ['docs', 'published_by', 'published_by_name'], ['events', 'created_by', 'created_by_name']]) {
       const feitos = await base.collection(kind).where(campo, '==', uid).limit(QUERY_LIMIT + 1).get(); // eslint-disable-line no-await-in-loop
