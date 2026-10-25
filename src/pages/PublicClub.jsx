@@ -6,7 +6,7 @@
  * está desligada), orienta a entrar na plataforma.
  */
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, MapPin, Mail, Phone, Users } from 'lucide-react';
@@ -20,6 +20,9 @@ import { usePublicPlans } from '@/modules/clubs/hooks/useClubAssociation';
 import ClubPlansList from '@/v2/components/clubs/association/ClubPlansList';
 import { ClubBenefitsShowcase, ClubNewsSection, ClubSponsorsStrip } from '@/v2/components/clubs/association/ClubShowcase';
 import { t } from '@/core/i18n';
+
+// A transparência das contas carrega o motor de contas: só quando a página é aberta.
+const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
 
 /** Os planos de associação na vitrine: quem chega pelo link vê o que ganha e entra para se associar. */
 function PublicClubPlans({ club, isAuthenticated }) {
@@ -53,6 +56,7 @@ function PublicClubPlans({ club, isAuthenticated }) {
       <ClubBenefitsShowcase clubId={club.id} />
       <ClubNewsSection clubId={club.id} limite={3} />
       <ClubSponsorsStrip clubId={club.id} />
+      <Suspense fallback={null}><ClubAccountsPublic clubId={club.id} /></Suspense>
     </section>
   );
 }

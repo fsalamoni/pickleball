@@ -455,6 +455,9 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ler comunicado "só associados" | ✖ | ✖ | ✔ qualquer membro do clube | ✔ `comms` | — | rules (`news`, `audience == members` + `isClubMember`) |
 | Criar/editar/apagar vantagem, comunicado e patrocinador | ✖ | ✖ | ✖ | ✔ `comms` ou admin | — | rules (`cxWritePerms`) |
 | Avisar os associados de um comunicado | ✖ | ✖ | ✖ | ✔ `comms` ou admin — uma vez por comunicado | — | **Cloud Function** `clubContent` (`news_notify`) |
+| Preparar orçamento, lançamentos e prestação de contas do clube | ✖ | ✖ | ✖ | ✔ `finance` ou admin | — | **Cloud Function** `clubAccounts` (`budgets`/`ledger`/`reports`: `write: if false`) |
+| Ver as contas do clube e dar o parecer da prestação | ✖ | ✖ | ✖ | ✔ conselho fiscal (`fiscal`): lê orçamento, lançamentos, prestação e as cobranças; o parecer só depois do envio | — | rules (`cxReadPerms`) e **Cloud Function** `clubAccounts` (`opinion`) |
+| Ver o orçamento e a prestação PUBLICADOS | ✔ | ✔ | ✔ | ✔ | — | rules (`budgets`/`reports` com `pub: true`, clube publicado) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |

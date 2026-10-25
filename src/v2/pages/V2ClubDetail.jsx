@@ -31,6 +31,7 @@ import ClubAssociationTab from '@/v2/components/clubs/association/ClubAssociatio
 import { ClubMemberBenefits, ClubNewsSection } from '@/v2/components/clubs/association/ClubShowcase';
 
 // Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
+const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
 
 export default function V2ClubDetail() {
@@ -209,6 +210,7 @@ export default function V2ClubDetail() {
         <div className="mt-6 space-y-5">
           <ClubAssociationTab club={club} />
           <ClubNewsSection clubId={clubId} limite={3} />
+          <Suspense fallback={null}><ClubAccountsPublic clubId={clubId} /></Suspense>
         </div>
       )}
 
@@ -275,7 +277,12 @@ export default function V2ClubDetail() {
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'associacao' && showAssocTab && <ClubAssociationTab club={club} />}
             {safeTab === 'vantagens' && showAssocTab && <ClubMemberBenefits club={club} onVerAssociacao={() => setActiveTab('associacao')} />}
-            {safeTab === 'comunicados' && showAssocTab && <ClubNewsSection clubId={clubId} member publicOn={assocOpen} titulo={false} limite={10} />}
+            {safeTab === 'comunicados' && showAssocTab && (
+              <div className="space-y-6">
+                <ClubNewsSection clubId={clubId} member publicOn={assocOpen} titulo={false} limite={10} />
+                {assocOpen && <Suspense fallback={null}><ClubAccountsPublic clubId={clubId} /></Suspense>}
+              </div>
+            )}
             {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}

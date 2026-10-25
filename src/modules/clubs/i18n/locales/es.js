@@ -438,4 +438,9 @@ export default {
   "Anúncios, pedidos, perguntas e o Pix ficam no painel do vendedor do Mercado, com o clube escolhido em \"Vendendo como\".": "Anuncios, pedidos, preguntas y el Pix están en el panel del vendedor del Mercado, con el club elegido en \"Vendiendo como\".",
   "Abra a loja no painel do Mercado: dê um nome, cadastre o Pix e publique o primeiro produto.": "Abra la tienda en el panel del Mercado: póngale un nombre, registre el Pix y publique el primer producto.",
   "Abrir a loja do clube": "Abrir la tienda del club",
+  "Contas do clube": "Cuentas del club",
+  "{clube}: prestação de contas para o seu parecer": "{clube}: rendición de cuentas para su dictamen",
+  "{clube}: chegou o parecer do conselho fiscal": "{clube}: llegó el dictamen del consejo fiscal",
+  "Período {periodo}. Os totais estão congelados: confira os lançamentos e registre o parecer do conselho fiscal.": "Período {periodo}. Los totales están congelados: revise los asientos y registre el dictamen del consejo fiscal.",
+  "Prestação de contas de {periodo}. Leve à assembleia e publique na transparência.": "Rendición de cuentas de {periodo}. Llévela a la asamblea y publíquela en la transparencia.",
 };

@@ -24,6 +24,9 @@ function cenario() {
     'club_x/c1/charges/k1': { club_id: 'c1', user_id: 'ana', payer_name: 'Ana', member_name: 'Ana', status: 'paid', amount_cents: 12000 },
     'club_x/c1/charges/k2': { club_id: 'c1', user_id: 'bia', payer_name: 'Bia', status: 'open' },
     'club_x/c1/staff/ana': { user_id: 'ana', perms: ['finance'] },
+    'club_x/c1/ledger/l1': { club_id: 'c1', created_by: 'ana', created_by_name: 'Ana', amount_cents: 500, status: 'posted' },
+    'club_x/c1/ledger/l2': { club_id: 'c1', created_by: 'bia', created_by_name: 'Bia', amount_cents: 700, status: 'posted' },
+    'club_x/c1/reports/2026': { club_id: 'c1', opened_by: 'ana', opened_by_name: 'Ana', status: 'draft' },
     'club_card_index/ABCDEFGH23': { club_id: 'c1', user_id: 'ana' },
     'club_card_index/ZZZZZZZZ22': { club_id: 'c1', user_id: 'bia' },
   });
@@ -40,6 +43,9 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_card_index/ABCDEFGH23')).toBeUndefined();
     expect(db.store.docs.get('club_x/c1/charges/k1')).toMatchObject({ payer_name: REMOVED_ATHLETE, member_name: '', status: 'paid', amount_cents: 12000 });
     expect(db.store.docs.get('club_x/c1/staff/ana')).toBeUndefined();
+    // as contas ficam (o clube presta contas), sem o nome de quem as preparou
+    expect(db.store.docs.get('club_x/c1/ledger/l1')).toMatchObject({ created_by_name: 'Usuário removido', amount_cents: 500, status: 'posted' });
+    expect(db.store.docs.get('club_x/c1/reports/2026')).toMatchObject({ opened_by_name: 'Usuário removido', status: 'draft' });
   });
 
   it('a associação de outra pessoa não é tocada', async () => {
@@ -48,5 +54,6 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_x/c1/aff/bia')).toMatchObject({ status: 'active', user_name: 'Bia', card_code: 'ZZZZZZZZ22' });
     expect(db.store.docs.get('club_card_index/ZZZZZZZZ22')).toBeTruthy();
     expect(db.store.docs.get('club_x/c1/charges/k2')).toMatchObject({ payer_name: 'Bia' });
+    expect(db.store.docs.get('club_x/c1/ledger/l2')).toMatchObject({ created_by_name: 'Bia' });
   });
 });

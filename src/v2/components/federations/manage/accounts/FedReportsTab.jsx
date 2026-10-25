@@ -10,8 +10,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, Circle, Download, FilePlus2, Gavel, Globe, RotateCcw, Save, Send, Stamp, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { accountsAction } from '@/modules/federations/services/accountsService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { accountsFolder, callAccounts, isClubScope, useAccountsMutation } from './accountsScope';
 import {
   ACCOUNT_REPORT_STATUS, ACCOUNT_REPORT_STATUS_LABELS, ASSEMBLY_RESULTS, OPINION_TEXT_MIN, OPINION_VERDICTS, STATEMENTS_MAX, STATEMENT_KINDS, budgetVsActual, canPrepareAccounts, categoryLabel,
   isAnnualPeriod, itemsInPeriod, legalDeadline, periodLabel, periodRange, periodYear, reportActions, reportTimeline, totalsByCategory, validateAssemblyInput, validateOpinionInput,
@@ -74,7 +73,7 @@ function OpinionForm({ federation, report, onFechar }) {
   const [f, setF] = useState({ verdict: '', text: '' });
   useAvisoNaoSalvo(Boolean(f.verdict || f.text));
   const ok = validateOpinionInput(f).ok;
-  const m = useFederationMutation(() => accountsAction({ federationId: federation.id, action: 'opinion', reportId: report.id, opinion: f }));
+  const m = useAccountsMutation(federation, () => callAccounts(federation, { action: 'opinion', reportId: report.id, opinion: f }));
   return (
     <div className="space-y-4">
       <fieldset className="space-y-2">
@@ -99,7 +98,7 @@ function OpinionForm({ federation, report, onFechar }) {
 function AssemblyForm({ federation, report, hoje, onFechar }) {
   const [f, setF] = useState({ date: hoje, result: '', event_id: '', note: '' });
   const ok = validateAssemblyInput(f).ok;
-  const m = useFederationMutation(() => accountsAction({ federationId: federation.id, action: 'report_assembly', reportId: report.id, assembly: f }));
+  const m = useAccountsMutation(federation, () => callAccounts(federation, { action: 'report_assembly', reportId: report.id, assembly: f }));
   return (
     <div className="space-y-4">
       <V2Field label={t('Data da assembleia')} htmlFor="as-data" required><V2Input id="as-data" type="date" max={hoje} value={f.date} onChange={(e) => setF((x) => ({ ...x, date: e.target.value }))} /></V2Field>
@@ -129,11 +128,11 @@ function Statements({ federation, report, editavel }) {
   useEffect(() => { setLista(atuais); setNotas(report.notes || ''); }, [atuais, report.notes]);
   const alterado = editavel && (JSON.stringify(lista) !== JSON.stringify(atuais) || notas !== (report.notes || ''));
   useAvisoNaoSalvo(alterado);
-  const m = useFederationMutation(() => accountsAction({ federationId: federation.id, action: 'report_save', reportId: report.id, statements: lista, notes: notas }));
+  const m = useAccountsMutation(federation, () => callAccounts(federation, { action: 'report_save', reportId: report.id, statements: lista, notes: notas }));
   const [baixando, setBaixando] = useState('');
   const baixar = async (s) => {
     setBaixando(s.path);
-    try { baixarArquivoDoServidor(await accountsAction({ federationId: federation.id, action: 'file', reportId: report.id, path: s.path })); } catch (e) { toast.error(e.message); } finally { setBaixando(''); }
+    try { baixarArquivoDoServidor(await callAccounts(federation, { action: 'file', reportId: report.id, path: s.path })); } catch (e) { toast.error(e.message); } finally { setBaixando(''); }
   };
   const oficial = (s) => atuais.some((x) => x.path === s.path);
   return (
@@ -155,7 +154,7 @@ function Statements({ federation, report, editavel }) {
       {editavel && lista.length < STATEMENTS_MAX && (
         <div className="grid items-end gap-3 rounded-2xl bg-paper p-3 sm:grid-cols-[12rem_1fr_auto]">
           <V2Field label={t('Tipo')} htmlFor="pc-dem-tipo"><V2Select id="pc-dem-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>{STATEMENT_KINDS.map((k) => <option key={k.id} value={k.id}>{t(k.label)}</option>)}</V2Select></V2Field>
-          <AccountFileInput id="pc-dem-arquivo" label={t('Arquivo')} value={novo} onChange={setNovo} />
+          <AccountFileInput id="pc-dem-arquivo" folder={accountsFolder(federation)} label={t('Arquivo')} value={novo} onChange={setNovo} />
           <V2Button type="button" variant="secondary" disabled={!novo} onClick={() => { setLista((x) => [...x, { ...novo, kind: tipo }]); setNovo(null); }}><FilePlus2 className="h-4 w-4" />{t('Incluir')}</V2Button>
         </div>
       )}
@@ -179,7 +178,7 @@ function ReportDetail({ federation, perms, report, items, hoje }) {
   const [dialogo, setDialogo] = useState(null); // 'enviar' | 'reabrir' | 'parecer' | 'assembleia' | 'publicar'
   const [motivo, setMotivo] = useState('');
   const fechar = () => { setDialogo(null); setMotivo(''); };
-  const m = useFederationMutation((payload) => accountsAction({ federationId: federation.id, ...payload }));
+  const m = useAccountsMutation(federation, (payload) => callAccounts(federation, payload));
   const rodar = (payload, okMsg) => m.mutate(payload, { onSuccess: () => { toast.success(okMsg); fechar(); }, onError: (e) => toast.error(e.message) });
   const op = report.fiscal_opinion;
   return (
@@ -231,7 +230,7 @@ function ReportDetail({ federation, perms, report, items, hoje }) {
       <ConfirmDialog open={dialogo === 'reabrir'} onOpenChange={(o) => { if (!o) fechar(); }} title={t('Reabrir a prestação?')} description={t('Volta a rascunho, os totais descongelam e o período reabre. Só é possível antes do parecer.')} confirmLabel={t('Reabrir')} loading={m.isPending} confirmDisabled={!motivoOk(motivo)} onConfirm={() => rodar({ action: 'report_open', period: report.period, reason: motivo }, t('Prestação reaberta.'))}>
         <ReasonField id="pc-motivo" value={motivo} onChange={setMotivo} />
       </ConfirmDialog>
-      <ConfirmDialog open={dialogo === 'publicar'} onOpenChange={(o) => { if (!o) fechar(); }} title={t('Publicar a prestação de contas?')} description={federation.modules?.official_docs ? t('Aparece na página da federação e vira dois atos no acervo oficial: as demonstrações e o parecer do conselho fiscal. Publicado não sai.') : t('Aparece na página da federação, na aba Documentos. Publicado não sai.')} confirmLabel={t('Publicar')} loading={m.isPending} onConfirm={() => rodar({ action: 'report_publish', reportId: report.id }, t('Prestação de contas publicada.'))} />
+      <ConfirmDialog open={dialogo === 'publicar'} onOpenChange={(o) => { if (!o) fechar(); }} title={t('Publicar a prestação de contas?')} description={isClubScope(federation) ? t('Aparece na página do clube, com os totais e o parecer do conselho fiscal. Publicado não sai.') : federation.modules?.official_docs ? t('Aparece na página da federação e vira dois atos no acervo oficial: as demonstrações e o parecer do conselho fiscal. Publicado não sai.') : t('Aparece na página da federação, na aba Documentos. Publicado não sai.')} confirmLabel={t('Publicar')} loading={m.isPending} onConfirm={() => rodar({ action: 'report_publish', reportId: report.id }, t('Prestação de contas publicada.'))} />
       <Dialog open={dialogo === 'parecer' || dialogo === 'assembleia'} onOpenChange={(o) => { if (!o) fechar(); }}>
         <DialogContent className="max-h-[90dvh] max-w-xl overflow-y-auto" onInteractOutside={(e) => { if (haAlteracaoNaoSalva()) e.preventDefault(); }}>
           <DialogTitle>{dialogo === 'parecer' ? t('Parecer do conselho fiscal') : t('Assembleia das contas')}</DialogTitle>
@@ -251,7 +250,7 @@ export default function FedReportsTab({ federation, perms, items, reports, hoje 
   const sel = lista.find((r) => r.id === selId) || lista[0] || null;
   const periodos = useMemo(() => openablePeriods(reports, hoje), [reports, hoje]);
   const [periodo, setPeriodo] = useState('');
-  const m = useFederationMutation((p) => accountsAction({ federationId: federation.id, action: 'report_open', period: p }));
+  const m = useAccountsMutation(federation, (p) => callAccounts(federation, { action: 'report_open', period: p }));
   const abrir = () => m.mutate(periodo, { onSuccess: (r) => { toast.success(t('Prestação aberta.')); setSelId(r?.reportId || ''); setPeriodo(''); }, onError: (e) => toast.error(e.message) });
   return (
     <div className="space-y-4" data-dica="federacao-contas-prestacao">

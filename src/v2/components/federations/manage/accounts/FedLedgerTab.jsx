@@ -9,8 +9,7 @@ import { toast } from 'sonner';
 import { Ban, Download, FileUp, Paperclip, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { accountsAction } from '@/modules/federations/services/accountsService';
-import { useFederationMutation } from '@/modules/federations/hooks/useFederations';
+import { accountsFolder, callAccounts, useAccountsMutation } from './accountsScope';
 import {
   AUTO_LABELS, ENTRY_KIND, ENTRY_STATUS, canPrepareAccounts, categoriesOf, categoryLabel, closedPeriodFor, ledgerCsv, validateEntryInput,
 } from '@/modules/federations/domain/accounts';
@@ -32,7 +31,7 @@ function EntryForm({ federation, hoje, onFechar }) {
   const alterado = Boolean(f.amount || f.description || f.counterparty || f.document || f.category);
   useAvisoNaoSalvo(alterado);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setErros({}); };
-  const m = useFederationMutation((entry) => accountsAction({ federationId: federation.id, action: 'entry_add', entry }));
+  const m = useAccountsMutation(federation, (entry) => callAccounts(federation, { action: 'entry_add', entry }));
   const lancar = (e) => {
     e.preventDefault();
     const entry = { kind: f.kind, category: f.category, date: f.date, amount_cents: parseBrlCents(f.amount), description: f.description, counterparty: f.counterparty, document: f.document };
@@ -60,7 +59,7 @@ function EntryForm({ federation, hoje, onFechar }) {
         <V2Field label={t('Descrição')} htmlFor="lc-desc" error={erros.description} required className="sm:col-span-2"><V2Input id="lc-desc" maxLength={300} value={f.description} onChange={(e) => set({ description: e.target.value })} /></V2Field>
         <V2Field label={t('Quem pagou ou recebeu (opcional)')} htmlFor="lc-contra" className="sm:col-span-2"><V2Input id="lc-contra" maxLength={120} value={f.counterparty} onChange={(e) => set({ counterparty: e.target.value })} /></V2Field>
       </div>
-      <AccountFileInput id="lc-anexo" value={f.document} onChange={(d) => set({ document: d })} />
+      <AccountFileInput id="lc-anexo" folder={accountsFolder(federation)} value={f.document} onChange={(d) => set({ document: d })} />
       {erros.document && <p className="text-sm text-red-600">{erros.document}</p>}
       <p className="text-xs text-gray-500">{t('As cobranças pagas de filiação, renovação, curso e multa entram sozinhas: não lance de novo.')}</p>
       <div className="flex justify-end gap-2">
@@ -103,11 +102,11 @@ export default function FedLedgerTab({ federation, perms, items, ledger, budgets
   const [extrato, setExtrato] = useState(false);
   const [estornar, setEstornar] = useState(null);
   const [motivo, setMotivo] = useState('');
-  const mVoid = useFederationMutation(() => accountsAction({ federationId: federation.id, action: 'entry_void', entryId: estornar.id, reason: motivo }));
+  const mVoid = useAccountsMutation(federation, () => callAccounts(federation, { action: 'entry_void', entryId: estornar.id, reason: motivo }));
   const [baixando, setBaixando] = useState('');
   const baixar = async (x) => {
     setBaixando(x.id);
-    try { baixarArquivoDoServidor(await accountsAction({ federationId: federation.id, action: 'file', entryId: x.id })); } catch (e) { toast.error(e.message); } finally { setBaixando(''); }
+    try { baixarArquivoDoServidor(await callAccounts(federation, { action: 'file', entryId: x.id })); } catch (e) { toast.error(e.message); } finally { setBaixando(''); }
   };
 
   const acoes = (x) => (

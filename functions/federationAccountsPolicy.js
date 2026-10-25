@@ -33,8 +33,8 @@ const STATEMENT_KINDS = Object.freeze(['balance_sheet', 'income_statement', 'cas
 const BR_OFFSET_MS = 3 * 3600000;
 const PERIOD_RE = /^(\d{4})(?:-Q([1-4]))?$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
-const UPLOAD_RE = /^federacao-contas\/[A-Za-z0-9]+\/[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/;
-const OFFICIAL_RE = /^federacao-contas-oficial\/[A-Za-z0-9_-]+\/[A-Za-z0-9_/-]+\.[a-z0-9]{2,4}$/;
+const UPLOAD_RE = /^(?:federacao|clube)-contas\/[A-Za-z0-9]+\/[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/;
+const OFFICIAL_RE = /^(?:federacao|clube)-contas-oficial\/[A-Za-z0-9_-]+\/[A-Za-z0-9_/-]+\.[a-z0-9]{2,4}$/;
 const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
 
 const line = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);

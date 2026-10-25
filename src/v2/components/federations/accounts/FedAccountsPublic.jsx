@@ -18,7 +18,7 @@ import { BudgetVsActualTable, TotalsTiles, reais } from './accountsUi';
 
 const rotulo = (lista, id) => { const x = lista.find((v) => v.id === id); return x ? t(x.label) : ''; };
 
-function ReportItem({ federation, r }) {
+export function ReportItem({ federation, r }) {
   const s = r.snapshot || {};
   const verdict = rotulo(OPINION_VERDICTS, r.fiscal_opinion?.verdict);
   return (
@@ -46,7 +46,7 @@ function ReportItem({ federation, r }) {
   );
 }
 
-function BudgetItem({ b }) {
+export function BudgetItem({ b }) {
   const p = b.published || {};
   const lines = p.lines || {};
   const tot = budgetTotals(lines);

@@ -1612,7 +1612,10 @@ andamento impede a exclusão.
   associado) com o "como usar"/código em `bsec/{id}` (só `comms` lê; o associado em
   dia recebe pelo servidor), `news/{id}` (comunicados; público ou "só associados";
   `notified_at` marca o aviso já enviado) e `sponsors/{id}` (patrocinadores) — os
-  quatro gravados por `comms`. Ids de filiação são deterministas. O cargo só
+  quatro gravados por `comms`, e as contas (Bloco D1): `budgets/{ano}` (+ cópia
+  `{ano}_pub`), `ledger/{id}` e `reports/{período}` (retrato congelado, parecer,
+  assembleia; cópia `_pub` com `pub: true`) — lidos por `finance`/`fiscal`/admin
+  (o público lê só `pub: true`) e **só o servidor grava**. Ids de filiação são deterministas. O cargo só
   conta enquanto a pessoa existe em `club_members`.
 - `club_card_index/{codigo}` — código da carteirinha → filiação; só o servidor
   toca; o código gira em ativação, renovação e suspensão.
