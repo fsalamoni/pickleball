@@ -530,4 +530,9 @@ export default {
   "Sanção encerrada — {clube}": "Sanción terminada — {clube}",
   "Suspensão disciplinar no {clube}": "Suspensión disciplinaria en {clube}",
   "{nome} recorreu. Decida em Disciplina → Sanções.": "{nome} recurrió. Decida en Disciplina → Sanciones.",
+  "Não deu para conferir o patrimônio": "No se pudo comprobar el patrimonio",
+  "Ver os empréstimos": "Ver los préstamos",
+  "Bens e empréstimos": "Bienes y préstamos",
+  "O que o clube tem e com quem está. Empréstimo é para outro clube, arena ou evento, com a devolução registrada.": "Lo que el club tiene y con quién está. El préstamo es para otro club, arena o evento, con la devolución registrada.",
+  "Cadastre redes, placares, bolas e o que mais o clube tem para os treinos e eventos.": "Registre redes, marcadores, pelotas y lo demás que el club tiene para los entrenamientos y eventos.",
 };

@@ -5594,6 +5594,8 @@ service cloud.firestore {
     //    todas; `ombud` (ouvidoria): só a disciplina lê (quem enviou acompanha o ESTADO pelo
     //    servidor, pelo protocolo — a anônima não guarda quem enviou); escrita só do SERVIDOR
     //    (`functions/clubDiscipline.js`);
+    //  - `assets` (patrimônio, Bloco E2a): o financeiro, a diretoria esportiva e o conselho
+    //    fiscal leem; escrita só do SERVIDOR (`functions/clubManagement.js`);
     //  - `cfg` (Pix e regras): equipe do financeiro/admin;
     //  - quem administra o clube (`club_members.role == admin`) tem toda
     //    permissão; os demais cargos vêm de `staff/{uid}.perms`, com mandato.
@@ -5614,7 +5616,7 @@ service cloud.firestore {
     function cxPub(c) { return gd('clubs/' + c).get('association', {}).get('published', false) == true; }
     // `roles` (lista dos cargos) e `imports` (pendentes da importação) são escritos só pelo servidor.
     function cxReadPerms(k) {
-      return {'aff': ['members', 'finance', 'discipline'], 'charges': ['finance', 'members', 'fiscal'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms'], 'budgets': ['finance', 'fiscal'], 'ledger': ['finance', 'fiscal'], 'reports': ['finance', 'fiscal'], 'docs': ['docs'], 'events': ['docs', 'sports'], 'cases': ['discipline'], 'ombud': ['discipline']}.get(k, ['admin']);
+      return {'aff': ['members', 'finance', 'discipline'], 'charges': ['finance', 'members', 'fiscal'], 'cfg': ['finance'], 'plans': ['finance', 'members', 'comms'], 'staff': ['staff'], 'roles': ['staff'], 'imports': ['members'], 'benefits': ['comms', 'members'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms'], 'budgets': ['finance', 'fiscal'], 'ledger': ['finance', 'fiscal'], 'reports': ['finance', 'fiscal'], 'docs': ['docs'], 'events': ['docs', 'sports'], 'cases': ['discipline'], 'ombud': ['discipline'], 'assets': ['finance', 'sports', 'fiscal']}.get(k, ['admin']);
     }
     function cxWritePerms(k) {
       return {'plans': ['admin', 'finance'], 'cfg': ['admin'], 'benefits': ['comms'], 'bsec': ['comms'], 'news': ['comms'], 'sponsors': ['comms']}.get(k, []);

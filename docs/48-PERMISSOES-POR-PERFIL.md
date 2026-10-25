@@ -465,6 +465,8 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Aplicar, encerrar e decidir recurso de sanção disciplinar do clube | ✖ | ✖ | ✖ | ✔ `discipline` ou admin | — | **Cloud Function** `clubDiscipline` (`cases`: `write: if false`) |
 | Ver as sanções do clube e a ouvidoria | ✖ | ✖ | ✔ **as próprias sanções** (consulta com `user_id == eu`) e recorrer, uma vez | ✔ `discipline`/admin leem tudo; a ouvidoria só eles | — | rules (`cxReadPerms`: `cases`, `ombud`) e **Cloud Function** `clubDiscipline` |
 | Mandar manifestação à ouvidoria do clube e acompanhar pelo protocolo | ✖ (precisa de conta) | ✔ anônima ou identificada | ✔ | ✔ | — | **Cloud Function** `clubDiscipline` (`report`/`report_status`; só o estado) |
+| Cadastrar bens, emprestar, registrar devolução e dar baixa no patrimônio do clube | ✖ | ✖ | ✖ | ✔ `finance`, `sports` ou admin | — | **Cloud Function** `clubManagement` (`assets`: `write: if false`) |
+| Ver o patrimônio do clube | ✖ | ✖ | ✖ | ✔ `finance`/`sports`/`fiscal`/admin | — | rules (`cxReadPerms`: `assets`) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |

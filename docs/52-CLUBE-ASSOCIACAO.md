@@ -52,6 +52,7 @@ pessoa do clube.
 | `seq` | contador de numeração dos atos (`seq/docs`) | ninguém | **só o servidor** |
 | `cases` | sanção disciplinar (advertência, suspensão, multa, exclusão): motivo, prazo, valor, `status`, recurso e decisão | `discipline`/admin; **a própria pessoa** (consulta com `user_id == eu`) | **só o servidor** (`clubDiscipline`) |
 | `ombud` | manifestação da ouvidoria: assunto, texto, `anonymous`, `reporter_uid` (nulo se anônima), `status`, anotações internas. **O id é o protocolo** (10 letras e números maiúsculos) | só `discipline`/admin; quem enviou acompanha o ESTADO pelo servidor | **só o servidor** |
+| `assets` | bem do patrimônio (nome, categoria, quantidade, estado, local, valor) com os **empréstimos** (`loans[]`: quem recebeu, quantidade, saída, devolução combinada, devolução e estado em que voltou) e o `history[]` | `finance`/`sports`/`fiscal`/admin | **só o servidor** (`clubManagement`) |
 | `events` | evento da agenda oficial (competição, curso, assembleia, reunião, prazo…): data, horário, local, `status` (marcado/adiado/cancelado), motivo, `history[]`, `ever_visible`, `visibility`, `pub` e `members` (marcas de leitura mantidas pelo servidor), documentos ligados | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/`sports`/admin leem tudo | **só o servidor** (`clubAgenda`) |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
@@ -100,6 +101,10 @@ Funções em `functions/clubAssociation.js` (testes ao lado):
   `end`, `report` (qualquer conta, associação aberta), `report_status` (por protocolo) e
   `report_update` (`discipline`). Reaproveita da associação `novaCobranca`, `encerrar` e
   `novoCodigo` e o cálculo de suspensão da federação (`membershipState`).
+- `clubManagement` (callable, `functions/clubManagement.js`) — o patrimônio (§5.7):
+  `asset_save`, `asset_loan`, `asset_return`, `asset_retire` (cargo `finance`, `sports` ou
+  `admin`). Reaproveita a régua da federação (`federationManagementPolicy.js`); a varredura
+  diária da associação avisa o empréstimo atrasado.
 
 ### 3.1 Importar associados
 
@@ -373,6 +378,29 @@ de antidopagem.
   recurso é decidido ou a sanção é encerrada; à disciplina quando chega recurso ou
   manifestação.
 
+### 5.7 Patrimônio do clube (Bloco E2a)
+
+Central do clube → **Patrimônio** (`?aba=patrimonio`; o financeiro, a diretoria esportiva e a
+administração gerem, o conselho fiscal só lê). É o **patrimônio da federação**
+(`AssetsManager`) com o clube no lugar dela (`managementScope.js`: `clubManagementEntity(club)`,
+`useScopedAssets`, `useScopedManagementAction`, `pick`). A régua (validação do bem, conta de
+disponível/emprestado/atrasado, validação do empréstimo) é a MESMA da federação
+(`federationManagementPolicy.js`); o clube não copia nem bifurca nada.
+
+- **Inventário**: bem com categoria, quantidade (bens iguais num cadastro só), estado, local,
+  código, data e valor; resumo (itens, emprestados, devoluções atrasadas, valor registrado) e
+  planilha CSV.
+- **Empréstimo** a outro clube, arena ou evento, com devolução combinada. Não empresta mais do
+  que há disponível; a quantidade do bem não fica abaixo do que está emprestado.
+- **Devolução** registrada com data e o estado em que voltou: voltou danificado, o bem passa a
+  dizer isso. **Baixa** (perdido, doado, vendido) pede motivo e não vale com empréstimo aberto;
+  reativar desfaz; só a administração apaga, e só o bem que nunca foi emprestado.
+- **Avisos**: a varredura diária da associação avisa, **uma vez** por empréstimo, quem emprestou
+  (na falta dele, a administração) quando a devolução combinada passa. A faixa **Hoje** mostra
+  "Devoluções atrasadas" a quem cuida do patrimônio.
+- **Conta excluída**: o bem fica (é do clube); o nome de quem a pessoa era sai do histórico e
+  de "quem emprestou".
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -471,6 +499,11 @@ de antidopagem.
 30. **A disciplina do clube recebe a entidade, não a copia**: não bifurque
     `FedDisciplinePanel` — passe `clubDisciplineEntity(club)` e use `callDiscipline`/
     `useDisciplineMutation`. Os ids `kind`/`status` da sanção e do assunto são gravados.
+31. **O patrimônio do clube é só do servidor** (`clubManagement`, `assets` com `write: if false`)
+    e usa a **régua da federação** (`federationManagementPolicy.js`, sem cópia): mexer no cálculo
+    de disponível/atrasado é mexer nos dois. A tela é `AssetsManager` com a entidade do clube
+    (`managementScope.js`) — não a bifurque. O conselho fiscal lê, não edita; o `value` das
+    abas e os ids de categoria/estado/tipo de quem recebe são gravados.
 
 ## 7. Testes
 
@@ -488,6 +521,8 @@ equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de q
 `functions/clubAgenda.parity.test.js`, `tests/rules/clubAgenda.rules.test.js`
 (emulador: equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de
 quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
+`functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
+`tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),
 `functions/clubDiscipline.test.js` (as quatro sanções, recurso uma vez, anular desfaz, multa não renova, ouvidoria anônima e protocolo),
 `tests/rules/clubDiscipline.rules.test.js` (emulador: a pessoa lê só as suas, a ouvidoria só a disciplina, ninguém grava),
 `functions/clubAccounts.test.js` (orçamento, lançamentos, prestação, parecer, anexo),

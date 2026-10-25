@@ -530,4 +530,9 @@ export default {
   "Sanção encerrada — {clube}": "Sanction ended — {clube}",
   "Suspensão disciplinar no {clube}": "Disciplinary suspension at {clube}",
   "{nome} recorreu. Decida em Disciplina → Sanções.": "{nome} appealed. Decide in Discipline → Sanctions.",
+  "Não deu para conferir o patrimônio": "Couldn't check the assets",
+  "Ver os empréstimos": "See the loans",
+  "Bens e empréstimos": "Assets and loans",
+  "O que o clube tem e com quem está. Empréstimo é para outro clube, arena ou evento, com a devolução registrada.": "What the club owns and who has it. A loan goes to another club, an arena or an event, with the return recorded.",
+  "Cadastre redes, placares, bolas e o que mais o clube tem para os treinos e eventos.": "Register nets, scoreboards, balls and whatever else the club has for training and events.",
 };

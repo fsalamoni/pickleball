@@ -5,7 +5,7 @@
  * em toda a Central (a seção ativa é achada pela aba) e é contrato de link:
  * os avisos do servidor levam a ele — nunca renomeie.
  */
-import { BarChart3, Calculator, CalendarDays, CircleDollarSign, Gavel, IdCard, Landmark, LayoutDashboard, Library, Megaphone, MessageSquareWarning, Scale, Settings, Store, Tag } from 'lucide-react';
+import { BarChart3, Calculator, CalendarDays, CircleDollarSign, Gavel, IdCard, Landmark, LayoutDashboard, Library, Megaphone, MessageSquareWarning, Package, Scale, Settings, Store, Tag } from 'lucide-react';
 import { CLUB_PERM } from '@/modules/clubs/domain/association';
 import { t, tk } from '@/core/i18n';
 
@@ -76,6 +76,11 @@ export function buildClubSections(perms = []) {
         { value: 'prestacao', label: t('Prestação de contas') },
       ],
       ok: tem(perms, CLUB_PERM.FINANCE, CLUB_PERM.FISCAL),
+    },
+    {
+      // O conselho fiscal lê o inventário; quem edita é o financeiro, a diretoria esportiva e a administração.
+      id: 'patrimonio', label: t('Patrimônio'), grupo: 'gerir', icon: Package, dica: 'clube-secao-patrimonio',
+      tabs: [{ value: 'patrimonio', label: t('Bens e empréstimos') }], ok: tem(perms, CLUB_PERM.FINANCE, CLUB_PERM.SPORTS, CLUB_PERM.FISCAL),
     },
     {
       id: 'loja', label: t('Loja'), grupo: 'gerir', icon: Store, dica: 'clube-secao-loja',
