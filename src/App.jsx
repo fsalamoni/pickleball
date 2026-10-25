@@ -22,6 +22,7 @@ const Telao = lazy(() => import('@/pages/Telao'));
 const GameDayTelao = lazy(() => import('@/v2/pages/V2GameDayTelao'));
 const ArenaKiosk = lazy(() => import('@/v2/pages/V2ArenaKiosk'));
 const PublicClub = lazy(() => import('@/pages/PublicClub'));
+const PublicClubVerify = lazy(() => import('@/pages/PublicClubVerify'));
 const PublicFederation = lazy(() => import('@/pages/PublicFederation'));
 const PublicFederationVerify = lazy(() => import('@/pages/PublicFederationVerify'));
 const PublicFederationAcervo = lazy(() => import('@/pages/PublicFederationAcervo'));
@@ -176,6 +177,7 @@ export default function App() {
                 path="/arenas/:arenaId/totem"
                 element={<AparenciaClara><ProtectedRoute><ArenaKiosk /></ProtectedRoute></AparenciaClara>}
               />
+              <Route path="/c/verificar/:codigo?" element={<PublicClubVerify />} />
               <Route path="/c/:clubId" element={<PublicClub />} />
               {/* Federações (flag `federations`): página pública e verificação da carteirinha, sem conta. */}
               <Route path="/f/verificar/:codigo?" element={<PublicFederationVerify />} />

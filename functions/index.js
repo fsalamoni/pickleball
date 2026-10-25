@@ -1990,3 +1990,35 @@ exports.duprWebhook = onRequest(
     }
   },
 );
+
+// =====================================================================
+// ASSOCIAÇÃO DO CLUBE (flag `club_association`): filiação, cobrança, carteirinha,
+// varredura diária e a verificação pública — ver `functions/clubAssociation.js`.
+// =====================================================================
+const clubAssociation = require('./clubAssociation');
+
+/** Chamada da associação do clube: confere a conta e traduz o erro para a tela. */
+exports.clubAssociation = federationCallable('clubAssociation', (ctx, actor, data) => clubAssociation.association(ctx, actor, data));
+
+// Verificação pública da carteirinha do clube: sem conta (o QR é lido por qualquer um).
+exports.clubAssociationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
+  try {
+    return await clubAssociation.verify(fedCtx(), req.data || {});
+  } catch (err) {
+    if (err instanceof federations.FederationError) throw new HttpsError(err.code, err.message);
+    logger.error('clubAssociationVerify falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});
+
+// Diária: vence quem venceu, avisa os prazos, gera a próxima mensalidade e lembra a cobrança em aberto.
+exports.clubAssociationSweep = onSchedule(
+  { schedule: 'every day 05:20', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 540 },
+  async () => {
+    try {
+      await clubAssociation.sweep(fedCtx());
+    } catch (err) {
+      logger.error('clubAssociationSweep falhou', err);
+    }
+  },
+);

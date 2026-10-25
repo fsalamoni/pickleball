@@ -22,6 +22,7 @@ const V2Community = lazy(() => import('@/v2/pages/V2Community'));
 const V2Partners = lazy(() => import('@/v2/pages/V2Partners'));
 const V2Clubs = lazy(() => import('@/v2/pages/V2Clubs'));
 const V2ClubDetail = lazy(() => import('@/v2/pages/V2ClubDetail'));
+const V2ClubManage = lazy(() => import('@/v2/pages/V2ClubManage'));
 const V2Performance = lazy(() => import('@/v2/pages/V2Performance'));
 const V2Achievements = lazy(() => import('@/v2/pages/V2Achievements'));
 const V2GamificationHome = lazy(() => import('@/v2/pages/V2GamificationHome'));
@@ -235,6 +236,7 @@ export default function V2App() {
           <Route path="clubes" element={<V2Clubs />} />
           <Route path="clubes/criar" element={<V2CreateClub />} />
           <Route path="clubes/:clubId" element={<V2ClubDetail />} />
+          <Route path="clubes/:clubId/gerir" element={<Isolada nome="central-do-clube"><V2ClubManage /></Isolada>} />
           <Route path="clubes/:clubId/eventos/:eventId" element={<Isolada nome="evento-de-clube"><V2EventDetail /></Isolada>} />
           <Route path="novidades" element={<V2Community />} />
           <Route path="chat" element={<V2Chat />} />

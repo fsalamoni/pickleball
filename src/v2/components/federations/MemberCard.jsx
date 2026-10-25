@@ -102,14 +102,18 @@ function WalletButtons({ member }) {
   );
 }
 
-export default function MemberCardDialog({ open, onOpenChange, member, federation, plan = null }) {
+/**
+ * `cardOverride` (clubes): um modelo já montado (`buildClubCard`) — a arte e as
+ * saídas são as mesmas, só o texto muda (`title`, `description`, `shareText`).
+ */
+export default function MemberCardDialog({ open, onOpenChange, member, federation, plan = null, cardOverride = null, title = '', description = '', shareText = '', fileSlug = '' }) {
   const cardRef = useRef(null);
   const [busy, setBusy] = useState('');
   const [showPhoto, setShowPhoto] = useState(true);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const card = useMemo(() => buildMemberCard({ member, federation, plan, origin }), [member, federation, plan, origin]);
+  const card = useMemo(() => cardOverride || buildMemberCard({ member, federation, plan, origin }), [cardOverride, member, federation, plan, origin]);
   const qr = useQrDataUrl(card.verifyUrl);
-  const fileName = `carteirinha-${card.federation.acronym || 'federacao'}-${card.number}.png`.toLowerCase();
+  const fileName = `carteirinha-${fileSlug || card.federation.acronym || 'federacao'}-${card.number}.png`.toLowerCase();
 
   async function gerarPng() {
     const opts = { pixelRatio: 3, cacheBust: true, imagePlaceholder: PIXEL_TRANSPARENTE };
@@ -137,7 +141,7 @@ export default function MemberCardDialog({ open, onOpenChange, member, federatio
   }
 
   async function compartilhar() {
-    const texto = t('Minha carteirinha da {federacao}: nº {numero}. Verifique em {url}', { federacao: card.federation.name, numero: card.number, url: card.verifyUrl });
+    const texto = shareText || t('Minha carteirinha da {federacao}: nº {numero}. Verifique em {url}', { federacao: card.federation.name, numero: card.number, url: card.verifyUrl });
     if (typeof navigator !== 'undefined' && navigator.share) {
       setBusy('share');
       try {
@@ -166,8 +170,8 @@ export default function MemberCardDialog({ open, onOpenChange, member, federatio
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg" sheet>
         <DialogHeader>
-          <DialogTitle>{member?.org_kind ? t('Certificado de filiação') : t('Carteirinha digital')}</DialogTitle>
-          <DialogDescription>{t('Mostre na quadra ou no torneio. O QR abre a verificação pública: nome, federação, categoria e validade — nada mais.')}</DialogDescription>
+          <DialogTitle>{title || (member?.org_kind ? t('Certificado de filiação') : t('Carteirinha digital'))}</DialogTitle>
+          <DialogDescription>{description || t('Mostre na quadra ou no torneio. O QR abre a verificação pública: nome, federação, categoria e validade — nada mais.')}</DialogDescription>
         </DialogHeader>
         <div ref={cardRef} className="tema-claro cartao-imprimivel">
           <MemberCard card={card} qrDataUrl={qr} showPhoto={showPhoto} />
@@ -178,7 +182,7 @@ export default function MemberCardDialog({ open, onOpenChange, member, federatio
           <V2Button type="button" size="sm" variant="secondary" onClick={imprimir}><Printer className="h-4 w-4" />{t('Imprimir / PDF')}</V2Button>
           {card.code && <CopyCodeButton code={card.code} size="sm" successMessage={t('Código da carteirinha copiado.')} />}
         </div>
-        <WalletButtons member={member} />
+        {!cardOverride && <WalletButtons member={member} />}
         <p className="flex items-start gap-2 text-xs text-gray-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{t('O código muda quando a filiação é renovada ou suspensa: uma carteirinha antiga deixa de verificar.')}</p>
         {open && typeof document !== 'undefined' && createPortal(
           <div className="cartao-folha-raiz hidden" aria-hidden="true">

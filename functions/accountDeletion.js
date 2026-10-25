@@ -493,6 +493,40 @@ async function coletarFederacoes(db, uid) {
   return { itens, deletes, truncated, count: itens.length + documentos.docs.length + quadros.docs.length + licencas.docs.length + protecao.docs.length + convites.docs.length + convocados.docs.length };
 }
 
+/**
+ * Associação de clube (`club_x/{clube}/…`, flag `club_association`): a
+ * filiação e as cobranças FICAM (o clube tem de prestar contas), sem o nome; a
+ * filiação viva ENCERRA e o código da carteirinha é APAGADO (a carteirinha de
+ * uma conta excluída não verifica); o cargo na equipe do clube é APAGADO. As
+ * espécies moram sob o clube — o que está no caminho são os clubes que ligaram
+ * a associação (poucos), e a pessoa só consta nos que ela frequentou.
+ */
+async function coletarAssociacoesDeClube(db, uid) {
+  const clubes = await db.collection('clubs').where('association.enabled', '==', true).limit(QUERY_LIMIT + 1).get();
+  const itens = [];
+  const deletes = [];
+  let total = 0;
+  for (const c of clubes.docs.slice(0, QUERY_LIMIT)) {
+    const base = db.collection('club_x').doc(c.id);
+    const aff = await base.collection('aff').doc(uid).get();
+    if (aff.exists) {
+      const d = aff.data() || {};
+      total += 1;
+      if (d.card_code) deletes.push(db.collection('club_card_index').doc(String(d.card_code)));
+      const encerra = FED_LIVE.includes(d.status) ? { status: 'cancelled', cancelled_at_ms: Date.now(), cancelled_by: 'account_deletion' } : {};
+      itens.push({ ref: aff.ref, patch: { ...encerra, user_name: REMOVED_ATHLETE, photo_url: null, card_code: null, public_badge: false, note: '' } });
+    }
+    const cobrancas = await base.collection('charges').where('user_id', '==', uid).limit(QUERY_LIMIT + 1).get();
+    cobrancas.docs.slice(0, QUERY_LIMIT).forEach((d) => {
+      total += 1;
+      itens.push({ ref: d.ref, patch: { payer_name: REMOVED_ATHLETE, member_name: '' } });
+    });
+    const cargo = await base.collection('staff').doc(uid).get();
+    if (cargo.exists) { total += 1; deletes.push(cargo.ref); }
+  }
+  return { itens, deletes, truncated: clubes.size > QUERY_LIMIT, count: total };
+}
+
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
 
 /**
@@ -1336,6 +1370,7 @@ const PSEUDO_SPECS = Object.freeze([
   // (`coletarFederacoes` apaga o índice do código). Federação que a pessoa
   // pediu para abrir fica, com "Usuário removido" em quem pediu.
   { label: 'Filiações em federações (ficam, sem o nome)', bucket: 'retained', collect: coletarFederacoes, deleteLabel: 'Códigos de carteirinha, dados reservados e documentos enviados a federações', cols: ['federation_members', 'federation_charges', 'federation_card_index', 'federation_results', 'federation_points', 'federation_rankings', 'federation_transfers', 'federation_sanctions', 'federation_course_enrollments', 'federation_credentials', 'federation_reports', 'federation_documents_submitted', 'federation_referees', 'federation_assignments', 'federation_coach_licenses', 'federation_coach_badges', 'federation_safeguarding', 'federation_ambassadors', 'federation_adapted_classifications', 'federation_incidents', 'federation_final_invites', 'federation_tournament_reports', 'federation_callups', 'federation_callup_members', 'federation_grants', 'federation_grant_applications', 'federation_cup_teams'] },
+  { label: 'Associações em clubes (ficam, sem o nome)', bucket: 'retained', collect: coletarAssociacoesDeClube, deleteLabel: 'Códigos de carteirinha de clube e cargos na equipe de clubes', cols: ['club_x', 'club_card_index'] },
   // A filiação do clube/arena é da organização; quem pediu vira "Usuário removido".
   { label: 'Pedidos de filiação de clube/arena que fez', bucket: 'retained', col: 'federation_affiliations', wheres: [['requested_by', '==']], patch: campos('requested_by', [], [], REMOVED_USER) },
   { label: 'Federações que pediu para abrir', bucket: 'retained', col: 'federations', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name'], [], REMOVED_USER) },

@@ -135,6 +135,13 @@ as legadas seguem no `GameDayOrganizer`).
   `club_event_games`, `club_event_rsvps`, `club_posts`, `club_forum_threads`,
   `club_invite_codes`, `club_join_requests`, `club_member_invites`,
   `club_internal_*_ratings`, `poll_votes`, `event_invites`.
+- **Associação (flag `club_association`, default OFF)** — `docs/52-CLUBE-ASSOCIACAO.md`:
+  planos de filiação, Pix, carteirinha e Central do clube. Telas
+  `/clubes/:clubId/gerir` (Central), aba Associação em `/clubes/:clubId`,
+  pública `/c/verificar/:codigo?` e seção "Associe-se" em `/c/:clubId`.
+  Coleções `club_x/{clubId}/{plans,aff,charges,staff,cfg}` e `club_card_index`.
+  Arquivos: `domain/association.js`, `services/associationService.js`,
+  `hooks/useClubAssociation.js`, `v2/components/clubs/{association,manage}/`.
 
 ### coaches/ — professor (Sistema A)
 Perfil público e descoberta, agenda e aulas, alunos e anotações,

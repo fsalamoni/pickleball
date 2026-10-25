@@ -1595,6 +1595,20 @@ pedidos, ofertas, perguntas e avaliações ficam sem o nome; a ficha pessoal
 fica "Vendedor removido", suspensa, com os anúncios encerrados; pedido em
 andamento impede a exclusão.
 
+## Clube como associação (flag `club_association`, default OFF) — `docs/52-CLUBE-ASSOCIACAO.md`
+
+- `clubs/{id}.association` — **opcional**: `{ enabled, published, intro, color }`
+  (cada clube liga para si e decide quando abrir ao público).
+- `club_x/{clubId}/{kind}/{id}` — árvore única com regra única (`cxOn()` exige a
+  flag): `plans` (planos; admin ou `finance` gravam), `aff/{clubId}_{uid}`
+  (filiação: status, plano, número, validade, código da carteirinha) e `charges`
+  (cobranças, com a chave Pix copiada) — **só o servidor grava** —, `staff/{uid}`
+  (cargos com `perms` e `term_end_ms`; só o servidor grava) e `cfg` (Pix e
+  instruções; só o admin). Ids de filiação são deterministas.
+- `club_card_index/{codigo}` — código da carteirinha → filiação; só o servidor
+  toca; o código gira em ativação, renovação e suspensão.
+- Zero índice composto. Exclusão e exportação de conta: `functions/accountDeletion.js`.
+
 ## Federações (flag `federations`, default OFF) — `docs/50-FEDERACAO.md`
 
 Dezenove coleções com prefixo `federation`, **zero índice composto** (uma ou

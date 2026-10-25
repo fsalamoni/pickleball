@@ -434,6 +434,20 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ✖ (apagar documento/resultado também exige a flag) | rules (`fedOn()`) e funções (`flagLigada`, inclusive `federationReview` e `federationVerify`) |
 | Qualquer permissão de equipe em qualquer federação | ✖ | ✖ | ✖ | — | ✔ (`fedHas` inclui o admin da plataforma; guarda `federacaoPermissoes.test.js`) | rules |
 
+### 4.8b Clube como associação (flag `club_association`) — detalhe em [`52`](./52-CLUBE-ASSOCIACAO.md)
+
+| Ação | Visitante | Atl (conta) | Associado (o próprio) | Admin/cargo do clube | Plat | Onde |
+|---|---|---|---|---|---|---|
+| Ver planos públicos de clube publicado | ✔ | ✔ | ✔ | ✔ | ✔ | rules `club_x/…/plans` (`published` + `public`) |
+| Ver planos internos / criar, editar, pausar plano | ✖ | ✖ | ✖ | ✔ admin ou `finance` | — | rules (`cxHas` exige `ps.size() > 0`) |
+| Pedir associação, "Já paguei", renovar, encerrar | ✖ | ✔ (login) | ✔ só a própria | — | — | **Cloud Function** `clubAssociation` (`aff`/`charges`: `write: if false`) |
+| Aprovar/recusar/suspender/reativar, associar membro, aplicar plano gratuito | ✖ | ✖ | ✖ | ✔ `members` ou admin | — | **Cloud Function** `clubAssociation` |
+| Confirmar ou cancelar cobrança | ✖ | ✖ | ✖ | ✔ `finance` ou admin | — | **Cloud Function** `clubAssociation` |
+| Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
+| Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |
+| Verificar carteirinha por código | ✔ (só o mínimo) | ✔ | ✔ | ✔ | ✔ | **Cloud Function** `clubAssociationVerify` |
+| Qualquer escrita com a flag desligada | ✖ | ✖ | ✖ | ✖ | ✖ | rules (`cxOn()`) e funções |
+
 ### 4.9 Plataforma (admin e dono)
 
 | Ação | Plat | Dono | Onde |
