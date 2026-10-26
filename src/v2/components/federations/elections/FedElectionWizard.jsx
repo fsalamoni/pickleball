@@ -12,13 +12,14 @@ import {
   CALENDAR_KEYS, CALENDAR_LABEL, CATEGORIES, CATEGORY_LABEL, MODE_LABEL, MODES, ORGANS, ORGAN_LABEL, POSITION_KINDS, POSITION_KIND_LABEL, POSITIONS_MAX, REASON_MIN,
   TIE_RULES, TIE_RULE_LABEL, WEIGHT_MAX, electionDraft, noticeText, validateElection,
 } from '@/modules/federations/domain/elections';
-import { useElectionAction } from '@/modules/federations/hooks/useElections';
+import { clubElectionDraft, clubNoticeText } from '@/modules/clubs/domain/elections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { fmtNumero, t, tk } from '@/core/i18n';
 import FedPersonPicker from '../manage/FedPersonPicker';
 import { useAvisoNaoSalvo } from '../manage/naoSalvo';
 import { hojeBr, pct } from './electionsUi';
+import { hasCollegeWeights, isClubElections, useScopedElectionAction } from './electionsScope';
 
 const PASSOS = [
   { id: 'cargos', label: tk('Cargos'), chaves: (k) => k === 'title' || k.startsWith('positions') || k === 'endorsement_pct' },
@@ -30,9 +31,10 @@ const PASSOS = [
 
 const nomeDaPessoa = (a) => a?.platform_name || a?.full_name || a?.display_name || '';
 
-function deEleicao(e, hoje) {
-  if (!e) return electionDraft(hoje);
-  const base = electionDraft(hoje);
+function deEleicao(e, hoje, clube = false) {
+  const rascunho = clube ? clubElectionDraft : electionDraft;
+  if (!e) return rascunho(hoje);
+  const base = rascunho(hoje);
   return {
     ...base, title: e.title || '', description: e.description || '', mode: e.mode || base.mode, tie_rule: e.tie_rule || base.tie_rule,
     endorsement_pct: e.endorsement_pct ?? 0, notice_min_days: e.notice_min_days ?? base.notice_min_days,
@@ -43,7 +45,9 @@ function deEleicao(e, hoje) {
 }
 
 function PreviaColegio({ federation, f }) {
-  const acao = useElectionAction();
+  const acao = useScopedElectionAction(federation);
+  const clube = isClubElections(federation);
+  const categorias = clube ? ['athlete'] : CATEGORIES;
   const [res, setRes] = useState(null);
   const pedir = () => acao.mutate({ federationId: federation.id, action: 'preview', election: f }, { onSuccess: setRes, onError: (er) => toast.error(er.message) });
   const b = res?.balance;
@@ -53,17 +57,17 @@ function PreviaColegio({ federation, f }) {
         <p className="text-sm font-semibold text-ink">{t('Quem votaria hoje')}</p>
         <V2Button type="button" size="sm" variant="secondary" onClick={pedir} disabled={acao.isPending} data-dica="federacao-eleicao-previa">{acao.isPending ? t('Calculando…') : b ? t('Recalcular') : t('Ver a prévia do colégio')}</V2Button>
       </div>
-      {!b && <p className="text-sm text-gray-500">{t('A prévia conta os filiados em dia hoje, com os pesos acima, e confere as regras da lei.')}</p>}
+      {!b && <p className="text-sm text-gray-500">{clube ? t('A prévia conta os associados em dia hoje, com direito a voto no plano, e confere as regras da lei.') : t('A prévia conta os filiados em dia hoje, com os pesos acima, e confere as regras da lei.')}</p>}
       {b && (
         <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <caption className="sr-only">{t('Peso de cada grupo no colégio eleitoral')}</caption>
-              <thead><tr className="text-left text-xs text-gray-500"><th className="py-1 font-semibold">{t('Grupo')}</th><th className="py-1 text-right font-semibold">{t('Eleitores')}</th><th className="py-1 text-right font-semibold">{t('Peso de cada voto')}</th><th className="py-1 text-right font-semibold">{t('Peso do grupo')}</th></tr></thead>
+              <thead><tr className="text-left text-xs text-gray-500"><th className="py-1 font-semibold">{clube ? t('Quem vota') : t('Grupo')}</th><th className="py-1 text-right font-semibold">{t('Eleitores')}</th><th className="py-1 text-right font-semibold">{t('Peso de cada voto')}</th><th className="py-1 text-right font-semibold">{t('Peso do grupo')}</th></tr></thead>
               <tbody>
-                {CATEGORIES.map((k) => (
+                {categorias.map((k) => (
                   <tr key={k} className="border-t border-gray-200">
-                    <td className="py-1.5">{t(CATEGORY_LABEL[k])}</td>
+                    <td className="py-1.5">{clube ? t('Associados') : t(CATEGORY_LABEL[k])}</td>
                     <td className="py-1.5 text-right tabular-nums">{fmtNumero(b.by_category[k].voters)}</td>
                     <td className="py-1.5 text-right tabular-nums">{b.by_category[k].unit || '—'}</td>
                     <td className="py-1.5 text-right tabular-nums">{fmtNumero(b.by_category[k].weight)} ({fmtNumero(pct(b.by_category[k].weight, b.total_weight))}%)</td>
@@ -74,9 +78,11 @@ function PreviaColegio({ federation, f }) {
           </div>
           <p className="text-sm text-ink">{t('{n} eleitores, peso total {p}. Apoio exigido por chapa: {a}.', { n: fmtNumero(b.voters), p: fmtNumero(b.total_weight), a: fmtNumero(res.endorsements_needed) })}</p>
           <ul className="space-y-1 text-sm">
-            <li className={b.athletes_ok ? 'text-green-800' : 'font-semibold text-red-700'}>{b.athletes_ok ? '✓ ' : '✗ '}{t('Atletas com {p}% do peso (a lei pede ao menos 1/3).', { p: fmtNumero(Math.round(b.athlete_share * 1000) / 10) })}</li>
-            <li className={b.ratio_ok ? 'text-green-800' : 'font-semibold text-red-700'}>{b.ratio_ok ? '✓ ' : '✗ '}{t('Diferença entre pesos até 1 para 6.')}</li>
-            {b.small.length > 0 && <li className="text-amber-800"><AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden="true" />{t('Grupos com menos de 3 eleitores ({g}): o voto deles pode ser deduzido pela apuração. Considere juntar grupos ou zerar o peso.', { g: b.small.map((k) => t(CATEGORY_LABEL[k])).join(', ') })}</li>}
+            {!clube && <li className={b.athletes_ok ? 'text-green-800' : 'font-semibold text-red-700'}>{b.athletes_ok ? '✓ ' : '✗ '}{t('Atletas com {p}% do peso (a lei pede ao menos 1/3).', { p: fmtNumero(Math.round(b.athlete_share * 1000) / 10) })}</li>}
+            {!clube && <li className={b.ratio_ok ? 'text-green-800' : 'font-semibold text-red-700'}>{b.ratio_ok ? '✓ ' : '✗ '}{t('Diferença entre pesos até 1 para 6.')}</li>}
+            {b.small.length > 0 && (clube
+              ? <li className="text-amber-800"><AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden="true" />{t('Menos de 3 eleitores: o voto deles pode ser deduzido pela apuração. Prefira fazer a eleição quando o clube tiver mais associados com direito a voto.')}</li>
+              : <li className="text-amber-800"><AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden="true" />{t('Grupos com menos de 3 eleitores ({g}): o voto deles pode ser deduzido pela apuração. Considere juntar grupos ou zerar o peso.', { g: b.small.map((k) => t(CATEGORY_LABEL[k])).join(', ') })}</li>)}
           </ul>
         </>
       )}
@@ -86,13 +92,14 @@ function PreviaColegio({ federation, f }) {
 
 export default function FedElectionWizard({ federation, election = null, onClose }) {
   const hoje = hojeBr();
+  const clube = isClubElections(federation);
   const publicado = election?.status === 'published';
-  const [f, setF] = useState(() => deEleicao(election, hoje));
+  const [f, setF] = useState(() => deEleicao(election, hoje, clube));
   const [base] = useState(f);
   const [passo, setPasso] = useState(publicado ? 1 : 0);
   const [reason, setReason] = useState('');
   const [confirmar, setConfirmar] = useState(false);
-  const acao = useElectionAction();
+  const acao = useScopedElectionAction(federation);
   useAvisoNaoSalvo(JSON.stringify(f) !== JSON.stringify(base));
   const r = useMemo(() => validateElection(f), [f]);
   const errosDo = (i) => Object.entries(r.errors).filter(([k]) => PASSOS[i].chaves(k));
@@ -113,7 +120,7 @@ export default function FedElectionWizard({ federation, election = null, onClose
       else id = (await acao.mutateAsync({ federationId: federation.id, action: 'create', election: r.value })).electionId;
       if (publicar) {
         const res = await acao.mutateAsync({ federationId: federation.id, action: 'publish', electionId: id });
-        toast.success(t('Edital publicado. {n} filiados avisados.', { n: res?.notified || 0 }));
+        toast.success(clube ? t('Edital publicado. {n} associados avisados.', { n: res?.notified || 0 }) : t('Edital publicado. {n} filiados avisados.', { n: res?.notified || 0 }));
       } else toast.success(publicado ? t('Edital atualizado.') : t('Rascunho salvo.'));
       onClose?.(id);
     } catch (er) {
@@ -187,7 +194,9 @@ export default function FedElectionWizard({ federation, election = null, onClose
 
       {passo === 2 && (
         <div className="space-y-4">
-          <V2Field label={t('Filiado há quantos meses, na abertura da votação')} htmlFor="el-meses" error={err('college.min_months')} hint={t('0 = qualquer filiado em dia. Dependentes (sem conta própria) não votam.')}><V2Input id="el-meses" type="number" min={0} max={60} className="sm:w-32" value={f.college.min_months} onChange={(e) => set('college', { ...f.college, min_months: e.target.value })} /></V2Field>
+          <V2Field label={clube ? t('Associado há quantos meses, na abertura da votação') : t('Filiado há quantos meses, na abertura da votação')} htmlFor="el-meses" error={err('college.min_months')} hint={clube ? t('0 = qualquer associado em dia. Menores sem conta própria não votam.') : t('0 = qualquer filiado em dia. Dependentes (sem conta própria) não votam.')}><V2Input id="el-meses" type="number" min={0} max={60} className="sm:w-32" value={f.college.min_months} onChange={(e) => set('college', { ...f.college, min_months: e.target.value })} /></V2Field>
+          {clube && <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-600">{t('No clube, cada associado em dia, com direito a voto no plano, tem um voto de peso igual. Planos sem direito a voto não entram no colégio.')}</p>}
+          {hasCollegeWeights(federation) && (
           <fieldset>
             <legend className="text-sm font-semibold text-ink">{t('Peso do voto de cada grupo (0 = não vota)')}</legend>
             <div className="mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -199,14 +208,15 @@ export default function FedElectionWizard({ federation, election = null, onClose
             </div>
             <p className="mt-2 text-xs text-gray-500">{t('Clubes e arenas votam pelo representante que pediu a filiação. A lei pede atletas com ao menos 1/3 do peso total e no máximo 1 para 6 entre pesos.')}</p>
           </fieldset>
+          )}
           <PreviaColegio federation={federation} f={r.value} />
         </div>
       )}
 
       {passo === 3 && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">{t('A comissão conduz a eleição: analisa chapas, julga impugnações, abre e encerra a votação e publica o resultado. Quem está na comissão não concorre. Sem comissão, o admin da federação conduz.')}</p>
-          {f.commission.length === 0 && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Sem comissão nomeada: o admin da federação vai conduzir. O ideal é nomear de 3 a 5 pessoas.')}</p>}
+          <p className="text-sm text-gray-500">{clube ? t('A comissão conduz a eleição: analisa chapas, julga impugnações, abre e encerra a votação e publica o resultado. Quem está na comissão não concorre. Sem comissão, a administração do clube conduz.') : t('A comissão conduz a eleição: analisa chapas, julga impugnações, abre e encerra a votação e publica o resultado. Quem está na comissão não concorre. Sem comissão, o admin da federação conduz.')}</p>
+          {f.commission.length === 0 && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{clube ? t('Sem comissão nomeada: a administração do clube vai conduzir. O ideal é nomear de 3 a 5 pessoas.') : t('Sem comissão nomeada: o admin da federação vai conduzir. O ideal é nomear de 3 a 5 pessoas.')}</p>}
           <FedPersonPicker id="el-comissao" multiple max={7}
             selecionados={f.commission.map((p) => ({ id: p.uid, platform_name: p.name }))}
             onChange={(lista) => set('commission', lista.map((a) => ({ uid: a.id, name: nomeDaPessoa(a) })))} />
@@ -224,8 +234,8 @@ export default function FedElectionWizard({ federation, election = null, onClose
           )}
           <div>
             <p className="text-sm font-semibold text-ink">{t('Prévia do edital')}</p>
-            <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-2xl bg-gray-50 p-4 font-sans text-sm text-ink">{noticeText(federation, { ...r.value, calendar: { ...r.value.calendar, notice_on: publicado ? r.value.calendar.notice_on : hoje } })}</pre>
-            {federation.modules?.official_docs === true ? <p className="mt-1 text-xs text-gray-500">{t('Ao publicar, o edital entra no acervo oficial, numerado.')}</p> : <p className="mt-1 text-xs text-gray-500">{t('O acervo oficial está desligado: o edital fica só na aba Eleições.')}</p>}
+            <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-2xl bg-gray-50 p-4 font-sans text-sm text-ink">{(clube ? clubNoticeText : noticeText)(federation, { ...r.value, calendar: { ...r.value.calendar, notice_on: publicado ? r.value.calendar.notice_on : hoje } })}</pre>
+            {clube ? <p className="mt-1 text-xs text-gray-500">{t('Ao publicar, o edital entra nos documentos oficiais do clube, numerado.')}</p> : federation.modules?.official_docs === true ? <p className="mt-1 text-xs text-gray-500">{t('Ao publicar, o edital entra no acervo oficial, numerado.')}</p> : <p className="mt-1 text-xs text-gray-500">{t('O acervo oficial está desligado: o edital fica só na aba Eleições.')}</p>}
           </div>
           {publicado && <V2Field label={t('Motivo da mudança')} htmlFor="el-motivo" required hint={t('Fica no histórico da eleição.')}><V2Textarea id="el-motivo" rows={2} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></V2Field>}
           <div className="flex flex-wrap gap-2">
@@ -249,7 +259,7 @@ export default function FedElectionWizard({ federation, election = null, onClose
         open={confirmar}
         onOpenChange={setConfirmar}
         title={t('Publicar o edital?')}
-        description={t('Os cargos não mudam mais depois de publicados, e todos os filiados são avisados. Calendário e colégio ainda podem ser ajustados, com motivo.')}
+        description={clube ? t('Os cargos não mudam mais depois de publicados, e todos os associados são avisados. Calendário e colégio ainda podem ser ajustados, com motivo.') : t('Os cargos não mudam mais depois de publicados, e todos os filiados são avisados. Calendário e colégio ainda podem ser ajustados, com motivo.')}
         confirmLabel={t('Publicar')}
         cancelLabel={t('Revisar mais')}
         onConfirm={() => { setConfirmar(false); salvar(true); }}

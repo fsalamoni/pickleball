@@ -2047,6 +2047,10 @@ exports.clubSafeguarding = federationCallable('clubSafeguarding', (ctx, actor, d
 const clubSelection = require('./clubSelection');
 exports.clubSelection = federationCallable('clubSelection', (ctx, actor, data) => clubSelection.selection(ctx, actor, data));
 
+// Eleições do clube (edital, chapas, voto secreto, apuração e posse): só o servidor grava — `functions/clubElections.js`.
+const clubElections = require('./clubElections');
+exports.clubElections = federationCallable('clubElections', (ctx, actor, data) => clubElections.elections(ctx, actor, data));
+
 // Vantagens do associado (o segredo só a quem está em dia) e o aviso do comunicado — `functions/clubContent.js`.
 const clubContent = require('./clubContent');
 exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));

@@ -8,18 +8,19 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { validateCandidacy } from '@/modules/federations/domain/elections';
-import { useElectionAction } from '@/modules/federations/hooks/useElections';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { V2Button, V2Field, V2Input, V2Select, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import FedPersonPicker from '../manage/FedPersonPicker';
 import { useAvisoNaoSalvo } from '../manage/naoSalvo';
+import { isClubElections, useScopedElectionAction } from './electionsScope';
 
 const nomeDaPessoa = (a) => a?.platform_name || a?.full_name || a?.display_name || '';
 
 function Formulario({ federation, election: e, onClose }) {
   const { user, userProfile } = useAuth();
-  const acao = useElectionAction();
+  const acao = useScopedElectionAction(federation);
+  const clube = isClubElections(federation);
   const [positionId, setPositionId] = useState(e.positions?.[0]?.id || '');
   const [nome, setNome] = useState('');
   const [proposta, setProposta] = useState('');
@@ -41,7 +42,7 @@ function Formulario({ federation, election: e, onClose }) {
     if (!v.ok) return;
     acao.mutate({ federationId: federation.id, action: 'candidacy_submit', electionId: e.id, candidacy }, {
       onSuccess: (res) => {
-        toast.success(res.endorsementsNeeded ? t('Chapa registrada. Agora ela precisa de {n} apoios de filiados: compartilhe o link de apoio.', { n: res.endorsementsNeeded }) : t('Chapa registrada. A comissão vai analisar.'));
+        toast.success(res.endorsementsNeeded ? (clube ? t('Chapa registrada. Agora ela precisa de {n} apoios de associados: compartilhe o link de apoio.', { n: res.endorsementsNeeded }) : t('Chapa registrada. Agora ela precisa de {n} apoios de filiados: compartilhe o link de apoio.', { n: res.endorsementsNeeded })) : t('Chapa registrada. A comissão vai analisar.'));
         onClose(res.candidacyId);
       },
       onError: (er) => toast.error(er.message),
@@ -59,7 +60,7 @@ function Formulario({ federation, election: e, onClose }) {
           <V2Input id="ch-nome" maxLength={80} value={nome} onChange={(ev) => setNome(ev.target.value)} />
         </V2Field>
       )}
-      <V2Field label={chapa ? t('Quem está na chapa') : t('Candidato(a)')} htmlFor="ch-pessoas" error={erro('members') || erro('gender_min')} hint={t('Todos precisam ter filiação ativa nesta federação. Quem registra faz parte.')}>
+      <V2Field label={chapa ? t('Quem está na chapa') : t('Candidato(a)')} htmlFor="ch-pessoas" error={erro('members') || erro('gender_min')} hint={clube ? t('Todos precisam ser associados em dia do clube. Quem registra faz parte.') : t('Todos precisam ter filiação ativa nesta federação. Quem registra faz parte.')}>
         <FedPersonPicker id="ch-pessoas" multiple={chapa} max={chapa ? 20 : 1} selecionados={pessoas} onChange={setPessoas} />
       </V2Field>
       {pessoas.length > 0 && (
@@ -83,7 +84,7 @@ function Formulario({ federation, election: e, onClose }) {
           ))}
         </ul>
       )}
-      <V2Field label={t('Proposta (opcional)')} htmlFor="ch-proposta" hint={t('Aparece na página para os filiados lerem antes de votar.')}>
+      <V2Field label={t('Proposta (opcional)')} htmlFor="ch-proposta" hint={clube ? t('Aparece na página para os associados lerem antes de votar.') : t('Aparece na página para os filiados lerem antes de votar.')}>
         <V2Textarea id="ch-proposta" rows={5} maxLength={4000} value={proposta} onChange={(ev) => setProposta(ev.target.value)} />
       </V2Field>
       <div className="flex flex-wrap justify-end gap-2">

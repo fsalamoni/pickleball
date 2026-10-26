@@ -7,16 +7,16 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { CANDIDACY_STATUS } from '@/modules/federations/domain/elections';
-import { useElectionAction, useElectionCandidacies } from '@/modules/federations/hooks/useElections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
+import { useScopedCandidacies, useScopedElectionAction } from './electionsScope';
 
 const ESPECIAIS = [['blank', tk('Em branco')], ['null', tk('Nulo')]];
 
 export default function VoteFlow({ federation, election: e, voter, onDone, onCancel }) {
-  const chapasQ = useElectionCandidacies(federation.id, e.id);
-  const acao = useElectionAction();
+  const chapasQ = useScopedCandidacies(federation, e.id);
+  const acao = useScopedElectionAction(federation);
   const [passo, setPasso] = useState(0);
   const [escolhas, setEscolhas] = useState({});
   const [confirmar, setConfirmar] = useState(false);

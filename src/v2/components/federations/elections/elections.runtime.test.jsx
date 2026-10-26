@@ -13,19 +13,18 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const electionAction = vi.fn();
 const toast = { success: vi.fn(), error: vi.fn() };
 vi.mock('sonner', () => ({ toast }));
-vi.mock('@/modules/federations/hooks/useElections', async () => {
-  const { useMutation } = await import('@tanstack/react-query');
-  return {
-    useElectionAction: () => useMutation({ mutationFn: (p) => electionAction(p) }),
-    useElectionCandidacies: () => ({
-      isLoading: false, isError: false,
-      data: [
-        { id: 'ch1', position_id: 'c1', status: 'accepted', name: 'Chapa Renovação', members: [{ name: 'Ana' }, { name: 'Bia' }] },
-        { id: 'ch2', position_id: 'c1', status: 'accepted', name: 'Chapa Unidade', members: [{ name: 'Caio' }, { name: 'Davi' }] },
-      ],
-    }),
-  };
-});
+vi.mock('@/modules/federations/services/federationService', async (original) => ({ ...(await original()), electionAction: (p) => electionAction(p) }));
+vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'u1' }, isAuthenticated: true }) }));
+vi.mock('@/modules/federations/hooks/useElections', async (original) => ({
+  ...(await original()),
+  useElectionCandidacies: () => ({
+    isLoading: false, isError: false,
+    data: [
+      { id: 'ch1', position_id: 'c1', status: 'accepted', name: 'Chapa Renovação', members: [{ name: 'Ana' }, { name: 'Bia' }] },
+      { id: 'ch2', position_id: 'c1', status: 'accepted', name: 'Chapa Unidade', members: [{ name: 'Caio' }, { name: 'Davi' }] },
+    ],
+  }),
+}));
 vi.mock('../manage/FedPersonPicker', () => ({ default: () => null }));
 vi.mock('../manage/naoSalvo', () => ({ useAvisoNaoSalvo: () => {} }));
 vi.mock('@/components/ui/confirm-dialog', () => ({

@@ -109,6 +109,8 @@ export function buildClubSections(perms = []) {
         { value: 'equipe', label: t('Equipe e mandatos') },
         // Montar os cargos é da presidência: só o master tem a permissão "admin".
         ...(perms.includes(CLUB_PERM.ADMIN) ? [{ value: 'cargos', label: t('Cargos') }] : []),
+        // Conduzir as eleições (edital, comissão, posse dos eleitos) é da administração.
+        ...(perms.includes(CLUB_PERM.ADMIN) ? [{ value: 'eleicoes', label: t('Eleições') }] : []),
       ],
       ok: tem(perms, CLUB_PERM.STAFF),
     },

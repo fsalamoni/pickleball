@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
-  Gift, Globe2, IdCard, LayoutDashboard, Library, ListChecks, Newspaper, Trophy,
+  Gift, Globe2, IdCard, LayoutDashboard, Library, ListChecks, Newspaper, Trophy, Vote,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
@@ -35,6 +35,7 @@ const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/
 const ClubDocsPublic = lazy(() => import('@/v2/components/clubs/association/ClubDocsPublic'));
 const ClubAgendaPublic = lazy(() => import('@/v2/components/clubs/association/ClubAgendaPublic'));
 const ClubTournamentsPublic = lazy(() => import('@/v2/components/clubs/association/ClubTournamentsPublic'));
+const ClubElectionsPublic = lazy(() => import('@/v2/components/clubs/association/ClubElectionsPublic'));
 const ClubSelectionPublic = lazy(() => import('@/v2/components/clubs/association/ClubSelectionPublic'));
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
 
@@ -65,6 +66,7 @@ export default function V2ClubDetail() {
     if (t !== 'forums') next.delete('thread');
     if (t !== 'documentos') next.delete('doc');
     if (t !== 'agenda') next.delete('evento');
+    if (t !== 'eleicoes') { next.delete('eleicao'); next.delete('apoiar'); }
     setSearchParams(next, { replace: true });
   };
   const setThreadParam = (threadId) => {
@@ -150,6 +152,7 @@ export default function V2ClubDetail() {
       { value: 'comunicados', label: t('Comunicados'), icon: Newspaper, dica: 'clube-aba-comunicados' },
     ] : []),
     ...(showAgendaTab ? [{ value: 'agenda', label: t('Agenda'), icon: CalendarDays, dica: 'clube-aba-agenda' }] : []),
+    ...(showAgendaTab ? [{ value: 'eleicoes', label: t('Eleições'), icon: Vote, dica: 'clube-aba-eleicoes' }] : []),
     ...(showDocsTab ? [{ value: 'documentos', label: t('Documentos'), icon: Library, dica: 'clube-aba-documentos' }] : []),
     ...(clubRankingOn ? [{ value: 'ranking', label: t('Ranking'), icon: Medal }] : []),
     { value: 'feed', label: t('Mural'), icon: MessageSquare },
@@ -157,7 +160,7 @@ export default function V2ClubDetail() {
     ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: t('Atividade'), icon: Trophy, dica: 'clube-aba-atividade' }] : []),
     ...(isAdmin ? [{ value: 'admin', label: t('Administração'), icon: Settings }] : []),
   ];
-  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn) || (['associacao', 'vantagens', 'comunicados'].includes(activeTab) && !showAssocTab) || (activeTab === 'documentos' && !showDocsTab) || (activeTab === 'agenda' && !showAgendaTab)
+  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn) || (['associacao', 'vantagens', 'comunicados'].includes(activeTab) && !showAssocTab) || (activeTab === 'documentos' && !showDocsTab) || (activeTab === 'agenda' && !showAgendaTab) || (activeTab === 'eleicoes' && !showAgendaTab)
     ? 'members' : activeTab;
 
   return (
@@ -303,7 +306,8 @@ export default function V2ClubDetail() {
               </div>
             )}
             {safeTab === 'agenda' && showAgendaTab && <Suspense fallback={<V2Skeleton lines={4} />}><ClubAgendaPublic club={club} member eventId={eventoParam} /></Suspense>}
-            {safeTab === 'documentos' && showDocsTab && <Suspense fallback={<V2Skeleton lines={4} />}><ClubDocsPublic club={club} member docId={docParam} /></Suspense>}
+            {safeTab === 'eleicoes' && showAgendaTab && <Suspense fallback={<V2Skeleton lines={4} />}><ClubElectionsPublic club={club} /></Suspense>}
+            {safeTab === 'documentos' && showDocsTab &&<Suspense fallback={<V2Skeleton lines={4} />}><ClubDocsPublic club={club} member docId={docParam} /></Suspense>}
             {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}

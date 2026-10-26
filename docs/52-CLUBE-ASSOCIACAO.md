@@ -513,6 +513,34 @@ no campo `meeting` do próprio evento (`club_x/{clube}/events`), que só o servi
 - As frases dos avisos são as da federação (`{sigla}` = nome do clube), então a tradução
   já existe.
 
+### 5.12 Eleições do clube (Bloco F2)
+
+Aba **Eleições** em duas casas: a **Central** (Diretoria → Eleições, só a administração) e a
+**página do clube** (aba para o associado). É a eleição da federação com o clube no lugar
+dela (`electionsScope.js`: `clubElectionsEntity`, hooks `useScoped*`) — **zero regra de
+Firestore nova, zero índice**. As coleções são `club_x/{clube}/{elections, candidacies,
+voters, endorsements}` (só o servidor grava; a regra genérica `cxReadPerms` as deixa para o
+`admin`) e a cédula do voto secreto mora na coleção `club_ballots`, **sem regra e sem uid**.
+
+- **Servidor** (`functions/clubElections.js`, régua em `federationElectionsPolicy.js` usada
+  direto; só o colégio e os textos mudam em `clubElectionsPolicy.js`): `overview`,
+  `preview`, `create`, `update`, `commission`, `publish`, `cancel`, `candidacy_info/submit/
+  withdraw`, `endorse`, `challenge`, `defend`, `judge`, `open_voting`, `vote`,
+  `close_voting`, `count`, `record_presential`, `publish_result`, `apply_governance`.
+  Toda leitura da tela passa por `overview` (uma chamada, filtrada pelo papel de quem pede;
+  quem não é associado recebe `member: false` e nada mais).
+- **Colégio**: um associado em dia, com direito a voto no plano, um voto de peso igual
+  (`{athlete: 1, outros: 0}`); a tela não oferece pesos nem a regra de 1/3 da lei da
+  federação. Mínimo de meses de associação opcional. Menos de 3 eleitores avisa.
+- **Edital e ata** entram no acervo do clube (`clubDocs`, numerados); a comissão conduz e,
+  sem comissão, a administração conduz. A chapa precisa de apoios de associados em dia.
+- **Posse**: `apply_governance` recebe `appointments: [{userId, roleId, termEnd?}]`, confere
+  que cada pessoa está entre os eleitos (`electedPeople`) e dá o cargo por `darPosse`
+  (`clubStaff`, `origin: 'election'`). A tela (`ClubPosseDialog`) sugere o cargo pelo que a
+  chapa declarou (`suggestRoleFor`) e só manda quem ficou com cargo.
+- **Exclusão de conta**: o colégio, as chapas e a comissão ficam (registro da eleição) com o
+  nome trocado por "Usuário removido"; o apoio dado é apagado; `club_ballots` nunca teve uid.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -655,6 +683,16 @@ no campo `meeting` do próprio evento (`club_x/{clube}/events`), que só o servi
     escolhida por `agendaScope` — **nunca** a bifurque; `hasFollow`/`hasComments` seguem
     falsos para o clube.
 
+36. **A eleição do clube é a da federação com o escopo trocado** (Bloco F2): nada de
+    coleção nova de regra — `elections/candidacies/voters/endorsements` só o servidor grava e
+    `club_ballots` (rule-less) **nunca** leva uid. A tela escolhe a casa por `electionsScope`
+    (`useScoped*`, `useScopedElectionAction`) — **nunca** bifurque `FedElectionWizard`,
+    `ElectionConductPanel`, `VoteFlow` etc. O voto é secreto por construção: o eleitor ganha
+    `voted_at_ms` e o recibo na MESMA transação em que a cédula nasce, sem ligação entre os
+    dois. Toda leitura da tela vem de `overview` (nunca consulte as coleções direto: a regra
+    as recusaria ao associado e viraria "não carregou"). A posse só aceita quem está entre os
+    eleitos e cria o cargo pelo `darPosse` (o cargo só vale enquanto a pessoa é membro).
+
 ## 7. Testes
 
 `functions/clubContent.test.js` (vantagens do associado em dia, aviso uma vez
@@ -679,6 +717,7 @@ quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `tests/rules/clubTournaments.rules.test.js` (emulador: quem marca o torneio com o clube, flag desligada, tirar o selo, lista pública),
 `src/modules/clubs/domain/clubTournaments.test.js`, `ClubTournamentsPanel.runtime.test.jsx`,
 `functions/clubMeetings.test.js` (convocar, edital do acervo, motivo, resultado, quórum, ata, correção) e `ClubMeetingDialogs.runtime.test.jsx`,
+`functions/clubElections.test.js` (ciclo da eleição, colégio, apoio, impugnação, voto secreto, apuração, posse), `functions/clubElections.parity.test.js` e `ClubElectionsPanel.runtime.test.jsx`,
 `src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
 `tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),
