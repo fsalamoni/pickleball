@@ -2297,6 +2297,16 @@ pontas — com a **troca para plano mais caro pagando só a diferença**, mesma
 validade. Plano mais barato segue pela federação, porque a renovação mantém o
 plano. Detalhe em `docs/50-FEDERACAO.md` §43–§46.
 
+## Dia de jogo vinculado a clube ou arena (2026-10-26)
+
+Pedido: dentro do "Jogar", o dia pode ser vinculado a um clube ou arena pelas
+próprias configurações, sem entrar no clube/arena para criar outro. Decidido como
+**atribuição** (campos `link_*`, nunca `club_id`/`arena_id`, para não dar poder de
+gestão ao clube/arena sobre o dia): as partidas contam nas estatísticas de quem
+recebe, quem é de fora vira convidado (só rótulo — mantém as estatísticas) e o dia
+fica sempre público. Só o criador vincula, e só a clube que administra / arena que
+gere. Detalhe em `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.
+
 ## Clube: página pública × Central do clube (2026-10-26)
 
 A página do clube tinha, no meio do que qualquer membro vê, as abas

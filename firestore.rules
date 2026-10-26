@@ -79,6 +79,23 @@ service cloud.firestore {
     function gameDayExists(gdId) {
       return ex('game_days/' + gdId);
     }
+    // Campo de vínculo do dia que fica como estava ou é REMOVIDO (sem valor novo a conferir).
+    function lkOk(f) { return nd().get(f, null) == null || nd().get(f, null) == od().get(f, null); }
+    // ENTRAR / SAIR de um dia: a lista de membros nova é EXATAMENTE a antiga
+    // mais (ou menos) quem pede, mexendo só nas chaves dadas — senão "entrar"
+    // viraria brecha para reescrever a lista dos outros.
+    function selfIn(ks) {
+      return nd().created_by == od().created_by && chg().hasOnly(ks)
+        && nd().member_uids.toSet() == od().member_uids.toSet().union([me()].toSet());
+    }
+    function selfOut() {
+      return nd().created_by == od().created_by && chg().hasOnly(['member_uids', 'updated_at'])
+        && nd().member_uids.toSet() == od().member_uids.toSet().difference([me()].toSet());
+    }
+    // O dia é de um clube de que eu sou membro.
+    function myClubDay() {
+      return 'club_id' in od() && od().club_id is string && isClubMember(od().club_id);
+    }
     // Criador (dono) de um dia de jogo do atleta.
     function isGameDayOwnerOf(gdId) {
       return isAuthed() && gameDayExists(gdId)
@@ -549,19 +566,21 @@ service cloud.firestore {
         // Dia de jogo de CLUBE: quem é do clube vê. Lê `resource.data` (o
         // próprio documento já carregado) em vez de `isClubGameDayMemberOf`,
         // que faria um `get` a mais do mesmo documento.
-        || ('club_id' in od() && od().club_id is string
-            && isClubMember(od().club_id))
+        || myClubDay()
         || isPlatformAdmin()
       );
       // Dia de ARENA só quem gere a arena cria, e dia de CLUBE só quem é do
       // clube: sem isso qualquer conta criava um dia "da arena X" com as
       // quadras do dia inteiro — o calendário da arena fechava (o dia de jogo
       // vira bloqueio derivado) e o dia aparecia na página dela.
+      // O VÍNCULO a um clube/arena (`link_*`) nasce depois, na edição: o dia
+      // nunca é criado já vinculado.
       allow create: if isOwner(nd().created_by)
         && (nd().get('arena_id', null) == null
             || arenaNd() || isPlatformAdmin())
         && (nd().get('club_id', null) == null
-            || isClubMember(nd().club_id) || isPlatformAdmin());
+            || isClubMember(nd().club_id) || isPlatformAdmin())
+        && !nd().keys().hasAny(['link_club_id', 'link_arena_id']);
       // Edição plena pelo criador/admin. Um atleta pode se auto-incluir como
       // membro quando o dia de jogo é público (fluxo "participar"), sem alterar
       // o dono.
@@ -570,7 +589,16 @@ service cloud.firestore {
         // da criação).
         (od().created_by == me()
           && nd().get('arena_id', null) == od().get('arena_id', null)
-          && nd().get('club_id', null) == od().get('club_id', null))
+          && nd().get('club_id', null) == od().get('club_id', null)
+          // VÍNCULO (atribuição das estatísticas do dia, sem dar poder ao
+          // clube/arena): o criador só vincula a clube que ADMINISTRA e a
+          // arena que gere. É ato institucional — o dia vai para a página e
+          // para o ranking do clube/arena —, então não é de qualquer membro
+          // (e, sem moderador que consiga corrigir o espelho do ranking de
+          // um dia alheio, não há como desfazer o que um membro vinculasse).
+          // Manter ou remover o vínculo que já tem é sempre livre.
+          && (lkOk('link_club_id') || isClubAdmin(nd().link_club_id))
+          && (lkOk('link_arena_id') || isArenaManager(nd().link_arena_id)))
         || isPlatformAdmin()
         // Dia de jogo de ARENA: quem gerencia a arena configura o dia todo
         // (título, data, quadras, horários, limites, modo de gestão). A arena
@@ -587,14 +615,8 @@ service cloud.firestore {
         // TERCEIROS (o dono inserindo, o administrador inserindo) passam pelas
         // outras condições deste mesmo `allow update`, então nada que
         // funcionava deixa de funcionar.
-        || (
-          od().visibility == 'public'
-          && nd().created_by == od().created_by
-          && chg()
-              .hasOnly(['member_uids', 'invited_uids', 'updated_at', 'open_game_id'])
-          && nd().member_uids.toSet()
-              == od().member_uids.toSet().union([me()].toSet())
-        )
+        || (od().visibility == 'public'
+            && selfIn(['member_uids', 'invited_uids', 'updated_at', 'open_game_id']))
         // ...e o caminho de VOLTA, que faltava: sair de um dia de jogo
         // público. Ao remover o participante, o serviço recalcula
         // `member_uids` — e a lista nova, naturalmente, não tem mais quem
@@ -603,37 +625,14 @@ service cloud.firestore {
         // A condição é EXATA: a lista nova tem de ser a antiga menos quem
         // está pedindo. Assim ninguém aproveita a brecha para esvaziar a
         // lista dos outros.
-        || (
-          od().visibility == 'public'
-          && nd().created_by == od().created_by
-          && chg()
-              .hasOnly(['member_uids', 'updated_at'])
-          && nd().member_uids.toSet()
-              == od().member_uids.toSet().difference([me()].toSet())
-        )
+        || (od().visibility == 'public' && selfOut())
         // O MEMBRO DO CLUBE entrando e saindo do dia de jogo do seu clube. É o
         // mesmo par de condições EXATAS do dia público logo acima, e pela
         // mesma razão: a lista nova tem de ser a antiga mais (ou menos)
         // exatamente quem está pedindo, senão "entrar" viraria brecha para
         // reescrever a lista dos outros.
-        || (
-          'club_id' in od() && od().club_id is string
-          && isClubMember(od().club_id)
-          && nd().created_by == od().created_by
-          && chg()
-              .hasOnly(['member_uids', 'invited_uids', 'updated_at'])
-          && nd().member_uids.toSet()
-              == od().member_uids.toSet().union([me()].toSet())
-        )
-        || (
-          'club_id' in od() && od().club_id is string
-          && isClubMember(od().club_id)
-          && nd().created_by == od().created_by
-          && chg()
-              .hasOnly(['member_uids', 'updated_at'])
-          && nd().member_uids.toSet()
-              == od().member_uids.toSet().difference([me()].toSet())
-        )
+        || (myClubDay() && selfIn(['member_uids', 'invited_uids', 'updated_at']))
+        || (myClubDay() && selfOut())
         // Quem gerencia (admin nomeado, ou participante num dia aberto) mexe na
         // LISTA DE MEMBROS ao inserir/remover participante — e SÓ nela. A trava
         // por campo é o que impede alguém de, por tabela, virar dono, se

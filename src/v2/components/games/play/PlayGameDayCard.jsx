@@ -8,8 +8,9 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Dices, MapPin, Users } from 'lucide-react';
+import { Building2, Dices, Link2, MapPin, Users } from 'lucide-react';
 import { PLAY_ORIGIN } from '@/modules/games/domain/playDiscovery';
+import { linkLabel } from '@/modules/games/domain/gameDayLink';
 import { V2Badge } from '@/v2/ui/primitives';
 import PlayItemAction from './PlayItemAction';
 import { t, tk } from '@/core/i18n';
@@ -44,6 +45,10 @@ export default function PlayGameDayCard({ item, distancia = null }) {
         <V2Badge tone={origem.tom}>
           <Icone className="h-3 w-3" aria-hidden="true" /> {t(origem.texto)}
         </V2Badge>
+        {/* Dia do atleta vinculado a um clube/arena: as estatísticas são de lá. */}
+        {item.origem === PLAY_ORIGIN.ATLETA && linkLabel(item.fonte) && (
+          <V2Badge tone="neutral"><Link2 className="h-3 w-3" aria-hidden="true" /> {linkLabel(item.fonte)}</V2Badge>
+        )}
         {/* "Você vai" já está ao lado do botão de sair — aqui, só as vagas. */}
         {item.badge && !item.estou && item.origem !== PLAY_ORIGIN.CLUBE && (
           <V2Badge tone="green"><Users className="h-3 w-3" aria-hidden="true" /> {item.badge}</V2Badge>

@@ -612,6 +612,63 @@ opção de inserir mais"*.
 - **Banco**: só campos opcionais; nenhuma regra, coleção ou índice. Jogo
   antigo é um jogo de um set.
 
+## 13. Vincular o dia a um clube ou arena (2026-10-26)
+
+Pedido: *"nos dias de jogo criados dentro de jogar, deve ser possível vincular o
+dia a um clube ou uma arena existente, pelas próprias configurações do dia, sem
+ter que entrar no clube ou na arena para criar um novo… todas as estatísticas
+passam para o clube ou para a arena… os atletas de fora são convidados, mantendo
+suas estatísticas… esse dia não pode ser exclusivo para membros"*.
+
+**Decisão de desenho: vínculo é ATRIBUIÇÃO, não troca de origem.** O dia segue
+sendo do atleta (`created_by`, quem organiza, formato, quadras). Quatro campos
+opcionais em `game_days` — `link_club_id`/`link_club_name`,
+`link_arena_id`/`link_arena_name` — dizem *a quem as estatísticas pertencem*.
+**Nunca** grave o vínculo em `club_id`/`arena_id`: esses campos dão ao gestor
+poder sobre o dia, o teto de vagas da arena, o bloqueio de quadra e a trava de
+edição. Domínio em `modules/games/domain/gameDayLink.js` (fonte única).
+
+- **Quem vincula**: só o CRIADOR do dia, e só a um clube que ADMINISTRA
+  (`isClubAdmin`) ou uma arena que GERE (`isArenaManager`) — conferido na regra
+  (`lkOk`). Motivo: o vínculo é ato institucional (o dia entra na página e no
+  ranking de quem o recebe) e só o admin/gestor consegue consertar o espelho do
+  ranking depois. Manter ou desfazer o vínculo é sempre livre para o criador. O
+  dia não nasce vinculado (a criação recusa `link_*`). Só dia do atleta aceita
+  vínculo (`canLinkGameDay`: sem `arena_id`, `club_id` nem `open_slot_id`).
+- **Nunca exclusivo de membros**: vinculado ⇒ `visibility` público
+  (`LINKED_VISIBILITY`, forçado em `updateGameDay`; o seletor de visibilidade
+  fica travado com a explicação). Entrar e sair seguem as regras de dia público.
+- **Convidado é RÓTULO** (`splitGuests`/`isGuest`): quem não está em
+  `club_members` (legível por conta logada) é "convidado do clube". Em
+  `arena_members` só o gestor lê — para os demais a lista é DESCONHECIDA e a tela
+  não rotula ninguém (desconhecido nunca vira "convidado"). Convidado joga,
+  pontua e conta no ranking como qualquer outro: o vínculo não tira estatística.
+- **Estatísticas**: `buildGameDayMatch` grava `club_id = gameDay.club_id ||
+  gameDay.link_club_id || …` no espelho `club_event_games`, e o servidor
+  (`functions/clubRanking.js`, que soma por `club_id` e inclui qualquer atleta)
+  faz o resto — sem função nova. `club_id` do espelho é imutável no update, então
+  trocar/tirar o clube de um dia já publicado **apaga e recria** o espelho em dois
+  lotes seguidos (`applyGameDayMirror`). Arena: o "ranking da casa" é derivado no
+  cliente e soma os dias vinculados (`useArenaLinkedGameDays`, consulta
+  `link_arena_id == X` **e** `visibility == 'public'` — sem o segundo filtro a
+  regra recusa a consulta), e o engajamento da arena (`ArenaEngagementPanel`)
+  também.
+- **Telas**: seção "Clube ou arena" nas Configurações do dia
+  (`GameDayLinkSection`, com confirmação antes de gravar), "Convidados do vínculo"
+  (`GameDayGuestsCard`, só com vínculo), "Dias de jogo vinculados" na página do
+  clube e da arena (`LinkedGameDaysSection`; some sem dias, diz quando falhou) e o
+  selo "Estatísticas: {nome}" nas listas do Jogar. Lista de opções:
+  `useGameDayLinkOptions` (falha ≠ "você não administra nenhum").
+- **Banco**: só campos opcionais em `game_days` e uma regra aditiva (helpers
+  `lkOk`, `selfIn`, `selfOut`, `myClubDay`; o compactado segue abaixo do teto de
+  140 KB). Nenhuma coleção, índice composto nem Cloud Function nova. Provas: 19
+  asserções no emulador (`tests/rules/gameDayLink.rules.test.js`), testes de
+  domínio (`gameDayLink.test.js`), de serviço (`gameDayService.link.test.js`) e de
+  tela (`gameDayLink.runtime.test.jsx`).
+- **Ao mexer**: o `GameDayModule` só monta o cartão de convidados quando o dia
+  tem vínculo (`isLinkedGameDay`); consulta de dias vinculados leva sempre as DUAS
+  igualdades; o clube do espelho muda por apagar+recriar, nunca por update.
+
 ## Atualização 2026-09-30 — entrar pelo próprio dia de jogo
 
 Quem chega a um dia de jogo PÚBLICO de outra pessoa (pelo "Jogar" do início ou

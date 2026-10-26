@@ -13,6 +13,7 @@ import {
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
+import LinkedGameDaysSection from '@/v2/components/games/LinkedGameDaysSection';
 import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
 import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
 import ClubRankingTab from '@/v2/components/clubs/ClubRankingTab';
@@ -282,7 +283,12 @@ export default function V2ClubDetail() {
 
           <div className="mt-6">
             {safeTab === 'members' && <V2ClubMembers clubId={clubId} />}
-            {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
+            {safeTab === 'events' && (
+              <>
+                <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />
+                <LinkedGameDaysSection clubId={clubId} />
+              </>
+            )}
             {safeTab === 'associacao' && showAssocTab && <ClubAssociationTab club={club} />}
             {safeTab === 'vantagens' && showAssocTab && <ClubMemberBenefits club={club} onVerAssociacao={() => setActiveTab('associacao')} />}
             {safeTab === 'comunicados' && showAssocTab && (

@@ -30,6 +30,8 @@ const estado = {
   uid: null,
   dias: [],
   diasErro: false,
+  vinculados: [],
+  vinculadosErro: false,
   torneios: [],
   torneiosErro: false,
   internos: [],
@@ -66,6 +68,10 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
 }));
 
 vi.mock('@/modules/games/services/gameDayService', () => ({
+  listArenaLinkedGameDays: async () => {
+    if (estado.vinculadosErro) throw new Error('rede');
+    return estado.vinculados;
+  },
   listGameDayParticipants: async (id) => estado.participantes[id] || [],
   listGameDayGames: async (id) => {
     if (estado.jogosErro.has(id)) throw new Error('rede');
@@ -140,7 +146,7 @@ function comUmTorneio() {
 
 beforeEach(() => {
   Object.assign(estado, {
-    uid: null, dias: [], diasErro: false, torneios: [], torneiosErro: false, internos: [], internosErro: false,
+    uid: null, dias: [], diasErro: false, vinculados: [], vinculadosErro: false, torneios: [], torneiosErro: false, internos: [], internosErro: false,
     legado: null, participantes: {}, jogos: {}, jogosErro: new Set(), categorias: {}, inscricoes: {}, partidas: {},
   });
   container = document.createElement('div');
@@ -166,6 +172,25 @@ describe('⭐ a soma', () => {
     const podio = container.querySelector('[aria-label="Pódio da temporada"]');
     expect(podio.textContent.indexOf('Caio')).toBeLessThan(podio.textContent.indexOf('Ana'));
     expect(podio.textContent).toContain('250');
+    expect(texto).not.toContain('Ninguém pontuou');
+  });
+});
+
+describe('⭐ dia de jogo vinculado à arena', () => {
+  it('o dia do atleta vinculado soma na temporada da casa', async () => {
+    comUmJogoAberto('gdv');
+    estado.vinculados.push(estado.dias.pop());
+    await render();
+    const texto = container.textContent;
+    expect(texto).toContain('Ana');
+    expect(texto).not.toContain('Ninguém pontuou');
+  });
+
+  it('a lista dos vinculados falhou: diz que ficou de fora, nunca "ninguém pontuou"', async () => {
+    estado.vinculadosErro = true;
+    await render();
+    const texto = container.textContent;
+    expect(texto).toContain('Os dias de jogo vinculados à arena');
     expect(texto).not.toContain('Ninguém pontuou');
   });
 });

@@ -144,6 +144,7 @@ torneio, `/c/:clubId`) existem para isso.
 | Editar **grupos do Play** | ✖ | ✔ | ✔ (só `format == 'play'`, só chaves `play_groups`, `play_groups_policy`, `updated_at`; lista ≤ 10) | ✖ | ✔ | ✔ | ✔ | rules (cláusula estreita) + `canEditPlayGroups` |
 | **Publicar no ranking** (`club_event_games`) | ✖ | ✔ | **✖** | ✖ | ✔ (`isArenaGameDayManagerOf`) | ✔ (`isClubAdmin(club_id)`, ou criador do evento do clube) | ✔ | rules (`create/update/delete`); a tela só mostra o card ao `podeConfigurar` |
 | Apagar o dia | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules |
+| **Vincular o dia** a clube/arena (`link_*`) | ✖ | ◐ só quem criou, e só a clube que **administra** / arena que **gere**; desfazer é livre | ✖ | ✖ | ✖ (o vínculo não dá poder à arena sobre o dia) | ✖ (idem) | ✔ | rules (`lkOk`) + `canLinkGameDay`/`linkOptions` na tela |
 
 \* `canAccessGameDay` para um gestor de arena que não é criador nem membro depende de o dia ser público; todo dia de arena nasce público.
 

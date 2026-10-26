@@ -60,6 +60,7 @@ import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
 import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 import { resultFromSets } from '../domain/gameSets.js';
+import { GAME_DAY_LINK_FIELDS, LINKED_VISIBILITY, canLinkGameDay, gameDayLinks, isLinkedGameDay } from '../domain/gameDayLink.js';
 import { t, tk, tx } from '@/core/i18n';
 
 const COL = 'game_days';
@@ -191,6 +192,35 @@ export async function listUpcomingClubGameDays({ clubId, dias = [] } = {}) {
     .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED);
 }
 
+/**
+ * Os dias de jogo do ATLETA vinculados a um clube ou a uma arena (`link_*`,
+ * ver `domain/gameDayLink.js`). O dia vinculado é sempre público, e é esse
+ * filtro, junto da igualdade do vínculo, que deixa a regra de `game_days`
+ * provar a consulta (senão ela é recusada para quem não é o criador). Duas
+ * igualdades: sem índice composto; ordem por data em memória.
+ *
+ * @param {'club'|'arena'} lado
+ * @param {string} id
+ */
+async function listLinkedGameDays(lado, id) {
+  if (!db || !id) return [];
+  const snap = await getDocs(query(
+    collection(db, COL),
+    where(lado === 'club' ? 'link_club_id' : 'link_arena_id', '==', id),
+    where('visibility', '==', LINKED_VISIBILITY),
+  ));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+}
+
+/** Os dias de jogo vinculados a um CLUBE (página do clube, ranking interno). */
+export const listClubLinkedGameDays = (clubId) => listLinkedGameDays('club', clubId);
+
+/** Os dias de jogo vinculados a uma ARENA (página da arena, ranking da casa). */
+export const listArenaLinkedGameDays = (arenaId) => listLinkedGameDays('arena', arenaId);
+
 /** Atualiza campos do dia de jogo (somente o criador — reforçado nas rules). */
 export async function updateGameDay(id, patch, actor) {
   if (!id) return;
@@ -204,6 +234,19 @@ export async function updateGameDay(id, patch, actor) {
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
   // Escolha de quem cria: enviar (ou não) os resultados ao DUPR. `null` = vale o padrão.
   if ('dupr_submit' in patch) editable.dupr_submit = typeof patch.dupr_submit === 'boolean' ? patch.dupr_submit : null;
+
+  // VÍNCULO a clube/arena (ver `domain/gameDayLink.js`): só o dia do atleta, os
+  // dois lados juntos, e o dia vinculado nunca é "só para membros".
+  const linkChanged = GAME_DAY_LINK_FIELDS.some((k) => k in patch);
+  if (linkChanged) {
+    if (!canLinkGameDay(current)) throw new Error(t('Este dia de jogo já pertence a um clube ou arena e não aceita vínculo.'));
+    GAME_DAY_LINK_FIELDS.forEach((k) => { editable[k] = patch[k] || null; });
+    const next = gameDayLinks(editable);
+    if (next.club || next.arena) editable.visibility = LINKED_VISIBILITY;
+  } else if (isLinkedGameDay(current)) {
+    // Enquanto durar o vínculo a visibilidade fica travada em pública.
+    delete editable.visibility;
+  }
   await updateDoc(doc(db, COL, id), { ...editable, updated_at: serverTimestamp() });
 
   // Sincroniza o convite público (open_games) conforme a visibilidade resultante.
@@ -224,6 +267,7 @@ export async function updateGameDay(id, patch, actor) {
     await createAuditLog({ action: 'game_day_updated', actor, details: { game_day_id: id } });
     return;
   }
+  if (linkChanged) await afterLinkChange(current, merged, actor);
   if (isPublicGameDay(merged)) {
     if (current.open_game_id) {
       // Atualiza o convite existente (data/descrição/local).
@@ -247,6 +291,29 @@ export async function updateGameDay(id, patch, actor) {
   }
 
   await createAuditLog({ action: 'game_day_updated', actor, details: { game_day_id: id } });
+}
+
+/**
+ * Depois de gravar o vínculo: auditoria e, se o dia já está no ranking, o espelho
+ * é regravado para o clube novo (o `club_id` do espelho é a atribuição). Falha
+ * na sincronização não desfaz o vínculo — o próximo lançamento de placar a refaz.
+ */
+async function afterLinkChange(before, after, actor) {
+  const a = gameDayLinks(before);
+  const b = gameDayLinks(after);
+  if (a.club?.id === b.club?.id && a.arena?.id === b.arena?.id) return;
+  await createAuditLog({
+    action: (b.club || b.arena) ? 'game_day_linked' : 'game_day_unlinked',
+    actor,
+    details: {
+      game_day_id: after.id,
+      club_id: b.club?.id || null, arena_id: b.arena?.id || null,
+      previous_club_id: a.club?.id || null, previous_arena_id: a.arena?.id || null,
+    },
+  });
+  if (before.publish_to_ranking) {
+    await syncGameDayRankingIfPublished(after.id, actor).catch((err) => logger.error('Vínculo do dia: sincronização do ranking falhou:', err));
+  }
 }
 
 /** Arquiva um dia de jogo: remove convite público e resultados espelhados. */
@@ -1691,6 +1758,15 @@ async function applyGameDayMirror(gameDay, actor) {
 
   const changed = result.toWrite.length > 0 || result.toRemove.length > 0;
   if (changed) {
+    // `club_id` do espelho é imutável na regra (um `set` por cima de um
+    // documento com outro clube é recusado): quem mudou de clube — vínculo novo,
+    // trocado ou desfeito — é apagado num lote e recriado no seguinte.
+    const clubChanged = result.toWrite.filter((w) => publishedById.has(w.id) && (publishedById.get(w.id)?.club_id ?? null) !== (w.payload.club_id ?? null));
+    if (clubChanged.length) {
+      const del = writeBatch(db);
+      clubChanged.forEach((w) => del.delete(doc(db, COL_RANKING, w.id)));
+      await del.commit();
+    }
     const batch = writeBatch(db);
     result.toWrite.forEach((w) => batch.set(doc(db, COL_RANKING, w.id), w.payload));
     result.toRemove.forEach((id) => batch.delete(doc(db, COL_RANKING, id)));

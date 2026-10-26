@@ -25,6 +25,7 @@ import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
+import LinkedGameDaysSection from '@/v2/components/games/LinkedGameDaysSection';
 import ArenaOpenMatchSection from '@/v2/components/arenas/openMatch/ArenaOpenMatchSection';
 import ArenaShopSection from '@/v2/components/arenas/shop/ArenaShopSection';
 import ArenaPromosSection from '@/v2/components/arenas/marketing/ArenaPromosSection';
@@ -255,6 +256,9 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           decisão mais simples (marcar presença) do que escolher horário e
           pedir uma quadra. Some sozinha quando não há nada marcado. */}
       <div id="arena-dia-de-jogo" data-secao-arena={t('Dia de jogo')} className="scroll-mt-4"><ArenaGameDaysSection arenaId={arenaId} /></div>
+
+      {/* Dias de jogo de atletas vinculados à arena: as estatísticas são daqui. */}
+      <div id="arena-dias-vinculados" data-secao-arena={t('Dias vinculados')} className="scroll-mt-4"><LinkedGameDaysSection arenaId={arenaId} /></div>
 
       {/* Jogos abertos (módulos de matchmaking) — pela mesma razão do dia de
           jogo: entrar num jogo pronto é uma decisão mais simples do que

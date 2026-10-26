@@ -1601,6 +1601,7 @@ const ATLETA = {
           tk('RANKING DO DIA — com jogo simples e em duplas no mesmo dia, são duas tabelas, independentes. Uma vitória no simples não soma nas duplas.'),
           tk('NA PUBLICAÇÃO — o simples vai para o rating de simples; as duplas, para o rating e o ranking de duplas.'),
         ),
+        p(tk('Administra um clube ou gere uma arena? Nas Configurações do dia, a seção "Clube ou arena" vincula este dia a ele, sem sair do dia e sem criar nada de novo dentro do clube ou da arena. As partidas passam a contar nas estatísticas do clube ou da arena; quem não é de lá joga como convidado e mantém todas as suas estatísticas. O dia vinculado fica sempre público — nunca exclusivo de membros — e você desvincula quando quiser.')),
         link('/dia-de-jogo', tk('Criar um dia de jogo')),
         tip(tk('Se o seu grupo varia (gente chegando e saindo), use Play ou Americano aprimorado. Se é o mesmo grupo do começo ao fim, o Americano é mais simples.')),
       ],

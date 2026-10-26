@@ -613,6 +613,16 @@ Tudo atrás de `club_association` e **zero banco, zero regra, zero função**.
   carregaram" (nunca "você não é associado"); clube que não pôde ser conferido vai escrito. A consulta ao
   servidor só sai se a pessoa tem clube.
 
+### 5.15a Dias de jogo vinculados ao clube (2026-10-26)
+
+Um atleta que **administra** o clube pode vincular o dia de jogo dele (criado no
+Jogar) ao clube, nas configurações do dia. As partidas passam a contar no ranking
+do clube (espelho `club_event_games.club_id`), quem não é membro aparece como
+convidado (só rótulo, sem perder estatística) e o dia fica sempre público. A
+página do clube lista esses dias em "Dias de jogo vinculados" (aba de eventos).
+Não usa `club_id` do dia: o clube não ganha poder de gestão sobre ele. Detalhe em
+`docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.
+
 ### 5.16 Página do clube × Central do clube (público × administração)
 
 A página do clube (`/clubes/:id`, `V2ClubDetail`) é a **visão pública e o que os

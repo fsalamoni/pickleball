@@ -526,3 +526,18 @@ Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
 - Telas: `v2/components/games/play/` — `PlayItemAction` (o botão, por origem),
   `PlayGameDayCard`, `OpenGameDaysForMe` ("Com vaga para você" no Dia de
   jogo). Ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`.
+
+## Dia vinculado a clube ou arena (2026-10-26)
+
+- `domain/gameDayLink.js` — a fonte única do vínculo: `buildLinkPatch`,
+  `canLinkGameDay`, `isLinkedGameDay`, `LINKED_VISIBILITY` (vinculado = sempre
+  público), `splitGuests`/`isGuest` (convidado é só rótulo; lista de membros
+  desconhecida não rotula ninguém), `linkOptions` (só clube que administra e
+  arena que gere). Campos `link_*` em `game_days`; **nunca** `club_id`/`arena_id`.
+- `services/gameDayService.js` — `updateGameDay` valida, força público, audita
+  (`game_day_linked`/`game_day_unlinked`) e regrava o espelho do ranking quando o
+  clube muda (apagar + recriar em dois lotes: `club_id` é imutável);
+  `listClubLinkedGameDays`/`listArenaLinkedGameDays` filtram o vínculo **e**
+  `visibility == 'public'`.
+- `hooks/useGameDayLink.js` e telas `v2/components/games/GameDayLinkSection`,
+  `GameDayGuestsCard`, `LinkedGameDaysSection`. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.
