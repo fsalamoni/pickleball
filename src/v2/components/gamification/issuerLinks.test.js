@@ -15,7 +15,7 @@ describe('issuerLinks', () => {
     });
     expect(l.map((x) => x.to)).toEqual([
       '/admin/painel?tab=gam-config', '/arenas/a1/gerir?aba=engajamento', '/aulas?aba=engajamento',
-      '/clubes/k1?tab=atividade', '/clubes/k2?tab=atividade',
+      '/clubes/k1/gerir?aba=engajamento', '/clubes/k2/gerir?aba=engajamento',
     ]);
     expect(new Set(l.map((x) => x.key)).size).toBe(l.length);
   });
@@ -32,7 +32,8 @@ describe('issuerLinks', () => {
     expect(arena).toContain("value: 'engajamento'");
     const coach = readFileSync('src/v2/pages/V2CoachAgenda.jsx', 'utf8');
     expect(coach).toContain("value: 'engajamento'");
-    const clube = readFileSync('src/v2/pages/V2ClubDetail.jsx', 'utf8');
-    expect(clube).toContain("value: 'atividade'");
+    // O clube: a Central (aberta sem a flag da associação) tem a aba, só para a administração.
+    const clube = readFileSync('src/v2/components/clubs/manage/clubManageSections.js', 'utf8');
+    expect(clube).toContain("value: 'engajamento'");
   });
 });
