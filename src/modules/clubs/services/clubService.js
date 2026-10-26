@@ -421,7 +421,7 @@ export async function requestToJoinClub(club, user, profile) {
     title: tx('{nome} pediu para entrar em "{clube}"', { nome: requesterName, clube: trimmed(club.name).slice(0, 50) }),
     message: tx('Toque para aprovar ou recusar o pedido na administração do clube.'),
     type: NOTIFICATION_TYPE.CLUB_JOIN_REQUEST,
-    link: `/clubes/${club.id}?tab=admin`,
+    link: `/clubes/${club.id}/gerir?aba=ingresso`,
     actor: { uid: user.uid, displayName: requesterName },
   });
   await createAuditLog({ action: 'club_join_requested', actor: user, details: { club_id: club.id } });

@@ -15,7 +15,12 @@ import { CLUB_ROLE, CLUB_ROLE_LABELS } from '@/modules/clubs/domain/constants';
 import { V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
-export default function V2ClubMembers({ clubId, isAdmin }) {
+/**
+ * A lista de membros. Na página do clube é só visão pública (quem faz parte e
+ * quem administra). `manage` liga promover, rebaixar e remover — e só a Central
+ * do clube (o ambiente de quem administra) o passa.
+ */
+export default function V2ClubMembers({ clubId, manage = false }) {
   const { user } = useAuth();
   const { data: members = [], isLoading } = useClubMembers(clubId);
   const setRole = useSetMemberRole(clubId);
@@ -76,7 +81,7 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
               {t(CLUB_ROLE_LABELS[member.role] || member.role)}
             </V2Badge>
 
-            {isAdmin && !isSelf && (
+            {manage && !isSelf && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button

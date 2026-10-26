@@ -2296,3 +2296,16 @@ clube e à confederação, o repasse marcado como feito entra nas contas das dua
 pontas — com a **troca para plano mais caro pagando só a diferença**, mesma
 validade. Plano mais barato segue pela federação, porque a renovação mantém o
 plano. Detalhe em `docs/50-FEDERACAO.md` §43–§46.
+
+## Clube: página pública × Central do clube (2026-10-26)
+
+A página do clube tinha, no meio do que qualquer membro vê, as abas
+"Administração" e "Atividade", o link de convite no cabeçalho, o menu de
+promover/remover em cada membro e a escolha de fontes do ranking. Tudo isso
+mudou para a **Central do clube**, que passou a abrir **sem** a flag
+`club_association` (Membros, Engajamento e Dados do clube valem para todo
+clube; só as seções da associação dependem dela). A página ficou com a visão
+pública e o que os membros fazem juntos; a moderação do que se publica segue
+na própria publicação. Links antigos (`?tab=admin`, `?tab=atividade`)
+redirecionam; os avisos de pedido de ingresso, filiação, selo, seguro e sede
+apontam para a Central. Detalhe em `docs/52-CLUBE-ASSOCIACAO.md` §5.16.

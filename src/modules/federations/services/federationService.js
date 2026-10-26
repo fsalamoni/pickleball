@@ -634,7 +634,7 @@ async function orgManagerUids(kind, orgId) {
   return [...new Set((await getDocs(q)).docs.map((d) => d.data().user_id).filter(Boolean))];
 }
 
-const linkDaOrg = (kind, orgId) => (kind === 'club' ? `/clubes/${orgId}?tab=admin` : `/arenas/${orgId}/gerir?aba=federacao`);
+const linkDaOrg = (kind, orgId) => (kind === 'club' ? `/clubes/${orgId}/gerir?aba=pagina` : `/arenas/${orgId}/gerir?aba=federacao`);
 
 /**
  * A FEDERAÇÃO convida um clube/arena (equipe com `members` ou `admin`). Não

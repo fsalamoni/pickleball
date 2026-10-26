@@ -27,7 +27,7 @@ const COL = 'federation_insurance_certificates';
 const AFF = 'federation_affiliations';
 const KINDS = ['club', 'arena'];
 const CS = P.CERT_STATUS;
-const LINK_ORG = (c) => (c.kind === 'club' ? `/clubes/${c.org_id}?tab=admin` : `/arenas/${c.org_id}/gerir?aba=federacao`);
+const LINK_ORG = (c) => (c.kind === 'club' ? `/clubes/${c.org_id}/gerir?aba=pagina` : `/arenas/${c.org_id}/gerir?aba=federacao`);
 const LINK_GESTAO = (fedId) => `/federacoes/${fedId}/gerir?aba=ocorrencias`;
 const br = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(String(iso || '')) ? iso.split('-').reverse().join('/') : '');
 const historico = (doc, actor, ctx, action, extra = {}) => [...(doc.history || []), { action, by: actor.uid, at_ms: ctx.now, ...extra }].slice(-30);

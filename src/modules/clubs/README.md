@@ -52,7 +52,7 @@ dia de jogo, ranking interno, página pública.
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,
   `V2ClubPublicPage` (Onda 8b)
-- **Componentes**: `V2ClubAdmin`, `V2ClubEvents`, `V2ClubFeed`,
+- **Componentes**: `V2ClubAdmin` (o ambiente de quem administra, um painel por aba da Central: `membros`, `ingresso`, `dados`, `pagina`), `ClubRankingTab`, `V2ClubEvents`, `V2ClubFeed`,
   `V2ClubForums`, `V2ClubMembers`, `V2EventChat`, `V2EventDatesPanel`,
   `V2EventParticipantsPanel`, `V2ForumPoll`, `V2ForumThreadView`,
   `ClubGameDayTab` (módulo × legado), `V2ClubInternalRanking`

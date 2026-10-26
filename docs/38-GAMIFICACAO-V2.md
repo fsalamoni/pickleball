@@ -16,7 +16,7 @@ desafios e recompensas** — sem cobrança. Ninguém perde pontos por ficar para
 | Atleta | Jornada (XP, nível, sequência, trilhas, primeiros passos), Missões (dia/semana/mês), Competir (duelos, desafios, Temporada, Hall da Fama), Social (avaliações, cartas, reputação, mentoria), Recompensas, Revisão da semana/mês, Configurações | `/gamification?aba=…`, `/gamification/como-funciona`, `/gamification/revisao`, `/gamification/configuracoes`, `/conquistas`, `/hall-da-fama`, `/vinculos` |
 | Professor | Saúde da base, metas, desafios e recompensas para os alunos | Painel do professor (`/aulas`) → Engajamento (`?aba=engajamento`) |
 | Arena | Saúde, metas, desafios e recompensas para quem joga na arena | Central → Desempenho → Engajamento (`?aba=engajamento`) |
-| Clube | Atividade do clube | Detalhe do clube → `?tab=atividade` (admin) |
+| Clube | Atividade, metas, desafios e recompensas do clube | Central do clube → Engajamento (`/clubes/:id/gerir?aba=engajamento`, só a administração) |
 | Admin da plataforma | Configuração (13 módulos, regras, temporada), desafios e recompensas da plataforma, integridade (revisão antifarm) e métricas | Painel admin → Gamificação (`gam-config`, `gam-challenges`, `gam-rewards`, `gam-integrity`, `gam-metrics`) |
 
 ## 2. Princípios que não podem regredir

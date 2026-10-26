@@ -83,13 +83,15 @@ export function useMyClubStaff(clubId, { enabled = true } = {}) {
  * com permissões e mandato. `isLoading` só até as duas fontes responderem;
  * `isError` se alguma falhou (a tela não afirma "sem acesso" sem saber).
  */
-export function useMyClubRole(clubId) {
+export function useMyClubRole(clubId, { association = true } = {}) {
   const membership = useMyMembership(clubId);
   const admin = membership.data?.role === 'admin';
   // O cargo só vale para quem ainda é membro do clube (a regra e o servidor conferem o mesmo).
-  const staff = useMyClubStaff(clubId, { enabled: membership.isSuccess && !!membership.data && !admin });
+  // Com a associação desligada (`association: false`) não há cargo: a regra recusa a leitura
+  // de `club_x` e a falha viraria "não carregou" para um membro comum.
+  const staff = useMyClubStaff(clubId, { enabled: association && membership.isSuccess && !!membership.data && !admin });
   const perms = useMemo(() => clubPermsOf({ isClubAdmin: admin, staff: staff.data }), [admin, staff.data]);
-  const temCargo = !admin && !!membership.data;
+  const temCargo = association && !admin && !!membership.data;
   const isLoading = membership.isLoading || (temCargo && staff.isLoading);
   const isError = membership.isError || (temCargo && staff.isError);
   return {

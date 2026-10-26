@@ -41,7 +41,7 @@ const CS = P.CUP_STATUS;
 const TS = P.CUP_TEAM_STATUS;
 const linkGestao = (fedId, aba) => `/federacoes/${fedId}/gerir?aba=${aba}`;
 /** Onde quem gere a organização acompanha o edital (o cartão "Federação" do clube ou da arena). */
-const LINK_ORG = (e) => (e.kind === 'club' ? `/clubes/${e.org_id}?tab=admin` : `/arenas/${e.org_id}/gerir?aba=federacao`);
+const LINK_ORG = (e) => (e.kind === 'club' ? `/clubes/${e.org_id}/gerir?aba=pagina` : `/arenas/${e.org_id}/gerir?aba=federacao`);
 const linkPublico = (fedId) => `/federacoes/${fedId}?aba=competicoes`;
 const br = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(String(iso || '')) ? iso.split('-').reverse().join('/') : '');
 const sigla = (fed) => texto(fed.acronym || fed.name, 20);
