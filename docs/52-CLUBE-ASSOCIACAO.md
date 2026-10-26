@@ -53,6 +53,8 @@ pessoa do clube.
 | `cases` | sanção disciplinar (advertência, suspensão, multa, exclusão): motivo, prazo, valor, `status`, recurso e decisão | `discipline`/admin; **a própria pessoa** (consulta com `user_id == eu`) | **só o servidor** (`clubDiscipline`) |
 | `ombud` | manifestação da ouvidoria: assunto, texto, `anonymous`, `reporter_uid` (nulo se anônima), `status`, anotações internas. **O id é o protocolo** (10 letras e números maiúsculos) | só `discipline`/admin; quem enviou acompanha o ESTADO pelo servidor | **só o servidor** |
 | `assets` | bem do patrimônio (nome, categoria, quantidade, estado, local, valor) com os **empréstimos** (`loans[]`: quem recebeu, quantidade, saída, devolução combinada, devolução e estado em que voltou) e o `history[]` | `finance`/`sports`/`fiscal`/admin | **só o servidor** (`clubManagement`) |
+| `safeguard` | a proteção de menores de uma pessoa (`{uid}`): versão do compromisso aceito, certidão de antecedentes conferida (`background`: status, emissão, validade, quem conferiu), a certidão **pendente** (`pending_background`, com o caminho do arquivo), última recusa, `designated`/`designated_label`, `cleared_until` | `discipline`/admin (a pessoa lê o próprio pela ação `me`, que não devolve o caminho do arquivo) | **só o servidor** (`clubSafeguarding`) |
+| `minors` | o **responsável legal** do associado menor de idade (`{uid}`): nome, parentesco, telefone, autorização de participação e de uso de imagem, observações | `discipline`/admin | **só o servidor** (`clubSafeguarding`); apagado aos 18 anos |
 | `events` | evento da agenda oficial (competição, curso, assembleia, reunião, prazo…): data, horário, local, `status` (marcado/adiado/cancelado), motivo, `history[]`, `ever_visible`, `visibility`, `pub` e `members` (marcas de leitura mantidas pelo servidor), documentos ligados | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/`sports`/admin leem tudo | **só o servidor** (`clubAgenda`) |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
@@ -401,6 +403,37 @@ disponível/emprestado/atrasado, validação do empréstimo) é a MESMA da feder
 - **Conta excluída**: o bem fica (é do clube); o nome de quem a pessoa era sai do histórico e
   de "quem emprestou".
 
+### 5.8 Proteção de menores do clube (Bloco E2b)
+
+Central do clube → **Proteção de menores** (`?aba=protecao`, `menores`, `protecao-regras`;
+permissão `discipline` ou administração). É a **proteção de menores da federação** com o
+clube no lugar dela: a régua da certidão (`federationCoachingPolicy.js`: validade, vencendo em
+30 dias, conferida por outra pessoa) é a MESMA, e o clube acrescenta o **compromisso de
+conduta** no lugar do curso (`clubSafeguardingPolicy.js`, `functions/clubSafeguarding.js`).
+
+- **Quem precisa estar em dia** (regras do clube; padrão: diretoria e designados): cargo na
+  diretoria com mandato valendo e quem a disciplina **inclui no quadro** (treinador, monitor,
+  voluntário — a pessoa é avisada). Em dia = compromisso aceito na versão em vigor **e**
+  certidão de antecedentes conferida e válida.
+- **A pessoa** (Minha filiação → card "Proteção de menores", `ClubMyProtection`) aceita o
+  compromisso e envia a certidão (PDF ou foto, até 5 MB, para `clube-protecao/{uid}/`; só ela
+  lê). A disciplina é avisada; **ninguém confere a própria certidão**; ao registrar a decisão
+  o servidor **apaga o arquivo** (o clube guarda data, validade e quem conferiu). Recusa leva
+  o motivo à pessoa, que envia outra; revogar tira o "em dia" na hora.
+- **Subir a versão do compromisso** ("Pedir novo aceite de todos") faz todos aceitarem de novo;
+  a versão só sobe, nunca desce.
+- **Associados menores**: quem tem menos de 18 anos pela data de nascimento do cadastro. O
+  próprio menor, a secretaria (`members`) ou a disciplina registram o **responsável legal**
+  (nome, parentesco, telefone, autorização de participação e de uso de imagem, observações de
+  saúde); os dados só a disciplina lê e **somem quando o associado faz 18 anos** (a varredura
+  diária). Sem data de nascimento o servidor recusa registrar (não dá para saber se é menor).
+- **Denúncia**: a ouvidoria ganhou o assunto "Proteção de criança ou adolescente"; o aviso
+  é de prioridade e **nunca leva o texto** (o conteúdo fica na Ouvidoria).
+- **Avisos**: a varredura avisa **uma vez** quem tem a certidão vencendo em 30 dias; a faixa
+  **Hoje** mostra "Certidões para conferir" e "Menores sem responsável" (fonte que falhou é "—",
+  nunca zero).
+- **Conta excluída**: o registro, o responsável e os arquivos (`clube-protecao/{uid}/`) saem.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -504,6 +537,17 @@ disponível/emprestado/atrasado, validação do empréstimo) é a MESMA da feder
     de disponível/atrasado é mexer nos dois. A tela é `AssetsManager` com a entidade do clube
     (`managementScope.js`) — não a bifurque. O conselho fiscal lê, não edita; o `value` das
     abas e os ids de categoria/estado/tipo de quem recebe são gravados.
+32. **A proteção de menores do clube é só do servidor** (`clubSafeguarding`; `safeguard` e `minors`
+    com `write: if false`, leitura só `discipline`/admin — nem o dono lê direto). A régua da
+    certidão é a da federação (`federationCoachingPolicy.js`) e a do clube é `clubSafeguardingPolicy.js`,
+    com **cópia no cliente** (`modules/clubs/domain/safeguarding.js`) e teste de paridade
+    (`functions/clubSafeguarding.parity.test.js`): mexer num lado só quebra o teste. Quatro
+    regras: (a) **o arquivo da certidão é apagado na decisão** e só o servidor o abre (ação
+    `sg_file`, a pessoa só pelo próprio); (b) **ninguém verifica a própria certidão**; (c) o
+    responsável legal é apagado aos 18 anos e só se registra com a data de nascimento
+    conhecida; (d) o aviso da denúncia `minor_protection` não leva o texto. O helper exportado
+    `situacao` é o que a convocação de atletas (Bloco E3) deve usar para recusar quem atuaria com
+    menores sem estar em dia. Os ids de `roles` (`staff`/`designated`) e de parentesco são gravados.
 
 ## 7. Testes
 
@@ -521,6 +565,9 @@ equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de q
 `functions/clubAgenda.parity.test.js`, `tests/rules/clubAgenda.rules.test.js`
 (emulador: equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de
 quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
+`functions/clubSafeguarding.test.js` (compromisso, certidão, conferência apaga o arquivo, ninguém confere a própria, designação, responsável do menor, varredura),
+`functions/clubSafeguarding.parity.test.js`, `tests/rules/clubSafeguarding.rules.test.js` (emulador: só a disciplina lê, ninguém grava),
+`src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
 `tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),
 `functions/clubDiscipline.test.js` (as quatro sanções, recurso uma vez, anular desfaz, multa não renova, ouvidoria anônima e protocolo),

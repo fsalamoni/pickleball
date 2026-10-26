@@ -4,10 +4,12 @@
  * informados, vencimentos). Fonte que falhou mostra "—" e um aviso — nunca zero.
  */
 import React from 'react';
-import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, ShieldCheck, Users } from 'lucide-react';
 import { affiliationCounts, financeSummary, formatBrlCents, normalizeAssociation } from '@/modules/clubs/domain/association';
 import { useClubCases, useClubOmbud } from '@/modules/clubs/hooks/useClubDiscipline';
 import { useClubAssets } from '@/modules/clubs/hooks/useClubManagement';
+import { useClubMinors, useClubSgOverview } from '@/modules/clubs/hooks/useClubSafeguarding';
+import { minorsWithoutGuardian } from '@/modules/clubs/domain/safeguarding';
 import { assetState } from '@/modules/federations/domain/management';
 import { isoDate } from '@/modules/federations/domain/membership';
 import { termStatus } from '@/modules/clubs/domain/staff';
@@ -36,6 +38,11 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
   const ouvidoriaQ = useClubOmbud(club.id, { enabled: veDisciplina });
   const recursos = casosQ.isSuccess ? (casosQ.data || []).filter((s) => s.status === 'appealed').length : null;
   const manifestacoes = ouvidoriaQ.isSuccess ? (ouvidoriaQ.data || []).filter((r) => r.status !== 'closed').length : null;
+  // Proteção de menores: certidões para conferir e menores sem responsável (mesmas chaves do painel).
+  const protecaoQ = useClubSgOverview(club.id, { enabled: veDisciplina });
+  const menoresQ = useClubMinors(club.id, { enabled: veDisciplina });
+  const certidoes = protecaoQ.isSuccess ? (protecaoQ.data?.rows || []).filter((r) => r.pending).length : null;
+  const semResponsavel = menoresQ.isSuccess ? minorsWithoutGuardian(menoresQ.data?.rows) : null;
   // Devolução atrasada: só quem cuida do patrimônio; fonte que falhou é dita, nunca zero.
   const vePatrimonio = admin || perms.includes('finance') || perms.includes('sports');
   const bensQ = useClubAssets(club.id, { enabled: vePatrimonio });
@@ -92,6 +99,21 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
           <div className="mt-3 flex flex-wrap gap-2">
             {recursos > 0 && <V2Button type="button" size="sm" onClick={() => onIrParaAba('sancoes')}>{t('Decidir recursos')}</V2Button>}
             {manifestacoes > 0 && <V2Button type="button" size="sm" variant="subtle" onClick={() => onIrParaAba('ouvidoria')}>{t('Abrir a ouvidoria')}</V2Button>}
+          </div>
+        </div>
+      )}
+
+      {veDisciplina && (protecaoQ.isError || menoresQ.isError || certidoes > 0 || semResponsavel > 0) && (
+        <div data-dica="clube-hoje-protecao">
+          <h2 className="mb-3 font-display text-lg font-bold text-ink">{t('Proteção de menores')}</h2>
+          {(protecaoQ.isError || menoresQ.isError) && <V2ErrorState inline title={t('Não deu para conferir a proteção de menores')} onRetry={() => { protecaoQ.refetch(); menoresQ.refetch(); }} />}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <V2StatCard icon={ShieldCheck} label={t('Certidões para conferir')} value={certidoes == null ? '—' : String(certidoes)} accent={certidoes ? 'acid' : 'ink'} />
+            <V2StatCard icon={Users} label={t('Menores sem responsável')} value={semResponsavel == null ? '—' : String(semResponsavel)} accent={semResponsavel ? 'acid' : 'ink'} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {certidoes > 0 && <V2Button type="button" size="sm" onClick={() => onIrParaAba('protecao')}>{t('Conferir certidões')}</V2Button>}
+            {semResponsavel > 0 && <V2Button type="button" size="sm" variant="subtle" onClick={() => onIrParaAba('menores')}>{t('Ver os menores')}</V2Button>}
           </div>
         </div>
       )}

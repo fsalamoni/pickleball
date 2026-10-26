@@ -168,6 +168,15 @@ describe('ouvidoria do clube', () => {
     expect(avisosPara(db, 'ana')).toHaveLength(0);
   });
 
+  it('⭐ denúncia de proteção de menor é aceita como assunto e o aviso diz que é prioridade, sem o texto', async () => {
+    const db = cenario();
+    const r = await chamar(db, ANA, { action: 'report', kind: 'minor_protection', body: 'Um adulto está sozinho com uma criança no vestiário.', anonymous: true });
+    expect(doc(db, `club_x/c1/ombud/${r.reportId}`)).toMatchObject({ kind: 'minor_protection', reporter_uid: null });
+    const aviso = avisosPara(db, 'disc')[0];
+    expect(aviso.title).toMatch(/proteção de menor/i);
+    expect(JSON.stringify(aviso)).not.toContain('vestiário');
+  });
+
   it('o protocolo diz só o estado: a anônima a quem tem o protocolo, a identificada só a quem enviou', async () => {
     const db = cenario();
     const anon = await chamar(db, ANA, { action: 'report', body: 'Aconteceu algo grave na quadra 2 ontem.', anonymous: true });

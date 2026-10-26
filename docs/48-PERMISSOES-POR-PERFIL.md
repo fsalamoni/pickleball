@@ -467,6 +467,9 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Mandar manifestação à ouvidoria do clube e acompanhar pelo protocolo | ✖ (precisa de conta) | ✔ anônima ou identificada | ✔ | ✔ | — | **Cloud Function** `clubDiscipline` (`report`/`report_status`; só o estado) |
 | Cadastrar bens, emprestar, registrar devolução e dar baixa no patrimônio do clube | ✖ | ✖ | ✖ | ✔ `finance`, `sports` ou admin | — | **Cloud Function** `clubManagement` (`assets`: `write: if false`) |
 | Ver o patrimônio do clube | ✖ | ✖ | ✖ | ✔ `finance`/`sports`/`fiscal`/admin | — | rules (`cxReadPerms`: `assets`) |
+| Aceitar o compromisso de conduta e enviar a certidão de antecedentes (cargo na diretoria ou designado) | ✖ | ✖ | ✔ o próprio, só sendo membro do clube | ✔ o próprio | — | **Cloud Function** `clubSafeguarding` (`pledge`/`sg_submit`); arquivo no Storage `clube-protecao/{uid}/` (só o dono) |
+| Conferir ou revogar certidão, incluir alguém no quadro, mudar as regras e ver quem trabalha com menores | ✖ | ✖ | ✖ | ✔ `discipline` ou admin (nunca a própria certidão) | — | **Cloud Function** `clubSafeguarding` (`safeguard`: `write: if false`; leitura só `discipline`/admin) |
+| Registrar o responsável legal de um associado menor de idade | ✖ | ✖ | ✔ o próprio menor | ✔ `members`, `discipline` ou admin | — | **Cloud Function** `clubSafeguarding` (`guardian_save`; `minors` só `discipline`/admin leem) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |
 | Gravar o Pix do clube (`cfg`) | ✖ | ✖ | ✖ | ✔ **só admin** | — | rules |

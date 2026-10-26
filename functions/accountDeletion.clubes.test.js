@@ -37,16 +37,21 @@ function cenario() {
     'club_x/c1/ombud/o2': { club_id: 'c1', kind: 'conduct', body: 'Relato da Bia', anonymous: false, reporter_uid: 'bia', status: 'open' },
     'club_x/c1/assets/b1': { club_id: 'c1', name: 'Rede', created_by: 'ana', history: [{ action: 'create', by: 'ana', by_name: 'Ana' }, { action: 'loan', by: 'bia', by_name: 'Bia' }], loans: [{ id: 'x1', borrower_name: 'Arena Sol', lent_by: 'ana', lent_by_name: 'Ana' }, { id: 'x2', borrower_name: 'Liga', lent_by: 'bia', lent_by_name: 'Bia' }] },
     'club_x/c1/assets/b2': { club_id: 'c1', name: 'Bolas', created_by: 'bia', history: [{ action: 'create', by: 'bia', by_name: 'Bia' }], loans: [] },
+    'club_x/c1/safeguard/ana': { club_id: 'c1', user_id: 'ana', name: 'Ana', pledge_version: 1, background: { status: 'valid', valid_until: '2027-01-01' } },
+    'club_x/c1/safeguard/bia': { club_id: 'c1', user_id: 'bia', name: 'Bia', pledge_version: 1 },
+    'club_x/c1/minors/ana': { club_id: 'c1', user_id: 'ana', guardian: { name: 'Mãe da Ana', phone: '51999990000' } },
+    'club_x/c1/minors/bia': { club_id: 'c1', user_id: 'bia', guardian: { name: 'Pai do Bia', phone: '51988880000' } },
     'club_card_index/ABCDEFGH23': { club_id: 'c1', user_id: 'ana' },
     'club_card_index/ZZZZZZZZ22': { club_id: 'c1', user_id: 'bia' },
   });
   const auth = createFakeAuth(['ana', 'bia'], { log: db.store.log });
-  return { db, ctx: { db, auth, bucket: createFakeBucket([]) } };
+  const bucket = createFakeBucket(['clube-protecao/ana/cert.pdf', 'clube-protecao/bia/cert.pdf']);
+  return { db, bucket, ctx: { db, auth, bucket } };
 }
 
 describe('excluir a conta e a associação em clubes', () => {
   it('⭐ a filiação encerra sem o nome, o código some, a cobrança fica sem o nome e o cargo é apagado', async () => {
-    const { db, ctx } = cenario();
+    const { db, ctx, bucket } = cenario();
     const r = await executeAccountDeletion(ctx, 'ana', { actor: { uid: 'admin', name: 'Dono' }, reason: 'pedido', hojeISO: '2026-10-25', FieldValue: FakeFieldValue });
     expect(r.status).not.toBe('blocked');
     expect(db.store.docs.get('club_x/c1/aff/ana')).toMatchObject({ status: 'cancelled', user_name: REMOVED_ATHLETE, photo_url: null, card_code: null, note: '' });
@@ -69,6 +74,10 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(bem.history.map((h) => h.by_name)).toEqual(['Usuário removido', 'Bia']);
     expect(bem.loans.map((l) => l.lent_by_name)).toEqual(['Usuário removido', 'Bia']);
     expect(bem.loans[0].borrower_name).toBe('Arena Sol');
+    // proteção de menores: o registro, o responsável do menor e a certidão pendente são apagados (nada deles fica)
+    expect(db.store.docs.get('club_x/c1/safeguard/ana')).toBeUndefined();
+    expect(db.store.docs.get('club_x/c1/minors/ana')).toBeUndefined();
+    expect(bucket.arquivos).toEqual(['clube-protecao/bia/cert.pdf']);
   });
 
   it('a associação de outra pessoa não é tocada', async () => {
@@ -83,5 +92,7 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_x/c1/cases/s2')).toMatchObject({ user_name: 'Bia' });
     expect(db.store.docs.get('club_x/c1/ombud/o2')).toMatchObject({ reporter_uid: 'bia', anonymous: false });
     expect(db.store.docs.get('club_x/c1/assets/b2').history[0].by_name).toBe('Bia');
+    expect(db.store.docs.get('club_x/c1/safeguard/bia')).toMatchObject({ name: 'Bia' });
+    expect(db.store.docs.get('club_x/c1/minors/bia')).toMatchObject({ guardian: { name: 'Pai do Bia' } });
   });
 });
