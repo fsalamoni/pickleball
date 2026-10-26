@@ -1361,7 +1361,8 @@ service cloud.firestore {
       // conta punha o torneio na página e no ranking da casa de qualquer arena.
       allow create: if isOwner(nd().creator_uid)
         && tournamentArenaOk()
-        && tournamentFederationOk();
+        && tournamentFederationOk()
+        && tournamentClubOk();
       // Update: a regra antiga (platform_admin / tournament_admin / criador)
       // continua valendo para todos os campos. Para o campo 'archived'
       // especificamente:
@@ -1382,6 +1383,8 @@ service cloud.firestore {
           || nd().get('creator_uid', null) == od().get('creator_uid', null))
         && (!chg().hasAny(['arena_id', 'arena_confirmed'])
           || tournamentArenaOk())
+        && (!chg().hasAny(['club_id', 'club_name'])
+          || tournamentClubOk())
         // A chancela: o organizador só PEDE (pendente) ou retira — nunca se aprova.
         && (!chg().hasAny(['federation_id', 'federation_sanction'])
           || (tournamentFederationOk()
@@ -1446,6 +1449,13 @@ service cloud.firestore {
             : (nd().player_b_user_id == me() || fedMemberOk(tdoc.federation_id, nd().player_b_user_id))));
     }
     // Sem sede, sede pendente, ou gerir a arena (o admin da plataforma também).
+    // Torneio do clube (Bloco E3b): sem clube, ou a administração / a diretoria esportiva do clube
+    // (`sports`) com a associação ligada. O torneio segue sendo da plataforma; só ganha o selo.
+    function tournamentClubOk() {
+      return nd().get('club_id', null) == null
+        || isPlatformAdmin()
+        || (nd().club_id is string && cxOn() && cxHas(nd().club_id, ['sports']));
+    }
     function tournamentArenaOk() {
       return nd().get('arena_id', null) == null
         || nd().get('arena_confirmed', null) == false

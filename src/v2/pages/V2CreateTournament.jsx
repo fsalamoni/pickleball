@@ -24,6 +24,7 @@ import { t, tk, fmtData } from '@/core/i18n';
 
 // Só baixa o código da federação quando a tela vem da Central (`?federacao=`).
 const FedTournamentOrigin = lazy(() => import('@/v2/components/federations/FedTournamentOrigin'));
+const ClubTournamentOrigin = lazy(() => import('@/v2/components/clubs/ClubTournamentOrigin'));
 
 const VISIBILITY_OPTIONS = [
   { value: TOURNAMENT_VISIBILITY.PUBLIC, title: tk('Público'), description: tk('Aparece na lista pública e aceita inscrições diretas.'), icon: Globe },
@@ -63,6 +64,10 @@ export default function V2CreateTournament() {
   // Pronto (permissão, federação pública, categoria) ⇒ sai já como "Realizado pela".
   const fedId = params.get('federacao') || '';
   const [fedChoice, setFedChoice] = useState(null);
+  // `?clube=<id>`: veio da Central do clube ("Criar torneio do clube"). Pronto (associação ligada e
+  // permissão da diretoria esportiva) ⇒ o torneio sai marcado com `club_id`; senão, é um torneio comum.
+  const clubId = params.get('clube') || '';
+  const [clubChoice, setClubChoice] = useState(null);
   const roleConsent = useRoleConsent('termos-organizador');
 
   const isLastStep = step === WIZARD_STEPS.length - 1;
@@ -86,6 +91,7 @@ export default function V2CreateTournament() {
         starts_at: form.starts_at || null, ends_at: form.ends_at || null, registration_deadline: form.registration_deadline || null,
         scoring: { ruleset: form.ruleset, win_by_two: true },
         arena_id: form.arena_id || null,
+        ...(clubChoice || {}),
       };
       const id = await createMutation.mutateAsync(payload);
       await roleConsent.recordAfterSuccess();
@@ -186,6 +192,11 @@ export default function V2CreateTournament() {
             {fedId && (
               <Suspense fallback={null}>
                 <FedTournamentOrigin federationId={fedId} onChange={setFedChoice} />
+              </Suspense>
+            )}
+            {clubId && (
+              <Suspense fallback={null}>
+                <ClubTournamentOrigin clubId={clubId} onChange={setClubChoice} />
               </Suspense>
             )}
             </>)}

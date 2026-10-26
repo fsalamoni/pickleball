@@ -386,6 +386,12 @@ Residência (vínculo coach ↔ arena).
 Campo extra: `arena_id: string|null` (opcional, vincula torneio
 a uma arena específica). Default null (torneio independente).
 
+### `tournaments/{id}` (torneio do clube — Bloco E3b)
+Campos extras opcionais: `club_id: string|null` (o clube em nome de quem o torneio é feito) e
+`club_name: string` (cópia para exibir, até 120). Quem marca: administração do clube ou `sports`,
+com a flag `club_association` ligada (regra `tournamentClubOk()`). Consulta: só `club_id ==`.
+Ausente = torneio comum. `docs/52` §5.10.
+
 ### `arena_courts/{id}` (Sprint 1 ARE-01)
 Quadras nomeadas da arena (substitui o `court_count: int` legado).
 - `arena_id`, `name` (max 60, obrigatório), `court_type` (`'indoor'|'outdoor'|'covered'`),

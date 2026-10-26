@@ -461,6 +461,25 @@ em `clubSelectionPolicy.js` com cópia no cliente `domain/selection.js` e teste 
 - Início da Central (Hoje): aviso de convites sem resposta; fonte que falhou é "não deu para
   conferir", nunca zero.
 
+### 5.10 Torneios do clube (Bloco E3b)
+
+Central do clube → **Torneios** (`?aba=torneios`; permissão `sports` ou administração). O torneio
+do clube **é o torneio da plataforma** — modalidades, sorteio, inscrições, resultados, ranking
+interno — marcado com dois campos opcionais de `tournaments`: `club_id` (o que a regra confere)
+e `club_name` (cópia para exibir sem ler o clube). **Zero coleção, zero índice, zero função.**
+
+- **Criar**: "Criar torneio do clube" leva a `/torneios/criar?clube=<id>`. Com a flag ligada e a
+  permissão (`ClubTournamentOrigin`), o torneio sai com o selo **"Realizado pelo {clube}"**;
+  sem permissão, sem a associação ou com o clube fora do ar a tela DIZ o porquê e o torneio é
+  criado comum — nunca falha calada.
+- **Onde aparece**: selo no cabeçalho do torneio, na lista de torneios e na página pública do
+  torneio (`ClubTournamentBadge`, lê só os campos gravados); na Central, a lista com "em andamento
+  e por vir", rascunhos e encerrados atrás de um botão; na página pública do clube, os torneios
+  **públicos** (`ClubTournamentsPublic`).
+- **Não é chancela**: ranking oficial e chancela de torneio são da federação (`federation_id`);
+  as duas marcas podem coexistir no mesmo torneio.
+- Falha de consulta diz que não carregou (e não oferece "criar") — nunca "nenhum torneio".
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -585,6 +604,15 @@ em `clubSelectionPolicy.js` com cópia no cliente `domain/selection.js` e teste 
     (nunca uid nem contato) e é refeito a cada mudança; (d) publicada, a convocação não troca de
     critério (prazo, vagas, menores). Os ids de status, papel, documento de viagem e tamanho de
     uniforme são gravados.
+34. **O torneio do clube é só um selo no torneio da plataforma** (`tournaments.club_id` e
+    `club_name`, opcionais). A regra `tournamentClubOk()` — na criação e em qualquer mudança
+    dessas chaves — só deixa marcar quem administra o clube ou é da diretoria esportiva
+    (`cxHas(…, ['sports'])`) **com a flag `club_association` ligada**; torneio sem `club_id`
+    segue como sempre, tirar o selo é livre e editar o resto do torneio não o toca. A consulta
+    dos torneios é **só `club_id ==`** (torneio novo nasce sem `archived`: filtrar
+    `archived == false` no servidor escondia todos), a ordem e o arquivado saem em memória.
+    **Nunca** crie coleção própria para o torneio do clube, e o selo (`ClubTournamentBadge`)
+    não importa o domínio do clube: vive nas listas de torneio e não deve pesá-las.
 
 ## 7. Testes
 
@@ -607,6 +635,8 @@ quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `functions/clubSelection.test.js` (ciclo, trava de menores, vagas, resposta, varredura), `functions/clubSelection.parity.test.js`,
 `tests/rules/clubSelection.rules.test.js` (emulador: pública `pub`, convites só `sports`/admin, ninguém grava),
 `src/modules/clubs/domain/selection.test.js`, `ClubSelectionPanel.runtime.test.jsx`,
+`tests/rules/clubTournaments.rules.test.js` (emulador: quem marca o torneio com o clube, flag desligada, tirar o selo, lista pública),
+`src/modules/clubs/domain/clubTournaments.test.js`, `ClubTournamentsPanel.runtime.test.jsx`,
 `src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
 `tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),

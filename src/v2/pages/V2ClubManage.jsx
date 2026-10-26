@@ -38,6 +38,7 @@ const ClubAgendaPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAgen
 const ClubDisciplinePanel = lazy(() => import('@/v2/components/clubs/manage/ClubDisciplinePanel'));
 const ClubSafeguardingPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSafeguardingPanel'));
 const ClubSelectionPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSelectionPanel'));
+const ClubTournamentsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubTournamentsPanel'));
 const ClubAssetsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAssetsPanel'));
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
@@ -129,6 +130,7 @@ function Central({ clubId }) {
         {['sancoes', 'ouvidoria'].includes(tab) && podeDisciplina && <ClubDisciplinePanel club={club} affiliationsQ={affiliationsQ} tab={tab} />}
         {['protecao', 'menores', 'protecao-regras'].includes(tab) && podeDisciplina && <ClubSafeguardingPanel club={club} affiliationsQ={affiliationsQ} tab={tab} />}
         {tab === 'selecao' && podeEsporte && <ClubSelectionPanel club={club} affiliationsQ={affiliationsQ} />}
+        {tab === 'torneios' && podeEsporte && <ClubTournamentsPanel club={club} />}
         {tab === 'cobrancas' && <ClubFinancePanel club={club} chargesQ={chargesQ} />}
         {tab === 'planos' && <ClubPlansTab club={club} plansQ={plansQ} canEdit={podeFinancas} canAdopt={podeMembros} />}
         {tab === 'pix' && admin && <ClubPixTab club={club} />}

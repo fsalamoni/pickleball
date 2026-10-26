@@ -25,6 +25,7 @@ import { t } from '@/core/i18n';
 const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
 const ClubDocsPublic = lazy(() => import('@/v2/components/clubs/association/ClubDocsPublic'));
 const ClubAgendaPublic = lazy(() => import('@/v2/components/clubs/association/ClubAgendaPublic'));
+const ClubTournamentsPublic = lazy(() => import('@/v2/components/clubs/association/ClubTournamentsPublic'));
 const ClubSelectionPublic = lazy(() => import('@/v2/components/clubs/association/ClubSelectionPublic'));
 
 /** Os planos de associação na vitrine: quem chega pelo link vê o que ganha e entra para se associar. */
@@ -61,6 +62,7 @@ function PublicClubPlans({ club, isAuthenticated, docId, eventId, agendaInteira 
       <ClubSponsorsStrip clubId={club.id} />
       <Suspense fallback={null}><ClubAgendaPublic club={club} publica eventId={eventId} compacto={!eventId && !agendaInteira} /></Suspense>
       <Suspense fallback={null}><ClubDocsPublic club={club} publica docId={docId} compacto={!docId} /></Suspense>
+      <Suspense fallback={null}><ClubTournamentsPublic clubId={club.id} /></Suspense>
       <Suspense fallback={null}><ClubSelectionPublic clubId={club.id} /></Suspense>
       <Suspense fallback={null}><ClubAccountsPublic clubId={club.id} /></Suspense>
     </section>
