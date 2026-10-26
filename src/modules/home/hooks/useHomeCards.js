@@ -32,7 +32,11 @@ export function useHomeCardsContext() {
   const treino = true;
   const mercado = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const federacao = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
-  return useMemo(() => ({ evolucao, treino, mercado, federacao }), [evolucao, treino, mercado, federacao]);
+  const associacaoClube = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
+  return useMemo(
+    () => ({ evolucao, treino, mercado, federacao, associacaoClube }),
+    [evolucao, treino, mercado, federacao, associacaoClube],
+  );
 }
 
 /**

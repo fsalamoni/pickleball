@@ -115,6 +115,10 @@ as dicas ligadas, o fim do artigo ganha **"Quer fazer agora?" → Mostre na
 tela**: ler e, em seguida, fazer. Só aparecem os guias que valem para a pessoa
 (flags e papel) — "Cadastrar quadras" não é oferecido a quem não gere arena.
 
+Os dois artigos do clube como associação levam os guias `clube-associar` e
+`clube-gerir` (atrás de `club_association`, com cinco pontos de dica em
+`/clubes/*` e `/clubes/*/gerir` — `docs/52-CLUBE-ASSOCIACAO.md` §5.15).
+
 ### 2.7 Configurações → Dicas
 
 O mesmo interruptor, "Ver os guias", "Mostrar de novo os pontos já vistos" e
