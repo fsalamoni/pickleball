@@ -728,4 +728,10 @@ export default {
   "Crie o primeiro: ele já sai com o selo \"Realizado pelo clube\" e entra na página pública.": "Crea el primero: sale con el sello \"Realizado por el club\" y entra en la página pública.",
   "Em andamento e por vir": "En curso y por venir",
   "Mostrar os encerrados": "Mostrar los terminados",
+  "Convocação salva. {n} associados avisados.": "Convocatoria guardada. {n} socios avisados.",
+  "Avisar os associados em dia": "Avisar a los socios al día",
+  "Os associados em dia recebem um aviso com a convocação.": "Los socios al día reciben un aviso con la convocatoria.",
+  "A convocação já foi divulgada: a mudança fica no histórico, com o motivo, e os associados são avisados.": "La convocatoria ya se publicó: el cambio queda en el historial, con el motivo, y se avisa a los socios.",
+  "Resultado salvo. {n} associados avisados.": "Resultado guardado. {n} socios avisados.",
+  "O resultado já foi divulgado: a correção fica no histórico, com o motivo, e os associados são avisados.": "El resultado ya se publicó: la corrección queda en el historial, con el motivo, y se avisa a los socios.",
 };

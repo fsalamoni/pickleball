@@ -728,4 +728,10 @@ export default {
   "Crie o primeiro: ele já sai com o selo \"Realizado pelo clube\" e entra na página pública.": "Create the first one: it carries the \"Run by the club\" badge and appears on the public page.",
   "Em andamento e por vir": "Ongoing and upcoming",
   "Mostrar os encerrados": "Show finished",
+  "Convocação salva. {n} associados avisados.": "Call saved. {n} members notified.",
+  "Avisar os associados em dia": "Notify members in good standing",
+  "Os associados em dia recebem um aviso com a convocação.": "Members in good standing receive a notice with the call.",
+  "A convocação já foi divulgada: a mudança fica no histórico, com o motivo, e os associados são avisados.": "The call was already published: the change goes to the history, with the reason, and members are notified.",
+  "Resultado salvo. {n} associados avisados.": "Result saved. {n} members notified.",
+  "O resultado já foi divulgado: a correção fica no histórico, com o motivo, e os associados são avisados.": "The result was already published: the correction goes to the history, with the reason, and members are notified.",
 };

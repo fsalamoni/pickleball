@@ -7,8 +7,8 @@
  * chamada, de onde vêm os eventos (e quais o leitor pode ver), de onde vêm os
  * documentos ligados, para onde os links apontam e o que a invalidação atinge. A régua
  * do evento é a MESMA (`functions/federationAgendaPolicy.js`, com a cópia em
- * `domain/agenda`). O clube ainda não tem convocação/resultado de reunião, seguir nem
- * comentários: `hasMeetings`/`hasFollow`/`hasComments` dizem onde a tela os esconde.
+ * `domain/agenda`). O clube tem convocação e resultado de reunião (Bloco F1), mas não
+ * seguir nem comentários: `hasMeetings`/`hasFollow`/`hasComments` dizem onde a tela os esconde.
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { tk } from '@/core/i18n';
@@ -32,8 +32,8 @@ export const clubAgendaEntity = (club, { publica = false, member = false, staff 
   id: club?.id, kind: 'club', name: club?.name || '', acronym: club?.name || club?.id, slug: club?.id, modules: { calendar: true, official_docs: true }, publica, member, staff,
 });
 
-/** A reunião tem convocação, pauta e ata? (Federação: sim; clube: no Bloco F.) */
-export const hasMeetings = (entity) => !isClubAgenda(entity);
+/** A reunião tem convocação, pauta e ata? (Federação e clube: sim — Bloco F1.) */
+export const hasMeetings = () => true;
 /** Seguir as publicações oficiais e comentar o evento são da federação. */
 export const hasFollow = (entity) => !isClubAgenda(entity);
 export const hasComments = (entity) => !isClubAgenda(entity);
