@@ -540,4 +540,4 @@ Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
   `listClubLinkedGameDays`/`listArenaLinkedGameDays` filtram o vínculo **e**
   `visibility == 'public'`.
 - `hooks/useGameDayLink.js` e telas `v2/components/games/GameDayLinkSection`,
-  `GameDayGuestsCard`, `LinkedGameDaysSection`. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.
+  `GameDayLinkGuests` (dentro da seção), `LinkedGameDaysSection`. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.

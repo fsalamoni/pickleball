@@ -654,8 +654,10 @@ edição. Domínio em `modules/games/domain/gameDayLink.js` (fonte única).
   regra recusa a consulta), e o engajamento da arena (`ArenaEngagementPanel`)
   também.
 - **Telas**: seção "Clube ou arena" nas Configurações do dia
-  (`GameDayLinkSection`, com confirmação antes de gravar), "Convidados do vínculo"
-  (`GameDayGuestsCard`, só com vínculo), "Dias de jogo vinculados" na página do
+  (`GameDayLinkSection`, com confirmação antes de gravar), com o clube/arena
+  vinculado e os "Convidados" (`GameDayLinkGuests`) DENTRO dela, no mesmo desenho
+  da lista de organizadores (linhas brancas com ícone/avatar, selo e botão discreto
+  de desfazer) — não há cartão solto no dia; "Dias de jogo vinculados" na página do
   clube e da arena (`LinkedGameDaysSection`; some sem dias, diz quando falhou) e o
   selo "Estatísticas: {nome}" nas listas do Jogar. Lista de opções:
   `useGameDayLinkOptions` (falha ≠ "você não administra nenhum").
