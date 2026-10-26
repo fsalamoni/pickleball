@@ -11,21 +11,23 @@ import { toast } from 'sonner';
 import { FileText, Gavel, HandHeart, Vote } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { CHALLENGE_MIN, STATUS, windowOpen } from '@/modules/federations/domain/elections';
-import { docPublicPath } from '@/modules/federations/domain/acervo';
-import { useCandidacyInfo, useElectionAction, useElectionCandidacies, useMyCommissionElections, usePublicElections } from '@/modules/federations/hooks/useElections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { V2Button, V2EmptyState, V2ErrorState, V2Field, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import { CandidacyCard, ElectionStatusBadge, ElectionTimeline, PositionLine, ResultChart, hojeBr } from './electionsUi';
 import ElectionMemberCard from './ElectionMemberCard';
 import ElectionConductPanel from './ElectionConductPanel';
+import {
+  electionsPathFor, isClubElections, noticeDocPathFor, useScopedCandidacies, useScopedCandidacyInfo, useScopedCommissionElections, useScopedElectionAction, useScopedPublicElections,
+} from './electionsScope';
 
 const ENCERRADAS = [STATUS.CLOSED, STATUS.CANCELLED];
 
 /** O pedido de apoio do link da chapa. */
 function Apoio({ federation, eleicaoId, chapaId }) {
-  const info = useCandidacyInfo(federation.id, eleicaoId, chapaId);
-  const acao = useElectionAction();
+  const info = useScopedCandidacyInfo(federation, eleicaoId, chapaId);
+  const acao = useScopedElectionAction(federation);
+  const clube = isClubElections(federation);
   const [feito, setFeito] = useState(false);
   if (info.isLoading) return <V2Skeleton lines={2} />;
   if (info.isError) return <V2ErrorState inline title={t('Este link de apoio não abriu')} description={info.error?.message} onRetry={info.refetch} />;
@@ -35,7 +37,7 @@ function Apoio({ federation, eleicaoId, chapaId }) {
     <V2Surface className="space-y-3 p-5" data-dica="federacao-eleicao-apoio">
       <p className="flex items-center gap-2 font-display text-lg text-ink"><HandHeart className="h-5 w-5" aria-hidden="true" />{t('Apoiar a chapa "{nome}"', { nome: c.name })}</p>
       <p className="text-sm text-gray-500">{c.position} · {c.members.map((m) => m.name).join(', ')}</p>
-      <p className="text-sm text-gray-500">{t('Apoios: {n} de {m}. O apoio só deixa a chapa concorrer — não é voto. Cada filiado apoia uma chapa por cargo.', { n: c.endorsement_count, m: c.endorsements_needed })}</p>
+      <p className="text-sm text-gray-500">{clube ? t('Apoios: {n} de {m}. O apoio só deixa a chapa concorrer — não é voto. Cada associado apoia uma chapa por cargo.', { n: c.endorsement_count, m: c.endorsements_needed }) : t('Apoios: {n} de {m}. O apoio só deixa a chapa concorrer — não é voto. Cada filiado apoia uma chapa por cargo.', { n: c.endorsement_count, m: c.endorsements_needed })}</p>
       {feito ? <p className="text-sm font-semibold text-green-800" role="status">{t('Apoio registrado. Obrigado!')}</p>
         : info.data.canEndorse
           ? <V2Button type="button" disabled={acao.isPending} onClick={() => acao.mutate({ federationId: federation.id, action: 'endorse', electionId: eleicaoId, candidacyId: chapaId }, { onSuccess: () => { setFeito(true); info.refetch(); }, onError: (er) => toast.error(er.message) })}>{t('Apoiar esta chapa')}</V2Button>
@@ -45,8 +47,8 @@ function Apoio({ federation, eleicaoId, chapaId }) {
 }
 
 function Chapas({ federation, e, meUid, podeImpugnar }) {
-  const q = useElectionCandidacies(federation.id, e.id);
-  const acao = useElectionAction();
+  const q = useScopedCandidacies(federation, e.id);
+  const acao = useScopedElectionAction(federation);
   const [alvo, setAlvo] = useState(null);
   const [motivo, setMotivo] = useState('');
   if (q.isError) return <V2ErrorState inline title={t('Não carregaram as chapas')} onRetry={q.refetch} />;
@@ -93,8 +95,8 @@ function Eleicao({ federation, e, meUid, memberOf, conduz, appLink }) {
         <div className="flex flex-wrap items-center gap-2"><h3 id={`el-${e.id}`} className="font-display text-2xl text-ink">{e.title}</h3><ElectionStatusBadge e={e} hoje={hoje} /></div>
         {e.description && <p className="whitespace-pre-line text-sm text-gray-600">{e.description}</p>}
         <div className="flex flex-wrap gap-2">
-          {e.notice_doc_id && <V2Button asChild size="sm" variant="ghost"><Link to={docPublicPath(federation, e.notice_doc_id)}><FileText className="h-4 w-4" />{t('Edital {codigo}', { codigo: e.notice_code || '' })}</Link></V2Button>}
-          {e.minutes_doc_id && <V2Button asChild size="sm" variant="ghost"><Link to={docPublicPath(federation, e.minutes_doc_id)}><FileText className="h-4 w-4" />{t('Ata {codigo}', { codigo: e.minutes_code || '' })}</Link></V2Button>}
+          {e.notice_doc_id && <V2Button asChild size="sm" variant="ghost"><Link to={noticeDocPathFor(federation, e.notice_doc_id)}><FileText className="h-4 w-4" />{t('Edital {codigo}', { codigo: e.notice_code || '' })}</Link></V2Button>}
+          {e.minutes_doc_id && <V2Button asChild size="sm" variant="ghost"><Link to={noticeDocPathFor(federation, e.minutes_doc_id)}><FileText className="h-4 w-4" />{t('Ata {codigo}', { codigo: e.minutes_code || '' })}</Link></V2Button>}
         </div>
         {!e.notice_doc_id && e.notice_text && (
           <details className="rounded-2xl border border-gray-100 bg-white px-4 py-3">
@@ -139,16 +141,17 @@ function Eleicao({ federation, e, meUid, memberOf, conduz, appLink }) {
 export default function ElectionsPublic({ federation, meUid = null, memberOf = false }) {
   const { isAuthenticated } = useAuth();
   const [params] = useSearchParams();
-  const lista = usePublicElections(federation.id);
-  const comissao = useMyCommissionElections({ enabled: Boolean(meUid) });
+  const lista = useScopedPublicElections(federation);
+  const comissao = useScopedCommissionElections(federation, { enabled: Boolean(meUid) });
+  const clube = isClubElections(federation);
   const apoiar = params.get('apoiar');
   const eleicaoDoApoio = params.get('eleicao');
   // Na página pública (sem conta aqui), quem está logado age no app.
-  const appLink = isAuthenticated && !meUid ? `/federacoes/${encodeURIComponent(federation.id)}?aba=eleicoes` : null;
+  const appLink = isAuthenticated && !meUid ? electionsPathFor({ ...federation, publica: false }) : null;
 
   if (lista.isError) return <V2ErrorState title={t('Não carregaram as eleições')} onRetry={lista.refetch} />;
   if (lista.isLoading) return <V2Skeleton lines={5} />;
-  const daComissao = (comissao.data || []).filter((e) => e.federation_id === federation.id && e.status !== STATUS.DRAFT);
+  const daComissao = (comissao.data || []).filter((e) => (e.federation_id || e.club_id) === federation.id && e.status !== STATUS.DRAFT);
   const porId = new Map([...(lista.data || []), ...daComissao].map((e) => [e.id, e]));
   const todas = [...porId.values()].sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
   const atuais = todas.filter((e) => !ENCERRADAS.includes(e.status));
@@ -160,9 +163,9 @@ export default function ElectionsPublic({ federation, meUid = null, memberOf = f
     <div id="fed-eleicoes" className="space-y-8">
       {apoiar && eleicaoDoApoio && (meUid
         ? <Apoio federation={federation} eleicaoId={eleicaoDoApoio} chapaId={apoiar} />
-        : <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">{t('Para apoiar a chapa, entre no app com a sua conta de filiado.')}</p>)}
+        : <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">{clube ? t('Para apoiar a chapa, entre no app com a sua conta de associado.') : t('Para apoiar a chapa, entre no app com a sua conta de filiado.')}</p>)}
       {!todas.length ? (
-        <V2EmptyState icon={Vote} title={t('Nenhuma eleição publicada')} description={t('Quando a federação publicar um edital, o calendário, as chapas e o resultado aparecem aqui.')} />
+        <V2EmptyState icon={Vote} title={t('Nenhuma eleição publicada')} description={clube ? t('Quando o clube publicar um edital, o calendário, as chapas e o resultado aparecem aqui.') : t('Quando a federação publicar um edital, o calendário, as chapas e o resultado aparecem aqui.')} />
       ) : (
         <>
           {atuais.map(mostrar)}

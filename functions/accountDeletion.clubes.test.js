@@ -41,6 +41,12 @@ function cenario() {
     'club_x/c1/safeguard/bia': { club_id: 'c1', user_id: 'bia', name: 'Bia', pledge_version: 1 },
     'club_x/c1/minors/ana': { club_id: 'c1', user_id: 'ana', guardian: { name: 'Mãe da Ana', phone: '51999990000' } },
     'club_x/c1/minors/bia': { club_id: 'c1', user_id: 'bia', guardian: { name: 'Pai do Bia', phone: '51988880000' } },
+    'club_x/c1/elections/el1': { club_id: 'c1', title: 'Eleições 2027', status: 'closed', created_by: 'ana', created_by_name: 'Ana', commission_uids: ['ana', 'bia'], commission: [{ uid: 'ana', name: 'Ana', role: 'presidente' }, { uid: 'bia', name: 'Bia', role: 'membro' }] },
+    'club_x/c1/voters/ana': { club_id: 'c1', election_id: 'el1', user_id: 'ana', kind: 'person', name: 'Ana', weight: 1 },
+    'club_x/c1/voters/bia': { club_id: 'c1', election_id: 'el1', user_id: 'bia', kind: 'person', name: 'Bia', weight: 1 },
+    'club_x/c1/candidacies/ch1': { club_id: 'c1', election_id: 'el1', name: 'Chapa A', status: 'accepted', member_uids: ['ana', 'bia'], members: [{ uid: 'ana', name: 'Ana', role: 'Presidente' }, { uid: 'bia', name: 'Bia', role: 'Tesoureira' }] },
+    'club_x/c1/endorsements/en1': { club_id: 'c1', election_id: 'el1', user_id: 'ana', candidacy_id: 'ch1' },
+    'club_x/c1/endorsements/en2': { club_id: 'c1', election_id: 'el1', user_id: 'bia', candidacy_id: 'ch1' },
     'club_card_index/ABCDEFGH23': { club_id: 'c1', user_id: 'ana' },
     'club_card_index/ZZZZZZZZ22': { club_id: 'c1', user_id: 'bia' },
   });
@@ -78,6 +84,17 @@ describe('excluir a conta e a associação em clubes', () => {
     expect(db.store.docs.get('club_x/c1/safeguard/ana')).toBeUndefined();
     expect(db.store.docs.get('club_x/c1/minors/ana')).toBeUndefined();
     expect(bucket.arquivos).toEqual(['clube-protecao/bia/cert.pdf']);
+    // eleições: colégio, chapa e comissão ficam (registro da eleição) sem o nome dela; o apoio dado é apagado
+    expect(db.store.docs.get('club_x/c1/voters/ana')).toMatchObject({ name: 'Usuário removido', weight: 1 });
+    expect(db.store.docs.get('club_x/c1/voters/bia').name).toBe('Bia');
+    const chapa = db.store.docs.get('club_x/c1/candidacies/ch1');
+    expect(chapa.members.map((m) => m.name)).toEqual(['Usuário removido', 'Bia']);
+    expect(chapa.members[1].role).toBe('Tesoureira');
+    const eleicao = db.store.docs.get('club_x/c1/elections/el1');
+    expect(eleicao.created_by_name).toBe('Usuário removido');
+    expect(eleicao.commission.map((m) => m.name)).toEqual(['Usuário removido', 'Bia']);
+    expect(db.store.docs.get('club_x/c1/endorsements/en1')).toBeUndefined();
+    expect(db.store.docs.get('club_x/c1/endorsements/en2')).toBeTruthy();
   });
 
   it('a associação de outra pessoa não é tocada', async () => {

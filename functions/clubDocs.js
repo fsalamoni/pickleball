@@ -334,6 +334,41 @@ async function file(ctx, actor, data, { club, perms }) {
 
 const ACOES = { save, delete: remove, publish, rectify, visibility, withdraw, notify };
 
+/**
+ * Cria e PUBLICA um ato só de texto (sem arquivo), pela mesma régua e numeração do
+ * `publish`: o edital e a ata das eleições (`clubElections.js`). Quem chama já conferiu
+ * a permissão. Não avisa ninguém (a eleição avisa pelo caminho dela).
+ */
+async function publicarAtoDeTexto(ctx, actor, club, input) {
+  const value = exigeValido({ ...input, files: [], media_links: [], relations: [] });
+  const ref = col(ctx, club.id, DOCS).doc();
+  const ano = anoBrasil(ctx.now);
+  const seqRef = col(ctx, club.id, SEQ).doc(DOCS);
+  const resultado = await ctx.db.runTransaction(async (tr) => {
+    const seqSnap = await tr.get(seqRef);
+    let number = null;
+    if (A.TYPES[value.type].numbered) {
+      const contadores = { ...((seqSnap.data() || {}).counters || {}) };
+      const chave = A.counterKey(value.type, ano);
+      number = (Number(contadores[chave]) || 0) + 1;
+      contadores[chave] = number;
+      tr.set(seqRef, { club_id: club.id, counters: contadores, updated_at_ms: ctx.now });
+    }
+    const code = A.codeOf(value.type, number, ano);
+    const ts = ctx.Timestamp.fromMillis(ctx.now);
+    tr.set(ref, {
+      club_id: club.id, ...value, status: A.STATUS.PUBLISHED, number, year: ano, code, ...P.readFlags(A.STATUS.PUBLISHED, value.visibility),
+      version: 1, version_reason: '', version_at_ms: ctx.now, versions: [],
+      created_by: actor.uid, created_by_name: texto(actor.name, 80), created_at: ts, created_at_ms: ctx.now,
+      published_at: ts, published_at_ms: ctx.now, published_by: actor.uid, published_by_name: texto(actor.name, 80),
+      updated_at: ts, updated_at_ms: ctx.now,
+    });
+    return { number, code };
+  });
+  await a.auditoria(ctx, actor, 'club_doc_publish', { club_id: club.id, doc_id: ref.id, code: resultado.code, type: value.type, origin: input.origin || '' });
+  return { docId: ref.id, ...resultado };
+}
+
 async function docs(ctx, actor, data = {}) {
   const c = await contexto(ctx, actor, data);
   if (data.action === 'file') return file(ctx, actor, data, c);
@@ -343,4 +378,4 @@ async function docs(ctx, actor, data = {}) {
   return fn(ctx, actor, data, c);
 }
 
-module.exports = { docs, DOCS, SEQ, VERSIONS_MAX };
+module.exports = { docs, publicarAtoDeTexto, DOCS, SEQ, VERSIONS_MAX };

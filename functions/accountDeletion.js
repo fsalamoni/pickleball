@@ -559,6 +559,24 @@ async function coletarAssociacoesDeClube(db, uid) {
       const doc = await base.collection(kind).doc(uid).get(); // eslint-disable-line no-await-in-loop
       if (doc.exists) { total += 1; deletes.push(doc.ref); }
     }
+    // Eleições (Bloco F2): o colégio, as chapas e a comissão FICAM (são o registro da eleição), sem o nome; o apoio dado a uma chapa é
+    // APAGADO; a cédula do voto secreto (`club_ballots`) nunca teve o uid. O nome de quem preparou o edital sai.
+    const eleitores = await base.collection('voters').where('user_id', '==', uid).limit(QUERY_LIMIT + 1).get();
+    eleitores.docs.slice(0, QUERY_LIMIT).forEach((d) => {
+      const x = d.data() || {};
+      if (x.kind === 'person' && x.name !== REMOVED_USER) { total += 1; itens.push({ ref: d.ref, patch: { name: REMOVED_USER } }); }
+    });
+    const chapas = await base.collection('candidacies').where('member_uids', 'array-contains', uid).limit(QUERY_LIMIT + 1).get();
+    chapas.docs.slice(0, QUERY_LIMIT).forEach((d) => { const patch = patchCandidacy(d.data() || {}, uid); if (patch) { total += 1; itens.push({ ref: d.ref, patch }); } });
+    const comissoes = await base.collection('elections').where('commission_uids', 'array-contains', uid).limit(QUERY_LIMIT + 1).get();
+    comissoes.docs.slice(0, QUERY_LIMIT).forEach((d) => {
+      const commission = patchArrayItems((d.data() || {}).commission, uid, { name: ['name'], label: REMOVED_USER });
+      if (commission) { total += 1; itens.push({ ref: d.ref, patch: { commission } }); }
+    });
+    const feitas = await base.collection('elections').where('created_by', '==', uid).limit(QUERY_LIMIT + 1).get();
+    feitas.docs.slice(0, QUERY_LIMIT).forEach((d) => { if ((d.data() || {}).created_by_name !== REMOVED_USER) { total += 1; itens.push({ ref: d.ref, patch: { created_by_name: REMOVED_USER } }); } });
+    const apoios = await base.collection('endorsements').where('user_id', '==', uid).limit(QUERY_LIMIT + 1).get();
+    apoios.docs.slice(0, QUERY_LIMIT).forEach((d) => { total += 1; deletes.push(d.ref); });
   }
   return { itens, deletes, truncated: clubes.size > QUERY_LIMIT, count: total };
 }

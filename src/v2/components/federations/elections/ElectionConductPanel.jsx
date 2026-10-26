@@ -11,13 +11,14 @@ import { AlertTriangle, Ban, FileText, Gavel, Lock, Pencil, Play, Square, Trophy
 import {
   CANDIDACY_STATUS, REASON_MIN, STATUS, TODO_LABEL, challengeReady, commissionTodo, votingClosesMs, votingOpensMs,
 } from '@/modules/federations/domain/elections';
-import { useElectionAction, useElectionCandidacies, useElectionVoters } from '@/modules/federations/hooks/useElections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { BuscaLista, MostrarMais, useBuscaLista } from '../manage/listTools';
 import FedPersonPicker from '../manage/FedPersonPicker';
 import { fmtNumero, t } from '@/core/i18n';
 import { CandidacyCard, ElectionStatusBadge, ElectionTimeline, Participation, ResultChart, hojeBr } from './electionsUi';
+import { isClubElections, useScopedCandidacies, useScopedElectionAction, useScopedVoters } from './electionsScope';
+import ClubPosseDialog from './ClubPosseDialog';
 
 const CAMPOS_ELEITOR = ['name'];
 const nomeDaPessoa =(a) => a?.platform_name || a?.full_name || a?.display_name || '';
@@ -47,13 +48,14 @@ function ComMotivo({ pedido, onClose, onConfirm, loading }) {
 }
 
 function Chapas({ federation, e, podeConduzir, executar, pendente }) {
-  const q = useElectionCandidacies(federation.id, e.id, { all: true });
+  const q = useScopedCandidacies(federation, e.id, { all: true });
+  const clube = isClubElections(federation);
   const [pedido, setPedido] = useState(null);
   const hoje = hojeBr();
   if (q.isError) return <V2ErrorState inline title={t('Não carregaram as chapas')} onRetry={q.refetch} />;
   if (q.isLoading) return <V2Skeleton lines={3} />;
   const chapas = (q.data || []).filter((c) => c.status !== CANDIDACY_STATUS.WITHDRAWN || podeConduzir);
-  if (!chapas.length) return <V2EmptyState icon={Users} title={t('Nenhuma chapa registrada ainda')} description={e.status === STATUS.PUBLISHED ? t('Os filiados registram as chapas pela aba Eleições da página da federação, no prazo do edital.') : undefined} />;
+  if (!chapas.length) return <V2EmptyState icon={Users} title={t('Nenhuma chapa registrada ainda')} description={e.status === STATUS.PUBLISHED ? (clube ? t('Os associados registram as chapas pela aba Eleições da página do clube, no prazo do edital.') : t('Os filiados registram as chapas pela aba Eleições da página da federação, no prazo do edital.')) : undefined} />;
   const julgar = e.status === STATUS.PUBLISHED && podeConduzir;
   const confirmar = (motivo) => {
     const p = pedido;
@@ -106,8 +108,8 @@ function Chapas({ federation, e, podeConduzir, executar, pendente }) {
 
 /** A mesa presencial: quem votou na mesa e os totais de cada cargo (precisam fechar com o peso). */
 function Presencial({ federation, e, executar, pendente }) {
-  const votersQ = useElectionVoters(federation.id, e.id);
-  const chapasQ = useElectionCandidacies(federation.id, e.id, { all: true });
+  const votersQ = useScopedVoters(federation, e.id);
+  const chapasQ = useScopedCandidacies(federation, e.id, { all: true });
   const [marcados, setMarcados] = useState(() => new Set());
   const [totais, setTotais] = useState({});
   const faltam = useMemo(() => (votersQ.data || []).filter((v) => !v.voted_at_ms), [votersQ.data]);
@@ -160,7 +162,9 @@ function Comissao({ e, executar, pendente, onClose }) {
 }
 
 export default function ElectionConductPanel({ federation, election: e, isAdmin = false, canConduct = false, onEdit }) {
-  const acao = useElectionAction();
+  const acao = useScopedElectionAction(federation);
+  const clube = isClubElections(federation);
+  const [posse, setPosse] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [cancelar, setCancelar] = useState(false);
   const [comissao, setComissao] = useState(false);
@@ -169,7 +173,7 @@ export default function ElectionConductPanel({ federation, election: e, isAdmin 
   const [fimMandato, setFimMandato] = useState('');
   const hoje = hojeBr();
   const agora = Date.now();
-  const chapasQ = useElectionCandidacies(federation.id, e.id, { all: true, enabled: canConduct || isAdmin });
+  const chapasQ = useScopedCandidacies(federation, e.id, { all: true, enabled: canConduct || isAdmin });
   const todo = chapasQ.isSuccess ? commissionTodo(e, chapasQ.data, { hoje, nowMs: agora }) : [];
   const executar = (payload, ok, depois) => acao.mutate({ federationId: federation.id, electionId: e.id, ...payload }, {
     onSuccess: (res) => { if (ok) toast.success(ok); if (payload.action === 'count') setApuracao(res.results); depois?.(res); },
@@ -192,7 +196,7 @@ export default function ElectionConductPanel({ federation, election: e, isAdmin 
         )}
       </header>
 
-      {semComissao && e.status !== STATUS.CLOSED && e.status !== STATUS.CANCELLED && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{t('Sem comissão eleitoral nomeada: o admin da federação conduz. O ideal é nomear uma comissão independente.')}</p>}
+      {semComissao && e.status !== STATUS.CLOSED && e.status !== STATUS.CANCELLED && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{clube ? t('Sem comissão eleitoral nomeada: a administração do clube conduz. O ideal é nomear uma comissão independente.') : t('Sem comissão eleitoral nomeada: o admin da federação conduz. O ideal é nomear uma comissão independente.')}</p>}
       {comissao && <Comissao e={e} executar={executar} pendente={acao.isPending} onClose={() => setComissao(false)} />}
       {e.status === STATUS.CANCELLED && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800">{t('Cancelada: {motivo}', { motivo: e.cancel_reason || '—' })}</p>}
 
@@ -225,7 +229,7 @@ export default function ElectionConductPanel({ federation, election: e, isAdmin 
               {e.mode !== 'online' && !e.presential && <Presencial federation={federation} e={e} executar={executar} pendente={acao.isPending} />}
               <div className="flex flex-wrap gap-2">
                 <V2Button type="button" variant="secondary" disabled={acao.isPending} onClick={() => executar({ action: 'count' })}>{t('Apurar (prévia só da comissão)')}</V2Button>
-                <V2Button type="button" disabled={acao.isPending || (e.mode !== 'online' && !e.presential)} onClick={() => setConfirm({ action: 'publish_result', title: t('Publicar o resultado?'), description: t('A apuração é refeita no servidor, o resultado vai para a página e a ata para o acervo. Todos os filiados são avisados.'), label: t('Publicar'), ok: t('Resultado publicado.'), governanca: isAdmin })} data-dica="federacao-eleicao-resultado"><Trophy className="h-4 w-4" />{t('Publicar o resultado')}</V2Button>
+                <V2Button type="button" disabled={acao.isPending || (e.mode !== 'online' && !e.presential)} onClick={() => setConfirm({ action: 'publish_result', title: t('Publicar o resultado?'), description: clube ? t('A apuração é refeita no servidor, o resultado vai para a página e a ata para os documentos do clube. Todos os associados são avisados.') : t('A apuração é refeita no servidor, o resultado vai para a página e a ata para o acervo. Todos os filiados são avisados.'), label: t('Publicar'), ok: t('Resultado publicado.'), governanca: isAdmin && !clube })} data-dica="federacao-eleicao-resultado"><Trophy className="h-4 w-4" />{t('Publicar o resultado')}</V2Button>
               </div>
               {apuracao && <ResultChart results={apuracao} />}
             </div>
@@ -234,7 +238,8 @@ export default function ElectionConductPanel({ federation, election: e, isAdmin 
             <div className="space-y-3">
               <ResultChart results={e.results || []} />
               {e.minutes_code && <p className="text-sm text-gray-500">{t('Ata no acervo: {codigo}', { codigo: e.minutes_code })}</p>}
-              {isAdmin && !e.governance_applied && <V2Button type="button" variant="secondary" disabled={acao.isPending} onClick={() => setConfirm({ action: 'apply_governance', title: t('Levar os eleitos para a governança?'), description: t('A diretoria e o conselho fiscal eleitos substituem a lista da página (Transparência). As permissões da equipe não mudam.'), label: t('Atualizar a governança'), ok: t('Governança atualizada.'), mandato: true })}>{t('Levar os eleitos para a governança')}</V2Button>}
+              {isAdmin && clube && <V2Button type="button" variant="secondary" onClick={() => setPosse(true)} data-dica="clube-eleicao-posse">{e.governance_applied ? t('Dar posse a mais gente') : t('Dar posse aos eleitos')}</V2Button>}
+              {isAdmin && !clube && !e.governance_applied && <V2Button type="button" variant="secondary" disabled={acao.isPending} onClick={() => setConfirm({ action: 'apply_governance', title: t('Levar os eleitos para a governança?'), description: t('A diretoria e o conselho fiscal eleitos substituem a lista da página (Transparência). As permissões da equipe não mudam.'), label: t('Atualizar a governança'), ok: t('Governança atualizada.'), mandato: true })}>{t('Levar os eleitos para a governança')}</V2Button>}
             </div>
           )}
           {(canConduct || isAdmin) && e.status !== STATUS.DRAFT && (
@@ -267,8 +272,9 @@ export default function ElectionConductPanel({ federation, election: e, isAdmin 
           </div>
         )}
       </ConfirmDialog>
+      {clube && posse && <ClubPosseDialog club={federation} election={e} open={posse} onClose={() => setPosse(false)} />}
       <ComMotivo
-        pedido={cancelar ? { destructive: true, title: t('Cancelar a eleição?'), description: t('Não tem volta. Os filiados são avisados com o motivo.'), confirmLabel: t('Cancelar a eleição') } : null}
+        pedido={cancelar ? { destructive: true, title: t('Cancelar a eleição?'), description: clube ? t('Não tem volta. Os associados são avisados com o motivo.') : t('Não tem volta. Os filiados são avisados com o motivo.'), confirmLabel: t('Cancelar a eleição') } : null}
         loading={acao.isPending}
         onClose={() => setCancelar(false)}
         onConfirm={(motivo) => { setCancelar(false); executar({ action: 'cancel', reason: motivo }, t('Eleição cancelada.')); }}

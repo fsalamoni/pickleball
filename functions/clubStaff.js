@@ -124,6 +124,23 @@ async function nomear(ctx, actor, club, lista, ator, data) {
   if (!role) falha('not-found', 'Cargo não encontrado. Atualize a página.');
   const anterior = lista.find((s) => s.user_id === uid) || null;
   if (!P.allowed({ actor: ator, target: anterior, role, now: ctx.now })) falha('permission-denied', 'Você não pode nomear para este cargo.');
+  return gravarNomeacao(ctx, actor, club, anterior, role, data);
+}
+
+/**
+ * A POSSE dos eleitos (`clubElections`, ação `apply_governance`): quem chama já provou ser a
+ * administração do clube; a pessoa precisa ser membro e o cargo existir.
+ */
+async function darPosse(ctx, actor, club, { userId, roleId, termStart, termEnd, userName }) {
+  const role = (await cargos(ctx, club.id)).find((r) => r.id === texto(roleId, 40));
+  if (!role) falha('not-found', 'Cargo não encontrado. Atualize a página.');
+  const anterior = (await equipe(ctx, club.id)).find((s) => s.user_id === userId) || null;
+  return gravarNomeacao(ctx, actor, club, anterior, role, { userId, termStart, termEnd, userName, origin: 'election' });
+}
+
+/** Grava o cargo (a conferência de quem pode já foi feita): membro do clube, mandato, aviso e auditoria. */
+async function gravarNomeacao(ctx, actor, club, anterior, role, data) {
+  const uid = texto(data.userId, 128);
   const mem = await ctx.db.collection('club_members').doc(`${club.id}_${uid}`).get();
   if (!mem.exists) falha('failed-precondition', 'A pessoa precisa ser membro do clube para ter um cargo.');
   const hoje = m.isoDateBR(ctx.now);
@@ -143,7 +160,7 @@ async function nomear(ctx, actor, club, lista, ator, data) {
       { cargo: role.name, inicio: dataBR(termStart), fim: dataBR(termEnd) });
   }
   await batch.commit();
-  await a.auditoria(ctx, actor, anterior ? 'club_staff_change' : 'club_staff_appoint', { club_id: club.id, user_id: uid, role_id: role.id, term_start: termStart, term_end: termEnd });
+  await a.auditoria(ctx, actor, anterior ? 'club_staff_change' : 'club_staff_appoint', { club_id: club.id, user_id: uid, role_id: role.id, term_start: termStart, term_end: termEnd, ...(data.origin ? { origin: data.origin } : {}) });
   return { ok: true };
 }
 
@@ -243,4 +260,4 @@ async function sweep(ctx) {
   return { avisados, encerrados };
 }
 
-module.exports = { staff, sweep, WARN_DAYS };
+module.exports = { staff, sweep, darPosse, WARN_DAYS };

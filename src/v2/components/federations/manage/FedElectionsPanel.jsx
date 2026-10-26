@@ -11,6 +11,7 @@ import { STATUS } from '@/modules/federations/domain/elections';
 import { V2Button, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 import FedElectionWizard from '../elections/FedElectionWizard';
+import { isClubElections } from '../elections/electionsScope';
 import ElectionConductPanel from '../elections/ElectionConductPanel';
 import { ElectionStatusBadge, hojeBr } from '../elections/electionsUi';
 import { dataCurta } from '../agenda/agendaUi';
@@ -26,6 +27,7 @@ export default function FedElectionsPanel({ federation, electionsQ }) {
   const [editando, setEditando] = useState(null); // 'nova' | eleição
   const [abertaId, setAbertaId] = useState(null);
   const hoje = hojeBr();
+  const clube = isClubElections(federation);
 
   if (editando) {
     return (
@@ -45,12 +47,12 @@ export default function FedElectionsPanel({ federation, electionsQ }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-gray-500">{t('Edital, chapas, impugnações, votação secreta pelo aplicativo (com peso por categoria), apuração e ata. O acervo guarda o edital e a ata, e o resultado pode atualizar a governança.')}</p>
+        <p className="max-w-2xl text-sm text-gray-500">{clube ? t('Edital, chapas, impugnações, votação secreta pelo aplicativo (um associado, um voto), apuração e ata. Os documentos do clube guardam o edital e a ata, e a posse dos eleitos vira cargo na diretoria.') : t('Edital, chapas, impugnações, votação secreta pelo aplicativo (com peso por categoria), apuração e ata. O acervo guarda o edital e a ata, e o resultado pode atualizar a governança.')}</p>
         <V2Button type="button" onClick={() => setEditando('nova')} data-dica="federacao-eleicao-nova"><Plus className="h-4 w-4" />{t('Nova eleição')}</V2Button>
       </div>
-      {emCurso && lista.length > 1 && <p className="text-xs text-gray-500">{t('Mais de uma eleição em andamento ao mesmo tempo confunde os filiados: prefira uma de cada vez.')}</p>}
+      {emCurso && lista.length > 1 && <p className="text-xs text-gray-500">{clube ? t('Mais de uma eleição em andamento ao mesmo tempo confunde os associados: prefira uma de cada vez.') : t('Mais de uma eleição em andamento ao mesmo tempo confunde os filiados: prefira uma de cada vez.')}</p>}
       {!lista.length ? (
-        <V2EmptyState icon={Vote} title={t('Nenhuma eleição ainda')} description={t('Comece por "Nova eleição": o assistente monta os cargos, o calendário, o colégio eleitoral e a comissão, e publica o edital no acervo.')} />
+        <V2EmptyState icon={Vote} title={t('Nenhuma eleição ainda')} description={clube ? t('Comece por "Nova eleição": o assistente monta os cargos, o calendário, o colégio eleitoral e a comissão, e publica o edital nos documentos do clube.') : t('Comece por "Nova eleição": o assistente monta os cargos, o calendário, o colégio eleitoral e a comissão, e publica o edital no acervo.')} />
       ) : (
         <ul className="space-y-2">
           {lista.map((e) => (

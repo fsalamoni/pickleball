@@ -9,19 +9,16 @@ import { Copy, Lock, Vote } from 'lucide-react';
 import {
   CANDIDACY_STATUS, CATEGORY_LABEL, REASON_MIN, STATUS, votingClosesMs, windowOpen,
 } from '@/modules/federations/domain/elections';
-import { useElectionAction, useMyCandidacies, useMyElectionVoters } from '@/modules/federations/hooks/useElections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { V2Button, V2ErrorState, V2Field, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { t } from '@/core/i18n';
 import { CandidacyCard, hojeBr } from './electionsUi';
+import { isClubElections, supportLinkFor, useScopedElectionAction, useScopedMyCandidacies, useScopedMyVoters } from './electionsScope';
 import CandidacyDialog from './CandidacyDialog';
 import VoteFlow from './VoteFlow';
 
 const VIVAS = [CANDIDACY_STATUS.SUBMITTED, CANDIDACY_STATUS.ACCEPTED, CANDIDACY_STATUS.CHALLENGED];
-
-/** O link que a chapa compartilha para pedir apoio (no app: apoiar exige entrar). */
-const linkDeApoio = (federation, e, c) => `${typeof window !== 'undefined' ? window.location.origin : ''}/federacoes/${encodeURIComponent(federation.id)}?aba=eleicoes&eleicao=${encodeURIComponent(e.id)}&apoiar=${encodeURIComponent(c.id)}`;
 
 function Defesa({ federation, e, c, ch, acao }) {
   const [texto, setTexto] = useState('');
@@ -42,9 +39,10 @@ function Defesa({ federation, e, c, ch, acao }) {
 }
 
 export default function ElectionMemberCard({ federation, election: e }) {
-  const votersQ = useMyElectionVoters();
-  const candsQ = useMyCandidacies();
-  const acao = useElectionAction();
+  const votersQ = useScopedMyVoters(federation);
+  const candsQ = useScopedMyCandidacies(federation);
+  const acao = useScopedElectionAction(federation);
+  const clube = isClubElections(federation);
   const { copy: copiar } = useClipboard();
   const [votando, setVotando] = useState(null);
   const [registrar, setRegistrar] = useState(false);
@@ -85,9 +83,13 @@ export default function ElectionMemberCard({ federation, election: e }) {
       )}
       {e.status === STATUS.PUBLISHED && (
         <p className="text-sm text-gray-500">
-          {e.college?.min_months > 0
-            ? t('Vota quem estiver com a filiação em dia, ativa há ao menos {n} meses e sem suspensão quando a votação abrir.', { n: e.college.min_months })
-            : t('Vota quem estiver com a filiação em dia e sem suspensão quando a votação abrir.')}
+          {clube
+            ? (e.college?.min_months > 0
+              ? t('Vota quem for associado com a filiação em dia, ativa há ao menos {n} meses e sem suspensão quando a votação abrir.', { n: e.college.min_months })
+              : t('Vota quem for associado com a filiação em dia e sem suspensão quando a votação abrir.'))
+            : (e.college?.min_months > 0
+              ? t('Vota quem estiver com a filiação em dia, ativa há ao menos {n} meses e sem suspensão quando a votação abrir.', { n: e.college.min_months })
+              : t('Vota quem estiver com a filiação em dia e sem suspensão quando a votação abrir.'))}
         </p>
       )}
 
@@ -95,8 +97,8 @@ export default function ElectionMemberCard({ federation, election: e }) {
         <CandidacyCard key={c.id} c={c} position={(e.positions || []).find((p) => p.id === c.position_id)} showStatus>
           {c.status === CANDIDACY_STATUS.SUBMITTED && e.endorsements_needed > 0 && (
             <div className="w-full space-y-1">
-              <p className="text-sm text-gray-500">{t('Apoios: {n} de {m}. Compartilhe o link com filiados em dia.', { n: c.endorsement_count || 0, m: e.endorsements_needed })}</p>
-              <V2Button type="button" size="sm" variant="ghost" onClick={() => copiar(linkDeApoio(federation, e, c), t('Link de apoio copiado.'))}><Copy className="h-4 w-4" />{t('Copiar link de apoio')}</V2Button>
+              <p className="text-sm text-gray-500">{clube ? t('Apoios: {n} de {m}. Compartilhe o link com associados em dia.', { n: c.endorsement_count || 0, m: e.endorsements_needed }) : t('Apoios: {n} de {m}. Compartilhe o link com filiados em dia.', { n: c.endorsement_count || 0, m: e.endorsements_needed })}</p>
+              <V2Button type="button" size="sm" variant="ghost" onClick={() => copiar(supportLinkFor(federation, e.id, c.id), t('Link de apoio copiado.'))}><Copy className="h-4 w-4" />{t('Copiar link de apoio')}</V2Button>
             </div>
           )}
           {c.status === CANDIDACY_STATUS.REJECTED && c.review?.reason && <p className="w-full text-sm text-gray-500">{t('Motivo: {motivo}', { motivo: c.review.reason })}</p>}
