@@ -469,6 +469,9 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ver o patrimônio do clube | ✖ | ✖ | ✖ | ✔ `finance`/`sports`/`fiscal`/admin | — | rules (`cxReadPerms`: `assets`) |
 | Aceitar o compromisso de conduta e enviar a certidão de antecedentes (cargo na diretoria ou designado) | ✖ | ✖ | ✔ o próprio, só sendo membro do clube | ✔ o próprio | — | **Cloud Function** `clubSafeguarding` (`pledge`/`sg_submit`); arquivo no Storage `clube-protecao/{uid}/` (só o dono) |
 | Conferir ou revogar certidão, incluir alguém no quadro, mudar as regras e ver quem trabalha com menores | ✖ | ✖ | ✖ | ✔ `discipline` ou admin (nunca a própria certidão) | — | **Cloud Function** `clubSafeguarding` (`safeguard`: `write: if false`; leitura só `discipline`/admin) |
+| Montar, publicar, encerrar e cancelar convocações da seleção; convocar e retirar atletas e comissão técnica | ✖ | ✖ | ✖ | ✔ `sports` ou admin (menor só com o responsável autorizando; comissão só com a proteção em dia) | — | **Cloud Function** `clubSelection` (`callups`/`callup_members`: `write: if false`; convites só `sports`/admin leem) |
+| Ver a lista dos confirmados da seleção | ✔ (com a associação publicada) | ✔ | ✔ | ✔ | — | rules `callups` (`pub`) |
+| Confirmar ou recusar a própria convocação | ✖ | ✖ | ✔ o próprio convidado | ✔ | — | **Cloud Function** `clubSelection` (`answer`) |
 | Registrar o responsável legal de um associado menor de idade | ✖ | ✖ | ✔ o próprio menor | ✔ `members`, `discipline` ou admin | — | **Cloud Function** `clubSafeguarding` (`guardian_save`; `minors` só `discipline`/admin leem) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
 | Ler filiações / cobranças | ✖ | ✖ | ✔ as próprias | ✔ `members`/`finance` | — | rules (`aff` e `charges`) |

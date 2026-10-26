@@ -34,6 +34,7 @@ import { ClubMemberBenefits, ClubNewsSection } from '@/v2/components/clubs/assoc
 const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
 const ClubDocsPublic = lazy(() => import('@/v2/components/clubs/association/ClubDocsPublic'));
 const ClubAgendaPublic = lazy(() => import('@/v2/components/clubs/association/ClubAgendaPublic'));
+const ClubSelectionPublic = lazy(() => import('@/v2/components/clubs/association/ClubSelectionPublic'));
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
 
 export default function V2ClubDetail() {
@@ -224,6 +225,7 @@ export default function V2ClubDetail() {
           <ClubNewsSection clubId={clubId} limite={3} />
           <Suspense fallback={null}><ClubAgendaPublic club={club} eventId={activeTab === 'agenda' ? eventoParam : null} compacto={activeTab !== 'agenda'} /></Suspense>
           <Suspense fallback={null}><ClubDocsPublic club={club} docId={activeTab === 'documentos' ? docParam : null} compacto={activeTab !== 'documentos'} /></Suspense>
+          <Suspense fallback={null}><ClubSelectionPublic clubId={clubId} /></Suspense>
           <Suspense fallback={null}><ClubAccountsPublic clubId={clubId} /></Suspense>
         </div>
       )}
@@ -294,6 +296,7 @@ export default function V2ClubDetail() {
             {safeTab === 'comunicados' && showAssocTab && (
               <div className="space-y-6">
                 <ClubNewsSection clubId={clubId} member publicOn={assocOpen} titulo={false} limite={10} />
+                <Suspense fallback={null}><ClubSelectionPublic clubId={clubId} enabled={assocOpen} /></Suspense>
                 {assocOpen && <Suspense fallback={null}><ClubAccountsPublic clubId={clubId} /></Suspense>}
               </div>
             )}
