@@ -7,10 +7,11 @@
 > campanhas), **C3** (loja do clube no Mercado) e **D1** (contas: orçamento,
 > lançamentos e prestação de contas), **D2a** (documentos oficiais do clube) e
 > **D2b** (agenda oficial do clube), **E1–E3** (disciplina, patrimônio, proteção de
-> menores, seleção e torneios) e **F1** (assembleias) estão no código. Os blocos F2–G
-> (eleições, conselho fiscal e integração final) estão no plano
+> menores, seleção e torneios), **F1** (assembleias), **F2** (eleições) e **F3**
+> (conformidade, transparência e pauta do conselho fiscal) estão no código. O Bloco G
+> (integração final: Minha área, início, ajuda, exportação de dados) está no plano
 > (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
-> existem** — este documento só descreve o que há no código.
+> existe** — este documento só descreve o que há no código.
 
 ## 1. O que é
 
@@ -541,6 +542,30 @@ voters, endorsements}` (só o servidor grava; a regra genérica `cxReadPerms` as
 - **Exclusão de conta**: o colégio, as chapas e a comissão ficam (registro da eleição) com o
   nome trocado por "Usuário removido"; o apoio dado é apagado; `club_ballots` nunca teve uid.
 
+### 5.13 Conformidade e transparência (Bloco F3)
+
+Zero coleção, zero função, zero regra, zero índice: é leitura do que a Central já carrega.
+
+- **Conformidade** (Central → Indicadores → **Conformidade**, só a administração; `ClubCompliancePanel`,
+  conta em `domain/compliance.js`, quadro `ComplianceBoard` da federação). Oito itens, cada um `ok`,
+  `attention` (com o botão **Resolver**, que leva à aba) ou `unknown`: estatuto publicado ao público;
+  mandatos (nenhum vencido, presidência com prazo); eleição marcada antes do fim do mandato (180 dias);
+  conselho fiscal nomeado (cargo próprio, mandato valendo, sem ser master); assembleia ordinária do ano
+  com a antecedência da convocação; contas do ano anterior (prestação publicada ou documento); orçamento
+  do ano aprovado; transparência. A base legal é o **Código Civil (arts. 54 e 59)** onde ele diz algo e
+  "Boa prática" no resto — a Lei Geral do Esporte não é invocada, porque o clube não é entidade de
+  administração do esporte. **Mulheres na direção e atletas nos órgãos não são medidos**: a diretoria do
+  clube não guarda gênero (dado pessoal) nem vaga de atleta.
+- **Fonte que falhou ou que a pessoa não lê é `unknown`, nunca reprovação** ("não deu para conferir").
+  `member: false` da visão das eleições também vira `unknown`.
+- **Transparência** (`ClubTransparencyCard`, no topo dos Documentos oficiais da página do clube, para o
+  associado e o visitante): os 8 itens que o clube deve deixar abertos (`CLUB_TRANSPARENCY_ITEMS`, tirados
+  da lista da federação), com o link ou **"não publicado"** — mostrar a falta é de propósito. Só vale
+  documento vigente, publicado e de visibilidade **pública**; contas e parecer só do ano passado para cá.
+- **Conselho fiscal**: o "Hoje" da Central ganhou o bloco **Conselho fiscal** ("Esperando o parecer", para
+  `fiscal` e administração) com as prestações em `submitted` e o atalho **Dar o parecer**. O aviso quando
+  a prestação é enviada, o parecer e a publicação já eram do servidor (`clubAccounts`, §5.8).
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -693,6 +718,12 @@ voters, endorsements}` (só o servidor grava; a regra genérica `cxReadPerms` as
     as recusaria ao associado e viraria "não carregou"). A posse só aceita quem está entre os
     eleitos e cria o cargo pelo `darPosse` (o cargo só vale enquanto a pessoa é membro).
 
+37. **Conformidade e transparência do clube não escrevem nada** (Bloco F3): o quadro é lógica pura
+    sobre o que a Central já leu (`clubComplianceChecklist`), fonte ausente é `unknown` e **nunca**
+    reprova, e o item só diz "ok" com o dado na mão. A transparência pública (`clubTransparencyChecklist`)
+    **mostra o que falta**; nunca esconda um item não publicado. Os tipos exigidos têm de existir em
+    `CLUB_DOC_TYPE_IDS` (teste). O quadro (`ComplianceBoard`) é o da federação — não o copie.
+
 ## 7. Testes
 
 `functions/clubContent.test.js` (vantagens do associado em dia, aviso uma vez
@@ -718,6 +749,7 @@ quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `src/modules/clubs/domain/clubTournaments.test.js`, `ClubTournamentsPanel.runtime.test.jsx`,
 `functions/clubMeetings.test.js` (convocar, edital do acervo, motivo, resultado, quórum, ata, correção) e `ClubMeetingDialogs.runtime.test.jsx`,
 `functions/clubElections.test.js` (ciclo da eleição, colégio, apoio, impugnação, voto secreto, apuração, posse), `functions/clubElections.parity.test.js` e `ClubElectionsPanel.runtime.test.jsx`,
+`domain/compliance.test.js` (os 8 itens, fonte ausente, tipos do clube) e `ClubCompliancePanel.runtime.test.jsx` (atalho "Resolver", falha ≠ reprovação, transparência pública),
 `src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
 `tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),

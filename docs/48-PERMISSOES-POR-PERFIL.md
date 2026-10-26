@@ -475,6 +475,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Ver a lista dos confirmados da seleção | ✔ (com a associação publicada) | ✔ | ✔ | ✔ | — | rules `callups` (`pub`) |
 | Montar, publicar, conduzir e apurar a eleição do clube; dar posse aos eleitos | ✖ | ✖ | ✖ | ✔ administração (a comissão nomeada conduz) | — | **Cloud Function** `clubElections` (`elections`/`candidacies`/`voters`/`endorsements`: `write: if false`; `club_ballots` sem regra e sem uid) |
 | Ver o edital, registrar chapa, apoiar, impugnar e votar (voto secreto, um associado em dia = um voto) | ✖ | ✖ | ✔ o associado em dia | ✔ | — | **Cloud Function** `clubElections` (`overview` devolve `member: false` a quem não é do clube) |
+| Ver a conformidade do clube (Indicadores → Conformidade) | ✖ | ✖ | ✖ | ✔ administração | — | leitura de `staff`/`docs`/`events`/`budgets`/`reports` e da visão das eleições, que só a administração lê; nenhuma escrita |
 | Confirmar ou recusar a própria convocação | ✖ | ✖ | ✔ o próprio convidado | ✔ | — | **Cloud Function** `clubSelection` (`answer`) |
 | Registrar o responsável legal de um associado menor de idade | ✖ | ✖ | ✔ o próprio menor | ✔ `members`, `discipline` ou admin | — | **Cloud Function** `clubSafeguarding` (`guardian_save`; `minors` só `discipline`/admin leem) |
 | Emitir declaração de associação | ✖ | ✖ | ✔ a própria, em dia | ✔ `members` (de qualquer associado em dia) | — | zero banco (cliente) |
