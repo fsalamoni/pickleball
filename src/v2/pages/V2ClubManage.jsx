@@ -29,6 +29,7 @@ const ClubMembersPanel = lazy(() => import('@/v2/components/clubs/manage/ClubMem
 const ClubFinancePanel = lazy(() => import('@/v2/components/clubs/manage/ClubFinancePanel'));
 const ClubStaffPanel = lazy(() => import('@/v2/components/clubs/manage/ClubStaffPanel'));
 const ClubIndicatorsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubIndicatorsPanel'));
+const ClubCompliancePanel = lazy(() => import('@/v2/components/clubs/manage/ClubCompliancePanel'));
 const ClubSettingsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubSettingsPanel'));
 const ClubCommsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubCommsPanel'));
 const ClubStorePanel = lazy(() => import('@/v2/components/clubs/manage/ClubStorePanel'));
@@ -91,6 +92,7 @@ function Central({ clubId }) {
       return novo;
     }, { replace: true });
   }, [setParams]);
+  const abas = useMemo(() => new Set(sections.flatMap((s) => s.tabs.map((x) => x.value))), [sections]);
   const irParaAba = (aba, filtro) => { if (sections.some((s) => s.tabs.some((x) => x.value === aba))) setTab(aba, filtro); };
 
   if (clubQ.isError || papel.isError) return <V2Page><V2ErrorState title={t('Não carregou o clube')} onRetry={() => { clubQ.refetch(); papel.refetch(); }} /></V2Page>;
@@ -154,6 +156,7 @@ function Central({ clubId }) {
         {tab === 'loja' && podeFinancas && <ClubStorePanel club={club} />}
         {tab === 'patrimonio' && (podeContas || perms.includes(CLUB_PERM.SPORTS)) && <ClubAssetsPanel club={club} perms={perms} />}
         {tab === 'indicadores' && <ClubIndicatorsPanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} perms={perms} />}
+        {tab === 'conformidade' && admin && <ClubCompliancePanel club={club} staffQ={staffQ} abas={abas} onIrParaAba={irParaAba} />}
         {tab === 'config' && admin && <ClubSettingsPanel club={club} />}
       </Suspense>
     </V2Page>

@@ -4,7 +4,8 @@
  * informados, vencimentos). Fonte que falhou mostra "—" e um aviso — nunca zero.
  */
 import React from 'react';
-import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, ShieldCheck, Trophy, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, Scale, ShieldCheck, Trophy, Users } from 'lucide-react';
+import { useClubAccountReports } from '@/modules/clubs/hooks/useClubAccounts';
 import { affiliationCounts, financeSummary, formatBrlCents, normalizeAssociation } from '@/modules/clubs/domain/association';
 import { useClubCases, useClubOmbud } from '@/modules/clubs/hooks/useClubDiscipline';
 import { useClubAssets } from '@/modules/clubs/hooks/useClubManagement';
@@ -48,6 +49,10 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
   const veSelecao = admin || perms.includes('sports');
   const convocQ = useClubCallups(club.id, { enabled: veSelecao });
   const aguardando = convocQ.isSuccess ? (convocQ.data?.rows || []).filter((x) => x.status === 'open').reduce((n, x) => n + ((x.counts || {}).invited || 0), 0) : null;
+  // Conselho fiscal: prestações de contas enviadas, esperando o parecer (mesma chave da aba de contas).
+  const veParecer = admin || perms.includes('fiscal');
+  const prestacoesQ = useClubAccountReports(club.id, { enabled: veParecer });
+  const semParecer = prestacoesQ.isSuccess ? (prestacoesQ.data || []).filter((r) => r.status === 'submitted').length : null;
   // Devolução atrasada: só quem cuida do patrimônio; fonte que falhou é dita, nunca zero.
   const vePatrimonio = admin || perms.includes('finance') || perms.includes('sports');
   const bensQ = useClubAssets(club.id, { enabled: vePatrimonio });
@@ -132,6 +137,20 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
                 <V2StatCard icon={Trophy} label={t('Convites sem resposta')} value={String(aguardando)} accent="acid" />
               </div>
               <div className="mt-3 flex flex-wrap gap-2"><V2Button type="button" size="sm" onClick={() => onIrParaAba('selecao')}>{t('Ver as convocações')}</V2Button></div>
+            </>
+          )}
+        </div>
+      )}
+
+      {veParecer && (prestacoesQ.isError || semParecer > 0) && (
+        <div data-dica="clube-hoje-parecer">
+          <h2 className="mb-3 font-display text-lg font-bold text-ink">{t('Conselho fiscal')}</h2>
+          {prestacoesQ.isError ? <V2ErrorState inline title={t('Não deu para conferir as prestações de contas')} onRetry={() => prestacoesQ.refetch()} /> : (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <V2StatCard icon={Scale} label={t('Esperando o parecer')} value={String(semParecer)} accent="acid" />
+              </div>
+              <V2Button type="button" size="sm" className="mt-3" onClick={() => onIrParaAba('prestacao')}>{t('Dar o parecer')}</V2Button>
             </>
           )}
         </div>

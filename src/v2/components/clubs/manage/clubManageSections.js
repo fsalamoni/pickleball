@@ -116,7 +116,12 @@ export function buildClubSections(perms = []) {
     },
     {
       id: 'indicadores', label: t('Indicadores'), grupo: 'gerir', icon: BarChart3, dica: 'clube-secao-indicadores',
-      tabs: [{ value: 'indicadores', label: t('Indicadores') }], ok: tem(perms, CLUB_PERM.MEMBERS, CLUB_PERM.FINANCE),
+      tabs: [
+        { value: 'indicadores', label: t('Indicadores') },
+        // Conferir a governança (estatuto, mandatos, eleição, contas) é da administração.
+        ...(perms.includes(CLUB_PERM.ADMIN) ? [{ value: 'conformidade', label: t('Conformidade') }] : []),
+      ],
+      ok: tem(perms, CLUB_PERM.MEMBERS, CLUB_PERM.FINANCE),
     },
     {
       id: 'config', label: t('Configurações'), grupo: 'gerir', icon: Settings, dica: 'clube-secao-config',

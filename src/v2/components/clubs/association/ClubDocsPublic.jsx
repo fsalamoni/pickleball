@@ -22,6 +22,7 @@ import { t } from '@/core/i18n';
 import { acervoPathFor, clubDocsEntity } from '../../federations/acervo/acervoScope';
 import { AcervoDocItem, AcervoListagem } from '../../federations/acervo/AcervoPublic';
 import AcervoDocView from '../../federations/acervo/AcervoDocView';
+import ClubTransparencyCard from './ClubTransparencyCard';
 
 export default function ClubDocsPublic({ club, member = false, docId = null, compacto = false, publica = false, enabled = true }) {
   const q = useReadableClubDocs(club.id, { member, enabled });
@@ -76,6 +77,7 @@ export default function ClubDocsPublic({ club, member = false, docId = null, com
       <p className="text-sm text-gray-500">{member
         ? t('Estatuto, regimento, atas, convocações e prestação de contas, sempre atualizados.')
         : t('Os documentos que o clube deixa abertos a qualquer pessoa.')}</p>
+      <ClubTransparencyCard entity={entity} docs={docs} />
       <AcervoListagem federation={entity} docs={docs} vazio={t('O clube ainda não publicou documentos oficiais.')} />
     </section>
   );
