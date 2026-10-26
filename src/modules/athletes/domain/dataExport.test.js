@@ -98,6 +98,23 @@ describe('exportação: o Mercado', () => {
   });
 });
 
+describe('exportação: as associações em clubes', () => {
+  it('entra só quando coletada, com as datas em ISO e a contagem de clubes', () => {
+    expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('club_associations');
+    const out = buildDataExport({
+      uid: 'u1',
+      clubAssociations: { clubs: [{ club_id: 'c1', club_name: 'Clube Um', aff: { id: 'u1', status: 'active', created_at: { toDate: () => new Date('2026-10-01T12:00:00Z') } }, charges: [] }] },
+    });
+    expect(out.club_associations.clubs[0].aff.created_at).toBe('2026-10-01T12:00:00.000Z');
+    expect(out.club_associations.counts).toEqual({ clubs: 1 });
+    expect(out.club_associations.not_included.join(' ')).toContain('voto');
+  });
+
+  it('coletada e vazia vem com lista vazia, não ausente', () => {
+    expect(buildDataExport({ uid: 'u1', clubAssociations: { clubs: [] } }).club_associations).toMatchObject({ clubs: [], counts: { clubs: 0 } });
+  });
+});
+
 describe('exportação: e-mails e mensagens enviados', () => {
   it('entra só quando coletado', () => {
     expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('messages');

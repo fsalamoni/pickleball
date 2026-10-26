@@ -25,6 +25,8 @@ import { useDuprMirror, useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useMyJoinRequests } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_ROLE_LABELS, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
+import { clubSummary } from '@/modules/clubs/domain/memberPending';
+import { dataCurta } from '@/modules/clubs/domain/association';
 import { partitionLessons, lessonsAwaitingReply } from '@/modules/coaches/domain/lesson';
 import { hojeLocal, TOURNAMENT_PHASE, TOURNAMENT_PHASE_LABEL } from '@/modules/home/domain/freshness';
 import { meuPapelTexto, myTournamentsForHome, periodoTexto } from '@/modules/home/domain/homeTournaments';
@@ -381,6 +383,40 @@ function TorneiosSecao() {
   );
 }
 
+/** O que o que cada clube-associação guarda da pessoa e espera dela: filiação, cobrança, convocação, votação (Bloco G). */
+function MinhasAssociacoes({ q }) {
+  if (!q) return null;
+  if (q.isError) return <V2ErrorState inline title={t('Não carregaram as suas associações em clubes')} description={t('Você continua associado — tente de novo.')} onRetry={() => q.refetch()} />;
+  if (!q.data) return q.isFetching ? <V2Skeleton lines={2} /> : null;
+  const resumos = (q.data.clubs || []).map((c) => clubSummary(c)).filter((r) => r.state || r.pagar);
+  if (resumos.length === 0 && !q.data.incomplete) return null;
+  const aviso = (r) => {
+    if (r.eleicoes) return { badge: t('Votar'), tone: 'acid' };
+    if (r.convocacoes) return { badge: t('Responder'), tone: 'acid' };
+    if (r.pagar) return { badge: t('Pagar'), tone: 'amber' };
+    if (r.vencida) return { badge: t('Renovar'), tone: 'amber' };
+    if (r.vencendo) return { badge: t('Vence em breve'), tone: 'amber' };
+    if (r.sancoes) return { badge: t('Sanção'), tone: 'amber' };
+    return { badge: r.label, tone: r.state === 'active' ? 'green' : 'neutral' };
+  };
+  return (
+    <Bloco id="associacoes" icon={IdCard} title={t('Suas associações')}>
+      <ul className="space-y-1">
+        {resumos.map((r) => {
+          const { badge, tone } = aviso(r);
+          return (
+            <li key={r.club_id}>
+              <HomeRow to={`/clubes/${r.club_id}`} icon={IdCard} title={r.club_name || t('Clube')}
+                subtitle={r.validUntil ? t('{estado} · até {data}', { estado: r.label, data: dataCurta(r.validUntil) }) : r.label} badge={badge} badgeTone={tone} />
+            </li>
+          );
+        })}
+      </ul>
+      {q.data.incomplete && <p className="mt-3 text-sm text-gray-500">{t('Algum clube não pôde ser conferido agora — a lista pode estar incompleta.')}</p>}
+    </Bloco>
+  );
+}
+
 function ClubesSecao({ ctx }) {
   const { clubsQ, clubInvitesQ, eventInvitesQ } = ctx;
   const pedidosQ = useMyJoinRequests();
@@ -452,6 +488,7 @@ function ClubesSecao({ ctx }) {
           </p>
         )}
       </Bloco>
+      <MinhasAssociacoes q={ctx.clubAssocQ} />
     </div>
   );
 }

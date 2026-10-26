@@ -19,6 +19,7 @@ import {
   associationAction, getMyAffiliation, getMyStaff, getPix, getPlan, getRoles, importMembers, listAffiliations, listAllPlans, listCharges, listImports, listMyCharges,
   listPublicPlans, listStaff, saveAssociationSettings, savePix, savePlan, setPlanActive, staffAction, verifyClubCard,
 } from '../services/associationService.js';
+import { fetchMyClubData } from '../services/mineService.js';
 
 export const assocKeys = {
   all: (clubId) => ['club-assoc', clubId],
@@ -174,6 +175,15 @@ export function useBenefitSecret(clubId, id, { enabled = true } = {}) {
 export function useMyBenefits(clubId, { enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({ queryKey: assocKeys.myBenefits(clubId, user?.uid), queryFn: () => fetchMemberBenefits(clubId), enabled: !!clubId && !!user?.uid && enabled, retry: 1 });
+}
+
+/**
+ * O que os clubes-associação guardam da PRÓPRIA pessoa e espera por ela (cobrança, convocação,
+ * sanção, votação) — leitura do servidor, uma chamada para todos os clubes (Minha área).
+ */
+export function useMyClubAssociations({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({ queryKey: ['club-assoc-me', user?.uid, 'pending'], queryFn: () => fetchMyClubData('pending'), enabled: !!user?.uid && enabled, staleTime: 60_000, retry: 1 });
 }
 
 export function usePublicClubNews(clubId, { enabled = true } = {}) {

@@ -131,6 +131,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   treinosNaoLidos?: number,
  *   duvidasEsperando?: number,
  *   mercado?: ReturnType<typeof marketPendingCounts>,
+ *   clubesAssociados?: { pagar?: number, vencendo?: number, vencida?: number, convocacoes?: number, eleicoes?: number, sancoes?: number },
  *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number, convites?: number, escalas?: number, finais?: number, diretor?: number, convocacoes?: number, licenca?: number },
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
@@ -227,6 +228,21 @@ export function userAreaPending(fontes = {}) {
   for (const id of ['pagar', 'vencendo', 'vencida', 'convites', 'escalas', 'finais', 'diretor', 'convocacoes', 'licenca']) {
     const n = numero(fontes.federacoes?.[id]);
     if (n) itens.push({ id: `federacoes:${id}`, count: n, secao: S.FEDERACOES, label: fedRotulo[id](n) });
+  }
+
+  // Clubes-associação: a mensalidade espera o Pix; a filiação vencendo ou vencida espera a renovação; a convocação,
+  // a votação e o recurso de uma sanção têm prazo. `clubesAssociados`: `myClubPending` (cada fonte `undefined` = não carregou).
+  const clubeRotulo = {
+    pagar: (n) => tn(n, '{n} cobrança de clube esperando o seu Pix', '{n} cobranças de clube esperando o seu Pix'),
+    vencendo: (n) => tn(n, '{n} filiação de clube vencendo em 30 dias', '{n} filiações de clube vencendo em 30 dias'),
+    vencida: (n) => tn(n, '{n} filiação de clube vencida para renovar', '{n} filiações de clube vencidas para renovar'),
+    convocacoes: (n) => tn(n, '{n} convocação do clube para responder', '{n} convocações do clube para responder'),
+    eleicoes: (n) => tn(n, '{n} eleição de clube esperando o seu voto', '{n} eleições de clube esperando o seu voto'),
+    sancoes: (n) => tn(n, '{n} sanção de clube em vigor (cabe recurso)', '{n} sanções de clube em vigor (cabe recurso)'),
+  };
+  for (const id of ['pagar', 'vencendo', 'vencida', 'convocacoes', 'eleicoes', 'sancoes']) {
+    const n = numero(fontes.clubesAssociados?.[id]);
+    if (n) itens.push({ id: `clubes:${id}`, count: n, secao: S.CLUBES, label: clubeRotulo[id](n) });
   }
 
   return itens;

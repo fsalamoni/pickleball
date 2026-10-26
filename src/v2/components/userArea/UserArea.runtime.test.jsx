@@ -26,6 +26,7 @@ function reset() {
     clubes: ok([]),
     convites: ok([]),
     eventos: ok([]),
+    associacoes: ok({ clubs: [], incomplete: false, failed: 0 }),
     balancos: { on: false, pending: [], isSuccess: false, isError: false, refetch: vi.fn() },
   });
 }
@@ -51,6 +52,7 @@ vi.mock('@/modules/clubs/hooks/useClubs', () => ({
   useMyEventInvites: () => estado.eventos,
   useMyJoinRequests: () => ok([]),
 }));
+vi.mock('@/modules/clubs/hooks/useClubAssociation', () => ({ useMyClubAssociations: () => estado.associacoes }));
 vi.mock('@/modules/training/hooks/useTrainingShares', () => ({ useTrainingInbox: () => ok([]) }));
 vi.mock('@/modules/training/hooks/useTrainingQuestions', () => ({
   useMyTrainingQuestions: () => ok([]),
@@ -158,6 +160,21 @@ describe('Minha área ligada', () => {
     expect(secoes()).toContain('Clubes');
     expect(container.textContent).toContain('Pickle Sul');
     expect(container.textContent).toContain('1 convite para entrar num clube');
+  });
+
+  it('⭐ associação em clube: a cobrança vira pendência e a seção Clubes mostra a filiação; falha vai escrita, nunca zero', async () => {
+    estado.flags = { user_hub: true, club_association: true };
+    estado.clubes = ok([{ id: 'c1', name: 'Clube Um', my_role: 'member' }]);
+    estado.associacoes = ok({ incomplete: false, failed: 0, clubs: [{ club_id: 'c1', club_name: 'Clube Um', aff: { status: 'active', valid_until: '2099-01-01' }, charges: [{ status: 'open' }], sanctions: [], callup_invites: [], elections: [] }] });
+    await render(<UserArea />, '/perfil?secao=clubes');
+    expect(container.querySelector('[data-dica="minha-area-pendencias"]').textContent).toContain('1 cobrança de clube esperando o seu Pix');
+    expect(container.textContent).toContain('Suas associações');
+    expect(container.textContent).toContain('Pagar');
+
+    estado.associacoes = erro();
+    await render(<UserArea />, '/perfil?secao=clubes');
+    expect(container.querySelector('[data-dica="minha-area-pendencias"]').textContent).toContain('Ficou de fora: as suas associações em clubes');
+    expect(container.querySelector('[data-dica="minha-area-pendencias"] a')).toBeNull();
   });
 
   it('⭐ Meus jogos (Jogo + Agenda): um link por destino, nenhum repetido', async () => {

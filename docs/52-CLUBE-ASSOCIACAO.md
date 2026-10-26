@@ -8,10 +8,11 @@
 > lançamentos e prestação de contas), **D2a** (documentos oficiais do clube) e
 > **D2b** (agenda oficial do clube), **E1–E3** (disciplina, patrimônio, proteção de
 > menores, seleção e torneios), **F1** (assembleias), **F2** (eleições) e **F3**
-> (conformidade, transparência e pauta do conselho fiscal) estão no código. O Bloco G
-> (integração final: Minha área, início, ajuda, exportação de dados) está no plano
-> (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
-> existe** — este documento só descreve o que há no código.
+> (conformidade, transparência e pauta do conselho fiscal) estão no código. Do Bloco G
+> (integração final) existem **G1** (Minha área: "Precisa de você" e "Suas associações";
+> exportação de dados pelo servidor); a ajuda, as dicas guiadas, o card no início e a
+> revisão final estão no plano (`/mnt/project-files/clubes/plano-clube-associacao.md`) e
+> **ainda não existem** — este documento só descreve o que há no código.
 
 ## 1. O que é
 
@@ -566,6 +567,30 @@ Zero coleção, zero função, zero regra, zero índice: é leitura do que a Cen
   `fiscal` e administração) com as prestações em `submitted` e o atalho **Dar o parecer**. O aviso quando
   a prestação é enviada, o parecer e a publicação já eram do servidor (`clubAccounts`, §5.8).
 
+### 5.14 Minha área e exportação de dados (Bloco G1)
+
+Uma leitura só, do servidor, para o que o clube guarda da **própria** pessoa: `functions/clubMine.js`
+(callable `clubMine`, ação única `mine`, sem escrita). O navegador não consulta "todos os clubes de
+uma vez" (as espécies moram sob `club_x/{clube}/…` e não há regra de grupo de coleções), então a
+varredura é do servidor, **sempre pelo uid de quem chama**.
+
+- `scope: 'pending'` — só os clubes de que a pessoa é membro (e que ligaram a associação): filiação,
+  cobranças, sanções, convites de convocação e as eleições em que ela está no colégio (com "já votou").
+- `scope: 'export'` — todos os clubes com associação, **inclusive aqueles de que já saiu**, e mais o
+  cargo, as manifestações identificadas, a proteção de menores (compromisso, certidão, responsável do
+  menor), as chapas e os apoios. Fica de fora o que é só de gestão ou credencial: a nota interna da
+  secretaria, o código da carteirinha, a nota da comissão e o recibo da votação. O voto é secreto e a
+  cédula nunca teve o uid. Timestamps viram ISO.
+- A resposta traz `incomplete`/`failed`: um clube que não pôde ser lido **vai escrito** (faixa "Ficou de
+  fora: as suas associações em clubes" e `incomplete` no arquivo) — nunca um arquivo "completo" com buraco.
+- **Minha área** (`UserArea.jsx`): com a flag ligada e a pessoa membro de algum clube, `useMyClubAssociations`
+  alimenta `myClubPending` (`domain/memberPending.js`) → "Precisa de você": cobrança esperando o Pix,
+  filiação vencendo (30 dias) ou vencida, convocação com prazo, eleição esperando o voto e sanção em vigor
+  que ainda cabe recurso; todos levam à seção Clubes, que ganhou o bloco **Suas associações** (estado,
+  validade e o selo do que pede ação). Fonte desconhecida **não vira zero**.
+- **Exportação** (`V2Settings` → `collectClubExport`): entra no JSON em `club_associations` com
+  `not_included` dizendo o que é do clube. A exclusão de conta já cobria `club_x` (§6, `accountDeletion`).
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -724,6 +749,12 @@ Zero coleção, zero função, zero regra, zero índice: é leitura do que a Cen
     **mostra o que falta**; nunca esconda um item não publicado. Os tipos exigidos têm de existir em
     `CLUB_DOC_TYPE_IDS` (teste). O quadro (`ComplianceBoard`) é o da federação — não o copie.
 
+38. **O que o clube guarda da pessoa só sai pelo servidor e pelo uid de quem chama** (Bloco G1,
+    `clubMine`): nunca aceite `uid` do navegador, nunca devolva a nota interna, o código da carteirinha
+    ou o recibo da votação, e clube que falhou vai em `incomplete` (a faixa e o arquivo dizem). A
+    "Precisa de você" do clube é `myClubPending` — fonte `undefined` não vira zero. Coleção de clube
+    nova entra em `coletarAssociacoesDeClube` (exclusão) **e** em `doClube` (exportação).
+
 ## 7. Testes
 
 `functions/clubContent.test.js` (vantagens do associado em dia, aviso uma vez
@@ -749,6 +780,7 @@ quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `src/modules/clubs/domain/clubTournaments.test.js`, `ClubTournamentsPanel.runtime.test.jsx`,
 `functions/clubMeetings.test.js` (convocar, edital do acervo, motivo, resultado, quórum, ata, correção) e `ClubMeetingDialogs.runtime.test.jsx`,
 `functions/clubElections.test.js` (ciclo da eleição, colégio, apoio, impugnação, voto secreto, apuração, posse), `functions/clubElections.parity.test.js` e `ClubElectionsPanel.runtime.test.jsx`,
+`functions/clubMine.test.js` (só os clubes e os dados da própria pessoa, o que não sai), `domain/memberPending.test.js` e o bloco "associação em clube" de `UserArea.runtime.test.jsx`,
 `domain/compliance.test.js` (os 8 itens, fonte ausente, tipos do clube) e `ClubCompliancePanel.runtime.test.jsx` (atalho "Resolver", falha ≠ reprovação, transparência pública),
 `src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),

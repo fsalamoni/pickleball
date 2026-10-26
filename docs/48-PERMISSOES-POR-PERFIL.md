@@ -454,6 +454,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Criar/editar/apagar cupom e campanha do clube | ✖ | ✖ | ✖ | ✔ `comms` ou administrador do clube, com a flag ligada **e** a associação publicada; o emissor não muda | — | rules (`promo_*`, `isPromoIssuer`, `promoPageOk`) |
 | Ler comunicado "só associados" | ✖ | ✖ | ✔ qualquer membro do clube | ✔ `comms` | — | rules (`news`, `audience == members` + `isClubMember`) |
 | Criar/editar/apagar vantagem, comunicado e patrocinador | ✖ | ✖ | ✖ | ✔ `comms` ou admin | — | rules (`cxWritePerms`) |
+| Ver e exportar o que os clubes guardam de mim (filiação, cobranças, sanções, convocações, eleições) | ✔ só os meus | ✔ só os meus | ✔ só os meus | ✔ só os meus | — | **Cloud Function** `clubMine` (uid de quem chama; nota interna e código da carteirinha não saem) |
 | Avisar os associados de um comunicado | ✖ | ✖ | ✖ | ✔ `comms` ou admin — uma vez por comunicado | — | **Cloud Function** `clubContent` (`news_notify`) |
 | Preparar orçamento, lançamentos e prestação de contas do clube | ✖ | ✖ | ✖ | ✔ `finance` ou admin | — | **Cloud Function** `clubAccounts` (`budgets`/`ledger`/`reports`: `write: if false`) |
 | Ver as contas do clube e dar o parecer da prestação | ✖ | ✖ | ✖ | ✔ conselho fiscal (`fiscal`): lê orçamento, lançamentos, prestação e as cobranças; o parecer só depois do envio | — | rules (`cxReadPerms`) e **Cloud Function** `clubAccounts` (`opinion`) |
