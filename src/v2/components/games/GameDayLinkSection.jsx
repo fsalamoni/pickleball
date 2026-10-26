@@ -18,6 +18,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
 import { buildLinkPatch, canLinkGameDay, gameDayLinks } from '@/modules/games/domain/gameDayLink';
 import { useGameDayLinkOptions } from '@/modules/games/hooks/useGameDayLink';
+import GameDayLinkGuests from '@/v2/components/games/GameDayLinkGuests';
 import { t } from '@/core/i18n';
 
 /**
@@ -70,35 +71,30 @@ export default function GameDayLinkSection({ gameDay, gravar, pending = false })
       </p>
 
       {(club || arena) && (
-        <div className="flex flex-wrap gap-2">
-          {club && (
-            <V2Badge tone="neutral">
-              <Users className="mr-1 h-3 w-3" /> {club.name}
-              <button type="button"
-                className="ml-2 inline-flex items-center text-gray-500 hover:text-red-600"
-                title={t('Desvincular do clube')}
-                aria-label={t('Desvincular do clube')}
-                disabled={pending}
-                onClick={() => desvincular('club')}
-              >
-                <Unlink className="h-3 w-3" />
-              </button>
-            </V2Badge>
-          )}
-          {arena && (
-            <V2Badge tone="neutral">
-              <Building2 className="mr-1 h-3 w-3" /> {arena.name}
-              <button type="button"
-                className="ml-2 inline-flex items-center text-gray-500 hover:text-red-600"
-                title={t('Desvincular da arena')}
-                aria-label={t('Desvincular da arena')}
-                disabled={pending}
-                onClick={() => desvincular('arena')}
-              >
-                <Unlink className="h-3 w-3" />
-              </button>
-            </V2Badge>
-          )}
+        <div className="space-y-1.5">
+          {[club && { lado: 'club', ...club }, arena && { lado: 'arena', ...arena }].filter(Boolean).map((v) => {
+            const Icone = v.lado === 'club' ? Users : Building2;
+            const rotulo = v.lado === 'club' ? t('Desvincular do clube') : t('Desvincular da arena');
+            return (
+              <div key={v.lado} className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white p-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-paper text-gray-600">
+                  <Icone aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{v.name}</span>
+                <V2Badge tone="neutral">{v.lado === 'club' ? t('Clube') : t('Arena')}</V2Badge>
+                <V2Button
+                  variant="ghost"
+                  className="text-gray-400 hover:text-red-600"
+                  title={rotulo}
+                  aria-label={rotulo}
+                  disabled={pending}
+                  onClick={() => desvincular(v.lado)}
+                >
+                  <Unlink className="h-4 w-4" />
+                </V2Button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -114,7 +110,7 @@ export default function GameDayLinkSection({ gameDay, gravar, pending = false })
         </p>
       ) : canLinkGameDay(gameDay) && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {disponiveis.clubs.length > 0 && (
               <div className="space-y-1.5">
                 <Label htmlFor={`gds-vc-${gdId}`}>{club ? t('Trocar de clube') : t('Clube')}</Label>
@@ -155,6 +151,8 @@ export default function GameDayLinkSection({ gameDay, gravar, pending = false })
           )}
         </>
       )}
+
+      {(club || arena) && <GameDayLinkGuests gameDay={gameDay} />}
 
       <ConfirmDialog
         open={!!confirmar}

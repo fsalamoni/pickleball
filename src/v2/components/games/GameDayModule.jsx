@@ -36,8 +36,6 @@ import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant
 import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayRulesCard from '@/v2/components/games/GameDayRulesCard';
 import GameDaySettingsCard from '@/v2/components/games/GameDaySettingsCard';
-import GameDayGuestsCard from '@/v2/components/games/GameDayGuestsCard';
-import { isLinkedGameDay } from '@/modules/games/domain/gameDayLink';
 import { t } from '@/core/i18n';
 
 /**
@@ -125,8 +123,6 @@ export default function GameDayModule({ gameDay, podeGerenciar = false }) {
           (`podeConfigurar`), que já soma criador, gestor da arena e admin do
           clube. */}
       <GameDaySettingsCard gameDay={gameDay} />
-      {/* Dia vinculado a clube/arena: quem joga de fora é convidado (só rótulo). */}
-      {isLinkedGameDay(gameDay) && <GameDayGuestsCard gameDay={gameDay} />}
       <Miolo gameDay={gameDay} podeGerenciar={podeGerenciar} />
     </div>
   );

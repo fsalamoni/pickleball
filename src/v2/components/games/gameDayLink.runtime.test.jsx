@@ -5,7 +5,7 @@
  *     ADMINISTRA, confirma antes de gravar, grava os quatro campos por um caminho
  *     só e desfaz sem confirmação. Falha ao carregar as listas não vira
  *     "você não administra nada".
- *  2. `GameDayGuestsCard`: quem é de fora vira CONVIDADO (só rótulo); lista de
+ *  2. `GameDayLinkGuests`: quem é de fora vira CONVIDADO (só rótulo); lista de
  *     membros desconhecida nunca rotula ninguém.
  *  3. `LinkedGameDaysSection`: sem dia, não existe; consulta falhando diz isso.
  */
@@ -39,7 +39,7 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({ useMyManagedArenas: () => (
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({ useArenaMembers: () => membros.arena }));
 
 const { default: GameDayLinkSection } = await import('./GameDayLinkSection.jsx');
-const { default: GameDayGuestsCard } = await import('./GameDayGuestsCard.jsx');
+const { default: GameDayLinkGuests } = await import('./GameDayLinkGuests.jsx');
 const { default: LinkedGameDaysSection } = await import('./LinkedGameDaysSection.jsx');
 
 const DIA = { id: 'gd1', title: 'Racha', created_by: 'u1', open_game_id: 'og1' };
@@ -114,6 +114,20 @@ describe('⭐ GameDayLinkSection', () => {
     });
   });
 
+  it('⭐ os convidados aparecem DENTRO da seção, junto do clube vinculado', () => {
+    participantes.lista = [{ id: 'p1', user_id: 'u1', name: 'Ana' }, { id: 'p2', user_id: 'u2', name: 'Bia' }];
+    membros.clube = { isSuccess: true, data: [{ user_id: 'u1' }] };
+    montar(<GameDayLinkSection
+      gameDay={{ ...DIA, link_club_id: 'c1', link_club_name: 'Clube Norte', visibility: 'public' }}
+      gravar={vi.fn()}
+    />);
+    const secao = container.querySelector('[data-dica="dia-de-jogo-vinculo"]');
+    expect(secao.textContent).toContain('Clube Norte');
+    expect(secao.textContent).toContain('Convidados');
+    expect(secao.textContent).toContain('Bia');
+    expect(secao.textContent).not.toContain('Ana');
+  });
+
   it('⭐ sem clube nem arena administrados, diz por quê — e sem seletor', () => {
     montar(<GameDayLinkSection gameDay={DIA} gravar={vi.fn()} />);
     expect(container.textContent).toContain('Só quem administra o clube ou gere a arena');
@@ -134,7 +148,7 @@ describe('⭐ GameDayLinkSection', () => {
   });
 });
 
-describe('⭐ GameDayGuestsCard', () => {
+describe('⭐ GameDayLinkGuests', () => {
   const diaVinculado = { ...DIA, link_club_id: 'c1', link_club_name: 'Clube Norte' };
 
   it('quem não é do clube aparece como convidado; quem é, só conta como de dentro', () => {
@@ -143,27 +157,27 @@ describe('⭐ GameDayGuestsCard', () => {
       { id: 'p2', user_id: 'u2', name: 'Bia' },
     ];
     membros.clube = { isSuccess: true, data: [{ user_id: 'u1' }] };
-    const texto = montar(<GameDayGuestsCard gameDay={diaVinculado} />);
+    const texto = montar(<GameDayLinkGuests gameDay={diaVinculado} />);
     expect(texto).toContain('Clube Norte');
     expect(texto).toContain('1 convidado');
     expect(texto).toContain('Bia');
-    expect(texto).toContain('mantém todas as suas estatísticas');
+    expect(texto).toContain('Convidado');
   });
 
   it('⭐ lista de membros DESCONHECIDA: não rotula ninguém de convidado', () => {
     participantes.lista = [{ id: 'p2', user_id: 'u2', name: 'Bia' }];
     membros.clube = { isSuccess: false, data: undefined };
-    expect(montar(<GameDayGuestsCard gameDay={diaVinculado} />)).toBe('');
+    expect(montar(<GameDayLinkGuests gameDay={diaVinculado} />)).toBe('');
   });
 
   it('sem vínculo não renderiza nada', () => {
     participantes.lista = [{ id: 'p2', user_id: 'u2', name: 'Bia' }];
-    expect(montar(<GameDayGuestsCard gameDay={DIA} />)).toBe('');
+    expect(montar(<GameDayLinkGuests gameDay={DIA} />)).toBe('');
   });
 
   it('arena que a pessoa NÃO gere: a lista de membros é privada e o cartão cala sobre ela', () => {
     participantes.lista = [{ id: 'p2', user_id: 'u2', name: 'Bia' }];
-    const texto = montar(<GameDayGuestsCard gameDay={{ ...DIA, link_arena_id: 'a1', link_arena_name: 'Arena Sul' }} />);
+    const texto = montar(<GameDayLinkGuests gameDay={{ ...DIA, link_arena_id: 'a1', link_arena_name: 'Arena Sul' }} />);
     expect(texto).toBe('');
   });
 });
