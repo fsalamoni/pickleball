@@ -89,6 +89,7 @@ cards novos cobrem o que ficava fora delas:
 | Sua arena | `arena` | |
 | Suas aulas (professor) | `professor` | |
 | Federação | `federacao` | só com a flag `federations` (`requer: 'federacao'`): filiações (pagar/renovar primeiro) e a última notícia — `docs/50-FEDERACAO.md` §6.7 |
+| Associação do clube | `associacao_clube` | só com a flag `club_association` (`requer: 'associacaoClube'`): a filiação nos clubes, o que pede a pessoa (votar, responder, pagar, renovar) no topo — `docs/52-CLUBE-ASSOCIACAO.md` §5.15 |
 
 **Promoções e destaques NÃO são card** (desde 2026-10-11, a pedido do dono):
 a área aparece para todo mundo, acima da grade, sempre que houver cupom ou

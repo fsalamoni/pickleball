@@ -10,9 +10,10 @@
 > menores, seleção e torneios), **F1** (assembleias), **F2** (eleições) e **F3**
 > (conformidade, transparência e pauta do conselho fiscal) estão no código. Do Bloco G
 > (integração final) existem **G1** (Minha área: "Precisa de você" e "Suas associações";
-> exportação de dados pelo servidor); a ajuda, as dicas guiadas, o card no início e a
-> revisão final estão no plano (`/mnt/project-files/clubes/plano-clube-associacao.md`) e
-> **ainda não existem** — este documento só descreve o que há no código.
+> exportação de dados pelo servidor) e **G2** (Central de Ajuda, dicas guiadas e o card
+> "Associação do clube" no início); a revisão final está no plano
+> (`/mnt/project-files/clubes/plano-clube-associacao.md`) — este documento só descreve o
+> que há no código.
 
 ## 1. O que é
 
@@ -591,6 +592,27 @@ varredura é do servidor, **sempre pelo uid de quem chama**.
 - **Exportação** (`V2Settings` → `collectClubExport`): entra no JSON em `club_associations` com
   `not_included` dizendo o que é do clube. A exclusão de conta já cobria `club_x` (§6, `accountDeletion`).
 
+### 5.15 Ajuda, dicas guiadas e o card no início (Bloco G2)
+
+Tudo atrás de `club_association` e **zero banco, zero regra, zero função**.
+
+- **Central de Ajuda** (`helpCenter.js`): dois artigos com `flags: ['club_association']` — `clube-associar`
+  ("Associar-se a um clube", para o atleta) e `clube-gerir` ("Administrar o clube como associação"). A pista
+  de rota `/clubes/*/gerir` ("a Central do clube") vem **antes** de `/clubes/*` (o primeiro molde que casa
+  vence); `/clubes/*` aponta para `clube-associar`.
+- **Dicas guiadas** (`guias.js`, `pontosDeDica.js`): os guias `clube-associar` (aba Associação → planos →
+  pedir a filiação → carteirinha) e `clube-gerir` (Central → seções → Configurações → Planos → Associados →
+  Financeiro → Diretoria) e cinco pontos de dica (`clube:aba-associacao`, `clube:aba-vantagens`,
+  `clube:central`, `clube:secoes`, `clube:pix`). **A âncora `data-dica="clube-…"` é contrato**: renomear não
+  dá erro, o guia diz "não encontrei" para sempre (`src/core/guards/dicas.test.js` confere).
+- **Início**: o card **Associação do clube** (`HOME_CARD.ASSOCIACAO_CLUBE`, `requer: 'associacaoClube'` =
+  a flag; grupo "O seu dia a dia"; escolhido pela pessoa, nunca padrão). Componente
+  `HomeClubAssociationCard` (lazy): reaproveita `useMyClubAssociations` e `clubSummary`, mostra até três
+  clubes com o que mais pede a pessoa no topo (votar, responder, pagar, renovar, vence em breve, sanção),
+  e sem clube a porta para `/clubes`. **Falha ≠ vazio**: clubes ou associações que falham dizem "não
+  carregaram" (nunca "você não é associado"); clube que não pôde ser conferido vai escrito. A consulta ao
+  servidor só sai se a pessoa tem clube.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -754,6 +776,11 @@ varredura é do servidor, **sempre pelo uid de quem chama**.
     ou o recibo da votação, e clube que falhou vai em `incomplete` (a faixa e o arquivo dizem). A
     "Precisa de você" do clube é `myClubPending` — fonte `undefined` não vira zero. Coleção de clube
     nova entra em `coletarAssociacoesDeClube` (exclusão) **e** em `doClube` (exportação).
+
+39. **Ajuda e card do clube andam com a flag** (Bloco G2): artigo, guia e ponto de dica do clube-associação
+    levam `flags: ['club_association']`; o card do início só existe com `associacaoClube` no contexto
+    (`useHomeCardsContext`). Novo `data-dica="clube-…"` ou nova seção na Central pede o ponto/guia
+    correspondente; a rota de ajuda `/clubes/*/gerir` precisa continuar **antes** de `/clubes/*`.
 
 ## 7. Testes
 

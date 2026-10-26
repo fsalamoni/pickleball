@@ -19,7 +19,7 @@ import {
 } from './homeCards.js';
 import { FOCUS_REASON, HOME_FOCUS, HOME_SECTION, resolveHomeFoci } from './homeProfile.js';
 
-const TUDO = { evolucao: true, treino: true, mercado: true, federacao: true };
+const TUDO = { evolucao: true, treino: true, mercado: true, federacao: true, associacaoClube: true };
 
 describe('⭐ o padrão', () => {
   it('são três cards: Dias de jogo, Horários da arena e Ranking — nessa ordem', () => {
