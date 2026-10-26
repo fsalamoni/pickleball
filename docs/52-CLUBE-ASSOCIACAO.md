@@ -55,6 +55,8 @@ pessoa do clube.
 | `assets` | bem do patrimônio (nome, categoria, quantidade, estado, local, valor) com os **empréstimos** (`loans[]`: quem recebeu, quantidade, saída, devolução combinada, devolução e estado em que voltou) e o `history[]` | `finance`/`sports`/`fiscal`/admin | **só o servidor** (`clubManagement`) |
 | `safeguard` | a proteção de menores de uma pessoa (`{uid}`): versão do compromisso aceito, certidão de antecedentes conferida (`background`: status, emissão, validade, quem conferiu), a certidão **pendente** (`pending_background`, com o caminho do arquivo), última recusa, `designated`/`designated_label`, `cleared_until` | `discipline`/admin (a pessoa lê o próprio pela ação `me`, que não devolve o caminho do arquivo) | **só o servidor** (`clubSafeguarding`) |
 | `minors` | o **responsável legal** do associado menor de idade (`{uid}`): nome, parentesco, telefone, autorização de participação e de uso de imagem, observações | `discipline`/admin | **só o servidor** (`clubSafeguarding`); apagado aos 18 anos |
+| `callups` | convocação da seleção do clube: título, evento, local, datas, `status` (rascunho / aberta / encerrada / cancelada), prazo de resposta (`accept_days`), vagas de atleta, documentos de viagem, uniforme, `involves_minors`, `counts`, `roster` (nome público e papel de quem confirmou) e `pub` | convocação aberta ou encerrada (`pub`) é pública com a associação publicada; rascunho e cancelada só `sports`/admin | **só o servidor** (`clubSelection`) |
+| `callup_members` | o convite de UMA pessoa a UMA convocação (`{convocação}_{uid}`): papel (atleta / comissão técnica), função, `status` (convidado / confirmado / recusou / retirado / venceu), prazo, tamanho do uniforme, conferência dos documentos | `sports`/admin (o convidado vê o que é dele pela ação `mine`) | **só o servidor** (`clubSelection`) |
 | `events` | evento da agenda oficial (competição, curso, assembleia, reunião, prazo…): data, horário, local, `status` (marcado/adiado/cancelado), motivo, `history[]`, `ever_visible`, `visibility`, `pub` e `members` (marcas de leitura mantidas pelo servidor), documentos ligados | público lê `pub == true` de clube publicado; **qualquer membro do clube** lê `members == true`; `docs`/`sports`/admin leem tudo | **só o servidor** (`clubAgenda`) |
 
 `club_card_index/{codigo}` (só o servidor) liga o código da carteirinha à
@@ -434,6 +436,31 @@ conduta** no lugar do curso (`clubSafeguardingPolicy.js`, `functions/clubSafegua
   nunca zero).
 - **Conta excluída**: o registro, o responsável e os arquivos (`clube-protecao/{uid}/`) saem.
 
+### 5.9 Seleção do clube (Bloco E3a)
+
+Central do clube → **Seleção** (`?aba=selecao`; permissão `sports` ou administração). A
+diretoria esportiva monta uma **convocação** (campeonato, interclube, amistoso), publica e
+convoca associados como **atleta** ou **comissão técnica** (`functions/clubSelection.js`, régua
+em `clubSelectionPolicy.js` com cópia no cliente `domain/selection.js` e teste de paridade).
+
+- **Ciclo**: rascunho (ninguém é avisado) → aberta (publicar; aparece na página pública do
+  clube com a lista dos confirmados) → encerrada ou cancelada (avisa os convidados, com
+  motivo). Publicada, o que foi anunciado (prazo, vagas, se há menores) não muda.
+- **Convite**: só para associado do clube; a pessoa é avisada e tem `accept_days` (padrão 7)
+  para **confirmar ou recusar** em Minha filiação (`ClubMyCallups`); confirmar já escolhe o
+  tamanho do uniforme quando a convocação coleta e mostra o que levar (documentos de viagem).
+  Convite sem resposta vence sozinho (varredura diária) e a convocação que já passou fecha.
+- **Trava de proteção**: **menor de idade** só é convocado como atleta com o responsável legal
+  registrado e **autorizando** (`minors`, Bloco E2b); a **comissão técnica** de uma convocação
+  que inclui menores só entra com a proteção de menores em dia (`situacao` do `clubSafeguarding`:
+  compromisso e certidão). A trava é do servidor e a tela só explica o motivo.
+- **Vagas**: o limite é de atletas (a comissão técnica não ocupa); lotada, não se convoca mais.
+- **Conferência**: a diretoria marca, por convidado, os documentos de viagem já conferidos.
+- **Página pública** (`ClubSelectionPublic`): título, evento, local, datas, recado e a lista de
+  confirmados pelo **nome público** (primeiro nome e inicial) — nada de contato.
+- Início da Central (Hoje): aviso de convites sem resposta; fonte que falhou é "não deu para
+  conferir", nunca zero.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -548,6 +575,16 @@ conduta** no lugar do curso (`clubSafeguardingPolicy.js`, `functions/clubSafegua
     conhecida; (d) o aviso da denúncia `minor_protection` não leva o texto. O helper exportado
     `situacao` é o que a convocação de atletas (Bloco E3) deve usar para recusar quem atuaria com
     menores sem estar em dia. Os ids de `roles` (`staff`/`designated`) e de parentesco são gravados.
+33. **A seleção do clube é só do servidor** (`clubSelection`; `callups` e `callup_members` com
+    `write: if false`; os convites só `sports`/admin leem). Régua em `clubSelectionPolicy.js`,
+    cópia no cliente (`domain/selection.js`) e paridade (`functions/clubSelection.parity.test.js`).
+    Quatro regras: (a) **a trava de proteção é do servidor** — menor sem responsável autorizando
+    e comissão sem proteção em dia (em convocação com menores) são recusados, nunca só avisados na
+    tela; (b) **o convite só vai a associado do clube** e o id é `{convocação}_{uid}`, então
+    ninguém é convocado duas vezes; (c) o **`roster` público** guarda só o nome público e o papel
+    (nunca uid nem contato) e é refeito a cada mudança; (d) publicada, a convocação não troca de
+    critério (prazo, vagas, menores). Os ids de status, papel, documento de viagem e tamanho de
+    uniforme são gravados.
 
 ## 7. Testes
 
@@ -567,6 +604,9 @@ equipe lê tudo, ninguém grava, público `pub`, associado `members`, cargo de q
 quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `functions/clubSafeguarding.test.js` (compromisso, certidão, conferência apaga o arquivo, ninguém confere a própria, designação, responsável do menor, varredura),
 `functions/clubSafeguarding.parity.test.js`, `tests/rules/clubSafeguarding.rules.test.js` (emulador: só a disciplina lê, ninguém grava),
+`functions/clubSelection.test.js` (ciclo, trava de menores, vagas, resposta, varredura), `functions/clubSelection.parity.test.js`,
+`tests/rules/clubSelection.rules.test.js` (emulador: pública `pub`, convites só `sports`/admin, ninguém grava),
+`src/modules/clubs/domain/selection.test.js`, `ClubSelectionPanel.runtime.test.jsx`,
 `src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
 `tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),

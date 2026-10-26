@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 240 |
 | Blocos `match` (raiz + subcoleções) | 260 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 117 |
+| Cloud Functions exportadas | 118 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 8 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 12 |
-| Arquivos de teste (`*.test.js(x)`) | 869 |
+| Arquivos de teste (`*.test.js(x)`) | 874 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 58 |
 
@@ -44,7 +44,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `athletes` | 8 | 1 | 2 | 1 | · | · | sim |
 | `chat` | 2 | 1 | 1 | 1 | · | · | sim |
 | `circuits` | 1 | 1 | 1 | · | · | · | sim |
-| `clubs` | 16 | 11 | 11 | 7 | · | 2 | sim |
+| `clubs` | 17 | 12 | 12 | 7 | · | 2 | sim |
 | `coaches` | 11 | 9 | 9 | 16 | · | 2 | sim |
 | `federations` | 50 | 17 | 17 | · | · | 2 | sim |
 | `feed` | 0 | 0 | 0 | 0 | · | · | sim |
@@ -424,6 +424,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `clubDiscipline` | federationCallable |  |
 | `clubManagement` | federationCallable |  |
 | `clubSafeguarding` | federationCallable |  |
+| `clubSelection` | federationCallable |  |
 | `clubContent` | federationCallable |  |
 | `clubAssociationVerify` | chamável (callable) |  |
 | `clubAssociationSweep` | agendada | `every day 05:20` |

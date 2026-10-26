@@ -4,10 +4,11 @@
  * informados, vencimentos). Fonte que falhou mostra "—" e um aviso — nunca zero.
  */
 import React from 'react';
-import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, ShieldCheck, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDollarSign, Clock, Gavel, MessageSquareWarning, Package, ShieldCheck, Trophy, Users } from 'lucide-react';
 import { affiliationCounts, financeSummary, formatBrlCents, normalizeAssociation } from '@/modules/clubs/domain/association';
 import { useClubCases, useClubOmbud } from '@/modules/clubs/hooks/useClubDiscipline';
 import { useClubAssets } from '@/modules/clubs/hooks/useClubManagement';
+import { useClubCallups } from '@/modules/clubs/hooks/useClubSelection';
 import { useClubMinors, useClubSgOverview } from '@/modules/clubs/hooks/useClubSafeguarding';
 import { minorsWithoutGuardian } from '@/modules/clubs/domain/safeguarding';
 import { assetState } from '@/modules/federations/domain/management';
@@ -43,6 +44,10 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
   const menoresQ = useClubMinors(club.id, { enabled: veDisciplina });
   const certidoes = protecaoQ.isSuccess ? (protecaoQ.data?.rows || []).filter((r) => r.pending).length : null;
   const semResponsavel = menoresQ.isSuccess ? minorsWithoutGuardian(menoresQ.data?.rows) : null;
+  // Seleção: convites sem resposta nas convocações abertas (a diretoria esportiva).
+  const veSelecao = admin || perms.includes('sports');
+  const convocQ = useClubCallups(club.id, { enabled: veSelecao });
+  const aguardando = convocQ.isSuccess ? (convocQ.data?.rows || []).filter((x) => x.status === 'open').reduce((n, x) => n + ((x.counts || {}).invited || 0), 0) : null;
   // Devolução atrasada: só quem cuida do patrimônio; fonte que falhou é dita, nunca zero.
   const vePatrimonio = admin || perms.includes('finance') || perms.includes('sports');
   const bensQ = useClubAssets(club.id, { enabled: vePatrimonio });
@@ -115,6 +120,20 @@ export default function ClubHojePanel({ club, affiliationsQ, chargesQ, plansQ, p
             {certidoes > 0 && <V2Button type="button" size="sm" onClick={() => onIrParaAba('protecao')}>{t('Conferir certidões')}</V2Button>}
             {semResponsavel > 0 && <V2Button type="button" size="sm" variant="subtle" onClick={() => onIrParaAba('menores')}>{t('Ver os menores')}</V2Button>}
           </div>
+        </div>
+      )}
+
+      {veSelecao && (convocQ.isError || aguardando > 0) && (
+        <div data-dica="clube-hoje-selecao">
+          <h2 className="mb-3 font-display text-lg font-bold text-ink">{t('Seleção')}</h2>
+          {convocQ.isError ? <V2ErrorState inline title={t('Não deu para conferir as convocações')} onRetry={() => convocQ.refetch()} /> : (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <V2StatCard icon={Trophy} label={t('Convites sem resposta')} value={String(aguardando)} accent="acid" />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2"><V2Button type="button" size="sm" onClick={() => onIrParaAba('selecao')}>{t('Ver as convocações')}</V2Button></div>
+            </>
+          )}
         </div>
       )}
 

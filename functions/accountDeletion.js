@@ -530,7 +530,7 @@ async function coletarAssociacoesDeClube(db, uid) {
     const manifestacoes = await base.collection('ombud').where('reporter_uid', '==', uid).limit(QUERY_LIMIT + 1).get();
     manifestacoes.docs.slice(0, QUERY_LIMIT).forEach((d) => { total += 1; itens.push({ ref: d.ref, patch: { reporter_uid: null, anonymous: true } }); });
     // As contas (Bloco D1), os documentos oficiais (D2a) e a agenda (D2b) do clube ficam (o clube presta contas e o ato publicado é registro dele), sem o nome de quem os preparou.
-    for (const [kind, campo, nome] of [['ledger', 'created_by', 'created_by_name'], ['budgets', 'created_by', 'created_by_name'], ['reports', 'opened_by', 'opened_by_name'], ['docs', 'created_by', 'created_by_name'], ['docs', 'published_by', 'published_by_name'], ['events', 'created_by', 'created_by_name']]) {
+    for (const [kind, campo, nome] of [['ledger', 'created_by', 'created_by_name'], ['budgets', 'created_by', 'created_by_name'], ['reports', 'opened_by', 'opened_by_name'], ['docs', 'created_by', 'created_by_name'], ['docs', 'published_by', 'published_by_name'], ['events', 'created_by', 'created_by_name'], ['callups', 'created_by', 'created_by_name']]) {
       const feitos = await base.collection(kind).where(campo, '==', uid).limit(QUERY_LIMIT + 1).get(); // eslint-disable-line no-await-in-loop
       feitos.docs.slice(0, QUERY_LIMIT).forEach((d) => {
         total += 1;
@@ -543,6 +543,16 @@ async function coletarAssociacoesDeClube(db, uid) {
       const patch = limparBemDe(d.data() || {}, uid);
       if (patch) { total += 1; itens.push({ ref: d.ref, patch }); }
     });
+    // Seleção (Bloco E3): os convites da pessoa (tamanho de uniforme, documentos) são APAGADOS e o nome sai da lista pública da delegação.
+    const convites = await base.collection('callup_members').where('user_id', '==', uid).limit(QUERY_LIMIT + 1).get();
+    for (const d of convites.docs.slice(0, QUERY_LIMIT)) {
+      total += 1;
+      deletes.push(d.ref);
+      const chave = require('node:crypto').createHash('sha256').update(d.id).digest('hex').slice(0, 12);
+      const cu = await base.collection('callups').doc(String((d.data() || {}).callup_id || '_')).get(); // eslint-disable-line no-await-in-loop
+      const roster = cu.exists && Array.isArray(cu.data().roster) ? cu.data().roster : [];
+      if (roster.some((r) => r && r.key === chave)) itens.push({ ref: cu.ref, patch: { roster: roster.filter((r) => !r || r.key !== chave) } });
+    }
     // Proteção de menores (Bloco E2b): o registro da pessoa (compromisso, conferência da certidão) e o responsável legal do menor
     // são dado pessoal sem prestação de contas — APAGADOS; a certidão pendente sai com a pasta `clube-protecao/{uid}/`.
     for (const kind of ['safeguard', 'minors']) {
