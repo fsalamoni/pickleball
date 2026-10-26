@@ -57,6 +57,17 @@ describe('userAreaPending', () => {
     expect(userAreaPending({ arenas: [{ id: 'a1', name: 'Arena', pendentes: undefined }] })).toEqual([]);
   });
 
+  it('⭐ Clubes-associação: cobrança, votação, convocação e filiação levam à seção Clubes; fonte desconhecida não vira zero', () => {
+    const itens = userAreaPending({ clubesAssociados: { pagar: 2, vencendo: 0, vencida: 1, convocacoes: 1, eleicoes: 1, sancoes: undefined } });
+    expect(itens.map((i) => [i.id, i.count, i.secao])).toEqual([
+      ['clubes:pagar', 2, S.CLUBES],
+      ['clubes:vencida', 1, S.CLUBES],
+      ['clubes:convocacoes', 1, S.CLUBES],
+      ['clubes:eleicoes', 1, S.CLUBES],
+    ]);
+    expect(userAreaPending({ clubesAssociados: { pagar: undefined, vencendo: undefined } })).toEqual([]);
+  });
+
   it('cada pendência leva ao lugar que resolve, com a conta certa', () => {
     const itens = userAreaPending({
       arenas: [{ id: 'a1', name: 'Arena Sol', pendentes: 2 }, { id: 'a2', pendentes: 0 }],

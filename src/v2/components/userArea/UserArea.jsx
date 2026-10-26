@@ -27,6 +27,8 @@ import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useCoachLessons } from '@/modules/coaches/hooks/useLessons';
 import { lessonsAwaitingReply, partitionLessons } from '@/modules/coaches/domain/lesson';
 import { useMyClubInvites, useMyClubs, useMyEventInvites } from '@/modules/clubs/hooks/useClubs';
+import { useMyClubAssociations } from '@/modules/clubs/hooks/useClubAssociation';
+import { myClubPending } from '@/modules/clubs/domain/memberPending';
 import { useTrainingInbox } from '@/modules/training/hooks/useTrainingShares';
 import { useCoachTrainingQuestions, useMyTrainingQuestions } from '@/modules/training/hooks/useTrainingQuestions';
 import { unreadCount } from '@/modules/training/domain/share';
@@ -87,6 +89,9 @@ export default function UserArea() {
   // A seção só existe para quem tem alguma coisa lá (ou cuja leitura falhou).
   const { flags } = useFeatureFlags();
   const federacoesOn = Boolean(flags?.[FEATURE_FLAG.FEDERATIONS]);
+  // Clubes-associação (flag `club_association`): só consulta quem é membro de algum clube (uma chamada ao servidor para todos).
+  const clubAssocOn = Boolean(flags?.[FEATURE_FLAG.CLUB_ASSOCIATION]);
+  const clubAssocQ = useMyClubAssociations({ enabled: clubAssocOn && clubsQ.isSuccess && (clubsQ.data || []).length > 0 });
   const fedMembersQ = useMyMemberships({ enabled: federacoesOn });
   const fedChargesQ = useMyFederationCharges({ enabled: federacoesOn });
   const fedRolesQ = useMyFederationRoles({ enabled: federacoesOn });
@@ -164,6 +169,7 @@ export default function UserArea() {
     duvidasEsperando,
     treinosNaoLidos: trainingOn && inboxQ.isSuccess ? unreadCount(inboxQ.data || []) : undefined,
     balancosPendentes: balancos.isSuccess ? balancos.pending.length : undefined,
+    clubesAssociados: clubAssocOn && clubAssocQ.isSuccess ? myClubPending(clubAssocQ.data?.clubs) : undefined,
     mercado: mercadoOn ? marketPendingCounts({
       sellerOrders: sellerOrdersQ.isSuccess ? sellerOrdersQ.data : undefined,
       sellerOffers: sellerOffersQ.isSuccess ? sellerOffersQ.data : undefined,
@@ -183,15 +189,18 @@ export default function UserArea() {
     balancos.isError && t('os jogos para o balanço'),
     mercadoOn && mercadoQs.some((q) => q.isError) && t('as suas compras e vendas no Mercado'),
     federacoesOn && fedQs.some((q) => q.isError) && t('as suas federações'),
+    // Um clube que não pôde ser lido (`incomplete`) também fica de fora dos números: dizer, não calar.
+    clubAssocOn && (clubAssocQ.isError || clubAssocQ.data?.incomplete) && t('as suas associações em clubes'),
   ].filter(Boolean);
   const tentarDeNovo = () => {
     [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ, ...mercadoQs, ...fedQs]
       .filter((q) => q.isError).forEach((q) => q.refetch());
+    if (clubAssocQ.isError || clubAssocQ.data?.incomplete) clubAssocQ.refetch();
     if (arenaSummary.pendingError) arenaSummary.refetch?.();
     if (balancos.isError) balancos.refetch();
   };
 
-  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ, finalsQ: fedFinalsQ, directedQ: fedDirectedQ, callupsQ: fedCallupsQ, grantAppsQ: fedGrantAppsQ, coachLicQ: fedCoachLicQ } };
+  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubAssocQ: clubAssocOn ? clubAssocQ : null, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ, finalsQ: fedFinalsQ, directedQ: fedDirectedQ, callupsQ: fedCallupsQ, grantAppsQ: fedGrantAppsQ, coachLicQ: fedCoachLicQ } };
 
   return (
     <V2Page className="space-y-6">

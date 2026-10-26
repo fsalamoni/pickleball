@@ -2055,6 +2055,10 @@ exports.clubElections = federationCallable('clubElections', (ctx, actor, data) =
 const clubContent = require('./clubContent');
 exports.clubContent = federationCallable('clubContent', (ctx, actor, data) => clubContent.content(ctx, actor, data));
 
+// O que os clubes guardam da PRÓPRIA pessoa (pendências da Minha área e exportação de dados): leitura do servidor — `functions/clubMine.js`.
+const clubMine = require('./clubMine');
+exports.clubMine = federationCallable('clubMine', (ctx, actor, data) => clubMine.mine(ctx, actor, data));
+
 // Verificação pública da carteirinha do clube: sem conta (o QR é lido por qualquer um).
 exports.clubAssociationVerify = onCall({ region: REGION, timeoutSeconds: 30 }, async (req) => {
   try {

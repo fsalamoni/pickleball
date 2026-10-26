@@ -110,14 +110,32 @@ function federationsBlock(f = {}) {
 }
 
 /**
+ * O bloco dos clubes-associação (`collectClubExport`, que vem do servidor): por clube, a filiação, as
+ * cobranças, o cargo, as sanções, as manifestações identificadas, a proteção de menores, as convocações,
+ * o colégio eleitoral (se votou — nunca em quem), as chapas e os apoios.
+ */
+function clubsBlock(c = {}) {
+  const clubs = (Array.isArray(c.clubs) ? c.clubs : []).map((x) => limpo(x));
+  return {
+    clubs,
+    not_included: [
+      'Os planos, as contas, a equipe e os atos do clube (são do clube).',
+      'A nota interna da secretaria, o código da carteirinha e o recibo da votação.',
+      'O seu voto: ele é secreto e nunca foi ligado a você.',
+    ],
+    counts: { clubs: clubs.length },
+  };
+}
+
+/**
  * Monta o pacote de exportação.
- * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, market?, federations?, incomplete? }} input
+ * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, market?, federations?, clubAssociations?, incomplete? }} input
  *   `goals` e `training` só entram quando foram coletados; `incomplete` lista,
  *   em pt-BR, as partes que falharam na leitura.
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, messages, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -138,6 +156,7 @@ export function buildDataExport({
   if (training !== undefined) out.training = trainingBlock(training || {});
   if (market !== undefined) out.market = marketBlock(market || {});
   if (federations !== undefined) out.federations = federationsBlock(federations || {});
+  if (clubAssociations !== undefined) out.club_associations = clubsBlock(clubAssociations || {});
   // E-mails, WhatsApp e SMS que a plataforma mandou (90 dias; endereço mascarado).
   if (messages !== undefined) out.messages = lista(messages);
   return out;

@@ -54,6 +54,7 @@ export default function V2Settings() {
   const gamificacaoOn = true;
   const treinoOn = true;
   const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const clubesOn = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
   // Categoria de aviso de funcionalidade desligada não aparece (nem conta).
   const categoriaVisivel = (cat) => (cat.id !== 'training' || treinoOn) && (cat.id !== 'market' || mercadoOn);
   // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) e
@@ -116,6 +117,17 @@ export default function V2Settings() {
       } catch (_) {
         federacoes = { federations: undefined, incomplete: [t('Federações')] };
       }
+      // Associações em clubes (flag `club_association`): filiação, cobranças, cargo, sanções, convocações, eleições —
+      // lidas pelo servidor, que varre os clubes (inclusive aqueles de que a pessoa já saiu).
+      let clubes = { clubs: undefined, incomplete: [] };
+      if (clubesOn) {
+        try {
+          const { collectClubExport } = await import('@/modules/clubs/services/mineService');
+          clubes = await collectClubExport();
+        } catch (_) {
+          clubes = { clubs: undefined, incomplete: [t('Associações em clubes')] };
+        }
+      }
       // O que saiu por e-mail, WhatsApp e SMS (registro dos últimos 90 dias).
       let mensagens;
       let mensagensFalhou = false;
@@ -133,6 +145,7 @@ export default function V2Settings() {
         ...extra.incomplete,
         ...mercado.incomplete,
         ...federacoes.incomplete,
+        ...clubes.incomplete.map((i) => t(i)),
       ];
       const pkg = buildDataExport({
         uid: user?.uid,
@@ -143,6 +156,7 @@ export default function V2Settings() {
         training: extra.training,
         market: mercado.market,
         federations: federacoes.federations,
+        clubAssociations: clubes.clubs === undefined ? undefined : { clubs: clubes.clubs },
         messages: mensagens,
         incomplete,
       });
