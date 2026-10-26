@@ -19,6 +19,7 @@
 import { useMemo } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
+import { useArenaLinkedGameDays } from '@/modules/games/hooks/useGameDayLink';
 import { listGameDayGames, listGameDayParticipants } from '@/modules/games/services/gameDayService';
 import { useArenaTournaments as useArenaPlatformTournaments } from '@/modules/tournament/hooks/useTournament';
 import { listModalities } from '@/modules/tournament/services/modalityService';
@@ -62,7 +63,21 @@ export function useHouseRanking(arenaId, { season = new Date().getFullYear(), fo
   const ativo = enabled && !!arenaId;
   const today = todayISO();
 
-  const diasQ = useArenaGameDays(ativo ? arenaId : null);
+  const diasDaArenaQ = useArenaGameDays(ativo ? arenaId : null);
+  // Os dias do ATLETA vinculados a esta arena (`domain/gameDayLink.js`): as
+  // estatísticas deles são da casa, e somam pelo mesmo caminho dos dias da arena.
+  const vinculadosQ = useArenaLinkedGameDays(ativo ? arenaId : null);
+  const diasQ = useMemo(() => {
+    const todos = new Map();
+    [...(diasDaArenaQ.data || []), ...(vinculadosQ.data || [])].forEach((g) => todos.set(g.id, g));
+    return {
+      data: [...todos.values()],
+      isError: diasDaArenaQ.isError,
+      isLoading: diasDaArenaQ.isLoading,
+      refetch: () => { if (diasDaArenaQ.isError) diasDaArenaQ.refetch(); },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só os campos que mudam (o objeto da consulta é novo a cada render)
+  }, [diasDaArenaQ.data, diasDaArenaQ.isError, diasDaArenaQ.isLoading, vinculadosQ.data]);
   const torneiosQ = useArenaPlatformTournaments(ativo ? arenaId : null);
   const legadoQ = useQuery({
     queryKey: arenaKeys.ladderLegado(arenaId),
@@ -179,10 +194,11 @@ export function useHouseRanking(arenaId, { season = new Date().getFullYear(), fo
     legadoQ.isError, legadoQ.data, internosQ.isSuccess, internosQ.isError, ativo]);
 
   // As listas-base: sem elas não se sabe nem O QUE carregar.
-  const baseFalhou = diasQ.isError || torneiosQ.isError;
+  const baseFalhou = diasQ.isError || torneiosQ.isError || vinculadosQ.isError;
   const baseFalhas = [
     ...(diasQ.isError ? [{ key: 'base:gd', label: 'Os dias de jogo da arena' }] : []),
     ...(torneiosQ.isError ? [{ key: 'base:t', label: 'Os torneios da casa' }] : []),
+    ...(vinculadosQ.isError ? [{ key: 'base:vinc', label: 'Os dias de jogo vinculados à arena' }] : []),
   ];
 
   const ranking = useMemo(() => buildHouseRanking(events, { season, format }), [events, season, format]);
@@ -198,13 +214,14 @@ export function useHouseRanking(arenaId, { season = new Date().getFullYear(), fo
   const refetch = () => {
     if (diasQ.isError) diasQ.refetch();
     if (torneiosQ.isError) torneiosQ.refetch();
+    if (vinculadosQ.isError) vinculadosQ.refetch();
     if (legadoQ.isError) legadoQ.refetch();
     if (internosQ.isError) internosQ.refetch();
     [participantesQs, jogosQs, categoriasQs, inscricoesQs, partidasQs]
       .forEach((lista) => lista.forEach((q) => q.isError && q.refetch()));
   };
 
-  const baseCarregando = ativo && (diasQ.isLoading || torneiosQ.isLoading || !internosResolvidos);
+  const baseCarregando = ativo && (diasQ.isLoading || vinculadosQ.isLoading || torneiosQ.isLoading || !internosResolvidos);
   return {
     rows: ranking.rows,
     events: ranking.events,

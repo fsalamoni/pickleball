@@ -35,6 +35,7 @@ import {
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { isArenaGameDay, arenaGameDayWhenText } from '@/modules/games/domain/arenaGameDay';
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
+import { gameDayLinks } from '@/modules/games/domain/gameDayLink';
 import { isOpenMatchGameDay, arenaGameDayEditLink } from '@/modules/arenas/domain/openMatchGameDay';
 import GameDayJoinPanel from '@/v2/components/games/GameDayJoinPanel';
 import OpenGameDaysForMe from '@/v2/components/games/play/OpenGameDaysForMe';
@@ -291,6 +292,7 @@ function GameDayDetail({ gameDayId }) {
 
   const daArena = isArenaGameDay(gameDay);
   const doClube = isClubGameDay(gameDay);
+  const vinculos = gameDayLinks(gameDay);
   // Editar e arquivar um dia de jogo de ARENA é no ambiente da arena, onde
   // estão as quadras, os horários e as vagas. No de CLUBE é na DATA do evento,
   // que é quem manda no título, no horário e na existência dele — arquivar por
@@ -327,6 +329,17 @@ function GameDayDetail({ gameDayId }) {
                 : doClube ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {gameDay.club_name || t('Do clube')}</V2Badge>
                   : isPublicGameDay(gameDay) ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> {t('Público')}</V2Badge>
                     : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> {t('Privado')}</V2Badge>}
+              {/* Vinculado (atribuição das estatísticas): leva à página de lá. */}
+              {vinculos.club && (
+                <Link to={`/clubes/${vinculos.club.id}`}>
+                  <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {t('Estatísticas: {nome}', { nome: vinculos.club.name })}</V2Badge>
+                </Link>
+              )}
+              {vinculos.arena && (
+                <Link to={`/arenas/${vinculos.arena.id}`}>
+                  <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> {t('Estatísticas: {nome}', { nome: vinculos.arena.name })}</V2Badge>
+                </Link>
+              )}
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {daArena ? arenaGameDayWhenText(gameDay) : gameDayWhenText(gameDay)}

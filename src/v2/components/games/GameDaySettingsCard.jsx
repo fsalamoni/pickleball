@@ -69,6 +69,8 @@ import {
 import { isArenaGameDay } from '@/modules/games/domain/arenaGameDay';
 import { arenaGameDayEditLink, isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
+import { isLinkedGameDay, linkLabel } from '@/modules/games/domain/gameDayLink';
+import GameDayLinkSection from '@/v2/components/games/GameDayLinkSection';
 import {
   useGameDayGames, useGameDayParticipants, useUpdateGameDay,
   useAddGameDayAdmin, useRemoveGameDayAdmin, useSetGameDayManageMode,
@@ -179,6 +181,8 @@ export default function GameDaySettingsCard({ gameDay }) {
   const temPartidas = games.length > 0;
   const formatoTravado = temPartidas || falhouJogos || update.isPending;
   const nomeados = organizadores.filter((o) => !o.criador).length;
+  // Dia vinculado a clube/arena: sempre público (nunca exclusivo de membros).
+  const vinculado = isLinkedGameDay(gameDay);
 
 
   const gravar = async (patch, sucesso) => {
@@ -255,6 +259,7 @@ export default function GameDaySettingsCard({ gameDay }) {
     modo === GAME_DAY_MANAGE_MODE.PARTICIPANTS
       ? t('Aberto a todos')
       : (nomeados > 0 ? t('Só você e mais {n}', { n: nomeados }) : t('Só você')),
+    ...(vinculado ? [t('Vinculado a {destino}', { destino: linkLabel(gameDay) })] : []),
   ].join(' · ');
 
   return (
@@ -418,9 +423,10 @@ export default function GameDaySettingsCard({ gameDay }) {
                       key={v}
                       type="button"
                       aria-pressed={identidade.visibility === v}
+                      disabled={vinculado && v !== GAME_DAY_VISIBILITY.PUBLIC}
                       onClick={() => setCampo('visibility', v)}
                       className={cn(
-                        'rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+                        'rounded-xl border px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50',
                         identidade.visibility === v
                           ? 'border-ink bg-ink text-white'
                           : 'border-gray-200 text-gray-600 hover:bg-paper',
@@ -431,7 +437,9 @@ export default function GameDaySettingsCard({ gameDay }) {
                   ))}
                 </div>
                 <p className="text-2xs text-gray-500">
-                  {t('Público publica um convite em "Procura-se jogo"; privado remove esse convite.')}
+                  {vinculado
+                    ? t('Este dia está vinculado a um clube ou arena, então fica sempre público — nunca exclusivo de membros. Desvincule para poder deixá-lo privado.')
+                    : t('Público publica um convite em "Procura-se jogo"; privado remove esse convite.')}
                 </p>
               </div>
 
@@ -561,6 +569,9 @@ export default function GameDaySettingsCard({ gameDay }) {
             </p>
           )}
         </section>
+
+        {/* ----------------------------------------------- 4. clube ou arena */}
+        <GameDayLinkSection gameDay={gameDay} gravar={gravar} pending={update.isPending} />
       </div>
 
       <NomearDialog

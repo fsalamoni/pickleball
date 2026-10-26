@@ -305,3 +305,14 @@ toque leva para DENTRO do dia (`/dia-de-jogo/:id`), onde o cartão de inscriçã
 é o mesmo da página da arena (`ArenaGameDaySignupCard`). Entrar pelo caminho do
 atleta (o "Iniciar minha participação" do Play) passou a respeitar o teto: ele
 delega a `signUpToArenaGameDay`. Ver `docs/34-MINHA-REGIAO.md`.
+
+## Atualização 2026-10-26 — dias de atletas vinculados à arena
+
+O gestor de uma arena pode ter dias de jogo de atletas (criados no Jogar)
+**vinculados** a ela — `game_days.link_arena_id` (atribuição; **não** é
+`arena_id`: a arena não ganha poder sobre o dia, nem teto de vagas, nem bloqueio
+de quadra). As estatísticas desses dias entram no ranking da casa
+(`useHouseRanking` soma `useArenaLinkedGameDays` aos dias da própria arena) e no
+engajamento da arena; a página da arena lista os dias em "Dias de jogo
+vinculados". Só o criador vincula, e só a arena que gere. Ver
+`docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.

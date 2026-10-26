@@ -32,6 +32,11 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
 const papel = { role: 'admin' };
 vi.mock('@/modules/clubs/hooks/useClubs', () => ({ useMyMembership: () => ({ data: papel }) }));
 
+// A seção "Clube ou arena" tem o teste próprio (gameDayLinkSection.runtime.test.jsx).
+vi.mock('@/modules/games/hooks/useGameDayLink', () => ({
+  useGameDayLinkOptions: () => ({ options: { clubs: [], arenas: [] }, isLoading: false, isError: false, retry: vi.fn() }),
+}));
+
 const flags = { americanoLive: false };
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => flags.americanoLive }));
 

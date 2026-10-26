@@ -113,8 +113,10 @@ export function buildGameDayMatch({ gameDay, gameId, game, participants, clubIds
   // não no clube que por acaso todos têm em comum) e é o campo que a regra de
   // `club_event_games` confere em `isClubAdmin(club_id)` — sem ele, só quem
   // agendou a data conseguiria publicar. Campo aditivo: um dia de jogo sem
-  // `club_id` segue exatamente como antes.
-  const clubId = gameDay.club_id || resolveMatchClubId(sideAUids, sideBUids, clubIdsByUid);
+  // `club_id` segue exatamente como antes. Dia VINCULADO a um clube (dia do
+  // atleta atribuído ao clube — `gameDayLink.js`): toda partida, de membro ou de
+  // convidado, vai para o clube vinculado.
+  const clubId = gameDay.club_id || gameDay.link_club_id || resolveMatchClubId(sideAUids, sideBUids, clubIdsByUid);
   const id = gameDayRankingId(gameDay.id, gameId);
 
   return {

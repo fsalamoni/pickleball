@@ -755,6 +755,15 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 - `admin_uids[]` (**opcional, aditivo**) — uids que o criador nomeou como admin
   do dia de jogo. Quem entra aqui também entra em `member_uids` (para enxergar o
   dia de jogo se ele for privado). Sair de admin **não** remove de `member_uids`.
+- `link_club_id`/`link_club_name`, `link_arena_id`/`link_arena_name`
+  (**opcionais, aditivos**) — vínculo do dia do ATLETA a um clube que ele
+  administra ou a uma arena que gere: as estatísticas passam a contar lá
+  (espelho `club_event_games.club_id`; ranking da casa da arena). É atribuição,
+  não origem (nunca preenche `club_id`/`arena_id`); vinculado ⇒ sempre
+  `visibility: 'public'`. A criação recusa; só o criador grava, só para clube que
+  administra / arena que gere (desfazer é livre). Consulta: `link_club_id == X`
+  (ou `link_arena_id`) **+** `visibility == 'public'`, sem índice composto. Ver
+  `docs/25` §13.
 
 #### Campos dos GRUPOS DO PLAY (**opcionais, aditivos** — flag `play_groups`)
 
