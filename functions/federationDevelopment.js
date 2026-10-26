@@ -36,7 +36,7 @@ const FILE_MAX = 9 * 1024 * 1024;
 const LINK_MEU = (fedId) => `/federacoes/${fedId}?aba=minha`;
 const linkGestao = (fedId, aba) => `/federacoes/${fedId}/gerir?aba=${aba}`;
 /** Onde quem gere a organização acompanha o selo (o mesmo cartão "Federação" da filiação). */
-const LINK_SELO = (s) => (s.kind === 'club' ? `/clubes/${s.org_id}?tab=admin` : `/arenas/${s.org_id}/gerir?aba=federacao`);
+const LINK_SELO = (s) => (s.kind === 'club' ? `/clubes/${s.org_id}/gerir?aba=pagina` : `/arenas/${s.org_id}/gerir?aba=federacao`);
 const br = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(String(iso || '')) ? iso.split('-').reverse().join('/') : '');
 const nomeDe = (u) => texto(u.platform_name || u.full_name || u.display_name || 'Atleta', 120);
 const sigla = (fed) => texto(fed.acronym || fed.name, 20);

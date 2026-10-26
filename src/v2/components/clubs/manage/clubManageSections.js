@@ -5,7 +5,7 @@
  * em toda a Central (a seção ativa é achada pela aba) e é contrato de link:
  * os avisos do servidor levam a ele — nunca renomeie.
  */
-import { BarChart3, Trophy, Calculator, CalendarDays, CircleDollarSign, Gavel, IdCard, Landmark, LayoutDashboard, Library, Medal, Megaphone, MessageSquareWarning, Package, Scale, Settings, ShieldCheck, Store, Tag, Users } from 'lucide-react';
+import { BarChart3, Building2, Trophy, Calculator, CalendarDays, CircleDollarSign, Gavel, IdCard, Landmark, LayoutDashboard, Library, Medal, Megaphone, MessageSquareWarning, Package, Scale, Settings, ShieldCheck, Store, Tag, Users } from 'lucide-react';
 import { CLUB_PERM } from '@/modules/clubs/domain/association';
 import { t, tk } from '@/core/i18n';
 
@@ -14,15 +14,35 @@ export const CLUB_SECTION_GROUPS = Object.freeze([
   { id: 'gerir', label: tk('Gerir') },
 ]);
 
+/** As seções que não dependem da associação: valem com `club_association` desligada. */
+export const SECOES_DA_GESTAO = new Set(['membros', 'engajamento', 'dados']);
+
 const tem = (perms, ...algumas) => perms.includes(CLUB_PERM.ADMIN) || algumas.some((p) => perms.includes(p));
 
 /**
+ * Duas famílias de seção. A GESTÃO DO CLUBE (Membros, Engajamento, Dados do
+ * clube) é de todo clube e de quem o administra — vale com a associação
+ * desligada: o ambiente da administração mora aqui, e a página do clube fica
+ * só com a visão pública e com o que os membros fazem juntos. As demais são da
+ * ASSOCIAÇÃO e só existem com `club_association` ligada.
+ *
  * @param {string[]} perms permissões da pessoa (`clubPermsOf`)
+ * @param {{ association?: boolean }} [opcoes] `association`: a flag `club_association` está ligada
  * @returns {Array<{ id: string, label: string, grupo: string, icon: any, dica: string, tabs: Array<{ value: string, label: string, dica?: string }> }>}
  */
-export function buildClubSections(perms = []) {
+export function buildClubSections(perms = [], { association = true } = {}) {
+  const admin = perms.includes(CLUB_PERM.ADMIN);
   const secoes = [
-    { id: 'hoje', label: t('Hoje'), grupo: 'atender', icon: LayoutDashboard, dica: 'clube-secao-hoje', tabs: [{ value: 'hoje', label: t('Hoje') }], ok: true },
+    { id: 'hoje', label: t('Hoje'), grupo: 'atender', icon: LayoutDashboard, dica: 'clube-secao-hoje', tabs: [{ value: 'hoje', label: t('Hoje') }], ok: association },
+    {
+      // Promover, rebaixar e remover; pedidos, convites e código de entrada — só quem administra o clube.
+      id: 'membros', label: t('Membros'), grupo: 'atender', icon: Users, dica: 'clube-secao-membros',
+      tabs: [
+        { value: 'membros', label: t('Membros e funções') },
+        { value: 'ingresso', label: t('Pedidos e convites') },
+      ],
+      ok: admin,
+    },
     {
       id: 'associados', label: t('Associados'), grupo: 'atender', icon: IdCard, dica: 'clube-secao-associados',
       tabs: [{ value: 'associados', label: t('Associados') }], ok: tem(perms, CLUB_PERM.MEMBERS),
@@ -125,10 +145,29 @@ export function buildClubSections(perms = []) {
     },
     {
       id: 'config', label: t('Configurações'), grupo: 'gerir', icon: Settings, dica: 'clube-secao-config',
-      tabs: [{ value: 'config', label: t('Associação do clube') }], ok: perms.includes(CLUB_PERM.ADMIN),
+      tabs: [{ value: 'config', label: t('Associação do clube') }], ok: admin,
+    },
+    {
+      // A saúde do clube (metas, desafios, recompensas) e o ranking interno com a escolha de incluir resultados externos.
+      id: 'engajamento', label: t('Engajamento'), grupo: 'gerir', icon: Trophy, dica: 'clube-secao-engajamento',
+      tabs: [
+        { value: 'engajamento', label: t('Atividade, metas e recompensas') },
+        { value: 'ranking', label: t('Ranking interno') },
+      ],
+      ok: admin,
+    },
+    {
+      id: 'dados', label: t('Dados do clube'), grupo: 'gerir', icon: Building2, dica: 'clube-secao-dados',
+      tabs: [
+        { value: 'dados', label: t('Dados e logo') },
+        { value: 'pagina', label: t('Página e federação') },
+      ],
+      ok: admin,
     },
   ];
-  return secoes.filter((s) => s.ok).map(({ ok: _ok, ...resto }) => resto);
+  return secoes
+    .filter((s) => s.ok && (association || SECOES_DA_GESTAO.has(s.id)))
+    .map(({ ok: _ok, ...resto }) => resto);
 }
 
 /** A seção que contém a aba pedida (ou a primeira, "Hoje"). */

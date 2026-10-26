@@ -518,7 +518,7 @@ const ATLETA = {
       summary: tk('Para quem administra um clube: atividade, metas, desafios e recompensas para os membros.'),
       keywords: ['clube', 'atividade', 'engajamento', 'membros', 'desafio', 'recompensa', 'meta', 'administrar', 'gamificação'],
       blocks: [
-        p(tk('Quem administra um clube vê a aba "Atividade" na página do clube. Ela mostra a vida do clube pelo que foi publicado — partidas dos dias de jogo, membros que jogaram, membros novos — e é visível só para quem administra.')),
+        p(tk('Quem administra um clube abre a Central do clube (o botão fica na página do clube) e entra em Engajamento. Ali está a vida do clube pelo que foi publicado — partidas dos dias de jogo, membros que jogaram, membros novos — e só quem administra vê.')),
         list(
           tk('METAS DO MÊS — números que você escolhe, com o progresso medido pelos registros (partidas publicadas, membros novos), não por marcação manual.'),
           tk('DESAFIOS — competições entre os membros, com métrica, prazo e prêmio em XP. O servidor mede e premia.'),

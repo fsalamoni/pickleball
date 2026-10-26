@@ -1,11 +1,18 @@
 /**
  * V2ClubManage — a Central do clube (`/clubes/:clubId/gerir?aba=`).
  *
- * Como a Central da federação e da arena: seções em dois grupos (Atender ·
+ * O ambiente de quem administra o clube — a página do clube só tem a visão
+ * pública e o que os membros fazem juntos; tudo o que é da administração mora
+ * aqui. Como a Central da federação e da arena: seções em dois grupos (Atender ·
  * Gerir), a aba na URL, os painéis baixando sob demanda. Quem entra é a
  * administração do clube e quem tem cargo com mandato valendo
  * (`club_x/{clube}/staff`); cada cargo vê só as seções da sua permissão.
  * Sem permissão, a pessoa volta à página do clube.
+ *
+ * Duas famílias de seção (`clubManageSections.js`): a gestão do clube (Membros,
+ * Engajamento, Dados do clube) vale para todo clube, com a flag
+ * `club_association` desligada; as da associação só com ela ligada — e sem ela
+ * nenhuma consulta a `club_x` é feita (a regra a recusaria).
  */
 import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
@@ -17,13 +24,16 @@ import {
 import { CLUB_PERM, isAssociationOpen } from '@/modules/clubs/domain/association';
 import { canUseClubAgenda } from '@/modules/clubs/domain/agenda';
 import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
+import { useFeatureFlag, useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { V2Avatar, V2Badge, V2BackLink, V2Button, V2EmptyState, V2ErrorState, V2Page, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { PAGE_TITLE } from '@/v2/ui/pageFrame';
 import { CLUB_SECTION_GROUPS, buildClubSections, sectionOfClubTab } from '@/v2/components/clubs/manage/clubManageSections';
 import { t } from '@/core/i18n';
 
+const V2ClubAdmin = lazy(() => import('@/v2/components/clubs/V2ClubAdmin'));
+const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
+const ClubRankingTab = lazy(() => import('@/v2/components/clubs/ClubRankingTab'));
 const ClubHojePanel = lazy(() => import('@/v2/components/clubs/manage/ClubHojePanel'));
 const ClubMembersPanel = lazy(() => import('@/v2/components/clubs/manage/ClubMembersPanel'));
 const ClubFinancePanel = lazy(() => import('@/v2/components/clubs/manage/ClubFinancePanel'));
@@ -45,9 +55,9 @@ const ClubAssetsPanel = lazy(() => import('@/v2/components/clubs/manage/ClubAsse
 const ClubPlansTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPlansTab })));
 const ClubPixTab = lazy(() => import('@/v2/components/clubs/manage/ClubPlansPanel').then((m) => ({ default: m.ClubPixTab })));
 
-function Central({ clubId }) {
+function Central({ clubId, assocOn }) {
   const clubQ = useClub(clubId);
-  const papel = useMyClubRole(clubId);
+  const papel = useMyClubRole(clubId, { association: assocOn });
   const perms = papel.perms;
   const admin = perms.includes(CLUB_PERM.ADMIN);
   const podeMembros = admin || perms.includes(CLUB_PERM.MEMBERS);
@@ -59,15 +69,15 @@ function Central({ clubId }) {
   // viraria "não carregou" numa seção que a pessoa nem vê.
   const podeDisciplina = admin || perms.includes(CLUB_PERM.DISCIPLINE); // a disciplina escolhe quem sancionar na lista de associados
   const podeEsporte = admin || perms.includes(CLUB_PERM.SPORTS); // a diretoria esportiva escolhe quem convocar na lista de associados
-  const affiliationsQ = useClubAffiliations(clubId, { enabled: papel.isStaff && (podeMembros || podeDisciplina || podeEsporte) });
-  const chargesQ = useClubCharges(clubId, { enabled: papel.isStaff && podeFinancas });
-  const plansQ = useAllPlans(clubId, { enabled: papel.isStaff && (podeMembros || podeFinancas) });
-  const pixQ = useClubPix(clubId, { enabled: papel.isStaff && admin });
+  const affiliationsQ = useClubAffiliations(clubId, { enabled: assocOn && papel.isStaff && (podeMembros || podeDisciplina || podeEsporte) });
+  const chargesQ = useClubCharges(clubId, { enabled: assocOn && papel.isStaff && podeFinancas });
+  const plansQ = useAllPlans(clubId, { enabled: assocOn && papel.isStaff && (podeMembros || podeFinancas) });
+  const pixQ = useClubPix(clubId, { enabled: assocOn && papel.isStaff && admin });
   const podeEquipe = admin || perms.includes(CLUB_PERM.STAFF);
-  const staffQ = useClubStaff(clubId, { enabled: papel.isStaff && podeEquipe });
-  const rolesQ = useClubRoles(clubId, { enabled: papel.isStaff && podeEquipe });
+  const staffQ = useClubStaff(clubId, { enabled: assocOn && papel.isStaff && podeEquipe });
+  const rolesQ = useClubRoles(clubId, { enabled: assocOn && papel.isStaff && podeEquipe });
 
-  const sections = useMemo(() => buildClubSections(perms), [perms]);
+  const sections = useMemo(() => buildClubSections(perms, { association: assocOn }), [perms, assocOn]);
   const tabPedida = params.get('aba') || '';
   const secaoPedida = params.get('secao') || '';
   const secaoAtiva = useMemo(
@@ -77,7 +87,7 @@ function Central({ clubId }) {
   const tab = secaoAtiva?.tabs.some((x) => x.value === tabPedida) ? tabPedida : secaoAtiva?.tabs[0]?.value;
 
   // Comunicação: cada aba consulta só a sua coleção, e só quem tem `comms` (a regra recusaria os demais).
-  const emComunicacao = papel.isStaff && (admin || perms.includes(CLUB_PERM.COMMS));
+  const emComunicacao = assocOn && papel.isStaff && (admin || perms.includes(CLUB_PERM.COMMS));
   const newsQ = useAllClubNews(clubId, { enabled: emComunicacao && tab === 'comunicados' });
   const benefitsQ = useAllBenefits(clubId, { enabled: emComunicacao && tab === 'vantagens' });
   const sponsorsQ = useAllClubSponsors(clubId, { enabled: emComunicacao && tab === 'patrocinadores' });
@@ -111,14 +121,14 @@ function Central({ clubId }) {
           <h1 className={PAGE_TITLE}>{club.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <V2Badge tone={admin ? 'ink' : 'neutral'}>{admin ? t('Administração') : (papel.roleName || t('Equipe'))}</V2Badge>
-            {club.association?.enabled
+            {assocOn && (club.association?.enabled
               ? <V2Badge tone={isAssociationOpen(club) ? 'green' : 'amber'}>{isAssociationOpen(club) ? t('Associação aberta') : t('Associação em preparo')}</V2Badge>
-              : <V2Badge tone="neutral">{t('Associação desligada')}</V2Badge>}
+              : <V2Badge tone="neutral">{t('Associação desligada')}</V2Badge>)}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <V2Button asChild variant="ghost" size="sm"><Link to={`/clubes/${clubId}`}>{t('Ver como associado')}</Link></V2Button>
-          {isAssociationOpen(club) && <V2Button asChild variant="ghost" size="sm"><a href={`/c/${clubId}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</a></V2Button>}
+          <V2Button asChild variant="ghost" size="sm"><Link to={`/clubes/${clubId}`}>{t('Ver como membro')}</Link></V2Button>
+          {((assocOn && isAssociationOpen(club)) || club.is_public === true) && <V2Button asChild variant="ghost" size="sm"><a href={`/c/${clubId}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />{t('Página pública')}</a></V2Button>}
         </div>
       </header>
 
@@ -128,6 +138,9 @@ function Central({ clubId }) {
       </div>
 
       <Suspense fallback={<V2Skeleton lines={6} />}>
+        {['membros', 'ingresso', 'dados', 'pagina'].includes(tab) && admin && <V2ClubAdmin club={club} tab={tab} />}
+        {tab === 'engajamento' && admin && <ClubEngagementPanel club={{ id: clubId, name: club.name }} />}
+        {tab === 'ranking' && admin && <ClubRankingTab clubId={clubId} adminTools />}
         {tab === 'hoje' && <ClubHojePanel club={club} affiliationsQ={affiliationsQ} chargesQ={chargesQ} plansQ={plansQ} pixQ={pixQ} staffQ={staffQ} perms={perms} onIrParaAba={irParaAba} />}
         {tab === 'associados' && <ClubMembersPanel club={club} affiliationsQ={affiliationsQ} plansQ={plansQ} perms={perms} />}
         {['sancoes', 'ouvidoria'].includes(tab) && podeDisciplina && <ClubDisciplinePanel club={club} affiliationsQ={affiliationsQ} tab={tab} />}
@@ -165,8 +178,8 @@ function Central({ clubId }) {
 
 export default function V2ClubManage() {
   const { clubId } = useParams();
-  const { flags, isLoading } = useFeatureFlags();
+  const { isLoading } = useFeatureFlags();
+  const assocOn = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
   if (isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-12" /><V2Skeleton className="h-64" /></V2Page>;
-  if (!flags?.[FEATURE_FLAG.CLUB_ASSOCIATION]) return <Navigate to={`/clubes/${clubId}`} replace />;
-  return <Central clubId={clubId} />;
+  return <Central clubId={clubId} assocOn={assocOn} />;
 }

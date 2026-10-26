@@ -38,7 +38,7 @@ import DocumentsUploadList from './DocumentsUploadList';
 
 const ABERTAS = [CHARGE_STATUS.OPEN, CHARGE_STATUS.DECLARED];
 /** De volta para onde a entidade é gerida (a aba "Federação"). */
-const gestaoDa = (kind, orgId) => (kind === 'club' ? `/clubes/${orgId}?tab=admin` : `/arenas/${orgId}/gerir?aba=federacao`);
+const gestaoDa = (kind, orgId) => (kind === 'club' ? `/clubes/${orgId}/gerir?aba=pagina` : `/arenas/${orgId}/gerir?aba=federacao`);
 
 function Situacao({ federation, plans, member, charges, kind, orgId }) {
   const { user } = useAuth();

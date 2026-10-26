@@ -1,7 +1,17 @@
+/**
+ * V2ClubAdmin — o ambiente de quem ADMINISTRA o clube, dentro da Central
+ * (`/clubes/:id/gerir`). Era a aba "Administração" da página do clube; a página
+ * ficou só com a visão pública e com o que os membros fazem juntos.
+ *
+ * Um painel por aba da Central (`tab`): `membros` (funções e remoção),
+ * `ingresso` (pedidos, convites, código), `dados` (editar e excluir o clube) e
+ * `pagina` (vitrine pública e filiação a uma federação). Nada aqui depende da
+ * flag `club_association`: vale para todo clube.
+ */
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, Copy, RefreshCw, Save, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, RefreshCw, Save, Search, Share2, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -24,16 +34,104 @@ import { V2Badge, V2Button, V2ErrorState, V2Surface, V2Toggle, V2Input, V2Textar
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 import OrgAffiliationCard from '@/v2/components/federations/OrgAffiliationCard';
+import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 
-export default function V2ClubAdmin({ club }) {
-  const navigate = useNavigate();
-  const { copy, copied } = useClipboard();
+/** @param {{ club: object, tab?: 'membros' | 'ingresso' | 'dados' | 'pagina' }} props */
+export default function V2ClubAdmin({ club, tab = 'ingresso' }) {
   const updateClub = useUpdateClub(club.id);
+  const { copy } = useClipboard();
+
+  if (tab === 'membros') {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-gray-500">{t('Quem faz parte do clube. Aqui você promove a administrador, rebaixa a membro ou remove — a lista pública mostra só quem é quem.')}</p>
+        <V2ClubMembers clubId={club.id} manage />
+      </div>
+    );
+  }
+  if (tab === 'dados') return <V2ClubEditCard club={club} updateClub={updateClub} />;
+  if (tab === 'pagina') {
+    return (
+      <div className="space-y-4">
+        <V2ClubPublicPageCard club={club} updateClub={updateClub} copy={copy} />
+        <OrgAffiliationCard kind="club" org={club} />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      <V2ClubJoinRequests club={club} />
+      <V2ClubAddMembers club={club} />
+      <V2ClubInviteCodeCard club={club} />
+    </div>
+  );
+}
+
+function V2ClubInviteCodeCard({ club }) {
+  const { copy, copied } = useClipboard();
   const regenerate = useRegenerateInviteCode(club.id);
   const inviteCodeQuery = useClubInviteCode(club);
   const inviteCode = inviteCodeQuery.data;
-  const deleteClub = useDeleteClub(club.id);
   const [confirmRegen, setConfirmRegen] = useState(false);
+
+  const handleRegenerate = async () => {
+    try {
+      const code = await regenerate.mutateAsync();
+      toast.success(t('Novo código gerado: {codigo}', { codigo: code }));
+      setConfirmRegen(false);
+    } catch (err) {
+      toast.error(err.message || t('Não foi possível gerar novo código.'));
+    }
+  };
+
+  return (
+    <V2Surface>
+      <h3 className="font-display text-base font-bold text-ink">{t('Código de convite')}</h3>
+      <p className="mt-1 text-sm text-gray-500">{t('Compartilhe este código para que atletas ingressem no clube.')}</p>
+      {inviteCodeQuery.isError && (
+        <div className="mt-4"><V2ErrorState inline title={t('Não foi possível carregar o código.')} onRetry={() => inviteCodeQuery.refetch()} /></div>
+      )}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {inviteCode ? (
+          <>
+            <code className="rounded-2xl border border-gray-100 bg-paper-pure px-4 py-2 font-display text-lg font-bold tracking-[0.25em] text-ink shadow-organic-sm">
+              {inviteCode}
+            </code>
+            <V2Button variant="ghost" size="sm" onClick={() => copy(inviteCode, t('Código copiado!'))}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {t('Copiar')}
+            </V2Button>
+            <V2Button
+              variant="ghost"
+              size="sm"
+              onClick={() => copy(`${window.location.origin}/clubes/${club.id}?invite=${encodeURIComponent(inviteCode)}`, t('Link de convite copiado!'))}
+            >
+              <Share2 className="h-4 w-4" /> {t('Copiar link de convite')}
+            </V2Button>
+          </>
+        ) : inviteCodeQuery.isLoading ? (
+          <span className="text-sm text-gray-500">{t('Carregando o código…')}</span>
+        ) : null}
+        <V2Button variant="ghost" size="sm" onClick={() => setConfirmRegen(true)} disabled={regenerate.isPending}>
+          <RefreshCw className="h-4 w-4" /> {t('Gerar novo')}
+        </V2Button>
+      </div>
+      <p className="mt-3 text-xs text-gray-500">{t('Ao gerar um novo código, o anterior deixa de funcionar imediatamente.')}</p>
+      <ConfirmDialog
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title={t('Gerar novo código')}
+        description={t('O código atual deixará de funcionar. Deseja continuar?')}
+        confirmLabel={t('Gerar novo')}
+        loading={regenerate.isPending}
+        onConfirm={handleRegenerate}
+      />
+    </V2Surface>
+  );
+}
+
+function V2ClubEditCard({ club, updateClub }) {
+  const navigate = useNavigate();
+  const deleteClub = useDeleteClub(club.id);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [form, setForm] = useState({
@@ -64,16 +162,6 @@ export default function V2ClubAdmin({ club }) {
     }
   };
 
-  const handleRegenerate = async () => {
-    try {
-      const code = await regenerate.mutateAsync();
-      toast.success(t('Novo código gerado: {codigo}', { codigo: code }));
-      setConfirmRegen(false);
-    } catch (err) {
-      toast.error(err.message || t('Não foi possível gerar novo código.'));
-    }
-  };
-
   const handleDelete = async () => {
     try {
       await deleteClub.mutateAsync();
@@ -86,38 +174,6 @@ export default function V2ClubAdmin({ club }) {
 
   return (
     <div className="space-y-4">
-      <V2ClubJoinRequests club={club} />
-      <V2ClubAddMembers club={club} />
-      <OrgAffiliationCard kind="club" org={club} />
-
-      <V2Surface>
-        <h3 className="font-display text-base font-bold text-ink">{t('Código de convite')}</h3>
-        <p className="mt-1 text-sm text-gray-500">{t('Compartilhe este código para que atletas ingressem no clube.')}</p>
-        {inviteCodeQuery.isError && (
-          <div className="mt-4"><V2ErrorState inline title={t('Não foi possível carregar o código.')} onRetry={() => inviteCodeQuery.refetch()} /></div>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {inviteCode ? (
-            <>
-              <code className="rounded-2xl border border-gray-100 bg-paper-pure px-4 py-2 font-display text-lg font-bold tracking-[0.25em] text-ink shadow-organic-sm">
-                {inviteCode}
-              </code>
-              <V2Button variant="ghost" size="sm" onClick={() => copy(inviteCode, t('Código copiado!'))}>
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Copiar
-              </V2Button>
-            </>
-          ) : inviteCodeQuery.isLoading ? (
-            <span className="text-sm text-gray-500">{t('Carregando o código…')}</span>
-          ) : null}
-          <V2Button variant="ghost" size="sm" onClick={() => setConfirmRegen(true)} disabled={regenerate.isPending}>
-            <RefreshCw className="h-4 w-4" /> {t('Gerar novo')}
-          </V2Button>
-        </div>
-        <p className="mt-3 text-xs text-gray-500">{t('Ao gerar um novo código, o anterior deixa de funcionar imediatamente.')}</p>
-      </V2Surface>
-
-      <V2ClubPublicPageCard club={club} updateClub={updateClub} copy={copy} />
-
       <V2Surface>
         <h3 className="font-display text-base font-bold text-ink">{t('Editar clube')}</h3>
         <p className="mt-1 text-sm text-gray-500">{t('Atualize as informações exibidas para a comunidade.')}</p>
@@ -193,15 +249,6 @@ export default function V2ClubAdmin({ club }) {
         </div>
       </V2Surface>
 
-      <ConfirmDialog
-        open={confirmRegen}
-        onOpenChange={setConfirmRegen}
-        title={t('Gerar novo código')}
-        description={t('O código atual deixará de funcionar. Deseja continuar?')}
-        confirmLabel={t('Gerar novo')}
-        loading={regenerate.isPending}
-        onConfirm={handleRegenerate}
-      />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}

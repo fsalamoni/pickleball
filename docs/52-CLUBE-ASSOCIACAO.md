@@ -160,8 +160,8 @@ Detalhe por perfil em [`48`](./48-PERMISSOES-POR-PERFIL.md) §4.8b.
 ## 5. Telas
 
 - **Página do clube** (`V2ClubDetail`): aba **Associação** (planos, "Minha
-  associação", carteirinha, renovar, encerrar) e, para o administrador, o botão
-  "Central do clube". Quem não é membro vê os planos acima do convite.
+  associação", carteirinha, renovar, encerrar) e, para o administrador e quem tem
+  cargo, o botão "Central do clube" (a única porta da administração; §5.16). Quem não é membro vê os planos acima do convite.
 - Para o associado, a página do clube ganha as abas **Vantagens** (as dele, com
   o "como usar" e o código copiável; em atraso, a tela diz que são de quem está em
   dia) e **Comunicados** (públicos + "só associados"; `?noticia=` abre e rola até
@@ -613,6 +613,47 @@ Tudo atrás de `club_association` e **zero banco, zero regra, zero função**.
   carregaram" (nunca "você não é associado"); clube que não pôde ser conferido vai escrito. A consulta ao
   servidor só sai se a pessoa tem clube.
 
+### 5.16 Página do clube × Central do clube (público × administração)
+
+A página do clube (`/clubes/:id`, `V2ClubDetail`) é a **visão pública e o que os
+membros fazem juntos**; tudo o que é próprio de quem administra mora na **Central
+do clube** (`/clubes/:id/gerir`). 🐞 Antes a página tinha as abas "Administração"
+e "Atividade", o botão de copiar o link de convite no cabeçalho, o menu de
+promover/remover em cada membro e a escolha "Incluir resultados externos" do
+ranking — misturados com o que qualquer membro vê — e a Central só abria com a
+associação ligada.
+
+| Função | Onde fica | Quem |
+|---|---|---|
+| Membros (lista), eventos, mural, fóruns, ranking interno | página do clube | todo membro (`?tab=members|events|feed|forums|ranking`) |
+| Associação, vantagens, comunicados, agenda, eleições, documentos | página do clube (com a associação ligada) | membro / associado em dia |
+| Entrar (pedir, código, convite), sair do clube | página do clube | quem não é / é membro |
+| Moderar o que se publica (apagar post de outra pessoa, fixar tópico, remover evento) | **na própria publicação**, na página | administração (a ação aparece onde o conteúdo está) |
+| Promover a administrador, rebaixar, remover membro | Central → **Membros** → Membros e funções (`?aba=membros`) | administração do clube |
+| Pedidos de ingresso, convidar atletas, código e link de convite | Central → Membros → Pedidos e convites (`?aba=ingresso`) | administração do clube |
+| Atividade do clube, metas, desafios, recompensas | Central → **Engajamento** (`?aba=engajamento`) | administração do clube |
+| Ranking interno com "Incluir resultados externos" | Central → Engajamento → Ranking interno (`?aba=ranking`) | administração do clube |
+| Editar nome, logo, contato; excluir o clube | Central → **Dados do clube** → Dados e logo (`?aba=dados`) | administração do clube |
+| Vitrine pública (`/c/:id`) e filiação a uma federação | Central → Dados do clube → Página e federação (`?aba=pagina`) | administração do clube |
+| Tudo da associação (planos, associados, financeiro, diretoria…) | Central, seções da associação | cada cargo, pela sua permissão |
+
+- **A Central abre sem a flag `club_association`.** As três seções da gestão
+  (`SECOES_DA_GESTAO`: Membros, Engajamento, Dados do clube) valem para todo clube e
+  só para quem administra o clube (`admin`); as seções da associação só existem com
+  a flag ligada (`buildClubSections(perms, { association })`). Sem a flag, **nenhuma
+  consulta a `club_x` é feita** (a regra a recusaria e viraria "não carregou") —
+  `useMyClubRole(clubId, { association })` nem lê o cargo.
+- **A porta é uma só**: o botão "Central do clube" no cabeçalho da página, para a
+  administração e para quem tem cargo (`papel.isStaff`), com ou sem a flag.
+- **Links antigos seguem valendo**: `?tab=admin` e `?tab=atividade` levam a
+  administração a `?aba=ingresso` / `?aba=engajamento`; os avisos novos (pedido de
+  ingresso, filiação a federação, selo, seguro, sede) já apontam para a Central.
+- A lista de membros (`V2ClubMembers`) e o ranking (`ClubRankingTab`) são um
+  componente só: o menu de gestão (`manage`) e a escolha de fontes (`adminTools`) só
+  a Central liga. Guarda de fonte: `src/core/guards/clubePublicoXAdmin.test.js`.
+- A moderação de conteúdo (mural, fóruns, eventos) fica **no contexto da
+  publicação** de propósito: quem modera precisa ver o que está apagando.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -781,6 +822,12 @@ Tudo atrás de `club_association` e **zero banco, zero regra, zero função**.
     levam `flags: ['club_association']`; o card do início só existe com `associacaoClube` no contexto
     (`useHomeCardsContext`). Novo `data-dica="clube-…"` ou nova seção na Central pede o ponto/guia
     correspondente; a rota de ajuda `/clubes/*/gerir` precisa continuar **antes** de `/clubes/*`.
+40. **A página do clube não carrega o que é da administração** (§5.16): promover/remover membro,
+    pedidos e convites, código de convite, metas/desafios/recompensas, editar/excluir o clube e a
+    escolha de fontes do ranking moram na Central (`V2ClubAdmin` por aba, `ClubRankingTab adminTools`,
+    `V2ClubMembers manage`). Função de administração nova entra na Central — nunca como aba ou botão
+    da página — e a Central abre **sem** a flag (as seções da associação é que dependem dela, e sem
+    a flag nenhuma consulta a `club_x` é feita). Guarda: `src/core/guards/clubePublicoXAdmin.test.js`.
 
 ## 7. Testes
 
