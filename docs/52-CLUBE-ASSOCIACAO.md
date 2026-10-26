@@ -11,9 +11,9 @@
 > (conformidade, transparência e pauta do conselho fiscal) estão no código. Do Bloco G
 > (integração final) existem **G1** (Minha área: "Precisa de você" e "Suas associações";
 > exportação de dados pelo servidor) e **G2** (Central de Ajuda, dicas guiadas e o card
-> "Associação do clube" no início); a revisão final está no plano
-> (`/mnt/project-files/clubes/plano-clube-associacao.md`) — este documento só descreve o
-> que há no código.
+> "Associação do clube" no início); o Bloco G está concluído, com a revisão final feita.
+> O plano está em `/mnt/project-files/clubes/plano-clube-associacao.md`; este documento só
+> descreve o que há no código.
 
 ## 1. O que é
 
