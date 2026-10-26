@@ -103,6 +103,8 @@ export async function createTournament(creator, data) {
     // Sprint 4 ARE-14: arena vinculada (opcional)
     arena_id: arenaId,
     ...(arenaId ? { arena_confirmed: arenaConfirmada } : {}),
+    // Torneio do clube (opcional): a regra só deixa marcar quem administra o clube ou é da diretoria esportiva.
+    ...(typeof data.club_id === 'string' && data.club_id ? { club_id: data.club_id, club_name: String(data.club_name || '').slice(0, 120) } : {}),
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   };

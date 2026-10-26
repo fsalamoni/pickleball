@@ -22,6 +22,7 @@ import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
+import ClubTournamentBadge from '@/v2/components/clubs/ClubTournamentBadge';
 import TournamentIntegrityNotice from '@/v2/components/federations/integrity/TournamentIntegrityNotice';
 import { TournamentRefereeCrew } from '@/v2/components/federations/referees/RefereesPublic';
 
@@ -188,6 +189,7 @@ export default function V2Tournament() {
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</span>
             {isAdmin && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> {t('Admin')}</span>}
             <TournamentSanctionBadge tournament={tournament} />
+            <ClubTournamentBadge tournament={tournament} />
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">

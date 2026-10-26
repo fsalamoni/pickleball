@@ -29,6 +29,7 @@ import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
+import ClubTournamentBadge from '@/v2/components/clubs/ClubTournamentBadge';
 import TournamentIntegrityNotice from '@/v2/components/federations/integrity/TournamentIntegrityNotice';
 
 function formatPublicMatchTime(iso) {
@@ -169,6 +170,7 @@ export default function PublicTournament() {
             )}
             <div className="mt-3 flex items-center gap-3 text-xs text-gray-500 flex-wrap">
               <TournamentSanctionBadge tournament={tournament} link={false} />
+              <ClubTournamentBadge tournament={tournament} link={false} />
               {tournament.city && (
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {tournament.city}

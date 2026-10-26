@@ -25,6 +25,7 @@ import {
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
+import ClubTournamentBadge from '@/v2/components/clubs/ClubTournamentBadge';
 
 const STATUS_TONE = {
   [TOURNAMENT_STATUS.IN_PROGRESS]: 'blue',
@@ -220,6 +221,7 @@ function TournamentCard({ tournament, distancia = null }) {
         <V2Badge tone="neutral"><Globe className="h-3 w-3" /> {TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</V2Badge>
         {tournament.invite_code && <V2Badge tone="neutral"><Hash className="h-3 w-3" /> {tournament.invite_code}</V2Badge>}
         <TournamentSanctionBadge tournament={tournament} link={false} />
+        <ClubTournamentBadge tournament={tournament} link={false} />
       </div>
 
       {/* Com a inscrição aberta, o cartão diz o que dá para FAZER nele: é lá
