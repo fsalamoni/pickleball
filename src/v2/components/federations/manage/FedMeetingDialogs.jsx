@@ -5,12 +5,13 @@
  * de presença e o registro de votação). Os dois passam pelo servidor
  * (`federationAgenda`, ações `convene` e `record`); mudar a pauta de uma
  * reunião divulgada e corrigir um resultado pedem motivo e vão ao histórico.
+ * O clube usa os mesmos formulários (`clubAgenda`, Bloco F1): `agendaScope`
+ * escolhe a função do servidor, de onde vêm os documentos e quem é avisado.
  */
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { agendaAction } from '@/modules/federations/services/federationService';
-import { useFederationMutation, useVisibleAcervo } from '@/modules/federations/hooks/useFederations';
+import { callAgenda, isClubAgenda, useAgendaMutation, useScopedAcervo } from '../agenda/agendaScope';
 import { EVENT_REASON_MIN } from '@/modules/federations/domain/agenda';
 import {
   ITEM_KINDS, MEETING_CALLS, MEETING_DOC_TYPES, MEETING_ITEMS_MAX, convocationDraft, convocationNotice, isMeetingConvened, isMeetingRecorded,
@@ -55,7 +56,8 @@ export function ConveneForm({ federation, ev, onFechar }) {
   const [tentou, setTentou] = useState(false);
   const [tirando, setTirando] = useState(null); // índice do item a confirmar
   useAvisoNaoSalvo(Boolean(reason.trim()) || JSON.stringify(f) !== JSON.stringify(base));
-  const acervo = useVisibleAcervo(federation);
+  const acervo = useScopedAcervo(federation);
+  const clube = isClubAgenda(federation);
   const r = validateConvocation(f, { eventDate: ev.date });
   const ja = isMeetingConvened(ev);
   const precisaMotivo = ja && Boolean(ev.ever_visible);
@@ -70,8 +72,8 @@ export function ConveneForm({ federation, ev, onFechar }) {
     return { ...x, items };
   });
   const tirarItem = (i) => { setF((x) => ({ ...x, items: x.items.filter((_, j) => j !== i) })); setTirando(null); };
-  const m = useFederationMutation(() => agendaAction({
-    federationId: federation.id, action: 'convene', eventId: ev.id, convocation: r.value, notify: divulga && notify, reason: precisaMotivo ? reason : '',
+  const m = useAgendaMutation(federation, () => callAgenda(federation, {
+    action: 'convene', eventId: ev.id, convocation: r.value, notify: divulga && notify, reason: precisaMotivo ? reason : '',
   }));
   const enviar = (e) => {
     e.preventDefault();
@@ -79,7 +81,7 @@ export function ConveneForm({ federation, ev, onFechar }) {
     if (!r.ok) { toast.error(Object.values(r.errors)[0]); return; }
     if (precisaMotivo && reason.trim().length < EVENT_REASON_MIN) { toast.error(t('Diga o motivo da mudança (mínimo {n} caracteres).', { n: EVENT_REASON_MIN })); return; }
     m.mutate(undefined, {
-      onSuccess: (res) => { toast.success(res?.notified ? t('Convocação salva. {n} seguidores avisados.', { n: res.notified }) : t('Convocação salva.')); onFechar(); },
+      onSuccess: (res) => { toast.success(res?.notified ? (clube ? t('Convocação salva. {n} associados avisados.', { n: res.notified }) : t('Convocação salva. {n} seguidores avisados.', { n: res.notified })) : t('Convocação salva.')); onFechar(); },
       onError: (er) => toast.error(er.message),
     });
   };
@@ -132,8 +134,10 @@ export function ConveneForm({ federation, ev, onFechar }) {
         </ol>
         {f.items.length < MEETING_ITEMS_MAX && <V2Button type="button" size="sm" variant="secondary" onClick={() => set('items', [...f.items, { title: '', description: '', kind: 'deliberation' }])}><Plus className="h-4 w-4" />{t('Acrescentar item')}</V2Button>}
       </fieldset>
-      {divulga && <V2Toggle id="cv-avisar" checked={notify} onChange={setNotify} label={t('Avisar quem segue a federação')} hint={t('Quem segue recebe um aviso com a convocação.')} />}
-      {precisaMotivo && <Motivo id="cv-motivo" value={reason} onChange={setReason} hint={t('A convocação já foi divulgada: a mudança fica no histórico, com o motivo, e quem segue é avisado.')} />}
+      {divulga && (clube
+        ? <V2Toggle id="cv-avisar" checked={notify} onChange={setNotify} label={t('Avisar os associados em dia')} hint={t('Os associados em dia recebem um aviso com a convocação.')} />
+        : <V2Toggle id="cv-avisar" checked={notify} onChange={setNotify} label={t('Avisar quem segue a federação')} hint={t('Quem segue recebe um aviso com a convocação.')} />)}
+      {precisaMotivo && <Motivo id="cv-motivo" value={reason} onChange={setReason} hint={clube ? t('A convocação já foi divulgada: a mudança fica no histórico, com o motivo, e os associados são avisados.') : t('A convocação já foi divulgada: a mudança fica no histórico, com o motivo, e quem segue é avisado.')} />}
       <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar a convocação')}</V2Button></div>
       <ConfirmDialog
         open={tirando != null}
@@ -159,7 +163,8 @@ export function RecordForm({ federation, ev, onFechar }) {
   const [reason, setReason] = useState('');
   useAvisoNaoSalvo(Boolean(reason.trim()) || JSON.stringify(f) !== JSON.stringify(base));
   const [tentou, setTentou] = useState(false);
-  const acervo = useVisibleAcervo(federation);
+  const acervo = useScopedAcervo(federation);
+  const clube = isClubAgenda(federation);
   const pauta = ev.meeting?.items || [];
   const r = validateRecord(f, pauta);
   const ja = isMeetingRecorded(ev);
@@ -167,14 +172,14 @@ export function RecordForm({ federation, ev, onFechar }) {
   const salvo = ev.meeting?.record || {};
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const setItem = (i, patch) => setF((x) => ({ ...x, items: x.items.map((it, j) => (j === i ? { ...it, ...patch } : it)) }));
-  const m = useFederationMutation(() => agendaAction({ federationId: federation.id, action: 'record', eventId: ev.id, record: f, reason: precisaMotivo ? reason : '' }));
+  const m = useAgendaMutation(federation, () => callAgenda(federation, { action: 'record', eventId: ev.id, record: f, reason: precisaMotivo ? reason : '' }));
   const enviar = (e) => {
     e.preventDefault();
     setTentou(true);
     if (!r.ok) { toast.error(Object.values(r.errors)[0]); return; }
     if (precisaMotivo && reason.trim().length < EVENT_REASON_MIN) { toast.error(t('Diga o motivo da correção (mínimo {n} caracteres).', { n: EVENT_REASON_MIN })); return; }
     m.mutate(undefined, {
-      onSuccess: (res) => { toast.success(res?.notified ? t('Resultado salvo. {n} seguidores avisados.', { n: res.notified }) : t('Resultado salvo.')); onFechar(); },
+      onSuccess: (res) => { toast.success(res?.notified ? (clube ? t('Resultado salvo. {n} associados avisados.', { n: res.notified }) : t('Resultado salvo. {n} seguidores avisados.', { n: res.notified })) : t('Resultado salvo.')); onFechar(); },
       onError: (er) => toast.error(er.message),
     });
   };
@@ -232,7 +237,7 @@ export function RecordForm({ federation, ev, onFechar }) {
       )}
       {acervo.isError && <V2ErrorState inline title={t('Não carregou o acervo')} onRetry={acervo.refetch} />}
       <V2Field label={t('Observações')} htmlFor="rs-obs"><V2Textarea id="rs-obs" rows={3} maxLength={2000} value={f.notes} onChange={(e) => set('notes', e.target.value)} /></V2Field>
-      {precisaMotivo && <Motivo id="rs-motivo" value={reason} onChange={setReason} hint={t('O resultado já foi divulgado: a correção fica no histórico, com o motivo, e quem segue é avisado.')} />}
+      {precisaMotivo && <Motivo id="rs-motivo" value={reason} onChange={setReason} hint={clube ? t('O resultado já foi divulgado: a correção fica no histórico, com o motivo, e os associados são avisados.') : t('O resultado já foi divulgado: a correção fica no histórico, com o motivo, e quem segue é avisado.')} />}
       <div className="flex justify-end gap-2"><V2Button type="button" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button><V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar o resultado')}</V2Button></div>
     </form>
   );

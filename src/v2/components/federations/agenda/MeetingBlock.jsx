@@ -8,7 +8,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Lock, Megaphone, Users } from 'lucide-react';
 import { ITEM_RESULTS, MEETING_CALLS, convocationNotice, itemKind } from '@/modules/federations/domain/meeting';
-import { docPublicPath } from '@/modules/federations/domain/acervo';
+import { docPathFor } from '../acervo/acervoScope';
 import { V2Badge } from '@/v2/ui/primitives';
 import { fmtData, t } from '@/core/i18n';
 
@@ -17,7 +17,7 @@ const TOM = { approved: 'green', rejected: 'red', elected: 'green', informed: 'b
 function DocLink({ federation, doc, rotulo }) {
   if (!doc?.doc_id) return null;
   return (
-    <Link to={docPublicPath(federation, doc.doc_id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink underline underline-offset-2">
+    <Link to={docPathFor(federation, doc.doc_id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink underline underline-offset-2">
       {doc.visibility && doc.visibility !== 'public' ? <Lock className="h-3.5 w-3.5" aria-label={t('Restrito')} /> : <FileText className="h-3.5 w-3.5" aria-hidden="true" />}
       {rotulo ? `${rotulo}: ` : ''}{[doc.code, doc.title].filter(Boolean).join(' — ') || t('Documento')}
     </Link>

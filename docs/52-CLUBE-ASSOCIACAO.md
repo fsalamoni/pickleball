@@ -6,8 +6,9 @@
 > (vantagens do associado, comunicados e patrocinadores), **C2** (cupons e
 > campanhas), **C3** (loja do clube no Mercado) e **D1** (contas: orçamento,
 > lançamentos e prestação de contas), **D2a** (documentos oficiais do clube) e
-> **D2b** (agenda oficial do clube) estão no código. Os blocos D2c–G (atletas e
-> seleção, torneios do clube, assembleias e eleições) estão no plano
+> **D2b** (agenda oficial do clube), **E1–E3** (disciplina, patrimônio, proteção de
+> menores, seleção e torneios) e **F1** (assembleias) estão no código. Os blocos F2–G
+> (eleições, conselho fiscal e integração final) estão no plano
 > (`/mnt/project-files/clubes/plano-clube-associacao.md`) e **ainda não
 > existem** — este documento só descreve o que há no código.
 
@@ -314,9 +315,9 @@ documentos, não é uma segunda agenda: é a **mesma tela da federação**
 (`FedAgendaPanel`, `AgendaBrowser`, `AgendaEventView`) com o clube no lugar dela.
 O `agendaScope.js` troca a entidade (`clubAgendaEntity(club)`, `kind: 'club'`), a
 função do servidor (`clubAgenda`), de onde vêm os eventos e os documentos
-ligados, os endereços e a invalidação; o clube **ainda não** tem convocação/ata de
-reunião, "Seguir" nem comentários (`hasMeetings`/`hasFollow`/`hasComments`
-escondem — reunião de verdade é o Bloco F).
+ligados, os endereços e a invalidação; o clube tem convocação e ata de reunião
+(Bloco F1, §5.11), mas **não** "Seguir" nem comentários (`hasFollow`/`hasComments`
+escondem).
 
 - **Quem marca o quê**: a secretaria (`docs`) e a administração, qualquer evento;
   a diretoria esportiva (`sports`), só a agenda esportiva (competição, seleção,
@@ -480,6 +481,38 @@ e `club_name` (cópia para exibir sem ler o clube). **Zero coleção, zero índi
   as duas marcas podem coexistir no mesmo torneio.
 - Falha de consulta diz que não carregou (e não oferece "criar") — nunca "nenhum torneio".
 
+### 5.11 Assembleias e reuniões (Bloco F1)
+
+Na **Agenda** da Central, o evento de tipo reunião ou assembleia (assembleia geral
+ordinária ou extraordinária, diretoria, conselhos) ganha **Convocar** e **Registrar o
+resultado**, os mesmos formulários da federação (`FedMeetingDialogs`) no escopo do
+clube. **Zero coleção, zero índice, zero regra nova**: a convocação e o resultado moram
+no campo `meeting` do próprio evento (`club_x/{clube}/events`), que só o servidor grava
+(`clubAgenda`, ações `convene` e `record`, com a régua `federationMeetingPolicy.js`).
+
+- **Convocação**: data (não futura, antes da reunião), edital do acervo do clube (tipo
+  convocação ou edital, **publicado e deste clube**), quórum da primeira e da segunda
+  chamada e a pauta (até 40 itens, ids `p1…` pela posição; tipo deliberação, eleição ou
+  informe). O prazo do estatuto (8 dias, padrão) **avisa, não bloqueia**. Os associados
+  em dia são avisados só quando a equipe pede, na primeira convocação.
+- **Mudar a convocação de uma reunião já divulgada** pede motivo (≥ 10 caracteres), entra
+  em `history[]` (`agenda_changed`) e avisa os associados.
+- **Resultado**: só depois de a reunião começar e só com a convocação feita; presença,
+  chamada, quórum, o que se decidiu em cada item (votos, resumo, o ato que saiu dele) e os
+  documentos (ata, lista de presença, registro de votação — do acervo do clube, do tipo
+  certo). **Sem quórum nada se decide** (cada item fica adiado ou sai da pauta). Publicar
+  avisa os associados; corrigir depois pede motivo, vai ao histórico (`record_corrected`) e
+  avisa.
+- **Depois do resultado**, a convocação e a data da reunião não mudam; reunião convocada
+  não vira um tipo que não é reunião nem fica antes da convocação; cancelada ou adiada não
+  se convoca nem tem resultado.
+- **Quem faz**: as mesmas permissões da agenda (`docs` e administração; `sports` não cuida
+  do institucional). O associado e o público leem o bloco `MeetingBlock` na página do
+  evento, conforme a visibilidade dele (`members` ou `pub`); documento restrito aparece
+  com o cadeado e só abre para quem pode lê-lo.
+- As frases dos avisos são as da federação (`{sigla}` = nome do clube), então a tradução
+  já existe.
+
 ## 6. O que não pode regredir
 
 1. **Filiação, cobrança, aprovação, confirmação e o código da carteirinha são do
@@ -613,6 +646,14 @@ e `club_name` (cópia para exibir sem ler o clube). **Zero coleção, zero índi
     `archived == false` no servidor escondia todos), a ordem e o arquivado saem em memória.
     **Nunca** crie coleção própria para o torneio do clube, e o selo (`ClubTournamentBadge`)
     não importa o domínio do clube: vive nas listas de torneio e não deve pesá-las.
+35. **A assembleia do clube é o evento da agenda com `meeting`** (Bloco F1): nada de
+    coleção própria. `convene` e `record` são do servidor (`clubAgenda`), com a régua da
+    federação (`federationMeetingPolicy.js`, sem cópia no cliente além da que a federação já
+    tem); o edital e a ata têm de ser documentos PUBLICADOS no acervo DESTE clube e do tipo
+    certo; reunião divulgada não muda calada (motivo e histórico) e, com resultado, não muda
+    de data nem de convocação. A tela é a da federação (`FedMeetingDialogs`, `MeetingBlock`)
+    escolhida por `agendaScope` — **nunca** a bifurque; `hasFollow`/`hasComments` seguem
+    falsos para o clube.
 
 ## 7. Testes
 
@@ -637,6 +678,7 @@ quem saiu) e `ClubAgendaPublic.runtime.test.jsx`,
 `src/modules/clubs/domain/selection.test.js`, `ClubSelectionPanel.runtime.test.jsx`,
 `tests/rules/clubTournaments.rules.test.js` (emulador: quem marca o torneio com o clube, flag desligada, tirar o selo, lista pública),
 `src/modules/clubs/domain/clubTournaments.test.js`, `ClubTournamentsPanel.runtime.test.jsx`,
+`functions/clubMeetings.test.js` (convocar, edital do acervo, motivo, resultado, quórum, ata, correção) e `ClubMeetingDialogs.runtime.test.jsx`,
 `src/modules/clubs/domain/safeguarding.test.js`, `ClubSafeguardingPanel.runtime.test.jsx`,
 `functions/clubManagement.test.js` (cargo, empréstimo, devolução, baixa, varredura uma vez só),
 `tests/rules/clubManagement.rules.test.js` (emulador: quem lê, ninguém grava),
