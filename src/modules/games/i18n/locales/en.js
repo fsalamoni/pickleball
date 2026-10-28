@@ -1058,6 +1058,7 @@ export default {
   "Você e a sua dupla foram para a fila de quem está sem grupo.": "You and your pair moved to the queue for people without a group.",
   "Você e a sua dupla foram para o grupo {nome}.": "You and your pair moved to group {nome}.",
   "Você entrou no dia de jogo. Bom jogo!": "You joined the game day. Have a good game!",
+  "Ele está na sua agenda, aqui no início.": "It is in your schedule, here on the home page.",
   "Você entrou no Play! Já está na ordem de participação.": "You're in the Play! You're already in the play order.",
   "Você escolhe quem entra, entre os {n} disponíveis na ordem de participação.": "You choose who comes in, among the {n} available in the play order.",
   "Você está em quadra agora. Bom jogo!": "You're on court now. Have a good game!",

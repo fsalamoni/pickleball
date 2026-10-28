@@ -124,15 +124,33 @@ function horarioDaArena(gd) {
   return { inicio: inicios[0] || null, fim: fins[fins.length - 1] || null };
 }
 
-/** Dias de jogo em que estou (`useMyGameDays`). Arquivado não entra. */
-export function agendaFromGameDays(gameDays = [], { agora = Date.now() } = {}) {
+/**
+ * O selo de um compromisso que nasceu num CLUBE: para quem é membro, é do
+ * clube ("Clube"); para quem não é (o convidado de fora), é um dia de jogo
+ * como outro qualquer — "Clube" diria que ele faz parte de algo de que não
+ * faz. Sem a lista de clubes em mãos (`meusClubes` ausente), `semLista`.
+ */
+function tipoDoClube(clubId, meusClubes, semLista) {
+  if (!clubId || !meusClubes) return semLista;
+  return meusClubes.has(clubId) ? AGENDA_KIND.EVENTO_CLUBE : AGENDA_KIND.DIA_DE_JOGO;
+}
+
+/**
+ * Dias de jogo em que estou (`useMyGameDays`). Arquivado não entra.
+ * @param {object[]} gameDays
+ * @param {{ agora?: number, meusClubes?: Set<string> }} [opts] `meusClubes` —
+ *   ids dos clubes de que a pessoa é membro: o dia de um deles vira "Clube".
+ */
+export function agendaFromGameDays(gameDays = [], { agora = Date.now(), meusClubes = null } = {}) {
   return (gameDays || []).map((gd) => {
     if (!gd?.id || gd.status === 'archived' || gd.archived === true) return null;
     const arena = horarioDaArena(gd);
-    const origem = gd.arena_name || gd.club_name || gd.location || '';
+    const origem = gd.club_id
+      ? [gd.club_name, gd.location].filter(Boolean).join(' · ')
+      : gd.arena_name || gd.club_name || gd.location || '';
     return item({
       key: `dia:${gd.id}`,
-      kind: AGENDA_KIND.DIA_DE_JOGO,
+      kind: tipoDoClube(gd.club_id, meusClubes, AGENDA_KIND.DIA_DE_JOGO),
       dia: gd.date,
       hora: arena.inicio || gd.time,
       fim: arena.fim,
@@ -142,6 +160,7 @@ export function agendaFromGameDays(gameDays = [], { agora = Date.now() } = {}) {
       subtitle: origem,
       link: `/dia-de-jogo/${gd.id}`,
       gameDayId: gd.id,
+      clubEventId: gd.club_id ? gd.club_event_id || null : null,
     });
   }).filter(Boolean);
 }
@@ -262,14 +281,14 @@ export function agendaFromOpenSlots(slots = [], { agora = Date.now(), gameDayIds
  * 'AAAA-MM-DDTHH:mm' e `my_invite_status`). Entra quem vai e o convite ainda
  * sem resposta (que pede uma).
  */
-export function agendaFromClubEvents(events = [], { agora = Date.now() } = {}) {
+export function agendaFromClubEvents(events = [], { agora = Date.now(), meusClubes = null } = {}) {
   return (events || []).map((e) => {
     const st = e?.my_invite_status;
     if (!e?.id || !(st === INVITE_STATUS.GOING || st === INVITE_STATUS.MAYBE || st === INVITE_STATUS.INVITED)) return null;
     const [dia, horaBruta] = str(e.starts_at).split('T');
     return item({
       key: `evento:${e.id}`,
-      kind: AGENDA_KIND.EVENTO_CLUBE,
+      kind: tipoDoClube(e.club_id, meusClubes, AGENDA_KIND.EVENTO_CLUBE),
       dia,
       hora: str(horaBruta).slice(0, 5),
       duracaoMs: DURACAO_DIA_DE_JOGO_MS,
@@ -279,8 +298,37 @@ export function agendaFromClubEvents(events = [], { agora = Date.now() } = {}) {
       status: st === INVITE_STATUS.INVITED ? t('Convite sem resposta') : (st === INVITE_STATUS.MAYBE ? t('Talvez') : t('Você vai')),
       acao: st === INVITE_STATUS.INVITED,
       link: e.club_id ? `/clubes/${e.club_id}/eventos/${e.id}` : '/clubes',
+      eventId: e.id,
     });
   }).filter(Boolean);
+}
+
+/**
+ * O dia de jogo do clube e o evento do clube são o MESMO compromisso: a data
+ * do evento nasce como um `game_days` (`club_event_id`). 🐞 A agenda listava
+ * os dois — "Clube" pelo evento e "Dia de jogo" pelo dia —, e a pessoa via o
+ * mesmo sábado duas vezes. Aqui eles viram UM item, o do dia de jogo (que já
+ * leva o selo certo: "Clube" para o membro, "Dia de jogo" para o convidado),
+ * com a resposta dada ao evento ("Você vai", "Talvez"). Convite ainda sem
+ * resposta leva ao evento, que é onde se responde.
+ *
+ * A data decide: num evento que se repete, cada data é um dia de jogo, e o
+ * evento só cobre a do `starts_at` dele.
+ * @param {object[]} dias    itens de `agendaFromGameDays`
+ * @param {object[]} eventos itens de `agendaFromClubEvents`
+ * @returns {object[]} os dias (com a resposta) e os eventos sem dia de jogo
+ */
+export function juntarEventosAosDias(dias = [], eventos = []) {
+  const chave = (id, dia) => `${id}|${dia}`;
+  const doEvento = new Map((eventos || []).filter((e) => e?.eventId).map((e) => [chave(e.eventId, e.dia), e]));
+  const usados = new Set();
+  const juntos = (dias || []).map((d) => {
+    const e = d?.clubEventId ? doEvento.get(chave(d.clubEventId, d.dia)) : null;
+    if (!e) return d;
+    usados.add(e.key);
+    return e.acao ? { ...d, status: e.status, acao: true, link: e.link } : { ...d, status: e.status };
+  });
+  return [...juntos, ...(eventos || []).filter((e) => e && !usados.has(e.key))];
 }
 
 /* ------------------------------------------------------------------ */

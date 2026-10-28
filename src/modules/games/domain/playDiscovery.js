@@ -361,7 +361,13 @@ export function buildPlayList({
  * O "Jogar" do início mostra o que a pessoa PODE fazer: o que ela preenche os
  * requisitos para entrar (a faixa de nível do jogo aberto) e o que ela já tem
  * marcado. O resto segue em Procura-se jogo, com o motivo escrito.
+ *
+ * Com a AGENDA na tela (`naAgenda`), o que ela já tem sai daqui: está lá, e o
+ * mesmo jogo em dois cards do início é o mesmo compromisso contado duas vezes.
+ * Sem a agenda, ele fica, com "Você vai" — senão sumiria do início.
+ * @param {object[]} itens
+ * @param {{ naAgenda?: boolean }} [opts]
  */
-export function playItemsForMe(itens = []) {
-  return (itens || []).filter((i) => i.estou || i.cabe !== false);
+export function playItemsForMe(itens = [], { naAgenda = false } = {}) {
+  return (itens || []).filter((i) => (i.estou ? !naAgenda : i.cabe !== false));
 }

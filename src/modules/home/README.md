@@ -8,7 +8,7 @@ home/
 ├── domain/
 │   ├── freshness.js        # ⭐ a régua única de "isto ainda está valendo?" (data sem hora = dia LOCAL)
 │   ├── homeProfile.js      # papel real + interesses → frentes → seções (resolveHomeFoci, homeSectionsFor)
-│   ├── homeAgenda.js       # todas as fontes da agenda numa lista por dia
+│   ├── homeAgenda.js       # todas as fontes da agenda numa lista por dia (o dia de jogo do clube e o evento dele = um item; selo "Clube" só para o membro)
 │   ├── homeTournaments.js  # meus torneios, abertos perto de mim, último resultado, o que o organizador precisa ver
 │   ├── homeShortcuts.js    # os atalhos (um por frente), a saudação e a frase do dia
 │   ├── homePlay.js         # convites abertos, a "arena de sempre" e os próximos horários livres

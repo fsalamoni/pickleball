@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   AGENDA_KIND, agendaFromTournamentMatches, agendaFromGameDays, agendaFromBookings,
   agendaFromLessons, agendaFromArenaEnrollments, agendaFromOpenSlots, agendaFromClubEvents,
-  mergeAgenda, groupAgendaByDay, agendaDayLabel, countToday,
+  mergeAgenda, groupAgendaByDay, agendaDayLabel, countToday, juntarEventosAosDias,
 } from './homeAgenda.js';
 
 // Sábado, 26/09/2026, 15:00 (hora local).
@@ -120,6 +120,52 @@ describe('eventos de clube', () => {
     ], ctx);
     expect(r.map((i) => i.key)).toEqual(['evento:e1', 'evento:e2']);
     expect(r[1]).toMatchObject({ acao: true, link: '/clubes/c/eventos/e2' });
+  });
+});
+
+describe('dia de jogo do clube: um item só, com o selo de quem vê', () => {
+  const dia = { id: 'gd1', title: 'Sábado no clube', date: '2026-09-27', time: '18:00', club_id: 'c1', club_name: 'Clube Sol', location: 'Quadra A', club_event_id: 'ev1' };
+  const evento = { id: 'ev1', club_id: 'c1', club_name: 'Clube Sol', title: 'Sábado no clube', starts_at: '2026-09-27T18:00' };
+
+  it('membro do clube vê "Clube"; o convidado de fora vê "Dia de jogo"', () => {
+    const membro = agendaFromGameDays([dia], { ...ctx, meusClubes: new Set(['c1']) });
+    const convidado = agendaFromGameDays([dia], { ...ctx, meusClubes: new Set(['outro']) });
+    expect(membro[0]).toMatchObject({ kind: AGENDA_KIND.EVENTO_CLUBE, subtitle: 'Clube Sol · Quadra A', link: '/dia-de-jogo/gd1', clubEventId: 'ev1' });
+    expect(convidado[0].kind).toBe(AGENDA_KIND.DIA_DE_JOGO);
+    // Sem a lista de clubes em mãos, fica como sempre foi.
+    expect(agendaFromGameDays([dia], ctx)[0].kind).toBe(AGENDA_KIND.DIA_DE_JOGO);
+    const ev = agendaFromClubEvents([{ ...evento, my_invite_status: 'invited' }], { ...ctx, meusClubes: new Set() });
+    expect(ev[0].kind).toBe(AGENDA_KIND.DIA_DE_JOGO);
+  });
+
+  it('o evento e o dia de jogo dele viram UM item, com a resposta dada ao evento', () => {
+    const meus = { ...ctx, meusClubes: new Set(['c1']) };
+    const r = juntarEventosAosDias(
+      agendaFromGameDays([dia], meus),
+      agendaFromClubEvents([{ ...evento, my_invite_status: 'going' }], meus),
+    );
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ key: 'dia:gd1', kind: AGENDA_KIND.EVENTO_CLUBE, status: 'Você vai', acao: false, link: '/dia-de-jogo/gd1' });
+  });
+
+  it('convite sem resposta continua pedindo ação e leva ao evento', () => {
+    const r = juntarEventosAosDias(
+      agendaFromGameDays([dia], ctx),
+      agendaFromClubEvents([{ ...evento, my_invite_status: 'invited' }], ctx),
+    );
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ key: 'dia:gd1', acao: true, link: '/clubes/c1/eventos/ev1' });
+  });
+
+  it('outra data do mesmo evento e evento sem dia de jogo seguem separados', () => {
+    const r = juntarEventosAosDias(
+      agendaFromGameDays([{ ...dia, id: 'gd2', date: '2026-10-04' }], ctx),
+      agendaFromClubEvents([
+        { ...evento, my_invite_status: 'going' },
+        { id: 'ev9', club_id: 'c1', starts_at: '2026-09-29T19:00', my_invite_status: 'going' },
+      ], ctx),
+    );
+    expect(r.map((i) => i.key).sort()).toEqual(['dia:gd2', 'evento:ev1', 'evento:ev9']);
   });
 });
 

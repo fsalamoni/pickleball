@@ -199,6 +199,16 @@ describe('buildPlayList', () => {
     expect(playItemsForMe(lista).map((i) => i.id)).toEqual(['meu', 'livre']);
   });
 
+  it('com a agenda no início, o que eu já tenho sai do Jogar (está na agenda)', () => {
+    const itens = [
+      { id: 'tenho', estou: true, cabe: true },
+      { id: 'cabe', estou: false, cabe: true },
+      { id: 'fora', estou: false, cabe: false },
+    ];
+    expect(playItemsForMe(itens).map((i) => i.id)).toEqual(['tenho', 'cabe']);
+    expect(playItemsForMe(itens, { naAgenda: true }).map((i) => i.id)).toEqual(['cabe']);
+  });
+
   it('nível desconhecido não barra ninguém (a plataforma não inventa nível)', () => {
     const vagas = [{ id: 'faixa', arena_id: 'A', date: '2026-10-01', start: '19:00', total_spots: 4, participants: [], min_level: 4.0 }];
     expect(buildPlayList({ ...base, vagas, nivel: null })[0].cabe).toBe(true);
