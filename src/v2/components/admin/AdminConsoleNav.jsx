@@ -62,15 +62,20 @@ function Selo({ n, className }) {
 
 /**
  * Uma linha por seção. Só a seção ATIVA mostra as abas; seção de uma aba só é
- * link direto. Tocar numa seção fechada abre a primeira aba dela.
+ * link direto. Tocar numa seção fechada abre a primeira aba dela; tocar na
+ * ativa recolhe e reabre as abas (sem trocar de aba). Recolhida, ela volta a
+ * abrir sozinha quando a aba muda (busca, link, outra seção).
  */
 function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
   const ir = (id) => { onTab(id); onEscolheu?.(); };
+  // Guarda a ABA em que a pessoa recolheu: trocar de aba desfaz o recolhimento.
+  const [recolhidaEm, setRecolhidaEm] = useState(null);
   return (
     <nav aria-label={t('Seções do painel')} data-dica="admin-secoes">
       <ul className="space-y-0.5">
         {sections.map((s) => {
           const ativa = s.tabs.some((aba) => aba.id === tab);
+          const aberta = ativa && recolhidaEm !== tab;
           const unica = s.tabs.length === 1;
           const pendentes = s.tabs.reduce((a, aba) => a + (badges[aba.id] || 0), 0);
           return (
@@ -78,8 +83,11 @@ function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
               <button
                 type="button"
                 aria-current={unica && ativa ? 'page' : undefined}
-                aria-expanded={unica ? undefined : ativa}
-                onClick={() => { if (!ativa) ir(s.tabs[0].id); }}
+                aria-expanded={unica ? undefined : aberta}
+                onClick={() => {
+                  if (!ativa) ir(s.tabs[0].id);
+                  else if (!unica) setRecolhidaEm((x) => (x === tab ? null : tab));
+                }}
                 className={cn(
                   'flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm coarse:min-h-11',
                   unica && ativa ? 'bg-ink font-bold text-white'
@@ -90,9 +98,9 @@ function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
                 {s.icon && <s.icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />}
                 {s.label}
                 <Selo n={pendentes} />
-                {!unica && <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 opacity-50 transition-transform', pendentes ? 'ml-1' : 'ml-auto', ativa && 'rotate-180')} aria-hidden />}
+                {!unica && <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 opacity-50 transition-transform', pendentes ? 'ml-1' : 'ml-auto', aberta && 'rotate-180')} aria-hidden />}
               </button>
-              {!unica && ativa && (
+              {!unica && aberta && (
                 <ul className="mb-1 ml-5 mt-0.5 space-y-0.5 border-l border-gray-100 pl-2">
                   {s.tabs.map((aba) => (
                     <li key={aba.id}>

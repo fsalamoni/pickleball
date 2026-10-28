@@ -23,7 +23,8 @@ Painel exclusivo de `platform_admin` (`/admin/*`).
 ## Navegação do Painel admin (2026-10-11)
 Nove seções por tarefa (Hoje · Pessoas · Torneios · Arenas · Treino · Gamificação ·
 Divulgação · Funcionalidades · Sistema) em `SECTIONS` (`V2AdminConsole.jsx`); só a
-seção ativa abre as abas. **O id de cada aba é contrato** (links, avisos, dicas).
+seção ativa abre as abas, e tocar nela de novo recolhe e reabre as abas sem trocar de
+aba (`AdminConsoleNav`; recolhida, volta a abrir quando a aba muda). **O id de cada aba é contrato** (links, avisos, dicas).
 "Precisa de você" (`domain/adminInbox.js` + `useAdminInbox`) junta as filas que já
 existem e põe o selo na barra; fonte que não respondeu é "desconhecida", nunca zero.
 Fila nova que espera decisão do admin entra em `buildInbox`. Branding e Conteúdo
