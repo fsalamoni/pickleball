@@ -258,7 +258,9 @@ push em main
           (falha se a CLI não disser "released rules"; erro 5xx/"currently
           unavailable" do serviço de regras ganha até 3 tentativas com espera
           crescente (2026-10-23); num 409 repete com --debug e mostra a
-          resposta do serviço de regras)
+          resposta do serviço de regras — e essa repetição também ganha até
+          3 tentativas num 5xx passageiro, desde o deploy do PR #364, que
+          parou num 503 depois de um 409 de PATCH lento)
        8. Deploy Firestore indexes → --only firestore:indexes,firestore:pickleball
           (sem --force: índice remoto não versionado é preservado e avisado)
        9. Install functions deps + Deploy Cloud Functions (não fatal)

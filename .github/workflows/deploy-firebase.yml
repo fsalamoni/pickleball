@@ -230,8 +230,18 @@ jobs:
           # publicar, as regras estão no ar e o deploy segue (PR #297).
           if echo "$OUT" | grep -q "HTTP Error: 409"; then
             echo "::group::Resposta do serviço de regras (--debug)"
-            DBG=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --debug 2>&1)
-            DRC=$?
+            # A repetição também pega o 503 passageiro (deploy do PR #364: o
+            # 409 veio de um PATCH lento e a repetição caiu num 503, parando
+            # site e funções com as regras já no ar).
+            for TENTATIVA in 1 2 3; do
+              DBG=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --debug 2>&1)
+              DRC=$?
+              if [ $DRC -eq 0 ] || ! echo "$DBG" | grep -qiE "HTTP Error: 5[0-9][0-9]|currently unavailable|ECONNRESET|ETIMEDOUT"; then
+                break
+              fi
+              echo "::warning title=Serviço de regras indisponível::Repetição $TENTATIVA falhou com erro passageiro; repetindo."
+              sleep $((TENTATIVA * 20))
+            done
             echo "$DBG" | grep -iE "rules\]|releases|rulesets|status\]|body\]|Error" | grep -v '"source"' | cut -c1-1500
             echo "::endgroup::"
             if [ $DRC -eq 0 ] && echo "$DBG" | grep -qE "released rules|updated release"; then
