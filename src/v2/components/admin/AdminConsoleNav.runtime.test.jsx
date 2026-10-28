@@ -1,5 +1,6 @@
 /**
- * A barra do Painel admin: uma linha por seção, só a ativa abre as abas, e o
+ * A barra do Painel admin: uma linha por seção, só a ativa abre as abas (e
+ * recolhe ao tocar de novo), e o
  * selo de pendências ("Precisa de você") soma as abas da seção.
  */
 import React from 'react';
@@ -33,14 +34,31 @@ describe('AdminConsoleNav', () => {
     expect(botao(/Treino/)).toBeTruthy();
   });
 
-  it('tocar numa seção fechada abre a primeira aba; na ativa não faz nada', async () => {
+  it('tocar numa seção fechada abre a primeira aba', async () => {
     const onTab = vi.fn();
     await montar({ tab: 'records', onTab });
     await act(async () => { botao(/Treino/).click(); });
     expect(onTab).toHaveBeenCalledWith('treino-revisao');
-    onTab.mockClear();
+  });
+
+  it('tocar na seção ativa recolhe e reabre as abas, sem trocar de aba', async () => {
+    const onTab = vi.fn();
+    await montar({ tab: 'records', onTab });
+    expect(botao(/Pessoas/).getAttribute('aria-expanded')).toBe('true');
     await act(async () => { botao(/Pessoas/).click(); });
+    expect(botao(/Acessos/)).toBeFalsy();
+    expect(botao(/Pessoas/).getAttribute('aria-expanded')).toBe('false');
+    await act(async () => { botao(/Pessoas/).click(); });
+    expect(botao(/Acessos/)).toBeTruthy();
     expect(onTab).not.toHaveBeenCalled();
+  });
+
+  it('recolhida, a seção reabre quando a aba muda', async () => {
+    await montar({ tab: 'records' });
+    await act(async () => { botao(/Pessoas/).click(); });
+    expect(botao(/Acessos/)).toBeFalsy();
+    await montar({ tab: 'access' });
+    expect(botao(/Cadastros/)).toBeTruthy();
   });
 
   it('o selo soma as abas da seção e leitor de tela ouve a contagem', async () => {
