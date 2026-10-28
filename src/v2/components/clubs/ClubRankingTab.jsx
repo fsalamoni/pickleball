@@ -8,7 +8,7 @@ import { Globe2, ListChecks, Medal, User, Users2 } from 'lucide-react';
 import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
 import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 export default function ClubRankingTab({ clubId, adminTools = false }) {
   const doublesOn = true;
@@ -35,18 +35,18 @@ export default function ClubRankingTab({ clubId, adminTools = false }) {
           <div className="flex flex-wrap items-center gap-2">
             <V2Badge tone="neutral" className="rounded-full">
               <Users2 className="mr-1 h-3 w-3" />
-              {t('{n} atletas do clube', { n: data?.clubUids?.length || 0 })}
+              {tn(data?.clubUids?.length || 0, '{n} atleta do clube', '{n} atletas do clube')}
             </V2Badge>
             {data?.sources && (
               <>
                 <V2Badge tone="green" className="rounded-full">
                   <ListChecks className="mr-1 h-3 w-3" />
-                  {data.sources.club} jogo(s) do clube
+                  {tn(data.sources.club, '{n} jogo do clube', '{n} jogos do clube')}
                 </V2Badge>
                 {includeExternal && data.sources.external > 0 && (
                   <V2Badge tone="amber" className="rounded-full">
                     <Globe2 className="mr-1 h-3 w-3" />
-                    {data.sources.external} externo(s)
+                    {tn(data.sources.external, '{n} jogo externo', '{n} jogos externos')}
                   </V2Badge>
                 )}
               </>

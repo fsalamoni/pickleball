@@ -21,7 +21,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import { V2Avatar, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 import { OrgAffiliationBadges } from '@/v2/components/federations/FedTags';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -167,17 +167,17 @@ export default function V2ClubDetail() {
       <V2BackLink to="/clubes" className="mb-5">{t('Voltar para clubes')}</V2BackLink>
 
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
+      <div className="relative overflow-hidden rounded-4xl bg-mesh p-6 shadow-organic sm:p-8">
         <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-4">
+          <div className="flex min-w-0 items-start gap-4">
             {club.logo_url
-              ? <V2Avatar name={club.name} photoUrl={club.logo_url} size="xl" className="h-16 w-16 rounded-2xl" />
-              : <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white"><Building2 className="h-7 w-7" /></span>}
+              ? <V2Avatar name={club.name} photoUrl={club.logo_url} size="xl" className="h-12 w-12 shrink-0 rounded-2xl sm:h-16 sm:w-16" />
+              : <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white sm:h-16 sm:w-16"><Building2 className="h-6 w-6 sm:h-7 sm:w-7" /></span>}
             <div className="min-w-0">
-              <h1 className={HERO_TITLE}>{club.name}</h1>
+              <h1 className={cn(HERO_TITLE, 'break-words')}>{club.name}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
                 {location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {location}</span>}
-                <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} membro(s)</span>
+                <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {tn(club.member_count || 0, '{n} membro', '{n} membros')}</span>
                 <OrgAffiliationBadges kind="club" orgId={club.id} />
               </div>
               {isMember && (
@@ -187,14 +187,16 @@ export default function V2ClubDetail() {
               )}
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          {/* No celular os botões ficam lado a lado, abaixo do nome; a partir do
+              tablet, empilhados à direita — sem quebrar o texto no meio. */}
+          <div className="flex flex-wrap gap-2 sm:shrink-0 sm:flex-col sm:items-stretch">
             {(isAdmin || papel.isStaff) && (
-              <V2Button asChild size="sm" variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40" data-dica="clube-central">
+              <V2Button asChild size="sm" variant="ghost" className="whitespace-nowrap border-white/20 bg-white/10 text-white hover:border-white/40" data-dica="clube-central">
                 <Link to={`/clubes/${club.id}/gerir`}><LayoutDashboard className="h-4 w-4" /> {t('Central do clube')}</Link>
               </V2Button>
             )}
             {isMember && (
-              <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
+              <V2Button variant="ghost" size="sm" onClick={handleLeave} className="whitespace-nowrap border-white/20 bg-white/10 text-white hover:border-white/40">
                 {t('Sair do clube')}
               </V2Button>
             )}

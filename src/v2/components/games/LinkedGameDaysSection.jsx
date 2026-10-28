@@ -8,7 +8,7 @@
  */
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Link2 } from 'lucide-react';
+import { ArrowRight, Link2 } from 'lucide-react';
 import { V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import { useArenaLinkedGameDays, useClubLinkedGameDays } from '@/modules/games/hooks/useGameDayLink';
 import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery';
@@ -58,7 +58,9 @@ export default function LinkedGameDaysSection({ clubId = null, arenaId = null, c
               .filter(Boolean).join(' · ')}
           </span>
         </span>
-        <span className="text-xs font-semibold text-gray-500">{t('Abrir')}</span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink">
+          {t('Abrir')} <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+        </span>
       </Link>
     </li>
   );

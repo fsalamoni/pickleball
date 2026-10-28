@@ -31,8 +31,10 @@ desafios e recompensas** — sem cobrança. Ninguém perde pontos por ficar para
 
 ## 3. Banco
 
-Coleções novas (todas em `firestore.rules`, 73 casos no emulador em `tests/rules/gamificationV2.rules.test.js`):
+Coleções novas (todas em `firestore.rules`, 74 casos no emulador em `tests/rules/gamificationV2.rules.test.js`):
 `user_gamification_prefs`, `user_xp_grants`, `gamification_moderation`, `gamification_flags`, `gamification_metrics`, `gamification_integrity`, `hall_of_fame`, `match_reviews`, `user_reputation`, `user_reputation_private`, `partner_letters`, `partner_letter_authors`, `gamification_challenges`, `challenge_entries`, `duels`, `gamification_rewards`, `reward_claims`, `gamification_goals`. Configuração do admin: documento `platform_settings/gamification`.
+
+**Metas do mês que ainda não existem** (`gamification_goals/{coach|arena|club}_{dono}_{AAAA-MM}`): a leitura olha `resource.data`, que é nulo num documento que não existe, então o `get` dava erro de permissão e o painel de Engajamento mostrava "Não deu para carregar as metas" para o dono, todo mês novo. `canGetMissingGoals` libera o `get` do documento AUSENTE só para o dono que o id nomeia (o mesmo desenho de `canGetMissingArenaUserDoc`); id malformado e conta de outro dono seguem recusados (caso do emulador "mês sem metas").
 
 Já existiam e foram estendidas: `user_progression_v2` e `user_achievements_v2` (leitura: dono, admin ou `gamificationPublicOk`), `season_rankings` (campos públicos opcionais), `mentorships` (convite com aceite: `pending` + `proposedBy`; só a **outra** pessoa aceita).
 

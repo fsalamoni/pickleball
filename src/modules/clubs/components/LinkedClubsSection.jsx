@@ -14,7 +14,7 @@ import { CLUB_ROLE } from '../domain/constants';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Select, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 function ClubCard({ club }) {
   return (
@@ -25,7 +25,7 @@ function ClubCard({ club }) {
       <div className="min-w-0">
         <p className="font-bold text-ink line-clamp-1">{club.name}</p>
         <p className="text-xs text-gray-400">
-          {club.member_count || 1} membro(s){club.city ? ` · ${club.city}` : ''}
+          {tn(club.member_count || 1, '{n} membro', '{n} membros')}{club.city ? ` · ${club.city}` : ''}
         </p>
       </div>
     </Link>

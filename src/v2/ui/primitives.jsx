@@ -533,7 +533,9 @@ export function V2Field({ label, htmlFor, hint, error, required, className, chil
 }
 
 export function V2Input({ className, ...props }) {
-  return <input className={cn(FIELD_CONTROL, className)} {...props} />;
+  // Tela que fixa a altura (`h-10`, `h-8`) leva também `py-0`: o campo
+  // centraliza o texto sozinho, e o `py-3` padrão cortava as letras.
+  return <input className={cn(FIELD_CONTROL, /(^|\s)h-\d/.test(className || '') && 'py-0', className)} {...props} />;
 }
 
 export function V2Textarea({ className, rows = 4, ...props }) {
@@ -546,7 +548,11 @@ export function V2Select({ className, children, options, ...props }) {
   // tem prioridade). Esse contrato era o esperado mas não estava implementado — V2CourtsTab
   // passava `options` e o select renderizava VAZIO (cn is not defined + options ignorado).
   return (
-    <select className={cn(FIELD_CONTROL, 'h-12 appearance-none bg-[length:1rem] pr-10', className)} {...props}>
+    // `py-0`: a altura é fixa e o navegador centraliza o texto sozinho — com o
+    // `py-3` do campo, toda tela que encolhia o seletor (`h-10`, `h-8`) cortava
+    // o texto. O `pr-9` vem DEPOIS do `className` para a seta nunca ficar por
+    // baixo do texto quando a tela troca o recuo (`px-3`).
+    <select className={cn(FIELD_CONTROL, 'v2-select h-12 appearance-none py-0', className, 'pr-9')} {...props}>
       {children || (options || []).map((opt) => {
         const o = typeof opt === 'string' ? { value: opt, label: opt } : opt;
         return (

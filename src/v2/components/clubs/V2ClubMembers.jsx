@@ -12,7 +12,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useClubMembers, useSetMemberRole, useRemoveMember } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_ROLE, CLUB_ROLE_LABELS } from '@/modules/clubs/domain/constants';
-import { V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 /**
@@ -22,7 +22,7 @@ import { t } from '@/core/i18n';
  */
 export default function V2ClubMembers({ clubId, manage = false }) {
   const { user } = useAuth();
-  const { data: members = [], isLoading } = useClubMembers(clubId);
+  const { data: members = [], isLoading, isError, refetch } = useClubMembers(clubId);
   const setRole = useSetMemberRole(clubId);
   const removeMember = useRemoveMember(clubId);
   const [confirmRemove, setConfirmRemove] = useState(null);
@@ -56,6 +56,11 @@ export default function V2ClubMembers({ clubId, manage = false }) {
     return <div className="space-y-3">{[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-16 rounded-3xl" />)}</div>;
   }
 
+  // Falha não é "Sem membros — convide": o clube tem gente, só não carregou.
+  if (isError) {
+    return <V2ErrorState title={t('Não deu para carregar os membros')} onRetry={() => refetch()} />;
+  }
+
   if (members.length === 0) {
     return <V2EmptyState icon={Users} title={t('Sem membros')} description={t('Convide atletas com o código do clube.')} />;
   }
@@ -66,10 +71,10 @@ export default function V2ClubMembers({ clubId, manage = false }) {
         const isSelf = member.user_id === user?.uid;
         return (
           <div key={member.id} className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-3 shadow-organic-sm sm:p-4">
-            <UserAvatar name={member.user_name} photoUrl={member.photo_url} size="md" />
+            <UserAvatar name={member.user_name || t('Atleta')} photoUrl={member.photo_url} size="md" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate font-bold text-ink">{member.user_name}</span>
+                <span className="truncate font-bold text-ink">{member.user_name || t('Atleta da plataforma')}</span>
                 {isSelf && <span className="text-xs text-gray-500">{t('(você)')}</span>}
               </div>
               {/* P1-01: o e-mail saiu daqui. `club_members` é lido por

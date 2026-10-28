@@ -653,6 +653,14 @@ associação ligada.
   a flag ligada (`buildClubSections(perms, { association })`). Sem a flag, **nenhuma
   consulta a `club_x` é feita** (a regra a recusaria e viraria "não carregou") —
   `useMyClubRole(clubId, { association })` nem lê o cargo.
+- **Cabeçalho e listas no celular** (2026-10-28): o nome do clube quebra em linhas
+  (nunca corta), os botões do cabeçalho ficam numa fileira que quebra no celular e
+  numa coluna à direita no computador, sem quebrar o rótulo; o cartão da lista de
+  clubes mostra o nome em até duas linhas com o selo embaixo; contagens usam plural
+  de verdade (`tn`: "1 membro", "2 membros"). Na aba Eventos o título vem numa
+  linha própria acima dos selos, e sem nenhum evento só o aviso de vazio oferece
+  "Criar evento" (um botão, não dois). A lista de membros que falha diz que não
+  carregou, nunca "Sem membros".
 - **A porta é uma só**: o botão "Central do clube" no cabeçalho da página, para a
   administração e para quem tem cargo (`papel.isStaff`), com ou sem a flag.
 - **Links antigos seguem valendo**: `?tab=admin` e `?tab=atividade` levam a

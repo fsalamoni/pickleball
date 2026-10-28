@@ -1,6 +1,10 @@
 // Catálogo en — chave: o texto em português (ver docs/44-IDIOMAS.md).
 export default {
   "{cargo} do {clube} até {fim}. Prorrogue ou nomeie outra pessoa.": "{cargo} of {clube} until {fim}. Extend it or appoint someone else.",
+  "{n} membros": ["{n} member", "{n} members"],
+  "{n} jogos do clube": ["{n} club game", "{n} club games"],
+  "{n} jogos externos": ["{n} outside game", "{n} outside games"],
+  "Não deu para carregar os membros": "Could not load the members",
   "{cargo} do {clube} saiu da diretoria em {fim}.": "{cargo} of {clube} left the board on {fim}.",
   "{msg} Já entraram {n} antes do erro; confira a lista e tente o restante.": "{msg} {n} were already added before the error; check the list and try the rest.",
   "{n} associados ativados.": ["{n} member activated.", "{n} members activated."],

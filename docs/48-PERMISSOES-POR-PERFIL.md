@@ -547,7 +547,7 @@ Princípios que seguem daí:
 | Avisos por e-mail e celular (origem do aviso, segredos, celular confirmado) | `messaging.rules.test.js` |
 | Contato no perfil público só com permissão | `athleteContacts.rules.test.js` |
 | Professor | `coachLessons.rules.test.js`, `promoMarketing.rules.test.js` |
-| Gamificação | `gamificationV2.rules.test.js`, `gamification.rules.emulator.mjs` |
+| Gamificação (inclui as metas do mês ainda sem documento: só o dono lê o ausente) | `gamificationV2.rules.test.js`, `gamification.rules.emulator.mjs` |
 | Treino | `training.rules.test.js` |
 | Mercado | `marketplace.rules.test.js`, `marketplace.functions.test.js` |
 | Storage | `storage.rules.test.js` |

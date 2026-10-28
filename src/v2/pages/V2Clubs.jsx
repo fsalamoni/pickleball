@@ -17,7 +17,7 @@ import {
   V2Skeleton,
   V2Surface, V2Page,
 } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 function locationText(club) {
   return [club.city, club.state].filter(Boolean).join(' / ') || null;
@@ -129,19 +129,21 @@ function ClubCard({ club, mine, distancia = null }) {
       to={`/clubes/${club.id}`}
       className="group flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          {club.logo_url
-            ? <V2Avatar name={club.name} photoUrl={club.logo_url} size="lg" className="rounded-2xl" />
-            : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink text-white"><Building2 className="h-6 w-6" /></span>}
-          <h3 className="truncate font-display text-lg font-bold text-ink">{club.name}</h3>
+      {/* O nome quebra em até duas linhas e o selo fica embaixo dele: com o
+          selo ao lado, um nome comum ("Clube Pickle Norte") virava "Clube Pickl…". */}
+      <div className="flex min-w-0 items-start gap-3">
+        {club.logo_url
+          ? <V2Avatar name={club.name} photoUrl={club.logo_url} size="lg" className="shrink-0 rounded-2xl" />
+          : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink text-white"><Building2 className="h-6 w-6" /></span>}
+        <div className="min-w-0 space-y-1.5">
+          <h3 className="line-clamp-2 break-words font-display text-lg font-bold leading-snug text-ink" title={club.name}>{club.name}</h3>
+          {mine && <V2Badge tone={club.my_role === 'admin' ? 'amber' : 'green'}>{club.my_role === 'admin' ? t('Admin') : t('Membro')}</V2Badge>}
         </div>
-        {mine && <V2Badge tone={club.my_role === 'admin' ? 'amber' : 'green'}>{club.my_role === 'admin' ? t('Admin') : t('Membro')}</V2Badge>}
       </div>
 
       <div className="mt-4 space-y-2 text-sm text-gray-500">
         <div className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-gray-400" /> {location || t('Cidade não informada')}{location && distancia ? ` · ${distancia}` : ''}</div>
-        <div className="flex items-center gap-2"><Users className="h-4 w-4 shrink-0 text-gray-400" /> {club.member_count || 0} membro(s)</div>
+        <div className="flex items-center gap-2"><Users className="h-4 w-4 shrink-0 text-gray-400" /> {tn(club.member_count || 0, '{n} membro', '{n} membros')}</div>
       </div>
 
       {club.description && <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-500">{club.description}</p>}

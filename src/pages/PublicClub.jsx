@@ -19,7 +19,7 @@ import { isAssociationOpen, normalizeAssociation } from '@/modules/clubs/domain/
 import { usePublicPlans } from '@/modules/clubs/hooks/useClubAssociation';
 import ClubPlansList from '@/v2/components/clubs/association/ClubPlansList';
 import { ClubBenefitsShowcase, ClubNewsSection, ClubSponsorsStrip } from '@/v2/components/clubs/association/ClubShowcase';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 // A transparência das contas carrega o motor de contas: só quando a página é aberta.
 const ClubAccountsPublic = lazy(() => import('@/v2/components/clubs/association/ClubAccountsPublic'));
@@ -137,7 +137,7 @@ export default function PublicClub() {
                 <h1 className="font-display text-3xl font-bold text-white">{club.name}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
                   {location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {location}</span>}
-                  <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} {t('membro(s)')}</span>
+                  <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {tn(club.member_count || 0, '{n} membro', '{n} membros')}</span>
                 </div>
               </div>
             </div>
