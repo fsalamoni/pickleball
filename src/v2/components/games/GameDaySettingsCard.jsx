@@ -366,7 +366,7 @@ export default function GameDaySettingsCard({ gameDay }) {
 
           <div className="flex items-center justify-between gap-3 pt-1">
             <p className="text-sm font-semibold text-ink">{t('Organizadores')}</p>
-            <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)}>
+            <V2Button size="sm" variant="ghost" className="whitespace-nowrap" onClick={() => setPickerOpen(true)}>
               <UserPlus className="mr-1.5 h-4 w-4" /> {t('Nomear organizador')}
             </V2Button>
           </div>
