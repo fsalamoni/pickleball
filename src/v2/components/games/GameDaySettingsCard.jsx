@@ -48,11 +48,10 @@ import { Link } from 'react-router-dom';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { V2Button, V2Badge, V2Input, V2Select } from '@/v2/ui/primitives';
+import { V2Button, V2Badge, V2Input, V2Select, V2Textarea } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { cn } from '@/core/lib/utils';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
@@ -276,11 +275,11 @@ export default function GameDaySettingsCard({ gameDay }) {
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-ink">{t('Como se joga')}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor={`gds-fmt-${gdId}`}>{t('Formato')}</Label>
               <V2Select
                 id={`gds-fmt-${gdId}`}
-                className="h-10 bg-white px-3 disabled:bg-paper disabled:text-gray-400"
+                className="disabled:bg-paper disabled:text-gray-500"
                 value={format}
                 disabled={formatoTravado}
                 onChange={(e) => trocarFormato(e.target.value)}
@@ -300,12 +299,12 @@ export default function GameDaySettingsCard({ gameDay }) {
               ) : null}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor={`gds-qd-${gdId}`}>{t('Quadras disponíveis')}</Label>
               {daArena ? (
                 <>
-                  <div className="flex h-10 w-full items-center rounded-md border border-dashed border-gray-200 bg-paper px-3 text-sm text-gray-600">
-                    {quadras === 1 ? '1 quadra' : `${quadras} quadras`}
+                  <div className="flex h-12 w-full items-center rounded-2xl border border-dashed border-gray-200 bg-paper px-4 text-sm text-gray-600">
+                    {tn(quadras, '{n} quadra', '{n} quadras')}
                   </div>
                   <p className="flex items-start gap-1.5 text-xs text-gray-500">
                     <Building2 aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -319,7 +318,6 @@ export default function GameDaySettingsCard({ gameDay }) {
                     type="number"
                     min={1}
                     max={12}
-                    className="h-10 bg-white px-3"
                     defaultValue={quadras}
                     disabled={update.isPending}
                     onBlur={(e) => trocarQuadras(e.target.value)}
@@ -384,7 +382,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                 ) : (
                   <V2Button
                     variant="ghost"
-                    className="text-gray-400 hover:text-red-600"
+                    className="text-gray-500 hover:text-red-600"
                     title={t('Remover organizador')}
                     aria-label={`Remover ${o.nome || 'organizador'}`}
                     onClick={() => setConfirmRemove(o)}
@@ -405,9 +403,9 @@ export default function GameDaySettingsCard({ gameDay }) {
           <h3 className="text-sm font-semibold text-ink">{t('Nome, data e local')}</h3>
           {identidadeAqui ? (
             <>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor={`gds-nome-${gdId}`}>{t('Nome*')}</Label>
-                <Input
+                <V2Input
                   id={`gds-nome-${gdId}`}
                   value={identidade.title}
                   maxLength={80}
@@ -415,7 +413,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label>{t('Visibilidade')}</Label>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {Object.values(GAME_DAY_VISIBILITY).map((v) => (
@@ -444,18 +442,18 @@ export default function GameDaySettingsCard({ gameDay }) {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor={`gds-data-${gdId}`}>{t('Data')}</Label>
-                  <Input
+                  <V2Input
                     id={`gds-data-${gdId}`}
                     type="date"
                     value={identidade.date}
                     onChange={(e) => setCampo('date', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor={`gds-hora-${gdId}`}>{t('Horário')}</Label>
-                  <Input
+                  <V2Input
                     id={`gds-hora-${gdId}`}
                     type="time"
                     value={identidade.time}
@@ -464,9 +462,9 @@ export default function GameDaySettingsCard({ gameDay }) {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor={`gds-local-${gdId}`}>{t('Local')}</Label>
-                <Input
+                <V2Input
                   id={`gds-local-${gdId}`}
                   value={identidade.location}
                   maxLength={160}
@@ -476,18 +474,18 @@ export default function GameDaySettingsCard({ gameDay }) {
               </div>
 
               <div className="grid grid-cols-[1fr_auto] gap-3">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor={`gds-cidade-${gdId}`}>{t('Cidade')}</Label>
-                  <Input
+                  <V2Input
                     id={`gds-cidade-${gdId}`}
                     value={identidade.city}
                     maxLength={80}
                     onChange={(e) => setCampo('city', e.target.value)}
                   />
                 </div>
-                <div className="w-20 space-y-1.5">
+                <div className="w-24 space-y-2">
                   <Label htmlFor={`gds-uf-${gdId}`}>{t('UF')}</Label>
-                  <Input
+                  <V2Input
                     id={`gds-uf-${gdId}`}
                     value={identidade.state}
                     maxLength={2}
@@ -497,16 +495,15 @@ export default function GameDaySettingsCard({ gameDay }) {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor={`gds-obs-${gdId}`}>{t('Observações (opcional)')}</Label>
-                <textarea
+                <V2Textarea
                   id={`gds-obs-${gdId}`}
-                  rows={2}
+                  rows={3}
                   maxLength={1000}
                   value={identidade.notes}
                   placeholder={t('Nível, valor da quadra, o que levar…')}
                   onChange={(e) => setCampo('notes', e.target.value)}
-                  className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-ink"
                 />
               </div>
 
@@ -609,7 +606,7 @@ function NomearDialog({ open, onClose, candidatos, onEscolher, falhou = false })
             {t('Quem você escolher passa a conduzir as partidas e a lista de participantes deste dia de jogo — e entra nele como membro, para poder acompanhar.')}
           </DialogDescription>
         </DialogHeader>
-        <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar por nome…')} />
+        <V2Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar por nome…')} />
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {lista.length === 0 ? (
             falhou ? (

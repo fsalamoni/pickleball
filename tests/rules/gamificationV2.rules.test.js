@@ -471,6 +471,15 @@ describe('metas do mês', () => {
     await assertFails(getDoc(doc(como(ANA), 'gamification_goals', `coach_${PROF}_2026-10`)));
   });
 
+  it('⭐ mês sem metas (documento que não existe): o dono lê o vazio; outra pessoa, não', async () => {
+    await assertSucceeds(getDoc(doc(como(PROF), 'gamification_goals', `coach_${PROF}_2026-11`)));
+    await assertSucceeds(getDoc(doc(como(GESTOR), 'gamification_goals', 'arena_arena_1_2026-11')));
+    await assertSucceeds(getDoc(doc(como(ADM_CLUBE), 'gamification_goals', 'club_clube_1_2026-11')));
+    await assertFails(getDoc(doc(como(ANA), 'gamification_goals', 'club_clube_1_2026-11'))); // membro, não admin
+    await assertFails(getDoc(doc(como(ANA), 'gamification_goals', `coach_${PROF}_2026-11`)));
+    await assertFails(getDoc(doc(como(PROF), 'gamification_goals', `coach_${PROF}`))); // id fora do padrão
+  });
+
   it('id e tamanho: o id carrega dono e mês; no máximo 6 metas', async () => {
     await assertFails(setDoc(doc(como(PROF), 'gamification_goals', 'qualquer'), metas('coach', PROF)));
     const muitas = Array.from({ length: 7 }, (_, i) => ({ metric: `m${i}`, target: 1 }));

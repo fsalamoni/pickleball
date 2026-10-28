@@ -14,7 +14,7 @@ import {
 } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/EventFormDialog';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
-import { t, fmtData } from '@/core/i18n';
+import { t, tn, fmtData } from '@/core/i18n';
 
 function formatDateTime(value) {
   if (!value) return null;
@@ -36,11 +36,19 @@ export default function V2ClubEvents({ clubId, isAdmin }) {
   const { data: events = [], isLoading, isError, refetch } = useClubEvents(clubId);
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Sem eventos, o botão de criar mora no próprio aviso de vazio — dois
+  // botões iguais na mesma tela só fazem a pessoa procurar a diferença.
+  const vazio = !isLoading && !isError && events.length === 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500">{t('Dias de jogo, confraternizações, torneios internos e reuniões do clube.')}</p>
-        <V2Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> {t('Novo evento')}</V2Button>
+        {!vazio && (
+          <V2Button size="sm" className="self-start whitespace-nowrap sm:self-auto" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" /> {t('Novo evento')}
+          </V2Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -98,23 +106,31 @@ function EventCard({ event, clubId, isAdmin }) {
     <V2Surface className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
+          {/* O título vem primeiro, numa linha própria: no meio dos selos ele
+              quebrava em lugares diferentes a cada evento. */}
+          <h4 className="break-words font-display text-base font-bold text-ink">{event.title}</h4>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <V2Badge tone={TYPE_TONE[event.type] || 'neutral'}>{eventTypeLabel(event.type)}</V2Badge>
             <V2Badge tone="neutral">
               {isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
               {isPrivate ? t('Privado') : t('Público')}
             </V2Badge>
             {event.recurring && <V2Badge tone="neutral"><Repeat className="h-3 w-3" /> {t('Recorrente')}</V2Badge>}
-            <h4 className="font-display text-base font-bold text-ink">{event.title}</h4>
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
             {when && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {when}</span>}
             {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>}
-            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {participantCount} participante(s)</span>
+            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {tn(participantCount, '{n} participante', '{n} participantes')}</span>
           </div>
         </div>
         {canManage && (
-          <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-50" onClick={() => setConfirmDelete(true)}>
+          <button
+            type="button"
+            aria-label={t('Remover evento')}
+            title={t('Remover evento')}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 coarse:h-11 coarse:w-11"
+            onClick={() => setConfirmDelete(true)}
+          >
             <Trash2 className="h-4 w-4" />
           </button>
         )}

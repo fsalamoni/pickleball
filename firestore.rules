@@ -3875,7 +3875,18 @@ service cloud.firestore {
         || (ownerType == 'club' && isClubAdmin(ownerId))
       );
     }
+    // 🐞 Mês sem metas = documento que NÃO existe, e aí `od()` é nulo: a leitura
+    // era recusada e o painel dizia "Não deu para carregar as metas" a todo
+    // dono, todo começo de mês. Sem documento, o dono sai do PRÓPRIO id
+    // (`{tipo}_{dono}_{AAAA-MM}`) — ler o que não existe não entrega dado.
+    function canGetMissingGoals(goalsId) {
+      return resource == null
+        && goalsId.matches('^(coach|arena|club)_.+_[0-9]{4}-[0-9]{2}$')
+        && isGoalsOwner(goalsId.split('_')[0],
+          goalsId.replace('^(coach|arena|club)_', '').replace('_[0-9]{4}-[0-9]{2}$', ''));
+    }
     match /gamification_goals/{goalsId} {
+      allow get: if canGetMissingGoals(goalsId);
       allow read: if isGoalsOwner(od().ownerType, od().ownerId) || isPlatformAdmin();
       allow create, update: if isGoalsOwner(nd().ownerType, nd().ownerId)
         && nd().keys().hasOnly(['ownerType', 'ownerId', 'month', 'goals', 'updatedAt'])

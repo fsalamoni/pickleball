@@ -84,7 +84,7 @@ export default function GameDayLinkSection({ gameDay, gravar, pending = false })
                 <V2Badge tone="neutral">{v.lado === 'club' ? t('Clube') : t('Arena')}</V2Badge>
                 <V2Button
                   variant="ghost"
-                  className="text-gray-400 hover:text-red-600"
+                  className="text-gray-500 hover:text-red-600"
                   title={rotulo}
                   aria-label={rotulo}
                   disabled={pending}
@@ -112,11 +112,10 @@ export default function GameDayLinkSection({ gameDay, gravar, pending = false })
         <>
           <div className="grid gap-4 sm:grid-cols-2">
             {disponiveis.clubs.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor={`gds-vc-${gdId}`}>{club ? t('Trocar de clube') : t('Clube')}</Label>
                 <V2Select
                   id={`gds-vc-${gdId}`}
-                  className="h-10 bg-white px-3"
                   value={clubeId}
                   disabled={pending}
                   onChange={(e) => setClubeId(e.target.value)}
@@ -127,11 +126,10 @@ export default function GameDayLinkSection({ gameDay, gravar, pending = false })
               </div>
             )}
             {disponiveis.arenas.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor={`gds-va-${gdId}`}>{arena ? t('Trocar de arena') : t('Arena')}</Label>
                 <V2Select
                   id={`gds-va-${gdId}`}
-                  className="h-10 bg-white px-3"
                   value={arenaId}
                   disabled={pending}
                   onChange={(e) => setArenaId(e.target.value)}

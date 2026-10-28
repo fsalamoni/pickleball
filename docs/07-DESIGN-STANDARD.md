@@ -71,7 +71,12 @@ os da marca.
 - `V2Button`: `variant` = `primary | secondary | ghost | subtle | danger`;
   `size` = `sm | md | lg | icon`. `sm`/`md` levam `coarse:min-h-11`; `icon` é 44×44.
 - `V2Badge`: `tone` = `neutral | acid | ink | green | blue | amber | red | cyan | purple`.
-- `V2Select` aceita `children` **ou** `options`.
+- `V2Select` aceita `children` **ou** `options`. Tem a altura padrão dos campos
+  (`h-12`), o texto centrado sem `py` e a seta própria (`.v2-select` em
+  `src/index.css`, com `pr-9` aplicado por último). **Não passe `h-10`/`h-9`**:
+  🐞 o seletor de clube e arena do dia de jogo fazia isso, e com o `py-3` do campo
+  o texto ficava cortado e sem seta. `V2Input` com altura própria (`h-…`) perde o
+  `py` sozinho pelo mesmo motivo — mas prefira a altura padrão.
 - `V2Field` junta rótulo (sempre acima), dica e erro.
 
 ### 3.2 Demais peças de `src/v2/ui/`

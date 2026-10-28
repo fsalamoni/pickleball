@@ -1,6 +1,10 @@
 // Catálogo es — chave: o texto em português (ver docs/44-IDIOMAS.md).
 export default {
   "{cargo} do {clube} até {fim}. Prorrogue ou nomeie outra pessoa.": "{cargo} de {clube} hasta el {fim}. Prorroga o nombra a otra persona.",
+  "{n} membros": ["{n} miembro", "{n} miembros"],
+  "{n} jogos do clube": ["{n} partido del club", "{n} partidos del club"],
+  "{n} jogos externos": ["{n} partido externo", "{n} partidos externos"],
+  "Não deu para carregar os membros": "No se pudieron cargar los miembros",
   "{cargo} do {clube} saiu da diretoria em {fim}.": "{cargo} de {clube} salió de la directiva el {fim}.",
   "{msg} Já entraram {n} antes do erro; confira a lista e tente o restante.": "{msg} Ya entraron {n} antes del error; revisa la lista e intenta con el resto.",
   "{n} associados ativados.": ["{n} asociado activado.", "{n} asociados activados."],
