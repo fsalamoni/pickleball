@@ -22,12 +22,12 @@ import { useMyGameDays } from '@/modules/games/hooks/useGameDays';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
 import { useStudentLessons, useCoachLessons } from '@/modules/coaches/hooks/useLessons';
 import { useMyClassEnrollments, useMyOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
-import { useAvailableEvents } from '@/modules/clubs/hooks/useClubs';
+import { useAvailableEvents, useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
 import { enrollmentRows } from '@/modules/arenas/domain/classAgenda';
 import {
   agendaFromArenaEnrollments, agendaFromBookings, agendaFromClubEvents, agendaFromGameDays,
-  agendaFromLessons, agendaFromOpenSlots, agendaFromTournamentMatches, mergeAgenda,
+  agendaFromLessons, agendaFromOpenSlots, agendaFromTournamentMatches, juntarEventosAosDias, mergeAgenda,
 } from '../domain/homeAgenda.js';
 import { hojeLocal } from '../domain/freshness.js';
 
@@ -62,6 +62,13 @@ export function useHomeAgenda({
   const matriculas = useMyClassEnrollments({ enabled: arenaModulesOn });
   const vagas = useMyOpenSlots({ enabled: arenaModulesOn });
   const eventos = useAvailableEvents({ enabled: comClubes });
+  // De que clubes a pessoa é membro: decide se o dia de um clube é "Clube"
+  // (membro) ou "Dia de jogo" (convidado de fora). Mesma chave da tela inicial.
+  const clubes = useMyClubs();
+  const meusClubes = useMemo(
+    () => (Array.isArray(clubes.data) ? new Set(clubes.data.map((c) => c?.id).filter(Boolean)) : null),
+    [clubes.data],
+  );
 
   const fontes = useMemo(() => [
     { id: 'dias', label: t('dias de jogo'), q: diasDeJogo, ligada: !!uid },
@@ -76,14 +83,19 @@ export function useHomeAgenda({
     diasDeJogo, reservas, aulasAluno, aulasProfessor, jogosTorneio, matriculas, vagas, eventos]);
 
   const itens = useMemo(() => {
-    const ctx = { agora };
+    const ctx = { agora, meusClubes };
     const hoje = hojeLocal(new Date(agora));
-    const dias = agendaFromGameDays(diasDeJogo.data || [], ctx);
+    // O dia de jogo do clube e o evento dele são o mesmo compromisso: um item só.
+    const diasEEventos = juntarEventosAosDias(
+      agendaFromGameDays(diasDeJogo.data || [], ctx),
+      agendaFromClubEvents(comClubes ? eventos.data || [] : [], ctx),
+    );
+    const dias = diasEEventos.filter((i) => i.gameDayId);
     const idsDias = new Set(dias.map((d) => d.gameDayId));
     const mat = matriculas.data;
     return mergeAgenda([
       agendaFromTournamentMatches(competindo ? jogosTorneio.data || [] : [], ctx),
-      dias,
+      diasEEventos,
       agendaFromBookings(reservas.data || [], ctx),
       agendaFromLessons(aulasAluno.data || [], { ...ctx, papel: 'aluno' }),
       agendaFromLessons(ehProfessor ? aulasProfessor.data || [] : [], { ...ctx, papel: 'professor' }),
@@ -92,16 +104,15 @@ export function useHomeAgenda({
         ctx,
       ),
       agendaFromOpenSlots(arenaModulesOn ? vagas.data || [] : [], { ...ctx, gameDayIds: idsDias }),
-      agendaFromClubEvents(comClubes ? eventos.data || [] : [], ctx),
     ]);
-  }, [agora, competindo, ehProfessor, arenaModulesOn, comClubes,
+  }, [agora, meusClubes, competindo, ehProfessor, arenaModulesOn, comClubes,
     diasDeJogo.data, reservas.data, aulasAluno.data, aulasProfessor.data, jogosTorneio.data,
     matriculas.data, vagas.data, eventos.data]);
 
   // Sinais de ATIVIDADE para as frentes da tela (resolveHomeFoci). Memorizado:
   // um objeto novo a cada render refaria as frentes, os atalhos e as seções.
   const sinais = useMemo(() => ({
-    temDiasDeJogo: itens.some((i) => i.kind === 'dia_de_jogo'),
+    temDiasDeJogo: itens.some((i) => i.kind === 'dia_de_jogo' || Boolean(i.gameDayId)),
     temReservas: itens.some((i) => i.kind === 'reserva'),
     temAulas: itens.some((i) => i.kind === 'aula' || i.kind === 'aula_arena'),
   }), [itens]);

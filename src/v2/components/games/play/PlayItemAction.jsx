@@ -48,7 +48,7 @@ function Abrir({ item, size, rotulo = t('Abrir') }) {
 }
 
 /** Os dias de jogo (atleta, clube, arena). */
-function AcaoDoDia({ item, size, mostrarAbrir }) {
+function AcaoDoDia({ item, size, mostrarAbrir, naAgenda }) {
   const entrar = useJoinPublicGameDay();
   const marcar = useSignUpToArenaGameDay();
   const sair = useLeaveGameDay();
@@ -88,14 +88,15 @@ function AcaoDoDia({ item, size, mostrarAbrir }) {
     );
   }
 
+  const aviso = naAgenda ? { description: t('Ele está na sua agenda, aqui no início.') } : undefined;
   const onEntrar = async () => {
     try {
       if (daArena) {
         await marcar.mutateAsync({ gameDay: item.fonte, courtId: null });
-        toast.success(t('Presença confirmada. Bom jogo!'));
+        toast.success(t('Presença confirmada. Bom jogo!'), aviso);
       } else {
         await entrar.mutateAsync(item.fonte);
-        toast.success(t('Você entrou no dia de jogo. Bom jogo!'));
+        toast.success(t('Você entrou no dia de jogo. Bom jogo!'), aviso);
       }
     } catch (err) {
       toast.error(err?.message || t('Não foi possível entrar.'));
@@ -152,13 +153,15 @@ function AcaoDoConvite({ item, size }) {
 }
 
 /**
- * @param {{ item: object, size?: 'sm'|'default', mostrarAbrir?: boolean }} props
+ * @param {{ item: object, size?: 'sm'|'default', mostrarAbrir?: boolean, naAgenda?: boolean }} props
+ *   `naAgenda` — a lista é a do início com a agenda: quem entra sai dela e vai
+ *   para a agenda, e o aviso diz isso (sumir calado parece falha).
  *   `mostrarAbrir`: o link para dentro do jogo ao lado do botão (nas linhas em
  *   que o título já é o link, ele sobra).
  */
-export default function PlayItemAction({ item, size = 'sm', mostrarAbrir = false }) {
+export default function PlayItemAction({ item, size = 'sm', mostrarAbrir = false, naAgenda = false }) {
   if (!item) return null;
   if (item.kind === PLAY_KIND.JOGO_ABERTO) return <AcaoDoJogoAberto item={item} size={size} mostrarAbrir={mostrarAbrir} />;
   if (item.kind === PLAY_KIND.CONVITE) return <AcaoDoConvite item={item} size={size} />;
-  return <AcaoDoDia item={item} size={size} mostrarAbrir={mostrarAbrir} />;
+  return <AcaoDoDia item={item} size={size} mostrarAbrir={mostrarAbrir} naAgenda={naAgenda} />;
 }

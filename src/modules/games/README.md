@@ -514,7 +514,8 @@ Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
   consulta por clube, que a regra só deixa passar para o membro) e cada item
   diz `origem`, `estou`, `cabe`/`motivo` (faixa de nível do jogo aberto),
   `porQuadra` e `fonte`. O que a pessoa já tem fica ("Você vai"); o que ela
-  criou, não. `playItemsForMe` = o que ela pode entrar (o início usa).
+  criou, não. `playItemsForMe` = o que ela pode entrar (o início usa); com
+  `{ naAgenda: true }` (Agenda no início) o que ela já tem sai — está na agenda.
 - `joinPublicGameDay` aceita o dia de **clube** (inclusive para quem agendou a
   data) e recusa o privado que não é de clube DIZENDO que é só por convite.
 - `leaveGameDay` — sair sozinho, em qualquer origem: apaga a própria inscrição

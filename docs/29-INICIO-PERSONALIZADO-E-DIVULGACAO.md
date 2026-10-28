@@ -71,7 +71,7 @@ torneio com o prazo vencido (`isTournamentOpen`).
 
 | Seção | Mostra | Sem conteúdo |
 |---|---|---|
-| Agenda | reservas, aulas, dias de jogo, jogos de torneio, jogo aberto, aulas de arena, eventos de clube — agrupados por dia | "agenda livre" **só** com todas as fontes carregadas; senão diz qual parte falhou |
+| Agenda | reservas, aulas, dias de jogo, jogos de torneio, jogo aberto, aulas de arena, eventos de clube — agrupados por dia | "agenda livre" **só** com todas as fontes carregadas; senão diz qual parte falhou. O dia de jogo do CLUBE é **um item só** (ver abaixo) |
 | Minha arena | pedidos esperando, atalho à Central | leitura falhando nunca oferece "cadastrar arena" (duplicaria) |
 | Suas aulas (professor) | pedidos esperando resposta, próximas aulas, alunos, clínicas; **"Divulgar com cupom ou campanha"** (com `coach_marketing`) | quem marcou "dou aulas" sem perfil vê "Ativar perfil" |
 | Organizar | rascunho, inscrições abertas, hora do sorteio, acontecendo — e o **esquecido** (data de fim vencida sem encerrar); encerrado não aparece | convite a criar |
@@ -81,6 +81,25 @@ torneio com o prazo vencido (`isTournamentOpen`).
 | Jogar | convites e dias de jogo públicos, perto de mim primeiro, e os jogos com vaga das arenas | caminho para criar/procurar |
 | Reservar | os próximos horários livres da **arena de sempre** (a da última reserva confirmada, ou a favorita), pela mesma conta do calendário; ocupação só afirmada com dado na mão | caminho para achar arena |
 | Aulas, Clubes, Comunidade | o que há de novo em cada | caminho |
+
+**O dia de jogo do clube na agenda (2026-10-28).** A data de um evento de
+clube nasce como um `game_days` (`club_event_id`), então o mesmo sábado
+chegava por DUAS fontes — o evento (selo "Clube") e o dia de jogo (selo "Dia
+de jogo") — e aparecia duas vezes, além de uma terceira no card "Jogar".
+Agora:
+
+- `juntarEventosAosDias` (`home/domain/homeAgenda.js`) junta o evento e o dia
+  de jogo dele (mesmo `club_event_id` e mesma data) num item só, o do dia de
+  jogo, com a resposta dada ao evento ("Você vai", "Talvez"). Convite ainda sem
+  resposta segue pedindo ação e leva ao evento, onde se responde. Outra data do
+  mesmo evento (evento que se repete) é outro item.
+- O SELO depende de quem vê (`meusClubes`, de `useMyClubs`): **membro** do clube
+  vê "Clube"; o **convidado de fora** vê "Dia de jogo" — ele não faz parte do
+  clube. Sem a lista de clubes carregada, vale o selo de antes.
+- O card "Jogar" tira o que a pessoa já tem quando a Agenda está no início
+  (`docs/35-JOGAR-ENTRAR-E-SAIR.md`), e "Seus clubes" tira o evento cujo dia de
+  jogo ela já tem. Página do clube, Dia de jogo e Procura-se jogo seguem
+  mostrando o dia — cada um no seu lugar.
 
 Cada seção é **isolada** (`HomeSectionBoundary`): um defeito numa não derruba
 as outras.

@@ -1058,6 +1058,7 @@ export default {
   "Você e a sua dupla foram para a fila de quem está sem grupo.": "Tú y tu pareja pasaron a la fila de quienes no tienen grupo.",
   "Você e a sua dupla foram para o grupo {nome}.": "Tú y tu pareja pasaron al grupo {nome}.",
   "Você entrou no dia de jogo. Bom jogo!": "Entraste al día de juego. ¡Buen juego!",
+  "Ele está na sua agenda, aqui no início.": "Está en tu agenda, aquí en el inicio.",
   "Você entrou no Play! Já está na ordem de participação.": "¡Entraste al Play! Ya estás en el orden de participación.",
   "Você escolhe quem entra, entre os {n} disponíveis na ordem de participação.": "Tú eliges quién entra, entre los {n} disponibles en el orden de participación.",
   "Você está em quadra agora. Bom jogo!": "Estás en cancha ahora. ¡Buen juego!",

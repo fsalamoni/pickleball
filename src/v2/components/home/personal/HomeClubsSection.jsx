@@ -5,13 +5,15 @@
  * deles — só os que ainda vão acontecer. O evento a que ela já disse que vai
  * está na agenda; aqui fica o que ela ainda pode decidir ir — com o botão de
  * participar ali mesmo ("Participar", ou "Aceitar convite" para quem foi
- * convidado), o mesmo da página do evento.
+ * convidado), o mesmo da página do evento. O evento cujo DIA DE JOGO a pessoa
+ * já tem também sai: ele está na agenda (um item só, com o selo do clube).
  */
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CalendarDays, LogIn, Search, Users } from 'lucide-react';
 import { useAvailableEvents, useMyClubs, useSetEventResponse } from '@/modules/clubs/hooks/useClubs';
+import { useMyGameDays } from '@/modules/games/hooks/useGameDays';
 import { INVITE_STATUS } from '@/modules/clubs/domain/constants';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -42,12 +44,18 @@ function ParticiparDoEvento({ evento }) {
 export default function HomeClubsSection({ reason, hoje }) {
   const clubes = useMyClubs();
   const eventos = useAvailableEvents();
+  // Os eventos de que a pessoa já está no dia de jogo (mesma chave da agenda).
+  const meusDias = useMyGameDays();
+  const comDia = useMemo(
+    () => new Set((meusDias.data || []).map((g) => g.club_event_id).filter(Boolean)),
+    [meusDias.data],
+  );
   const proximos = useMemo(() => (eventos.data || [])
     .filter((e) => {
       const dia = String(e.starts_at || '').slice(0, 10);
-      return dia >= hoje && !JA_RESPONDIDO.has(e.my_invite_status);
+      return dia >= hoje && !JA_RESPONDIDO.has(e.my_invite_status) && !comDia.has(e.id);
     })
-    .slice(0, 3), [eventos.data, hoje]);
+    .slice(0, 3), [eventos.data, hoje, comDia]);
   const nomeDoClube = useMemo(
     () => new Map((clubes.data || []).map((c) => [c.id, c.name])),
     [clubes.data],

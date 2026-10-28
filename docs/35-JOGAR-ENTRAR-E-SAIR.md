@@ -59,6 +59,14 @@ Cada item diz agora `origem` (decide o botão), `estou` (já estou nele), `cabe`
   quem é do clube, porque é a própria consulta que recorta. O **início** mostra
   só o que cabe (`playItemsForMe`); o **Procura-se jogo** mostra tudo, com o
   motivo escrito.
+- **No início, um compromisso aparece UMA vez** (2026-10-28). Com o card
+  **Agenda** na tela, o "Jogar" do início tira o que a pessoa já tem
+  (`playItemsForMe(itens, { naAgenda: true })`) — ele está na agenda — e o
+  aviso de entrada diz isso ("Ele está na sua agenda, aqui no início"), para
+  a linha que some não parecer falha. Sem a agenda, ele fica no "Jogar" com
+  "Você vai". O Procura-se jogo e o Dia de jogo continuam mostrando o que a
+  pessoa tem (regra acima). Ver a agenda em
+  `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1.
 - **Quem agendou a data do clube** pode entrar para jogar (quem agenda não vira
   jogador — um evento semanal cria dezenas de datas). Para ele, "estou" sai da
   lista de inscritos, que o hook lê só para esses dias.

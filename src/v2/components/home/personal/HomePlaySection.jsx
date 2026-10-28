@@ -13,8 +13,10 @@
  * Tocar num dia de jogo leva para DENTRO dele (`/dia-de-jogo/:id`), onde a
  * pessoa vê o formato, quem vai, e se inscreve — não para a página da arena.
  *
- * Só o que ainda vale: o que já terminou some, o que a pessoa já tem (o dia em
- * que ela está, o que ela criou) também — ele mora na agenda.
+ * Só o que ainda vale: o que já terminou some, e o que a pessoa criou também.
+ * O que ela já tem (o dia em que ela está) sai daqui quando a AGENDA está no
+ * início (`naAgenda`) — ele mora lá, com o selo certo (do clube para o membro);
+ * sem a agenda, fica aqui com "Você vai", senão sumiria do início.
  *
  * Com a MINHA REGIÃO (flag `my_region`), só o que está na região da pessoa,
  * com a barra dizendo qual é e quantos ficaram de fora. Sem ela, o mais perto
@@ -67,7 +69,7 @@ const TONS = {
  * entra (ou sai) ali mesmo. Dois alvos, e nenhum dentro do outro — botão
  * dentro de link não é clicável direito nem anunciado direito.
  */
-function PlayRow({ item, selo, tomSelo, subtitulo }) {
+function PlayRow({ item, selo, tomSelo, subtitulo, naAgenda }) {
   const Icone = iconeDe(item);
   return (
     <li className={cn(
@@ -93,17 +95,18 @@ function PlayRow({ item, selo, tomSelo, subtitulo }) {
         )}
       </Link>
       <div className="flex shrink-0 flex-wrap items-center gap-2 pl-12 sm:pl-0">
-        <PlayItemAction item={item} />
+        <PlayItemAction item={item} naAgenda={naAgenda} />
       </div>
     </li>
   );
 }
 
-export default function HomePlaySection({ reason, hoje, agora, perfil }) {
+export default function HomePlaySection({ reason, hoje, agora, perfil, naAgenda = false }) {
   const rotulos = useNavRotulos();
   const jogos = usePlayDiscovery({ hoje, agora });
-  // Só o que a pessoa pode fazer: o que preenche os requisitos, ou já tem.
-  const paraMim = useMemo(() => playItemsForMe(jogos.itens), [jogos.itens]);
+  // Só o que a pessoa pode fazer: o que preenche os requisitos, ou já tem
+  // (este, só sem a agenda na tela — com ela, ele está lá).
+  const paraMim = useMemo(() => playItemsForMe(jogos.itens, { naAgenda }), [jogos.itens, naAgenda]);
   const regional = useRegionalList(paraMim, lugarDe);
 
   // Sem a Minha região: o mais perto primeiro, sem perder a ordem por data.
@@ -161,6 +164,7 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
                 <PlayRow
                   key={item.key}
                   item={item}
+                  naAgenda={naAgenda}
                   subtitulo={[item.subtitle, km].filter(Boolean).join(' · ')}
                   selo={item.badge || perto}
                   tomSelo={item.origem === PLAY_ORIGIN.CLUBE ? 'blue' : item.badge ? 'green' : 'acid'}
