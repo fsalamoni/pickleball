@@ -28,6 +28,7 @@ import {
 } from '@/modules/tournament/domain/teamFormat';
 import { useRecordConfrontation } from '@/modules/tournament/hooks/useTeams';
 import { t } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 /* ----------------------------- compartilhado ----------------------------- */
 
@@ -362,7 +363,7 @@ export function TeamResultDialog({
                               {t('Game')} {gi + 1}
                             </span>
                           )}
-                          <input
+                          <NumberInput
                             type="number" min="0" inputMode="numeric"
                             value={g.a}
                             onChange={(e) => setGame(ei, gi, 'a', e.target.value)}
@@ -370,7 +371,7 @@ export function TeamResultDialog({
                             className={scoreCls}
                           />
                           <span className="text-gray-300">×</span>
-                          <input
+                          <NumberInput
                             type="number" min="0" inputMode="numeric"
                             value={g.b}
                             onChange={(e) => setGame(ei, gi, 'b', e.target.value)}

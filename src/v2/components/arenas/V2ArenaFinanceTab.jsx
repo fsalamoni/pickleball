@@ -35,6 +35,7 @@ import {
   V2Badge, V2Button, V2ErrorState, V2StatCard, V2Surface, V2Skeleton,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 export default function V2ArenaFinanceTab() {
   const { arenaId } = useParams();
@@ -352,7 +353,7 @@ function ViewTable({ lines }) {
 
 function EditTable({ lines, onChange, onRemove, onAdd, onCancel, onSave, saving }) {
   const numInput = (l, field) => (
-    <input
+    <NumberInput
       type="number" min="0" step="0.01"
       value={l[field]}
       onChange={(e) => onChange(l.key, field, Number(e.target.value))}

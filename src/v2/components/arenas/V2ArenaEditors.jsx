@@ -7,6 +7,7 @@ import { useSaveArenaPricing } from '@/modules/arenas/hooks/useArenas';
 import { V2Button, V2Surface, V2Input, V2Textarea } from '@/v2/ui/primitives';
 import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import { t } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 /**
  * Componente nativo V2 de edição dos dados descritivos e de contato da Arena.
@@ -161,7 +162,7 @@ export function V2PricingEditor({ arena }) {
     <div className="space-y-6">
       <div className="space-y-2">
         <label htmlFor="base-price" className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Preço base (fallback)')}</label>
-        <input
+        <NumberInput
           id="base-price" type="number" min="0" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder={t('Ex.: 80')}
           className="w-40 rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         />
@@ -203,7 +204,7 @@ export function V2PricingEditor({ arena }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Preço (R$)')}</label>
-                  <input type="number" min="0" step="0.01" value={r.price} onChange={(e) => updateRule(r.id, { price: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
+                  <NumberInput type="number" min="0" step="0.01" value={r.price} onChange={(e) => updateRule(r.id, { price: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Rótulo')}</label>
@@ -240,7 +241,7 @@ export function V2PricingEditor({ arena }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Preço (R$)')}</label>
-                  <input type="number" min="0" step="0.01" value={o.price} onChange={(e) => updateOverride(o.id, { price: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
+                  <NumberInput type="number" min="0" step="0.01" value={o.price} onChange={(e) => updateOverride(o.id, { price: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Rótulo')}</label>

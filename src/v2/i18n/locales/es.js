@@ -637,4 +637,6 @@ export default {
   "Falta autorizar no DUPR": "Falta autorizar en DUPR",
   "O DUPR só mostra uma conta depois que ela autoriza a plataforma. Em cada jogador, toque em \"Autorizar pelo login do DUPR\" e entre com a conta de teste DELE: o ID vem do próprio DUPR. Entre um jogador e outro, saia da conta no quadro do DUPR.": "DUPR solo muestra una cuenta después de que autoriza la plataforma. En cada jugador, toca \"Autorizar con el login de DUPR\" y entra con la cuenta de prueba DE ÉL: el ID viene del propio DUPR. Entre un jugador y otro, cierra la sesión en el cuadro de DUPR.",
   "O login do DUPR não abriu": "El login de DUPR no se abrió",
+  "Diminuir": "Disminuir",
+  "Aumentar": "Aumentar",
 };

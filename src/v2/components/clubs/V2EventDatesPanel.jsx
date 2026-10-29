@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { V2Surface, V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -168,13 +169,15 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
                   {isCourtByCourtFormat(form.format) && (
                     <div className="space-y-1.5">
                       <Label htmlFor="new_date_courts">{t('Quadras')}</Label>
-                      <Input
+                      <V2NumberInput
+                        compacto
                         id="new_date_courts"
-                        type="number"
                         min={1}
                         max={12}
                         value={form.play_courts}
                         onChange={(e) => setForm((p) => ({ ...p, play_courts: e.target.value }))}
+                        rotulo={t('Quadras')}
+                        className="max-w-48"
                       />
                       <p className="text-xs text-gray-500">{t('Quantas quadras rodam ao mesmo tempo.')}</p>
                     </div>
@@ -184,9 +187,10 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
               {recurringOn && (
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="new_date_repeat">{t('Repetir semanalmente por (semanas)')}</Label>
-                  <Input id="new_date_repeat" type="number" min={1} max={52}
+                  <V2NumberInput compacto id="new_date_repeat" min={1} max={52}
                     value={form.repeat_weeks}
-                    onChange={(e) => setForm((p) => ({ ...p, repeat_weeks: e.target.value }))} />
+                    onChange={(e) => setForm((p) => ({ ...p, repeat_weeks: e.target.value }))}
+                    rotulo={t('Semanas')} className="max-w-48" />
                   <p className="text-xs text-gray-500">{t('1 = só esta data. Ex.: 4 cria esta e mais 3 semanas seguidas.')}</p>
                 </div>
               )}

@@ -44,6 +44,7 @@ import { DUPR_MAX, DUPR_MIN } from '@/modules/rating/domain/duprScale';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { t, tn, tk } from '@/core/i18n';
 
 const MODALIDADES = [
@@ -322,7 +323,7 @@ export default function OpenMatchForm({
         <Secao icone={Users} titulo={t('Quem pode entrar')}>
           <div className="grid gap-3 sm:grid-cols-3">
             <V2Field label={t('Vagas')} htmlFor="om-vagas">
-              <V2Input id="om-vagas" type="number" min="2" max="20" required
+              <V2NumberInput id="om-vagas" min={2} max={20} required rotulo={t('Vagas')}
                 value={form.total_spots} onChange={(e) => set({ total_spots: e.target.value })} />
             </V2Field>
             <V2Field label={t('Modalidade')} htmlFor="om-modalidade">

@@ -36,6 +36,7 @@ import {
 } from '@/modules/arenas/domain/matchmaking';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 function MatchCard({ candidate, score, arenaId, onChat }) {
   const tone = scoreTone(score);
@@ -220,7 +221,7 @@ export default function V2ArenaMatchmaking() {
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block">
             <span className="text-xs font-bold text-gray-500">{t('Diferença mínima de nível')}</span>
-            <input
+            <NumberInput
               type="number"
               min="0"
               max="5"
@@ -232,7 +233,7 @@ export default function V2ArenaMatchmaking() {
           </label>
           <label className="block">
             <span className="text-xs font-bold text-gray-500">{t('Diferença máxima de nível')}</span>
-            <input
+            <NumberInput
               type="number"
               min="0"
               max="5"

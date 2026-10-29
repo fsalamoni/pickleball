@@ -78,6 +78,22 @@ os da marca.
   o texto ficava cortado e sem seta. `V2Input` com altura própria (`h-…`) perde o
   `py` sozinho pelo mesmo motivo — mas prefira a altura padrão.
 - `V2Field` junta rótulo (sempre acima), dica e erro.
+- **Campo de número** (`type="number"`): `V2Input`, o `Input` de
+  `components/ui` e o `NumberInput` (o mesmo, sem estilo) passam por
+  `useNumberDraft` (`src/core/lib/`): enquanto o campo está em foco ele mostra
+  o que a pessoa DIGITOU, e ao sair volta o valor da tela. 🐞 Antes, tela que
+  convertia no `onChange` (`Number(v) || 1`, `Math.max(1, …)`) devolvia o
+  número na hora em que a pessoa apagava o último dígito — no celular só
+  funcionava selecionar tudo e digitar por cima. **Nunca** escreva
+  `<input type="number">` nativo numa tela (guarda
+  `src/core/guards/campoNumerico.test.js`).
+- **`V2NumberInput`** (`src/v2/ui/V2NumberInput.jsx`): campo de número com
+  botões − e + (44 px no celular), para contagens pequenas com limite —
+  quadras, rodadas, vagas, semanas, grupos, cabeças de chave, atletas por
+  equipe. Os botões param em `min`/`max`, falam pelo MESMO `onChange` do campo
+  (`{ target: { value } }`) e o campo pede o teclado numérico. `compacto` usa a
+  altura dos diálogos (o `Input` de 40 px); `rotulo` nomeia os botões para o
+  leitor de tela. Preço, placar e nota seguem como campo simples.
 
 ### 3.2 Demais peças de `src/v2/ui/`
 

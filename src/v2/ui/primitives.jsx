@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Slot } from '@radix-ui/react-slot';
 import { AlertTriangle, ArrowLeft, ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
+import { useNumberDraft } from '@/core/lib/useNumberDraft';
 import { t, tk } from '@/core/i18n';
 
 import { PAGE_FRAME, PAGE_TITLE, HERO_TITLE } from './pageFrame';
@@ -533,9 +534,12 @@ export function V2Field({ label, htmlFor, hint, error, required, className, chil
 }
 
 export function V2Input({ className, ...props }) {
+  // Campo numérico: deixa apagar e redigitar mesmo quando a tela converte no
+  // onChange (ver `useNumberDraft`).
+  const numero = useNumberDraft(props.type === 'number' ? props : {});
   // Tela que fixa a altura (`h-10`, `h-8`) leva também `py-0`: o campo
   // centraliza o texto sozinho, e o `py-3` padrão cortava as letras.
-  return <input className={cn(FIELD_CONTROL, /(^|\s)h-\d/.test(className || '') && 'py-0', className)} {...props} />;
+  return <input className={cn(FIELD_CONTROL, /(^|\s)h-\d/.test(className || '') && 'py-0', className)} {...props} {...numero} />;
 }
 
 export function V2Textarea({ className, rows = 4, ...props }) {

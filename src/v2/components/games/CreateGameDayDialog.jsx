@@ -6,6 +6,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { V2Button } from '@/v2/ui/primitives';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { tutorialIdForGameDayFormat } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
@@ -227,14 +228,16 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
           )}
 
           {mostrarQuadras && (
-            <div className="w-40">
-              <Label className="text-xs">{t('Quadras disponíveis')}</Label>
-              <Input
-                type="number"
+            <div className="w-48">
+              <Label htmlFor="cgd-quadras" className="text-xs">{t('Quadras disponíveis')}</Label>
+              <V2NumberInput
+                compacto
+                id="cgd-quadras"
                 min={1}
                 max={12}
                 value={form.play_courts}
                 onChange={(e) => set('play_courts', normalizePlayCourts(e.target.value))}
+                rotulo={t('Quadras disponíveis')}
               />
             </div>
           )}
