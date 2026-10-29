@@ -20,7 +20,8 @@
  *
  * Estados derivados:
  *  - `in_court`   — está num jogo aberto;
- *  - `unavailable`— optou por pular as próximas X partidas (`skip_remaining` > 0);
+ *  - `unavailable`— optou por pular as próximas X partidas (`skip_remaining` > 0)
+ *                   ou ficou fora "até voltar" (`skip_until_back`, ver abaixo);
  *  - `available`  — na ordem de participação, apto a entrar em quadra.
  */
 
@@ -42,6 +43,49 @@ export const PLAY_SLOTS = 4;
 
 /** Nível padrão quando o participante não tem nível informado (guests etc.). */
 export const PLAY_DEFAULT_LEVEL = 3.0;
+
+/* -------------------------------- pausa -------------------------------- */
+
+/**
+ * "Até voltar": a pausa SEM número de partidas. A pessoa fica fora da ordem
+ * até ela (ou quem organiza) tocar em "Voltar a jogar".
+ *
+ * Gravada como `skip_until_back: true` + `skip_remaining` alto. O número alto
+ * é de propósito: um aparelho com a versão anterior do app (que não conhece o
+ * campo) continua vendo a pessoa como pausada, em vez de chamá-la para a
+ * quadra. Quem decide é sempre o PAR — `skip_remaining` zerado por qualquer
+ * versão (o "Voltar a jogar" de sempre) encerra a pausa.
+ */
+export const PAUSE_UNTIL_BACK = 'until_back';
+const SKIP_UNTIL_BACK_COUNT = 999;
+/** Teto da pausa por número de partidas (o seletor e o serviço). */
+export const PLAY_SKIP_MAX = 50;
+
+/** A pessoa está pausada "até voltar" (sem número de partidas)? */
+export function isPausedUntilBack(p) {
+  return p?.skip_until_back === true && Number(p?.skip_remaining) > 0;
+}
+
+/**
+ * Os campos a gravar ao pausar/retomar. `count` é um número de partidas
+ * (0 = voltar à fila; limitado a `PLAY_SKIP_MAX`) ou `PAUSE_UNTIL_BACK`.
+ */
+export function playSkipFields(count) {
+  if (count === PAUSE_UNTIL_BACK) return { skip_remaining: SKIP_UNTIL_BACK_COUNT, skip_until_back: true };
+  const n = Math.max(0, Math.min(PLAY_SKIP_MAX, Math.floor(Number(count) || 0)));
+  return { skip_remaining: n, skip_until_back: false };
+}
+
+/**
+ * O que muda na pausa de alguém quando NASCE uma partida: quem pula X
+ * partidas desconta uma (e volta à fila ao zerar, `voltou: true`); quem está
+ * "até voltar" não desconta nada. `null` = nada a gravar.
+ */
+export function skipAfterNewGame(p) {
+  const skip = Number(p?.skip_remaining) || 0;
+  if (skip <= 0 || isPausedUntilBack(p)) return null;
+  return { skip_remaining: skip - 1, voltou: skip - 1 === 0 };
+}
 
 /* ------------------------------ utilidades ------------------------------ */
 

@@ -5,6 +5,7 @@ import {
   computePlayOrder, buildPlayNextMatch, nextAvailableExcluding, pickSwapReplacement,
   eligibleSwapReplacements, isEligibleSwapReplacement,
   assignPlayTeams, freePlayCourts, nextFreePlayCourt, forecastPlayMatches,
+  PAUSE_UNTIL_BACK, PLAY_SKIP_MAX, isPausedUntilBack, playSkipFields, skipAfterNewGame,
 } from './gamePlay.js';
 
 // Helper: participante disponível com espera crescente por índice.
@@ -359,5 +360,42 @@ describe('⭐ substituto: quem tem dupla na fila vai por último', () => {
     const order = fila([P('a', { partner_id: 'b' }), P('b', { partner_id: 'a' }), P('c')]);
     const ctx = { swappedOutIds: ['c'] };
     expect(pickSwapReplacement(order, ctx).id).toBe(eligibleSwapReplacements(order, ctx)[0].id);
+  });
+});
+
+describe('gamePlay — pausa "até voltar"', () => {
+  it('grava sem número e com o número alto para o app antigo seguir vendo pausado', () => {
+    const f = playSkipFields(PAUSE_UNTIL_BACK);
+    expect(f.skip_until_back).toBe(true);
+    expect(f.skip_remaining).toBeGreaterThan(PLAY_SKIP_MAX);
+    expect(isPausedUntilBack(f)).toBe(true);
+  });
+
+  it('por número: limita ao teto, zera a marca e 0 volta à fila', () => {
+    expect(playSkipFields(3)).toEqual({ skip_remaining: 3, skip_until_back: false });
+    expect(playSkipFields(500)).toEqual({ skip_remaining: PLAY_SKIP_MAX, skip_until_back: false });
+    expect(playSkipFields(0)).toEqual({ skip_remaining: 0, skip_until_back: false });
+    expect(playSkipFields(-2).skip_remaining).toBe(0);
+  });
+
+  it('fica fora da ordem e não desconta quando nasce partida', () => {
+    const pausado = { ...P('a'), ...playSkipFields(PAUSE_UNTIL_BACK) };
+    expect(playParticipantStatus(pausado, new Set())).toBe(PLAY_STATUS.UNAVAILABLE);
+    const view = computePlayOrder({ participants: [pausado, P('b')], games: [] });
+    expect(view.unavailable.map((p) => p.id)).toEqual(['a']);
+    expect(view.order.map((p) => p.id)).toEqual(['b']);
+    expect(skipAfterNewGame(pausado)).toBeNull();
+  });
+
+  it('a pausa por número desconta e avisa quando volta', () => {
+    expect(skipAfterNewGame(P('a', { skip: 2 }))).toEqual({ skip_remaining: 1, voltou: false });
+    expect(skipAfterNewGame(P('a', { skip: 1 }))).toEqual({ skip_remaining: 0, voltou: true });
+    expect(skipAfterNewGame(P('a'))).toBeNull();
+  });
+
+  it('o "Voltar a jogar" de qualquer versão (skip zerado) encerra a pausa, mesmo com a marca', () => {
+    const voltou = { ...P('a'), skip_until_back: true, skip_remaining: 0 };
+    expect(isPausedUntilBack(voltou)).toBe(false);
+    expect(playParticipantStatus(voltou, new Set())).toBe(PLAY_STATUS.AVAILABLE);
   });
 });

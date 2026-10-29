@@ -57,7 +57,9 @@ na quadra liberada. Domínio puro em `domain/gamePlay.js` (com testes):
 - `freePlayCourts`/`nextFreePlayCourt` — controle de quadras.
 
 Participantes têm campos aditivos `play_status` (derivado), `available_since`,
-`available_tie`, `skip_remaining` (pausar X partidas), `partner_id` (dupla fixa),
+`available_tie`, `skip_remaining` (pausar X partidas) + `skip_until_back`
+(pausa "até voltar", sem número — `playSkipFields`/`isPausedUntilBack`, ver
+`docs/16-DIA-DE-JOGO-RODIZIO.md` §11), `partner_id` (dupla fixa),
 `play_level`, `play_gender`. Serviço: `createNextPlayGame`, `createManualPlayGame`,
 `finishPlayGame` (auto-cria o próximo), `cancelPlayGame`, `noShowSwapPlayGame`
 (tira um jogador da partida e coloca outro, trocando os dois de lugar na fila;

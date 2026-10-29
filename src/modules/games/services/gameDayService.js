@@ -33,7 +33,7 @@ import {
 import {
   computePlayOrder, buildPlayNextMatch, assignPlaySides,
   nextFreePlayCourt, freePlayCourts, pickSwapReplacement, isEligibleSwapReplacement,
-  PLAY_GAME_STATUS, PLAY_SLOTS,
+  PLAY_GAME_STATUS, PLAY_SLOTS, playSkipFields, skipAfterNewGame,
 } from '../domain/gamePlay.js';
 import {
   GAME_KIND, courtKindsFromGames, gameKindOf, kindOfCourt, mergeCourtKinds, normalizeGameKind,
@@ -988,15 +988,18 @@ function writePlayGame(batch, gdId, {
   return gid;
 }
 
-/** Após criar uma partida, quem estava pulando desconta 1 (e volta à fila ao zerar). */
+/**
+ * Após criar uma partida, quem estava pulando desconta 1 (e volta à fila ao
+ * zerar). Quem está "até voltar" não desconta: só sai da pausa pelo "Voltar a
+ * jogar" (`skipAfterNewGame`).
+ */
 function applySkipDecrement(batch, gdId, participants) {
   const now = Date.now();
   (participants || []).forEach((p) => {
-    const skip = Number(p.skip_remaining) || 0;
-    if (skip <= 0) return;
-    const nextSkip = skip - 1;
-    const patch = { skip_remaining: nextSkip, updated_at: serverTimestamp() };
-    if (nextSkip === 0) { patch.available_since = now; patch.available_tie = Math.random(); }
+    const next = skipAfterNewGame(p);
+    if (!next) return;
+    const patch = { skip_remaining: next.skip_remaining, updated_at: serverTimestamp() };
+    if (next.voltou) { patch.available_since = now; patch.available_tie = Math.random(); }
     batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, p.id), patch);
   });
 }
@@ -1522,13 +1525,24 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) 
   return { replacedBy: repl.id };
 }
 
-/** Define/ajusta a indisponibilidade ("pular X partidas") de um participante. */
+/**
+ * Define/ajusta a indisponibilidade de um participante: "pular X partidas"
+ * (`count` numérico; 0 = voltar à fila) ou "até voltar" (`PAUSE_UNTIL_BACK`).
+ */
 export async function setPlayParticipantSkip(gdId, pid, count, actor) {
-  const n = Math.max(0, Math.floor(Number(count) || 0));
-  const patch = { skip_remaining: n, updated_at: serverTimestamp() };
-  if (n === 0) { patch.available_since = Date.now(); patch.available_tie = Math.random(); }
+  const fields = playSkipFields(count);
+  const patch = { ...fields, updated_at: serverTimestamp() };
+  if (fields.skip_remaining === 0) { patch.available_since = Date.now(); patch.available_tie = Math.random(); }
   await updateDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), patch);
-  await createAuditLog({ action: 'game_day_play_skip_set', actor, details: { game_day_id: gdId, participant_id: pid, count: n } });
+  await createAuditLog({
+    action: 'game_day_play_skip_set',
+    actor,
+    details: {
+      game_day_id: gdId, participant_id: pid,
+      count: fields.skip_until_back ? null : fields.skip_remaining,
+      until_back: fields.skip_until_back,
+    },
+  });
 }
 
 /** Define/limpa a DUPLA FIXA (mútua) de um participante. */

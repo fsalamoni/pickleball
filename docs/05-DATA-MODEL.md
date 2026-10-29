@@ -854,7 +854,10 @@ Subcoleções:
 - `game_days/{id}/participants/{pid}` — `user_id?`, `name`, `photo_url?`,
   `source: 'owner'|'invited'|'joined'|'guest'`; `play_level?`/`play_gender?`
   (nível e sexo do convidado avulso, usados pelo Play); `play_group_id?`
-  (grupo do Play, **opcional** — id que não existe mais vale "sem grupo")
+  (grupo do Play, **opcional** — id que não existe mais vale "sem grupo");
+  `skip_remaining` (pausa por N partidas) e `skip_until_back?` (pausa "até
+  voltar", sem número — gravada com `skip_remaining: 999`; ver
+  `docs/16-DIA-DE-JOGO-RODIZIO.md` §11)
 - `game_days/{id}/games/{gid}` — `round`, `court`, `kind`, `side_a`/`side_b`
   (`[{id,name}]`), `score_a`/`score_b`, `order`; `group_id?`/`group_name?`/
   `group_color?` (cópia do grupo do Play em que a partida foi sorteada — o
