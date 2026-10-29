@@ -12,7 +12,10 @@
 
 ## O que a tela faz
 
-1. **Lista todos os cadastros**, com busca por nome, e-mail, cidade ou uid.
+1. **Lista todos os cadastros**, com busca por nome, e-mail, cidade, UF, ID
+   DUPR ou uid (sem acento nem caixa; cada palavra pode estar num campo).
+   Desde 2026-10-29 a lista é feita para **milhares** de contas — ver
+   "Gerir a base de cadastros" abaixo.
 2. **Aponta o que falta** em cada um — antes, descobrir que um atleta está sem
    data de nascimento exigia abrir o banco. Quem tem campo **obrigatório**
    faltando aparece primeiro, porque é quem precisa de ação.
@@ -33,6 +36,65 @@
    No editor, rating mexido e fora da regra **trava o salvar** até virar um
    rating ("Você quis dizer 4,525?" → "Sim, usar 4,525"); o valor antigo que
    ninguém tocou não trava a correção dos outros campos.
+
+## Gerir a base de cadastros (2026-10-29)
+
+O pedido: "no futuro, milhares de usuários — preciso compreender o estágio dos
+cadastros, mandar as pessoas atualizarem ou eu mesmo atualizar". Antes a lista
+mostrava as 100 primeiras ("refine a busca"), numa ordem só, com seis filtros.
+A conta mora em `modules/admin/domain/userRecordsView.js` (pura, com teste); a
+tela só desenha.
+
+- **Panorama dos cadastros** (`userRecords/RecordsOverview.jsx`): % de
+  cadastros completos, e quatro atalhos — falta obrigatório, DUPR a conferir,
+  novos (30 dias), sem entrar (90+ dias, inclusive quem nunca entrou) — mais
+  **"O que mais falta"**: cada campo obrigatório com quantas pessoas estão sem
+  ele. Tocar num número filtra só aquilo (tocar de novo desliga). Os números
+  contam a base inteira, não o recorte.
+- **Filtros que se somam**: situação (todos · falta obrigatório · completos ·
+  algo a preencher · DUPR a conferir · parecem de teste · suspensas e
+  bloqueadas), **campo que falta**, **estado** (com contagem; UF inválida é
+  "Sem UF válida"), **atividade** (cadastrados/entraram nos últimos 30 dias,
+  sem entrar há 90+), **perfil** (atletas · professores · administradores).
+- **Ordem**: o que precisa de ação primeiro (padrão: obrigatório faltando →
+  DUPR a conferir → opcional faltando → em dia), nome, cadastro mais
+  recente/antigo, último acesso, há mais tempo sem entrar, menos preenchido.
+  Data ausente vai sempre para o fim (no "há mais tempo sem entrar", quem nunca
+  entrou vem primeiro).
+- **Paginação 20 · 50 · 100** (`V2Pagination`, a mesma do ranking de duplas).
+  O tamanho escolhido fica com cada admin no navegador
+  (`v2:view:<uid>:admin:cadastros:por-pagina`).
+- **Tudo na URL** (`?busca=&situacao=&falta=&uf=&atividade=&perfil=&ordem=&pag=&tam=`):
+  recarregar ou mandar o link mostra o mesmo recorte; valor inventado cai no
+  padrão. Esses nomes são contrato de link — não renomeie.
+- Cada linha diz **quando a pessoa se cadastrou e o último acesso**
+  (`created_at`, `last_login`) e, se for o caso, quando recebeu o último pedido
+  para completar.
+- **Pedir para completar o cadastro** (`userRecords/ProfileReminderDialog.jsx`),
+  para o recorte inteiro ou para uma pessoa: um aviso no sino (e por
+  e-mail/WhatsApp/SMS se `external_messaging` estiver ligada, nas regras de
+  Comunicações) que leva a `/perfil/editar`. Vai **só a quem tem obrigatório
+  faltando** com a conta aberta e visível; quem recebeu um pedido há menos de
+  **7 dias** fica de fora por padrão (dá para incluir). A tela conta e explica
+  antes de enviar quem ficou de fora e por quê. Envio pelo `notifyUsers` de
+  sempre; a Auditoria (`admin_profile_reminder_sent`) guarda QUEM recebeu, um
+  registro por lote de 400 uids — é dela que sai o "pedido enviado em…". Se a
+  Auditoria não carregou, a tela **diz** que não deu para conferir em vez de
+  tratar como "ninguém recebeu".
+- **Baixar planilha** do recorte (CSV `;`, UTF-8): nome, uid, cidade, UF,
+  perfil, situação da conta, completo, o que falta, cadastro, último acesso e
+  DUPR. **Sem e-mail, telefone, endereço nem nascimento** — na tela eles são
+  mascarados e só se revelam com motivo e registro; a planilha não pode ser a
+  porta dos fundos dessa regra. Célula que começa com `=`, `+`, `-` ou `@` ganha
+  um `'` na frente (não vira fórmula). O download fica na Auditoria
+  (`admin_user_records_exported`, com quantas linhas e o recorte).
+- **Selecionar para excluir** passa a ser "os desta página" (até 25).
+
+O teto, dito: a lista ainda lê a coleção `users` inteira numa consulta (é o que
+deixa contar e filtrar por "o que falta", que não é campo gravado), com cache de
+5 minutos. Aguenta dezenas de milhares de contas; acima disso o caminho é um
+resumo mantido pelo servidor e a lista paginada por consulta. Zero coleção,
+zero índice, zero regra nova.
 
 ## As listas são as MESMAS do cadastro normal
 

@@ -113,6 +113,8 @@ export const AUDIT_ACTION_LABELS = {
   training_seed_installed: 'Biblioteca inicial do treino instalada/atualizada (admin)',
   training_items_imported: 'Treinos/drills importados em lote (admin)',
   admin_broadcast_sent: 'Aviso em massa enviado pelo admin',
+  admin_profile_reminder_sent: 'Pedido de completar o cadastro enviado pelo admin',
+  admin_user_records_exported: 'Planilha de cadastros baixada pelo admin',
 };
 
 export async function createAuditLog({

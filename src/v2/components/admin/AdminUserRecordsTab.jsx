@@ -1,12 +1,15 @@
-import React, { lazy, Suspense, useMemo, useState } from 'react';
+import React, {
+  lazy, Suspense, useDeferredValue, useMemo, useRef, useState,
+} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight, Trash2, FlaskConical, GitMerge,
-  Ban, PauseCircle, PlayCircle, Eye, AlertTriangle, BadgeCheck,
+  Ban, PauseCircle, PlayCircle, Eye, AlertTriangle, BadgeCheck, BellRing, Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
-  V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2Select, V2FilterChip, V2ErrorState,
+  V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2Select, V2FilterChip, V2ErrorState, V2Field,
 } from '@/v2/ui/primitives';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -14,8 +17,19 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import {
-  useAllPlatformUsers, useUpdateUserRecordAsAdmin, useAccountLifecycleLogs,
+  useAllPlatformUsers, useUpdateUserRecordAsAdmin, useAccountLifecycleLogs, useProfileReminderLogs,
 } from '@/modules/admin/hooks/usePlatformUsers';
+import { logUserRecordsExport } from '@/modules/admin/services/adminService';
+import {
+  RECORD_STATUS_FILTERS, RECORD_ACTIVITY_FILTERS, RECORD_ROLE_FILTERS, RECORD_SORTS, NO_UF,
+  readRecordFilters, hasActiveRecordFilters, filterRecords, sortRecords, withRecordIndex,
+  recordsOverview, recordUfCounts, lastReminderByUid, reminderAudience, recordsCsv,
+} from '@/modules/admin/domain/userRecordsView';
+import { paginate, normalizePageSize, PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/core/domain/pagination';
+import { readNumericPreference, writeViewPreference } from '@/core/lib/viewPreference';
+import V2Pagination from '@/v2/ui/V2Pagination';
+import { rolarAte } from '@/v2/ui/rolarAte';
+import RecordsOverview from './userRecords/RecordsOverview';
 import { deletedAccountsFromAudit } from '@/modules/admin/domain/accountMerge';
 import {
   ADMIN_EDITABLE_FIELDS, ADMIN_FORBIDDEN_FIELDS, userRecordStatus,
@@ -31,7 +45,7 @@ import { SENSITIVE_FIELDS, maskValue } from '@/modules/admin/domain/supportAcces
 import { duprRecordCheck, DUPR_ISSUE } from '@/modules/admin/domain/duprRecord';
 import { duprRatingToInput, formatDuprRating } from '@/core/domain/duprRating';
 import { DuprIdInput, DuprRatingInput, duprRatingBlocksSave } from '@/v2/components/rating/DuprFields';
-import { t, tk, tn, fmtData } from '@/core/i18n';
+import { t, tk, tn, fmtData, fmtNumero } from '@/core/i18n';
 
 // O diálogo de exclusão só baixa quando alguém vai excluir.
 const AdminAccountDeletionDialog = lazy(() => import('./AdminAccountDeletionDialog'));
@@ -40,6 +54,9 @@ const AdminAccountMergeDialog = lazy(() => import('./AdminAccountMergeDialog'));
 // Suspender/bloquear/reativar e revelar contato: também sob demanda.
 const AdminAccountStatusDialog = lazy(() => import('./AdminAccountStatusDialog'));
 const AdminSupportRevealDialog = lazy(() => import('./AdminSupportRevealDialog'));
+const ProfileReminderDialog = lazy(() => import('./userRecords/ProfileReminderDialog'));
+
+const ICONE_SITUACAO = { teste: FlaskConical, fechadas: Ban, dupr: AlertTriangle };
 
 const GRUPOS = [
   { id: 'identidade', label: tk('Identidade') },
@@ -47,31 +64,68 @@ const GRUPOS = [
   { id: 'jogo', label: tk('Jogo') },
 ];
 
+/** O tamanho de página escolhido fica com cada admin, no navegador. */
+const PREF_POR_PAGINA = 'admin:cadastros:por-pagina';
+
+/** O recorte, sem o que não é filtro — vai para a Auditoria do envio e da planilha. */
+const recorteDe = (f) => Object.fromEntries(Object.entries(f).filter(([k, v]) => v && k !== 'ordem' && !(k === 'situacao' && v === 'todos')));
+
 /**
- * "Cadastros" — onde o admin corrige, complementa e ajusta o cadastro de
- * qualquer usuário.
+ * "Cadastros" — onde o admin entende em que pé estão os cadastros, corrige,
+ * complementa, pede para a pessoa completar e exclui.
  *
- * O que a tela resolve, além de permitir editar: mostrar O QUE FALTA. Antes,
- * descobrir que um atleta está sem data de nascimento exigia abrir o banco.
+ * Feita para MILHARES de contas: o panorama responde "em que estágio estão"
+ * antes da lista; filtros, ordem e página moram na URL (recarregar ou mandar o
+ * link mostra o mesmo recorte); só a página visível é desenhada. A lista de
+ * contas continua vindo inteira de uma consulta (é o que deixa contar e filtrar
+ * por "o que falta", que não é campo gravado).
  *
  * O limite é explícito na própria tela: o admin corrige dado ERRADO; não
  * decide quem VÊ o dado (privacidade é do titular) e não concede poder.
  *
- * E EXCLUI cadastro — principalmente contas de exemplo. O filtro "Parecem de
- * teste" existe porque o pedido foi "há MUITOS cadastros de exemplo": achar
- * um a um numa lista de centenas é a tarefa que não acontece. Ele SUGERE e
- * mostra o porquê; quem decide é o admin, que ainda vê a prévia do servidor
- * antes de confirmar.
+ * O filtro "Parecem de teste" SUGERE contas de exemplo e mostra o porquê;
+ * quem decide é o admin, que ainda vê a prévia do servidor antes de excluir.
  */
 export default function AdminUserRecordsTab() {
   const { isPlatformAdmin, user } = useAuth();
+  // ponytail: a lista lê a coleção `users` inteira (uma leitura por conta a
+  // cada 5 min de uso). Aguenta dezenas de milhares; acima disso, o caminho é
+  // um resumo mantido pelo servidor e a lista paginada por consulta.
   const { data: users = [], isLoading, isError, refetch } = useAllPlatformUsers({ enabled: isPlatformAdmin });
-  const [busca, setBusca] = useState('');
-  const [filtro, setFiltro] = useState('todos'); // todos | incompletos | pendentes | teste
+  const lembretes = useProfileReminderLogs({ enabled: isPlatformAdmin });
+  const [params, setParams] = useSearchParams();
   const [alvo, setAlvo] = useState(null);
   const [selecionados, setSelecionados] = useState(() => new Set());
   const [paraExcluir, setParaExcluir] = useState(null);
   const [paraStatus, setParaStatus] = useState(null); // { user, action }
+  const [paraLembrete, setParaLembrete] = useState(null); // linhas
+  const topoDaLista = useRef(null);
+
+  const filtros = useMemo(() => readRecordFilters(params), [params]);
+  // Filtrar milhares de linhas a cada tecla: adiado, o campo de busca não trava.
+  const buscaAdiada = useDeferredValue(filtros.busca);
+  const porPagina = params.get('tam')
+    ? normalizePageSize(params.get('tam'))
+    : readNumericPreference(user?.uid, PREF_POR_PAGINA, PAGE_SIZES, DEFAULT_PAGE_SIZE);
+  const pagina = Math.max(1, Number(params.get('pag')) || 1);
+
+  /** Atualiza a URL (sem encher o "voltar"). Mudar o recorte volta para a página 1. */
+  const atualizar = (patch, { manterPagina = false } = {}) => {
+    const next = new URLSearchParams(params);
+    Object.entries(patch).forEach(([k, v]) => {
+      if (v === '' || v == null) next.delete(k);
+      else next.set(k, String(v));
+    });
+    if (!manterPagina) next.delete('pag');
+    setParams(next, { replace: true });
+  };
+  const LIMPAR = { busca: '', situacao: '', falta: '', uf: '', atividade: '', perfil: '' };
+  const limparFiltros = () => atualizar(LIMPAR);
+  // Atalho do panorama: mostra SÓ aquele recorte; tocar de novo desliga.
+  const filtrarPorAtalho = (patch) => {
+    const [k, v] = Object.entries(patch)[0];
+    atualizar({ ...LIMPAR, [k]: filtros[k] === v ? '' : v });
+  };
 
   const ctxExclusao = useMemo(
     () => ({ actorUid: user?.uid || null, ownerEmails: PLATFORM_OWNER_EMAILS }),
@@ -81,7 +135,7 @@ export default function AdminUserRecordsTab() {
   // "Obrigatório" aqui é a MESMA regra do cadastro — com o cadastro essencial
   // ligado, a categoria e o nível entram na conta.
   const essencial = true;
-  const comStatus = useMemo(() => (users || []).map((u) => ({
+  const comStatus = useMemo(() => (users || []).map((u) => withRecordIndex({
     ...u,
     _status: userRecordStatus(u, { essencial }),
     _teste: testAccountSignals(u),
@@ -91,35 +145,23 @@ export default function AdminUserRecordsTab() {
     _dupr: duprRecordCheck(u),
   })), [users, ctxExclusao, essencial]);
 
-  const listados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    return comStatus
-      .filter((u) => {
-        if (filtro === 'incompletos' && u._status.missingCount === 0) return false;
-        if (filtro === 'pendentes' && u._status.complete) return false;
-        if (filtro === 'teste' && u._teste.length === 0) return false;
-        if (filtro === 'fechadas' && u._conta.status === 'active') return false;
-        if (filtro === 'dupr' && u._dupr.issues.length === 0) return false;
-        if (!q) return true;
-        return [u.platform_name, u.full_name, u.email, u.uid, u.city, u.dupr_id]
-          .some((v) => String(v || '').toLowerCase().includes(q));
-      })
-      // Quem tem obrigatório faltando aparece primeiro — é o que precisa de ação.
-      .sort((a, b) => {
-        if (a._status.complete !== b._status.complete) return a._status.complete ? 1 : -1;
-        return b._status.missingCount - a._status.missingCount;
-      });
-  }, [comStatus, busca, filtro]);
-
-  const totais = useMemo(() => ({
-    total: comStatus.length,
-    incompletos: comStatus.filter((u) => u._status.missingCount > 0).length,
-    pendentes: comStatus.filter((u) => !u._status.complete).length,
-    teste: comStatus.filter((u) => u._teste.length > 0).length,
-    fechadas: comStatus.filter((u) => u._conta.status !== 'active').length,
-    vencidas: comStatus.filter((u) => u._conta.vencida).length,
-    dupr: comStatus.filter((u) => u._dupr.issues.length > 0).length,
-  }), [comStatus]);
+  const resumo = useMemo(() => recordsOverview(comStatus, { essencial }), [comStatus, essencial]);
+  const ufs = useMemo(() => recordUfCounts(comStatus), [comStatus]);
+  const listados = useMemo(
+    () => sortRecords(filterRecords(comStatus, { ...filtros, busca: buscaAdiada }), filtros.ordem),
+    [comStatus, filtros, buscaAdiada],
+  );
+  const pag = useMemo(() => paginate(listados, pagina, porPagina), [listados, pagina, porPagina]);
+  // Sem a Auditoria carregada, "quem já recebeu" é DESCONHECIDO (null), não "ninguém".
+  const lembradoEm = useMemo(
+    () => (lembretes.isSuccess ? lastReminderByUid(lembretes.data) : null),
+    [lembretes.isSuccess, lembretes.data],
+  );
+  const alcanceDoLembrete = useMemo(
+    () => reminderAudience(listados, { lastReminder: lembradoEm }).uids.length,
+    [listados, lembradoEm],
+  );
+  const comFiltro = hasActiveRecordFilters(filtros);
 
   const alternar = (u) => {
     setSelecionados((atual) => {
@@ -130,14 +172,31 @@ export default function AdminUserRecordsTab() {
     });
   };
 
-  // "Selecionar os que aparecem": só os que PODEM ser excluídos, e até o
+  // "Selecionar os desta página": só os que PODEM ser excluídos, e até o
   // limite — selecionar 300 para depois descobrir que só 25 cabem é frustrante.
   const selecionarVisiveis = () => {
-    const podem = listados.filter((u) => u._bloqueio.ok).slice(0, DELETION_BATCH_MAX);
+    const podem = pag.pageItems.filter((u) => u._bloqueio.ok).slice(0, DELETION_BATCH_MAX);
     setSelecionados(new Set(podem.map((u) => u.uid)));
   };
 
-  const abrirExclusao = (lista) => setParaExcluir(lista);
+  const irParaPagina = (p) => {
+    atualizar({ pag: p === 1 ? '' : p }, { manterPagina: true });
+    rolarAte(topoDaLista.current);
+  };
+  const trocarPorPagina = (s) => {
+    writeViewPreference(user?.uid, PREF_POR_PAGINA, s === DEFAULT_PAGE_SIZE ? null : s);
+    atualizar({ tam: s === DEFAULT_PAGE_SIZE ? '' : s });
+  };
+
+  const baixarPlanilha = () => {
+    const url = URL.createObjectURL(new Blob([recordsCsv(listados, t)], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cadastros.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    logUserRecordsExport({ actor: user, count: listados.length, context: recorteDe(filtros) });
+  };
 
   if (isLoading) return <V2Skeleton lines={6} />;
   if (isError) {
@@ -167,57 +226,115 @@ export default function AdminUserRecordsTab() {
         </p>
       </V2Surface>
 
+      {resumo.total > 0 && <RecordsOverview resumo={resumo} filtros={filtros} onFiltrar={filtrarPorAtalho} />}
+
       <V2Surface>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <V2Input
-              className="pl-9"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder={t('Buscar por nome, e-mail, cidade, ID DUPR ou uid…')}
-            />
-          </div>
-          <V2FilterChip active={filtro === 'todos'} onClick={() => setFiltro('todos')}>
-            {t('Todos ({total})', { total: totais.total })}
-          </V2FilterChip>
-          <V2FilterChip active={filtro === 'pendentes'} onClick={() => setFiltro('pendentes')}>
-            {t('Falta obrigatório ({pendentes})', { pendentes: totais.pendentes })}
-          </V2FilterChip>
-          <V2FilterChip active={filtro === 'incompletos'} onClick={() => setFiltro('incompletos')}>
-            {t('Algo a preencher ({incompletos})', { incompletos: totais.incompletos })}
-          </V2FilterChip>
-          <V2FilterChip active={filtro === 'teste'} onClick={() => setFiltro('teste')}>
-            <FlaskConical className="mr-1 inline h-3.5 w-3.5" />
-            {t('Parecem de teste ({teste})', { teste: totais.teste })}
-          </V2FilterChip>
-          <V2FilterChip active={filtro === 'fechadas'} onClick={() => setFiltro('fechadas')}>
-            <Ban className="mr-1 inline h-3.5 w-3.5" />
-            {t('Suspensas e bloqueadas ({fechadas})', { fechadas: totais.fechadas })}
-          </V2FilterChip>
-          <V2FilterChip active={filtro === 'dupr'} onClick={() => setFiltro('dupr')}>
-            <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
-            {t('DUPR a conferir ({dupr})', { dupr: totais.dupr })}
-          </V2FilterChip>
+        <div ref={topoDaLista} className="scroll-mt-4" />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
+          <V2Input
+            className="pl-9"
+            type="search"
+            value={filtros.busca}
+            onChange={(e) => atualizar({ busca: e.target.value })}
+            placeholder={t('Buscar por nome, e-mail, cidade, UF, ID DUPR ou uid…')}
+            aria-label={t('Buscar cadastros')}
+          />
         </div>
 
-        {filtro === 'dupr' && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {RECORD_STATUS_FILTERS.map((s) => {
+            const Icone = ICONE_SITUACAO[s.id];
+            return (
+              <V2FilterChip
+                key={s.id}
+                active={filtros.situacao === s.id}
+                onClick={() => atualizar({ situacao: s.id === 'todos' ? '' : s.id })}
+              >
+                {Icone && <Icone className="h-3.5 w-3.5" aria-hidden="true" />}
+                {t(s.label)} ({fmtNumero(resumo[s.id === 'todos' ? 'total' : s.id])})
+              </V2FilterChip>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <V2Field label={t('Falta preencher')} htmlFor="cad-falta">
+            <V2Select id="cad-falta" className="h-10 text-sm" value={filtros.falta} onChange={(e) => atualizar({ falta: e.target.value })}>
+              <option value="">{t('Qualquer campo')}</option>
+              {ADMIN_EDITABLE_FIELDS.map((f) => <option key={f.key} value={f.key}>{t(f.label)}</option>)}
+            </V2Select>
+          </V2Field>
+          <V2Field label={t('Estado')} htmlFor="cad-uf">
+            <V2Select id="cad-uf" className="h-10 text-sm" value={filtros.uf} onChange={(e) => atualizar({ uf: e.target.value })}>
+              <option value="">{t('Todos os estados')}</option>
+              {ufs.map(({ uf, count }) => (
+                <option key={uf} value={uf}>{uf === NO_UF ? t('Sem UF válida') : uf} ({fmtNumero(count)})</option>
+              ))}
+            </V2Select>
+          </V2Field>
+          <V2Field label={t('Atividade')} htmlFor="cad-atividade">
+            <V2Select id="cad-atividade" className="h-10 text-sm" value={filtros.atividade} onChange={(e) => atualizar({ atividade: e.target.value })}>
+              {RECORD_ACTIVITY_FILTERS.map((a) => <option key={a.id} value={a.id}>{t(a.label, { n: a.days })}</option>)}
+            </V2Select>
+          </V2Field>
+          <V2Field label={t('Perfil')} htmlFor="cad-perfil">
+            <V2Select id="cad-perfil" className="h-10 text-sm" value={filtros.perfil} onChange={(e) => atualizar({ perfil: e.target.value })}>
+              {RECORD_ROLE_FILTERS.map((p) => <option key={p.id} value={p.id}>{t(p.label)}</option>)}
+            </V2Select>
+          </V2Field>
+          <V2Field label={t('Ordenar por')} htmlFor="cad-ordem">
+            <V2Select id="cad-ordem" className="h-10 text-sm" value={filtros.ordem} onChange={(e) => atualizar({ ordem: e.target.value === 'prioridade' ? '' : e.target.value })}>
+              {RECORD_SORTS.map((o) => <option key={o.id} value={o.id}>{t(o.label)}</option>)}
+            </V2Select>
+          </V2Field>
+        </div>
+
+        {filtros.situacao === 'dupr' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
             {t('O rating DUPR vai de {min} a {max}, com três casas depois da vírgula. Até esta versão, o que fosse digitado fora disso (como “4525” em vez de “4,525”, ou o ID no campo do rating) era gravado como {max} ou {min} — por isso um rating cravado no limite aparece aqui.', { min: formatDuprRating(2), max: formatDuprRating(8) })} <strong>{t('Confira com a pessoa antes de corrigir')}</strong>{t(': nada foi alterado sozinho. O que veio do login oficial do DUPR não entra nesta lista.')}
           </p>
         )}
 
-        {filtro === 'fechadas' && (
+        {filtros.situacao === 'fechadas' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
-            {t('Suspensa tem prazo; bloqueada não.')} <strong>{t('Nada reativa sozinho')}</strong>{t(': quando a suspensão vence, a conta aparece aqui como vencida')}{totais.vencidas > 0 ? ` (${t('{n} agora', { n: totais.vencidas })})` : ''} {t('e o admin decide se reativa. Reativar devolve o acesso como era; nada foi apagado.')}
+            {t('Suspensa tem prazo; bloqueada não.')} <strong>{t('Nada reativa sozinho')}</strong>{t(': quando a suspensão vence, a conta aparece aqui como vencida')}{resumo.vencidas > 0 ? ` (${t('{n} agora', { n: resumo.vencidas })})` : ''} {t('e o admin decide se reativa. Reativar devolve o acesso como era; nada foi apagado.')}
           </p>
         )}
 
-        {filtro === 'teste' && (
+        {filtros.situacao === 'teste' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
             {t('A suspeita vem de sinais simples — conta oculta na moderação, e-mail de domínio de exemplo, nome ou e-mail com “teste”, “mock”, “demo”. Cada linha mostra o que levantou a suspeita.')} <strong>{t('Confira antes de excluir')}</strong>{t(': é sugestão, não certeza.')}
           </p>
         )}
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+          <p className="text-sm text-ink" aria-live="polite">
+            <strong className="tabular-nums">{fmtNumero(listados.length)}</strong>{' '}
+            {comFiltro
+              ? tn(listados.length, 'cadastro neste recorte', 'cadastros neste recorte')
+              : tn(listados.length, 'cadastro no total', 'cadastros no total')}
+            {comFiltro && (
+              <button type="button" onClick={limparFiltros} className="ml-2 text-xs font-semibold text-gray-500 underline hover:text-ink">
+                {t('Limpar filtros')}
+              </button>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <V2Button
+              size="sm"
+              variant="secondary"
+              disabled={alcanceDoLembrete === 0}
+              onClick={() => setParaLembrete(listados)}
+              title={alcanceDoLembrete === 0 ? t('Ninguém neste recorte está com obrigatório faltando (ou todos receberam um pedido há pouco).') : undefined}
+            >
+              <BellRing className="h-3.5 w-3.5" aria-hidden="true" /> {t('Pedir para completar ({n})', { n: fmtNumero(alcanceDoLembrete) })}
+            </V2Button>
+            <V2Button size="sm" variant="ghost" disabled={listados.length === 0} onClick={baixarPlanilha}>
+              <Download className="h-3.5 w-3.5" aria-hidden="true" /> {t('Baixar planilha')}
+            </V2Button>
+          </div>
+        </div>
 
         {selecionados.size > 0 ? (
           <div className="sticky top-2 z-10 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
@@ -230,46 +347,72 @@ export default function AdminUserRecordsTab() {
               <V2Button
                 size="sm"
                 className="bg-red-600 text-white hover:bg-red-700"
-                onClick={() => abrirExclusao(comStatus.filter((u) => selecionados.has(u.uid)))}
+                onClick={() => setParaExcluir(comStatus.filter((u) => selecionados.has(u.uid)))}
               >
                 <Trash2 className="h-3.5 w-3.5" /> {t('Excluir selecionados')}
               </V2Button>
             </div>
           </div>
-        ) : listados.some((u) => u._bloqueio.ok) && (
+        ) : pag.pageItems.some((u) => u._bloqueio.ok) && (
           <div className="mt-3 text-right">
             <button type="button" className="text-2xs font-semibold text-gray-500 underline hover:text-ink" onClick={selecionarVisiveis}>
-              {t('Selecionar os que aparecem (até {max})', { max: DELETION_BATCH_MAX })}
+              {t('Selecionar os desta página para excluir (até {max})', { max: DELETION_BATCH_MAX })}
             </button>
           </div>
         )}
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-2">
           {listados.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum cadastro encontrado.')}</p>
-          ) : listados.slice(0, 100).map((u) => (
+            <div className="py-6 text-center text-sm text-gray-500">
+              {comFiltro ? (
+                <>
+                  <p>{t('Nenhum cadastro neste recorte.')}</p>
+                  <V2Button size="sm" variant="ghost" className="mt-2" onClick={limparFiltros}>{t('Limpar filtros')}</V2Button>
+                </>
+              ) : <p>{t('Nenhum cadastro encontrado.')}</p>}
+            </div>
+          ) : pag.pageItems.map((u) => (
             <UserRow
               key={u.uid}
               user={u}
+              lembradoEm={lembradoEm?.get(u.uid) || null}
               onEdit={() => setAlvo(u)}
               selected={selecionados.has(u.uid)}
               onToggle={() => alternar(u)}
-              onDelete={() => abrirExclusao([u])}
+              onDelete={() => setParaExcluir([u])}
               onStatus={(action) => setParaStatus({ user: u, action })}
+              onRemind={() => setParaLembrete([u])}
             />
           ))}
-          {listados.length > 100 && (
-            <p className="pt-2 text-center text-2xs text-gray-500">
-              {t('Mostrando 100 de {length}. Refine a busca.', { length: listados.length })}
-            </p>
-          )}
         </div>
+        {listados.length > 0 && (
+          <div className="mt-3">
+            <V2Pagination
+              data={pag}
+              itemLabel={t('cadastros')}
+              idPrefix="cadastros"
+              onPage={irParaPagina}
+              onPageSize={trocarPorPagina}
+            />
+          </div>
+        )}
       </V2Surface>
 
       <DeletedAccountsPanel users={users} enabled={isPlatformAdmin} />
 
       {alvo && (
         <RecordEditDialog user={alvo} onClose={() => setAlvo(null)} />
+      )}
+
+      {paraLembrete && (
+        <Suspense fallback={null}>
+          <ProfileReminderDialog
+            rows={paraLembrete}
+            lastReminder={lembradoEm}
+            context={paraLembrete.length === 1 ? { uid: paraLembrete[0].uid } : recorteDe(filtros)}
+            onClose={() => setParaLembrete(null)}
+          />
+        </Suspense>
       )}
 
       {paraStatus && (
@@ -426,10 +569,16 @@ function DuprResumo({ dupr, onEdit }) {
   );
 }
 
-function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
+function UserRow({ user: u, lembradoEm, onEdit, selected, onToggle, onDelete, onStatus, onRemind }) {
   const s = u._status;
   const bloqueio = u._bloqueio;
   const conta = u._conta;
+  const { createdMs, lastLoginMs } = u._tempo;
+  const datas = [
+    Number.isFinite(createdMs) ? t('cadastro em {data}', { data: formatarData(createdMs) }) : null,
+    Number.isFinite(lastLoginMs) ? t('último acesso em {data}', { data: formatarData(lastLoginMs) }) : t('sem acesso registrado'),
+  ].filter(Boolean).join(' · ');
+  const podePedir = !s.complete && conta.status === 'active' && u.hidden !== true;
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${
       selected ? 'border-red-300 bg-red-50/40' : s.complete ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'
@@ -450,7 +599,7 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
           </span>
           {conta.status !== 'active' && (
             <V2Badge tone={conta.tone}>
-              <Ban className="h-3 w-3" /> {conta.label}{conta.vencida ? ' · prazo vencido' : ''}
+              <Ban className="h-3 w-3" /> {t(conta.label)}{conta.vencida ? ` · ${t('prazo vencido')}` : ''}
             </V2Badge>
           )}
           {s.complete ? (
@@ -480,8 +629,13 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
           </div>
         )}
         <div className="mt-1 text-2xs text-gray-500">
-          {s.filledCount}/{s.totalCount} campos preenchidos
+          {t('{n} de {total} campos preenchidos', { n: s.filledCount, total: s.totalCount })} · {datas}
         </div>
+        {lembradoEm && (
+          <div className="mt-1 inline-flex items-center gap-1 text-2xs font-medium text-blue-700">
+            <BellRing className="h-3 w-3" aria-hidden="true" /> {t('pedido para completar enviado em {data}', { data: formatarData(lembradoEm) })}
+          </div>
+        )}
         {u._teste.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {u._teste.map((m) => (
@@ -496,6 +650,11 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
         <V2Button size="sm" variant="secondary" onClick={onEdit}>
           <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar cadastro')}
         </V2Button>
+        {podePedir && (
+          <V2Button size="sm" variant="ghost" onClick={onRemind}>
+            <BellRing className="h-3.5 w-3.5" aria-hidden="true" /> {t('Pedir para completar')}
+          </V2Button>
+        )}
         {u._acoes.actions.map((a) => {
           const I = ICONE_ACAO[a];
           return (

@@ -33,6 +33,14 @@ export async function listAllPlatformUsers() {
 }
 
 /**
+ * Registra que o admin baixou a planilha de Cadastros (sem contato, mas é a
+ * lista de pessoas da plataforma): quantas linhas e de qual recorte.
+ */
+export function logUserRecordsExport({ actor, count, context }) {
+  return createAuditLog({ action: 'admin_user_records_exported', actor, details: { count, context: context || null } });
+}
+
+/**
  * @deprecated Prefira `archiveTournament` / `unarchiveTournament` de
  * `@/modules/tournament/services/tournamentService`. Esta função existe só
  * para retrocompatibilidade de imports legados (AdminTournaments V1).
