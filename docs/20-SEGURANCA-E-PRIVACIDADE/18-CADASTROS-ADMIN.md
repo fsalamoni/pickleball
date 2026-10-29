@@ -22,6 +22,17 @@
 5. **Exige motivo**, que vai para a Auditoria junto com o diff.
 6. **Re-sincroniza o espelho público** (`athlete_profiles`) — sem isso a
    correção não aparece no diretório e alguém a refaz na semana seguinte.
+7. **Mostra o DUPR no card de cada pessoa** (2026-10-29): ID e rating (três
+   casas, "4,525"), o selo "verificado pelo DUPR" quando veio do login oficial,
+   e em âmbar o que parece errado (`duprRecordCheck`, `modules/admin/domain/duprRecord.js`):
+   rating fora de 2,000–8,000 (com o palpite), rating **cravado em 8,000 ou
+   2,000** (rastro da leitura antiga, que limitava "4525" ao teto), ID que parece
+   um rating, ID com caractere que o DUPR não usa. Filtro **DUPR a conferir** e
+   busca pelo ID DUPR. **Nada é corrigido sozinho**: o admin confere com a pessoa
+   e corrige no editor, que usa o mesmo campo do cadastro (`DuprRatingInput`).
+   No editor, rating mexido e fora da regra **trava o salvar** até virar um
+   rating ("Você quis dizer 4,525?" → "Sim, usar 4,525"); o valor antigo que
+   ninguém tocou não trava a correção dos outros campos.
 
 ## As listas são as MESMAS do cadastro normal
 

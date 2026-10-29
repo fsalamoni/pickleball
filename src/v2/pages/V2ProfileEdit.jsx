@@ -33,6 +33,8 @@ import {
 import { t, tk } from '@/core/i18n';
 import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import DuprConnectCard from '@/v2/components/rating/DuprConnectCard';
+import { DuprIdInput, DuprRatingInput, duprRatingBlocksSave } from '@/v2/components/rating/DuprFields';
+import { duprRatingToInput } from '@/core/domain/duprRating';
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -52,9 +54,7 @@ export default function V2ProfileEdit() {
   const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
   const [competitionGender, setCompetitionGender] = useState(userProfile?.competition_gender || '');
   const [duprId, setDuprId] = useState(userProfile?.dupr_id || '');
-  const [duprRating, setDuprRating] = useState(
-    userProfile?.dupr_rating != null ? String(userProfile.dupr_rating) : '',
-  );
+  const [duprRating, setDuprRating] = useState(duprRatingToInput(userProfile?.dupr_rating));
   const skillRatingOn = true;
   const [courtSide, setCourtSide] = useState(userProfile?.court_side || '');
   const [interests, setInterests] = useState(sanitizeInterests(userProfile?.interests));
@@ -97,7 +97,7 @@ export default function V2ProfileEdit() {
     setPickleballExperience(userProfile?.pickleball_experience || '');
     setCompetitionGender(userProfile?.competition_gender || '');
     setDuprId(userProfile?.dupr_id || '');
-    setDuprRating(userProfile?.dupr_rating != null ? String(userProfile.dupr_rating) : '');
+    setDuprRating(duprRatingToInput(userProfile?.dupr_rating));
     setCourtSide(userProfile?.court_side || '');
     setInterests(sanitizeInterests(userProfile?.interests));
     setManualLevel(userProfile?.leveling_level || '');
@@ -142,8 +142,11 @@ export default function V2ProfileEdit() {
     if (essencial && competitionGender !== 'male' && competitionGender !== 'female') {
       extras.competitionGender = t('Escolha a categoria em que você joga.');
     }
+    // Rating fora de 2,000–8,000 não se grava: o campo mostra o porquê (e o palpite).
+    if (!duprOficial && duprRatingBlocksSave(duprRating)) extras.duprRating = true;
     if (!validation.isValid || Object.keys(extras).length > 0) {
       setErrors({ ...validation.errors, ...extras });
+      if (extras.duprRating) document.getElementById('perfil_dupr_rating')?.focus();
       return;
     }
     setErrors({});
@@ -372,13 +375,20 @@ export default function V2ProfileEdit() {
             </V2Field>
             {duprOficial && <DuprConnectCard />}
             {!duprOficial && (
-              <V2Field label={t('ID DUPR (opcional)')} hint={t('Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.')}>
-                <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder={t('Ex.: ABC123')} />
+              <V2Field label={t('ID DUPR (opcional)')} htmlFor="perfil_dupr_id" hint={t('Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.')}>
+                <DuprIdInput id="perfil_dupr_id" value={duprId} onChange={setDuprId} />
               </V2Field>
             )}
             {skillRatingOn && !duprOficial && (
-              <V2Field label={t('Meu rating DUPR atual (opcional)')} hint={t('Se você já tem um rating DUPR, informe-o (2.000 a 8.000) para servir de ponto de partida no ranking de nível da plataforma. Opcional — se vazio, usamos o seu nivelamento.')}>
-                <V2Input value={duprRating} onChange={(e) => setDuprRating(e.target.value)} inputMode="decimal" maxLength={6} placeholder={t('Ex.: 3.500')} />
+              <V2Field label={t('Meu rating DUPR atual (opcional)')} htmlFor="perfil_dupr_rating">
+                <DuprRatingInput
+                  id="perfil_dupr_rating"
+                  value={duprRating}
+                  // O valor GRAVADO já fora da regra (cadastro antigo) aparece explicado logo de cara.
+                  showFeedback={Boolean(errors.duprRating) || duprRatingBlocksSave(duprRatingToInput(userProfile?.dupr_rating))}
+                  onChange={setDuprRating}
+                />
+                <p className="text-xs leading-5 text-gray-500">{t('Serve de ponto de partida no ranking de nível da plataforma. Se ficar vazio, usamos o seu nivelamento.')}</p>
               </V2Field>
             )}
             <V2Field label={t('Lado da quadra que prefere jogar')} required error={errors.courtSide} hint={t('Ajuda a encontrar parcerias compatíveis.')}>

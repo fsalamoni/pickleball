@@ -22,6 +22,13 @@ service cloud.firestore {
         && !(od().get('dupr_verified', false) == true
              && chg().hasAny(['dupr_id', 'dupr_rating', 'dupr_rating_singles']));
     }
+    // Rating DUPR digitado: ausente/nulo ou número de 2 a 8 — nunca "4525" limitado a 8.
+    function duprNum(d) {
+      return d.get('dupr_rating', null) == null
+        || (d.dupr_rating is number && d.dupr_rating >= 2 && d.dupr_rating <= 8);
+    }
+    // No update só confere quando o rating muda (valor antigo fora da regra não trava o resto).
+    function duprOk() { return !chg().hasAny(['dupr_rating']) || duprNum(nd()); }
     function isPlatformAdmin() {
       return isAuthed()
         && exists(/databases/$(database)/documents/users/$(me()))
@@ -1258,6 +1265,7 @@ service cloud.firestore {
           && !nd().keys().hasAny(['phone_verified_number', 'phone_verified_at'])
           // O SELO "DUPR verificado" só o servidor concede (`duprIntegration`).
           && !nd().keys().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
+          && duprNum(nd())
         )
       );
 
@@ -1287,6 +1295,7 @@ service cloud.firestore {
           // DUPR VERIFICADO: o selo é do servidor, e com ele o ID e os ratings
           // vêm do DUPR — o dono não os reescreve à mão (desvincular libera).
           && duprSeloIntacto()
+          && duprOk()
         )
         || (isOwner(userId) && isPlatformOwnerEmail())
         || (isPlatformAdmin()
@@ -1318,7 +1327,8 @@ service cloud.firestore {
               // nível antigo — inclusive no espelho público.
               'level', 'leveling_method', 'leveling_manual_level',
               'updated_at', 'admin_edited_at', 'admin_edited_by',
-            ]))
+            ])
+            && duprOk())
         // REVOGAÇÃO DE PODER — assimétrica de propósito.
         //
         // O dono da plataforma (e-mail do TOKEN, não dado gravável) pode
@@ -1835,12 +1845,14 @@ service cloud.firestore {
       allow create: if (isPlatformAdmin() && contatosMarcados(nd()))
         || (isOwner(uid) && nd().get('hidden', false) == false
             && !nd().keys().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
+            && duprNum(nd())
             && contatosDoDonoPermitidos(uid, nd()));
       allow update: if (isPlatformAdmin()
             && (!mexeEmContato() || contatosMarcados(nd())))
         || (isOwner(uid) && !chg()
               .hasAny(['hidden', 'hidden_at', 'hidden_by'])
             && duprSeloIntacto()
+            && duprOk()
             && contatosDoDonoPermitidos(uid, nd()));
       allow delete: if isPlatformAdmin()
         || (isOwner(uid) && od().get('hidden', false) != true);

@@ -31,6 +31,8 @@ import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tk } from '@/core/i18n';
 import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
+import { duprRatingToInput } from '@/core/domain/duprRating';
+import { DuprIdInput, DuprRatingInput, duprRatingBlocksSave } from '@/v2/components/rating/DuprFields';
 
 /** Quando a pessoa adiou os interesses — no navegador, por uid (zero banco). */
 const PREF_ADIADO = 'onboarding:adiado';
@@ -115,7 +117,7 @@ export default function V2OnboardingWizard() {
     setInterests(sanitizeInterests(userProfile?.interests));
     setLevelCode(userProfile?.leveling_level || '');
     setDuprId(userProfile?.dupr_id || '');
-    setDuprRating(userProfile?.dupr_rating != null ? String(userProfile.dupr_rating) : '');
+    setDuprRating(duprRatingToInput(userProfile?.dupr_rating));
     setLevelMode(null);
     setErrors({});
     const faltando = userProfile ? missingRegistrationFields(userProfile, { essencial }) : [];
@@ -257,9 +259,12 @@ export default function V2OnboardingWizard() {
   async function saveEssentialLevel() {
     // Com a conexão oficial, ID e rating vêm do login do DUPR (Perfil → Editar), não daqui.
     const rating = duprOficial ? null : parseDuprRating(duprRating);
-    const temRatingDigitado = !duprOficial && String(duprRating || '').trim() !== '';
     const next = {};
-    if (temRatingDigitado && rating === null) next.duprRating = t('Use o formato do DUPR, entre 2.000 e 8.000 (ex.: 3.500).');
+    // Fora de 2,000–8,000 não se grava: o campo mostra o porquê (e o palpite).
+    if (!duprOficial && duprRatingBlocksSave(duprRating)) {
+      next.duprRating = true;
+      document.getElementById('onb_dupr_rating')?.focus();
+    }
     if (!levelCode && rating === null) next.level = t('Escolha o seu nível na lista (ou informe o seu rating DUPR).');
     if (Object.keys(next).length > 0) { setErrors(next); return; }
     const level = getLevelByCode(levelCode);
@@ -539,10 +544,10 @@ export default function V2OnboardingWizard() {
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <V2Field label={t('ID DUPR')} htmlFor="onb_dupr_id">
-                  <V2Input id="onb_dupr_id" value={duprId} maxLength={20} placeholder={t('Ex.: ABC123')} onChange={(e) => setDuprId(e.target.value)} />
+                  <DuprIdInput id="onb_dupr_id" value={duprId} onChange={setDuprId} />
                 </V2Field>
-                <V2Field label={t('Rating DUPR (2.000–8.000)')} htmlFor="onb_dupr_rating" error={errors.duprRating}>
-                  <V2Input id="onb_dupr_rating" value={duprRating} inputMode="decimal" maxLength={6} placeholder={t('Ex.: 3.500')} onChange={(e) => setDuprRating(e.target.value)} />
+                <V2Field label={t('Rating DUPR')} htmlFor="onb_dupr_rating">
+                  <DuprRatingInput id="onb_dupr_rating" value={duprRating} showFeedback={Boolean(errors.duprRating)} onChange={setDuprRating} />
                 </V2Field>
               </div>
               <p className="text-xs leading-5 text-gray-500">

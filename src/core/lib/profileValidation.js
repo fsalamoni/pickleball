@@ -1,4 +1,5 @@
 import { isBrazilUF } from '../domain/ufs.js';
+import { readDuprRating, isValidDuprRating } from '../domain/duprRating.js';
 import { t, tk } from '../i18n/index.js';
 
 export function calculateAge(birthDateValue, referenceDate = new Date()) {
@@ -78,13 +79,13 @@ export function isRequiredProfileComplete(profile) {
 }
 
 /**
- * Converte o campo "rating DUPR atual" em número na escala 2.000–8.000, ou null
- * quando vazio/inválido. Aceita vírgula ou ponto.
+ * Converte o campo "rating DUPR atual" em número de 2,000 a 8,000, ou null
+ * quando vazio OU fora da regra. Nunca limita: "4525" não vira 8 — quem
+ * chama confere `readDuprRating` e pergunta à pessoa (ver core/domain/duprRating).
  */
 export function parseDuprRating(raw) {
-  const n = Number(String(raw ?? '').trim().replace(',', '.'));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.min(8, Math.max(2, Math.round(n * 1000) / 1000));
+  const r = readDuprRating(raw);
+  return r.status === 'ok' ? r.value : null;
 }
 
 /** As categorias em que se compete (as mesmas de `COMPETITION_GENDER`). */
@@ -97,8 +98,7 @@ const CATEGORIAS = new Set(['male', 'female']);
  */
 export function hasDeclaredLevel(profile) {
   if (String(profile?.leveling_level || '').trim()) return true;
-  const dupr = Number(profile?.dupr_rating);
-  return profile?.dupr_rating != null && profile?.dupr_rating !== '' && Number.isFinite(dupr) && dupr >= 2 && dupr <= 8;
+  return isValidDuprRating(profile?.dupr_rating);
 }
 
 /** Como cada campo do cadastro se chama na tela (e no painel do admin). */

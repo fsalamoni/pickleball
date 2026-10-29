@@ -28,6 +28,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { hasDeclaredLevel } from '@/core/lib/profileValidation';
+import { readDuprRating } from '@/core/domain/duprRating';
 import { t, tk } from '@/core/i18n';
 
 /** `{ valor: rótulo }` vira `[{ value, label }]`, o formato do formulário. */
@@ -62,7 +63,7 @@ export const ADMIN_EDITABLE_FIELDS = Object.freeze([
   { key: 'court_side', label: tk('Lado na quadra'), type: 'select', group: 'jogo', required: true },
   { key: 'leveling_level', label: tk('Nível declarado'), type: 'select', group: 'jogo', requiredWithEssential: true },
   { key: 'dupr_id', label: tk('DUPR ID'), type: 'text', group: 'jogo' },
-  { key: 'dupr_rating', label: tk('DUPR rating'), type: 'number', group: 'jogo' },
+  { key: 'dupr_rating', label: tk('DUPR rating'), type: 'dupr', group: 'jogo' },
   { key: 'photo_url', label: tk('URL da foto'), type: 'text', group: 'jogo' },
 ]);
 
@@ -161,6 +162,8 @@ export function derivedFieldsFor(key, value) {
  * limpeza quanto na comparação, mantém `''`, `null` e `undefined` sendo a
  * mesma coisa — e um zero digitado de verdade continua sendo zero.
  */
+const numerico = (campo) => campo.type === 'number' || campo.type === 'dupr';
+
 function numeroOuNulo(v) {
   if (v === '' || v === null || v === undefined) return null;
   const n = Number(v);
@@ -173,15 +176,26 @@ function numeroOuNulo(v) {
  * inteira, e derrubar a correção por causa de um campo a mais seria pior.
  *
  * @param {object} patch
- * @returns {{ patch: object, ignored: string[] }}
+ * O rating DUPR (`type: 'dupr'`) só entra se for um rating de 2,000 a 8,000
+ * (ou vazio, que apaga). Fora disso fica de fora e vai para `invalid`: a tela
+ * pergunta "Você quis dizer…?" em vez de gravar — nunca limita ao teto.
+ *
+ * @returns {{ patch: object, ignored: string[], invalid: string[] }}
  */
 export function sanitizeAdminUserPatch(patch = {}) {
   const limpo = {};
   const ignorados = [];
+  const invalidos = [];
   Object.entries(patch || {}).forEach(([k, v]) => {
     if (!EDITAVEIS.has(k)) { ignorados.push(k); return; }
     const campo = ADMIN_EDITABLE_FIELDS.find((f) => f.key === k);
     if (campo.type === 'number') { limpo[k] = numeroOuNulo(v); return; }
+    if (campo.type === 'dupr') {
+      const leitura = readDuprRating(v);
+      if (leitura.status === 'ok' || leitura.status === 'empty') limpo[k] = leitura.value;
+      else { ignorados.push(k); invalidos.push(k); }
+      return;
+    }
     let s = texto(v);
     if (campo.maxLength) s = s.slice(0, campo.maxLength);
     if (k === 'state') s = s.toUpperCase();
@@ -192,7 +206,7 @@ export function sanitizeAdminUserPatch(patch = {}) {
     limpo[k] = s;
     Object.assign(limpo, derivedFieldsFor(k, s));
   });
-  return { patch: limpo, ignored: ignorados };
+  return { patch: limpo, ignored: ignorados, invalid: invalidos };
 }
 
 /**
@@ -211,7 +225,7 @@ export function diffAdminUserPatch(before = {}, patch = {}) {
     // Nos dois lados a mesma normalização, senão `''` e `null` (que significam
     // a mesma coisa) apareceriam como alteração e o botão de salvar ficaria
     // habilitado sozinho num cadastro que ninguém tocou.
-    const iguais = campo.type === 'number'
+    const iguais = numerico(campo)
       ? numeroOuNulo(from) === numeroOuNulo(to)
       : texto(from) === texto(to);
     if (!iguais) {
@@ -220,8 +234,8 @@ export function diffAdminUserPatch(before = {}, patch = {}) {
       mudancas.push({
         field: k,
         label: campo.label,
-        from: campo.type === 'number' ? numeroOuNulo(from) : texto(from),
-        to: campo.type === 'number' ? numeroOuNulo(to) : texto(to),
+        from: numerico(campo) ? numeroOuNulo(from) : texto(from),
+        to: numerico(campo) ? numeroOuNulo(to) : texto(to),
       });
     }
   });
@@ -238,7 +252,7 @@ export function missingUserFields(user = {}, opts = {}) {
   return ADMIN_EDITABLE_FIELDS
     .filter((f) => {
       const v = user?.[f.key];
-      if (f.type === 'number') return v == null || v === '';
+      if (numerico(f)) return v == null || v === '';
       return texto(v) === '';
     })
     .map((f) => ({ key: f.key, label: f.label, required: faltaObrigatorio(f, user, opts) }));

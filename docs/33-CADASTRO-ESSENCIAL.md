@@ -67,6 +67,27 @@ quadra também) — e aí o assistente reabria na entrada seguinte pedindo de vo
 
 - O assistente pede a **categoria** (no passo do jogo) e o **nível** (no último
   passo, sem "concluir sem informar"), com ID e rating DUPR opcionais ao lado.
+
+**O rating DUPR digitado (2026-10-29)** — no assistente, no perfil e no painel
+do admin, o campo é o mesmo (`DuprRatingInput`, `v2/components/rating/DuprFields.jsx`)
+e a leitura é uma só (`readDuprRating`, `core/domain/duprRating.js`):
+
+- O formato aparece antes de errar: número de 2,000 a 8,000, três casas depois
+  da vírgula, como no app do DUPR (ex.: 3,525). Vírgula e ponto valem.
+- 🐞 **Nada é limitado ao teto.** Antes, "4525" (o 4,525 sem vírgula) e um ID
+  no campo errado viravam 8,000 em silêncio. Agora o fora da faixa não é
+  gravado: ao sair do campo (ou ao salvar) a tela explica e, quando dá,
+  pergunta **"Você quis dizer 4,525?"** com "Sim, usar 4,525". "4525", "45250"
+  e "4.525.000" dão 4,525; seis dígitos ou mais sem vírgula é o ID; abaixo de
+  2,000 e acima de 8,000 sem palpite viram explicação.
+- O campo do ID avisa quando o que foi digitado parece o rating (ex.: "4,525")
+  ou tem espaço/ponto.
+- A regra do Firestore impõe a mesma faixa (`duprNum`/`duprOk`): `users` (dono
+  e correção do admin) e `athlete_profiles` (dono) recusam `dupr_rating` que
+  não seja número de 2 a 8 ou nulo. Só confere quando o rating MUDA — um valor
+  antigo fora da regra não trava o resto do cadastro. O espelho público
+  (`buildPublicProfile`) leva `null` no lugar de um valor fora da regra.
+- O que já estava gravado não foi migrado: o painel do admin aponta (doc 18).
 - A **UF** vira lista (a mesma do núcleo, `src/core/domain/ufs.js`).
 - **Quem já tinha concluído o cadastro vê SÓ o que falta**, com um aviso de
   por quê ("o cadastro passou a pedir a categoria e o nível…") — refazer o
