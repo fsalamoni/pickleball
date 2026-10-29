@@ -9,21 +9,29 @@
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const auth = { user: { uid: 'admin_uid' }, isPlatformAdmin: true };
-const dados = { users: [] };
+const dados = { users: [], rota: '/admin', lembretes: [] };
 const salvar = vi.fn(async () => ({ changes: [{ field: 'city' }] }));
+const enviarLembrete = vi.fn(async ({ uids }) => ({ sent: uids.length, requested: uids.length }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/modules/admin/hooks/usePlatformUsers', () => ({
   useAllPlatformUsers: () => ({ data: dados.users, isLoading: false }),
   useAccountLifecycleLogs: () => ({ data: [], isLoading: false }),
+  useProfileReminderLogs: () => ({ data: dados.lembretes, isLoading: false, isSuccess: true }),
+  useSendProfileReminder: () => ({ mutateAsync: enviarLembrete, isPending: false }),
   useUpdateUserRecordAsAdmin: () => ({ mutateAsync: salvar, isPending: false }),
 }));
+vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => false }));
+vi.mock('@/modules/admin/services/adminService', () => ({ logUserRecordsExport: vi.fn() }));
 
+// O diálogo do pedido entra por `lazy`: carregado antes, resolve na primeira volta.
+await import('./userRecords/ProfileReminderDialog.jsx');
 const { default: AdminUserRecordsTab } = await import('./AdminUserRecordsTab.jsx');
 const { fieldOptions } = await import('@/modules/admin/domain/adminUserEdit');
 
@@ -41,7 +49,10 @@ let container, root;
 
 beforeEach(() => {
   salvar.mockClear();
+  enviarLembrete.mockClear();
   dados.users = [COMPLETO, INCOMPLETO];
+  dados.rota = '/admin';
+  dados.lembretes = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -52,7 +63,11 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const render = async () => { await act(async () => { root.render(<AdminUserRecordsTab />); }); };
+const render = async () => {
+  await act(async () => {
+    root.render(<MemoryRouter initialEntries={[dados.rota]}><AdminUserRecordsTab /></MemoryRouter>);
+  });
+};
 const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 const digitar = async (input, valor) => {
   await act(async () => {
@@ -81,7 +96,7 @@ describe('aba Cadastros — enxergar o que falta', () => {
   it('cadastro completo é marcado como completo', async () => {
     await render();
     expect(container.textContent).toContain('completo');
-    expect(container.textContent).toContain('15/15 campos preenchidos');
+    expect(container.textContent).toContain('15 de 15 campos preenchidos');
   });
 
   it('⭐ diz em voz alta o que NÃO faz', async () => {
@@ -287,5 +302,86 @@ describe('aba Cadastros — DUPR no card de cada pessoa', () => {
     expect(salvarBtn().disabled).toBe(false);
     await click(salvarBtn());
     expect(salvar.mock.calls[0][0].patch.dupr_rating).toBe(4.525);
+  });
+});
+
+describe('aba Cadastros — milhares de contas', () => {
+  const muitos = (n) => Array.from({ length: n }, (_, i) => ({
+    uid: `p${String(i).padStart(3, '0')}`, email: `p${i}@x.com`, platform_name: `Pessoa ${String(i).padStart(3, '0')}`,
+  }));
+  const linhas = () => container.querySelectorAll('input[type="checkbox"][aria-label^="Selecionar"]').length;
+
+  it('⭐ pagina de 20 em 20 e deixa trocar para 50 e 100', async () => {
+    dados.users = muitos(130);
+    await render();
+    expect(linhas()).toBe(20);
+    expect(container.textContent).toContain('Mostrando 1–20 de 130 cadastros');
+    const seletor = container.querySelector('#cadastros-por-pagina');
+    expect([...seletor.options].map((o) => o.value)).toEqual(['20', '50', '100']);
+    await act(async () => {
+      seletor.value = '100';
+      seletor.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(linhas()).toBe(100);
+    await click(container.querySelector('[aria-label="Próxima página"]'));
+    expect(linhas()).toBe(30);
+    expect(container.textContent).toContain('Mostrando 101–130 de 130 cadastros');
+  });
+
+  it('⭐ o recorte vem da URL: filtro, ordem e página sobrevivem a recarregar e a um link', async () => {
+    dados.users = [...muitos(3), { ...COMPLETO, uid: 'u_sp', platform_name: 'Paulista', state: 'SP' }];
+    dados.rota = '/admin?uf=SP';
+    await render();
+    expect(linhas()).toBe(1);
+    expect(container.textContent).toContain('1 cadastro neste recorte');
+    expect(container.querySelector('#cad-uf').value).toBe('SP');
+  });
+
+  it('⭐ ordena por nome quando pedido', async () => {
+    dados.users = [
+      { ...COMPLETO, uid: 'z', platform_name: 'Zélia' },
+      { uid: 'a', platform_name: 'Álvaro' },
+      { ...COMPLETO, uid: 'm', platform_name: 'Marta' },
+    ];
+    dados.rota = '/admin?ordem=nome';
+    await render();
+    const nomes = [...container.querySelectorAll('input[type="checkbox"][aria-label^="Selecionar"]')]
+      .map((c) => c.getAttribute('aria-label'));
+    expect(nomes.map((n) => n.replace('Selecionar ', '').replace(' para excluir', ''))).toEqual(['Álvaro', 'Marta', 'Zélia']);
+  });
+
+  it('⭐ o panorama diz em que pé estão os cadastros, e cada número filtra', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('Panorama dos cadastros');
+    expect(txt).toContain('50% dos cadastros estão completos');
+    expect(txt).toContain('O que mais falta (obrigatório)');
+    const atalho = [...container.querySelectorAll('button')].find((b) => b.textContent.includes('Data de nascimento') && b.getAttribute('aria-pressed') !== null);
+    await click(atalho);
+    expect(linhas()).toBe(1);
+    expect(container.textContent).toContain('Faltosa');
+    expect(container.textContent).toContain('Limpar filtros');
+  });
+
+  it('⭐ "Pedir para completar" conta antes e envia só a quem falta obrigatório', async () => {
+    await render();
+    const botao = [...container.querySelectorAll('button')].find((b) => b.textContent.includes('Pedir para completar (1)'));
+    expect(botao).toBeTruthy();
+    await click(botao);
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    const d = document.querySelector('[role="dialog"]');
+    expect(d.textContent).toContain('Vai para 1 pessoa.');
+    expect(d.textContent).toContain('1 já está com o cadastro em dia');
+    await click([...d.querySelectorAll('button')].find((b) => b.textContent.includes('Enviar para 1 pessoa')));
+    expect(enviarLembrete).toHaveBeenCalledTimes(1);
+    expect(enviarLembrete.mock.calls[0][0].uids).toEqual(['u_falta']);
+  });
+
+  it('⭐ quem recebeu um pedido há pouco não recebe outro, e a linha diz quando foi', async () => {
+    dados.lembretes = [{ created_at_ms: Date.now() - 60_000, details: { uids: ['u_falta'] } }];
+    await render();
+    expect(container.textContent).toContain('pedido para completar enviado em');
+    const botao = [...container.querySelectorAll('button')].find((b) => b.textContent.includes('Pedir para completar (0)'));
+    expect(botao.disabled).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ import {
   listAccountLifecycleLogs, previewAccountMerge, mergeAccountHistory,
 } from '../services/accountMergeService';
 import { setAccountStatus, supportReveal } from '../services/accountStatusService';
+import { listProfileReminderLogs, sendProfileReminder } from '../services/profileReminderService';
 
 /**
  * Lista todos os usuários da plataforma (coleção `users`). Só o admin da
@@ -128,4 +129,24 @@ export function useSupportReveal() {
 /** "Funções no ar": o registro da vigilância e do deploy das Cloud Functions. */
 export function useFunctionsHealth() {
   return useQuery({ queryKey: ['admin', 'functions-health'], queryFn: getFunctionsHealth, staleTime: 60_000 });
+}
+
+/** Os pedidos de completar o cadastro já enviados (Auditoria; só admin lê). */
+export function useProfileReminderLogs({ enabled = false } = {}) {
+  return useQuery({
+    queryKey: ['admin-profile-reminders'],
+    queryFn: listProfileReminderLogs,
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+/** Envia o pedido de completar o cadastro e atualiza o "pedido enviado em…". */
+export function useSendProfileReminder() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (p) => sendProfileReminder({ ...p, actor: user }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-profile-reminders'] }),
+  });
 }

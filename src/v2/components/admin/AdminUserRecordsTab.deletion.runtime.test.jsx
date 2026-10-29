@@ -12,6 +12,7 @@
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -25,6 +26,8 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/modules/admin/hooks/usePlatformUsers', () => ({
   useAllPlatformUsers: () => ({ data: dados.users, isLoading: false }),
   useAccountLifecycleLogs: () => ({ data: dados.logs || [], isLoading: false }),
+  useProfileReminderLogs: () => ({ data: [], isLoading: false, isSuccess: true }),
+  useSendProfileReminder: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePreviewAccountMerge: () => ({ mutate: vi.fn(), reset: vi.fn(), data: null, isPending: false, isError: false }),
   useMergeAccountHistory: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateUserRecordAsAdmin: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -69,6 +72,7 @@ beforeEach(() => {
   excluir.mockClear();
   auth.user = { uid: 'admin_uid', email: 'fsalamoni@gmail.com' };
   dados.users = [TESTE, REAL, ADMIN_EXTRA, EU];
+  dados.rota = '/admin';
   dados.previa = null;
   dados.resultado = null;
   container = document.createElement('div');
@@ -81,7 +85,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const render = async () => { await act(async () => { root.render(<AdminUserRecordsTab />); }); };
+const render = async () => { await act(async () => { root.render(<MemoryRouter initialEntries={[dados.rota]}><AdminUserRecordsTab /></MemoryRouter>); }); };
 const esperar = async () => { await act(async () => { await new Promise((r) => setTimeout(r, 0)); }); };
 const clicar = async (el) => { await act(async () => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); }); };
 const botao = (texto, raiz = document.body) => [...raiz.querySelectorAll('button')].find((b) => b.textContent.includes(texto));
@@ -126,8 +130,9 @@ describe('o filtro "Parecem de teste"', () => {
 describe('a seleção', () => {
   it('⭐ respeita o limite de 25', async () => {
     dados.users = Array.from({ length: 30 }, (_, i) => ({ uid: `m${i}`, email: `m${i}@gmail.com`, full_name: `Pessoa ${i}` }));
+    dados.rota = '/admin?tam=50';
     await render();
-    await clicar(botao('Selecionar os que aparecem', container));
+    await clicar(botao('Selecionar os desta página', container));
     expect(container.textContent).toContain('25 selecionados');
     expect(container.textContent).toContain('limite de 25');
   });

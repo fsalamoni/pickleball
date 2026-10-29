@@ -78,6 +78,14 @@ import { setFeatureFlag } from '@/core/services/platformSettingsService'; // pla
 - `feature_flag_changed`
 - `admin_account_suspended` / `admin_account_blocked` / `admin_account_reactivated` (servidor)
 - `admin_broadcast_sent`
+- `admin_profile_reminder_sent` (pedido de completar o cadastro; um registro por lote de 400 uids — é o que a lista lê para "pedido enviado em…")
+- `admin_user_records_exported` (planilha de Cadastros, sem contato)
+
+## Cadastros para milhares de contas (2026-10-29)
+Panorama, filtros que se somam, ordem, paginação 20/50/100 e o recorte na URL:
+`domain/userRecordsView.js` (puro, com teste). Pedido de completar o cadastro:
+`services/profileReminderService.js` + `useProfileReminderLogs`/`useSendProfileReminder`.
+Detalhes em `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md` § Gerir a base.
 
 ## Onde achar mais
 - `docs/06-MODULES.md` § admin
