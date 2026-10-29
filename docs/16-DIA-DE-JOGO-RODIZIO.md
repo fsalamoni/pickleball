@@ -236,3 +236,35 @@ espere as outras, sorteie a rodada.
 
 **Zero banco**: nenhuma coleção, campo, índice, regra ou função nova. A rodada
 grava exatamente os mesmos documentos de partida de sempre.
+
+## 11. Ficar indisponível: por partidas ou "até voltar" (2026-10-29)
+
+No Play e no Americano aprimorado a pessoa sai da ordem de participação de
+duas formas, escolhidas no mesmo diálogo (`SkipDialog`, em
+`AthletePlayOrganizer.jsx`, usado pelo painel, pela "Minha participação" e
+pelo telão):
+
+- **Por algumas partidas** — atalhos (1, 2, 3, 5) e botões − / + até 50. Cada
+  partida criada desconta uma; ao zerar, a pessoa volta à fila sozinha.
+- **Até voltar** — sem número. Fica de fora até alguém (ela mesma, no Play, ou
+  quem organiza) tocar em **Voltar a jogar**. Nenhuma partida criada desconta.
+
+O número não é digitado: sem campo de texto, não há o que apagar no celular.
+
+Nos formatos de grade (Americano, Mexicano, Rei da Quadra) as rodadas são
+sorteadas de uma vez, e não existe pausa — nem por número, nem "até voltar".
+
+**Como é gravado** (`game_days/{id}/participants/{pid}`, aditivo): a pausa por
+número é `skip_remaining: N`, como sempre; "até voltar" é
+`skip_until_back: true` + `skip_remaining: 999`. O número alto é de propósito:
+um aparelho com o app anterior, que não conhece o campo, segue vendo a pessoa
+como pausada em vez de chamá-la para a quadra. "Voltar a jogar" (de qualquer
+versão) zera `skip_remaining`, e isso encerra a pausa — a marca sozinha não
+vale (`isPausedUntilBack` exige as duas).
+
+A regra é pura, em `gamePlay.js` — `playSkipFields` (o que gravar),
+`skipAfterNewGame` (o desconto) e `isPausedUntilBack` —, com teste. O serviço
+(`setPlayParticipantSkip`, `applySkipDecrement`) só aplica. Nenhuma regra,
+índice ou coleção nova: a regra de `participants` não fecha a lista de campos.
+O selo na fila mostra **Pausado (3)** ou **Pausado · até voltar**
+(`PauseBadge`).

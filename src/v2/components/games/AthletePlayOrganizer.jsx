@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useDesfazivel } from '@/v2/ui/useDesfazivel';
 import { toast } from 'sonner';
 import {
-  Plus, Trash2, Users, UserPlus, UserX, Pause, PlayCircle, Link2, Unlink,
+  Plus, Minus, Trash2, Users, UserPlus, UserX, Pause, PlayCircle, Link2, Unlink,
   ListOrdered, LayoutGrid, Check, Swords, ArrowRightLeft, MoreHorizontal, Shuffle, UsersRound,
 } from 'lucide-react';
 
@@ -27,7 +27,7 @@ import {
 } from '@/modules/games/domain/gameDay';
 import {
   computePlayOrder, freePlayCourts, forecastPlayMatches, PLAY_STATUS, PLAY_GAME_STATUS,
-  eligibleSwapReplacements,
+  eligibleSwapReplacements, isPausedUntilBack, PAUSE_UNTIL_BACK, PLAY_SKIP_MAX,
 } from '@/modules/games/domain/gamePlay';
 import {
   buildPlayHistory, forecastPlayMatchesBalanced, forecastPlayByCourtBalanced, applyPlayEntryOrder,
@@ -233,7 +233,7 @@ function avisoDeGrupo(p, participants, config) {
 export function statusBadge(p) {
   if (p.status === PLAY_STATUS.IN_COURT) return <V2Badge tone="acid">{t('Em quadra')}</V2Badge>;
   if (p.status === PLAY_STATUS.UNAVAILABLE) {
-    return <V2Badge tone="amber">{t('Pausado ({n})', { n: Number(p.skip_remaining) || 0 })}</V2Badge>;
+    return <PauseBadge p={p} />;
   }
   // Com grupos, o número é a posição NA FILA DO GRUPO (`groupNo`); sem eles,
   // a ordem de sempre.
@@ -405,7 +405,7 @@ export function PlayParticipantsSection({
                           <PlayCircle className="mr-1 h-3.5 w-3.5" /> {t('Voltar')}
                         </V2Button>
                       ) : (
-                        <V2Button size="sm" variant="ghost" onClick={() => setSkipFor(p)} title={t('Pausar participação')}>
+                        <V2Button size="sm" variant="ghost" onClick={() => setSkipFor(p)} title={t('Pausar participação')} aria-label={t('Pausar participação de {nome}', { nome: p.name })}>
                           <Pause className="h-3.5 w-3.5" />
                         </V2Button>
                       )}
@@ -575,36 +575,100 @@ function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
   );
 }
 
-export function SkipDialog({ participant, onClose, onConfirm }) {
+/** O selo de quem está pausado: "Pausado (3)" ou, sem número, "Pausado · até voltar". */
+export function PauseBadge({ p }) {
+  return (
+    <V2Badge tone="amber">
+      {isPausedUntilBack(p) ? t('Pausado · até voltar') : t('Pausado ({n})', { n: Number(p?.skip_remaining) || 0 })}
+    </V2Badge>
+  );
+}
+
+const PAUSA_RAPIDA = [1, 2, 3, 5];
+
+/**
+ * Ficar indisponível: por um número de partidas (volta à fila sozinho depois
+ * delas) ou "até voltar" — sem número, até alguém tocar em "Voltar a jogar".
+ * O número é escolhido por atalhos e por − / +: sem campo de digitar, não há o
+ * que apagar no celular. `self` = a própria pessoa (muda só o texto).
+ */
+export function SkipDialog({ participant, onClose, onConfirm, self = false }) {
+  const [modo, setModo] = useState('partidas'); // 'partidas' | 'ate_voltar'
   const [count, setCount] = useState(1);
-  React.useEffect(() => { if (participant) setCount(1); }, [participant]);
+  React.useEffect(() => { if (participant) { setModo('partidas'); setCount(1); } }, [participant]);
   const open = !!participant;
+  const porPartidas = modo === 'partidas';
+  const escolherNumero = (n) => { setModo('partidas'); setCount(Math.max(1, Math.min(PLAY_SKIP_MAX, n))); };
+  const opcao = (ativo) => `w-full rounded-2xl border p-3 text-left transition-colors ${ativo ? 'border-ink ring-1 ring-ink' : 'border-gray-200 hover:border-gray-300'}`;
+  const cabecalho = (ativo, titulo, texto) => (
+    <span className="flex items-start gap-2.5">
+      <span aria-hidden="true" className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${ativo ? 'border-ink' : 'border-gray-300'}`}>
+        {ativo && <span className="h-2 w-2 rounded-full bg-ink" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-ink">{titulo}</span>
+        <span className="block text-xs text-gray-500">{texto}</span>
+      </span>
+    </span>
+  );
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('Pausar participação')}</DialogTitle>
+          <DialogTitle>{self ? t('Ficar indisponível') : t('Pausar participação')}</DialogTitle>
           <DialogDescription>
-            {t('{nome} vai ficar de fora das próximas partidas. Enquanto pausado, não entra na ordem nem em novos jogos.', { nome: participant?.name })}
+            {self
+              ? t('Você sai da ordem de participação e não é chamado para novas partidas. Escolha por quanto tempo.')
+              : t('{nome} sai da ordem de participação e não é chamado para novas partidas. Escolha por quanto tempo.', { nome: participant?.name })}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            {[1, 2, 3, 5].map((n) => (
-              <V2Button key={n} size="sm" variant={count === n ? 'default' : 'outline'} onClick={() => setCount(n)}>
-                {tn(n, '{n} partida', '{n} partidas')}
-              </V2Button>
-            ))}
+
+        <div role="radiogroup" aria-label={t('Por quanto tempo')} className="space-y-2">
+          <div className={opcao(porPartidas)}>
+            <button type="button" role="radio" aria-checked={porPartidas} onClick={() => setModo('partidas')} className="block w-full rounded-lg text-left focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-100">
+              {cabecalho(porPartidas, t('Por algumas partidas'), t('Volta à fila sozinho depois delas.'))}
+            </button>
+            <div className={`mt-3 flex flex-wrap items-center gap-2 pl-6 transition-opacity ${porPartidas ? '' : 'opacity-60'}`}>
+              <div className="inline-flex items-center rounded-full border border-gray-200 bg-paper-pure" role="group" aria-label={t('Número de partidas')}>
+                <button type="button" aria-label={t('Uma partida a menos')} disabled={porPartidas && count <= 1} onClick={() => escolherNumero(count - 1)} className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40 coarse:h-11 coarse:w-11">
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="min-w-8 text-center text-sm font-bold tabular-nums" aria-live="polite">{count}</span>
+                <button type="button" aria-label={t('Uma partida a mais')} disabled={porPartidas && count >= PLAY_SKIP_MAX} onClick={() => escolherNumero(count + 1)} className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40 coarse:h-11 coarse:w-11">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              {PAUSA_RAPIDA.map((n) => {
+                const ativo = porPartidas && count === n;
+                return (
+                  <button type="button"
+                    key={n} aria-pressed={ativo} onClick={() => escolherNumero(n)}
+                    aria-label={tn(n, '{n} partida', '{n} partidas')}
+                    className={`h-9 rounded-full border px-3 text-xs font-semibold transition-colors coarse:h-11 ${ativo ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-ink hover:border-ink'}`}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="w-40">
-            <Label className="text-xs">{t('Ou informe')}</Label>
-            <Input type="number" min={1} max={50} value={count}
-              onChange={(e) => setCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))} />
-          </div>
+
+          <button type="button" role="radio" aria-checked={!porPartidas} onClick={() => setModo('ate_voltar')} className={`${opcao(!porPartidas)} focus:outline-none focus-visible:ring-4 focus-visible:ring-gray-100`}>
+            {cabecalho(
+              !porPartidas,
+              t('Até voltar'),
+              self
+                ? t('Sem número de partidas. Você fica de fora até tocar em “Voltar a jogar”.')
+                : t('Sem número de partidas. Fica de fora até alguém tocar em “Voltar a jogar”.'),
+            )}
+          </button>
         </div>
+
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
-          <V2Button onClick={() => onConfirm(count)}>{t('Pausar por {n}', { n: count })}</V2Button>
+          <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button type="button" onClick={() => onConfirm(porPartidas ? count : PAUSE_UNTIL_BACK)}>
+            {porPartidas ? tn(count, 'Pausar por {n} partida', 'Pausar por {n} partidas') : t('Pausar até voltar')}
+          </V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1552,7 +1616,7 @@ export function PlayOrderSection({ view, grupos = null }) {
               <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">{t('Em quadra')}</V2Badge>} />
             ))}
             {unavailable.map((p) => (
-              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">{t('Pausado ({n})', { n: Number(p.skip_remaining) || 0 })}</V2Badge>} />
+              <OrderRow key={p.id} p={p} muted badge={<PauseBadge p={p} />} />
             ))}
           </div>
         )}
@@ -1592,7 +1656,7 @@ function OrdemPorGrupo({ view, config }) {
               <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">{t('Em quadra')}</V2Badge>} />
             ))}
             {pausados.map((p) => (
-              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">{t('Pausado ({n})', { n: Number(p.skip_remaining) || 0 })}</V2Badge>} />
+              <OrderRow key={p.id} p={p} muted badge={<PauseBadge p={p} />} />
             ))}
           </section>
         );

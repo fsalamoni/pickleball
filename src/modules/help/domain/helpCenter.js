@@ -1580,7 +1580,7 @@ const ATLETA = {
           tk('AMERICANO — a grade de jogos é sorteada de uma vez. Você vê as suas partidas e os resultados.'),
           tk('AMERICANO APRIMORADO — como o Play (fila, partida a partida), mas com placar e ranking do dia.'),
         ),
-        p(tk('Em qualquer um deles você pode ficar indisponível por algumas partidas (para descansar) e pedir dupla fixa com alguém. Quem organiza aplica.')),
+        p(tk('No Play e no Americano aprimorado dá para ficar indisponível por algumas partidas ou até voltar (sem número: fica de fora até tocar em “Voltar a jogar”) e pedir dupla fixa com alguém. No Play você mesmo marca; no Americano aprimorado, quem organiza.')),
         p(tk('Os jogos podem ser de DUPLAS ou de SIMPLES (um contra um) — quem organiza escolhe, quadra a quadra ou no sorteio. Quando o dia tem os dois, são dois rankings do dia, separados, e cada resultado publicado vai para o rating certo: simples para o de simples, duplas para o de duplas.')),
         link('/dia-de-jogo', tk('Ver dias de jogo')),
         tip(tk('Há um TELÃO por dia de jogo, feito para a TV da quadra: mostra quem está jogando, quem entra depois e o ranking do dia.')),

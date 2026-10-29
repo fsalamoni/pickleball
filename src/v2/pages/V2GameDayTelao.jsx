@@ -63,7 +63,7 @@ import { setsReady, setsText } from '@/modules/games/domain/gameSets';
 import SetScoreEditor from '@/v2/components/games/SetScoreEditor';
 import {
   computePlayOrder, forecastPlayByCourt, freePlayCourts,
-  PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
+  PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS, PAUSE_UNTIL_BACK, isPausedUntilBack,
 } from '@/modules/games/domain/gamePlay';
 import {
   buildPlayHistory, forecastPlayByCourtBalanced, applyPlayEntryOrder,
@@ -959,7 +959,8 @@ export default function V2GameDayTelao() {
   );
   const pausar = (pid, count) => executar(
     () => definirPausa.mutateAsync({ pid, count }),
-    count > 0 ? t('Pausado por {n} partida(s).', { n: count }) : t('De volta à fila.'),
+    count === PAUSE_UNTIL_BACK ? t('Pausado até voltar.')
+      : count > 0 ? t('Pausado por {n} partida(s).', { n: count }) : t('De volta à fila.'),
   );
   const gerarAoVivo = (court) => executar(
     () => criarProximoAoVivo.mutateAsync({ court, ...pedidoDoTipo(court) }),
@@ -1471,9 +1472,9 @@ function AcoesDoAtleta({ atleta, onClose, onPausar, onVoltar, onDupla, onDesfaze
         <DialogHeader>
           <DialogTitle>{atleta?.name}</DialogTitle>
           <DialogDescription>
-            {pausado
-              ? t('Pausado pelas próximas {n} partida(s).', { n: Number(atleta?.skip_remaining) || 0 })
-              : t('Na ordem de participação.')}
+            {!pausado ? t('Na ordem de participação.')
+              : isPausedUntilBack(atleta) ? t('Pausado até voltar.')
+                : t('Pausado pelas próximas {n} partida(s).', { n: Number(atleta?.skip_remaining) || 0 })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
@@ -1483,7 +1484,7 @@ function AcoesDoAtleta({ atleta, onClose, onPausar, onVoltar, onDupla, onDesfaze
             </V2Button>
           ) : (
             <V2Button variant="secondary" onClick={onPausar}>
-              <Pause className="mr-1.5 h-4 w-4" /> {t('Ficar indisponível por X jogos')}
+              <Pause className="mr-1.5 h-4 w-4" /> {t('Ficar indisponível')}
             </V2Button>
           )}
           {atleta?.partner_id ? (

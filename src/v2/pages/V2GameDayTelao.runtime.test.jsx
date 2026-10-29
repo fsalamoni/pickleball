@@ -12,6 +12,7 @@ import { act } from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { PAUSE_UNTIL_BACK } from '@/modules/games/domain/gamePlay';
 
 const dados = { gameDay: null, participants: [], games: [] };
 const auth = { user: { uid: 'espectador' } };
@@ -406,8 +407,29 @@ describe('telão do Play — organizar pela própria tela', () => {
     click(linha);
     await act(async () => { await Promise.resolve(); });
     const txt = document.body.textContent;
-    expect(txt).toContain('Ficar indisponível por X jogos');
+    expect(txt).toContain('Ficar indisponível');
     expect(txt).toContain('Vincular dupla');
+  });
+
+  it('pausar "até voltar" grava sem número de partidas', async () => {
+    auth.user = { uid: 'dono' };
+    mutacoes.pausar.mockClear();
+    await render();
+    const botoes = () => [...document.body.querySelectorAll('button')];
+    click(botoes().find((b) => b.textContent.includes('Elis Prado') && b.textContent.includes('entra a seguir')));
+    await act(async () => { await Promise.resolve(); });
+    click(botoes().find((b) => b.textContent.trim() === 'Ficar indisponível'));
+    await act(async () => { await Promise.resolve(); });
+    // Sem campo de digitar: o número é por atalho e − / +.
+    expect(document.body.querySelector('[role="dialog"] input[type="number"]')).toBeNull();
+    const ateVoltar = botoes().find((b) => b.getAttribute('role') === 'radio' && b.textContent.includes('Até voltar'));
+    click(ateVoltar);
+    await act(async () => { await Promise.resolve(); });
+    expect(ateVoltar.getAttribute('aria-checked')).toBe('true');
+    click(botoes().find((b) => b.textContent.trim() === 'Pausar até voltar'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.pausar).toHaveBeenCalledTimes(1);
+    expect(mutacoes.pausar.mock.calls[0][0].count).toBe(PAUSE_UNTIL_BACK);
   });
 
   it('mostra quem está em quadra e quem está na fila', async () => {

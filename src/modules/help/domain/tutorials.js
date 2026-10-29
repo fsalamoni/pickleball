@@ -314,7 +314,7 @@ const AMERICANO_LIVE = {
       title: tk('2. Participantes e fila'),
       body: [
         tk('Inclua os atletas. Cada um entra no fim da ORDEM DE PARTICIPAÇÃO, e quem termina de jogar volta para o fim dela.'),
-        tk('Vale tudo o que vale no Play: entrar e sair a qualquer hora, ficar indisponível por X partidas, vincular dupla fixa, substituir alguém que saiu no meio.'),
+        tk('Vale tudo o que vale no Play: entrar e sair a qualquer hora, ficar indisponível por algumas partidas ou até voltar, vincular dupla fixa, substituir alguém que saiu no meio.'),
       ],
       tip: tk('A seção "Como o dia está indo" mostra quantas partidas já saíram, quantas duplas diferentes se formaram e quem jogou mais e menos.'),
     },

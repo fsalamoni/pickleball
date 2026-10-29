@@ -9,7 +9,7 @@ import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { computePlayOrder, PLAY_STATUS } from '@/modules/games/domain/gamePlay';
+import { computePlayOrder, PLAY_STATUS, isPausedUntilBack } from '@/modules/games/domain/gamePlay';
 import { buildPlayHistory } from '@/modules/games/domain/playRotation';
 import { courtKindsFromGames } from '@/modules/games/domain/gameKind';
 import { groupIdOf } from '@/modules/games/domain/playGroups';
@@ -158,7 +158,9 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
     if (!myView) return '';
     if (myView.status === PLAY_STATUS.IN_COURT) return t('Você está em quadra agora. Bom jogo!');
     if (myView.status === PLAY_STATUS.UNAVAILABLE) {
-      return t('Você está pausado pelas próximas {n} partida(s).', { n: Number(me.skip_remaining) || 0 });
+      return isPausedUntilBack(me)
+        ? t('Você está pausado até voltar. Toque em “Voltar a jogar” para entrar de novo na fila.')
+        : t('Você está pausado pelas próximas {n} partida(s).', { n: Number(me.skip_remaining) || 0 });
     }
     // Com grupos, a posição é a da fila DO GRUPO — a que o telão mostra.
     const nomeDoGrupo = grupos?.ativo && myView.group_id
@@ -216,7 +218,7 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
                 </V2Button>
               ) : (
                 <V2Button variant="ghost" onClick={() => setSkipOpen(true)}>
-                  <Pause className="mr-1.5 h-4 w-4" /> {t('Ficar indisponível por X jogos')}
+                  <Pause className="mr-1.5 h-4 w-4" /> {t('Ficar indisponível')}
                 </V2Button>
               )}
 
@@ -239,6 +241,7 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
       </div>
 
       <SkipDialog
+        self
         participant={skipOpen ? me : null}
         onClose={() => setSkipOpen(false)}
         onConfirm={(count) => { setSkip.mutate({ pid: me.id, count }); setSkipOpen(false); }}
