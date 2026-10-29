@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { V2Button, V2Badge, V2ErrorState} from '@/v2/ui/primitives';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
@@ -630,13 +631,14 @@ function GamesSection({ gameDay, participants, isOwner }) {
               {!isKingOfCourt && (
                 <div className="space-y-2">
                   <Label htmlFor="rounds">{t('Número de rodadas')}</Label>
-                  <Input
+                  <V2NumberInput
+                    compacto
                     id="rounds"
-                    type="number"
                     min={1}
                     max={GAME_DAY_LIMITS.MAX_ROUNDS}
                     value={rounds || effectiveRounds}
                     onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
+                    rotulo={t('Número de rodadas')}
                   />
                 </div>
               )}

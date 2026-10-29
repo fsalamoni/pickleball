@@ -41,8 +41,10 @@ import { normalizeTeamConfig } from '@/modules/tournament/domain/teamFormat';
 import { DUPR_BUCKET, duprBucket } from '@/modules/rating/domain/duprPolicy';
 import DuprSubmitChoice from '@/v2/components/rating/DuprSubmitChoice';
 import { V2Badge, V2Button, V2EmptyState, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { AdaptedClassField, AdaptedModalityBadge, useAdaptedOptions } from '@/v2/components/federations/adapted/AdaptedModality';
 import { t, fmtLista } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 const PREVIEW_PLAYER_COUNT = 8;
 
@@ -396,11 +398,11 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                   {t('Sem limite')}
                 </label>
               </label>
-              <input type="number" min="2" max={MAX_REGISTRATIONS_PER_MODALITY} value={form.max_entries} onChange={(e) => set('max_entries', e.target.value)} disabled={form.has_unlimited_entries} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30 disabled:opacity-50" />
+              <V2NumberInput min={2} max={MAX_REGISTRATIONS_PER_MODALITY} value={form.max_entries} onChange={(e) => set('max_entries', e.target.value)} disabled={form.has_unlimited_entries} rotulo={t('Vagas')} />
             </div>
             <div className="space-y-2">
               <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Valor da inscrição (R$)')}</label>
-              <input type="number" min="0" step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+              <NumberInput type="number" min="0" step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
         </V2Surface>
@@ -428,14 +430,14 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                 {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (
                   <div className="space-y-2">
                     <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Qtd. de grupos')}</label>
-                    <input type="number" min="2" max="16" value={form.group_count} onChange={(e) => set('group_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+                    <V2NumberInput min={2} max={16} value={form.group_count} onChange={(e) => set('group_count', e.target.value)} rotulo={t('Qtd. de grupos')} />
                     <p className="text-2xs leading-relaxed text-gray-500">{t('Os atletas são sorteados e divididos entre os grupos; cada grupo tem seus próprios jogos e sua própria classificação.')}</p>
                   </div>
                 )}
                 {[TOURNAMENT_STAGE_TYPE.SINGLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.DOUBLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.TWO_STAGE].includes(form.stage_type) && (
                   <div className="space-y-2">
                     <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Cabeças de chave (Seeds)')}</label>
-                    <input type="number" min="0" max="32" value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+                    <V2NumberInput min={0} max={32} value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} rotulo={t('Cabeças de chave (Seeds)')} />
                   </div>
                 )}
               </div>
@@ -480,11 +482,11 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
             </div>
             <div className="space-y-2 md:col-span-1">
               <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Quadras')}</label>
-              <input type="number" min="1" max={MAX_COURT_COUNT} value={form.court_count} onChange={(e) => set('court_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+              <NumberInput type="number" min="1" max={MAX_COURT_COUNT} value={form.court_count} onChange={(e) => set('court_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
               <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Min/Jogo')}</label>
-              <input type="number" min="10" max="180" step="5" value={form.match_duration_minutes} onChange={(e) => set('match_duration_minutes', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+              <NumberInput type="number" min="10" max="180" step="5" value={form.match_duration_minutes} onChange={(e) => set('match_duration_minutes', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
         </V2Surface>

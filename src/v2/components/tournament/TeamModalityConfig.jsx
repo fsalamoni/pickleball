@@ -8,6 +8,7 @@
 import React from 'react';
 import { Plus, Trash2, Users } from 'lucide-react';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import {
   TEAM_GENDER, TEAM_GENDER_LABELS,
   TEAM_ETAPA_TYPE, TEAM_ETAPA_TYPE_LABELS,
@@ -76,13 +77,12 @@ export default function TeamModalityConfig({ value, onChange }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label className={labelCls}>{t('Atletas por equipe')}</label>
-          <input
-            type="number"
+          <V2NumberInput
             min={TEAM_LIMITS.MIN_TEAM_SIZE}
             max={TEAM_LIMITS.MAX_TEAM_SIZE}
             value={cfg.team_size}
             onChange={(e) => set({ team_size: Number(e.target.value) })}
-            className={inputCls}
+            rotulo={t('Atletas por equipe')}
           />
           <p className="text-xs text-gray-500">
             {t('Elenco de cada equipe. Se maior que o mínimo, o admin define quem joga cada etapa no confronto.')}
@@ -200,13 +200,12 @@ export default function TeamModalityConfig({ value, onChange }) {
         {cfg.win_rule === TEAM_WIN_RULE.BEST_OF && (
           <div className="space-y-2">
             <label className={labelCls}>{t('Etapas para vencer (melhor de)')}</label>
-            <input
-              type="number"
+            <V2NumberInput
               min={1}
               max={Math.max(1, etapas.length)}
               value={cfg.win_target}
               onChange={(e) => set({ win_target: Number(e.target.value) })}
-              className={inputCls}
+              rotulo={t('Etapas para vencer (melhor de)')}
             />
             <p className="text-xs text-gray-500">
               {t('Ex.: {win_target} de {n} — primeira equipe a atingir vence.', { win_target: preview.value.win_target, n: etapas.length })}
@@ -227,13 +226,12 @@ export default function TeamModalityConfig({ value, onChange }) {
           {cfg.singles_mode === TEAM_SINGLES_MODE.ROTATING && (
             <div className="space-y-2">
               <label className={labelCls}>{t('Trocar a cada X pontos')}</label>
-              <input
-                type="number"
+              <V2NumberInput
                 min={TEAM_LIMITS.MIN_ROTATION_POINTS}
                 max={TEAM_LIMITS.MAX_ROTATION_POINTS}
                 value={cfg.singles_rotation_points}
                 onChange={(e) => set({ singles_rotation_points: Number(e.target.value) })}
-                className={inputCls}
+                rotulo={t('Trocar a cada X pontos')}
               />
             </div>
           )}

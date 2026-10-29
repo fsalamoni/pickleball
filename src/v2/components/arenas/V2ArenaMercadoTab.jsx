@@ -43,6 +43,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t, tn, tk, fmtNumero } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 const EXIT_TYPE_LABELS = {
   sale: tk('Venda'), consumption: tk('Consumo interno'), loss: tk('Perda'), gift: tk('Brinde'), return: tk('Devolução'),
@@ -630,10 +631,10 @@ function ProductRow({ product: p, posicao, editing, onToggleEdit, onToggleActive
       {editing && (
         <div className="mt-3 grid grid-cols-1 gap-2 border-t border-gray-100 pt-3 sm:grid-cols-4">
           <V2Field label={t('Preço de venda (R$)')}>
-            <input type="number" min="0" step="0.01" value={edit.sale_price} onChange={(e) => setEdit((s) => ({ ...s, sale_price: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+            <NumberInput type="number" min="0" step="0.01" value={edit.sale_price} onChange={(e) => setEdit((s) => ({ ...s, sale_price: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
           </V2Field>
           <V2Field label={t('Estoque mínimo')}>
-            <input type="number" min="0" value={edit.min_stock} onChange={(e) => setEdit((s) => ({ ...s, min_stock: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+            <NumberInput type="number" min="0" value={edit.min_stock} onChange={(e) => setEdit((s) => ({ ...s, min_stock: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
           </V2Field>
           <V2Field label={t('Validade')}>
             <input type="date" value={edit.expiry_date} onChange={(e) => setEdit((s) => ({ ...s, expiry_date: e.target.value }))} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
@@ -946,7 +947,7 @@ function ExitsSection({ arenaId }) {
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <V2Field label={t('Quantidade')} required hint={selectedAvailable != null ? t('Disponível: {n}', { n: selectedAvailable }) : undefined}>
-              <input type="number" min="1" value={form.quantity} onChange={setField('quantity')} required className={cn('w-full rounded-2xl border bg-paper px-3 py-2 text-sm', overSells ? 'border-red-300' : 'border-gray-200')} />
+              <NumberInput type="number" min="1" value={form.quantity} onChange={setField('quantity')} required className={cn('w-full rounded-2xl border bg-paper px-3 py-2 text-sm', overSells ? 'border-red-300' : 'border-gray-200')} />
               {overSells && <p className="mt-1 text-xs text-red-600">{t('Quantidade maior que o estoque disponível ({n}).', { n: selectedAvailable })}</p>}
             </V2Field>
             <V2Field label={t('Preço unitário (R$)')} required>

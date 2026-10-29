@@ -24,6 +24,7 @@ import { useArena } from '@/modules/arenas/hooks/useArenas';
 import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
+import { NumberInput } from '@/components/ui/input';
 
 const STATUS_TONE = {
   [BOOKING_STATUS.REQUESTED]: 'amber',
@@ -183,7 +184,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
         <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4">
           <div>
             <label className="mb-1 block text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Valor (R$)')}</label>
-            <input
+            <NumberInput
               type="number"
               min="0"
               step="0.01"

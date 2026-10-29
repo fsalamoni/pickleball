@@ -376,7 +376,10 @@ Use `src/v2/ui/primitives.jsx` (lista completa e variantes em
 (`variant` padrao/compacto/plano), `V2Button`, `V2Badge`, `V2Field`/`V2Input`/
 `V2Textarea`/`V2Select`/`V2Toggle`, `V2EmptyState`, `V2ErrorState`, `V2Skeleton`,
 `V2FilterChip`, `V2SearchInput`, `V2StatCard`… e, em `src/v2/ui/`,
-`V2CollapsibleCard`, `V2SectionNav`/`V2SubTabs`, `V2Pagination`, `CopyCodeButton`.
+`V2CollapsibleCard`, `V2SectionNav`/`V2SubTabs`, `V2Pagination`, `CopyCodeButton`,
+`V2NumberInput` (número com − e +). Campo de número é sempre `V2Input`/`Input`/
+`NumberInput`/`V2NumberInput` — nunca `<input type="number">` nativo, que fica
+fora da correção que deixa apagar e redigitar no celular (`docs/07` §3.1).
 Diálogos usam Radix (`src/components/ui/dialog.jsx`) e `ConfirmDialog`.
 
 **Não** escreva à mão o que já tem primitivo (cartão, campo, botão, bloco de

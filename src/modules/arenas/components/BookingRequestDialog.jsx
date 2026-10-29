@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/core/lib/utils';
 import { PlatformNotice } from '@/components/ui/platform-page';
@@ -588,12 +589,15 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               {semanas > 1 && (
                 <div className="flex flex-wrap items-end gap-2">
                   <div>
-                    <Label className="text-xs">{t('Por quantas semanas')}</Label>
-                    <Input
-                      type="number" min="2" max={RECURRENCE_MAX_WEEKS} inputMode="numeric"
+                    <Label htmlFor="brd-semanas" className="text-xs">{t('Por quantas semanas')}</Label>
+                    <V2NumberInput
+                      compacto
+                      id="brd-semanas"
+                      min={2} max={RECURRENCE_MAX_WEEKS}
                       value={semanas}
                       onChange={(e) => setSemanas(Math.max(2, Math.min(RECURRENCE_MAX_WEEKS, Number(e.target.value) || 2)))}
-                      className="mt-1 w-28"
+                      rotulo={t('Por quantas semanas')}
+                      className="mt-1 w-44"
                     />
                   </div>
                   <p className="pb-2 text-[11px] text-gray-500">
