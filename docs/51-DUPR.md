@@ -81,6 +81,10 @@ substitui os campos de ID e de rating digitados à mão.
 * `dupr_verified` e `dupr_verified_at_ms`: o dono **não escreve** (nem na criação).
 * Com o selo, o dono não reescreve `dupr_id`, `dupr_rating`, `dupr_rating_singles`
   (regravar o mesmo valor passa — a sincronização do perfil faz isso).
+* Sem o selo, o `dupr_rating` digitado só passa se for número de 2 a 8 (ou
+  nulo) — `duprNum`/`duprOk`, nos `users` e no espelho; a tela pergunta "Você
+  quis dizer 4,525?" em vez de limitar ao teto (ver `docs/33` e o card do admin
+  no `docs/20-…/18`). A escrita do servidor (Admin SDK) não passa pela regra.
 * `dupr_links/{uid}`: o dono e o admin leem; ninguém escreve. `dupr_link_tokens` e
   `dupr_ids`: fechados ao navegador. Provado em `tests/rules/dupr.rules.test.js`.
 

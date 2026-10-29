@@ -1978,7 +1978,9 @@ leitura, o refresh gira) — fechado ao navegador. `dupr_ids/{ID}`: `{ user_id }
 reserva de um ID DUPR a uma única conta — fechado. Em `users` e `athlete_profiles`
 (campos opcionais, só do servidor): `dupr_verified`, `dupr_verified_at_ms` e
 `dupr_rating_singles`; com o selo, `dupr_id`/`dupr_rating` também são do servidor
-(regra `duprSeloIntacto`). Credenciais do parceiro: `platform_secrets/dupr`
+(regra `duprSeloIntacto`). Sem o selo, o `dupr_rating` digitado é número de 2 a 8
+ou nulo — a regra (`duprNum`/`duprOk`) recusa o resto; valores antigos fora disso
+seguem gravados e aparecem no painel do admin para correção. Credenciais do parceiro: `platform_secrets/dupr`
 (`client_key`, `client_secret`, `env`, `webhook_token`), sem leitura no navegador.
 
 `platform_settings/dupr_policy` (documento novo na coleção de sempre: leitura de

@@ -101,7 +101,10 @@ describe('cadastro essencial (flag essential_profile)', () => {
     expect(parseDuprRating('3,5')).toBe(3.5);
     expect(parseDuprRating('')).toBeNull();
     expect(parseDuprRating('abc')).toBeNull();
-    expect(parseDuprRating('12')).toBe(8);
+    // Fora da faixa não é limitado ao teto: não é rating (a tela pergunta).
+    expect(parseDuprRating('12')).toBeNull();
+    expect(parseDuprRating('4525')).toBeNull();
+    expect(parseDuprRating('4.525')).toBe(4.525);
   });
 });
 

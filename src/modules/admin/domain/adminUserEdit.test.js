@@ -67,9 +67,15 @@ describe('sanitizeAdminUserPatch', () => {
     expect(sanitizeAdminUserPatch({ state: 'Rio Grande do Sul' }).patch.state).toBe('RI');
   });
 
-  it('número inválido vira null em vez de NaN', () => {
-    expect(sanitizeAdminUserPatch({ dupr_rating: 'abc' }).patch.dupr_rating).toBeNull();
+  it('⭐ rating DUPR fora de 2,000–8,000 não entra (nem limitado ao teto): vai para `invalid`', () => {
+    for (const v of ['abc', '4525', '12', '1,5', '0', 0]) {
+      const r = sanitizeAdminUserPatch({ dupr_rating: v });
+      expect('dupr_rating' in r.patch).toBe(false);
+      expect(r.invalid).toEqual(['dupr_rating']);
+    }
     expect(sanitizeAdminUserPatch({ dupr_rating: '3.75' }).patch.dupr_rating).toBe(3.75);
+    expect(sanitizeAdminUserPatch({ dupr_rating: '4,525' }).patch.dupr_rating).toBe(4.525);
+    expect(sanitizeAdminUserPatch({ dupr_rating: 4.525 }).invalid).toEqual([]);
   });
 
   it('⭐ campo numérico VAZIO é ausência, nunca zero', () => {
@@ -78,9 +84,6 @@ describe('sanitizeAdminUserPatch', () => {
     expect(sanitizeAdminUserPatch({ dupr_rating: '' }).patch.dupr_rating).toBeNull();
     expect(sanitizeAdminUserPatch({ dupr_rating: null }).patch.dupr_rating).toBeNull();
     expect(sanitizeAdminUserPatch({ dupr_rating: undefined }).patch.dupr_rating).toBeNull();
-    // E zero de verdade continua sendo zero.
-    expect(sanitizeAdminUserPatch({ dupr_rating: 0 }).patch.dupr_rating).toBe(0);
-    expect(sanitizeAdminUserPatch({ dupr_rating: '0' }).patch.dupr_rating).toBe(0);
   });
 
   it('⭐ abrir um cadastro sem DUPR e não mexer em nada não gera alteração', () => {
@@ -92,8 +95,8 @@ describe('sanitizeAdminUserPatch', () => {
   });
 
   it('entrada vazia não quebra', () => {
-    expect(sanitizeAdminUserPatch()).toEqual({ patch: {}, ignored: [] });
-    expect(sanitizeAdminUserPatch(null)).toEqual({ patch: {}, ignored: [] });
+    expect(sanitizeAdminUserPatch()).toEqual({ patch: {}, ignored: [], invalid: [] });
+    expect(sanitizeAdminUserPatch(null)).toEqual({ patch: {}, ignored: [], invalid: [] });
   });
 });
 

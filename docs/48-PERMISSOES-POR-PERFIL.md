@@ -113,7 +113,7 @@ torneio, `/c/:clubId`) existem para isso.
 | Ação | Atl (titular) | Plat | Onde |
 |---|---|---|---|
 | Ler `users/{uid}` | ✔ o próprio | ✔ todos | rules (`isOwner` / `isPlatformAdmin`) |
-| Editar o próprio perfil | ✔ exceto `role`, `can_create_pools`, `hidden*`, `account_status*`, `phone_verified_*` | — | rules |
+| Editar o próprio perfil | ✔ exceto `role`, `can_create_pools`, `hidden*`, `account_status*`, `phone_verified_*`; `dupr_rating` só número de 2 a 8 (ou nulo) | — | rules (`duprOk`, também na correção do admin e no espelho) |
 | Confirmar o celular (`phone_verified_number`) | ◐ só pelo código de 6 números | ✖ pelo cliente | **Cloud Function** `messagingUser` (+ rules recusam o cliente — senão mandaria mensagem paga para o número de outra pessoa) |
 | Escolher canais de aviso (`notification_channels`) | ✔ o próprio | — | rules (campo do dono) |
 | Corrigir cadastro de outro | ✖ | ◐ lista **fechada** de campos (nome, nascimento, telefone, cidade…); **nunca** `role`, privacidade (`*_public`, `directory_listed`) nem `email` | rules (`hasOnly`) + `adminUserEdit.js` na tela |

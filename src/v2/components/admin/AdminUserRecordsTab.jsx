@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import {
   UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight, Trash2, FlaskConical, GitMerge,
-  Ban, PauseCircle, PlayCircle, Eye,
+  Ban, PauseCircle, PlayCircle, Eye, AlertTriangle, BadgeCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +28,9 @@ import {
 import { PLATFORM_OWNER_EMAILS } from '@/core/config/owners';
 import { accountStatusOf, accountStatusActions, STATUS_ACTION_META } from '@/modules/admin/domain/accountStatus';
 import { SENSITIVE_FIELDS, maskValue } from '@/modules/admin/domain/supportAccess';
+import { duprRecordCheck, DUPR_ISSUE } from '@/modules/admin/domain/duprRecord';
+import { duprRatingToInput, formatDuprRating } from '@/core/domain/duprRating';
+import { DuprIdInput, DuprRatingInput, duprRatingBlocksSave } from '@/v2/components/rating/DuprFields';
 import { t, tk, tn, fmtData } from '@/core/i18n';
 
 // O diálogo de exclusão só baixa quando alguém vai excluir.
@@ -85,6 +88,7 @@ export default function AdminUserRecordsTab() {
     _bloqueio: deletionBlockedReason(u, ctxExclusao),
     _conta: accountStatusOf(u),
     _acoes: accountStatusActions(u, ctxExclusao),
+    _dupr: duprRecordCheck(u),
   })), [users, ctxExclusao, essencial]);
 
   const listados = useMemo(() => {
@@ -95,8 +99,9 @@ export default function AdminUserRecordsTab() {
         if (filtro === 'pendentes' && u._status.complete) return false;
         if (filtro === 'teste' && u._teste.length === 0) return false;
         if (filtro === 'fechadas' && u._conta.status === 'active') return false;
+        if (filtro === 'dupr' && u._dupr.issues.length === 0) return false;
         if (!q) return true;
-        return [u.platform_name, u.full_name, u.email, u.uid, u.city]
+        return [u.platform_name, u.full_name, u.email, u.uid, u.city, u.dupr_id]
           .some((v) => String(v || '').toLowerCase().includes(q));
       })
       // Quem tem obrigatório faltando aparece primeiro — é o que precisa de ação.
@@ -113,6 +118,7 @@ export default function AdminUserRecordsTab() {
     teste: comStatus.filter((u) => u._teste.length > 0).length,
     fechadas: comStatus.filter((u) => u._conta.status !== 'active').length,
     vencidas: comStatus.filter((u) => u._conta.vencida).length,
+    dupr: comStatus.filter((u) => u._dupr.issues.length > 0).length,
   }), [comStatus]);
 
   const alternar = (u) => {
@@ -169,7 +175,7 @@ export default function AdminUserRecordsTab() {
               className="pl-9"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder={t('Buscar por nome, e-mail, cidade ou uid…')}
+              placeholder={t('Buscar por nome, e-mail, cidade, ID DUPR ou uid…')}
             />
           </div>
           <V2FilterChip active={filtro === 'todos'} onClick={() => setFiltro('todos')}>
@@ -189,7 +195,17 @@ export default function AdminUserRecordsTab() {
             <Ban className="mr-1 inline h-3.5 w-3.5" />
             {t('Suspensas e bloqueadas ({fechadas})', { fechadas: totais.fechadas })}
           </V2FilterChip>
+          <V2FilterChip active={filtro === 'dupr'} onClick={() => setFiltro('dupr')}>
+            <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
+            {t('DUPR a conferir ({dupr})', { dupr: totais.dupr })}
+          </V2FilterChip>
         </div>
+
+        {filtro === 'dupr' && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
+            {t('O rating DUPR vai de {min} a {max}, com três casas depois da vírgula. Até esta versão, o que fosse digitado fora disso (como “4525” em vez de “4,525”, ou o ID no campo do rating) era gravado como {max} ou {min} — por isso um rating cravado no limite aparece aqui.', { min: formatDuprRating(2), max: formatDuprRating(8) })} <strong>{t('Confira com a pessoa antes de corrigir')}</strong>{t(': nada foi alterado sozinho. O que veio do login oficial do DUPR não entra nesta lista.')}
+          </p>
+        )}
 
         {filtro === 'fechadas' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
@@ -349,6 +365,67 @@ function DeletedAccountsPanel({ users, enabled }) {
 
 const ICONE_ACAO = { suspend: PauseCircle, block: Ban, reactivate: PlayCircle };
 
+const DUPR_ISSUE_TEXT = {
+  [DUPR_ISSUE.OUT_OF_RANGE]: tk('Rating gravado fora de {min}–{max} ({valor}): não vale como rating.'),
+  [DUPR_ISSUE.AT_LIMIT]: tk('Rating cravado no limite da escala ({valor}): era o que o sistema gravava quando o número vinha errado. Confira com a pessoa.'),
+  [DUPR_ISSUE.ID_LOOKS_LIKE_RATING]: tk('O ID parece um rating: os campos podem ter sido trocados.'),
+  [DUPR_ISSUE.ID_FORMAT]: tk('O ID tem caracteres que o DUPR não usa (só letras e números).'),
+};
+
+/**
+ * O DUPR na própria linha do cadastro: ID e rating à vista, e o que parece
+ * errado em destaque — o admin vê e corrige antes de o número entrar no sorteio.
+ */
+function DuprResumo({ dupr, onEdit }) {
+  const problema = dupr.issues.length > 0;
+  const vars = {
+    min: formatDuprRating(2),
+    max: formatDuprRating(8),
+    valor: dupr.rating !== null ? formatDuprRating(dupr.rating) : dupr.raw,
+  };
+  return (
+    <div className={`mt-2 rounded-lg px-2.5 py-1.5 text-xs ${problema ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-200' : 'bg-gray-50 text-gray-600'}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-2xs font-bold uppercase tracking-wide">DUPR</span>
+        <span>
+          {t('ID')}{' '}
+          <strong className="font-mono font-semibold text-ink">{dupr.id || '—'}</strong>
+        </span>
+        <span>
+          {t('Rating')}{' '}
+          <strong className="font-semibold tabular-nums text-ink">{vars.valor ?? '—'}</strong>
+        </span>
+        {dupr.verified && (
+          <span className="inline-flex items-center gap-1 font-semibold text-green-700">
+            <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" /> {t('verificado pelo DUPR')}
+          </span>
+        )}
+        {!dupr.informed && <span className="text-gray-500">{t('não informado')}</span>}
+      </div>
+      {problema && (
+        <ul className="mt-1 space-y-0.5">
+          {dupr.issues.map((code) => (
+            <li key={code} className="flex gap-1.5">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+              <span>
+                {t(DUPR_ISSUE_TEXT[code], vars)}
+                {code === DUPR_ISSUE.OUT_OF_RANGE && dupr.suggestion !== null && (
+                  <> {t('Talvez {sugestao}.', { sugestao: formatDuprRating(dupr.suggestion) })}</>
+                )}
+              </span>
+            </li>
+          ))}
+          <li>
+            <button type="button" onClick={onEdit} className="font-semibold underline hover:text-ink">
+              {t('Corrigir no cadastro')}
+            </button>
+          </li>
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
   const s = u._status;
   const bloqueio = u._bloqueio;
@@ -385,9 +462,15 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
               <AlertCircle className="h-3 w-3" /> {tn(s.missingRequired.length, 'falta {n} obrigatório', 'faltam {n} obrigatórios')}
             </V2Badge>
           )}
+          {u._dupr.issues.length > 0 && (
+            <V2Badge tone="amber">
+              <AlertTriangle className="h-3 w-3" /> {t('DUPR a conferir')}
+            </V2Badge>
+          )}
         </div>
         {/* Mascarado: o e-mail inteiro só com registro de leitura (ficha → Revelar). */}
         <div className="mt-0.5 truncate text-xs text-gray-500">{maskValue('email', u.email) || t('(sem e-mail)')}</div>
+        <DuprResumo dupr={u._dupr} onEdit={onEdit} />
         {conta.status !== 'active' && conta.reason && (
           <div className="mt-1 text-2xs text-gray-500">{t('Motivo: {reason}', { reason: conta.reason })}</div>
         )}
@@ -440,16 +523,22 @@ function RecordEditDialog({ user, onClose }) {
   const salvar = useUpdateUserRecordAsAdmin();
   // Os campos de contato entram no formulário SÓ depois de revelados (com
   // registro de leitura): fora dele, não mudam e não aparecem.
-  const [form, setForm] = useState(() => Object.fromEntries(
-    ADMIN_EDITABLE_FIELDS.filter((f) => !SENSIVEL.has(f.key)).map((f) => [f.key, user[f.key] ?? '']),
+  const [inicial] = useState(() => Object.fromEntries(
+    ADMIN_EDITABLE_FIELDS.filter((f) => !SENSIVEL.has(f.key)).map((f) => [
+      f.key, f.type === 'dupr' ? duprRatingToInput(user[f.key]) : (user[f.key] ?? ''),
+    ]),
   ));
+  const [form, setForm] = useState(inicial);
   const [revelado, setRevelado] = useState(null);
   const [revelando, setRevelando] = useState(false);
   const [motivo, setMotivo] = useState('');
 
-  const { patch } = sanitizeAdminUserPatch(form);
+  const { patch, invalid } = sanitizeAdminUserPatch(form);
   const changes = diffAdminUserPatch(user, patch);
   const validacao = validateAdminEdit({ changes, reason: motivo });
+  // Rating DUPR mexido e fora da regra trava o salvar (o campo diz por quê).
+  // O valor antigo que ninguém tocou não trava a correção dos outros campos.
+  const duprTravado = invalid.includes('dupr_rating') && form.dupr_rating !== inicial.dupr_rating;
   const faltando = new Set(user._status?.missing?.map((f) => f.key) || []);
   const essencial = true;
 
@@ -505,6 +594,11 @@ function RecordEditDialog({ user, onClose }) {
                       </span>
                     ) : (
                       <CampoDeEdicao field={f} value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                    )}
+                    {f.type === 'dupr' && user._dupr?.issues.includes(DUPR_ISSUE.AT_LIMIT) && form[f.key] === inicial[f.key] && (
+                      <span className="mt-1 block text-2xs font-normal leading-5 text-amber-800">
+                        {t('Rating cravado no limite da escala: era o que o sistema gravava quando o número vinha errado. Confira com a pessoa o rating que aparece no app do DUPR.')}
+                      </span>
                     )}
                   </label>
                 ))}
@@ -564,7 +658,7 @@ function RecordEditDialog({ user, onClose }) {
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button
-            disabled={!validacao.isValid || salvar.isPending}
+            disabled={!validacao.isValid || duprTravado || salvar.isPending}
             onClick={handleSave}
           >
             {salvar.isPending ? t('Salvando…') : tn(changes.length, 'Salvar {n} alteração', 'Salvar {n} alterações')}
@@ -583,6 +677,22 @@ function RecordEditDialog({ user, onClose }) {
  */
 function CampoDeEdicao({ field: f, value, onChange }) {
   const opcoes = fieldOptions(f.key);
+
+  if (f.type === 'dupr') {
+    // O valor gravado fora da regra (cadastro antigo) já abre explicado.
+    return (
+      <DuprRatingInput
+        id={`admin_${f.key}`}
+        className="mt-1 font-normal"
+        value={value}
+        showFeedback={duprRatingBlocksSave(value)}
+        onChange={onChange}
+      />
+    );
+  }
+  if (f.key === 'dupr_id') {
+    return <DuprIdInput id={`admin_${f.key}`} className="mt-1 font-normal" value={value} onChange={onChange} />;
+  }
 
   if (!opcoes) {
     return (

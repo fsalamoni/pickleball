@@ -32,7 +32,7 @@ const COMPLETO = {
   full_name: 'Ana Completa', birth_date: '1990-01-01', phone: '51999999999',
   gender: 'F', city: 'Porto Alegre', state: 'RS', address: 'Rua X',
   pickleball_experience: '1-2 anos', competition_gender: 'female',
-  court_side: 'right', leveling_level: '3.5', dupr_id: 'A1', dupr_rating: 3.5,
+  court_side: 'right', leveling_level: '3.5', dupr_id: 'DDQ0KL', dupr_rating: 3.5,
   photo_url: 'https://x/y.jpg',
 };
 const INCOMPLETO = { uid: 'u_falta', email: 'falta@x.com', platform_name: 'Faltosa' };
@@ -251,5 +251,41 @@ describe('aba Cadastros — listas de seleção', () => {
     expect(patch.leveling_level).toBe(codigo);
     expect(patch.level).toMatch(/USAP/);
     expect(patch.leveling_method).toBe('manual');
+  });
+});
+
+describe('aba Cadastros — DUPR no card de cada pessoa', () => {
+  it('⭐ ID e rating aparecem na linha, no formato de três casas', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('DDQ0KL');
+    expect(txt).toContain('3,500');
+  });
+
+  it('⭐ rating cravado no limite (8,000) é apontado, com filtro próprio', async () => {
+    dados.users = [COMPLETO, { ...COMPLETO, uid: 'u_teto', platform_name: 'Teto', dupr_rating: 8 }];
+    await render();
+    expect(container.textContent).toContain('DUPR a conferir (1)');
+    expect(container.textContent).toContain('cravado no limite');
+  });
+
+  it('⭐ no editor, "4525" pergunta "Você quis dizer 4,525?" e trava o salvar até aceitar', async () => {
+    dados.users = [COMPLETO];
+    await render();
+    await click([...container.querySelectorAll('button')].find((x) => x.textContent.includes('Editar cadastro')));
+    const d = document.querySelector('[role="dialog"]');
+    await digitar(d.querySelector('#admin_dupr_rating'), '4525');
+    const motivo = [...d.querySelectorAll('label')]
+      .find((l) => l.textContent.includes('Motivo da correção')).querySelector('input');
+    await digitar(motivo, 'rating informado pelo atleta');
+    const salvarBtn = () => [...d.querySelectorAll('button')].find((b) => b.textContent.includes('Salvar'));
+    expect(salvarBtn().disabled).toBe(true);
+    // O aviso aparece ao sair do campo.
+    await act(async () => { d.querySelector('#admin_dupr_rating').dispatchEvent(new FocusEvent('focusout', { bubbles: true })); });
+    expect(d.textContent).toContain('Você quis dizer 4,525?');
+    await click([...d.querySelectorAll('button')].find((b) => b.textContent.includes('Sim, usar 4,525')));
+    expect(salvarBtn().disabled).toBe(false);
+    await click(salvarBtn());
+    expect(salvar.mock.calls[0][0].patch.dupr_rating).toBe(4.525);
   });
 });

@@ -8,6 +8,7 @@
  */
 
 import { calculateAge } from '@/core/lib/profileValidation';
+import { isValidDuprRating } from '@/core/domain/duprRating';
 import { ATHLETE_PRIVACY_FIELDS } from './constants.js';
 
 function trimmed(value) {
@@ -93,9 +94,9 @@ export function buildAthletePublicProfile(uid, profile = {}, clubs = [], options
     // atleta no DUPR. Exibido nos cards/telas de atleta.
     dupr_id: trimmed(profile.dupr_id) || null,
     // Rating DUPR informado manualmente (semente do ranking estilo DUPR). Aditivo.
-    dupr_rating: Number.isFinite(Number(profile.dupr_rating)) && Number(profile.dupr_rating) > 0
-      ? Number(profile.dupr_rating)
-      : null,
+    // Só o que é rating (2,000–8,000) vai ao espelho público: um valor antigo
+    // fora da regra fica no `users` para o admin corrigir, não no diretório.
+    dupr_rating: isValidDuprRating(profile.dupr_rating) ? Number(profile.dupr_rating) : null,
     // Lado da quadra preferido (útil para encontrar parcerias).
     court_side: profile.court_side || null,
     level: profile.level || null,

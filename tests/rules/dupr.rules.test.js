@@ -170,3 +170,33 @@ describe('livro de envios ao DUPR (dupr_submissions)', () => {
     await assertFails(deleteDoc(doc(como(ADMIN), 'dupr_submissions', ID)));
   });
 });
+
+describe('rating DUPR digitado: só de 2 a 8 (nunca "4525" limitado ao teto)', () => {
+  it('o dono grava rating dentro da faixa, ou apaga', async () => {
+    await assertSucceeds(updateDoc(doc(como(BIA), 'users', BIA), { dupr_rating: 4.525 }));
+    await assertSucceeds(updateDoc(doc(como(BIA), 'users', BIA), { dupr_rating: 2 }));
+    await assertSucceeds(updateDoc(doc(como(BIA), 'users', BIA), { dupr_rating: null }));
+    await assertSucceeds(updateDoc(doc(como(BIA), 'athlete_profiles', BIA), { dupr_rating: 8 }));
+  });
+
+  it('fora da faixa ou texto é recusado — no cadastro, no espelho e na conta nova', async () => {
+    await assertFails(updateDoc(doc(como(BIA), 'users', BIA), { dupr_rating: 4525 }));
+    await assertFails(updateDoc(doc(como(BIA), 'users', BIA), { dupr_rating: 1.5 }));
+    await assertFails(updateDoc(doc(como(BIA), 'users', BIA), { dupr_rating: '4.525' }));
+    await assertFails(updateDoc(doc(como(BIA), 'athlete_profiles', BIA), { dupr_rating: 9 }));
+    await assertFails(setDoc(doc(como('nova_uid'), 'users', 'nova_uid'), { full_name: 'Nova', dupr_rating: 45 }));
+  });
+
+  it('o admin corrigindo o cadastro segue a mesma faixa', async () => {
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'users', BIA), { dupr_rating: 3.75 }));
+    await assertFails(updateDoc(doc(como(ADMIN), 'users', BIA), { dupr_rating: 4525 }));
+  });
+
+  it('um valor antigo fora da faixa não trava o resto do cadastro', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'users', BIA), { dupr_rating: 4525 });
+    });
+    await assertSucceeds(updateDoc(doc(como(BIA), 'users', BIA), { city: 'Canoas' }));
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'users', BIA), { city: 'Gramado' }));
+  });
+});
