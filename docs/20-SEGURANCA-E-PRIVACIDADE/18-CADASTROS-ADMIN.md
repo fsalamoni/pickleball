@@ -36,6 +36,11 @@
    No editor, rating mexido e fora da regra **trava o salvar** até virar um
    rating ("Você quis dizer 4,525?" → "Sim, usar 4,525"); o valor antigo que
    ninguém tocou não trava a correção dos outros campos.
+8. **O card lê de cima para baixo** (2026-10-29): nome, selos, DUPR e o que
+   falta ocupam a largura toda; as ações ficam numa faixa embaixo — editar e
+   pedir para completar à esquerda, suspender/bloquear/excluir à direita (no
+   celular, quebram para a linha de baixo). Com os botões ao lado, o texto
+   era espremido numa coluna de uma palavra.
 
 ## Gerir a base de cadastros (2026-10-29)
 

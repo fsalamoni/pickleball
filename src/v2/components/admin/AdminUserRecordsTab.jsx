@@ -580,73 +580,77 @@ function UserRow({ user: u, lembradoEm, onEdit, selected, onToggle, onDelete, on
   ].filter(Boolean).join(' · ');
   const podePedir = !s.complete && conta.status === 'active' && u.hidden !== true;
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${
+    // Conteúdo em cima, na largura toda; ações numa faixa embaixo. Lado a lado,
+    // a fileira de botões espremia o texto numa coluna de uma palavra.
+    <div className={`rounded-xl border p-3 ${
       selected ? 'border-red-300 bg-red-50/40' : s.complete ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'
     }`}>
-      <input
-        type="checkbox"
-        className="h-4 w-4 shrink-0 rounded border-gray-300"
-        checked={selected}
-        disabled={!bloqueio.ok}
-        onChange={onToggle}
-        aria-label={t('Selecionar {valor} para excluir', { valor: u.platform_name || u.full_name || u.uid })}
-        title={bloqueio.ok ? t('Selecionar para excluir') : bloqueio.reason}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-semibold text-ink">
-            {u.platform_name || u.full_name || t('(sem nome)')}
-          </span>
-          {conta.status !== 'active' && (
-            <V2Badge tone={conta.tone}>
-              <Ban className="h-3 w-3" /> {t(conta.label)}{conta.vencida ? ` · ${t('prazo vencido')}` : ''}
-            </V2Badge>
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300"
+          checked={selected}
+          disabled={!bloqueio.ok}
+          onChange={onToggle}
+          aria-label={t('Selecionar {valor} para excluir', { valor: u.platform_name || u.full_name || u.uid })}
+          title={bloqueio.ok ? t('Selecionar para excluir') : bloqueio.reason}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-semibold text-ink">
+              {u.platform_name || u.full_name || t('(sem nome)')}
+            </span>
+            {conta.status !== 'active' && (
+              <V2Badge tone={conta.tone}>
+                <Ban className="h-3 w-3" /> {t(conta.label)}{conta.vencida ? ` · ${t('prazo vencido')}` : ''}
+              </V2Badge>
+            )}
+            {s.complete ? (
+              <V2Badge tone="green">
+                <CheckCircle2 className="h-3 w-3" /> {t('completo')}
+              </V2Badge>
+            ) : (
+              <V2Badge tone="amber">
+                <AlertCircle className="h-3 w-3" /> {tn(s.missingRequired.length, 'falta {n} obrigatório', 'faltam {n} obrigatórios')}
+              </V2Badge>
+            )}
+            {u._dupr.issues.length > 0 && (
+              <V2Badge tone="amber">
+                <AlertTriangle className="h-3 w-3" /> {t('DUPR a conferir')}
+              </V2Badge>
+            )}
+          </div>
+          {/* Mascarado: o e-mail inteiro só com registro de leitura (ficha → Revelar). */}
+          <div className="mt-0.5 truncate text-xs text-gray-500">{maskValue('email', u.email) || t('(sem e-mail)')}</div>
+          <DuprResumo dupr={u._dupr} onEdit={onEdit} />
+          {conta.status !== 'active' && conta.reason && (
+            <div className="mt-1 text-2xs text-gray-500">{t('Motivo: {reason}', { reason: conta.reason })}</div>
           )}
-          {s.complete ? (
-            <V2Badge tone="green">
-              <CheckCircle2 className="h-3 w-3" /> {t('completo')}
-            </V2Badge>
-          ) : (
-            <V2Badge tone="amber">
-              <AlertCircle className="h-3 w-3" /> {tn(s.missingRequired.length, 'falta {n} obrigatório', 'faltam {n} obrigatórios')}
-            </V2Badge>
+          {s.missingCount > 0 && (
+            <div className="mt-1 text-2xs text-gray-500">
+              {t('Falta preencher:')} {s.missing.map((f) => f.label).join(', ')}
+            </div>
           )}
-          {u._dupr.issues.length > 0 && (
-            <V2Badge tone="amber">
-              <AlertTriangle className="h-3 w-3" /> {t('DUPR a conferir')}
-            </V2Badge>
-          )}
-        </div>
-        {/* Mascarado: o e-mail inteiro só com registro de leitura (ficha → Revelar). */}
-        <div className="mt-0.5 truncate text-xs text-gray-500">{maskValue('email', u.email) || t('(sem e-mail)')}</div>
-        <DuprResumo dupr={u._dupr} onEdit={onEdit} />
-        {conta.status !== 'active' && conta.reason && (
-          <div className="mt-1 text-2xs text-gray-500">{t('Motivo: {reason}', { reason: conta.reason })}</div>
-        )}
-        {s.missingCount > 0 && (
           <div className="mt-1 text-2xs text-gray-500">
-            {t('Falta preencher:')} {s.missing.map((f) => f.label).join(', ')}
+            {t('{n} de {total} campos preenchidos', { n: s.filledCount, total: s.totalCount })} · {datas}
           </div>
-        )}
-        <div className="mt-1 text-2xs text-gray-500">
-          {t('{n} de {total} campos preenchidos', { n: s.filledCount, total: s.totalCount })} · {datas}
+          {lembradoEm && (
+            <div className="mt-1 inline-flex items-center gap-1 text-2xs font-medium text-blue-700">
+              <BellRing className="h-3 w-3" aria-hidden="true" /> {t('pedido para completar enviado em {data}', { data: formatarData(lembradoEm) })}
+            </div>
+          )}
+          {u._teste.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {u._teste.map((m) => (
+                <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-medium text-amber-900">
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-        {lembradoEm && (
-          <div className="mt-1 inline-flex items-center gap-1 text-2xs font-medium text-blue-700">
-            <BellRing className="h-3 w-3" aria-hidden="true" /> {t('pedido para completar enviado em {data}', { data: formatarData(lembradoEm) })}
-          </div>
-        )}
-        {u._teste.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {u._teste.map((m) => (
-              <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-medium text-amber-900">
-                {m}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
         <V2Button size="sm" variant="secondary" onClick={onEdit}>
           <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar cadastro')}
         </V2Button>
@@ -655,22 +659,25 @@ function UserRow({ user: u, lembradoEm, onEdit, selected, onToggle, onDelete, on
             <BellRing className="h-3.5 w-3.5" aria-hidden="true" /> {t('Pedir para completar')}
           </V2Button>
         )}
-        {u._acoes.actions.map((a) => {
-          const I = ICONE_ACAO[a];
-          return (
-            <V2Button key={a} size="sm" variant="ghost" onClick={() => onStatus(a)}
-              className={a === 'block' ? 'text-red-600 hover:bg-red-50' : a === 'suspend' ? 'text-amber-700 hover:bg-amber-50' : ''}>
-              <I className="h-3.5 w-3.5" /> {STATUS_ACTION_META[a].label}
+        {/* Ações sobre a conta à direita, longe do "Editar" (no celular, quebram para a linha de baixo). */}
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {u._acoes.actions.map((a) => {
+            const I = ICONE_ACAO[a];
+            return (
+              <V2Button key={a} size="sm" variant="ghost" onClick={() => onStatus(a)}
+                className={a === 'block' ? 'text-red-600 hover:bg-red-50' : a === 'suspend' ? 'text-amber-700 hover:bg-amber-50' : ''}>
+                <I className="h-3.5 w-3.5" /> {STATUS_ACTION_META[a].label}
+              </V2Button>
+            );
+          })}
+          {bloqueio.ok ? (
+            <V2Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete} aria-label={t('Excluir {valor}', { valor: u.platform_name || u.full_name || u.uid })}>
+              <Trash2 className="h-3.5 w-3.5" /> {t('Excluir')}
             </V2Button>
-          );
-        })}
-        {bloqueio.ok ? (
-          <V2Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete} aria-label={t('Excluir {valor}', { valor: u.platform_name || u.full_name || u.uid })}>
-            <Trash2 className="h-3.5 w-3.5" /> {t('Excluir')}
-          </V2Button>
-        ) : (
-          <span className="self-center text-2xs text-gray-500" title={bloqueio.reason}>{t('não excluível')}</span>
-        )}
+          ) : (
+            <span className="self-center text-2xs text-gray-500" title={bloqueio.reason}>{t('não excluível')}</span>
+          )}
+        </div>
       </div>
     </div>
   );
