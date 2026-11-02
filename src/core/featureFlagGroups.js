@@ -26,7 +26,7 @@ export const FLAG_GROUPS = Object.freeze([
     label: tk('Dia de jogo'),
     // Os formatos opcionais do dia de jogo ficam juntos, no grupo em que o
     // admin procura por eles.
-    keys: [FEATURE_FLAG.GAMEDAY_MEXICANO, FEATURE_FLAG.GAMEDAY_KING_OF_COURT],
+    keys: [FEATURE_FLAG.GAMEDAY_MEXICANO, FEATURE_FLAG.GAMEDAY_KING_OF_COURT, FEATURE_FLAG.LINE_CONTROL],
   },
   {
     id: 'marketplace',

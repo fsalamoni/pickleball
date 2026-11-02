@@ -132,6 +132,19 @@ export const FEATURE_FLAG = Object.freeze({
    */
   EXTERNAL_MESSAGING: 'external_messaging',
 
+  /**
+   * CONTROLE DE LINHAS por câmera (`docs/53-CONTROLE-DE-LINHAS.md`).
+   *
+   * Ligada, quem organiza um dia de jogo (o criador, o gestor da arena, o
+   * admin do clube) liga o controle naquele jogo — ou em todos os seus — e
+   * abre `/dia-de-jogo/:id/linhas` no aparelho com a câmera: calibra a quadra
+   * tocando nos quatro cantos, e o navegador marca o quique (dentro, fora ou
+   * revisar) e a falta de pé na cozinha no voleio. Tudo roda no aparelho; o
+   * vídeo não é gravado nem enviado. O único dado gravado é o campo opcional
+   * `game_days.line_control`. Desligada, nada aparece e o campo é ignorado.
+   */
+  LINE_CONTROL: 'line_control',
+
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -542,6 +555,10 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.EXTERNAL_MESSAGING]: {
     label: tk('Avisos por e-mail e celular'),
     description: tk('Liga o envio dos avisos por e-mail, WhatsApp e SMS e mostra a cada pessoa o cartão "E-mail e celular" em Configurações. Cada canal só envia depois de configurado e testado em Painel admin → Comunicações. Desligada, nada sai da plataforma e o push segue como sempre.'),
+  },
+  [FEATURE_FLAG.LINE_CONTROL]: {
+    label: tk('Controle de linhas por câmera'),
+    description: tk('Deixa quem organiza um dia de jogo ligar o controle de linhas naquele jogo ou em todos os seus, inclusive no jogo em andamento: uma câmera (do celular, USB ou de captura) filma a quadra e o navegador marca se a bola quicou dentro ou fora e se houve pé na cozinha no voleio, dizendo "revisar" quando a distância é menor que a precisão. O vídeo fica no aparelho. Desligada, nada aparece.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: tk('DUPR oficial (conexão da conta e rating)'),

@@ -747,6 +747,9 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 - `dupr_submit` (**opcional**, `true|false|null`) — enviar os resultados ao
   DUPR, escolha de quem configura o dia (cartão de configurações); `null` =
   padrão da plataforma. Ver `docs/51` §8
+- `line_control` (**opcional**, `true|false`) — controle de linhas por câmera
+  ligado neste dia (flag `line_control`). Só diz que o jogo usa câmera: vídeo,
+  calibração e marcações ficam no aparelho. Ausente = desligado. Ver `docs/53`
 - `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
   operar as partidas (sortear, criar próxima partida, substituir jogador, marcar
   indisponível, vincular dupla, incluir/excluir participante). **Ausente, nulo ou

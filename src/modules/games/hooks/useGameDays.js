@@ -17,7 +17,7 @@ import {
   createNextAmericanoLiveGame, submitAmericanoLiveResult, updateAmericanoLiveResult,
   createManualAmericanoLiveGame,
   createPlayRoundForFreeCourts, createAmericanoLiveRoundForFreeCourts,
-  addGameDayAdmin, removeGameDayAdmin, setGameDayManageMode,
+  addGameDayAdmin, removeGameDayAdmin, setGameDayManageMode, setGameDaysLineControl,
 } from '../services/gameDayService.js';
 
 /* ------------------------------ Dias de jogo ---------------------------- */
@@ -72,6 +72,15 @@ export function useUpdateGameDay() {
       qc.invalidateQueries({ queryKey: ['game-days'] });
       qc.invalidateQueries({ queryKey: ['game-days', 'detail', vars.id] });
     },
+  });
+}
+
+/** Controle de linhas em vários dias de uma vez (`{ ids, on }`). */
+export function useSetGameDaysLineControl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ids, on }) => setGameDaysLineControl(ids, on),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['game-days'] }),
   });
 }
 

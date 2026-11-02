@@ -87,6 +87,7 @@ const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
 const V2Help = lazy(() => import('@/v2/pages/V2Help'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
 const V2GameDays = lazy(() => import('@/v2/pages/V2GameDays'));
+const V2LineControl = lazy(() => import('@/v2/pages/V2LineControl'));
 const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
 const V2LegalDocument = lazy(() => import('@/v2/pages/V2LegalDocument'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
@@ -247,6 +248,7 @@ export default function V2App() {
           <Route path="meus-jogos" element={<V2MyGames />} />
           <Route path="dia-de-jogo" element={<Isolada nome="dia-de-jogo"><V2GameDays /></Isolada>} />
           <Route path="dia-de-jogo/:gameDayId" element={<Isolada nome="dia-de-jogo"><V2GameDays /></Isolada>} />
+          <Route path="dia-de-jogo/:gameDayId/linhas" element={<Isolada nome="controle-de-linhas"><V2LineControl /></Isolada>} />
           <Route path="encontrar-jogadores" element={<V2FindPlayers />} />
           <Route path="procura-jogo" element={<V2OpenGames />} />
           <Route path="parceiros" element={<V2Partners />} />

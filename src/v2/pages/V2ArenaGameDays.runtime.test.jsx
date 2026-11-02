@@ -48,6 +48,9 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   // propósito, para provar que o miolo chega à arena.
   useGameDayGames: () => ({ data: [], isError: false }),
   useUpdateGameDay: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
+  // Cartão do controle de linhas (flag `line_control`, ligada aqui junto com as demais).
+  useMyGameDays: () => ({ data: [], isSuccess: true }),
+  useSetGameDaysLineControl: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 // Os organizadores são o miolo COMPARTILHADO com o ambiente do atleta e já têm
 // testes próprios; aqui interessa o enquadramento da arena em volta deles.
