@@ -154,6 +154,13 @@ torneio, `/c/:clubId`) existem para isso.
 
 **Controle de linhas na quadra de torneio** (`tournament_line_courts`, docs/53 §9): ligar a quadra, escolher o arranjo, ser câmera, dar a palavra final e limpar marcações — só a equipe do torneio (criador, administrador do torneio, gestor da arena sede, admin da plataforma), pela regra `tLineOrg`/`tLineCamOk`; ser câmera exige a quadra ligada e é em nome próprio. Acompanhar a central: qualquer conta logada.
 
+**Admin da plataforma (Plat) no dia de outra pessoa (2026-11-03).** Até essa
+data, o admin passava na regra do documento do dia, mas não nos participantes
+nem nos jogos (`isGameDayAdminOf` não tinha `adm()`), e a tela não mostrava a
+ele as configurações. Hoje ele passa nos três, e a tela mostra as configurações
+com a opção `platformAdmin` de `gameDayRoles.js` (via `useGameDayRoles`). O
+caminho de entrada é Painel admin → Torneios → Dias de jogo.
+
 \* `canAccessGameDay` para um gestor de arena que não é criador nem membro depende de o dia ser público; todo dia de arena nasce público.
 
 **Onde a regra é mais larga que a tela (Play).** Em `participants` (update) e

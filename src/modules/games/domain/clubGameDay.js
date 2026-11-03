@@ -177,7 +177,7 @@ export function normalizeClubGameDayInput(input = {}, { event = null } = {}) {
   };
 
   const errors = {};
-  if (!value.date) errors.date_time = t('Informe a data e o horário.');
+  if (!value.date || !value.time) errors.date_time = t('Informe a data e o horário.');
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }

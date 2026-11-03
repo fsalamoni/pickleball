@@ -15,6 +15,7 @@ import { Link, Navigate } from 'react-router-dom';
 import {
   Activity,
   AlertTriangle,
+  CalendarClock,
   Archive,
   CheckCircle2,
   ExternalLink,
@@ -95,6 +96,7 @@ import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 // Sob demanda: só com a flag `platform_marketing`, e só quando a aba abre.
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
 const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
+const AdminGameDaysTab = lazy(() => import('@/v2/components/admin/AdminGameDaysTab'));
 const DuprPolicyCard = lazy(() => import('@/v2/components/admin/DuprPolicyCard'));
 const AdminDuprPilotTab = lazy(() => import('@/v2/components/admin/AdminDuprPilotTab'));
 const AdminDuprSubmissionsTab = lazy(() => import('@/v2/components/admin/AdminDuprSubmissionsTab'));
@@ -138,6 +140,7 @@ const SECTIONS = Object.freeze([
   ] },
   { id: 'competition', label: tk('Torneios'), icon: Trophy, tabs: [
     { id: 'tournaments', label: tk('Torneios'), icon: Trophy },
+    { id: 'game-days', label: tk('Dias de jogo'), icon: CalendarClock, keywords: ['dia de jogo', 'play', 'americano', 'ajustar', 'horário', 'data', 'organizador'] },
   ] },
   { id: 'arenasSection', label: tk('Arenas'), icon: Building2, tabs: [
     { id: 'arenas', label: tk('Arenas'), icon: Building2 },
@@ -252,6 +255,9 @@ export default function V2AdminConsole() {
       <div className="mt-6 min-w-0 lg:mt-0">
         {tab === 'overview'   && <OverviewTab inbox={inbox} onTab={setTab} />}
         {tab === 'tournaments' && <TournamentsTab />}
+        {tab === 'game-days' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}><AdminGameDaysTab /></Suspense>
+        )}
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
         {tab === 'catalog'    && <AdminCatalogTab />}

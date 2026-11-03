@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeGameDayInput, computeMemberUids, canViewGameDay, isGameDayOwner,
-  isPublicGameDay, gameDayWhenText, GAME_DAY_VISIBILITY,
+  isPublicGameDay, gameDayWhenText, GAME_DAY_VISIBILITY, gameDayCreationDate,
 } from './gameDay.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 
@@ -12,8 +12,29 @@ describe('normalizeGameDayInput', () => {
     expect(errors.title).toBeTruthy();
   });
 
+  it('exige o horário de início; sem data, vale a data padrão (o dia da criação)', () => {
+    const semHora = normalizeGameDayInput({ title: 'X', date: '2026-11-03' });
+    expect(semHora.valid).toBe(false);
+    expect(semHora.errors.time).toBeTruthy();
+    const semData = normalizeGameDayInput({ title: 'X', time: '19:00' }, { defaultDate: '2026-11-03' });
+    expect(semData.valid).toBe(true);
+    expect(semData.value.date).toBe('2026-11-03');
+    // A data escolhida vence a padrão.
+    expect(normalizeGameDayInput({ title: 'X', date: '2026-12-01', time: '19:00' }, { defaultDate: '2026-11-03' }).value.date).toBe('2026-12-01');
+    // Sem data nenhuma, é erro.
+    expect(normalizeGameDayInput({ title: 'X', time: '19:00' }).errors.date).toBeTruthy();
+    expect(normalizeGameDayInput({ title: 'X', date: '2026-02-31', time: '19:00' }).errors.date).toBeTruthy();
+    expect(normalizeGameDayInput({ title: 'X', date: '2026-11-03', time: '25:00' }).errors.time).toBeTruthy();
+  });
+
+  it('gameDayCreationDate: o dia LOCAL de created_at_ms', () => {
+    const ms = new Date(2026, 10, 3, 22, 30).getTime(); // 22h30 locais: ainda é dia 3
+    expect(gameDayCreationDate({ created_at_ms: ms })).toBe('2026-11-03');
+    expect(gameDayCreationDate({}, new Date(2026, 0, 5, 10).getTime())).toBe('2026-01-05');
+  });
+
   it('normaliza campos e usa privado como padrão', () => {
-    const { valid, value } = normalizeGameDayInput({ title: '  Sábado  ', state: 'sp' });
+    const { valid, value } = normalizeGameDayInput({ title: '  Sábado  ', state: 'sp', date: '2026-11-03', time: '19:00' });
     expect(valid).toBe(true);
     expect(value.title).toBe('Sábado');
     expect(value.visibility).toBe(GAME_DAY_VISIBILITY.PRIVATE);

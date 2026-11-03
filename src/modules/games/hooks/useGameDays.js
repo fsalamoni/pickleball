@@ -5,7 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  createGameDay, getGameDay, listMyGameDays, updateGameDay, deleteGameDay,
+  createGameDay, getGameDay, listMyGameDays, listAllGameDaysForAdmin, updateGameDay, deleteGameDay,
   listGameDayParticipants, addGameDayParticipant, removeGameDayParticipant,
   linkGuestParticipantToAccount,
   listGameDayGames, addGameDayGame, updateGameDayGame, deleteGameDayGame,
@@ -29,6 +29,17 @@ export function useMyGameDays({ enabled = true } = {}) {
     queryFn: () => listMyGameDays(user?.uid),
     enabled: enabled && !!user?.uid,
     staleTime: 20_000,
+  });
+}
+
+/** Todos os dias de jogo (Painel admin → Torneios → Dias de jogo). */
+export function useAllGameDaysForAdmin({ enabled = true } = {}) {
+  const { isPlatformAdmin } = useAuth();
+  return useQuery({
+    queryKey: ['game-days', 'admin-all'],
+    queryFn: () => listAllGameDaysForAdmin(),
+    enabled: enabled && isPlatformAdmin === true,
+    staleTime: 30_000,
   });
 }
 

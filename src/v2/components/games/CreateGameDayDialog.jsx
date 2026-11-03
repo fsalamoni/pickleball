@@ -11,6 +11,7 @@ import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { tutorialIdForGameDayFormat } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
 import { GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS, normalizePlayCourts } from '@/modules/games/domain/gameDay';
+import { todayISO } from '@/modules/arenas/domain/calendar';
 import {
   GAME_DAY_MANAGE_MODE, GAME_DAY_MANAGE_MODE_LABELS, GAME_DAY_MANAGE_MODE_HINTS,
 } from '@/modules/games/domain/gameDayRoles';
@@ -45,9 +46,11 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
   const { userProfile } = useAuth();
   const playOn = true;
 
-  // Na CRIAÇÃO, os padrões são: visibilidade pública + cidade/UF do usuário.
+  // Na CRIAÇÃO, os padrões são: visibilidade pública + cidade/UF do usuário +
+  // a data de HOJE (sem outra escolha, o dia de jogo é no dia em que é criado).
   const defaultsForNew = () => ({
     ...EMPTY_FORM,
+    date: todayISO(),
     visibility: GAME_DAY_VISIBILITY.PUBLIC,
     city: userProfile?.city || '',
     state: (userProfile?.state || '').toUpperCase().slice(0, 2),
@@ -74,6 +77,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
 
   const handleSubmit = async () => {
     if (!form.title.trim()) { toast.error(t('Dê um nome ao seu dia de jogo.')); return; }
+    if (!form.time) { toast.error(t('Informe o horário de início.')); return; }
     try {
       const { id } = await create.mutateAsync(form);
       toast.success(
@@ -159,15 +163,20 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3" data-dica="dia-de-jogo-data">
-            <div>
-              <Label className="text-xs">{t('Data')}</Label>
-              <Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
+          <div data-dica="dia-de-jogo-data">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="cgd-data" className="text-xs">{t('Data*')}</Label>
+                <Input id="cgd-data" type="date" required value={form.date} onChange={(e) => set('date', e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="cgd-hora" className="text-xs">{t('Horário de início*')}</Label>
+                <Input id="cgd-hora" type="time" required value={form.time} onChange={(e) => set('time', e.target.value)} />
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">{t('Horário')}</Label>
-              <Input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
-            </div>
+            <p className="mt-1 text-2xs text-gray-500">
+              {t('Sem outra data, o dia de jogo fica para hoje, o dia em que é criado.')}
+            </p>
           </div>
 
           <div>
@@ -257,7 +266,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
 
         <DialogFooter>
           <V2Button variant="ghost" onClick={() => onOpenChange(false)}>{t('Cancelar')}</V2Button>
-          <V2Button onClick={handleSubmit} disabled={busy || !form.title.trim()} data-dica="dia-de-jogo-confirmar">
+          <V2Button onClick={handleSubmit} disabled={busy || !form.title.trim() || !form.time} data-dica="dia-de-jogo-confirmar">
             {busy ? t('Criando…') : t('Criar dia de jogo')}
           </V2Button>
         </DialogFooter>
