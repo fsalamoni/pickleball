@@ -363,3 +363,8 @@ só. Telão novo entra nessa lista.
 > duplicá-la para o torneio, releia `docs/27-FALHA-NAO-E-VAZIO.md` §8.3 — o
 > risco de cópia aqui é dar tolerâncias diferentes à mesma regra sem nada na
 > tela denunciando.
+
+O **controle de linhas** (flag `line_control`) também chega aos dois pelas
+mesmas peças (`TelaoLineTicker.jsx`): no dia de jogo, `TelaoLineTicker` do
+jogo; no torneio, `TournamentTelaoLines`, um aviso por quadra ligada. Ver
+`docs/53-CONTROLE-DE-LINHAS.md` §9.

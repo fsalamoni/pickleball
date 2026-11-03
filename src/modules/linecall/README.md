@@ -27,4 +27,4 @@ serviços recebem o anfitrião por `hostPath`).
 Telas: `v2/components/games/GameDayLineControlCard.jsx` (no `GameDayModule`),
 `v2/pages/V2LineControl.jsx` (`/dia-de-jogo/:id/linhas?modo=camera|central`) e
 `v2/components/linecall/` (desenho da quadra, escolha do arranjo, guia de
-posicionamento, estação da câmera, central, `CourtMark`, `LanceReplay`, `TelaoLineTicker` no telão). Ver `docs/53-CONTROLE-DE-LINHAS.md`.
+posicionamento, estação da câmera, central, `CourtMark`, `LanceReplay`, `TelaoLineTicker` no telão do dia de jogo e `TournamentTelaoLines` no do torneio, uma por quadra). Ver `docs/53-CONTROLE-DE-LINHAS.md`.

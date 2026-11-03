@@ -31,6 +31,7 @@ import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { categorizeBoardMatches } from '@/modules/tournament/domain/tournamentBoard';
+import { TournamentTelaoLines } from '@/v2/components/linecall/TelaoLineTicker';
 import { t, fmtData } from '@/core/i18n';
 
 function regLabel(reg) {
@@ -260,6 +261,8 @@ export default function Telao() {
             </aside>
         </div>
       </div>
+      {/* O último lance das câmeras de cada quadra (flag `line_control`). */}
+      <TournamentTelaoLines tournamentId={tournamentId} />
     </div>
   );
 }
