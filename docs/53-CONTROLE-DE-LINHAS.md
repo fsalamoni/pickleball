@@ -131,7 +131,17 @@ junta as marcações das câmeras dela por **janela de tempo**:
   (`reason`) é o dela.
 
 A presença de cada câmera é `…/line_cams/{uid}_{posição}`, renovada a cada
-15 s (online = visto há ≤ 45 s) e apagada ao sair da tela.
+15 s (online = visto há ≤ 45 s) e apagada ao sair da tela. Se o aparelho
+apaga, a bateria acaba ou a aba é fechada à força, o documento FICA: a central
+passa a mostrá-lo fora do ar depois de 45 s, e ele sai quando a mesma conta
+volta àquela posição ou com a exclusão da conta.
+
+A tela da câmera **não cai num soluço da rede**: com o Wi-Fi fora um instante,
+a releitura do dia ou das quadras falha e a tela segue com o que já tinha
+(erro só quando não há dado nenhum — `V2LineControl.runtime.test.jsx`). As
+quadras são lidas do SERVIDOR (`getDocsFromServer`): sem rede, a leitura comum
+devolveria o que sobrou no cache, às vezes nada, e "nenhuma quadra" virava
+"controle desligado" na câmera que estava filmando.
 A central (`LineCentral`) mostra o arranjo, quem está em cada posição
 (analisando / calibrada / falta calibrar / sem câmera, quadros/s), o último
 lance em letras grandes e os anteriores; quem organiza pode **Limpar
@@ -175,12 +185,17 @@ final, em nome próprio) e `lcCfg` (formato da quadra). No dia de jogo:
 
 A cláusula estreita do nomeado na regra do próprio `game_days` saiu: ele
 configura a quadra pela regra de `line_courts`, sem tocar no documento do dia.
-**Exclusão de conta** (`coletarDiasDeJogo`, `functions/accountDeletion.js`)
-apaga as câmeras e marcações da pessoa em TODA quadra dos dias de jogo em que
-ela aparece (membro, administrador nomeado ou jogo publicado) — e as do formato
-antigo, direto no dia. O gestor de arena que filmou um dia em que não é membro
-fica de fora dessa busca; a câmera dele some ao sair da tela, e a marcação leva
-só o uid.
+**Exclusão de conta** (`coletarLinhas`, `functions/accountDeletion.js`) apaga
+as câmeras e marcações da pessoa em TODA quadra — do dia de jogo, do torneio e
+do formato antigo, direto no dia — por **grupo de coleção**, pela `uid`. 🐞
+Antes o pai era achado pelas listas do dia (membro, nomeado, jogo publicado) e
+pela equipe do torneio: o gestor da arena que filmou um dia em que não é
+membro, e quem saiu do dia depois de filmar, ficavam de fora — e a câmera
+guarda o nome. A busca precisa do índice de GRUPO de `uid` em `line_cams` e
+`line_calls` (`firestore.indexes.json` → `fieldOverrides`, que mantêm os
+índices simples de sempre; guarda em `indicesCompostos.test.js`). Sem o índice
+a consulta falha e a exclusão sai **parcial**, nunca "nada a apagar"; mais de
+400 documentos numa coleção também (a próxima rodada apaga o resto).
 
 Vídeo, calibração (por posição: `v2:view:<uid>:linhas:calibracao:<dia>:<posição>`)
 e as fotos das marcações ficam **no aparelho**. Imagem de atleta não sai do
@@ -400,8 +415,9 @@ linhas" (só com a flag).
   `updated_by`, `updated_at`) com as mesmas subcoleções `line_cams`/
   `line_calls`. Os serviços recebem o "anfitrião" (`hostPath`): id de dia de
   jogo ou o caminho da quadra. Na exclusão de conta, as câmeras e marcações da
-  pessoa nas quadras dos torneios que ela administra são apagadas
-  (`coletarLinhasDeTorneio`). Zero índice (uma igualdade).
+  pessoa saem de toda quadra de torneio pela mesma busca por grupo de coleção
+  do dia de jogo (`coletarLinhas`, §4) — inclusive de quem já saiu da equipe.
+  A lista de quadras do torneio é uma igualdade só (zero índice composto).
 - **Telão do torneio** (`/torneios/:id/telao`): `TournamentTelaoLines` (em
   `TelaoLineTicker.jsx`) põe no canto um aviso por quadra ligada — câmeras no
   ar, "Lance em revisão" e o último lance —, com o nome da quadra na frente.

@@ -773,9 +773,11 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
     nunca renomeie); e a palavra final de quem organiza, `decision`,
     `decided_by`, `decided_ms` — o único update aceito), **sem imagem**.
   Câmera e marcação gravam só com `line_control == true` NAQUELA quadra, em
-  nome próprio, quem participa/organiza (`lcGdCam`); zero índice (a central lê
-  `orderBy created_at` numa subcoleção, que é índice simples). Vídeo e
-  calibração ficam no aparelho
+  nome próprio, quem participa/organiza (`lcGdCam`); zero índice composto (a
+  central lê `orderBy created_at` numa subcoleção, que é índice simples). A
+  exclusão de conta acha as da pessoa por GRUPO de coleção (`uid`), o que pede o
+  índice de grupo de `line_cams.uid` e `line_calls.uid` (`fieldOverrides`, ver
+  Índices). Vídeo e calibração ficam no aparelho
 - coleção `tournament_line_courts/{torneio}_{quadra}` (flag `line_control`) —
   o controle de linhas de uma QUADRA de torneio: `tournament_id`, `court_id`
   (`court-N`), `court_name`, `line_control`, `line_control_layout`,
@@ -2899,8 +2901,13 @@ Seis blocos; o resto é negado (`/{allPaths=**}`: sem leitura nem escrita).
 
 ## Índices
 
-Os índices compostos estão em `firestore.indexes.json` (38 hoje; `fieldOverrides`
-vazio). Números e a lista atual: `docs/46-INVENTARIO.md` §6. A regra do projeto:
+Os índices compostos estão em `firestore.indexes.json`. Números e a lista atual:
+`docs/46-INVENTARIO.md` §6. `fieldOverrides` tem só os índices de GRUPO de
+coleção que uma busca por `collectionGroup` exige — hoje `uid` em `line_cams` e
+`line_calls` (exclusão de conta, docs/53 §4); cada um repete os índices
+simples automáticos da coleção (crescente, decrescente, contém), senão eles
+somem. O guarda `indicesCompostos.test.js` reprova `collectionGroup(…).where`
+sem o índice de grupo. A regra do projeto:
 um `where` só, ordenação em memória. Quando `where` + `orderBy` for
 inevitável, o guarda `src/core/guards/indicesCompostos.test.js` exige índice
 **exato** (igualdades primeiro, depois só os campos do `orderBy`; o Firestore
