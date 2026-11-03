@@ -97,15 +97,19 @@ marcações** (confirmação em dois toques).
 - `game_days.line_control` (opcional) e `game_days.line_control_layout`
   (opcional, id do arranjo; ausente = `solo_fundo`).
 - `game_days/{id}/line_cams/{uid}_{posição}`: `uid, name, position, layout,
-  calibrated, analyzing, fps, seen_ms, updated_at`.
+  calibrated, analyzing, fps, seen_ms, updated_at` + opcionais `battery`
+  (0–1), `charging`, `check_cm` (erro da conferência pelo 5º ponto).
 - `game_days/{id}/line_calls/{auto}`: `uid, position, kind (bounce|volley),
   call (in|out|review|fault|clean), t_ms, margin_m, uncertainty_m, depth_m, x,
-  y, created_at`. **Nunca imagem.**
+  y, created_at` + opcional `serve: true` (quique de saque). **Nunca imagem.**
+  Quem organiza grava a **palavra final** no primeiro documento do lance:
+  `decision` (`in|out` no quique, `fault|clean` no voleio), `decided_by` (ele
+  mesmo) e `decided_ms` — e nada mais; o que a câmera marcou não muda.
 
 **Regra** (`firestore.rules`, dentro de `game_days`; `lineCamOk`/`lineOrgOf`;
 emulador em `tests/rules/lineControl.rules.test.js`): lê quem lê o dia; grava
 só com `line_control == true` naquele dia, em nome próprio, e só quem está em
-`member_uids`, é administrador nomeado ou organiza; marcação não se edita;
+`member_uids`, é administrador nomeado ou organiza; marcação não se edita (só a decisão de quem organiza, acima);
 apagar é do dono (câmera) ou de quem organiza. **Exclusão de conta** apaga as
 câmeras e marcações da pessoa (`coletarDiasDeJogo`, `functions/accountDeletion.js`).
 
@@ -147,7 +151,12 @@ linha é menor que ela, ele diz **Revisar**.
 - **Detecção da bola sem modelo treinado**: cor + movimento; perde a bola com
   sombra forte, contra luz ou atrás do jogador. O ganho real é um TrackNet
   (MIT) treinado com vídeo de pickleball — só `findBallCandidates` muda.
-- **Saque e quem ganhou o ponto** não são marcados.
+- **Saque**: com o detector de pés, a primeira batida do ponto é o saque e o
+  primeiro quique é julgado pela área de saque em diagonal (linha da cozinha =
+  fora; linha central = dentro). Sem pés, é julgado como bola comum.
+- **Quem ganhou o ponto** não é marcado.
+- **Nada disto foi testado em quadra.** As medidas vêm de testes sintéticos;
+  a primeira rodada real deve conferir `ENGINE_DEFAULTS` e o tom de cor da bola.
 
 ## 7. Como o motor decide (`domain/lineCallEngine.js`)
 
@@ -158,13 +167,34 @@ interseção das duas trajetórias, levado ao chão pela homografia. Modo
 quique desde a anterior = **voleio**, com o ponto dos pés de quem bateu.
 Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
 
+## 7a. Confiança — o que a pessoa vê
+
+- **Calibração com prova**: lupa ao tocar (4×), "Ajustar os pontos" (arrastar),
+  e o **5º ponto** (`domain/calibrationCheck.js`: o "T" da central com a
+  cozinha) mede o erro em cm — até 3 ótimo, até 6 bom, acima refazer. O erro vai
+  para a central (`check_cm`).
+- **Testar com a bola**: tocar na bola parada mostra a quantos cm da linha a
+  calibração a coloca (`nearestBoundary`, `court.js`).
+- **Bola na linha é dentro**: a margem é medida até a borda da MARCA da bola
+  (`contactPatchM`, 1 cm, em `ENGINE_DEFAULTS`).
+- **Replay** (`domain/replay.js`, `LanceReplay`): anel de quadros de 2,4 s; cada
+  marcação guarda de 1,2 s antes a 0,6 s depois, com o rastro da bola e a marca
+  ampliada (`CourtMark`), câmera lenta até 0,1×, quadro a quadro (← → espaço).
+  Só no aparelho, os 12 mais recentes.
+- **Palavra final** de quem organiza na central (regra acima), **voz**
+  ("Falar o lance", `useAnnounce`: fala + vibração, preferência por pessoa),
+  **telão** (`TelaoLineTicker`, o último lance por 12 s, só com a flag e o
+  controle ligado no dia), **planilha** CSV do jogo (`domain/report.js`),
+  **bateria** e quadros/s por câmera com aviso.
+- Dois guias de dicas (`controle-de-linhas-camera`, `controle-de-linhas-central`,
+  atrás da flag) apontam os botões reais (`data-dica="linhas-…"`).
+
 ## 8. Fora deste PR
 
 1. Treinar um TrackNet com vídeo de pickleball (CVAT + SAM 2) e rodar com
    `onnxruntime-web`.
 2. Torneio: o mesmo cartão nas partidas de torneio.
-3. Última marcação no telão (os dados já estão em `line_calls`).
-4. Software externo (câmeras sincronizadas) só se for preciso decidir a bola NA linha.
+3. Software externo (câmeras sincronizadas) só se for preciso decidir a bola NA linha.
 
 O repositório `pickleball-nivelamento` (questionário de nível) não tem nada de
 câmera; a integração com ele não se aplica a esta funcionalidade.

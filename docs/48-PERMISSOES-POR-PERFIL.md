@@ -148,6 +148,7 @@ torneio, `/c/:clubId`) existem para isso.
 
 | Ligar o **controle de linhas** / escolher o arranjo (`line_control`, `line_control_layout`) | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (update do dia) + `podeConfigurar` |
 | Ser **câmera** (`line_cams`, `line_calls` create) | ◐ se está em `member_uids` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`lineCamOk`: só com `line_control == true`, em nome próprio) |
+| Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`, decisão em nome próprio, valor do tipo do lance) |
 | Ver a **central** de linhas | ◐ quem vê o dia | ✔ | ✔ | ✔ | ✔* | ✔ | ✔ | rules (`canAccessGameDay`) |
 | Limpar marcações | ✖ (só a própria câmera) | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |
 

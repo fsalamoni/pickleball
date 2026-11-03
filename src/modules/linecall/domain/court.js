@@ -77,3 +77,39 @@ export function courtSegments() {
     [{ x: W / 2, y: N + K }, { x: W / 2, y: L }],
   ];
 }
+
+/** Raio da bola de pickleball (diâmetro oficial 7,3–7,5 cm), em metros. */
+export const BALL_RADIUS = 0.037;
+
+/**
+ * A linha da quadra mais perto do quique — para desenhar a MARCA (estilo
+ * Hawk-Eye): qual linha, a margem com sinal (positiva dentro) e onde, ao longo
+ * dela, a bola tocou. As linhas de limite são retas nos eixos.
+ */
+export function nearestBoundary({ x, y }) {
+  const options = [
+    { line: 'fundo_a', marginM: y, along: x, axis: 'h' },
+    { line: 'fundo_b', marginM: L - y, along: x, axis: 'h' },
+    { line: 'lateral_1', marginM: x, along: y, axis: 'v' },
+    { line: 'lateral_2', marginM: W - x, along: y, axis: 'v' },
+  ];
+  return options.sort((a, b) => Math.abs(a.marginM) - Math.abs(b.marginM))[0];
+}
+
+/**
+ * Margem do quique do SAQUE: a bola tem de cair na área de saque em DIAGONAL,
+ * do outro lado da rede e além da cozinha. A linha da cozinha é da cozinha
+ * (bola nela, no saque, é FORA); a central, a de fundo e a lateral são da
+ * área (bola nelas é DENTRO).
+ *
+ * @param {{x:number,y:number}} p  o quique
+ * @param {{ side: 'A'|'B', x: number }} server  de que lado da rede e em que
+ *   ponto da largura (x dos pés no chão) saiu o saque
+ */
+export function serviceBoxMargin(p, server) {
+  const half = COURT.LINE / 2;
+  const toHigh = server.x < W / 2; // diagonal: a metade OPOSTA da largura
+  const across = toHigh ? Math.min(p.x - (W / 2 - half), W - p.x) : Math.min(p.x, W / 2 + half - p.x);
+  const along = server.side === 'A' ? Math.min(p.y - (N + K), L - p.y) : Math.min(N - K - p.y, p.y);
+  return Math.min(across, along);
+}

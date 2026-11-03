@@ -1614,7 +1614,9 @@ const ATLETA = {
       keywords: [
         'câmera', 'linha', 'fora', 'dentro', 'cozinha', 'pé na cozinha', 'voleio', 'arbitragem',
         'celular', 'webcam', 'gopro', 'tripé', 'calibrar', 'central', 'revisar',
+        'replay', 'saque', 'telão', 'planilha',
       ],
+      guias: ['controle-de-linhas-camera', 'controle-de-linhas-central'],
       blocks: [
         p(tk('Quem organiza o dia de jogo liga o "Controle de linhas por câmera" no cartão do dia (num jogo, ou em todos os seus, até com o jogo em andamento). Depois, cada aparelho que vai filmar abre o dia, toca em "Abrir câmera" e escolhe a posição. A central junta o que todas as câmeras viram e mostra cada lance.')),
         list(
@@ -1626,9 +1628,18 @@ const ATLETA = {
         steps(
           tk('Combine com quem vai filmar qual é o lado A da quadra (por exemplo, o lado da entrada). Todos usam o mesmo desenho.'),
           tk('Em cada aparelho: "Abrir câmera" → escolha a posição → leia "Como posicionar esta câmera" e monte o tripé no lugar e na altura indicados.'),
-          tk('Abra a câmera (a traseira, no celular), toque nos quatro pontos da quadra na ordem que o desenho pisca e confira se as linhas azuis caem em cima das linhas da quadra.'),
-          tk('Se a bola não for amarela ou verde-limão, toque nela parada no chão para ensinar a cor. Depois, "Analisar".'),
-          tk('Na mesa da organização (ou numa TV), abra "Abrir central": as câmeras no ar e cada lance, com o que cada uma viu.'),
+          tk('Abra a câmera (a traseira, no celular), toque nos quatro pontos da quadra na ordem que o desenho pisca e confira se as linhas azuis caem em cima das linhas da quadra. Segurando o dedo, uma lupa mostra o ponto de perto; "Ajustar os pontos" deixa arrastar cada um.'),
+          tk('Toque no 5º ponto que a tela pede (o "T" da linha central com a cozinha): ela diz o erro da calibração em centímetros. Até 3 cm é ótimo; acima de 6 cm, ajuste.'),
+          tk('Antes do jogo, "Testar com a bola": ponha a bola parada em cima de uma linha e toque nela — a tela diz a quantos centímetros da linha ela está. Mostre aos jogadores.'),
+          tk('Se a bola não for amarela ou verde-limão, toque nela parada no chão para ensinar a cor. Depois, "Começar a analisar".'),
+          tk('Na mesa da organização (ou numa TV), abra "Abrir central": as câmeras no ar, com bateria e erro de cada uma, e cada lance, com o que cada câmera viu.'),
+        ),
+        list(
+          tk('REPLAY — toda marcação tem replay em câmera lenta e quadro a quadro, com o rastro da bola e a marca do quique ampliada. Fica só no aparelho que filmou (os 12 mais recentes).'),
+          tk('SAQUE — com o detector de pés ligado, o primeiro quique depois do saque é julgado pela área de saque em diagonal: bola na linha da cozinha, no saque, é fora.'),
+          tk('BOLA NA LINHA É DENTRO — a câmera mede a marca que a bola deixa no chão; se ela toca a linha, é dentro.'),
+          tk('PALAVRA FINAL — na central, quem organiza decide os lances "Revisar" (ou corrige qualquer um). O que as câmeras marcaram não muda; a decisão fica ao lado.'),
+          tk('VOZ E TELÃO — "Falar o lance" anuncia "Fora!" em voz alta e vibra o aparelho; o telão do dia de jogo mostra o último lance no canto. A central baixa a planilha do jogo.'),
         ),
         tip(tk('"Revisar" quer dizer que a distância até a linha é menor que a precisão da câmera, ou que as câmeras discordaram. Aí a decisão volta para a quadra, como sem câmera.')),
         warn(tk('A câmera ajuda; não substitui a regra do jogo. Câmera Wi-Fi não abre direto no navegador (use o OBS Studio com a "Câmera virtual" num computador) e Bluetooth não transmite vídeo.')),

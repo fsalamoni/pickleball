@@ -741,13 +741,14 @@ service cloud.firestore {
       // jogo dividem — nunca vídeo nem foto. `line_cams` é a câmera "no ar"
       // (id `{uid}_{posição}`), `line_calls` cada marcação. Grava só quem
       // organiza ou participa do dia, só com o controle ligado NAQUELE jogo e
-      // só em nome próprio; marcação não se edita, quem organiza limpa.
+      // só em nome próprio; o que a câmera marcou não se edita — quem organiza
+      // só acrescenta a DECISÃO (a palavra final no lance) e limpa.
       match /line_cams/{camId} {
         allow read: if canAccessGameDay(gdId);
         allow create, update: if lineCamOk(gdId)
           && nd().position is string && nd().position.size() <= 20
           && camId == me() + '_' + nd().position
-          && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at']);
+          && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
         allow delete: if isOwner(od().uid) || lineOrgOf(gdId);
       }
       match /line_calls/{callId} {
@@ -755,7 +756,10 @@ service cloud.firestore {
         allow create: if lineCamOk(gdId)
           && nd().kind in ['bounce', 'volley']
           && nd().call in ['in', 'out', 'review', 'fault', 'clean']
-          && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'created_at']);
+          && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'serve', 'created_at']);
+        allow update: if lineOrgOf(gdId) && chg().hasOnly(['decision', 'decided_by', 'decided_ms'])
+          && nd().decided_by == me() && nd().decided_ms is int
+          && nd().decision in (od().kind == 'bounce' ? ['in', 'out'] : ['fault', 'clean']);
         allow delete: if lineOrgOf(gdId);
       }
     }

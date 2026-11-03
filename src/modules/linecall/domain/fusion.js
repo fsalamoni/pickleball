@@ -57,16 +57,33 @@ function verdict(cluster) {
   }
   const calls = new Set(seguras.map((c) => c.call));
   const best = seguras[0] || ranked[0];
+  const machine = calls.size === 1 ? best.call : 'review';
+  // A palavra final é de quem organiza: a decisão mais recente do lance vence.
+  const decided = cluster.calls
+    .filter((c) => DECISIONS[cluster.kind].includes(c.decision))
+    .sort((a, b) => (b.decided_ms || 0) - (a.decided_ms || 0))[0];
   return {
     id: cluster.calls[0].id,
     kind: cluster.kind,
     t_ms: cluster.t_ms,
-    call: calls.size === 1 ? best.call : 'review',
+    call: decided ? decided.decision : machine,
+    machineCall: machine,
+    decided: Boolean(decided),
+    decidedBy: decided?.decided_by || null,
+    decisionDocId: decided?.id || cluster.calls[0].id,
     disagree: calls.size > 1,
+    serve: cluster.calls.some((c) => c.serve === true),
     positions: cluster.calls.map((c) => c.position),
+    calls: ranked,
     best,
   };
 }
+
+/** O que quem organiza pode decidir em cada tipo de lance. */
+export const DECISIONS = Object.freeze({
+  bounce: Object.freeze(['in', 'out']),
+  volley: Object.freeze(['fault', 'clean']),
+});
 
 /**
  * @param {Array<{ id: string, position: string, kind: 'bounce'|'volley',

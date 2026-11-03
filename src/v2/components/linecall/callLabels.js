@@ -18,7 +18,18 @@ const cm = (m) => Math.round(Math.abs(m) * 100);
 /** O rótulo de um evento do motor (`type`) ou de um lance da central (`kind`). */
 export function callLabel(e) {
   const k = e.type || e.kind;
-  return t(CALL_LABEL[k]?.[e.call] || CALL_LABEL.bounce.review);
+  const base = t(CALL_LABEL[k]?.[e.call] || CALL_LABEL.bounce.review);
+  return e.serve && k === 'bounce' ? t('Saque: {c}', { c: base.toLowerCase() }) : base;
+}
+
+/** O que dizer em voz alta (curto: "Fora!", "Falta!"). */
+export const CALL_SPOKEN = {
+  bounce: { in: tk('Dentro'), out: tk('Fora'), review: tk('Revisar') },
+  volley: { fault: tk('Falta na cozinha'), clean: tk('Voleio limpo'), review: tk('Revisar o pé') },
+};
+export function callSpoken(e) {
+  const k = e.type || e.kind;
+  return t(CALL_SPOKEN[k]?.[e.call] || CALL_SPOKEN.bounce.review);
 }
 
 /**

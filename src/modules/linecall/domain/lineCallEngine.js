@@ -37,7 +37,7 @@
  */
 
 import { applyHomography, metersPerPixel } from './homography.js';
-import { insideMargin, kitchenDepth } from './court.js';
+import { insideMargin, kitchenDepth, serviceBoxMargin, courtSide } from './court.js';
 
 export const LINE_CALL = Object.freeze({ IN: 'in', OUT: 'out', REVIEW: 'review' });
 export const VOLLEY_CALL = Object.freeze({ FAULT: 'fault', CLEAN: 'clean', REVIEW: 'review' });
@@ -68,6 +68,10 @@ export const ENGINE_DEFAULTS = Object.freeze({
   kinkMS: 2.5,
   /** modo `overhead`: quanto a bola perde, no mínimo, de velocidade no quique */
   bounceSlowdown: 0.15,
+  /** o 1º quique depois do saque vale contra a área de saque em diagonal */
+  serveRule: true,
+  /** raio da marca que a bola deixa no chão ao quicar (bola dura, achata pouco), em metros */
+  contactPatchM: 0.01,
 });
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -108,6 +112,7 @@ export function createLineCallEngine({ H, options = {} }) {
   let track = [];
   let lastKinkT = -Infinity;
   let lastContact = null; // { t, bouncedSince }
+  let serve = null; // o saque da jogada, até o primeiro quique: { side, x }
   let watch = null; // voleio em observação
   let lastBallT = -Infinity;
 
@@ -152,9 +157,14 @@ export function createLineCallEngine({ H, options = {} }) {
   }
 
   function bounce(k, ground, u, events) {
+    // O primeiro quique depois do saque vale contra a ÁREA DE SAQUE, não a quadra.
+    const s = serve && lastContact && !lastContact.bouncedSince ? serve : null;
+    serve = null;
     if (lastContact) lastContact.bouncedSince = true;
-    const marginM = insideMargin(ground);
-    events.push({ type: 'bounce', t: k.t, call: decide(marginM, u), marginM, uncertaintyM: u, point: ground, imagePoint: k });
+    // Bola que TOCA a linha é dentro: a margem é a da borda da MARCA que a
+    // bola deixa no chão (o centro do toque mais o raio da área de contato).
+    const marginM = (s ? serviceBoxMargin(ground, s) : insideMargin(ground)) + o.contactPatchM;
+    events.push({ type: 'bounce', t: k.t, call: decide(marginM, u), marginM, uncertaintyM: u, point: ground, imagePoint: k, serve: Boolean(s) });
   }
 
   /** Câmera de cima: tudo no chão. Batida inverte o sentido; quique freia. */
@@ -171,6 +181,7 @@ export function createLineCallEngine({ H, options = {} }) {
     const cos = (vin.x * vout.x + vin.y * vout.y) / ((sin * sout) || 1);
     if (cos < 0) {
       lastContact = { t: c.t, bouncedSince: false };
+      serve = null;
       return;
     }
     if (cos < 0.7 || sout > sin * (1 - o.bounceSlowdown)) return;
@@ -197,7 +208,13 @@ export function createLineCallEngine({ H, options = {} }) {
       // BATIDA. É voleio se a bola não quicou desde a batida anterior (a
       // primeira batida da jogada é o saque, que nunca é voleio).
       const isVolley = lastContact && !lastContact.bouncedSince;
+      const isServe = !lastContact && o.serveRule;
       lastContact = { t: k.t, bouncedSince: false };
+      serve = null;
+      if (isServe && hitter.p.feet?.length) {
+        const at = applyHomography(H, centroid(hitter.p.feet));
+        serve = { side: courtSide(at), x: at.x };
+      }
       if (isVolley && hitter.p.feet?.length) {
         const feetAt = centroid(hitter.p.feet);
         watch = { t: k.t, imagePoint: k, point: applyHomography(H, feetAt), feetAt, prevFeet: null, near: null };
@@ -225,6 +242,7 @@ export function createLineCallEngine({ H, options = {} }) {
         if (frame.t - lastBallT > o.rallyGapS) {
           track = [];
           lastContact = null;
+          serve = null;
         }
         lastBallT = frame.t;
         track.push({ t: frame.t, x: frame.ball.x, y: frame.ball.y });

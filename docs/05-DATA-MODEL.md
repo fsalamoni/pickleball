@@ -753,10 +753,12 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
   (`solo_fundo`, `fundo_rede`, `fundos_redes`…); ausente = `solo_fundo`. O id
   é gravado: nunca renomeie
 - subcoleção `line_cams/{uid}_{posição}` — câmera no ar (`uid, name, position,
-  layout, calibrated, analyzing, fps, seen_ms, updated_at`), renovada a cada
+  layout, calibrated, analyzing, fps, seen_ms, updated_at` + opcionais `battery`,
+  `charging`, `check_cm`), renovada a cada
   15 s e apagada ao sair; subcoleção `line_calls/{auto}` — cada marcação
   (`uid, position, kind, call, t_ms, margin_m, uncertainty_m, depth_m, x, y,
-  created_at`), **sem imagem**. Grava só com `line_control == true`, em nome
+  created_at` + opcional `serve`; e a palavra final de quem organiza,
+  `decision`, `decided_by`, `decided_ms` — o único update aceito), **sem imagem**. Grava só com `line_control == true`, em nome
   próprio, quem participa/organiza; zero índice (a central lê `orderBy
   created_at` numa subcoleção, que é índice simples). Vídeo e calibração ficam
   no aparelho

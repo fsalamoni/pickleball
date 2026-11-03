@@ -13,13 +13,15 @@ marcações (`line_calls`), subcoleções de `game_days`.
 - `domain/fusion.js` — junta as marcações de várias câmeras por janela de tempo; quem está no ar.
 - `domain/ballDetection.js` — bola por cor + movimento (trocável por um modelo TrackNet).
 - `domain/cameraCheck.js` — a câmera entrega o mínimo? (30 q/s e 720p; bom: 60 e 1080p).
+- `domain/replay.js` — anel de quadros e janela do replay; `domain/report.js` — resumo e CSV do jogo; `domain/calibrationCheck.js` — o 5º ponto (erro em cm).
 - `domain/lineControlTargets.js` — "ligar em todos os meus jogos".
 - `services/cameraService.js` — `getUserMedia`; `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
 - `services/lineCallSync.js` — presença da câmera e envio das marcações.
 - `hooks/useLineCallSession.js` — uma câmera: abrir, calibrar (navegador, por posição), analisar, enviar.
+- `hooks/useAnnounce.js` — fala o lance e vibra (preferência por pessoa).
 - `hooks/useLineControlLive.js` — a central: câmeras no ar e lances juntados (tempo real).
 
 Telas: `v2/components/games/GameDayLineControlCard.jsx` (no `GameDayModule`),
 `v2/pages/V2LineControl.jsx` (`/dia-de-jogo/:id/linhas?modo=camera|central`) e
 `v2/components/linecall/` (desenho da quadra, escolha do arranjo, guia de
-posicionamento, estação da câmera, central). Ver `docs/53-CONTROLE-DE-LINHAS.md`.
+posicionamento, estação da câmera, central, `CourtMark`, `LanceReplay`, `TelaoLineTicker` no telão). Ver `docs/53-CONTROLE-DE-LINHAS.md`.

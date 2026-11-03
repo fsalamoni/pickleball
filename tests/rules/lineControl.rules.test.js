@@ -91,4 +91,21 @@ describe('as marcações', () => {
     await assertFails(deleteDoc(doc(como(ATLETA), 'game_days/ligado/line_calls/c0')));
     await assertSucceeds(deleteDoc(doc(como(DONO), 'game_days/ligado/line_calls/c0')));
   });
+
+  it('⭐ quem organiza dá a palavra final num lance — só a decisão, em nome próprio', async () => {
+    const dec = (uid, decision = 'out') => ({ decision, decided_by: uid, decided_ms: 5 });
+    await assertSucceeds(updateDoc(doc(como(DONO), 'game_days/ligado/line_calls/c0'), dec(DONO)));
+    // quem só participa não decide; ninguém decide em nome de outro
+    await assertFails(updateDoc(doc(como(ATLETA), 'game_days/ligado/line_calls/c0'), dec(ATLETA)));
+    await assertFails(updateDoc(doc(como(DONO), 'game_days/ligado/line_calls/c0'), dec(ATLETA)));
+    // decisão que não cabe no tipo do lance, ou mexer no que a câmera marcou
+    await assertFails(updateDoc(doc(como(DONO), 'game_days/ligado/line_calls/c0'), dec(DONO, 'fault')));
+    await assertFails(updateDoc(doc(como(DONO), 'game_days/ligado/line_calls/c0'), { ...dec(DONO, 'in'), call: 'out' }));
+  });
+
+  it('o saque e a saúde da câmera entram; nada além disso', async () => {
+    await assertSucceeds(addDoc(collection(como(ATLETA), 'game_days/ligado/line_calls'), { ...call(ATLETA), serve: true }));
+    await assertSucceeds(setDoc(doc(como(ATLETA), 'game_days/ligado/line_cams', `${ATLETA}_fundo_a`),
+      { ...cam(ATLETA), battery: 40, charging: false, check_cm: 2.1 }));
+  });
 });

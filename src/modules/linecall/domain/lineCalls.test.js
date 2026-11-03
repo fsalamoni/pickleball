@@ -65,7 +65,8 @@ describe('motor: quique', () => {
     const fundo = COURT.LENGTH * 100;
     const [dentro] = bounceAt(fundo - 11);
     expect(dentro).toMatchObject({ type: 'bounce', call: LINE_CALL.IN });
-    expect(dentro.marginM).toBeCloseTo(0.11, 2);
+    // a margem é a da borda da marca: 11 cm do centro + 1 cm de raio de contato
+    expect(dentro.marginM).toBeCloseTo(0.12, 2);
     expect(bounceAt(fundo + 9)[0].call).toBe(LINE_CALL.OUT);
     expect(bounceAt(fundo - 2)[0].call).toBe(LINE_CALL.REVIEW);
   });
