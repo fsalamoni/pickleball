@@ -42,8 +42,10 @@ function LanceMark({ l }) {
   const bounce = l.kind === 'bounce';
   const margin = bounce ? b.margin_m : b.depth_m;
   if (!Number.isFinite(margin)) return null;
-  const line = bounce && !l.serve && Number.isFinite(b.x) ? nearestBoundary({ x: b.x, y: b.y }).line : null;
-  return <CourtMark kind={l.kind} call={l.call} marginM={margin} uncertaintyM={b.uncertainty_m} lineName={line} className="max-w-xs" />;
+  // Lance de rally longo ou lateral: a linha mais perto diz de que lado. Saque e rede: o motivo.
+  const rally = bounce && !l.serve && Number.isFinite(b.x) && ['long', 'wide', undefined, null].includes(b.reason);
+  const line = rally ? nearestBoundary({ x: b.x, y: b.y }).line : null;
+  return <CourtMark kind={l.kind} call={l.call} marginM={margin} uncertaintyM={b.uncertainty_m} lineName={line} reason={b.reason} className="max-w-xs" />;
 }
 
 function Lance({ l, big = false }) {
@@ -139,7 +141,9 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
     setLimpando(true);
     try { await clearLineCalls(gameDay.id); } finally { setLimpando(false); setConfirmar(false); }
   };
-  const exportar = () => baixar(`linhas-${String(gameDay.id).split('/').pop()}.csv`, lancesCsv(live.lances, {
+  // O nome do arquivo leva os ids do caminho (dia e quadra), não só o último.
+  const tag = String(gameDay.id).split('/').filter((_, i) => i % 2 === 1).join('-') || String(gameDay.id);
+  const exportar = () => baixar(`linhas-${tag}.csv`, lancesCsv(live.lances, {
     header: [t('Hora'), t('Lance'), t('Decidido'), t('Câmeras discordaram'), t('Margem (cm)'), t('Incerteza (cm)'), t('Câmeras')],
     time: hora,
     label: callLabel,

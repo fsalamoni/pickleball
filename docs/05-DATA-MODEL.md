@@ -755,21 +755,27 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 - `dupr_submit` (**opcional**, `true|false|null`) — enviar os resultados ao
   DUPR, escolha de quem configura o dia (cartão de configurações); `null` =
   padrão da plataforma. Ver `docs/51` §8
-- `line_control` (**opcional**, `true|false`) — controle de linhas por câmera
-  ligado neste dia (flag `line_control`). Ausente = desligado. Ver `docs/53`
-- `line_control_layout` (**opcional**, string) — o arranjo das câmeras
-  (`solo_fundo`, `fundo_rede`, `fundos_redes`…); ausente = `solo_fundo`. O id
-  é gravado: nunca renomeie
-- subcoleção `line_cams/{uid}_{posição}` — câmera no ar (`uid, name, position,
-  layout, calibrated, analyzing, fps, seen_ms, updated_at` + opcionais `battery`,
-  `charging`, `check_cm`), renovada a cada
-  15 s e apagada ao sair; subcoleção `line_calls/{auto}` — cada marcação
-  (`uid, position, kind, call, t_ms, margin_m, uncertainty_m, depth_m, x, y,
-  created_at` + opcional `serve`; e a palavra final de quem organiza,
-  `decision`, `decided_by`, `decided_ms` — o único update aceito), **sem imagem**. Grava só com `line_control == true`, em nome
-  próprio, quem participa/organiza; zero índice (a central lê `orderBy
-  created_at` numa subcoleção, que é índice simples). Vídeo e calibração ficam
-  no aparelho
+- `line_control`, `line_control_layout` — **LEGADO** (o controle de linhas
+  morava no dia antes de ser por quadra). Nada lê nem grava mais; não foram
+  migrados. Ver `docs/53` §1
+- subcoleção `line_courts/court-N` (flag `line_control`) — o controle de linhas
+  de UMA QUADRA do dia (N = 1–99): `line_control` (bool), `line_control_layout`
+  (**opcional**, `solo_fundo`, `fundo_rede`, `fundos_redes`…; ausente =
+  `solo_fundo` — o id é gravado: nunca renomeie), `updated_by`, `updated_at`.
+  Sem documento = desligada. Lê quem lê o dia; grava quem organiza
+  (`lineOrgOf`), só as quatro chaves. Embaixo dela:
+  - `line_cams/{uid}_{posição}` — câmera no ar (`uid, name, position, layout,
+    calibrated, analyzing, fps, seen_ms, updated_at` + opcionais `battery`,
+    `charging`, `check_cm`), renovada a cada 15 s e apagada ao sair;
+  - `line_calls/{auto}` — cada marcação (`uid, position, kind
+    (bounce|volley|serve_foot|two_bounce), call, t_ms, margin_m, uncertainty_m,
+    depth_m, x, y, created_at` + opcionais `serve` e `reason` (ids gravados:
+    nunca renomeie); e a palavra final de quem organiza, `decision`,
+    `decided_by`, `decided_ms` — o único update aceito), **sem imagem**.
+  Câmera e marcação gravam só com `line_control == true` NAQUELA quadra, em
+  nome próprio, quem participa/organiza (`lcGdCam`); zero índice (a central lê
+  `orderBy created_at` numa subcoleção, que é índice simples). Vídeo e
+  calibração ficam no aparelho
 - coleção `tournament_line_courts/{torneio}_{quadra}` (flag `line_control`) —
   o controle de linhas de uma QUADRA de torneio: `tournament_id`, `court_id`
   (`court-N`), `court_name`, `line_control`, `line_control_layout`,

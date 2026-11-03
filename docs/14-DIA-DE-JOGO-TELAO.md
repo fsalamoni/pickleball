@@ -365,6 +365,12 @@ só. Telão novo entra nessa lista.
 > tela denunciando.
 
 O **controle de linhas** (flag `line_control`) também chega aos dois pelas
-mesmas peças (`TelaoLineTicker.jsx`): no dia de jogo, `TelaoLineTicker` do
-jogo; no torneio, `TournamentTelaoLines`, um aviso por quadra ligada. Ver
-`docs/53-CONTROLE-DE-LINHAS.md` §9.
+mesmas peças (`TelaoLineTicker.jsx`), QUADRA POR QUADRA: no dia de jogo,
+`TelaoLineTicker` lê `game_days/{id}/line_courts`; no torneio,
+`TournamentTelaoLines` lê `tournament_line_courts`. Nos dois, um aviso no canto
+por quadra ligada (o mesmo `CourtTickers`), com o nome da quadra na frente,
+relido a cada 30 s. Ver `docs/53-CONTROLE-DE-LINHAS.md` §5a e §9.
+
+No telão do torneio, o quadro dos jogos lê o número da quadra em
+`court_index` (`courtLabel`, `categorizeBoardMatches`): o agendamento grava o
+NOME em `court` ("Quadra 2"), e montar "Quadra {court}" dava "Quadra Quadra 2".

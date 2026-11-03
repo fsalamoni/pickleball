@@ -9,7 +9,9 @@ import { fuseLineCalls, isCamOnline, positionOccupancy, decisionsFor } from './f
 const CALIBRATION_CORNERS = calibrationPoints('fundo_a');
 import { decide, LINE_CALL } from './lineCallEngine.js';
 import { findBallCandidates, pickBall, rgbToHsv } from './ballDetection.js';
-import { lineControlTargets } from './lineControlTargets.js';
+import {
+  gameDayLineCourts, lineCourtCopyPlan, lineCourtNumber, gameDayLineHost, gameDayLinePage,
+} from './gameDayLine.js';
 import { assessCamera, worstCmPerPixel, worstLevel, CAMERA_LEVEL } from './cameraCheck.js';
 
 // Imagem em "centímetros": 1 px = 1 cm do chão. Facilita conferir as contas.
@@ -86,18 +88,58 @@ describe('detecção da bola', () => {
   });
 });
 
-describe('ligar em todos os meus jogos', () => {
-  it('só os meus, de hoje em diante, que ainda não estão como pedido', () => {
-    const dias = [
-      { id: 'a', created_by: 'u', date: '2026-11-02' },
-      { id: 'b', created_by: 'u', date: '2026-10-01' },
-      { id: 'c', created_by: 'x', date: '2026-12-01' },
-      { id: 'd', created_by: 'u', line_control: true },
-      { id: 'e', created_by: 'u', status: 'archived' },
+describe('quadra por quadra no dia de jogo', () => {
+  it('as quadras do dia: play_courts, as dos jogos e as já configuradas, sem repetir', () => {
+    expect(gameDayLineCourts({ play_courts: 2 })).toEqual([{ id: 'court-1', index: 1 }, { id: 'court-2', index: 2 }]);
+    // Sem play_courts ⇒ ao menos uma quadra; jogo na quadra 4 e configuração na 6 entram.
+    expect(gameDayLineCourts({}, { games: [{ court: 4 }, { court: 'x' }, { court: 0 }], docs: [{ id: 'court-6' }, { id: 'lixo' }] })
+      .map((c) => c.index)).toEqual([1, 4, 6]);
+    // Quadra configurada fora do número do dia continua na lista (ela pode ter câmera ligada).
+    expect(gameDayLineCourts({ play_courts: 1 }, { docs: [{ id: 'court-3' }] }).map((c) => c.id)).toEqual(['court-1', 'court-3']);
+    // Teto: 99 quadras, número negativo ou absurdo não vira quadra.
+    expect(gameDayLineCourts({ play_courts: 500 })).toHaveLength(99);
+    expect(gameDayLineCourts({ play_courts: -3 })).toHaveLength(1);
+  });
+
+  it('o número da quadra só sai de um id de quadra', () => {
+    expect(lineCourtNumber('court-12')).toBe(12);
+    expect(lineCourtNumber('court-0')).toBe(null);
+    expect(lineCourtNumber('court-100')).toBe(null);
+    expect(lineCourtNumber('quadra-1')).toBe(null);
+    expect(lineCourtNumber(null)).toBe(null);
+  });
+
+  it('caminho das câmeras e a página de cada quadra', () => {
+    expect(gameDayLineHost('G1', 'court-2')).toBe('game_days/G1/line_courts/court-2');
+    expect(gameDayLinePage('G1')).toBe('/dia-de-jogo/G1/linhas');
+    expect(gameDayLinePage('G1', 'court-2')).toBe('/dia-de-jogo/G1/linhas?quadra=court-2');
+  });
+
+  it('⭐ copiar: só os MEUS dias de hoje em diante, quadra a quadra pelo número', () => {
+    const fonte = { id: 'src' };
+    const conf = [
+      { id: 'court-1', line_control: true, line_control_layout: 'quatro' },
+      { id: 'court-2', line_control: false },
     ];
-    expect(lineControlTargets(dias, 'u', true, '2026-11-02')).toEqual(['a']);
-    expect(lineControlTargets(dias, 'u', false, '2026-11-02')).toEqual(['d']);
-    expect(lineControlTargets(dias, null, true, '2026-11-02')).toEqual([]);
+    const dias = [
+      { id: 'src', created_by: 'u', play_courts: 2 },
+      { id: 'a', created_by: 'u', date: '2026-11-03', play_courts: 3 },
+      { id: 'b', created_by: 'u', date: '2026-10-01', play_courts: 2 },
+      { id: 'c', created_by: 'x', date: '2026-12-01', play_courts: 2 },
+      { id: 'd', created_by: 'u' },
+      { id: 'e', created_by: 'u', status: 'archived', date: '2026-12-01' },
+    ];
+    const plano = lineCourtCopyPlan(fonte, conf, dias, 'u', '2026-11-03');
+    expect(plano.map((p) => p.gameDayId)).toEqual(['a', 'd']);
+    expect(plano[0].courts).toEqual([
+      { id: 'court-1', patch: { line_control: true, line_control_layout: 'quatro' } },
+      { id: 'court-2', patch: { line_control: false } },
+      // A quadra 3 não existe aqui: lá ela fica desligada, como a cópia pede.
+      { id: 'court-3', patch: { line_control: false } },
+    ]);
+    expect(plano[1].courts).toEqual([{ id: 'court-1', patch: { line_control: true, line_control_layout: 'quatro' } }]);
+    expect(lineCourtCopyPlan(fonte, conf, dias, null, '2026-11-03')).toEqual([]);
+    expect(lineCourtCopyPlan(null, conf, dias, 'u', '2026-11-03')).toEqual([]);
   });
 });
 

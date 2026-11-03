@@ -93,8 +93,10 @@ export default function LanceReplay({ event, Hinv, onClose }) {
     if (e.key === ' ') { e.preventDefault(); setPlaying((p) => !p); }
   };
 
-  const bounce = (event?.type || event?.kind) === 'bounce';
-  const line = bounce && event?.point && !event.serve ? nearestBoundary(event.point).line : null;
+  const kind = event?.type || event?.kind;
+  const bounce = kind === 'bounce';
+  const rally = bounce && event?.point && !event.serve && ['long', 'wide', undefined, null].includes(event.reason);
+  const line = rally ? nearestBoundary(event.point).line : null;
   const f = clip?.frames[index];
 
   return (
@@ -170,11 +172,12 @@ export default function LanceReplay({ event, Hinv, onClose }) {
               <V2Badge tone={CALL_TONE[event.call]}>{callLabel(event)}</V2Badge>
               <p className="text-sm text-gray-600">{callDetail(event)}</p>
               <CourtMark
-                kind={bounce ? 'bounce' : 'volley'}
+                kind={kind}
                 call={event.call}
                 marginM={bounce ? event.marginM : event.depthM}
                 uncertaintyM={event.uncertaintyM}
                 lineName={line}
+                reason={event.reason}
               />
             </div>
           </div>

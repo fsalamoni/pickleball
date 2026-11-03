@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { listTournamentLineCourts, saveTournamentLineCourt } from '../services/tournamentLineService.js';
+import { listTournamentLineCourts, saveTournamentLineCourts } from '../services/tournamentLineService.js';
 
 const key = (tid) => ['tournament-line-courts', tid];
 
@@ -14,12 +14,12 @@ export function useTournamentLineCourts(tournamentId, { enabled = true, refetchI
   });
 }
 
-/** `mutate({ court, patch, exists })`. */
-export function useSaveTournamentLineCourt(tournamentId) {
+/** `mutate([{ court, patch, exists }, …])` ⇒ `{ ok, failed }` (ver `saveEach`). */
+export function useSaveTournamentLineCourts(tournamentId) {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v) => saveTournamentLineCourt({ tournamentId, uid: user?.uid, ...v }),
+    mutationFn: (items) => saveTournamentLineCourts({ tournamentId, uid: user?.uid, items }),
     onSuccess: () => qc.invalidateQueries({ queryKey: key(tournamentId) }),
   });
 }

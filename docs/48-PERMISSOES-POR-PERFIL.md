@@ -146,9 +146,9 @@ torneio, `/c/:clubId`) existem para isso.
 | Apagar o dia | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules |
 | **Vincular o dia** a clube/arena (`link_*`) | ✖ | ◐ só quem criou, e só a clube que **administra** / arena que **gere**; desfazer é livre | ✖ | ✖ | ✖ (o vínculo não dá poder à arena sobre o dia) | ✖ (idem) | ✔ | rules (`lkOk`) + `canLinkGameDay`/`linkOptions` na tela |
 
-| Ligar o **controle de linhas** / escolher o arranjo (`line_control`, `line_control_layout`) | ✖ | ✔ | ✔ (só essas duas chaves e `updated_at`, com tipo) | ✖ | ✔ | ✔ | ✔ | rules (update do dia; cláusula estreita do nomeado) + `canConfigureLineControl` (`podeConfigurarLinhas`) |
-| Ser **câmera** (`line_cams`, `line_calls` create) | ◐ se está em `member_uids` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`lineCamOk`: só com `line_control == true`, em nome próprio) |
-| Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`, decisão em nome próprio, valor do tipo do lance) |
+| Ligar o **controle de linhas** de uma QUADRA / escolher o arranjo dela (`line_courts/court-N`) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf` + `lcCfg`: id `court-N`, só `line_control`, `line_control_layout`, `updated_by` = quem grava, `updated_at`) + `canConfigureLineControl` (`podeConfigurarLinhas`) |
+| Ser **câmera** da quadra (`line_cams`, `line_calls` create) | ◐ se está em `member_uids` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`lcGdCam`: só com `line_control == true` NAQUELA quadra, em nome próprio; formato `lcCam`/`lcCall`) |
+| Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf` + `lcDec`: decisão em nome próprio, valor do tipo do lance) |
 | Ver a **central** de linhas | ◐ quem vê o dia | ✔ | ✔ | ✔ | ✔* | ✔ | ✔ | rules (`canAccessGameDay`) |
 | Limpar marcações | ✖ (só a própria câmera) | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |
 

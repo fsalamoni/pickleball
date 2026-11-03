@@ -236,22 +236,6 @@ export const listClubLinkedGameDays = (clubId) => listLinkedGameDays('club', clu
 /** Os dias de jogo vinculados a uma ARENA (página da arena, ranking da casa). */
 export const listArenaLinkedGameDays = (arenaId) => listLinkedGameDays('arena', arenaId);
 
-/**
- * Liga/desliga o controle de linhas de VÁRIOS dias de jogo de uma vez ("em
- * todos os meus jogos"). Toca só `line_control`: a regra de `game_days` já
- * deixa o criador (e o gestor da arena/clube) editar o próprio dia.
- * @returns {Promise<number>} quantos dias foram alterados
- */
-export async function setGameDaysLineControl(ids, on) {
-  const unicos = [...new Set((ids || []).filter(Boolean))];
-  for (let i = 0; i < unicos.length; i += 400) {
-    const batch = writeBatch(db);
-    unicos.slice(i, i + 400).forEach((id) => batch.update(doc(db, COL, id), { line_control: on === true, updated_at: serverTimestamp() }));
-    await batch.commit();
-  }
-  return unicos.length;
-}
-
 /** Atualiza campos do dia de jogo (somente o criador — reforçado nas rules). */
 export async function updateGameDay(id, patch, actor) {
   if (!id) return;
@@ -270,13 +254,8 @@ export async function updateGameDay(id, patch, actor) {
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
   // Escolha de quem cria: enviar (ou não) os resultados ao DUPR. `null` = vale o padrão.
   if ('dupr_submit' in patch) editable.dupr_submit = typeof patch.dupr_submit === 'boolean' ? patch.dupr_submit : null;
-  // Controle de linhas por câmera (flag `line_control`): só diz que o jogo usa
-  // câmeras; o vídeo fica no aparelho (docs/53).
-  if ('line_control' in patch) editable.line_control = patch.line_control === true;
-  // ...e o ARRANJO das câmeras que quem organiza escolheu (`cameraLayouts.js`).
-  if ('line_control_layout' in patch) {
-    editable.line_control_layout = typeof patch.line_control_layout === 'string' ? patch.line_control_layout.slice(0, 40) : null;
-  }
+  // O controle de linhas NÃO passa por aqui: é quadra por quadra, em
+  // `game_days/{id}/line_courts` (docs/53 §1). `line_control` no dia é legado.
 
   // VÍNCULO a clube/arena (ver `domain/gameDayLink.js`): só o dia do atleta, os
   // dois lados juntos, e o dia vinculado nunca é "só para membros".

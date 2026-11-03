@@ -184,6 +184,13 @@ describe('⭐ a cascata com as especificações REAIS', () => {
     'game_days/d1/participants/px': { user_id: X, name: 'Ana Teste', photo_url: 'f' },
     'game_days/d1/participants/py': { user_id: 'y', name: 'Bia Real' },
     'game_days/d1/games/j1': { side_a: [{ id: 'px', name: 'Ana Teste' }], side_b: [{ id: 'py', name: 'Bia Real', user_id: 'y' }] },
+    // controle de linhas: a câmera e as marcações da pessoa, na quadra e no dia (antigo)
+    'game_days/d1/line_courts/court-2': { line_control: true, updated_by: 'y' },
+    'game_days/d1/line_courts/court-2/line_cams/x_fundo_a': { uid: X, name: 'Ana Teste', position: 'fundo_a' },
+    'game_days/d1/line_courts/court-2/line_cams/y_rede_1': { uid: 'y', name: 'Bia Real', position: 'rede_1' },
+    'game_days/d1/line_courts/court-2/line_calls/k1': { uid: X, position: 'fundo_a', kind: 'bounce', call: 'out' },
+    'game_days/d1/line_courts/court-2/line_calls/k2': { uid: 'y', position: 'rede_1', kind: 'volley', call: 'fault' },
+    'game_days/d1/line_calls/k0': { uid: X, position: 'fundo_a', kind: 'bounce', call: 'in' },
     // conversa
     'conversations/c1': { member_ids: [X, 'y'], members: [{ uid: X, name: 'Ana Teste' }, { uid: 'y', name: 'Bia Real' }] },
     'conversations/c1/messages/m1': { sender_id: X, sender_name: 'Ana Teste', text: 'segredo', attachments: [] },
@@ -236,6 +243,16 @@ describe('⭐ a cascata com as especificações REAIS', () => {
     expect(jogo.side_b[0].name).toBe('Bia Real');
   });
 
+  it('⭐ controle de linhas: a câmera e as marcações da pessoa saem, em toda quadra; as dos outros ficam', async () => {
+    const { get } = await rodar();
+    expect(get('game_days/d1/line_courts/court-2/line_cams/x_fundo_a')).toBeUndefined();
+    expect(get('game_days/d1/line_courts/court-2/line_calls/k1')).toBeUndefined();
+    expect(get('game_days/d1/line_calls/k0')).toBeUndefined();
+    expect(get('game_days/d1/line_courts/court-2/line_cams/y_rede_1').name).toBe('Bia Real');
+    expect(get('game_days/d1/line_courts/court-2/line_calls/k2').call).toBe('fault');
+    expect(get('game_days/d1/line_courts/court-2').line_control).toBe(true);
+  });
+
   it('⭐ conversa: a mensagem da pessoa perde o conteúdo; a da outra fica', async () => {
     const { get } = await rodar();
     expect(get('conversations/c1/messages/m1').text).toBe(REMOVED_MESSAGE);
@@ -273,6 +290,10 @@ describe('⭐ a cascata com as especificações REAIS', () => {
       'club_forum_threads/f1/poll_votes/x',
       // O selo público de professor credenciado é da própria pessoa (id = uid).
       'federation_coach_badges/x',
+      // A câmera e as marcações do controle de linhas são da própria pessoa (uid).
+      'game_days/d1/line_calls/k0',
+      'game_days/d1/line_courts/court-2/line_calls/k1',
+      'game_days/d1/line_courts/court-2/line_cams/x_fundo_a',
       'users/x',
     ].sort());
   });

@@ -2319,3 +2319,28 @@ pública e o que os membros fazem juntos; a moderação do que se publica segue
 na própria publicação. Links antigos (`?tab=admin`, `?tab=atividade`)
 redirecionam; os avisos de pedido de ingresso, filiação, selo, seguro e sede
 apontam para a Central. Detalhe em `docs/52-CLUBE-ASSOCIACAO.md` §5.16.
+
+## Controle de linhas quadra por quadra e as faltas de linha completas (2026-11-03)
+
+Pedido do dono: "a ativação do controle de linhas deve se dar quadra por quadra",
+com a configuração das câmeras por quadra (uma quadra pode ter um número de
+câmeras diferente da outra), em todo lugar onde um jogo nasce; e as faltas que
+envolvem linha julgadas de verdade — bola fora, saque fora da área (com a linha
+da cozinha), pé na cozinha no voleio ou no impulso depois dele, pé no saque.
+
+- O controle saiu do documento do dia (`game_days.line_control`, legado, sem
+  migração) para `game_days/{id}/line_courts/court-N`, com as câmeras e as
+  marcações embaixo de cada quadra; o torneio já era por quadra e passou a usar
+  o mesmo quadro (`LineCourtsBoard`). A regra ganhou quatro funções comuns aos
+  dois (`lcCam`, `lcCall`, `lcDec`, `lcCfg`) e perdeu a cláusula estreita do
+  nomeado no `game_days`.
+- O motor passou a seguir o ponto do saque ao fim (só o 1º quique de cada
+  batida é julgado, o 2º encerra; rede; bola no corpo sem marcação), a corrigir
+  a altura da bola e do pé, a medir a incerteza por eixo e a julgar `serve_foot`
+  e `two_bounce`, com o motivo gravado (`reason`).
+- 🐞 Voz: um "revisar" em voz alta no aparelho ao lado da quadra pararia o
+  ponto por uma bola que segue em jogo (8.D) — agora só a falta é dita, e o
+  revisar vai para a central e o telão.
+- 🐞 De quebra, no telão do torneio: "Quadra Quadra 2" (o agendamento grava o
+  nome em `court`) e as partidas em andamento fora de ordem (`Number('Quadra 2')`
+  é NaN). Detalhe em `docs/53-CONTROLE-DE-LINHAS.md` §1, §4 e §10.

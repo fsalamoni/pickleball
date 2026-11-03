@@ -66,6 +66,9 @@ describe('câmeras e marcações na quadra', () => {
     await assertSucceeds(setDoc(camRef(ADMIN_T), cam(ADMIN_T)));
     await assertSucceeds(addDoc(collection(como(ADMIN_T), 'tournament_line_courts/T1_court-2/line_calls'),
       { uid: ADMIN_T, position: 'fundo_a', kind: 'bounce', call: 'out', t_ms: 2, margin_m: -0.1, uncertainty_m: 0.03, x: 3, y: 13.5 }));
+    // as outras faltas de linha, com o motivo
+    await assertSucceeds(addDoc(collection(como(ADMIN_T), 'tournament_line_courts/T1_court-2/line_calls'),
+      { uid: ADMIN_T, position: 'fundo_a', kind: 'serve_foot', call: 'fault', reason: 'baseline', serve: true, t_ms: 3, x: 3, y: -0.2 }));
   });
 
   it('quem joga acompanha, mas não vira câmera', async () => {

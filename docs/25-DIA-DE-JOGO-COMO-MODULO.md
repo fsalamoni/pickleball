@@ -691,6 +691,25 @@ edição. Domínio em `modules/games/domain/gameDayLink.js` (fonte única).
   `orderBy('created_at_ms')` com `limit`), e duas cláusulas aditivas de regra
   (`adm()` em `isGameDayAdminOf` e na criação de `open_games`).
 
+## 15. Controle de linhas por câmera, quadra por quadra (2026-11-03)
+
+O cartão `GameDayLineControlCard` (flag `line_control`) é montado **dentro do
+`GameDayModule`**, então chega às três origens por construção. Ele lista as
+QUADRAS do dia (`play_courts`, as dos jogos e as já configuradas) e cada uma
+liga o seu controle e escolhe o seu arranjo, de 1 a 5 câmeras — a quadra 1
+pode ter uma câmera e a 2, cinco. Quem liga é quem organiza (criador, gestor da
+arena, admin do clube, administrador nomeado: `canConfigureLineControl`); a
+origem não muda nada.
+
+- **Banco**: subcoleção `game_days/{id}/line_courts/court-N`, com as câmeras e
+  marcações embaixo. Os campos `line_control`/`line_control_layout` no próprio
+  dia são legado: nada os lê, e `updateGameDay` não os grava mais. A cláusula
+  estreita do nomeado na regra do `game_days` saiu — ele configura a quadra
+  pela regra de `line_courts`, sem tocar no documento do dia.
+- **Torneio**: o mesmo quadro (`LineCourtsBoard`) em `/torneios/:id/linhas`,
+  sobre `tournament_line_courts`.
+- Detalhe em [`53`](./53-CONTROLE-DE-LINHAS.md) §1 e §4.
+
 ## Atualização 2026-09-30 — entrar pelo próprio dia de jogo
 
 Quem chega a um dia de jogo PÚBLICO de outra pessoa (pelo "Jogar" do início ou

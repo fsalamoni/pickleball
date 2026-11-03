@@ -960,11 +960,17 @@ async function coletarDiasDeJogo(db, uid) {
       if (p) itens.push({ ref: refDe(d), patch: p });
     });
     // Controle de linhas (docs/53): a câmera e as marcações da pessoa são
-    // dados técnicos do jogo, sem valor de histórico — saem com a conta.
-    for (const sub of ['line_cams', 'line_calls']) {
-      // eslint-disable-next-line no-await-in-loop
-      const r = await pai.ref.collection(sub).where('uid', '==', uid).limit(QUERY_LIMIT).get();
-      r.docs.forEach((d) => deletes.push(d.ref));
+    // dados técnicos do jogo, sem valor de histórico — saem com a conta. Desde
+    // o controle por QUADRA elas moram em `line_courts/{quadra}`; as do dia
+    // (antes da troca) seguem no próprio dia.
+    // eslint-disable-next-line no-await-in-loop
+    const quadras = await pai.ref.collection('line_courts').limit(QUERY_LIMIT).get();
+    for (const base of [pai.ref, ...quadras.docs.map((q) => q.ref)]) {
+      for (const sub of ['line_cams', 'line_calls']) {
+        // eslint-disable-next-line no-await-in-loop
+        const r = await base.collection(sub).where('uid', '==', uid).limit(QUERY_LIMIT).get();
+        r.docs.forEach((d) => deletes.push(d.ref));
+      }
     }
   }
   return { itens, deletes, truncated: false };

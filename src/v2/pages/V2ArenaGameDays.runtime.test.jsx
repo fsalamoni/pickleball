@@ -50,7 +50,11 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useUpdateGameDay: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
   // Cartão do controle de linhas (flag `line_control`, ligada aqui junto com as demais).
   useMyGameDays: () => ({ data: [], isSuccess: true }),
-  useSetGameDaysLineControl: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+// As quadras do controle de linhas (uma configuração por quadra).
+vi.mock('@/modules/linecall/hooks/useGameDayLineCourts', () => ({
+  useGameDayLineCourts: () => ({ data: [], isLoading: false, isSuccess: true, isError: false, refetch: vi.fn() }),
+  useSaveGameDayLineCourts: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 // Os organizadores são o miolo COMPARTILHADO com o ambiente do atleta e já têm
 // testes próprios; aqui interessa o enquadramento da arena em volta deles.

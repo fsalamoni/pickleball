@@ -198,11 +198,33 @@ service cloud.firestore {
       return isGameDayAdminOf(gdId) || isArenaGameDayManagerOf(gdId)
         || isClubGameDayManagerOf(gdId) || adm();
     }
-    // ...e quem pode ser uma CÂMERA: quem organiza, o administrador nomeado ou
-    // quem participa — e só com o controle ligado naquele jogo.
-    function lineCamOk(gdId) {
-      return isOwner(nd().uid) && gameDayData(gdId).get('line_control', false) == true
-        && (me() in gameDayData(gdId).get('member_uids', []) || isGameDayAdminOf(gdId) || lineOrgOf(gdId));
+    // ...e quem pode ser uma CÂMERA da quadra: quem organiza, o administrador
+    // nomeado ou quem participa — e só com o controle ligado NAQUELA quadra.
+    function lcGdCam(gdId, cId) {
+      return isOwner(nd().uid) && gd('game_days/' + gdId + '/line_courts/' + cId).get('line_control', false) == true
+        && (me() in gameDayData(gdId).get('member_uids', []) || lineOrgOf(gdId));
+    }
+    // O formato da câmera "no ar", da marcação, da palavra final e da
+    // configuração da quadra: o mesmo no dia de jogo e no torneio.
+    function lcCam(camId) {
+      return nd().position is string && nd().position.size() <= 20
+        && camId == me() + '_' + nd().position
+        && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
+    }
+    function lcCall() {
+      return nd().kind in ['bounce', 'volley', 'serve_foot', 'two_bounce']
+        && nd().call in ['in', 'out', 'review', 'fault', 'clean']
+        && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 'reason', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'serve', 'created_at'])
+        && (!('reason' in nd()) || (nd().reason is string && nd().reason.size() <= 12));
+    }
+    function lcDec() {
+      return chg().hasOnly(['decision', 'decided_by', 'decided_ms'])
+        && nd().decided_by == me() && nd().decided_ms is int
+        && nd().decision in (od().kind == 'bounce' ? ['in', 'out'] : ['fault', 'clean']);
+    }
+    function lcCfg() {
+      return nd().line_control is bool && nd().updated_by == me()
+        && (!('line_control_layout' in nd()) || (nd().line_control_layout is string && nd().line_control_layout.size() <= 40));
     }
     // Quem pode ver um dia de jogo: dono, membro, qualquer um se público — e,
     // num dia de jogo de CLUBE, quem é do clube.
@@ -696,18 +718,6 @@ service cloud.firestore {
           && (!('play_groups_policy' in nd())
               || nd().play_groups_policy in ['queue', 'rotate', 'priority'])
         )
-        // CONTROLE DE LINHAS (flag `line_control`, docs/53): o administrador
-        // NOMEADO do jogo liga/desliga e escolhe o arranjo das câmeras, como o
-        // criador. ESTREITA: só as duas chaves (e `updated_at`), com tipo.
-        || (
-          'admin_uids' in od() && od().admin_uids is list
-          && (me() in od().admin_uids)
-          && nd().created_by == od().created_by
-          && chg().hasOnly(['line_control', 'line_control_layout', 'updated_at'])
-          && (!('line_control' in nd()) || nd().line_control is bool)
-          && (!('line_control_layout' in nd()) || (nd().line_control_layout is string
-              && nd().line_control_layout.size() <= 40))
-        )
       );
       allow delete: if isAuthed() && (
         od().created_by == me()
@@ -755,30 +765,29 @@ service cloud.firestore {
           || isPlayGameDayMember(gdId);
       }
 
-      // CONTROLE DE LINHAS (flag `line_control`, docs/53): o que as câmeras do
-      // jogo dividem — nunca vídeo nem foto. `line_cams` é a câmera "no ar"
-      // (id `{uid}_{posição}`), `line_calls` cada marcação. Grava só quem
-      // organiza ou participa do dia, só com o controle ligado NAQUELE jogo e
-      // só em nome próprio; o que a câmera marcou não se edita — quem organiza
-      // só acrescenta a DECISÃO (a palavra final no lance) e limpa.
-      match /line_cams/{camId} {
+      // CONTROLE DE LINHAS (flag `line_control`, docs/53): QUADRA POR QUADRA.
+      // `line_courts/court-N` liga/desliga e guarda o arranjo daquela quadra
+      // (quem organiza o dia, o nomeado inclusive); embaixo, o que as câmeras
+      // dela dividem — nunca vídeo nem foto: `line_cams` é a câmera "no ar"
+      // (id `{uid}_{posição}`), `line_calls` cada marcação. Câmera só com o
+      // controle ligado NAQUELA quadra e só em nome próprio; o que a câmera
+      // marcou não se edita — quem organiza só acrescenta a DECISÃO e limpa.
+      match /line_courts/{cId} {
         allow read: if canAccessGameDay(gdId);
-        allow create, update: if lineCamOk(gdId)
-          && nd().position is string && nd().position.size() <= 20
-          && camId == me() + '_' + nd().position
-          && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
-        allow delete: if isOwner(od().uid) || lineOrgOf(gdId);
-      }
-      match /line_calls/{callId} {
-        allow read: if canAccessGameDay(gdId);
-        allow create: if lineCamOk(gdId)
-          && nd().kind in ['bounce', 'volley']
-          && nd().call in ['in', 'out', 'review', 'fault', 'clean']
-          && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'serve', 'created_at']);
-        allow update: if lineOrgOf(gdId) && chg().hasOnly(['decision', 'decided_by', 'decided_ms'])
-          && nd().decided_by == me() && nd().decided_ms is int
-          && nd().decision in (od().kind == 'bounce' ? ['in', 'out'] : ['fault', 'clean']);
+        allow create, update: if lineOrgOf(gdId) && cId.matches('court-[0-9]{1,2}') && lcCfg()
+          && nd().keys().hasOnly(['line_control', 'line_control_layout', 'updated_by', 'updated_at']);
         allow delete: if lineOrgOf(gdId);
+        match /line_cams/{camId} {
+          allow read: if canAccessGameDay(gdId);
+          allow create, update: if lcGdCam(gdId, cId) && lcCam(camId);
+          allow delete: if isOwner(od().uid) || lineOrgOf(gdId);
+        }
+        match /line_calls/{callId} {
+          allow read: if canAccessGameDay(gdId);
+          allow create: if lcGdCam(gdId, cId) && lcCall();
+          allow update: if lineOrgOf(gdId) && lcDec();
+          allow delete: if lineOrgOf(gdId);
+        }
       }
     }
 
@@ -1552,29 +1561,19 @@ service cloud.firestore {
         && nd().court_id is string && nd().court_id.size() <= 12
         && lcId == nd().tournament_id + '_' + nd().court_id
         && nd().keys().hasOnly(['tournament_id', 'court_id', 'court_name', 'line_control', 'line_control_layout', 'updated_by', 'updated_at'])
-        && nd().line_control is bool && nd().updated_by == me();
+        && lcCfg();
       allow update: if tLineOrg(od().tournament_id)
-        && chg().hasOnly(['line_control', 'line_control_layout', 'court_name', 'updated_by', 'updated_at'])
-        && nd().line_control is bool && nd().updated_by == me()
-        && (!('line_control_layout' in nd()) || (nd().line_control_layout is string && nd().line_control_layout.size() <= 40));
+        && chg().hasOnly(['line_control', 'line_control_layout', 'court_name', 'updated_by', 'updated_at']) && lcCfg();
       allow delete: if tLineOrg(od().tournament_id);
       match /line_cams/{camId} {
         allow read: if isAuthed();
-        allow create, update: if tLineCamOk(lcId)
-          && nd().position is string && nd().position.size() <= 20
-          && camId == me() + '_' + nd().position
-          && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
+        allow create, update: if tLineCamOk(lcId) && lcCam(camId);
         allow delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
       }
       match /line_calls/{callId} {
         allow read: if isAuthed();
-        allow create: if tLineCamOk(lcId)
-          && nd().kind in ['bounce', 'volley']
-          && nd().call in ['in', 'out', 'review', 'fault', 'clean']
-          && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'serve', 'created_at']);
-        allow update: if tLineOrg(tLineTid(lcId)) && chg().hasOnly(['decision', 'decided_by', 'decided_ms'])
-          && nd().decided_by == me() && nd().decided_ms is int
-          && nd().decision in (od().kind == 'bounce' ? ['in', 'out'] : ['fault', 'clean']);
+        allow create: if tLineCamOk(lcId) && lcCall();
+        allow update: if tLineOrg(tLineTid(lcId)) && lcDec();
         allow delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
       }
     }

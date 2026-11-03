@@ -2,29 +2,62 @@
 
 > Flag `line_control` (default OFF, só o admin liga em Painel admin →
 > Funcionalidades → Dia de jogo). Módulo `src/modules/linecall/`.
-> Estado: **no navegador, de 1 a 5 câmeras** (2026-11-03). A pesquisa de
-> origem está em https://claude.ai/artifact/1AR6uPgAbzy8A2CLs2v2sE.
+> Estado: **no navegador, QUADRA POR QUADRA, de 1 a 5 câmeras por quadra**
+> (2026-11-03). As regras julgadas e onde cada uma vive no motor: §10. A
+> pesquisa de origem está em https://claude.ai/artifact/1AR6uPgAbzy8A2CLs2v2sE.
 
-## 1. O que faz
+## 1. O que faz — quadra por quadra
 
-Com a flag ligada, quem **organiza** o jogo — criador, gestor da arena, admin do
-clube e o **administrador nomeado** do jogo (`canConfigureLineControl`,
-`useGameDayRoles().podeConfigurarLinhas`; a regra tem uma cláusula estreita para
-o nomeado: só `line_control`/`line_control_layout`) — vê o cartão **Controle de
-linhas por câmera** dentro do `GameDayModule` (as três origens por construção):
+O controle de linhas é da **QUADRA**, em todo lugar onde um jogo nasce (dia de
+jogo do atleta, da arena e do clube; torneio): cada quadra liga o seu e escolhe
+o seu arranjo — uma quadra pode ter uma câmera e a do lado, cinco. A câmera
+fica montada na quadra e os jogos passam por ela.
 
-- liga/desliga **neste jogo** — vale com o jogo em andamento;
-- **Ligar em todos os meus jogos** / **Desligar em todos** — os dias que a
-  pessoa criou, de hoje em diante (`lineControlTargets`), num lote só;
-- **Abrir câmera** e **Abrir central** → `/dia-de-jogo/:id/linhas?modo=camera|central`
-  (`V2LineControl`), em outra aba. Com o controle ligado, os dois botões
-  aparecem para **todos** que veem o dia; ser câmera exige participar ou
-  organizar (a regra confere).
+Com a flag ligada, quem **organiza** o dia — criador, gestor da arena, admin do
+clube e o **administrador nomeado** (`canConfigureLineControl`,
+`useGameDayRoles().podeConfigurarLinhas`; a regra é `lineOrgOf`) — vê o cartão
+**Controle de linhas por câmera** dentro do `GameDayModule` (as três origens por
+construção). O cartão é o `LineCourtsBoard`, o MESMO quadro da página de linhas
+do dia e da do torneio:
 
-| evento | resultado |
-|---|---|
-| quique | **Dentro** · **Fora** · **Revisar** — com a distância à linha e a incerteza (± cm) |
-| voleio | **Falta: pé na cozinha** · **Voleio sem falta** · **Revisar o pé** |
+- **as quadras do dia** (`gameDayLineCourts`, `domain/gameDayLine.js`): de 1 a
+  `play_courts`, mais as quadras dos jogos já criados e as que já têm
+  configuração — nenhuma some da lista enquanto tiver câmera ligada (máx. 99);
+- em cada quadra: **liga/desliga** (vale com o jogo em andamento), o
+  **arranjo** (de 1 a 5 câmeras, §2) e o que ele julga ("linhas, saque, cozinha
+  e pé no saque" ou "linhas e saque (não julga pé)", `layoutJudges`);
+- **Abrir câmera** e **Abrir central** → `/dia-de-jogo/:id/linhas?quadra=court-N&modo=camera|central`
+  (`V2LineControl`), em outra aba; **Onde pôr as câmeras** abre a quadra com o
+  guia de montagem;
+- **Ligar em todas as quadras** / **Desligar todas**;
+- **Copiar para os meus próximos dias de jogo** (`lineCourtCopyPlan`): os dias
+  que a pessoa CRIOU, de hoje em diante, fora os arquivados — cada quadra
+  recebe a configuração da quadra de mesmo número (sem configuração aqui ⇒
+  desligada). Dia de outra pessoa é dela para decidir.
+
+Quem não organiza vê o cartão só se alguma quadra estiver ligada, com a central
+e — se participa do dia — a câmera (`canBeLineCamera`). Cada escrita é uma
+quadra (`saveEach`, 8 por vez): a que falha não derruba as outras e a tela diz
+quantas não foram salvas.
+
+| marcação (`kind`) | resultado (`call`) | o que é |
+|---|---|---|
+| `bounce` — quique | **Dentro** · **Fora** (longa, lateral, curta na cozinha, área errada, rede) · **Revisar** | a bola contra as linhas, com a distância e a incerteza (± cm) |
+| `volley` — voleio | **Falta: pé na cozinha** (no voleio, no impulso, sem ter saído da cozinha) · **Voleio sem falta** · **Revisar o pé** | o pé de quem voleou (11.A) |
+| `serve_foot` — pé no saque | **Falta** (na linha de fundo, fora da lateral, fora da central, no ar) · **Saque sem falta de pé** · **Revisar** | o pé de quem saca, no instante da batida (7.A) |
+| `two_bounce` — dois quiques | **Falta** (devolução ou 3ª bola sem quicar) · **Dois quiques respeitados** · **Revisar** | 10.A |
+
+O **motivo** de cada marcação é gravado (`reason`, §4) e vira o texto da tela
+(`callLabel`/`callDetail`, `callLabels.js`): "Fora: longa", "Saque curto: na
+cozinha", "Pé 4 cm além da linha de fundo no saque (±2 cm)".
+
+**Legado.** Antes do controle por quadra o liga/desliga ficava no próprio dia
+(`game_days.line_control`/`line_control_layout`) e as câmeras em
+`game_days/{id}/line_cams|line_calls`. Nada disso é lido mais (a flag nasce
+desligada e só o admin a liga) e nada foi migrado — migração de dados é decisão
+do dono: o dia que tinha o controle ligado aparece com todas as quadras
+desligadas, e basta ligar a quadra. Os documentos antigos seguem no banco sem tela; a
+exclusão de conta ainda os apaga.
 
 ## 2. Posições e arranjos (`domain/cameraLayouts.js`)
 
@@ -41,9 +74,9 @@ qual ponta é o lado A. Cada posição sabe onde fica, a altura, para onde apont
 | `topo` | acima da rede, no centro, 7–9 m (4–5 m com grande-angular linear) | cantos da quadra | **de cima** | não julga (0) |
 
 Os ids de posição e de arranjo vão para o banco (`line_cams.position`,
-`game_days.line_control_layout`): **nunca renomeie** (há teste travando).
+`line_courts.line_control_layout`): **nunca renomeie** (há teste travando).
 
-Os **11 arranjos** (quem organiza escolhe; padrão `solo_fundo`):
+Os **11 arranjos** (quem organiza escolhe, POR QUADRA; padrão `solo_fundo`):
 
 | câmeras | arranjo | para quê |
 |---|---|---|
@@ -75,20 +108,30 @@ peixe) entorta as linhas e a homografia erra nas bordas: use o modo **linear**.
 
 ## 3. Várias câmeras juntas — a central (`domain/fusion.js`)
 
-Cada aparelho roda o próprio motor e grava cada marcação em
-`game_days/{id}/line_calls`. Não há sincronia de quadros (o navegador não
-consegue — isso exigiria aplicativo nativo do tipo *recsync*); a **central**
-junta as marcações por **janela de tempo**:
+Cada aparelho roda o próprio motor e grava cada marcação nas `line_calls` da
+SUA quadra. Não há sincronia de quadros (o navegador não consegue — isso
+exigiria aplicativo nativo do tipo *recsync*); a **central** de cada quadra
+junta as marcações das câmeras dela por **janela de tempo**:
 
-- mesmo tipo de evento a até **700 ms**, no máximo uma marcação por posição;
-- quique a até **1,5 m** um do outro; voleio do mesmo lado da quadra;
+- mesmo tipo de evento a até **700 ms** (quique) ou **350 ms** (lance de pé —
+  voleio, pé no saque, dois quiques: num bate-rebate na cozinha dois voleios
+  caem a menos de 0,7 s), no máximo uma marcação por posição;
+- quique a até **1,5 m** um do outro; lance de pé do mesmo lado da rede;
 - **veredito:** as câmeras confiantes (que não disseram "revisar") que
   concordam decidem; se discordam, **Revisar** com "as câmeras discordaram";
-- no voleio, votam só as câmeras com o maior peso de pé presentes;
-- a medida mostrada é a da melhor câmera (menor incerteza ÷ peso).
+- no pé, votam só as câmeras da MELHOR posição presente: o "sem falta" do
+  fundo pode ser o pé escondido atrás de outro jogador. No voleio pesa
+  `footWeight` (a lateral da rede vê melhor); no pé no saque, `serveFootWeight`
+  — e a câmera do fundo do OUTRO lado vale 40% disso (vê de longe, através da
+  rede e dos jogadores);
+- **dois quiques** só saem de uma câmera que viu a troca inteira, e outra
+  câmera pode DESMENTIR: um quique visto do lado de quem bateu, até 2,5 s antes
+  da batida, quer dizer que a bola quicou — o lance vira "revisar";
+- a medida mostrada é a da melhor câmera (menor incerteza ÷ peso), e o motivo
+  (`reason`) é o dela.
 
-A presença de cada câmera é `game_days/{id}/line_cams/{uid}_{posição}`,
-renovada a cada 15 s (online = visto há ≤ 45 s) e apagada ao sair da tela.
+A presença de cada câmera é `…/line_cams/{uid}_{posição}`, renovada a cada
+15 s (online = visto há ≤ 45 s) e apagada ao sair da tela.
 A central (`LineCentral`) mostra o arranjo, quem está em cada posição
 (analisando / calibrada / falta calibrar / sem câmera, quadros/s), o último
 lance em letras grandes e os anteriores; quem organiza pode **Limpar
@@ -96,24 +139,48 @@ marcações** (confirmação em dois toques).
 
 ## 4. O que é gravado
 
-- `game_days.line_control` (opcional) e `game_days.line_control_layout`
-  (opcional, id do arranjo; ausente = `solo_fundo`).
-- `game_days/{id}/line_cams/{uid}_{posição}`: `uid, name, position, layout,
-  calibrated, analyzing, fps, seen_ms, updated_at` + opcionais `battery`
-  (0–1), `charging`, `check_cm` (erro da conferência pelo 5º ponto).
-- `game_days/{id}/line_calls/{auto}`: `uid, position, kind (bounce|volley),
-  call (in|out|review|fault|clean), t_ms, margin_m, uncertainty_m, depth_m, x,
-  y, created_at` + opcional `serve: true` (quique de saque). **Nunca imagem.**
+- **A quadra**: `game_days/{id}/line_courts/court-N` (o id é `court-` + o número
+  da quadra, 1–99) — `line_control` (bool), `line_control_layout` (opcional, id
+  do arranjo; ausente = `solo_fundo`), `updated_by`, `updated_at`. Sem
+  documento, a quadra está desligada.
+- **A câmera no ar**: `…/line_courts/court-N/line_cams/{uid}_{posição}` —
+  `uid, name, position, layout, calibrated, analyzing, fps, seen_ms,
+  updated_at` + opcionais `battery` (0–1), `charging`, `check_cm` (erro da
+  conferência pelo 5º ponto).
+- **A marcação**: `…/line_courts/court-N/line_calls/{auto}` — `uid, position,
+  kind (bounce|volley|serve_foot|two_bounce), call (in|out|review|fault|clean),
+  t_ms, margin_m, uncertainty_m, depth_m, x, y, created_at` + opcionais
+  `serve: true` (quique de saque) e `reason` (≤ 12 letras: `long`, `wide`,
+  `short`, `wrong_box`, `net`, `contact`, `momentum`, `reentry`, `unseen`,
+  `baseline`, `sideline`, `centerline`, `airborne`, `return`, `third` — os ids
+  são gravados, **nunca renomeie**). No pé no saque, `margin_m` positivo é pé
+  legal e `depth_m = −margin_m` é quanto passou da linha. **Nunca imagem.**
   Quem organiza grava a **palavra final** no primeiro documento do lance:
-  `decision` (`in|out` no quique, `fault|clean` no voleio), `decided_by` (ele
-  mesmo) e `decided_ms` — e nada mais; o que a câmera marcou não muda.
+  `decision` (`in|out` no quique, `fault|clean` nos lances de pé), `decided_by`
+  (ele mesmo) e `decided_ms` — e nada mais; o que a câmera marcou não muda.
 
-**Regra** (`firestore.rules`, dentro de `game_days`; `lineCamOk`/`lineOrgOf`;
-emulador em `tests/rules/lineControl.rules.test.js`): lê quem lê o dia; grava
-só com `line_control == true` naquele dia, em nome próprio, e só quem está em
-`member_uids`, é administrador nomeado ou organiza; marcação não se edita (só a decisão de quem organiza, acima);
-apagar é do dono (câmera) ou de quem organiza. **Exclusão de conta** apaga as
-câmeras e marcações da pessoa (`coletarDiasDeJogo`, `functions/accountDeletion.js`).
+**Regra** (`firestore.rules`, dentro de `game_days`; emulador em
+`tests/rules/lineControl.rules.test.js`). Quatro funções valem igual no dia de
+jogo e no torneio: `lcCam` (formato da câmera, id `{uid}_{posição}`), `lcCall`
+(formato da marcação, os quatro `kind`, o `reason`), `lcDec` (só a palavra
+final, em nome próprio) e `lcCfg` (formato da quadra). No dia de jogo:
+
+- **a quadra** lê quem lê o dia; grava quem organiza (`lineOrgOf`: criador,
+  nomeado, gestor da arena, admin do clube, admin da plataforma), só com id
+  `court-N` e só as quatro chaves;
+- **câmera e marcação** (`lcGdCam`): só com `line_control == true` NAQUELA
+  quadra, em nome próprio, e só quem está em `member_uids` ou organiza;
+  marcação não se edita (só a decisão de quem organiza); apagar é do dono
+  (câmera) ou de quem organiza.
+
+A cláusula estreita do nomeado na regra do próprio `game_days` saiu: ele
+configura a quadra pela regra de `line_courts`, sem tocar no documento do dia.
+**Exclusão de conta** (`coletarDiasDeJogo`, `functions/accountDeletion.js`)
+apaga as câmeras e marcações da pessoa em TODA quadra dos dias de jogo em que
+ela aparece (membro, administrador nomeado ou jogo publicado) — e as do formato
+antigo, direto no dia. O gestor de arena que filmou um dia em que não é membro
+fica de fora dessa busca; a câmera dele some ao sair da tela, e a marcação leva
+só o uid.
 
 Vídeo, calibração (por posição: `v2:view:<uid>:linhas:calibracao:<dia>:<posição>`)
 e as fotos das marcações ficam **no aparelho**. Imagem de atleta não sai do
@@ -155,11 +222,11 @@ dos kits são `basico`, `celulares`, `computador`, `estudio` — nunca renomeie.
 | Estúdio com OBS | profissional | 1–5 | câmeras sem fio (NDI, SRT, RTSP) ou com fio no OBS → câmera virtual |
 
 - **Chamar um aparelho** (`CameraInvite`, na central): cada posição vazia tem
-  QR + link `/dia-de-jogo/:id/linhas?modo=camera&posicao=…` (o `qrcode` entra
-  por import dinâmico). Quem abre precisa de conta que pode ser câmera
-  (participante ou quem organiza) — a regra `lineCamOk` não mudou. Celular
-  separado entra com a conta de quem organiza ou com uma conta incluída como
-  participante.
+  QR + link `/dia-de-jogo/:id/linhas?quadra=court-N&modo=camera&posicao=…` (o
+  `qrcode` entra por import dinâmico) — o link já leva à quadra certa. Quem
+  abre precisa de conta que pode ser câmera (participante ou quem organiza; a
+  regra `lcGdCam` confere). Celular separado entra com a conta de quem organiza
+  ou com uma conta incluída como participante.
 - **Várias câmeras num computador**: "Abrir outra câmera neste computador"
   abre outra aba (cada aba = uma posição, o motor por aba). Aba escondida
   analisa mais devagar.
@@ -173,18 +240,28 @@ dos kits são `basico`, `celulares`, `computador`, `estudio` — nunca renomeie.
 - **Aviso na hora** (`domain/alertTones.js` + `services/alertSound.js`, em
   `useAnnounce`): um TOQUE pelo Web Audio sai alguns milissegundos depois do
   lance, antes da voz (que leva 200–500 ms): fora = dois agudos, falta de pé =
-  zumbido grave, revisar = um médio; o "dentro" não toca. O toque nasce LIGADO
-  (`<pref>:som`), a voz desligada; os dois por pessoa no navegador. A vibração
-  sai sempre. Junto, `CallFlash` pinta a tela inteira na cor do lance com a
-  palavra enorme (câmera analisando e central), sem bloquear o toque.
+  zumbido grave, revisar = um médio; o "dentro" e o "sem falta" não tocam. O
+  toque nasce LIGADO (`<pref>:som`), a voz desligada; os dois por pessoa no
+  navegador. A vibração sai sempre. Junto, `CallFlash` pinta a tela inteira na
+  cor do lance com a palavra enorme (câmera analisando e central), sem
+  bloquear o toque.
+- **Só a falta grita** (`callSpoken`): a voz diz "Fora", "Curta", "Rede",
+  "Falta na cozinha", "Pé no saque", "Dois quiques"; dentro e sem falta ficam
+  calados. **No aparelho que filma, "revisar" fica calado** (`useAnnounce(…,
+  { quietReview: true })`, no `CameraStation`): bola que não está claramente
+  fora segue em jogo (8.D), e um aviso no meio do ponto faria os jogadores
+  pararem. A central (com quem organiza) toca o "revisar", e o telão mostra
+  "Lance em revisão" — a decisão volta para a quadra sem parar o ponto.
 - **Pronto para começar?** (`domain/readiness.js`, no topo da central): sem
   câmera, sem calibrar ou em pausa **bloqueiam** (a posição não julga);
   menos de 24 q/s, bateria ≤ 20% fora do carregador e erro do 5º ponto acima
   de 6 cm só **avisam**.
-- **Telão** (`TelaoLineTicker` + `telaoLineStatus` em `fusion.js`): faixa fixa
+- **Telão** (`TelaoLineTicker` + `telaoLineStatus` em `fusion.js`): no canto,
+  UM aviso por quadra ligada, com o nome da quadra na frente — faixa fixa
   "Controle de linhas ativo · N câmera(s)" ou quais posições pararam; "Lance em
   revisão" enquanto o último lance é "revisar" sem decisão (até 90 s,
-  `REVIEW_HOLD_MS`); o lance grande por 12 s.
+  `REVIEW_HOLD_MS`); o lance grande por 12 s. As quadras são relidas a cada
+  30 s; o `game_days.line_control` antigo é ignorado.
 
 ## 6. Precisão — o que é viável e o que NÃO é
 
@@ -193,28 +270,63 @@ linha é menor que ela, ele diz **Revisar**.
 
 - **Fora/dentro com margem — viável com uma câmera**; com duas ou mais a faixa
   de "revisar" encolhe (a melhor câmera mede, e a discordância vira revisar).
-- **Pé na cozinha no voleio — viável, com limites.** Só pé **apoiado** conta;
-  pé no ar, escondido ou a ±7 cm da linha → **Revisar o pé**. A lateral da
-  rede é quem melhor vê.
+  A incerteza é POR EIXO: a câmera da rede tem a palavra nas linhas da cozinha,
+  a de fundo na central e nas laterais (a melhor vista de uma linha corre ao
+  longo dela, como o juiz de linha sentado no prolongamento).
+- **Saque — viável.** O 1º quique do saque vale contra a área em diagonal; a
+  cozinha inteira, com a linha, é CURTA; na linha de fundo, na lateral ou na
+  central da área é dentro (7.E). Câmera de lado que não vê quem saca sabe de
+  que lado saiu, mas não a diagonal: julga curta, longa e lateral, não "área
+  errada".
+- **Pé na cozinha no voleio — viável, com limites.** Só pé **apoiado** (parado
+  por três quadros) e visível conta; pé no ar, escondido ou perto da linha
+  dentro da incerteza → **Revisar o pé**. A lateral da rede é quem melhor vê.
+  O impulso é observado até a pessoa parar ou recuar (0,5 s a 3 s), mesmo com
+  a bola morta.
+- **Pé no saque — viável com a câmera do fundo de quem saca.** No instante da
+  batida, ao menos um pé apoiado atrás da linha de fundo, sem tocá-la, e entre
+  os prolongamentos da lateral e da central. Os dois pés no ar → revisar.
+- **Dois quiques — só com a troca inteira à vista.** Se uma batida do outro
+  lado passou sem ser vista, o motor deixa de julgar a regra até o próximo
+  saque (sem a sequência não se sabe qual é a 2ª e qual a 3ª bola).
 - **Bola exatamente na linha (milímetro, nível Hawk-Eye) — não é viável no
   navegador.** Exige câmeras sincronizadas a 240+ quadros e triangulação 3D.
 - **Detecção da bola sem modelo treinado**: cor + movimento; perde a bola com
   sombra forte, contra luz ou atrás do jogador. O ganho real é um TrackNet
   (MIT) treinado com vídeo de pickleball — só `findBallCandidates` muda.
-- **Saque**: com o detector de pés, a primeira batida do ponto é o saque e o
-  primeiro quique é julgado pela área de saque em diagonal (linha da cozinha =
-  fora; linha central = dentro). Sem pés, é julgado como bola comum.
-- **Quem ganhou o ponto** não é marcado.
-- **Nada disto foi testado em quadra.** As medidas vêm de testes sintéticos;
-  a primeira rodada real deve conferir `ENGINE_DEFAULTS` e o tom de cor da bola.
+- **Quem ganhou o ponto** não é marcado, nem o placar.
+- **Nada disto foi testado em quadra.** As medidas vêm de testes sintéticos
+  (`lineCallScenarios.test.js` sobre o simulador `testkit/courtSim.js`, que
+  filma pontos inteiros com a projeção de câmeras reais); a primeira rodada
+  real deve conferir `ENGINE_DEFAULTS` e o tom de cor da bola.
 
 ## 7. Como o motor decide (`domain/lineCallEngine.js`)
 
-Modo **imagem**: quique e batida são as mudanças bruscas de direção na imagem;
-colada a um punho (≤ 90 px) é batida; descendo → subindo é quique; o ponto é a
-interseção das duas trajetórias, levado ao chão pela homografia. Modo
-**overhead**: o mesmo em metros da quadra, pela desaceleração (§2). Batida sem
-quique desde a anterior = **voleio**, com o ponto dos pés de quem bateu.
+O cabeçalho de `lineCallEngine.js` é a explicação completa; em resumo:
+
+- **O ponto, do saque ao fim.** O motor sabe em que parte do ponto está: o
+  SAQUE é a batida de quem está atrás da linha de fundo com a bola perto dela;
+  depois, em cada batida, só o 1º quique é julgado (contra a metade do OUTRO
+  lado); o 2º quique encerra o ponto sem marcação; bola que cai do lado de quem
+  bateu é REDE se cair logo; ponto encerrado não é julgado até o próximo
+  saque; quique antes do saque nunca é marcação.
+- **Quique ou batida.** As duas mudanças bruscas de direção da bola. Na câmera
+  de lado, batida é a bola que volta para o lado de onde veio; na de fundo,
+  altura e profundidade se misturam, e o motor ESPERA o lance seguinte
+  (`resolveS`) para saber qual foi. Bola que cai ao pé de quem acabou de bater
+  encerra o ponto SEM marcação: pode ter batido no corpo (10.C.3), e "fora"
+  daria o ponto ao time errado.
+- **Altura.** Com o tamanho da imagem o motor acha ONDE a câmera está
+  (`estimateCamera`, `homography.js`) e corrige o que não está no chão — o
+  centro da bola no quique e os pontos do pé —, que projetados no chão cairiam
+  até 15 cm longe demais. E sabe o que a REDE esconde (`netHides`): da câmera
+  de fundo, o chão da cozinha do outro lado não aparece.
+- **Incerteza.** Toda medida sai com a incerteza em cada eixo (pixel no chão,
+  instante do quique, calibração, correção de altura). Margem menor que a
+  incerteza é REVISAR; revisar sem decisão vale DENTRO (8.D).
+- Modo **overhead** (câmera de cima): o quique é o PULO da velocidade aparente
+  para fora; a batida inverte o rumo ou parece parar (§2).
+
 Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
 
 ## 7a. Confiança — o que a pessoa vê
@@ -232,10 +344,15 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
   ampliada (`CourtMark`), câmera lenta até 0,1×, quadro a quadro (← → espaço).
   Só no aparelho, os 12 mais recentes.
 - **Palavra final** de quem organiza na central (regra acima), **voz**
-  ("Falar o lance", `useAnnounce`: fala + vibração, preferência por pessoa),
-  **telão** (`TelaoLineTicker`, o último lance por 12 s, só com a flag e o
-  controle ligado no dia), **planilha** CSV do jogo (`domain/report.js`),
-  **bateria** e quadros/s por câmera com aviso.
+  ("Falar o lance", `useAnnounce`: fala + vibração, preferência por pessoa;
+  só a falta é dita, §5a), **telão** (`TelaoLineTicker`, o último lance de cada
+  quadra ligada por 12 s, só com a flag), **planilha** CSV da quadra
+  (`domain/report.js`, com o motivo de cada lance), **bateria** e quadros/s
+  por câmera com aviso.
+- **A marca do lance** (`CourtMark`, no replay e na central): o quique de jogo
+  mostra a linha mais perto; o de saque curto, de área errada e de rede mostra
+  a linha do motivo; o pé no saque usa o desenho do pé, "além" ou "antes" da
+  linha de fundo, da lateral ou da central.
 - **Grudar na linha** (`domain/snapCorner.js`): leva os quatro cantos da QUADRA
   ao canto externo do "L" branco perto do toque (a linha é dentro, a quadra
   acaba na borda de fora). Janela de 14 px; sem branco suficiente, branco demais
@@ -264,9 +381,12 @@ câmera; a integração com ele não se aplica a esta funcionalidade.
 No torneio o controle é da QUADRA, não da partida: a câmera fica montada na
 quadra e as partidas passam por ela. `/torneios/:id/linhas` lista as quadras
 do agendamento (`court-1`…, o maior `court_count` das modalidades, mais as
-que já têm documento) e `?quadra=court-N` abre a MESMA tela do dia de jogo
-(`LineControlScreen`: arranjo, câmera, central, convite por QR). Na gestão do
-torneio, botão "Controle de linhas" (só com a flag).
+que já têm documento) no MESMO `LineCourtsBoard` do dia de jogo (liga/desliga,
+arranjo, Ligar em todas as quadras — gravadas por `saveTournamentLineCourts`,
+uma escrita por quadra) e `?quadra=court-N` abre a MESMA tela do dia de jogo
+(`LineControlScreen`: arranjo, câmera, central, convite por QR). Quem não é da
+equipe vê só as quadras ligadas. Na gestão do torneio, botão "Controle de
+linhas" (só com a flag).
 
 - **Quem liga e configura**: a equipe do torneio — criador, administrador do
   torneio (`tournament_admins`), gestor da arena sede e o admin da plataforma
@@ -286,7 +406,43 @@ torneio, botão "Controle de linhas" (só com a flag).
   `TelaoLineTicker.jsx`) põe no canto um aviso por quadra ligada — câmeras no
   ar, "Lance em revisão" e o último lance —, com o nome da quadra na frente.
   Relê as quadras a cada 30 s. A leitura pede conta logada: sem conta ou com
-  falha, não aparece nada e o quadro dos jogos segue igual.
+  falha, não aparece nada e o quadro dos jogos segue igual. 🐞 O quadro dos
+  jogos dizia "Quadra Quadra 2" (o agendamento grava o NOME em `court` e o
+  número em `court_index`) e não ordenava as partidas em andamento por quadra
+  (`Number('Quadra 2')` é NaN): hoje `courtLabel` e `categorizeBoardMatches`
+  leem `court_index`.
 - Prova no emulador: `tests/rules/tournamentLineControl.rules.test.js`.
 
 Evitar no produto: Ultralytics/YOLOv8+ (AGPL-3.0) e repositórios sem licença.
+
+## 10. As regras do jogo e o que a câmera julga
+
+As regras são as da **USA Pickleball 2026** (a CBP segue as mesmas); o número
+entre parênteses é o da regra. O motor cita o número junto do código que a
+aplica. "Revisar" é sempre a saída quando a câmera não tem certeza — e revisar
+sem decisão vale **dentro / sem falta** (8.D: a dúvida é de quem recebe a
+marcação).
+
+| regra | o que diz | como o motor aplica | o que fica com quem organiza |
+|---|---|---|---|
+| Bola na linha (8.B, 8.C) | tocar a linha é dentro — exceto a linha da cozinha no saque | a margem vai até a BORDA da marca da bola (`contactPatchM`, 1 cm); só o ponto de contato com o chão conta (8.E) | bola na linha com precisão de milímetro |
+| Fora (8.D) | quem não tem certeza diz dentro | margem menor que a incerteza ⇒ revisar; revisar sem decisão vale dentro | a palavra final, na central |
+| Saque na área certa (7.E) | o saque passa a rede e cai na área em diagonal, além da cozinha; a cozinha e a linha dela são CURTA | o 1º quique do saque contra a área em diagonal (`wrong_box`) e a cozinha (`short`) | saque que toca quem recebe antes de quicar (7.E.5) |
+| Quique antes do saque (7.D.4) | quicar a bola para sacar não é jogada | nunca é marcação | — |
+| Pé no saque (7.A) | no instante da batida, ao menos um pé no chão atrás da linha de fundo, sem tocá-la, entre os prolongamentos da lateral e da central | `serve_foot`: `baseline`, `sideline`, `centerline`; os dois pés no ar (`airborne`) ⇒ revisar | o movimento do saque (braço, altura do contato) e o saque com quique |
+| Dois quiques (10.A) | a devolução do saque e a 3ª bola têm de quicar | `two_bounce`: `return` / `third`, só com a troca inteira à vista; outra câmera desmente | — |
+| Bola no corpo (10.C.3) | a bola que toca o jogador é falta DELE | bola que cai ao pé de quem bateu encerra o ponto SEM marcação | quem foi atingido |
+| Pé na cozinha no voleio (11.A) | voleio com pé na cozinha ou na linha dela é falta | `volley` / `contact`: só pé APOIADO e visível | raquete, mão, roupa ou parceiro tocando a cozinha (11.A.1) |
+| O impulso (11.A.2) | a falta vale se o impulso do voleio leva à cozinha, mesmo com a bola morta (9.B.1) | `momentum`: observa até a pessoa parar ou recuar (0,5–3 s) | — |
+| Sair da cozinha (11.A.3) | quem estava na cozinha precisa firmar os dois pés fora antes de volear | `reentry` | — |
+| Objeto na cozinha (10.J) | o que cai da pessoa na cozinha durante o voleio é falta | não é seguido | quem organiza |
+
+**Por que "revisar" fica calado no aparelho que filma.** A câmera de quadra fica
+no tripé ao lado dos jogadores: um "revisar" em voz alta no meio do ponto faria
+todos pararem — e a bola que não está claramente fora segue em jogo (8.D). A
+câmera só GRITA a falta; o revisar vai para a central e para o telão, e quem
+organiza decide com o replay.
+
+**Quem decide.** A câmera marca; a palavra final é de quem organiza (criador,
+nomeado, gestor da arena, admin do clube; no torneio, a equipe do torneio), na
+central da quadra, gravada no lance (`decision`). Nada muda sozinho no placar.

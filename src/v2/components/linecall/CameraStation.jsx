@@ -268,7 +268,8 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const [replay, setReplay] = useState(null);
   useWakeLock(Boolean(s.stream));
   const last = s.events[0];
-  const [falar, setFalar, som, setSom] = useAnnounce(last || null, callSpoken, 'linhas:voz:camera');
+  // Ao lado da quadra, só a falta grita: "revisar" não interrompe o ponto.
+  const [falar, setFalar, som, setSom] = useAnnounce(last || null, callSpoken, 'linhas:voz:camera', { quietReview: true });
 
   const onTap = useCallback((pt) => {
     if (mode === 'color') { s.learnBallColor(pt); setMode(null); return; }

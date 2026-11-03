@@ -141,6 +141,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     () => (H && calib.checkTap ? calibrationCheck(H, calib.checkTap, checkPoint) : null),
     [H, calib.checkTap, checkPoint],
   );
+  const checkCm = check?.cm ?? null;
 
   // A referência de "onde a quadra está" é tirada quando a calibração fica
   // pronta (e no 1º quadro da análise, se o vídeo ainda não tinha imagem).
@@ -268,7 +269,13 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     if (!running || !video || !H) return undefined;
     let cancelled = false;
     let pose = null;
-    const engine = createLineCallEngine({ H, options: { mode: pos.mode } });
+    // Com o tamanho da imagem o motor tira da calibração onde a câmera está e
+    // corrige a altura da bola e do pé; o erro medido no 5º ponto entra na
+    // incerteza de cada medida (nunca abaixo do erro típico de quem toca).
+    const imageSize = video.videoWidth && video.videoHeight ? { w: video.videoWidth, h: video.videoHeight } : null;
+    const options = { mode: pos.mode, imageSize };
+    if (Number.isFinite(checkCm)) options.calibrationM = Math.max(0.015, checkCm / 100);
+    const engine = createLineCallEngine({ H, options });
     const scan = document.createElement('canvas');
     const sctx = scan.getContext('2d', { willReadFrequently: true });
     const snap = document.createElement('canvas');
@@ -396,7 +403,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       setBall(null);
       setFps(0);
     };
-  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId]);
+  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm]);
 
   return {
     position: pos, targets, checkPoint,

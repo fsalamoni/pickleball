@@ -315,6 +315,12 @@ e-mail verificado**.
 tem de entrar na exclusão e na exportação). Docs:
 `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`, `05-ADMIN-SUPORTE.md`.
 
+**Controle de linhas** (docs/53 §4): nos dias de jogo da pessoa,
+`coletarDiasDeJogo` apaga as câmeras (`line_cams`) e as marcações
+(`line_calls`) DELA em toda quadra (`line_courts/*`) e no formato antigo, direto
+no dia; as dos outros ficam (`accountDeletion.pseudo.test.js`). No torneio,
+`coletarLinhasDeTorneio` faz o mesmo em `tournament_line_courts`.
+
 ### 7.1 Erros do navegador → Error Reporting (`clientErrorReport`)
 
 A única função **HTTP** (`onRequest`, `invoker: 'public'`, `maxInstances: 2`,
