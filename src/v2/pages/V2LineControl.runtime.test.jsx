@@ -67,7 +67,7 @@ describe('V2LineControl', () => {
   });
 
   it('sem dado nenhum, a falha é dita (com "Tentar de novo")', () => {
-    estado.dia = { data: undefined, isLoading: false, isError: true };
+    estado.dia = { data: undefined, isLoading: false, isError: true, isLoadingError: true };
     render();
     expect(container.querySelector('[data-testid="camera"]')).toBeNull();
     expect(container.textContent).toMatch(/Tentar de novo/);
