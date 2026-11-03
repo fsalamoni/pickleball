@@ -478,6 +478,8 @@ describe('⭐ a varredura na plataforma inteira', () => {
    * Se leva, a tela não se isenta.
    */
   const ISENTOS_NA_PLATAFORMA = new Map([
+    ['src/v2/components/linecall/CameraStation.jsx',
+      '"nenhuma câmera encontrada" é o erro do navegador (NotFoundError) ao abrir a câmera do aparelho, não o resultado de uma consulta ao banco'],
     ['src/v2/components/arenas/V2ArenaEditors.jsx',
       'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
     ['src/v2/components/games/playGroups/PlayGroupsCard.jsx',

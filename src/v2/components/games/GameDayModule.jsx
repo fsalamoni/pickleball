@@ -36,6 +36,7 @@ import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant
 import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayRulesCard from '@/v2/components/games/GameDayRulesCard';
 import GameDaySettingsCard from '@/v2/components/games/GameDaySettingsCard';
+import GameDayLineControlCard from '@/v2/components/games/GameDayLineControlCard';
 import { t } from '@/core/i18n';
 
 /**
@@ -123,6 +124,9 @@ export default function GameDayModule({ gameDay, podeGerenciar = false }) {
           (`podeConfigurar`), que já soma criador, gestor da arena e admin do
           clube. */}
       <GameDaySettingsCard gameDay={gameDay} />
+      {/* Controle de linhas por câmera (flag `line_control`): some sozinho
+          quando a flag está desligada. */}
+      <GameDayLineControlCard gameDay={gameDay} />
       <Miolo gameDay={gameDay} podeGerenciar={podeGerenciar} />
     </div>
   );

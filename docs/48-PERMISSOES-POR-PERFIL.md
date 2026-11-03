@@ -146,6 +146,12 @@ torneio, `/c/:clubId`) existem para isso.
 | Apagar o dia | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules |
 | **Vincular o dia** a clube/arena (`link_*`) | ✖ | ◐ só quem criou, e só a clube que **administra** / arena que **gere**; desfazer é livre | ✖ | ✖ | ✖ (o vínculo não dá poder à arena sobre o dia) | ✖ (idem) | ✔ | rules (`lkOk`) + `canLinkGameDay`/`linkOptions` na tela |
 
+| Ligar o **controle de linhas** / escolher o arranjo (`line_control`, `line_control_layout`) | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (update do dia) + `podeConfigurar` |
+| Ser **câmera** (`line_cams`, `line_calls` create) | ◐ se está em `member_uids` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`lineCamOk`: só com `line_control == true`, em nome próprio) |
+| Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`, decisão em nome próprio, valor do tipo do lance) |
+| Ver a **central** de linhas | ◐ quem vê o dia | ✔ | ✔ | ✔ | ✔* | ✔ | ✔ | rules (`canAccessGameDay`) |
+| Limpar marcações | ✖ (só a própria câmera) | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |
+
 \* `canAccessGameDay` para um gestor de arena que não é criador nem membro depende de o dia ser público; todo dia de arena nasce público.
 
 **Onde a regra é mais larga que a tela (Play).** Em `participants` (update) e
@@ -502,7 +508,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Aviso em massa com e-mail/WhatsApp/SMS (`broadcast`) | ✔ | ✔ | rules (`broadcast` só de `isPlatformAdmin()`) + servidor confere de novo |
 | Promover a admin | ✖ | ✖ | só console |
 
-Quase toda coleção tem um ramo `|| isPlatformAdmin()` (383 ocorrências no
+Quase toda coleção tem um ramo `|| adm()` (o atalho de `isPlatformAdmin()`, ~400 ocorrências no
 arquivo): o admin da plataforma é um superusuário **da leitura e da maioria das
 escritas**, com as exceções acima (ranking, concessão de `role`, campos
 privados de usuário, passos que exigem o dono).

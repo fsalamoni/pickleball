@@ -91,6 +91,7 @@ import { PlayGroupBadge, NoGroupBadge } from '@/v2/components/games/playGroups/P
 import { telaoConnectionState } from '@/modules/games/domain/telaoConnection';
 import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useRelogio } from '@/core/lib/useRelogio';
+import TelaoLineTicker from '@/v2/components/linecall/TelaoLineTicker';
 import { t } from '@/core/i18n';
 
 /** De quanto em quanto tempo o painel se atualiza sozinho. */
@@ -1104,6 +1105,9 @@ export default function V2GameDayTelao() {
             </Link>
           </div>
         </header>
+
+        {/* O último lance das câmeras (flag `line_control`), no canto. */}
+        <TelaoLineTicker gameDay={gameDay} />
 
         {/* GRADE PRINCIPAL — o layout segue a ORIENTAÇÃO da tela, não só a
             largura. Em PAISAGEM com espaço (TV, notebook) são duas colunas; em

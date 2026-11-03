@@ -1018,6 +1018,92 @@ const GUIAS_BASE = [
     ],
   },
 
+  /* ------------------------------------------------- controle de linhas -- */
+  {
+    id: 'controle-de-linhas-camera',
+    area: GUIA_AREA.JOGAR,
+    flags: ['line_control'],
+    title: tk('Montar uma câmera do controle de linhas'),
+    summary: tk('Do tripé à primeira marcação: posição, calibração, conferência e análise.'),
+    keywords: ['câmera', 'linhas', 'fora', 'dentro', 'cozinha', 'calibrar', 'replay', 'juiz'],
+    screens: ['/dia-de-jogo/*/linhas'],
+    steps: [
+      {
+        id: 'posicionar',
+        route: '/dia-de-jogo/*/linhas',
+        goTo: '/dia-de-jogo',
+        awayText: tk('Abra o dia de jogo, toque em "Abrir câmera" no cartão do controle de linhas e escolha a posição deste aparelho.'),
+        target: 'linhas-posicionar',
+        title: tk('Onde o aparelho fica'),
+        body: tk('O desenho mostra o lugar, a altura e para onde apontar. Prenda bem o aparelho: se ele mexer depois da calibração, as marcações erram.'),
+        tip: tk('Tripé ou suporte firme, deitado (paisagem), tomada perto.'),
+      },
+      {
+        id: 'abrir',
+        route: '/dia-de-jogo/*/linhas',
+        target: 'linhas-abrir-camera',
+        title: tk('Abra a câmera'),
+        body: tk('Escolha a câmera (a traseira do celular, uma webcam ou uma placa de captura) e permita o acesso. Os selos dizem se ela entrega quadros e resolução suficientes.'),
+      },
+      {
+        id: 'calibrar',
+        route: '/dia-de-jogo/*/linhas',
+        target: 'linhas-calibrar',
+        title: tk('Marque os pontos e confira'),
+        body: [
+          tk('Toque nos quatro pontos na ordem do desenho, na borda externa da linha. Segurando o dedo, a lupa mostra o ponto de perto.'),
+          tk('Depois toque no 5º ponto: a tela diz o erro da calibração em centímetros. Acima de 6 cm, ajuste os pontos arrastando.'),
+        ],
+      },
+      {
+        id: 'testar',
+        route: '/dia-de-jogo/*/linhas',
+        target: ['linhas-testar-bola', 'linhas-calibrar'],
+        title: tk('Teste com a bola'),
+        body: tk('Ponha a bola parada em cima de uma linha e toque nela: a tela diz a quantos centímetros da linha a calibração acha que ela está. É a melhor forma de os jogadores confiarem na câmera.'),
+      },
+      {
+        id: 'analisar',
+        route: '/dia-de-jogo/*/linhas',
+        target: 'linhas-analisar',
+        title: tk('Comece a analisar'),
+        body: tk('Cada quique e cada voleio viram uma marcação com replay em câmera lenta, só neste aparelho. A central junta o que todas as câmeras viram.'),
+        tip: tk('Ligue "Falar o lance" para ouvir "Fora!" sem olhar a tela.'),
+      },
+    ],
+  },
+  {
+    id: 'controle-de-linhas-central',
+    area: GUIA_AREA.JOGAR,
+    flags: ['line_control'],
+    title: tk('Usar a central do controle de linhas'),
+    summary: tk('Ver as câmeras no ar, o lance e dar a palavra final.'),
+    keywords: ['central', 'linhas', 'revisar', 'decisão', 'telão', 'planilha'],
+    screens: ['/dia-de-jogo/*/linhas'],
+    steps: [
+      {
+        id: 'cameras',
+        route: '/dia-de-jogo/*/linhas',
+        goTo: '/dia-de-jogo',
+        awayText: tk('Abra o dia de jogo e toque em "Abrir central" no cartão do controle de linhas.'),
+        target: 'linhas-central-cameras',
+        title: tk('As câmeras do jogo'),
+        body: tk('Cada posição do arranjo, com quem está nela, se está analisando, a bateria e o erro da calibração. Bateria baixa e erro alto aparecem em vermelho.'),
+      },
+      {
+        id: 'lance',
+        route: '/dia-de-jogo/*/linhas',
+        target: 'linhas-central-lance',
+        title: tk('O lance'),
+        body: [
+          tk('O último lance em letras grandes, com a marca da bola na linha ampliada e a distância em centímetros.'),
+          tk('Em "Revisar", quem organiza dá a palavra final: a decisão fica gravada ao lado do que as câmeras marcaram.'),
+        ],
+        tip: tk('O telão do dia de jogo também mostra o último lance, no canto.'),
+      },
+    ],
+  },
+
   /* ------------------------------------------------------------ treino -- */
   {
     id: 'mercado-comprar',
