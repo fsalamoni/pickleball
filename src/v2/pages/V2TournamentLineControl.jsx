@@ -104,7 +104,8 @@ export default function V2TournamentLineControl() {
     body = <V2EmptyState icon={Camera} title={t('Controle de linhas desligado')} description={t('Esta funcionalidade ainda não foi liberada na plataforma.')} />;
   } else if (torneio.isLoading || linhas.isLoading || modalidades.isLoading || admin.isLoading) {
     body = <V2Skeleton lines={4} />;
-  } else if (torneio.isError || !tournament || linhas.isError || modalidades.isError) {
+  } else if (!tournament || !linhas.data || !modalidades.data) {
+    // Erro só SEM dado: a releitura que falha não desliga a câmera que filma.
     body = <V2ErrorState onRetry={() => { torneio.refetch(); linhas.refetch(); modalidades.refetch(); }} />;
   } else if (quadra && !court) {
     body = <V2EmptyState icon={Camera} title={t('Quadra não encontrada neste torneio')} action={<V2Button asChild size="sm"><Link to={tournamentLinePage(tournamentId)}>{t('Ver as quadras')}</Link></V2Button>} />;

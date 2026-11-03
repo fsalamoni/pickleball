@@ -5,15 +5,20 @@
  * administrador nomeado) — a regra confere.
  */
 
-import { collection, doc, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDocsFromServer, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { LINE_COURTS } from '../domain/gameDayLine.js';
 import { saveEach } from './saveEach.js';
 
 const courtsCol = (gameDayId) => collection(db, 'game_days', gameDayId, LINE_COURTS);
 
+/**
+ * Do SERVIDOR: sem rede, a leitura comum devolve o que sobrou no cache — às
+ * vezes nada —, e "nenhuma quadra" virava "controle desligado" na câmera que
+ * estava filmando. Sem rede é FALHA, e a tela segue com o que já tinha.
+ */
 export async function listGameDayLineCourts(gameDayId) {
-  const snap = await getDocs(courtsCol(gameDayId));
+  const snap = await getDocsFromServer(courtsCol(gameDayId));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 

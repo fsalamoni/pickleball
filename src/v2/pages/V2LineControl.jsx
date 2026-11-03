@@ -106,7 +106,10 @@ export default function V2LineControl() {
     body = <V2EmptyState icon={Camera} title={t('Controle de linhas desligado')} description={t('Esta funcionalidade ainda não foi liberada na plataforma.')} />;
   } else if (consulta.isLoading || linhas.isLoading) {
     body = <V2Skeleton lines={4} />;
-  } else if (consulta.isError || !gameDay || linhas.isError) {
+  } else if (!gameDay || !linhas.data) {
+    // Erro só SEM dado: numa releitura que falha (o Wi-Fi caiu um instante) a
+    // câmera que está filmando segue com o que já tinha — o React Query
+    // guarda o dado; derrubar a tela desligaria a câmera no meio do jogo.
     body = <V2ErrorState onRetry={() => { consulta.refetch(); linhas.refetch(); }} />;
   } else if (quadra && !court) {
     body = <V2EmptyState icon={Camera} title={t('Quadra não encontrada neste dia de jogo')} action={<V2Button asChild size="sm"><Link to={gameDayLinePage(gameDayId)}>{t('Ver as quadras')}</Link></V2Button>} />;

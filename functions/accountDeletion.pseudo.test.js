@@ -191,6 +191,12 @@ describe('⭐ a cascata com as especificações REAIS', () => {
     'game_days/d1/line_courts/court-2/line_calls/k1': { uid: X, position: 'fundo_a', kind: 'bounce', call: 'out' },
     'game_days/d1/line_courts/court-2/line_calls/k2': { uid: 'y', position: 'rede_1', kind: 'volley', call: 'fault' },
     'game_days/d1/line_calls/k0': { uid: X, position: 'fundo_a', kind: 'bounce', call: 'in' },
+    // ⭐ filmou sem estar nas listas: o dia da arena que ela gere (não é
+    // membro) e a quadra de um torneio de que ela não é da equipe
+    'game_days/d9': { created_by: 'y', arena_id: 'a1', member_uids: ['y'], status: 'active' },
+    'game_days/d9/line_courts/court-1/line_cams/x_topo': { uid: X, name: 'Ana Teste', position: 'topo' },
+    'game_days/d9/line_courts/court-1/line_calls/k9': { uid: X, position: 'topo', kind: 'bounce', call: 'out' },
+    'tournament_line_courts/t9_c1/line_cams/x_fundo_b': { uid: X, name: 'Ana Teste', position: 'fundo_b' },
     // conversa
     'conversations/c1': { member_ids: [X, 'y'], members: [{ uid: X, name: 'Ana Teste' }, { uid: 'y', name: 'Bia Real' }] },
     'conversations/c1/messages/m1': { sender_id: X, sender_name: 'Ana Teste', text: 'segredo', attachments: [] },
@@ -253,6 +259,36 @@ describe('⭐ a cascata com as especificações REAIS', () => {
     expect(get('game_days/d1/line_courts/court-2').line_control).toBe(true);
   });
 
+  it('⭐ controle de linhas: acha a câmera de quem filmou SEM estar nas listas (gestor da arena, fora da equipe)', async () => {
+    const { get } = await rodar();
+    expect(get('game_days/d9/line_courts/court-1/line_cams/x_topo')).toBeUndefined();
+    expect(get('game_days/d9/line_courts/court-1/line_calls/k9')).toBeUndefined();
+    expect(get('tournament_line_courts/t9_c1/line_cams/x_fundo_b')).toBeUndefined();
+  });
+
+  it('⭐ controle de linhas: mais marcações que o teto ⇒ exclusão PARCIAL (a próxima rodada apaga o resto)', async () => {
+    const db = createFakeDb({
+      ...seed(),
+      ...Object.fromEntries(Array.from({ length: 401 }, (_, i) => [`game_days/d1/line_courts/court-2/line_calls/m${i}`, { uid: X, kind: 'bounce', call: 'in' }])),
+    });
+    const ctx = { db, auth: createFakeAuth([X], { log: db.store.log }), bucket: createFakeBucket([]) };
+    const r = await executeAccountDeletion(ctx, X, {
+      actor: { uid: 'admin', email: 'dono@x.com' }, reason: 'teste', hojeISO: '2026-09-24', FieldValue: FakeFieldValue,
+    });
+    expect(r.status).toBe('partial');
+  });
+
+  it('⭐ controle de linhas: a busca que FALHA (sem o índice de grupo) deixa a exclusão parcial, não "nada a apagar"', async () => {
+    const db = createFakeDb(seed());
+    db.collectionGroup = () => { throw Object.assign(new Error('FAILED_PRECONDITION: requires an index'), { code: 9 }); };
+    const ctx = { db, auth: createFakeAuth([X], { log: db.store.log }), bucket: createFakeBucket([]) };
+    const r = await executeAccountDeletion(ctx, X, {
+      actor: { uid: 'admin', email: 'dono@x.com' }, reason: 'teste', hojeISO: '2026-09-24', FieldValue: FakeFieldValue,
+    });
+    expect(r.status).toBe('partial');
+    expect(db.store.docs.get('users/x')).toBeUndefined();
+  });
+
   it('⭐ conversa: a mensagem da pessoa perde o conteúdo; a da outra fica', async () => {
     const { get } = await rodar();
     expect(get('conversations/c1/messages/m1').text).toBe(REMOVED_MESSAGE);
@@ -294,6 +330,9 @@ describe('⭐ a cascata com as especificações REAIS', () => {
       'game_days/d1/line_calls/k0',
       'game_days/d1/line_courts/court-2/line_calls/k1',
       'game_days/d1/line_courts/court-2/line_cams/x_fundo_a',
+      'game_days/d9/line_courts/court-1/line_calls/k9',
+      'game_days/d9/line_courts/court-1/line_cams/x_topo',
+      'tournament_line_courts/t9_c1/line_cams/x_fundo_b',
       'users/x',
     ].sort());
   });
