@@ -4,11 +4,13 @@ import { listTournamentLineCourts, saveTournamentLineCourt } from '../services/t
 
 const key = (tid) => ['tournament-line-courts', tid];
 
-export function useTournamentLineCourts(tournamentId, { enabled = true } = {}) {
+/** `refetchInterval`: o telão relê para notar quadra ligada/desligada. */
+export function useTournamentLineCourts(tournamentId, { enabled = true, refetchInterval } = {}) {
   return useQuery({
     queryKey: key(tournamentId),
     queryFn: () => listTournamentLineCourts(tournamentId),
     enabled: Boolean(enabled && tournamentId),
+    refetchInterval,
   });
 }
 

@@ -282,6 +282,11 @@ torneio, botão "Controle de linhas" (só com a flag).
   jogo ou o caminho da quadra. Na exclusão de conta, as câmeras e marcações da
   pessoa nas quadras dos torneios que ela administra são apagadas
   (`coletarLinhasDeTorneio`). Zero índice (uma igualdade).
+- **Telão do torneio** (`/torneios/:id/telao`): `TournamentTelaoLines` (em
+  `TelaoLineTicker.jsx`) põe no canto um aviso por quadra ligada — câmeras no
+  ar, "Lance em revisão" e o último lance —, com o nome da quadra na frente.
+  Relê as quadras a cada 30 s. A leitura pede conta logada: sem conta ou com
+  falha, não aparece nada e o quadro dos jogos segue igual.
 - Prova no emulador: `tests/rules/tournamentLineControl.rules.test.js`.
 
 Evitar no produto: Ultralytics/YOLOv8+ (AGPL-3.0) e repositórios sem licença.
