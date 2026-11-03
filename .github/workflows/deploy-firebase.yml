@@ -197,9 +197,9 @@ jobs:
         run: |
           set +e
           # O serviço de regras às vezes devolve 503/500 passageiro (deploy do
-          # PR #320 parou assim, sem nada errado no código): repete até 3 vezes
+          # PR #320 parou assim, sem nada errado no código): repete até 5 vezes
           # com espera crescente antes de desistir.
-          for TENTATIVA in 1 2 3; do
+          for TENTATIVA in 1 2 3 4 5; do
             OUT=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
             RC=$?
             echo "$OUT"
@@ -207,7 +207,7 @@ jobs:
               break
             fi
             echo "::warning title=Serviço de regras indisponível::Tentativa $TENTATIVA falhou com erro passageiro; repetindo."
-            sleep $((TENTATIVA * 20))
+            [ $TENTATIVA -lt 5 ] && sleep $((TENTATIVA * 45))
           done
           if [ $RC -eq 0 ]; then
             # Verde sem publicar é o pior desfecho: parece que as regras estão
@@ -233,14 +233,14 @@ jobs:
             # A repetição também pega o 503 passageiro (deploy do PR #364: o
             # 409 veio de um PATCH lento e a repetição caiu num 503, parando
             # site e funções com as regras já no ar).
-            for TENTATIVA in 1 2 3; do
+            for TENTATIVA in 1 2 3 4 5; do
               DBG=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --debug 2>&1)
               DRC=$?
               if [ $DRC -eq 0 ] || ! echo "$DBG" | grep -qiE "HTTP Error: 5[0-9][0-9]|currently unavailable|ECONNRESET|ETIMEDOUT"; then
                 break
               fi
               echo "::warning title=Serviço de regras indisponível::Repetição $TENTATIVA falhou com erro passageiro; repetindo."
-              sleep $((TENTATIVA * 20))
+              [ $TENTATIVA -lt 5 ] && sleep $((TENTATIVA * 45))
             done
             echo "$DBG" | grep -iE "rules\]|releases|rulesets|status\]|body\]|Error" | grep -v '"source"' | cut -c1-1500
             echo "::endgroup::"
