@@ -152,6 +152,8 @@ torneio, `/c/:clubId`) existem para isso.
 | Ver a **central** de linhas | ◐ quem vê o dia | ✔ | ✔ | ✔ | ✔* | ✔ | ✔ | rules (`canAccessGameDay`) |
 | Limpar marcações | ✖ (só a própria câmera) | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |
 
+**Controle de linhas na quadra de torneio** (`tournament_line_courts`, docs/53 §9): ligar a quadra, escolher o arranjo, ser câmera, dar a palavra final e limpar marcações — só a equipe do torneio (criador, administrador do torneio, gestor da arena sede, admin da plataforma), pela regra `tLineOrg`/`tLineCamOk`; ser câmera exige a quadra ligada e é em nome próprio. Acompanhar a central: qualquer conta logada.
+
 \* `canAccessGameDay` para um gestor de arena que não é criador nem membro depende de o dia ser público; todo dia de arena nasce público.
 
 **Onde a regra é mais larga que a tela (Play).** Em `participants` (update) e

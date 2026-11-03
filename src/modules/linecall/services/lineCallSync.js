@@ -21,8 +21,14 @@ import { db } from '@/core/config/firebase';
 
 export const HEARTBEAT_MS = 15000;
 
-const camsCol = (gameDayId) => collection(db, 'game_days', gameDayId, 'line_cams');
-const callsCol = (gameDayId) => collection(db, 'game_days', gameDayId, 'line_calls');
+/**
+ * Onde moram as câmeras e as marcações. O "anfitrião" é o id de um dia de jogo
+ * (`game_days/{id}`) ou o caminho de uma quadra de torneio
+ * (`tournament_line_courts/{torneio}_{quadra}`, ver `domain/tournamentLine.js`).
+ */
+export const hostPath = (host) => (String(host).includes('/') ? String(host) : `game_days/${host}`);
+const camsCol = (host) => collection(db, hostPath(host), 'line_cams');
+const callsCol = (host) => collection(db, hostPath(host), 'line_calls');
 
 export const camDocId = (uid, position) => `${uid}_${position}`;
 

@@ -11,15 +11,20 @@ import { V2Button } from '@/v2/ui/primitives';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { t } from '@/core/i18n';
 
-export function cameraLink(gameDayId, position) {
+/**
+ * @param {string} gameDayId  o dia de jogo — ou `linkBase`, o caminho da página
+ *   (`/torneios/X/linhas?quadra=Y`) quando a câmera é de uma quadra de torneio
+ */
+export function cameraLink(gameDayId, position, linkBase = null) {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${origin}/dia-de-jogo/${gameDayId}/linhas?modo=camera&posicao=${encodeURIComponent(position)}`;
+  const base = linkBase || `/dia-de-jogo/${gameDayId}/linhas`;
+  return `${origin}${base}${base.includes('?') ? '&' : '?'}modo=camera&posicao=${encodeURIComponent(position)}`;
 }
 
-export default function CameraInvite({ gameDayId, position, positionLabel }) {
+export default function CameraInvite({ gameDayId, position, positionLabel, linkBase = null }) {
   const [aberto, setAberto] = useState(false);
   const [png, setPng] = useState(null);
-  const url = cameraLink(gameDayId, position);
+  const url = cameraLink(gameDayId, position, linkBase);
   useEffect(() => {
     if (!aberto || png) return undefined;
     let vivo = true;
