@@ -7,6 +7,8 @@
  * clube. Puro.
  */
 
+import { DEFAULT_LAYOUT } from './cameraLayouts.js';
+
 export const LINE_COURTS = 'line_courts';
 export const MAX_LINE_COURTS = 99;
 const COURT_ID = /^court-(\d{1,2})$/;
@@ -82,7 +84,10 @@ export function lineCourtCopyPlan(source, sourceDocs, gameDays, uid, today) {
       courts: gameDayLineCourts(g).map((c) => {
         const d = conf.get(c.id);
         const patch = { line_control: d?.line_control === true };
-        if (d?.line_control_layout) patch.line_control_layout = d.line_control_layout;
+        // Ligada sem arranjo escolhido é o arranjo PADRÃO: grava-se, senão a
+        // quadra de lá mantém o arranjo antigo dela (a gravação mescla).
+        if (patch.line_control) patch.line_control_layout = d.line_control_layout || DEFAULT_LAYOUT;
+        else if (d?.line_control_layout) patch.line_control_layout = d.line_control_layout;
         return { id: c.id, patch };
       }),
     }));

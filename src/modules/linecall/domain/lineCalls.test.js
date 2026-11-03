@@ -138,6 +138,9 @@ describe('quadra por quadra no dia de jogo', () => {
       { id: 'court-3', patch: { line_control: false } },
     ]);
     expect(plano[1].courts).toEqual([{ id: 'court-1', patch: { line_control: true, line_control_layout: 'quatro' } }]);
+    // Ligada sem arranjo escolhido leva o padrão (senão a de lá mantém o dela).
+    const soLigada = lineCourtCopyPlan(fonte, [{ id: 'court-1', line_control: true }], [dias[4]], 'u', '2026-11-03');
+    expect(soLigada[0].courts).toEqual([{ id: 'court-1', patch: { line_control: true, line_control_layout: 'solo_fundo' } }]);
     expect(lineCourtCopyPlan(fonte, conf, dias, null, '2026-11-03')).toEqual([]);
     expect(lineCourtCopyPlan(null, conf, dias, 'u', '2026-11-03')).toEqual([]);
   });

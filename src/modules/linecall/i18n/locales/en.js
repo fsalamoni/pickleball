@@ -265,6 +265,8 @@ export default {
   "{n} decididos por quem organiza": "{n} decided by the organizer",
   "{n} dentro": "{n} in",
   "{n} faltas na cozinha": "{n} kitchen faults",
+  "{n} faltas de pé no saque": "{n} serve foot faults",
+  "{n} faltas de dois quiques": "{n} two-bounce faults",
   "{n} fora": "{n} out",
   "{n} lances": "{n} calls",
   "{n} para revisar": "{n} to review",

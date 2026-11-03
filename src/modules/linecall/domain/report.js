@@ -5,17 +5,23 @@
 
 const KINDS = ['in', 'out', 'review', 'fault', 'clean'];
 
-/** Quantos lances de cada veredito, e quantos o organizador decidiu. */
+/**
+ * Quantos lances de cada veredito, e quantos o organizador decidiu. As faltas
+ * também por TIPO (`faults`): pé na cozinha no voleio, pé no saque e dois
+ * quiques são regras diferentes.
+ */
 export function lanceSummary(lances) {
   const out = Object.fromEntries(KINDS.map((k) => [k, 0]));
+  const faults = { volley: 0, serve_foot: 0, two_bounce: 0 };
   let decided = 0;
   let serves = 0;
   (lances || []).forEach((l) => {
     if (l.call in out) out[l.call] += 1;
+    if (l.call === 'fault' && l.kind in faults) faults[l.kind] += 1;
     if (l.decided) decided += 1;
     if (l.serve) serves += 1;
   });
-  return { ...out, total: (lances || []).length, decided, serves };
+  return { ...out, faults, total: (lances || []).length, decided, serves };
 }
 
 const cm = (m) => (Number.isFinite(m) ? String(Math.round(m * 100)) : '');

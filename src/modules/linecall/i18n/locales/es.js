@@ -265,6 +265,8 @@ export default {
   "{n} decididos por quem organiza": "{n} decididas por quien organiza",
   "{n} dentro": "{n} dentro",
   "{n} faltas na cozinha": "{n} faltas en la cocina",
+  "{n} faltas de pé no saque": "{n} faltas de pie en el saque",
+  "{n} faltas de dois quiques": "{n} faltas de doble bote",
   "{n} fora": "{n} fuera",
   "{n} lances": "{n} jugadas",
   "{n} para revisar": "{n} para revisar",

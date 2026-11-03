@@ -273,7 +273,9 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
           <V2Badge tone="neutral">{t('{n} lances', { n: resumo.total })}</V2Badge>
           {resumo.in > 0 && <V2Badge tone="green">{t('{n} dentro', { n: resumo.in })}</V2Badge>}
           {resumo.out > 0 && <V2Badge tone="red">{t('{n} fora', { n: resumo.out })}</V2Badge>}
-          {resumo.fault > 0 && <V2Badge tone="red">{t('{n} faltas na cozinha', { n: resumo.fault })}</V2Badge>}
+          {resumo.faults.volley > 0 && <V2Badge tone="red">{t('{n} faltas na cozinha', { n: resumo.faults.volley })}</V2Badge>}
+          {resumo.faults.serve_foot > 0 && <V2Badge tone="red">{t('{n} faltas de pé no saque', { n: resumo.faults.serve_foot })}</V2Badge>}
+          {resumo.faults.two_bounce > 0 && <V2Badge tone="red">{t('{n} faltas de dois quiques', { n: resumo.faults.two_bounce })}</V2Badge>}
           {resumo.review > 0 && <V2Badge tone="amber">{t('{n} para revisar', { n: resumo.review })}</V2Badge>}
           {resumo.decided > 0 && <V2Badge tone="neutral">{t('{n} decididos por quem organiza', { n: resumo.decided })}</V2Badge>}
         </div>

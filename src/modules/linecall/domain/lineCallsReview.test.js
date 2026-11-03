@@ -76,6 +76,13 @@ describe('resumo e planilha', () => {
   it('conta por veredito', () => {
     expect(lanceSummary(lances)).toMatchObject({ in: 1, out: 1, total: 2, decided: 1, serves: 1 });
   });
+  it('separa as faltas por regra: pé na cozinha, pé no saque e dois quiques', () => {
+    const faltas = [
+      { kind: 'serve_foot', call: 'fault' }, { kind: 'serve_foot', call: 'fault' },
+      { kind: 'two_bounce', call: 'fault' }, { kind: 'volley', call: 'clean' },
+    ];
+    expect(lanceSummary(faltas)).toMatchObject({ fault: 3, faults: { volley: 0, serve_foot: 2, two_bounce: 1 } });
+  });
   it('monta o CSV em ordem de tempo, com ; e aspas quando precisa', () => {
     const csv = lancesCsv(lances, {
       header: ['Hora', 'Lance', 'Decidido', 'Discordância', 'Margem', 'Incerteza', 'Câmeras'],
