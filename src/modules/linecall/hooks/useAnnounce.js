@@ -1,17 +1,19 @@
 /**
- * useAnnounce — fala o lance em voz alta ("Fora!") e vibra o aparelho quando
- * chega um lance NOVO. É o juiz de linha que grita: quem está em quadra não
- * precisa olhar a tela.
+ * useAnnounce — avisa o lance NOVO na hora: um TOQUE curto (Web Audio, alguns
+ * milissegundos), a vibração e, se a pessoa quiser, a VOZ ("Fora!"). É o juiz
+ * de linha que grita: quem está em quadra não precisa olhar a tela.
  *
- * A escolha (ligado/desligado) é por pessoa, no navegador (`viewPreference`),
- * separada para a câmera e para a central. Nada abre sozinho na primeira
- * renderização: só o que chega DEPOIS de a tela abrir é anunciado.
+ * Duas escolhas por pessoa, no navegador (`viewPreference`), separadas para a
+ * câmera e para a central: o toque (padrão LIGADO) e a voz (padrão desligada).
+ * Nada toca na primeira renderização: só o que chega DEPOIS de a tela abrir.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { localeAtivo } from '@/core/i18n';
+import { tonesFor } from '../domain/alertTones';
+import { playTones, unlockAlertSound } from '../services/alertSound';
 
 export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
 
@@ -35,29 +37,37 @@ const vibrate = (pattern) => {
  * @param {{ id: string, call: string }|null} latest  o lance mais recente
  * @param {(l) => string} toText  o que falar
  * @param {string} prefKey  onde guardar a escolha
- * @returns {[boolean, (on: boolean) => void]}
+ * @returns {[boolean, (on: boolean) => void, boolean, (on: boolean) => void]}
+ *   voz ligada, liga/desliga a voz, toque ligado, liga/desliga o toque
  */
 export function useAnnounce(latest, toText, prefKey) {
   const { user } = useAuth();
   const uid = user?.uid || null;
+  const somKey = `${prefKey}:som`;
   const [on, setOnState] = useState(() => readViewPreference(uid, prefKey) === '1');
+  const [som, setSomState] = useState(() => readViewPreference(uid, somKey) !== '0');
   const seen = useRef(latest?.id ?? null);
 
   const setOn = (v) => {
     setOnState(v);
     writeViewPreference(uid, prefKey, v ? '1' : '0');
     // O primeiro anúncio precisa de um gesto da pessoa (Safari): este é ele.
-    if (v) speak(' ');
+    if (v) { speak(' '); unlockAlertSound(); }
+  };
+  const setSom = (v) => {
+    setSomState(v);
+    writeViewPreference(uid, somKey, v ? '1' : '0');
+    if (v) { unlockAlertSound(); playTones(tonesFor('review')); }
   };
 
   useEffect(() => {
     if (!latest?.id || latest.id === seen.current) return;
     seen.current = latest.id;
-    if (!on) return;
-    speak(toText(latest));
+    if (som) playTones(tonesFor(latest.call));
     if (['out', 'fault'].includes(latest.call)) vibrate([120, 60, 120]);
     else if (latest.call === 'review') vibrate(60);
-  }, [latest, on, toText]);
+    if (on) speak(toText(latest));
+  }, [latest, on, som, toText]);
 
-  return [on, setOn];
+  return [on, setOn, som, setSom];
 }

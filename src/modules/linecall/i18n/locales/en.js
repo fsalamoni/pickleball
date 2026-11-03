@@ -384,4 +384,6 @@ export default {
   "menos de 24 quadros/s": "under 24 frames/s",
   "bateria baixa fora do carregador": "low battery, not charging",
   "calibração com erro acima de 6 cm": "calibration error above 6 cm",
+  "Som do lance ligado": "Call sound on",
+  "Som do lance desligado": "Call sound off",
 };

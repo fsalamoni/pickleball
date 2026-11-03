@@ -4,7 +4,7 @@
  * `GameDayModule`, então vale igual no atleta, na arena e no clube.
  *
  * Só existe com a flag `line_control` ligada pelo admin da plataforma. Quem
- * pode ligar é quem CONFIGURA o dia (`podeConfigurar`); para os demais o
+ * pode ligar é quem organiza o dia ou é administrador nomeado do jogo (`podeConfigurarLinhas`); para os demais o
  * cartão só aparece se o controle estiver ligado, como aviso.
  *
  * Ligar vale para jogo em andamento: não depende de status nem de partida.
@@ -34,7 +34,7 @@ export default function GameDayLineControlCard({ gameDay }) {
 
 function LineControlCard({ gameDay }) {
   const { user } = useAuth();
-  const { podeConfigurar } = useGameDayRoles(gameDay);
+  const { podeConfigurarLinhas: podeConfigurar } = useGameDayRoles(gameDay);
   const update = useUpdateGameDay();
   const setMany = useSetGameDaysLineControl();
   // Só quem pode ligar precisa da lista dos próprios dias (para "todos").

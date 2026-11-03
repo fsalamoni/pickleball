@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Camera, Crosshair, Palette, Play, Pause, Trash2, Check, Radio, AlertTriangle,
   Move, Target, ScanSearch, Volume2, VolumeX, Film, BatteryLow, Magnet,
+  Bell, BellOff,
 } from 'lucide-react';
 
 import { V2Surface, V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
@@ -28,6 +29,7 @@ import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
 import CourtDiagram from './CourtDiagram';
 import PlacementGuide, { DeviceTips } from './PlacementGuide';
 import LanceReplay from './LanceReplay';
+import CallFlash from './CallFlash';
 import { CALL_TONE, CALL_COLOR, CALL_TEXT, callLabel, callDetail, callSpoken } from './callLabels';
 import { cn } from '@/core/lib/utils';
 import { t, tk } from '@/core/i18n';
@@ -266,7 +268,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const [replay, setReplay] = useState(null);
   useWakeLock(Boolean(s.stream));
   const last = s.events[0];
-  const [falar, setFalar] = useAnnounce(last || null, callSpoken, 'linhas:voz:camera');
+  const [falar, setFalar, som, setSom] = useAnnounce(last || null, callSpoken, 'linhas:voz:camera');
 
   const onTap = useCallback((pt) => {
     if (mode === 'color') { s.learnBallColor(pt); setMode(null); return; }
@@ -306,6 +308,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
   return (
     <div className="space-y-4">
+      <CallFlash latest={s.running ? last || null : null} />
       <V2Surface
         collapsible
         collapseId="linhas-posicionar"
@@ -454,6 +457,10 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                     {s.running
                       ? <><Pause className="mr-1.5 h-4 w-4" /> {t('Pausar')}</>
                       : <><Play className="mr-1.5 h-4 w-4" /> {t('Começar a analisar')}</>}
+                  </V2Button>
+                  <V2Button variant="ghost" onClick={() => setSom(!som)} aria-pressed={som}>
+                    {som ? <Bell className="mr-1.5 h-4 w-4" /> : <BellOff className="mr-1.5 h-4 w-4" />}
+                    {som ? t('Som do lance ligado') : t('Som do lance desligado')}
                   </V2Button>
                   {canSpeak() && (
                     <V2Button variant="ghost" onClick={() => setFalar(!falar)} aria-pressed={falar}>

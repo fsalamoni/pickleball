@@ -109,3 +109,34 @@ describe('as marcações', () => {
       { ...cam(ATLETA), battery: 40, charging: false, check_cm: 2.1 }));
   });
 });
+
+describe('quem liga e configura o controle (pedido do dono, 2026-11-03)', () => {
+  const NOMEADO = 'nomeado_uid';
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'game_days', 'comAdmin'), {
+        visibility: 'public', created_by: DONO, member_uids: [DONO, ATLETA], admin_uids: [NOMEADO], format: 'americano', title: 'Racha',
+      });
+    });
+  });
+
+  it('⭐ o administrador nomeado liga e escolhe o arranjo — só essas chaves', async () => {
+    await assertSucceeds(updateDoc(doc(como(NOMEADO), 'game_days/comAdmin'), { line_control: true, line_control_layout: 'dois_fundos' }));
+    await assertFails(updateDoc(doc(como(NOMEADO), 'game_days/comAdmin'), { line_control: false, title: 'Outro' }));
+    await assertFails(updateDoc(doc(como(NOMEADO), 'game_days/comAdmin'), { line_control: 'sim' }));
+  });
+
+  it('o participante e quem só vê o dia não ligam', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'game_days/comAdmin'), { line_control: true }));
+    await assertFails(updateDoc(doc(como(ESTRANHO), 'game_days/comAdmin'), { line_control: true }));
+  });
+
+  it('o nomeado dá a palavra final num lance; o participante não', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'game_days/comAdmin'), { line_control: true }, { merge: true });
+      await setDoc(doc(ctx.firestore(), 'game_days/comAdmin/line_calls/c1'), call(ATLETA));
+    });
+    await assertSucceeds(updateDoc(doc(como(NOMEADO), 'game_days/comAdmin/line_calls/c1'), { decision: 'out', decided_by: NOMEADO, decided_ms: 5 }));
+    await assertFails(updateDoc(doc(como(ATLETA), 'game_days/comAdmin/line_calls/c1'), { decision: 'in', decided_by: ATLETA, decided_ms: 6 }));
+  });
+});

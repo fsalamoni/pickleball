@@ -32,7 +32,7 @@ import { CLUB_ROLE } from '@/modules/clubs/domain/constants';
 import { isArenaGameDay } from '../domain/arenaGameDay.js';
 import { isClubGameDay } from '../domain/clubGameDay.js';
 import {
-  canConfigureGameDay, canEditPlayGroups, canManageGameDay, isGameDayAdmin, isGameDayCreator,
+  canConfigureGameDay, canConfigureLineControl, canEditPlayGroups, canManageGameDay, isGameDayAdmin, isGameDayCreator,
 } from '../domain/gameDayRoles.js';
 
 /**
@@ -75,6 +75,8 @@ export function useGameDayRoles(gameDay, participants = null) {
       // Os GRUPOS do Play são a única configuração que o administrador NOMEADO
       // divide com o criador (ver `canEditPlayGroups`).
       podeEditarGrupos: canEditPlayGroups(gameDay, uid, { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube }),
+      // Controle de linhas: quem organiza + o administrador nomeado do jogo.
+      podeConfigurarLinhas: canConfigureLineControl(gameDay, uid, { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube }),
     };
   }, [gameDay, participants, arenasGeridas, membership, uid]);
 }

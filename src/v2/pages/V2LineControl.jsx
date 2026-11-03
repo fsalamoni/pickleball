@@ -145,7 +145,7 @@ export default function V2LineControl() {
   const { user } = useAuth();
   const consulta = useGameDay(ligada ? gameDayId : null);
   const gameDay = consulta.data;
-  const { podeConfigurar } = useGameDayRoles(gameDay);
+  const { podeConfigurarLinhas: podeConfigurar } = useGameDayRoles(gameDay);
   const update = useUpdateGameDay();
   const ativo = Boolean(ligada && gameDay?.line_control === true);
   const live = useLineControlLive(gameDay?.id, { enabled: ativo });

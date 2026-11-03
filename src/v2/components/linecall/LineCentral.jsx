@@ -12,7 +12,7 @@
 
 import React, { useCallback, useState } from 'react';
 import {
-  Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target, CheckCircle2, AlertTriangle,
+  Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target, CheckCircle2, AlertTriangle, Bell, BellOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -28,6 +28,7 @@ import { clearLineCalls, decideLance } from '@/modules/linecall/services/lineCal
 import CourtDiagram from './CourtDiagram';
 import CourtMark from './CourtMark';
 import CameraInvite from './CameraInvite';
+import CallFlash from './CallFlash';
 import { CALL_TEXT, CALL_TONE, CALL_LABEL, callLabel, callDetail, callSpoken } from './callLabels';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
@@ -124,7 +125,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
   const [aberto, setAberto] = useState(null);
   const [ultimo, ...anteriores] = live.lances;
   const spoken = useCallback((l) => callSpoken(l), []);
-  const [falar, setFalar] = useAnnounce(ultimo || null, spoken, 'linhas:voz:central');
+  const [falar, setFalar, som, setSom] = useAnnounce(ultimo || null, spoken, 'linhas:voz:central');
 
   if (live.isError) return <V2ErrorState onRetry={live.retry} description={t('Não deu para ouvir as câmeras deste jogo.')} />;
   if (live.isLoading) return <V2Skeleton lines={4} />;
@@ -146,6 +147,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
 
   return (
     <div className="space-y-4">
+      <CallFlash latest={ultimo || null} />
       <V2Surface className="p-4" data-dica="linhas-central-cameras">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,140px)_1fr]">
           <CourtDiagram
@@ -243,6 +245,10 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
           </p>
         )}
         <div className="flex flex-wrap items-center justify-center gap-2">
+          <V2Button size="sm" variant="ghost" onClick={() => setSom(!som)} aria-pressed={som}>
+            {som ? <Bell className="mr-1.5 h-4 w-4" /> : <BellOff className="mr-1.5 h-4 w-4" />}
+            {som ? t('Som do lance ligado') : t('Som do lance desligado')}
+          </V2Button>
           {canSpeak() && (
             <V2Button size="sm" variant="ghost" onClick={() => setFalar(!falar)} aria-pressed={falar}>
               {falar ? <Volume2 className="mr-1.5 h-4 w-4" /> : <VolumeX className="mr-1.5 h-4 w-4" />}

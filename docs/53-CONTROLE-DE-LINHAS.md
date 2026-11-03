@@ -7,8 +7,10 @@
 
 ## 1. O que faz
 
-Com a flag ligada, quem **configura** um dia de jogo (criador, gestor da arena,
-admin do clube — `useGameDayRoles().podeConfigurar`) vê o cartão **Controle de
+Com a flag ligada, quem **organiza** o jogo — criador, gestor da arena, admin do
+clube e o **administrador nomeado** do jogo (`canConfigureLineControl`,
+`useGameDayRoles().podeConfigurarLinhas`; a regra tem uma cláusula estreita para
+o nomeado: só `line_control`/`line_control_layout`) — vê o cartão **Controle de
 linhas por câmera** dentro do `GameDayModule` (as três origens por construção):
 
 - liga/desliga **neste jogo** — vale com o jogo em andamento;
@@ -168,6 +170,13 @@ dos kits são `basico`, `celulares`, `computador`, `estudio` — nunca renomeie.
   câmera (plug-in de câmera virtual múltipla ou "Webcam Input" das ferramentas
   NDI) ou uma cópia do OBS por câmera. Vídeo do OBS em 1080p **60** (o padrão é
   30). Sem fio: roteador só das câmeras, 5 GHz, perto da quadra.
+- **Aviso na hora** (`domain/alertTones.js` + `services/alertSound.js`, em
+  `useAnnounce`): um TOQUE pelo Web Audio sai alguns milissegundos depois do
+  lance, antes da voz (que leva 200–500 ms): fora = dois agudos, falta de pé =
+  zumbido grave, revisar = um médio; o "dentro" não toca. O toque nasce LIGADO
+  (`<pref>:som`), a voz desligada; os dois por pessoa no navegador. A vibração
+  sai sempre. Junto, `CallFlash` pinta a tela inteira na cor do lance com a
+  palavra enorme (câmera analisando e central), sem bloquear o toque.
 - **Pronto para começar?** (`domain/readiness.js`, no topo da central): sem
   câmera, sem calibrar ou em pausa **bloqueiam** (a posição não julga);
   menos de 24 q/s, bateria ≤ 20% fora do carregador e erro do 5º ponto acima

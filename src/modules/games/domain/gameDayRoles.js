@@ -206,6 +206,19 @@ export function canEditPlayGroups(gameDay, uid, { arenaManager = false, clubMana
 }
 
 /**
+ * Pode LIGAR e CONFIGURAR o controle de linhas por câmera (flag `line_control`)?
+ * Quem organiza o dia (criador, gestor da arena, admin do clube) e o
+ * administrador NOMEADO do jogo. O participante de um dia aberto opera as
+ * partidas, mas não liga câmera de arbitragem. A regra do `game_days` confere
+ * o mesmo (cláusula estreita: só `line_control`/`line_control_layout`).
+ */
+export function canConfigureLineControl(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
+  if (!uid || !gameDay) return false;
+  if (canConfigureGameDay(gameDay, uid, { arenaManager, clubManager })) return true;
+  return gameDayAdminUids(gameDay).includes(uid);
+}
+
+/**
  * Pode GERENCIAR as partidas e os participantes?
  *
  * @param {object} gameDay
