@@ -12,7 +12,7 @@
 
 import React, { useCallback, useState } from 'react';
 import {
-  Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target,
+  Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -21,11 +21,13 @@ import { CAMERA_POSITIONS, layoutById } from '@/modules/linecall/domain/cameraLa
 import { positionOccupancy, DECISIONS } from '@/modules/linecall/domain/fusion';
 import { nearestBoundary } from '@/modules/linecall/domain/court';
 import { lanceSummary, lancesCsv } from '@/modules/linecall/domain/report';
+import { readinessCheck, READINESS_TEXT } from '@/modules/linecall/domain/readiness';
 import { useNow } from '@/modules/linecall/hooks/useLineControlLive';
 import { useAnnounce, canSpeak } from '@/modules/linecall/hooks/useAnnounce';
 import { clearLineCalls, decideLance } from '@/modules/linecall/services/lineCallSync';
 import CourtDiagram from './CourtDiagram';
 import CourtMark from './CourtMark';
+import CameraInvite from './CameraInvite';
 import { CALL_TEXT, CALL_TONE, CALL_LABEL, callLabel, callDetail, callSpoken } from './callLabels';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
@@ -129,6 +131,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
 
   const noAr = Object.values(occ).filter(Boolean).length;
   const resumo = lanceSummary(live.lances);
+  const pronto = readinessCheck(layout.positions, occ);
 
   const limpar = async () => {
     setLimpando(true);
@@ -157,6 +160,29 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
               <V2Badge tone={noAr === layout.positions.length ? 'green' : noAr ? 'amber' : 'neutral'}>
                 {t('{n} de {m} câmeras no ar', { n: noAr, m: layout.positions.length })}
               </V2Badge>
+            </div>
+            <div
+              role="status"
+              data-dica="linhas-central-pronto"
+              className={cn('rounded-lg px-3 py-2 text-sm', pronto.ready ? 'bg-green-50 text-green-800' : pronto.blocking ? 'bg-amber-50 text-amber-900' : 'bg-blue-50 text-blue-900')}
+            >
+              <p className="flex items-center gap-2 font-semibold">
+                {pronto.ready
+                  ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  : <AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+                {pronto.ready
+                  ? t('Pronto para começar: todas as câmeras analisando.')
+                  : pronto.blocking
+                    ? t('Ainda não está pronto: {n} posição(ões) sem julgar.', { n: pronto.blocking })
+                    : t('Dá para começar, com {n} aviso(s).', { n: pronto.warnings })}
+              </p>
+              {!pronto.ready && (
+                <ul className="mt-1 list-disc space-y-0.5 pl-6 text-xs">
+                  {pronto.issues.map((i) => (
+                    <li key={i.position + i.code}>{t(CAMERA_POSITIONS[i.position]?.label || i.position)}: {t(READINESS_TEXT[i.code])}</li>
+                  ))}
+                </ul>
+              )}
             </div>
             <ul className="space-y-2">
               {layout.positions.map((p, i) => {
@@ -187,7 +213,10 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
                         {c.name && <span className="text-xs text-gray-500">{c.name}</span>}
                       </>
                     ) : (
-                      <V2Badge tone="neutral">{t('Sem câmera')}</V2Badge>
+                      <>
+                        <V2Badge tone="neutral">{t('Sem câmera')}</V2Badge>
+                        <CameraInvite gameDayId={gameDay.id} position={p} positionLabel={t(CAMERA_POSITIONS[p].label)} />
+                      </>
                     )}
                   </li>
                 );

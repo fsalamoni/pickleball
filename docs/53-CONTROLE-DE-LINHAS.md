@@ -136,6 +136,47 @@ ENTREGOU): 30 quadros/s e 720p (abaixo disso a tela recusa analisar); o bom é
 **60 quadros e 1080p**. O selo "cm por pixel" no ponto mais longe deve ficar
 ≤ 3. A bola anda 10–25 m/s: a 30 quadros ela salta até 80 cm entre duas fotos.
 
+## 5a. Montagens — "Como você vai montar?" (`domain/setupKits.js`, `SetupGuide`)
+
+A entrada do controle de linhas mostra quatro kits, com passo a passo, prós e
+limites, os arranjos que combinam ("Usar: …" para quem organiza) e o que ESTE
+aparelho aguenta (`deviceProfile`: celular/tablet = uma câmera; computador pelo
+`hardwareConcurrency`/`deviceMemory` — desconhecido fica conservador, 1). A
+escolha fica no navegador (`v2:view:<uid>:linhas:kit`), **zero banco**. Os ids
+dos kits são `basico`, `celulares`, `computador`, `estudio` — nunca renomeie.
+
+| kit | para quem | câmeras | ligação |
+|---|---|---|---|
+| Um celular | dia a dia | 1 | o próprio aparelho |
+| Vários celulares | clube e arena | 2–5 | cada celular analisa e só envia as marcações |
+| Computador com câmeras | torneio | 1–4 | USB / placa de captura HDMI, uma aba por câmera |
+| Estúdio com OBS | profissional | 1–5 | câmeras sem fio (NDI, SRT, RTSP) ou com fio no OBS → câmera virtual |
+
+- **Chamar um aparelho** (`CameraInvite`, na central): cada posição vazia tem
+  QR + link `/dia-de-jogo/:id/linhas?modo=camera&posicao=…` (o `qrcode` entra
+  por import dinâmico). Quem abre precisa de conta que pode ser câmera
+  (participante ou quem organiza) — a regra `lineCamOk` não mudou. Celular
+  separado entra com a conta de quem organiza ou com uma conta incluída como
+  participante.
+- **Várias câmeras num computador**: "Abrir outra câmera neste computador"
+  abre outra aba (cada aba = uma posição, o motor por aba). Aba escondida
+  analisa mais devagar.
+- **Fonte da câmera** (`cameraSource`, pelo nome que o sistema dá): OBS, NDI,
+  celular sem fio (DroidCam, Iriun, Camo…), placa de captura, câmera da frente —
+  cada uma com a dica certa (`CAMERA_SOURCE_TIP`) no passo 1.
+- **OBS**: uma câmera virtual por instância; para várias, uma saída virtual por
+  câmera (plug-in de câmera virtual múltipla ou "Webcam Input" das ferramentas
+  NDI) ou uma cópia do OBS por câmera. Vídeo do OBS em 1080p **60** (o padrão é
+  30). Sem fio: roteador só das câmeras, 5 GHz, perto da quadra.
+- **Pronto para começar?** (`domain/readiness.js`, no topo da central): sem
+  câmera, sem calibrar ou em pausa **bloqueiam** (a posição não julga);
+  menos de 24 q/s, bateria ≤ 20% fora do carregador e erro do 5º ponto acima
+  de 6 cm só **avisam**.
+- **Telão** (`TelaoLineTicker` + `telaoLineStatus` em `fusion.js`): faixa fixa
+  "Controle de linhas ativo · N câmera(s)" ou quais posições pararam; "Lance em
+  revisão" enquanto o último lance é "revisar" sem decisão (até 90 s,
+  `REVIEW_HOLD_MS`); o lance grande por 12 s.
+
 ## 6. Precisão — o que é viável e o que NÃO é
 
 O motor nunca inventa: toda medida sai com incerteza, e quando a distância à

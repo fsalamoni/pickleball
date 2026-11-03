@@ -1089,6 +1089,7 @@ const GUIAS_BASE = [
         target: 'linhas-central-cameras',
         title: tk('As câmeras do jogo'),
         body: tk('Cada posição do arranjo, com quem está nela, se está analisando, a bateria e o erro da calibração. Bateria baixa e erro alto aparecem em vermelho.'),
+        tip: tk('Posição vazia tem "Chamar um aparelho": um QR que abre o celular já como câmera naquela posição.'),
       },
       {
         id: 'lance',

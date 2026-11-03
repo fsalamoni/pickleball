@@ -23,6 +23,7 @@ import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnoun
 import { applyHomography } from '@/modules/linecall/domain/homography';
 import { courtSegments, insideMargin, kitchenDepth } from '@/modules/linecall/domain/court';
 import { CAMERA_LEVEL } from '@/modules/linecall/domain/cameraCheck';
+import { cameraSource, CAMERA_SOURCE_TIP } from '@/modules/linecall/domain/setupKits';
 import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
 import CourtDiagram from './CourtDiagram';
 import PlacementGuide, { DeviceTips } from './PlacementGuide';
@@ -278,6 +279,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const ids = s.targets.map((p) => p.id);
   const nextPoint = mode === 'corners' ? ids[Math.min(s.calib.corners.length, 3)] : null;
   const bloqueada = s.cameraChecks.some((c) => c.level === CAMERA_LEVEL.BLOCK);
+  // A dica pela FONTE da câmera (OBS, NDI, celular sem fio, captura), pelo nome que o sistema dá a ela.
+  const nomeCamera = s.stream?.getVideoTracks?.()[0]?.label || s.cameras.find((c) => c.id === deviceId)?.label || '';
+  const fonteDica = CAMERA_SOURCE_TIP[cameraSource(nomeCamera)];
   const calibrada = Boolean(s.H);
   const baixaBateria = Number.isFinite(s.battery.level) && s.battery.level <= 20 && s.battery.charging === false;
   const lento = s.running && s.fps > 0 && s.fps < 24;
@@ -331,6 +335,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 <Camera className="mr-1.5 h-4 w-4" /> {s.stream ? t('Trocar câmera') : t('Abrir câmera')}
               </V2Button>
             </div>
+            {fonteDica && (
+              <p className="rounded-2xl bg-paper p-3 text-sm text-ink" aria-live="polite">{t(fonteDica)}</p>
+            )}
             {s.stream && (
               <div className="flex flex-wrap gap-2">
                 {s.cameraChecks.map((c) => (
