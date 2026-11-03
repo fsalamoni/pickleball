@@ -28,8 +28,21 @@ A tentação era ter só "admin". Não serve, porque existem ações que o Fires
 
 | Nível | Função | Quem tem | O que pode |
 |---|---|---|---|
-| **Configurar** | `canConfigureGameDay(gd, uid)` | **só o criador** | editar, arquivar, escolher o modo, nomear/remover admin, publicar no ranking da plataforma |
-| **Organizar** | `canManageGameDay(gd, uid, { participants })` | depende do modo | sortear, criar/cancelar partida, substituir jogador, indisponível, vincular dupla, incluir/excluir participante |
+| **Configurar** | `canConfigureGameDay(gd, uid)` | **só o criador** (+ gestor da arena, admin do clube e o **admin da plataforma**) | editar, arquivar, escolher o modo, nomear/remover admin, publicar no ranking da plataforma |
+| **Organizar** | `canManageGameDay(gd, uid, { participants })` | depende do modo (o admin da plataforma sempre) | sortear, criar/cancelar partida, substituir jogador, indisponível, vincular dupla, incluir/excluir participante |
+
+**Administrador da plataforma (2026-11-03).** Ele configura e conduz o dia de
+jogo de QUALQUER pessoa. Ele chega lá por **Painel admin → Torneios → Dias de
+jogo** (`AdminGameDaysTab`, domínio `adminGameDays.js`): busca, origem e os
+filtros "Próximos", "Passados", "Sem data ou horário" e "Arquivados". Na tela, é
+a opção `platformAdmin` das funções de `gameDayRoles.js`, que `useGameDayRoles`
+preenche com `isPlatformAdmin` (e "ver como usuário" desliga). O hook devolve
+`ehAdminDaPlataforma` quando ele está no dia de outra pessoa só por esse
+papel, e o cartão de configurações avisa que cada mudança vai para a auditoria
+com o nome dele. Na regra, `isGameDayAdminOf` inclui `adm()` (participantes e
+jogos); o documento do dia, o ranking e o convite público (`open_games`, criado
+em nome de quem criou o dia) já aceitavam `adm()`. A prova no emulador está em
+`tests/rules/gameDayPlatformAdmin.rules.test.js`.
 
 E dois modos de organizar, escolhidos na criação e na edição do dia de jogo:
 

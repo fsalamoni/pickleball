@@ -544,3 +544,20 @@ Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
   `visibility == 'public'`.
 - `hooks/useGameDayLink.js` e telas `v2/components/games/GameDayLinkSection`,
   `GameDayLinkGuests` (dentro da seção), `LinkedGameDaysSection`. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §13.
+
+## Data e horário obrigatórios; admin da plataforma em qualquer dia (2026-11-03)
+
+- `normalizeGameDayInput(input, { defaultDate })` exige o horário de início. Sem
+  data, vale `defaultDate`: `todayISO()` ao criar e `gameDayCreationDate(atual)`
+  ao editar (o dia LOCAL de `created_at_ms`). `updateGameDay` só confere
+  `title`/`date`/`time` quando o patch os traz, então um dia antigo sem horário
+  não trava outras edições. O clube passou a exigir data e hora em `date_time`.
+- `gameDayRoles.js` ganhou a opção `platformAdmin` em `isGameDayAdmin` e
+  `canConfigureGameDay`, que `canManageGameDay`, `canEditPlayGroups` e
+  `canConfigureLineControl` repassam. `useGameDayRoles` a preenche com
+  `isPlatformAdmin` e devolve `ehAdminDaPlataforma`. Na regra, o `adm()` entrou
+  em `isGameDayAdminOf`.
+- A aba Painel admin → Torneios → Dias de jogo usa `listAllGameDaysForAdmin`
+  (`orderBy('created_at_ms')` + `limit`, sem índice composto; corta nos 500
+  mais recentes), `useAllGameDaysForAdmin` e o domínio `adminGameDays.js`.
+- Detalhes em `docs/15-DIA-DE-JOGO-PERMISSOES.md` §2 e `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §14.

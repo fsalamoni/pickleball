@@ -671,6 +671,26 @@ edição. Domínio em `modules/games/domain/gameDayLink.js` (fonte única).
   tem vínculo (`isLinkedGameDay`); consulta de dias vinculados leva sempre as DUAS
   igualdades; o clube do espelho muda por apagar+recriar, nunca por update.
 
+## 14. Data e horário de início obrigatórios; o admin da plataforma ajusta qualquer dia (2026-11-03)
+
+- **Data e horário de início** são obrigatórios em todo dia de jogo. No atleta,
+  `normalizeGameDayInput(input, { defaultDate })` recusa sem horário. A data em
+  branco vale o dia LOCAL em que o dia de jogo é criado: o diálogo de criação
+  já abre com hoje, o serviço passa `todayISO()` ao criar e
+  `gameDayCreationDate(atual)` ao editar. O cartão de configurações marca os
+  dois campos com `*` e diz qual data vale quando a data é apagada. A edição só
+  confere o que TOCA, então um dia antigo sem horário segue aceitando mudar
+  formato ou quadras. Na arena, a data e o início de cada quadra já eram
+  obrigatórios. No clube, `normalizeClubGameDayInput` passou a exigir também o
+  horário de `date_time`.
+- **Admin da plataforma**: configura e conduz o dia de qualquer origem. O
+  detalhe está em [`15`](./15-DIA-DE-JOGO-PERMISSOES.md) §2. Ele acha o dia em
+  Painel admin → Torneios → Dias de jogo. Arena e clube continuam mandando na
+  identidade dos dias deles (o cartão mostra onde editar).
+- **Banco**: nenhum campo novo, nenhum índice composto (a lista do admin é um
+  `orderBy('created_at_ms')` com `limit`), e duas cláusulas aditivas de regra
+  (`adm()` em `isGameDayAdminOf` e na criação de `open_games`).
+
 ## Atualização 2026-09-30 — entrar pelo próprio dia de jogo
 
 Quem chega a um dia de jogo PÚBLICO de outra pessoa (pelo "Jogar" do início ou

@@ -776,7 +776,7 @@ export default {
   "Dá para tirar férias de novo depois de {diasEntreFerias} dias, para a pausa não virar atalho.": "You can take a vacation again after {diasEntreFerias} days, so the break doesn't become a shortcut.",
   "DATA — a reunião não pode ser marcada antes da própria convocação, e depois de registrado o resultado a data não muda mais.": "DATE — the meeting cannot be set before its own notice, and once the outcome is recorded the date no longer changes.",
   "Data de nascimento serve para faixa etária em torneios; não vira informação pública.": "Date of birth is used for age groups in tournaments; it doesn't become public information.",
-  "Data e horário de início. Local e cidade ajudam quem vem de fora.": "Date and start time. Place and city help people coming from elsewhere.",
+  "Data e horário de início são obrigatórios — a data já vem com hoje. Local e cidade ajudam quem vem de fora.": "Date and start time are required — the date starts as today. Place and city help people coming from elsewhere.",
   "Datas e prazo": "Dates and deadline",
   "De 1 a 16 semanas, nos dias e no tempo que você tem.": "From 1 to 16 weeks, on the days and with the time you have.",
   "De onde vem o seu XP": "Where your XP comes from",

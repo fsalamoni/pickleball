@@ -135,9 +135,10 @@ export function isGameDayCreator(gameDay, uid) {
  *   `arenaManager` é ignorado em dia de jogo que não seja de arena;
  *   `clubManager`, em dia de jogo que não seja de clube.
  */
-export function isGameDayAdmin(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
+export function isGameDayAdmin(gameDay, uid, { arenaManager = false, clubManager = false, platformAdmin = false } = {}) {
   if (!uid || !gameDay) return false;
   if (isGameDayCreator(gameDay, uid)) return true;
+  if (platformAdmin === true) return true;
   if (arenaManager === true && ehDeArena(gameDay)) return true;
   if (clubManager === true && ehDeClube(gameDay)) return true;
   return gameDayAdminUids(gameDay).includes(uid);
@@ -172,10 +173,15 @@ export function isGameDayParticipant(gameDay, uid, participants = null) {
  * de jogo de CLUBE, quem administra o clube. A arena e o clube são donos do
  * evento: amarrar a configuração a uma pessoa deixaria o dia de jogo órfão
  * quando ela saísse da equipe.
+ *
+ * E o ADMINISTRADOR DA PLATAFORMA (`platformAdmin`), em qualquer dia: é quem
+ * corrige o dia de outra pessoa (data errada, formato trocado, organizador que
+ * sumiu). A regra do `game_days` já o deixa (`adm()`).
  */
-export function canConfigureGameDay(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
+export function canConfigureGameDay(gameDay, uid, { arenaManager = false, clubManager = false, platformAdmin = false } = {}) {
   if (isGameDayCreator(gameDay, uid)) return true;
-  if (!uid) return false;
+  if (!uid || !gameDay) return false;
+  if (platformAdmin === true) return true;
   if (arenaManager === true && ehDeArena(gameDay)) return true;
   return clubManager === true && ehDeClube(gameDay);
 }
@@ -199,9 +205,9 @@ export function canConfigureGameDay(gameDay, uid, { arenaManager = false, clubMa
  * @param {string} uid
  * @param {{ arenaManager?: boolean, clubManager?: boolean }} [options]
  */
-export function canEditPlayGroups(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
+export function canEditPlayGroups(gameDay, uid, papel = {}) {
   if (!uid || !gameDay) return false;
-  if (canConfigureGameDay(gameDay, uid, { arenaManager, clubManager })) return true;
+  if (canConfigureGameDay(gameDay, uid, papel)) return true;
   return gameDay.format === 'play' && gameDayAdminUids(gameDay).includes(uid);
 }
 
@@ -212,9 +218,9 @@ export function canEditPlayGroups(gameDay, uid, { arenaManager = false, clubMana
  * partidas, mas não liga câmera de arbitragem. A regra do `game_days` confere
  * o mesmo (cláusula estreita: só `line_control`/`line_control_layout`).
  */
-export function canConfigureLineControl(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
+export function canConfigureLineControl(gameDay, uid, papel = {}) {
   if (!uid || !gameDay) return false;
-  if (canConfigureGameDay(gameDay, uid, { arenaManager, clubManager })) return true;
+  if (canConfigureGameDay(gameDay, uid, papel)) return true;
   return gameDayAdminUids(gameDay).includes(uid);
 }
 
@@ -225,9 +231,9 @@ export function canConfigureLineControl(gameDay, uid, { arenaManager = false, cl
  * @param {string} uid
  * @param {{ participants?: Array|null, arenaManager?: boolean, clubManager?: boolean }} [options]
  */
-export function canManageGameDay(gameDay, uid, { participants = null, arenaManager = false, clubManager = false } = {}) {
+export function canManageGameDay(gameDay, uid, { participants = null, ...papel } = {}) {
   if (!uid || !gameDay) return false;
-  if (isGameDayAdmin(gameDay, uid, { arenaManager, clubManager })) return true;
+  if (isGameDayAdmin(gameDay, uid, papel)) return true;
   if (!isGameDayOpenToParticipants(gameDay)) return false;
   return isGameDayParticipant(gameDay, uid, participants);
 }

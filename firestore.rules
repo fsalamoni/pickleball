@@ -168,6 +168,9 @@ service cloud.firestore {
         )
         || isArenaGameDayManagerOf(gdId)
         || isClubGameDayManagerOf(gdId)
+        // O administrador da plataforma conduz o dia de qualquer pessoa
+        // (participantes e jogos), como já configura o documento do dia.
+        || adm()
       );
     }
     // O criador abriu a gestão para quem está inscrito? Campo aditivo: sem ele,
@@ -543,7 +546,8 @@ service cloud.firestore {
     // edição/remoção só do autor (ou admin master).
     match /open_games/{gameId} {
       allow read: if isAuthed();
-      allow create: if isOwner(nd().created_by);
+      // O admin cria em nome de quem criou o dia de jogo (ao torná-lo público).
+      allow create: if isOwner(nd().created_by) || adm();
       allow update, delete: if isAuthed()
         && (od().created_by == me() || adm());
     }

@@ -63,8 +63,9 @@ import {
   gameDayManageMode, gameDayAdminList,
 } from '@/modules/games/domain/gameDayRoles';
 import {
-  normalizePlayCourts, GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS,
+  normalizePlayCourts, GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS, gameDayCreationDate,
 } from '@/modules/games/domain/gameDay';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { isArenaGameDay } from '@/modules/games/domain/arenaGameDay';
 import { arenaGameDayEditLink, isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
@@ -106,7 +107,7 @@ export default function GameDaySettingsCard({ gameDay }) {
   // Mesma chave de React Query que o organizador logo abaixo já usa: volta do
   // cache, sem consulta nova.
   const { data: participants = [] } = useGameDayParticipants(gdId);
-  const { podeConfigurar } = useGameDayRoles(gameDay, participants);
+  const { podeConfigurar, ehCriador, ehAdminDaPlataforma } = useGameDayRoles(gameDay, participants);
   // ⚠️ FALHA não é "nenhum jogo": com a consulta caída a tela liberaria a troca
   // de formato num dia que JÁ TEM partidas — o que apaga rodada disputada.
   // Estado desconhecido não habilita comando.
@@ -214,7 +215,9 @@ export default function GameDaySettingsCard({ gameDay }) {
       await setMode.mutateAsync(novo);
       toast.success(novo === GAME_DAY_MANAGE_MODE.PARTICIPANTS
         ? t('Agora qualquer participante pode organizar as partidas.')
-        : t('Só você e os organizadores que nomear podem conduzir as partidas.'));
+        : (ehCriador
+          ? t('Só você e os organizadores que nomear podem conduzir as partidas.')
+          : t('Só quem organiza e os organizadores nomeados podem conduzir as partidas.')));
     } catch (err) {
       toast.error(err?.message || t('Não foi possível mudar o modo.'));
     }
@@ -241,6 +244,7 @@ export default function GameDaySettingsCard({ gameDay }) {
 
   const salvarIdentidade = async () => {
     if (!identidade.title.trim()) { toast.error(t('Dê um nome ao dia de jogo.')); return; }
+    if (!identidade.time) { toast.error(t('Informe o horário de início.')); return; }
     const patch = {};
     CAMPOS_DE_IDENTIDADE.forEach((k) => { patch[k] = identidade[k]; });
     const ok = await gravar(patch, t('Dia de jogo atualizado.'));
@@ -257,7 +261,9 @@ export default function GameDaySettingsCard({ gameDay }) {
     tn(quadras, '{n} quadra', '{n} quadras'),
     modo === GAME_DAY_MANAGE_MODE.PARTICIPANTS
       ? t('Aberto a todos')
-      : (nomeados > 0 ? t('Só você e mais {n}', { n: nomeados }) : t('Só você')),
+      : ehCriador
+        ? (nomeados > 0 ? t('Só você e mais {n}', { n: nomeados }) : t('Só você'))
+        : (nomeados > 0 ? t('Quem organiza e mais {n}', { n: nomeados }) : t('Só quem organiza')),
     ...(vinculado ? [t('Vinculado a {destino}', { destino: linkLabel(gameDay) })] : []),
   ].join(' · ');
 
@@ -271,6 +277,12 @@ export default function GameDaySettingsCard({ gameDay }) {
       defaultCollapsed
     >
       <div className="space-y-6">
+        {ehAdminDaPlataforma && (
+          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            {t('Você está ajustando o dia de jogo de {nome} como administrador da plataforma. Cada mudança fica registrada na auditoria com o seu nome.', { nome: gameDay.creator_name || t('outra pessoa') })}
+          </p>
+        )}
         {/* ------------------------------------------------- 1. como se joga */}
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-ink">{t('Como se joga')}</h3>
@@ -443,24 +455,31 @@ export default function GameDaySettingsCard({ gameDay }) {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor={`gds-data-${gdId}`}>{t('Data')}</Label>
+                  <Label htmlFor={`gds-data-${gdId}`}>{t('Data*')}</Label>
                   <V2Input
                     id={`gds-data-${gdId}`}
                     type="date"
+                    required
                     value={identidade.date}
                     onChange={(e) => setCampo('date', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`gds-hora-${gdId}`}>{t('Horário')}</Label>
+                  <Label htmlFor={`gds-hora-${gdId}`}>{t('Horário de início*')}</Label>
                   <V2Input
                     id={`gds-hora-${gdId}`}
                     type="time"
+                    required
                     value={identidade.time}
                     onChange={(e) => setCampo('time', e.target.value)}
                   />
                 </div>
               </div>
+              {!identidade.date && (
+                <p className="text-2xs text-gray-500">
+                  {t('Sem data, vale o dia em que o dia de jogo foi criado ({data}).', { data: formatDateShortBR(gameDayCreationDate(gameDay)) })}
+                </p>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor={`gds-local-${gdId}`}>{t('Local')}</Label>

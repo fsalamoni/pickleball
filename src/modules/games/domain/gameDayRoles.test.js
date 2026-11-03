@@ -97,6 +97,25 @@ describe('canConfigureGameDay — só o criador', () => {
   });
 });
 
+describe('administrador da PLATAFORMA', () => {
+  const papel = { platformAdmin: true };
+  it('configura, conduz e edita grupos no dia de qualquer pessoa (atleta, arena, clube)', () => {
+    [dia(), dia({ arena_id: 'ar1' }), dia({ club_id: 'cl1' }), dia({ format: 'play' })].forEach((d) => {
+      expect(canConfigureGameDay(d, ESTRANHO, papel)).toBe(true);
+      expect(isGameDayAdmin(d, ESTRANHO, papel)).toBe(true);
+      expect(canManageGameDay(d, ESTRANHO, { participants: participantes, ...papel })).toBe(true);
+      expect(canEditPlayGroups(d, ESTRANHO, papel)).toBe(true);
+    });
+  });
+
+  it('sem a opção (ou com ela falsa, como no "ver como usuário"), nada muda', () => {
+    expect(canConfigureGameDay(dia(), ESTRANHO, { platformAdmin: false })).toBe(false);
+    expect(canManageGameDay(dia(), ESTRANHO, { participants: participantes })).toBe(false);
+    expect(canConfigureGameDay(dia(), null, papel)).toBe(false);
+    expect(canConfigureGameDay(null, ESTRANHO, papel)).toBe(false);
+  });
+});
+
 describe('canManageGameDay — modo RESTRITO (o padrão)', () => {
   const d = dia({ admin_uids: [ADMIN] });
 
