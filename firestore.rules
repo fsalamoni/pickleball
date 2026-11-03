@@ -188,9 +188,11 @@ service cloud.firestore {
           && (me() in gameDayData(gdId).member_uids)
         );
     }
-    // Controle de linhas: quem organiza o dia (criador, gestor da arena/clube).
+    // Controle de linhas: quem organiza o dia (criador, gestor da arena/clube)
+    // e o administrador NOMEADO do jogo (`isGameDayAdminOf` cobre os dois
+    // primeiros e os nomeados).
     function lineOrgOf(gdId) {
-      return isGameDayOwnerOf(gdId) || isArenaGameDayManagerOf(gdId)
+      return isGameDayAdminOf(gdId) || isArenaGameDayManagerOf(gdId)
         || isClubGameDayManagerOf(gdId) || adm();
     }
     // ...e quem pode ser uma CÂMERA: quem organiza, o administrador nomeado ou
@@ -689,6 +691,18 @@ service cloud.firestore {
                   && nd().play_groups.size() <= 10))
           && (!('play_groups_policy' in nd())
               || nd().play_groups_policy in ['queue', 'rotate', 'priority'])
+        )
+        // CONTROLE DE LINHAS (flag `line_control`, docs/53): o administrador
+        // NOMEADO do jogo liga/desliga e escolhe o arranjo das câmeras, como o
+        // criador. ESTREITA: só as duas chaves (e `updated_at`), com tipo.
+        || (
+          'admin_uids' in od() && od().admin_uids is list
+          && (me() in od().admin_uids)
+          && nd().created_by == od().created_by
+          && chg().hasOnly(['line_control', 'line_control_layout', 'updated_at'])
+          && (!('line_control' in nd()) || nd().line_control is bool)
+          && (!('line_control_layout' in nd()) || (nd().line_control_layout is string
+              && nd().line_control_layout.size() <= 40))
         )
       );
       allow delete: if isAuthed() && (

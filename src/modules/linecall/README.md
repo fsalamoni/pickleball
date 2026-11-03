@@ -18,7 +18,7 @@ marcações (`line_calls`), subcoleções de `game_days`.
 - `services/cameraService.js` — `getUserMedia`; `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
 - `services/lineCallSync.js` — presença da câmera e envio das marcações.
 - `hooks/useLineCallSession.js` — uma câmera: abrir, calibrar (navegador, por posição), analisar, enviar.
-- `hooks/useAnnounce.js` — fala o lance e vibra (preferência por pessoa).
+- `hooks/useAnnounce.js` — toque na hora (`domain/alertTones.js` + `services/alertSound.js`), vibração e voz (preferências por pessoa).
 - `hooks/useLineControlLive.js` — a central: câmeras no ar e lances juntados (tempo real).
 
 Telas: `v2/components/games/GameDayLineControlCard.jsx` (no `GameDayModule`),

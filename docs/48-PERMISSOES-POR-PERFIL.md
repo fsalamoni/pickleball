@@ -146,11 +146,11 @@ torneio, `/c/:clubId`) existem para isso.
 | Apagar o dia | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules |
 | **Vincular o dia** a clube/arena (`link_*`) | ✖ | ◐ só quem criou, e só a clube que **administra** / arena que **gere**; desfazer é livre | ✖ | ✖ | ✖ (o vínculo não dá poder à arena sobre o dia) | ✖ (idem) | ✔ | rules (`lkOk`) + `canLinkGameDay`/`linkOptions` na tela |
 
-| Ligar o **controle de linhas** / escolher o arranjo (`line_control`, `line_control_layout`) | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (update do dia) + `podeConfigurar` |
+| Ligar o **controle de linhas** / escolher o arranjo (`line_control`, `line_control_layout`) | ✖ | ✔ | ✔ (só essas duas chaves e `updated_at`, com tipo) | ✖ | ✔ | ✔ | ✔ | rules (update do dia; cláusula estreita do nomeado) + `canConfigureLineControl` (`podeConfigurarLinhas`) |
 | Ser **câmera** (`line_cams`, `line_calls` create) | ◐ se está em `member_uids` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`lineCamOk`: só com `line_control == true`, em nome próprio) |
-| Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`, decisão em nome próprio, valor do tipo do lance) |
+| Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`, decisão em nome próprio, valor do tipo do lance) |
 | Ver a **central** de linhas | ◐ quem vê o dia | ✔ | ✔ | ✔ | ✔* | ✔ | ✔ | rules (`canAccessGameDay`) |
-| Limpar marcações | ✖ (só a própria câmera) | ✔ | ✖ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |
+| Limpar marcações | ✖ (só a própria câmera) | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |
 
 \* `canAccessGameDay` para um gestor de arena que não é criador nem membro depende de o dia ser público; todo dia de arena nasce público.
 

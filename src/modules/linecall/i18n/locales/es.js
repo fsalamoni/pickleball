@@ -384,4 +384,6 @@ export default {
   "menos de 24 quadros/s": "menos de 24 cuadros/s",
   "bateria baixa fora do carregador": "batería baja fuera del cargador",
   "calibração com erro acima de 6 cm": "calibración con error de más de 6 cm",
+  "Som do lance ligado": "Sonido de la jugada activado",
+  "Som do lance desligado": "Sonido de la jugada desactivado",
 };
