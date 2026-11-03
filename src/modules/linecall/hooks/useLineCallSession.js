@@ -23,6 +23,8 @@ import { findBallCandidates, pickBall, rgbToHsv, BALL_DEFAULTS } from '../domain
 import { assessCamera, worstCmPerPixel } from '../domain/cameraCheck.js';
 import { checkPointFor, calibrationCheck } from '../domain/calibrationCheck.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
+import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
+import { snapToOuterCorner, centroid } from '../domain/snapCorner.js';
 import { listCameras, openCamera, closeCamera } from '../services/cameraService.js';
 import { createPoseDetector } from '../services/poseService.js';
 import { upsertLineCam, removeLineCam, postLineCall, HEARTBEAT_MS } from '../services/lineCallSync.js';
@@ -32,6 +34,31 @@ const SCAN_W = 480;
 /** Largura dos quadros do replay (px): o bastante para ver a linha, leve na memória. */
 const REPLAY_W = 480;
 const MAX_EVENTS = 30;
+/** De quanto em quanto tempo conferir se a câmera mexeu e se tem luz (ms). */
+const HEALTH_EVERY_MS = 1000;
+/** Os cantos da quadra (os únicos que o "Ajustar à linha" mexe). */
+const COURT_CORNER_IDS = ['A1', 'A2', 'B1', 'B2'];
+
+/** A imagem atual em cinza, na escala da análise. */
+function grabGray(video) {
+  const w = video?.videoWidth;
+  const h = video?.videoHeight;
+  if (!w || !h) return null;
+  const k = SCAN_W / w;
+  const cv = document.createElement('canvas');
+  cv.width = SCAN_W;
+  cv.height = Math.round(h * k);
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(video, 0, 0, cv.width, cv.height);
+  return { gray: toGray(ctx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height), w: cv.width, h: cv.height, k };
+}
+
+/** Os pedaços de imagem em volta dos pontos marcados (a "foto" de onde a quadra está). */
+function cutRefs(snap, corners) {
+  if (!snap) return null;
+  const refs = corners.map((c) => cutPatch(snap.gray, snap.w, snap.h, c.x * snap.k, c.y * snap.k));
+  return refs.filter(Boolean).length >= 2 ? refs : null;
+}
 
 const prefId = (gameDayId, position) => `linhas:calibracao:${gameDayId}:${position}`;
 const EMPTY = () => ({ corners: [], hue: BALL_DEFAULTS.hue });
@@ -94,6 +121,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const [ball, setBall] = useState(null);
   const [shareError, setShareError] = useState(false);
   const battery = useBattery(Boolean(stream));
+  // A câmera mexeu? Tem luz? (`domain/cameraHealth.js`)
+  const [health, setHealth] = useState({ moved: false, px: null, known: false, dark: false });
+  const refPatches = useRef(null);
 
   // Trocar de posição troca a calibração.
   useEffect(() => { setCalib(readCalib(uid, gameDayId, pos.id)); setRunning(false); }, [uid, gameDayId, pos.id]);
@@ -111,6 +141,13 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     () => (H && calib.checkTap ? calibrationCheck(H, calib.checkTap, checkPoint) : null),
     [H, calib.checkTap, checkPoint],
   );
+
+  // A referência de "onde a quadra está" é tirada quando a calibração fica
+  // pronta (e no 1º quadro da análise, se o vídeo ainda não tinha imagem).
+  useEffect(() => {
+    try { refPatches.current = H ? cutRefs(grabGray(videoRef.current), calib.corners) : null; } catch { refPatches.current = null; }
+    setHealth((st) => ({ ...st, moved: false, px: null, known: false }));
+  }, [H, calib.corners]);
 
   const refreshCameras = useCallback(() => listCameras().then(setCameras).catch(() => setCameras([])), []);
   useEffect(() => { refreshCameras(); }, [refreshCameras]);
@@ -167,6 +204,39 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const moveCorner = useCallback((i, pt) => {
     setCalib((c) => ({ ...c, checkTap: null, corners: c.corners.map((p, j) => (j === i ? pt : p)) }));
   }, []);
+  /**
+   * "Ajustar à linha": leva os cantos da QUADRA para a borda externa do L
+   * branco (`domain/snapCorner.js`). As pontas da cozinha ficam como estão.
+   * Devolve quantos pontos andaram; o anterior fica guardado para desfazer.
+   */
+  const snapBackup = useRef(null);
+  const snapCorners = useCallback(() => {
+    const v = videoRef.current;
+    if (!v?.videoWidth || calib.corners.length !== 4) return 0;
+    const cv = document.createElement('canvas');
+    cv.width = v.videoWidth; cv.height = v.videoHeight;
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(v, 0, 0);
+    const img = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    const mid = centroid(calib.corners);
+    let moved = 0;
+    const next = calib.corners.map((p, i) => {
+      if (!COURT_CORNER_IDS.includes(targets[i]?.id)) return p;
+      const q = snapToOuterCorner(img, cv.width, cv.height, p, mid);
+      if (!q) return p;
+      moved += 1;
+      return q;
+    });
+    if (!moved) return 0;
+    snapBackup.current = calib.corners;
+    setCalib((c) => ({ ...c, checkTap: null, corners: next }));
+    return moved;
+  }, [calib.corners, targets]);
+  const undoSnap = useCallback(() => {
+    const prev = snapBackup.current;
+    snapBackup.current = null;
+    if (prev) setCalib((c) => ({ ...c, checkTap: null, corners: prev }));
+  }, []);
   const resetCorners = useCallback(() => setCalib((c) => ({ ...c, corners: [], checkTap: null })), []);
   /** Toque no 5º ponto (o de conferência). */
   const setCheckTap = useCallback((pt) => setCalib((c) => ({ ...c, checkTap: pt })), []);
@@ -212,6 +282,8 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     let frames = 0;
     let since = performance.now();
     let handle = null;
+    let healthAt = 0;
+    let moved = false;
 
     if (pos.usesPose) {
       setPoseState('loading');
@@ -260,6 +332,14 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         const img = sctx.getImageData(0, 0, scan.width, scan.height).data;
         const cands = findBallCandidates(img, prev, scan.width, scan.height, { hue: calib.hue });
         prev = img;
+        if (now - healthAt >= HEALTH_EVERY_MS) {
+          healthAt = now;
+          const gray = toGray(img, scan.width, scan.height);
+          if (!refPatches.current) refPatches.current = cutRefs({ gray, w: scan.width, h: scan.height, k }, calib.corners);
+          const drift = driftFrom((refPatches.current || []).map((p) => matchPatch(gray, scan.width, scan.height, p)));
+          moved = drift.moved;
+          setHealth({ moved: drift.moved, px: drift.px, known: drift.known, dark: brightness(gray).dark });
+        }
         const got = pickBall(cands, last ? { x: last.x * k, y: last.y * k } : null);
         last = got ? { x: got.x / k, y: got.y / k } : null;
         setBall(last);
@@ -267,7 +347,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         try { players = pose ? pose.detect(video, now) : []; } catch { players = []; }
         const t = meta?.mediaTime ?? now / 1000;
         record(t, w, h, last);
-        const found = engine.push({ t, ball: last, players });
+        // Com a câmera fora do lugar a medida não vale: o lance vai para revisão.
+        const found = engine.push({ t, ball: last, players })
+          .map((e) => (moved ? { ...e, call: 'review', moved: true } : e));
         if (found.length) {
           snap.width = 320;
           snap.height = Math.round(h * (320 / w));
@@ -314,12 +396,12 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       setBall(null);
       setFps(0);
     };
-  }, [running, H, calib.hue, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId]);
+  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId]);
 
   return {
     position: pos, targets, checkPoint,
     videoRef, cameras, start, stream, settings, cameraError, cameraChecks,
-    calib, addCorner, moveCorner, resetCorners, setCheckTap, check, learnBallColor, H, Hinv, cmPerPixel,
-    running, setRunning, poseState, events, clearEvents, fps, ball, shareError, battery,
+    calib, addCorner, moveCorner, resetCorners, snapCorners, undoSnap, setCheckTap, check, learnBallColor, H, Hinv, cmPerPixel,
+    running, setRunning, poseState, events, clearEvents, fps, ball, shareError, battery, health,
   };
 }

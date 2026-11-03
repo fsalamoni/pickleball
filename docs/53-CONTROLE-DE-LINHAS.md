@@ -186,6 +186,17 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
   **telão** (`TelaoLineTicker`, o último lance por 12 s, só com a flag e o
   controle ligado no dia), **planilha** CSV do jogo (`domain/report.js`),
   **bateria** e quadros/s por câmera com aviso.
+- **Grudar na linha** (`domain/snapCorner.js`): leva os quatro cantos da QUADRA
+  ao canto externo do "L" branco perto do toque (a linha é dentro, a quadra
+  acaba na borda de fora). Janela de 14 px; sem branco suficiente, branco demais
+  ou o L saindo da janela, o ponto não anda. As pontas da cozinha não mexem.
+  Tem "Desfazer" e quem confere é o 5º ponto.
+- **A câmera saiu do lugar?** (`domain/cameraHealth.js`): ao calibrar, guarda
+  pedacinhos da imagem em volta de cada canto; a cada 1 s procura onde eles
+  estão (±10 px). Com 2+ achados e deslocamento mediano ≥ 3 px, aviso em
+  vermelho (voz e vibração) e **todo lance vira "Revisar"** com `moved: true`
+  até marcar os pontos de novo. Canto coberto por alguém não decide. Pouca luz
+  (brilho médio < 55) dá aviso. Nada novo no banco: "revisar" já existia.
 - Dois guias de dicas (`controle-de-linhas-camera`, `controle-de-linhas-central`,
   atrás da flag) apontam os botões reais (`data-dica="linhas-…"`).
 

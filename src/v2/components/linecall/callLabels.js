@@ -37,6 +37,7 @@ export function callSpoken(e) {
  * marcação gravada (`margin_m`…).
  */
 export function callDetail(e) {
+  if (e.moved) return t('A câmera tinha saído do lugar: a medida não vale. Marque os pontos de novo.');
   const k = e.type || e.kind;
   const margin = e.marginM ?? e.margin_m;
   const depth = e.depthM ?? e.depth_m;

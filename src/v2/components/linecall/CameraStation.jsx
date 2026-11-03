@@ -13,13 +13,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Camera, Crosshair, Palette, Play, Pause, Trash2, Check, Radio, AlertTriangle,
-  Move, Target, ScanSearch, Volume2, VolumeX, Film, BatteryLow,
+  Move, Target, ScanSearch, Volume2, VolumeX, Film, BatteryLow, Magnet,
 } from 'lucide-react';
 
 import { V2Surface, V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
 import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useLineCallSession } from '@/modules/linecall/hooks/useLineCallSession';
-import { useAnnounce, canSpeak } from '@/modules/linecall/hooks/useAnnounce';
+import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnounce';
 import { applyHomography } from '@/modules/linecall/domain/homography';
 import { courtSegments, insideMargin, kitchenDepth } from '@/modules/linecall/domain/court';
 import { CAMERA_LEVEL } from '@/modules/linecall/domain/cameraCheck';
@@ -258,6 +258,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const s = useLineCallSession(gameDayId, position, { layout });
   const [deviceId, setDeviceId] = useState('');
   const [mode, setMode] = useState(null); // 'corners' | 'adjust' | 'check' | 'inspect' | 'color' | null
+  // Resultado do "Grudar na linha" (quantos cantos andaram); mexer nos pontos de outro jeito o apaga.
+  const [snapped, setSnapped] = useState(null);
+  useEffect(() => { if (mode) setSnapped(null); }, [mode]);
   const [inspected, setInspected] = useState(null);
   const [replay, setReplay] = useState(null);
   useWakeLock(Boolean(s.stream));
@@ -278,6 +281,13 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const calibrada = Boolean(s.H);
   const baixaBateria = Number.isFinite(s.battery.level) && s.battery.level <= 20 && s.battery.charging === false;
   const lento = s.running && s.fps > 0 && s.fps < 24;
+  const mexeu = s.running && s.health?.moved;
+  // A câmera saiu do lugar: avisa em voz (se a voz está ligada) e vibra, uma vez.
+  useEffect(() => {
+    if (!mexeu) return;
+    if (falar) speak(t('A câmera saiu do lugar'));
+    try { navigator.vibrate?.([200, 100, 200]); } catch { /* sem vibração */ }
+  }, [mexeu, falar]);
 
   // Pausar ao mexer na calibração: análise com pontos mudando mede errado.
   useEffect(() => { if (mode && mode !== 'inspect' && mode !== 'color') s.setRunning(false); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -372,6 +382,18 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                   {mode === 'inspect' && inspected && s.H && (
                     <p className="rounded-xl bg-gray-50 p-2 text-sm font-semibold text-ink" aria-live="polite">{inspectText(s.H, inspected)}</p>
                   )}
+                  {snapped != null && !mode && (
+                    <p className="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 p-2 text-sm text-ink" aria-live="polite">
+                      {snapped > 0
+                        ? t('{n} canto(s) da quadra foram para a borda de fora da linha. Confira com o 5º ponto.', { n: snapped })
+                        : t('Não achei a linha branca com certeza perto dos cantos: os pontos ficaram como estavam.')}
+                      {snapped > 0 && (
+                        <V2Button size="sm" variant="ghost" onClick={() => { s.undoSnap(); setSnapped(null); }}>
+                          {t('Desfazer')}
+                        </V2Button>
+                      )}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {mode && mode !== 'color' ? (
                       <V2Button size="sm" onClick={() => { setMode(null); setInspected(null); }}>
@@ -386,6 +408,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                           <>
                             <V2Button size="sm" variant="secondary" onClick={() => setMode('adjust')}>
                               <Move className="mr-1.5 h-4 w-4" /> {t('Ajustar os pontos')}
+                            </V2Button>
+                            <V2Button size="sm" variant="secondary" onClick={() => setSnapped(s.snapCorners())}>
+                              <Magnet className="mr-1.5 h-4 w-4" /> {t('Grudar na linha')}
                             </V2Button>
                             <V2Button size="sm" variant={s.check ? 'ghost' : 'primary'} onClick={() => setMode('check')}>
                               <Target className="mr-1.5 h-4 w-4" /> {s.check ? t('Conferir de novo') : t('Conferir com o 5º ponto')}
@@ -432,12 +457,27 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {s.running && <V2Badge tone={lento ? 'amber' : 'neutral'}>{t('Analisando {n} quadros/s', { n: s.fps })}</V2Badge>}
+                  {s.running && s.health?.known && !s.health.moved && <V2Badge tone="green">{t('Câmera no lugar')}</V2Badge>}
                   {s.running && s.poseState === 'loading' && <V2Badge tone="neutral">{t('Carregando o detector de pés…')}</V2Badge>}
                   {s.poseState === 'failed' && <V2Badge tone="red">{t('Detector de pés indisponível: só dentro/fora')}</V2Badge>}
                   {s.poseState === 'off' && <V2Badge tone="neutral">{t('Câmera de cima: só dentro/fora')}</V2Badge>}
                   {s.stream && !s.shareError && <V2Badge tone="green"><Radio className="mr-1 inline h-3 w-3" aria-hidden="true" />{t('Ligada à central')}</V2Badge>}
                   {s.shareError && <V2Badge tone="amber"><AlertTriangle className="mr-1 inline h-3 w-3" aria-hidden="true" />{t('Sem conexão com a central: as marcações ficam só aqui')}</V2Badge>}
                 </div>
+                {mexeu && (
+                  <div role="alert" className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <p className="flex items-start gap-1.5 text-sm font-medium text-red-700">
+                      <Move className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      {t('A câmera saiu do lugar (cerca de {n} px). Até marcar os pontos de novo, todo lance vai para "Revisar".', { n: s.health.px })}
+                    </p>
+                    <V2Button size="sm" onClick={() => { s.setRunning(false); s.resetCorners(); setMode('corners'); }}>
+                      <Crosshair className="mr-1.5 h-4 w-4" /> {t('Marcar os pontos de novo')}
+                    </V2Button>
+                  </div>
+                )}
+                {s.running && s.health?.dark && (
+                  <p className="text-sm text-amber-700">{t('Pouca luz: a bola vira um borrão e some. Acenda as luzes da quadra ou mude o aparelho de lugar, longe da contraluz.')}</p>
+                )}
                 {lento && (
                   <p className="text-sm text-amber-700">{t('Poucos quadros por segundo: feche outros aplicativos, tire o modo de economia de bateria ou use outro aparelho. Com menos de 24 por segundo a bola pula muito entre um quadro e outro.')}</p>
                 )}
