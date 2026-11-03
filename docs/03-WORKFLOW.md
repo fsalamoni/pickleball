@@ -256,10 +256,12 @@ push em main
           COMPILADO tem teto de 250 KB) + Deploy Firestore rules
           → --only firestore:rules,firestore:pickleball
           (falha se a CLI não disser "released rules"; erro 5xx/"currently
-          unavailable" do serviço de regras ganha até 3 tentativas com espera
-          crescente (2026-10-23); num 409 repete com --debug e mostra a
+          unavailable" do serviço de regras ganha até 5 tentativas com espera
+          crescente de 45 s, 90 s, 135 s e 180 s, cerca de 7,5 min ao todo
+          (2026-11-03: o deploy do PR #379 desistiu depois de 3 tentativas em
+          2 min de 503); num 409 repete com --debug e mostra a
           resposta do serviço de regras — e essa repetição também ganha até
-          3 tentativas num 5xx passageiro, desde o deploy do PR #364, que
+          5 tentativas num 5xx passageiro, desde o deploy do PR #364, que
           parou num 503 depois de um 409 de PATCH lento)
        8. Deploy Firestore indexes → --only firestore:indexes,firestore:pickleball
           (sem --force: índice remoto não versionado é preservado e avisado)
