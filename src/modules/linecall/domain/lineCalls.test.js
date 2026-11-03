@@ -4,7 +4,7 @@ import { COURT, insideMargin, kitchenDepth, kitchenMargin, landingMargin, serveF
 import {
   CAMERA_LAYOUTS, CAMERA_POSITIONS, calibrationPoints, layoutById, layoutsByCount, layoutJudges, DEFAULT_LAYOUT,
 } from './cameraLayouts.js';
-import { fuseLineCalls, isCamOnline, positionOccupancy } from './fusion.js';
+import { fuseLineCalls, isCamOnline, positionOccupancy, decisionsFor } from './fusion.js';
 
 const CALIBRATION_CORNERS = calibrationPoints('fundo_a');
 import { decide, LINE_CALL } from './lineCallEngine.js';
@@ -162,6 +162,42 @@ describe('central: juntar as câmeras', () => {
     const [l] = fuseLineCalls([v('1', 'fundo_a', 'clean', 1000), v('2', 'rede_1', 'fault', 1050)]);
     expect(l).toMatchObject({ call: 'fault', disagree: false });
     expect(fuseLineCalls([v('1', 'rede_1', 'clean', 1000), v('2', 'rede_2', 'fault', 1050)])[0].call).toBe('review');
+  });
+
+  it('pé no saque (7.A): vale a câmera do fundo de quem saca, e o motivo vem dela', () => {
+    const s = (id, position, call, extra = {}) => ({
+      id, position, kind: 'serve_foot', call, t_ms: 1000, uncertainty_m: 0.03, x: 1.5, y: -0.2, ...extra,
+    });
+    const [l] = fuseLineCalls([s('1', 'fundo_b', 'clean'), s('2', 'fundo_a', 'fault', { reason: 'baseline' })]);
+    expect(l).toMatchObject({ call: 'fault', disagree: false, reason: 'baseline' });
+    expect(l.best.position).toBe('fundo_a');
+    // a lateral da rede vê a linha de fundo de longe: o fundo decide
+    expect(fuseLineCalls([s('1', 'rede_1', 'fault'), s('2', 'fundo_a', 'clean')])[0].call).toBe('clean');
+  });
+
+  it('dois quiques (10.A): um quique visto do lado de quem bateu, logo antes, desmente', () => {
+    const tb = { id: '9', position: 'fundo_a', kind: 'two_bounce', call: 'fault', reason: 'return', t_ms: 5000, x: 3, y: 12 };
+    const b = (y, t) => ({ id: `b${t}`, position: 'rede_1', kind: 'bounce', call: 'in', t_ms: t, uncertainty_m: 0.05, x: 3, y });
+    expect(fuseLineCalls([tb])[0]).toMatchObject({ call: 'fault', disagree: false });
+    const desmentido = fuseLineCalls([b(11, 4600), tb]).find((l) => l.kind === 'two_bounce');
+    expect(desmentido).toMatchObject({ call: 'review', disagree: true });
+    // o quique do outro lado (o do saque, por exemplo) não desmente nada
+    expect(fuseLineCalls([b(2, 4600), tb]).find((l) => l.kind === 'two_bounce').call).toBe('fault');
+    // nem o quique de muito antes
+    expect(fuseLineCalls([b(11, 1000), tb]).find((l) => l.kind === 'two_bounce').call).toBe('fault');
+  });
+
+  it('lance de pé tem janela curta: dois voleios do mesmo lado a 0,5 s são dois lances', () => {
+    const v = (id, position, t) => ({ id, position, kind: 'volley', call: 'clean', t_ms: t, uncertainty_m: 0.05, x: 3, y: 4.5 });
+    expect(fuseLineCalls([v('1', 'fundo_a', 1000), v('2', 'rede_1', 1500)])).toHaveLength(2);
+    expect(fuseLineCalls([v('1', 'fundo_a', 1000), v('2', 'rede_1', 1150)])).toHaveLength(1);
+  });
+
+  it('o que quem organiza decide em cada tipo de lance', () => {
+    expect(decisionsFor('bounce')).toEqual(['in', 'out']);
+    expect(decisionsFor('serve_foot')).toEqual(['fault', 'clean']);
+    expect(decisionsFor('two_bounce')).toEqual(['fault', 'clean']);
+    expect(decisionsFor('outra_coisa')).toEqual([]);
   });
 
   it('câmera no ar e quem ocupa cada posição', () => {

@@ -19,48 +19,74 @@
  * · nenhuma segura ⇒ "revisar".
  * A medida mostrada é a da melhor câmera: a de menor incerteza no quique; no
  * pé, a de menor incerteza dividida pelo peso da posição (a lateral da rede
- * vê o pé melhor que o fundo). No pé só as câmeras da MELHOR posição votam:
- * o "sem falta" do fundo pode ser o pé escondido atrás de outro jogador.
+ * vê o pé na cozinha melhor que o fundo; o pé de quem SACA, a câmera do fundo
+ * dele). No pé só as câmeras da MELHOR posição votam: o "sem falta" do fundo
+ * pode ser o pé escondido atrás de outro jogador.
+ *
+ * Os dois quiques (10.A) só saem de uma câmera que viu a troca inteira — e a
+ * outra câmera pode DESMENTIR: um quique visto do lado de quem bateu, pouco
+ * antes da batida, quer dizer que a bola quicou, e o lance vira "revisar".
+ *
+ * Lance de pé (voleio, saque, dois quiques) usa janela de tempo menor: num
+ * bate-rebate na cozinha, dois voleios do mesmo lado caem a menos de 0,7 s um
+ * do outro; o mesmo lance visto por duas câmeras, não.
  */
 
 import { CAMERA_POSITIONS } from './cameraLayouts.js';
 import { courtSide } from './court.js';
 
-export const FUSION_DEFAULTS = Object.freeze({ windowMs: 700, distM: 1.5 });
+export const FUSION_DEFAULTS = Object.freeze({
+  windowMs: 700,
+  /** lance de pé (voleio, saque, dois quiques): janela menor */
+  footWindowMs: 350,
+  distM: 1.5,
+  /** quique do lado de quem bateu, até este tempo antes da batida, desmente os dois quiques */
+  bounceBeforeMs: 2500,
+});
 
-const weightOf = (position, kind) => {
-  if (kind !== 'volley') return 1;
-  return CAMERA_POSITIONS[position]?.footWeight ?? 0.5;
-};
+/** Lances julgados pelo pé: vale a posição que vê o pé melhor. */
+const FOOT_KINDS = new Set(['volley', 'serve_foot']);
 
 const hasPoint = (c) => Number.isFinite(c.x) && Number.isFinite(c.y);
 
+/** Quanto a câmera vale neste lance (no quique, todas iguais: a incerteza decide). */
+function weightOf(c) {
+  const p = CAMERA_POSITIONS[c.position];
+  if (c.kind === 'volley') return p?.footWeight ?? 0.5;
+  if (c.kind !== 'serve_foot') return 1;
+  // O pé de quem saca: a câmera do fundo DELE o vê de perto; a do outro
+  // fundo, de longe e através da rede e dos jogadores.
+  const w = p?.serveFootWeight ?? 0.5;
+  return p?.end && hasPoint(c) && p.end !== courtSide(c) ? w * 0.4 : w;
+}
+
 function sameLance(cluster, c, o) {
   if (cluster.kind !== c.kind) return false;
-  if (Math.abs(cluster.t_ms - c.t_ms) > o.windowMs) return false;
+  const win = c.kind === 'bounce' ? o.windowMs : o.footWindowMs;
+  if (Math.abs(cluster.t_ms - c.t_ms) > win) return false;
   if (cluster.calls.some((x) => x.position === c.position)) return false;
   const ref = cluster.calls.find(hasPoint);
   if (!ref || !hasPoint(c)) return true;
-  if (c.kind === 'volley') return courtSide(ref) === courtSide(c);
+  if (c.kind !== 'bounce') return courtSide(ref) === courtSide(c);
   return Math.hypot(ref.x - c.x, ref.y - c.y) <= o.distM;
 }
 
 function verdict(cluster) {
-  const score = (c) => (Number.isFinite(c.uncertainty_m) ? c.uncertainty_m : 0.5) / Math.max(weightOf(c.position, c.kind), 0.05);
+  const score = (c) => (Number.isFinite(c.uncertainty_m) ? c.uncertainty_m : 0.5) / Math.max(weightOf(c), 0.05);
   const ranked = [...cluster.calls].sort((a, b) => score(a) - score(b));
   let seguras = ranked.filter((c) => c.call !== 'review');
-  // No pé, "voleio sem falta" de uma câmera que vê o pé PIOR não desmente a
-  // que vê melhor: pode ser só o pé escondido atrás de alguém.
-  if (cluster.kind === 'volley' && seguras.length) {
-    const top = Math.max(...seguras.map((c) => weightOf(c.position, c.kind)));
-    seguras = seguras.filter((c) => weightOf(c.position, c.kind) >= top);
+  // No pé, "sem falta" de uma câmera que vê o pé PIOR não desmente a que vê
+  // melhor: pode ser só o pé escondido atrás de alguém.
+  if (FOOT_KINDS.has(cluster.kind) && seguras.length) {
+    const top = Math.max(...seguras.map(weightOf));
+    seguras = seguras.filter((c) => weightOf(c) >= top);
   }
   const calls = new Set(seguras.map((c) => c.call));
   const best = seguras[0] || ranked[0];
-  const machine = calls.size === 1 ? best.call : 'review';
+  const machine = cluster.contradicted ? 'review' : (calls.size === 1 ? best.call : 'review');
   // A palavra final é de quem organiza: a decisão mais recente do lance vence.
   const decided = cluster.calls
-    .filter((c) => DECISIONS[cluster.kind].includes(c.decision))
+    .filter((c) => decisionsFor(cluster.kind).includes(c.decision))
     .sort((a, b) => (b.decided_ms || 0) - (a.decided_ms || 0))[0];
   return {
     id: cluster.calls[0].id,
@@ -71,7 +97,8 @@ function verdict(cluster) {
     decided: Boolean(decided),
     decidedBy: decided?.decided_by || null,
     decisionDocId: decided?.id || cluster.calls[0].id,
-    disagree: calls.size > 1,
+    disagree: calls.size > 1 || Boolean(cluster.contradicted),
+    reason: best.reason || null,
     serve: cluster.calls.some((c) => c.serve === true),
     positions: cluster.calls.map((c) => c.position),
     calls: ranked,
@@ -83,11 +110,34 @@ function verdict(cluster) {
 export const DECISIONS = Object.freeze({
   bounce: Object.freeze(['in', 'out']),
   volley: Object.freeze(['fault', 'clean']),
+  serve_foot: Object.freeze(['fault', 'clean']),
+  two_bounce: Object.freeze(['fault', 'clean']),
 });
 
+/** O que quem organiza pode decidir num lance (tipo desconhecido ⇒ nada). */
+export const decisionsFor = (kind) => DECISIONS[kind] || [];
+
 /**
- * @param {Array<{ id: string, position: string, kind: 'bounce'|'volley',
- *   call: string, t_ms: number, uncertainty_m?: number, x?: number, y?: number }>} calls
+ * Os dois quiques que outra câmera desmente: um quique visto do lado de quem
+ * bateu, entre `bounceBeforeMs` e um instante antes da batida.
+ */
+function markContradictions(clusters, o) {
+  const bounces = clusters.filter((k) => k.kind === 'bounce');
+  clusters.filter((k) => k.kind === 'two_bounce').forEach((k) => {
+    const ref = k.calls.find(hasPoint);
+    if (!ref) return;
+    const side = courtSide(ref);
+    k.contradicted = bounces.some((b) => {
+      const dt = k.t_ms - b.t_ms;
+      const bp = b.calls.find(hasPoint);
+      return dt > 50 && dt <= o.bounceBeforeMs && bp && courtSide(bp) === side;
+    });
+  });
+}
+
+/**
+ * @param {Array<{ id: string, position: string, kind: string, call: string,
+ *   t_ms: number, uncertainty_m?: number, x?: number, y?: number, reason?: string }>} calls
  * @returns {Array<object>} os lances, do mais recente ao mais antigo
  */
 export function fuseLineCalls(calls, options = {}) {
@@ -101,6 +151,7 @@ export function fuseLineCalls(calls, options = {}) {
       if (hit) hit.calls.push(c);
       else clusters.push({ kind: c.kind, t_ms: c.t_ms, calls: [c] });
     });
+  markContradictions(clusters, o);
   return clusters.map(verdict).sort((a, b) => b.t_ms - a.t_ms);
 }
 

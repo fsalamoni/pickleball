@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { CAMERA_POSITIONS, layoutById } from '@/modules/linecall/domain/cameraLayouts';
-import { positionOccupancy, DECISIONS } from '@/modules/linecall/domain/fusion';
+import { positionOccupancy, decisionsFor } from '@/modules/linecall/domain/fusion';
 import { nearestBoundary } from '@/modules/linecall/domain/court';
 import { lanceSummary, lancesCsv } from '@/modules/linecall/domain/report';
 import { readinessCheck, READINESS_TEXT } from '@/modules/linecall/domain/readiness';
@@ -76,7 +76,7 @@ function Decide({ l, gameDayId, uid }) {
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('Palavra final de quem organiza')}>
       <Gavel className="h-4 w-4 text-gray-500" aria-hidden="true" />
-      {DECISIONS[l.kind].map((d) => (
+      {decisionsFor(l.kind).map((d) => (
         <V2Button key={d} size="sm" disabled={saving} variant={l.decided && l.call === d ? 'primary' : 'secondary'} onClick={() => decidir(d)}>
           {t(CALL_LABEL[l.kind][d])}
         </V2Button>
