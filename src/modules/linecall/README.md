@@ -4,7 +4,10 @@ Flag `line_control`. De 1 a 5 câmeras (celulares, webcams, câmeras de ação)
 filmam a quadra; cada aparelho marca o quique (dentro / fora / revisar) e a
 falta de pé na cozinha no voleio, e a central junta o que todas viram. O vídeo
 fica no aparelho; vão ao banco só a presença de cada câmera (`line_cams`) e as
-marcações (`line_calls`), subcoleções de `game_days`.
+marcações (`line_calls`), subcoleções de `game_days` — ou, no torneio, de
+`tournament_line_courts/{torneio}_{quadra}` (`domain/tournamentLine.js`,
+`services/tournamentLineService.js`, página `V2TournamentLineControl`; os
+serviços recebem o anfitrião por `hostPath`).
 
 - `domain/court.js` — medidas da quadra, os pontos de calibração (cantos e pontas da cozinha), margem e profundidade.
 - `domain/cameraLayouts.js` — as posições (`fundo_a`, `rede_1`, `topo`, cantos…) e os 11 arranjos de 1 a 5 câmeras. **Ids gravados: nunca renomeie.**

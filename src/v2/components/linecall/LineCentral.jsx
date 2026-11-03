@@ -113,9 +113,10 @@ function baixar(nome, texto) {
 
 /**
  * @param {{ gameDay: object, live: ReturnType<import('@/modules/linecall/hooks/useLineControlLive').useLineControlLive>,
- *   podeLimpar?: boolean }} props  `podeLimpar`: quem organiza (limpa e decide)
+ *   podeLimpar?: boolean, linkBase?: string }} props  `podeLimpar`: quem organiza (limpa e decide);
+ *   `linkBase`: a página das câmeras quando não é um dia de jogo (quadra de torneio)
  */
-export default function LineCentral({ gameDay, live, podeLimpar = false }) {
+export default function LineCentral({ gameDay, live, podeLimpar = false, linkBase = null }) {
   const { user } = useAuth();
   const now = useNow();
   const layout = layoutById(gameDay.line_control_layout);
@@ -138,7 +139,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
     setLimpando(true);
     try { await clearLineCalls(gameDay.id); } finally { setLimpando(false); setConfirmar(false); }
   };
-  const exportar = () => baixar(`linhas-${gameDay.id}.csv`, lancesCsv(live.lances, {
+  const exportar = () => baixar(`linhas-${String(gameDay.id).split('/').pop()}.csv`, lancesCsv(live.lances, {
     header: [t('Hora'), t('Lance'), t('Decidido'), t('Câmeras discordaram'), t('Margem (cm)'), t('Incerteza (cm)'), t('Câmeras')],
     time: hora,
     label: callLabel,
@@ -217,7 +218,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
                     ) : (
                       <>
                         <V2Badge tone="neutral">{t('Sem câmera')}</V2Badge>
-                        <CameraInvite gameDayId={gameDay.id} position={p} positionLabel={t(CAMERA_POSITIONS[p].label)} />
+                        <CameraInvite gameDayId={gameDay.id} position={p} positionLabel={t(CAMERA_POSITIONS[p].label)} linkBase={linkBase} />
                       </>
                     )}
                   </li>

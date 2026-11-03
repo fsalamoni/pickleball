@@ -762,6 +762,11 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
   próprio, quem participa/organiza; zero índice (a central lê `orderBy
   created_at` numa subcoleção, que é índice simples). Vídeo e calibração ficam
   no aparelho
+- coleção `tournament_line_courts/{torneio}_{quadra}` (flag `line_control`) —
+  o controle de linhas de uma QUADRA de torneio: `tournament_id`, `court_id`
+  (`court-N`), `court_name`, `line_control`, `line_control_layout`,
+  `updated_by`, `updated_at`; as mesmas subcoleções `line_cams`/`line_calls`.
+  Lê qualquer conta logada; grava a equipe do torneio (`tLineOrg`). Ver docs/53 §9
 - `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
   operar as partidas (sortear, criar próxima partida, substituir jogador, marcar
   indisponível, vincular dupla, incluir/excluir participante). **Ausente, nulo ou

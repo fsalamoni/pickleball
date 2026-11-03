@@ -54,11 +54,13 @@ export function DeviceCard({ profile }) {
   );
 }
 
-export default function SetupGuide({ gameDay, podeConfigurar }) {
+export default function SetupGuide({ gameDay, podeConfigurar, save = null }) {
   const { user } = useAuth();
   const uid = user?.uid;
   const profile = useDeviceProfile();
-  const update = useUpdateGameDay();
+  const updateGameDay = useUpdateGameDay();
+  // `save` grava o arranjo onde ele mora (dia de jogo por padrão; quadra de torneio).
+  const update = save || { mutate: (patch, opts) => updateGameDay.mutate({ id: gameDay.id, patch }, opts), isPending: updateGameDay.isPending };
   const sugerido = profile.kind === 'computer' ? 'computador' : 'basico';
   const [kitId, setKitId] = useState(() => {
     const salvo = readViewPreference(uid, PREF);
@@ -69,7 +71,7 @@ export default function SetupGuide({ gameDay, podeConfigurar }) {
   const avisos = kitWarnings(kitId, profile);
   const atual = gameDay?.line_control_layout || null;
   const usar = (id) => update.mutate(
-    { id: gameDay.id, patch: { line_control_layout: id } },
+    { line_control_layout: id },
     { onSuccess: () => toast.success(t('Arranjo trocado.')), onError: (e) => toast.error(e?.message || t('Não foi possível salvar.')) },
   );
 

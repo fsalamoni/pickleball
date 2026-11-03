@@ -254,10 +254,34 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
 
 1. Treinar um TrackNet com vídeo de pickleball (CVAT + SAM 2) e rodar com
    `onnxruntime-web`.
-2. Torneio: o mesmo cartão nas partidas de torneio.
-3. Software externo (câmeras sincronizadas) só se for preciso decidir a bola NA linha.
+2. Software externo (câmeras sincronizadas) só se for preciso decidir a bola NA linha.
 
 O repositório `pickleball-nivelamento` (questionário de nível) não tem nada de
 câmera; a integração com ele não se aplica a esta funcionalidade.
+
+## 9. Torneio — por quadra (`domain/tournamentLine.js`, `V2TournamentLineControl`)
+
+No torneio o controle é da QUADRA, não da partida: a câmera fica montada na
+quadra e as partidas passam por ela. `/torneios/:id/linhas` lista as quadras
+do agendamento (`court-1`…, o maior `court_count` das modalidades, mais as
+que já têm documento) e `?quadra=court-N` abre a MESMA tela do dia de jogo
+(`LineControlScreen`: arranjo, câmera, central, convite por QR). Na gestão do
+torneio, botão "Controle de linhas" (só com a flag).
+
+- **Quem liga e configura**: a equipe do torneio — criador, administrador do
+  torneio (`tournament_admins`), gestor da arena sede e o admin da plataforma
+  (`tLineOrg` na regra).
+- **Quem é câmera**: só a equipe do torneio, em nome próprio, com a quadra
+  ligada (`tLineCamOk`). Quem joga não filma pela própria conta — o aparelho da
+  câmera entra com a conta de quem organiza. Qualquer conta logada acompanha a
+  central.
+- **Banco**: `tournament_line_courts/{torneio}_{quadra}` (`tournament_id`,
+  `court_id`, `court_name`, `line_control`, `line_control_layout`,
+  `updated_by`, `updated_at`) com as mesmas subcoleções `line_cams`/
+  `line_calls`. Os serviços recebem o "anfitrião" (`hostPath`): id de dia de
+  jogo ou o caminho da quadra. Na exclusão de conta, as câmeras e marcações da
+  pessoa nas quadras dos torneios que ela administra são apagadas
+  (`coletarLinhasDeTorneio`). Zero índice (uma igualdade).
+- Prova no emulador: `tests/rules/tournamentLineControl.rules.test.js`.
 
 Evitar no produto: Ultralytics/YOLOv8+ (AGPL-3.0) e repositórios sem licença.

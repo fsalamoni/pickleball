@@ -88,6 +88,7 @@ const V2Help = lazy(() => import('@/v2/pages/V2Help'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
 const V2GameDays = lazy(() => import('@/v2/pages/V2GameDays'));
 const V2LineControl = lazy(() => import('@/v2/pages/V2LineControl'));
+const V2TournamentLineControl = lazy(() => import('@/v2/pages/V2TournamentLineControl'));
 const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
 const V2LegalDocument = lazy(() => import('@/v2/pages/V2LegalDocument'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
@@ -227,6 +228,7 @@ export default function V2App() {
           <Route path="torneios/guia" element={<Isolada nome="guia-formatos"><V2FormatsGuide /></Isolada>} />
           <Route path="torneios/:tournamentId" element={<Isolada nome="torneio"><V2Tournament /></Isolada>} />
           <Route path="torneios/:tournamentId/gerenciar" element={<Isolada nome="gerir-torneio"><V2TournamentAdmin /></Isolada>} />
+          <Route path="torneios/:tournamentId/linhas" element={<Isolada nome="controle-de-linhas-torneio"><V2TournamentLineControl /></Isolada>} />
           <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<Isolada nome="modalidade"><V2ModalityPage /></Isolada>} />
           <Route path="torneios/:tournamentId/:tab" element={<Isolada nome="torneio"><V2Tournament /></Isolada>} />
 

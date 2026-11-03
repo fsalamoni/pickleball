@@ -12,7 +12,9 @@
 
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Eye, ShieldCheck } from 'lucide-react';
+import { Camera, Eye, ShieldCheck } from 'lucide-react';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdminPanel';
@@ -24,6 +26,7 @@ import { t } from '@/core/i18n';
 export default function V2TournamentAdmin() {
   const { tournamentId } = useParams();
   const consoleOn = true;
+  const linhasOn = useFeatureFlag(FEATURE_FLAG.LINE_CONTROL);
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: isAdmin, isLoading: loadingAdmin } = useIsTournamentAdmin(tournamentId);
 
@@ -59,6 +62,11 @@ export default function V2TournamentAdmin() {
           {/* O tutorial abre sozinho na primeira vez que alguém entra na gestão
               de um torneio, e fica aqui para rever quando quiser. */}
           <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} dica="torneio-como-funciona" />
+          {linhasOn && (
+            <V2Button asChild size="sm" variant="ghost">
+              <Link to={`/torneios/${tournamentId}/linhas`}><Camera className="h-4 w-4" /> {t('Controle de linhas')}</Link>
+            </V2Button>
+          )}
           <V2Button asChild size="sm" variant="ghost">
             <Link to={`/torneios/${tournamentId}`} data-dica="torneio-pagina-publica"><Eye className="h-4 w-4" /> {t('Ver página pública')}</Link>
           </V2Button>

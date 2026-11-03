@@ -386,4 +386,11 @@ export default {
   "calibração com erro acima de 6 cm": "calibration error above 6 cm",
   "Som do lance ligado": "Call sound on",
   "Som do lance desligado": "Call sound off",
+  "O controle de linhas está desligado nesta quadra": "Line control is off on this court",
+  "Quem organiza o torneio liga o controle de linhas de cada quadra.": "The tournament organizers turn on line control for each court.",
+  "Só contas da equipe do torneio podem ser câmera. No aparelho da câmera, entre com a conta de quem organiza ou de um administrador do torneio.": "Only tournament staff accounts can be a camera. On the camera device, sign in with the organizer account or a tournament admin account.",
+  "Nenhuma quadra com controle de linhas ligado": "No court with line control on",
+  "Controle de linhas nesta quadra": "Line control on this court",
+  "Quadra não encontrada neste torneio": "Court not found in this tournament",
+  "Ver as quadras": "See the courts",
 };

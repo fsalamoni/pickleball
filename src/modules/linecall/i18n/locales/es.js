@@ -386,4 +386,11 @@ export default {
   "calibração com erro acima de 6 cm": "calibración con error de más de 6 cm",
   "Som do lance ligado": "Sonido de la jugada activado",
   "Som do lance desligado": "Sonido de la jugada desactivado",
+  "O controle de linhas está desligado nesta quadra": "El control de líneas está apagado en esta cancha",
+  "Quem organiza o torneio liga o controle de linhas de cada quadra.": "Quien organiza el torneo activa el control de líneas de cada cancha.",
+  "Só contas da equipe do torneio podem ser câmera. No aparelho da câmera, entre com a conta de quem organiza ou de um administrador do torneio.": "Solo las cuentas del equipo del torneo pueden ser cámara. En el dispositivo de la cámara, entra con la cuenta de quien organiza o de un administrador del torneo.",
+  "Nenhuma quadra com controle de linhas ligado": "Ninguna cancha con control de líneas activado",
+  "Controle de linhas nesta quadra": "Control de líneas en esta cancha",
+  "Quadra não encontrada neste torneio": "Cancha no encontrada en este torneo",
+  "Ver as quadras": "Ver las canchas",
 };

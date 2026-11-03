@@ -1526,6 +1526,55 @@ service cloud.firestore {
         || (nd().arena_id is string && arenaNd());
     }
 
+    // CONTROLE DE LINHAS NA QUADRA DO TORNEIO (flag `line_control`, docs/53 §9):
+    // um documento por quadra (`{torneio}_{quadra}`) com o liga/desliga e o
+    // arranjo, e embaixo as mesmas `line_cams`/`line_calls` do dia de jogo.
+    // Liga, configura, é câmera e dá a palavra final só a EQUIPE do torneio:
+    // criador, admin do torneio, gestor da arena-sede e o admin da plataforma.
+    function tLineOrg(tid) {
+      return isTournamentAdmin(tid) || isTournamentCreator(tid) || adm()
+        || (ex('tournaments/' + tid) && gd('tournaments/' + tid).get('arena_id', null) is string
+            && isArenaManager(gd('tournaments/' + tid).arena_id));
+    }
+    function tLineTid(lcId) { return gd('tournament_line_courts/' + lcId).tournament_id; }
+    function tLineCamOk(lcId) {
+      return isOwner(nd().uid) && ex('tournament_line_courts/' + lcId)
+        && gd('tournament_line_courts/' + lcId).get('line_control', false) == true
+        && tLineOrg(tLineTid(lcId));
+    }
+    match /tournament_line_courts/{lcId} {
+      allow read: if isAuthed();
+      allow create: if nd().tournament_id is string && tLineOrg(nd().tournament_id)
+        && nd().court_id is string && nd().court_id.size() <= 12
+        && lcId == nd().tournament_id + '_' + nd().court_id
+        && nd().keys().hasOnly(['tournament_id', 'court_id', 'court_name', 'line_control', 'line_control_layout', 'updated_by', 'updated_at'])
+        && nd().line_control is bool && nd().updated_by == me();
+      allow update: if tLineOrg(od().tournament_id)
+        && chg().hasOnly(['line_control', 'line_control_layout', 'court_name', 'updated_by', 'updated_at'])
+        && nd().line_control is bool && nd().updated_by == me()
+        && (!('line_control_layout' in nd()) || (nd().line_control_layout is string && nd().line_control_layout.size() <= 40));
+      allow delete: if tLineOrg(od().tournament_id);
+      match /line_cams/{camId} {
+        allow read: if isAuthed();
+        allow create, update: if tLineCamOk(lcId)
+          && nd().position is string && nd().position.size() <= 20
+          && camId == me() + '_' + nd().position
+          && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
+        allow delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
+      }
+      match /line_calls/{callId} {
+        allow read: if isAuthed();
+        allow create: if tLineCamOk(lcId)
+          && nd().kind in ['bounce', 'volley']
+          && nd().call in ['in', 'out', 'review', 'fault', 'clean']
+          && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'serve', 'created_at']);
+        allow update: if tLineOrg(tLineTid(lcId)) && chg().hasOnly(['decision', 'decided_by', 'decided_ms'])
+          && nd().decided_by == me() && nd().decided_ms is int
+          && nd().decision in (od().kind == 'bounce' ? ['in', 'out'] : ['fault', 'clean']);
+        allow delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
+      }
+    }
+
     match /tournament_admins/{docId} {
       allow read: if isAuthed();
       // Owner cria o registro inicial dele próprio durante createTournament.
