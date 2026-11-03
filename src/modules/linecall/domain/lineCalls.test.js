@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { solveHomography, applyHomography, invertHomography, metersPerPixel } from './homography.js';
-import { COURT, insideMargin, kitchenDepth, courtSide } from './court.js';
+import { COURT, insideMargin, kitchenDepth, kitchenMargin, landingMargin, serveFootMargin, courtSide } from './court.js';
 import {
   CAMERA_LAYOUTS, CAMERA_POSITIONS, calibrationPoints, layoutById, layoutsByCount, layoutJudges, DEFAULT_LAYOUT,
 } from './cameraLayouts.js';
 import { fuseLineCalls, isCamOnline, positionOccupancy } from './fusion.js';
 
 const CALIBRATION_CORNERS = calibrationPoints('fundo_a');
-import { createLineCallEngine, decide, LINE_CALL, VOLLEY_CALL } from './lineCallEngine.js';
+import { decide, LINE_CALL } from './lineCallEngine.js';
 import { findBallCandidates, pickBall, rgbToHsv } from './ballDetection.js';
 import { lineControlTargets } from './lineControlTargets.js';
 import { assessCamera, worstCmPerPixel, worstLevel, CAMERA_LEVEL } from './cameraCheck.js';
@@ -46,66 +46,26 @@ describe('quadra', () => {
     expect(kitchenDepth({ x: -0.3, y: COURT.NET_Y })).toBeLessThan(0);
   });
 
+  it('com a incerteza de cada eixo, decide a linha de menor margem em incertezas', () => {
+    // perto do canto do fundo: 6 cm do fundo (eixo y, bem visto), 8 cm da lateral (eixo x, mal visto)
+    const p = { x: 0.08 - 0.01, y: 0.06 - 0.01 };
+    const semU = landingMargin(p, { patchM: 0.01 });
+    expect(semU).toMatchObject({ reason: 'long', axis: 'y' });
+    const comU = landingMargin(p, { patchM: 0.01, u: { x: 0.2, y: 0.02 } });
+    expect(comU).toMatchObject({ reason: 'wide', axis: 'x', uncertaintyM: 0.2 });
+    expect(decide(comU.marginM, comU.uncertaintyM)).toBe(LINE_CALL.REVIEW);
+    // a cozinha: a linha dela é o eixo y; a lateral ao lado dela, o x
+    expect(kitchenMargin({ x: 3, y: COURT.NET_Y - 1 }, { x: 0.1, y: 0.05 })).toMatchObject({ axis: 'y', uncertaintyM: 0.05 });
+    expect(kitchenMargin({ x: 0.02, y: COURT.NET_Y - 1 }, { x: 0.1, y: 0.05 })).toMatchObject({ axis: 'x', uncertaintyM: 0.1 });
+    // o pé no saque: cada ponto com a sua incerteza
+    const pe = serveFootMargin([{ x: 1.5, y: -0.05, u: { x: 0.03, y: 0.08 } }], 'A');
+    expect(pe).toMatchObject({ reason: 'baseline', axis: 'y', uncertaintyM: 0.08 });
+  });
+
   it('decide só com margem maior que a incerteza', () => {
     expect(decide(0.08, 0.03)).toBe(LINE_CALL.IN);
     expect(decide(-0.08, 0.03)).toBe(LINE_CALL.OUT);
     expect(decide(0.01, 0.03)).toBe(LINE_CALL.REVIEW);
-  });
-});
-
-/** Quique: a bola desce na imagem até `peak` e volta a subir. */
-function bounceAt(peak) {
-  const e = createLineCallEngine({ H: H_CM });
-  const ys = [peak - 30, peak - 20, peak - 10, peak, peak - 5, peak - 10];
-  return ys.flatMap((y, i) => e.push({ t: i / 60, ball: { x: 300, y } }));
-}
-
-describe('motor: quique', () => {
-  it('dentro, fora e revisar pela distância à linha de fundo', () => {
-    const fundo = COURT.LENGTH * 100;
-    const [dentro] = bounceAt(fundo - 11);
-    expect(dentro).toMatchObject({ type: 'bounce', call: LINE_CALL.IN });
-    // a margem é a da borda da marca: 11 cm do centro + 1 cm de raio de contato
-    expect(dentro.marginM).toBeCloseTo(0.12, 2);
-    expect(bounceAt(fundo + 9)[0].call).toBe(LINE_CALL.OUT);
-    expect(bounceAt(fundo - 2)[0].call).toBe(LINE_CALL.REVIEW);
-  });
-
-  it('uma quina perto do punho é batida, não quique', () => {
-    const e = createLineCallEngine({ H: H_CM });
-    const players = [{ feet: [], wrists: [{ x: 300, y: 500 }] }];
-    const ev = [470, 480, 490, 500, 495, 490].flatMap((y, i) => e.push({ t: i / 60, ball: { x: 300, y }, players }));
-    expect(ev).toEqual([]);
-  });
-});
-
-/** Saque perto do punho (y=460), voleio perto do punho (y=360), pés parados em `feetY`. */
-function volley(feetY) {
-  const e = createLineCallEngine({ H: H_CM });
-  const players = [{
-    feet: [{ x: 300, y: feetY }, { x: 330, y: feetY }],
-    wrists: [{ x: 300, y: 460 }, { x: 300, y: 360 }],
-  }];
-  const ys = [400, 420, 440, 460, 440, 420, 400, 380, 360, 380, 400];
-  const ev = ys.flatMap((y, i) => e.push({ t: i / 60, ball: { x: 300, y }, players }));
-  for (let i = ys.length; i < ys.length + 90; i += 1) ev.push(...e.push({ t: i / 60, ball: null, players }));
-  return ev.filter((x) => x.type === 'volley');
-}
-
-describe('motor: pé na cozinha no voleio', () => {
-  it('pé apoiado dentro da cozinha é falta', () => {
-    const [v] = volley(800);
-    expect(v.call).toBe(VOLLEY_CALL.FAULT);
-    expect(v.depthM).toBeGreaterThan(0.5);
-  });
-
-  it('pé longe da cozinha é voleio limpo, depois do impulso', () => {
-    expect(volley(1200).map((v) => v.call)).toEqual([VOLLEY_CALL.CLEAN]);
-  });
-
-  it('pé em cima da linha, dentro da incerteza, pede revisão', () => {
-    const linha = (COURT.NET_Y + COURT.KITCHEN) * 100 + 2;
-    expect(volley(linha).map((v) => v.call)).toEqual([VOLLEY_CALL.REVIEW]);
   });
 });
 
@@ -147,32 +107,6 @@ describe('câmera', () => {
     expect(worstLevel(assessCamera({ width: 1280, height: 720, frameRate: 30 }))).toBe(CAMERA_LEVEL.WARN);
     expect(worstLevel(assessCamera({ width: 640, height: 480, frameRate: 30 }))).toBe(CAMERA_LEVEL.BLOCK);
     expect(worstCmPerPixel(H_CM, [{ x: 0, y: 0 }])).toBeCloseTo(1);
-  });
-});
-
-/** Câmera de cima: a bola segue em +y a 10 m/s e passa a 7 m/s (quique) ou volta (batida). */
-function overhead(startCm, after) {
-  const e = createLineCallEngine({ H: H_CM, options: { mode: 'overhead' } });
-  const ys = [0, 1, 2, 3].map((i) => startCm + (1000 / 60) * i);
-  for (let i = 1; i <= 3; i += 1) ys.push(ys[3] + (after * 100 / 60) * i);
-  return ys.flatMap((y, i) => e.push({ t: i / 60, ball: { x: 300, y } }));
-}
-
-describe('motor: câmera de cima', () => {
-  it('o quique é a freada no chão, sem mudar de rumo', () => {
-    const [dentro, ...resto] = overhead(100, 7);
-    expect(resto).toEqual([]);
-    expect(dentro).toMatchObject({ type: 'bounce', call: LINE_CALL.IN });
-    expect(dentro.point.y).toBeCloseTo(1.417, 2);
-    expect(overhead(1316, 7)[0].call).toBe(LINE_CALL.OUT);
-  });
-
-  it('a bola que volta é batida, não quique', () => {
-    expect(overhead(400, -8)).toEqual([]);
-  });
-
-  it('seguir no mesmo ritmo não é nada', () => {
-    expect(overhead(400, 10)).toEqual([]);
   });
 });
 

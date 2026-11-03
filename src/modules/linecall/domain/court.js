@@ -58,10 +58,34 @@ export function insideMargin({ x, y }) {
  * A cozinha vai de lateral a lateral: pisar fora da quadra ao lado da
  * cozinha não é falta.
  */
-export function kitchenDepth({ x, y }) {
-  const along = K - Math.abs(y - N);
-  const across = Math.min(x, W - x);
-  return Math.min(along, across);
+export function kitchenDepth(p) {
+  return kitchenMargin(p).depthM;
+}
+
+/**
+ * Entre as linhas que valem para o lance, a que DECIDE. Cada candidata leva a
+ * margem e o EIXO em que ela é medida: `x` nas laterais e na central, `y` no
+ * fundo, na cozinha e na rede. Com a incerteza de cada eixo (`u = { x, y }`),
+ * decide a de menor margem medida em incertezas: perto de um canto, a linha
+ * mais longe pode ser a mais duvidosa — e "dentro" exige todas folgadas.
+ */
+function binding(cands) {
+  const z = (c) => (c.u ? c.marginM / c.u[c.axis] : c.marginM);
+  let best = cands[0];
+  cands.forEach((c) => { if (z(c) < z(best)) best = c; });
+  return { marginM: best.marginM, reason: best.reason, axis: best.axis, uncertaintyM: best.u ? best.u[best.axis] : undefined };
+}
+
+/**
+ * O mesmo de `kitchenDepth`, pela linha que decide: a da cozinha (`y`) ou a
+ * lateral (`x`). Com `u` (a incerteza de cada eixo) devolve a dela também.
+ */
+export function kitchenMargin({ x, y }, u = null) {
+  const b = binding([
+    { marginM: K - Math.abs(y - N), axis: 'y', u },
+    { marginM: Math.min(x, W - x), axis: 'x', u },
+  ]);
+  return { depthM: b.marginM, axis: b.axis, uncertaintyM: b.uncertaintyM };
 }
 
 /** De que lado da rede o ponto está. */
@@ -80,6 +104,94 @@ export function courtSegments() {
 
 /** Raio da bola de pickleball (diâmetro oficial 7,3–7,5 cm), em metros. */
 export const BALL_RADIUS = 0.037;
+
+/** Altura da rede no poste (36 pol.), em metros: o que ela esconde de cada câmera. */
+export const NET_HEIGHT = 0.914;
+
+const other = (side) => (side === 'A' ? 'B' : 'A');
+export { other as otherSide };
+
+/**
+ * Onde a bola TINHA de cair e quanto sobrou (com sinal: positiva dentro).
+ * Devolve também o MOTIVO — a linha que decide: `long` (fundo), `wide`
+ * (lateral), `short` (linha da cozinha, no saque), `wrong_box` (linha
+ * central, no saque) e `net` (não passou da rede).
+ *
+ * A marca da bola no chão (`patchM`, o raio do toque) entra a FAVOR em toda
+ * linha que é da área — tocar o fundo, a lateral ou a central é dentro — e
+ * CONTRA na linha da cozinha no saque: tocar nela é saque curto.
+ *
+ * @param {{x:number,y:number}} p o centro do toque
+ * @param {{ target?: 'A'|'B'|null, serveHalf?: 'low'|'high'|null, patchM?: number, u?: {x:number,y:number} }} [o]
+ *   `target`: o lado em que a bola tem de cair (`null` = a quadra inteira, quando
+ *   não se sabe quem bateu); `serveHalf`: no saque, a metade da largura da área
+ *   de saque em diagonal (`low` = x < meio); `u`: a incerteza do toque em cada
+ *   eixo — com ela a linha que decide é a de menor margem em incertezas, e ela
+ *   volta em `uncertaintyM`.
+ */
+export function landingMargin(p, { target = null, serveHalf = null, serve = Boolean(serveHalf), patchM = 0, u = null } = {}) {
+  const half = COURT.LINE / 2;
+  const c = (reason, marginM, axis) => ({ reason, marginM, axis, u });
+  const opts = [];
+  if (target !== 'A') opts.push(c('long', L - p.y + patchM, 'y'));
+  if (target !== 'B') opts.push(c('long', p.y + patchM, 'y'));
+  if (target && serveHalf === 'high') opts.push(c('wide', W - p.x + patchM, 'x'), c('wrong_box', p.x - (W / 2 - half) + patchM, 'x'));
+  else if (target && serveHalf === 'low') opts.push(c('wide', p.x + patchM, 'x'), c('wrong_box', W / 2 + half - p.x + patchM, 'x'));
+  else opts.push(c('wide', p.x + patchM, 'x'), c('wide', W - p.x + patchM, 'x'));
+  // No saque a cozinha inteira (e a linha dela) é curta, saiba-se ou não a área em diagonal.
+  if (target && serve) opts.push(c('short', (target === 'B' ? p.y - (N + K) : N - K - p.y) - patchM, 'y'));
+  else if (target) opts.push(c('net', target === 'B' ? p.y - N : N - p.y, 'y'));
+  return binding(opts);
+}
+
+/**
+ * O pé do SACADOR no instante da batida (USA Pickleball 7.A): atrás da linha
+ * de fundo sem tocá-la (a linha é da quadra), entre os prolongamentos
+ * imaginários da lateral e da central. Os prolongamentos SÃO da área de saque
+ * (3.A.4.g): pisar neles vale, passar deles é falta — por isso a divisa da
+ * central fica na borda de LÁ da linha (a central tem 5 cm, e o prolongamento
+ * dela vale para os dois lados) e a da lateral na borda de fora.
+ * Recebe os pontos APOIADOS (no ar não contam) já no chão — cada um pode levar
+ * a sua incerteza por eixo (`u`) — e devolve a margem da linha que decide
+ * (positiva = dentro da regra), o motivo, o eixo e a metade da largura de onde
+ * o saque saiu. A metade é a que deixa o pé mais folgado (sem o placar não se
+ * sabe de que lado a pessoa devia sacar): quem pisa dos dois lados do
+ * prolongamento da central erra nas duas.
+ *
+ * @param {Array<{x:number,y:number,u?:{x:number,y:number}}>} pts
+ * @param {'A'|'B'} side o lado de quem saca
+ */
+export function serveFootMargin(pts, side) {
+  if (!pts.length) return null;
+  const half = COURT.LINE / 2;
+  const forHalf = (h) => ({
+    ...binding(pts.flatMap((p) => [
+      { reason: 'baseline', marginM: side === 'A' ? -p.y : p.y - L, axis: 'y', u: p.u },
+      { reason: 'sideline', marginM: Math.min(p.x, W - p.x), axis: 'x', u: p.u },
+      { reason: 'centerline', marginM: h === 'low' ? W / 2 + half - p.x : p.x - (W / 2 - half), axis: 'x', u: p.u },
+    ])),
+    half: h,
+  });
+  const z = (m) => (m.uncertaintyM ? m.marginM / m.uncertaintyM : m.marginM);
+  const lo = forHalf('low');
+  const hi = forHalf('high');
+  return z(lo) >= z(hi) ? lo : hi;
+}
+
+/**
+ * A rede esconde este ponto do chão para a câmera em `cam` ({x, y, z})? A
+ * linha de visão passa pelo plano da rede abaixo da fita. Da câmera de fundo,
+ * a cozinha do OUTRO lado quase sempre fica escondida: com a câmera a 4 m de
+ * altura e 3 m atrás do fundo, o chão some até 2,9 m depois da rede.
+ */
+export function netHides(cam, p, marginM = 0.03) {
+  if (!cam) return false;
+  const dy = p.y - cam.y;
+  if (Math.abs(dy) < 1e-9) return false;
+  const s = (N - cam.y) / dy;
+  if (!(s > 0 && s < 1)) return false;
+  return cam.z * (1 - s) < NET_HEIGHT + marginM;
+}
 
 /**
  * A linha da quadra mais perto do quique — para desenhar a MARCA (estilo
@@ -107,9 +219,7 @@ export function nearestBoundary({ x, y }) {
  *   ponto da largura (x dos pés no chão) saiu o saque
  */
 export function serviceBoxMargin(p, server) {
-  const half = COURT.LINE / 2;
-  const toHigh = server.x < W / 2; // diagonal: a metade OPOSTA da largura
-  const across = toHigh ? Math.min(p.x - (W / 2 - half), W - p.x) : Math.min(p.x, W / 2 + half - p.x);
-  const along = server.side === 'A' ? Math.min(p.y - (N + K), L - p.y) : Math.min(N - K - p.y, p.y);
-  return Math.min(across, along);
+  // diagonal: a metade OPOSTA da largura, do outro lado da rede
+  const serveHalf = server.x < W / 2 ? 'high' : 'low';
+  return landingMargin(p, { target: server.side === 'A' ? 'B' : 'A', serveHalf }).marginM;
 }

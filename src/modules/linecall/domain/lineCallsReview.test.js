@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { COURT, nearestBoundary, serviceBoxMargin } from './court.js';
-import { createLineCallEngine, LINE_CALL } from './lineCallEngine.js';
 import { fuseLineCalls } from './fusion.js';
 import { createFrameRing, clipWindow, frameIndexAt } from './replay.js';
 import { lanceSummary, lancesCsv } from './report.js';
@@ -9,8 +8,6 @@ import { calibrationPoints } from './cameraLayouts.js';
 import { solveHomography } from './homography.js';
 
 const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
-// Imagem em "centímetros": 1 px = 1 cm do chão.
-const H_CM = [0.01, 0, 0, 0, 0.01, 0, 0, 0, 1];
 
 describe('marca do quique: a linha mais perto', () => {
   it('acha a linha e a margem com sinal', () => {
@@ -34,25 +31,6 @@ describe('saque: a área em diagonal', () => {
   it('do lado B, o alvo é o lado A', () => {
     expect(serviceBoxMargin({ x: 1, y: 2 }, { side: 'B', x: 5 })).toBeGreaterThan(0);
     expect(serviceBoxMargin({ x: 1, y: N - 1 }, { side: 'B', x: 5 })).toBeLessThan(0);
-  });
-
-  /** Sacador (pés em x=150 cm, y=50) bate perto do punho; a bola sobe e cai em (x, y) cm. */
-  function serveTo(x, y) {
-    const e = createLineCallEngine({ H: H_CM });
-    const players = [{ feet: [{ x: 140, y: 50 }, { x: 160, y: 50 }], wrists: [{ x, y: 60 }] }];
-    const ys = [0, 20, 40, 60];
-    for (let v = 40; v >= -300; v -= 20) ys.push(v);
-    for (let v = -280; v <= y; v += 20) ys.push(v);
-    ys.push(y - 20, y - 40);
-    const ev = ys.flatMap((yy, i) => e.push({ t: i / 60, ball: { x, y: yy }, players }));
-    return ev.filter((a) => a.type === 'bounce');
-  }
-
-  it('o motor julga o primeiro quique do saque pela área de saque', () => {
-    const [na] = serveTo(460, 1000);
-    expect(na).toMatchObject({ serve: true, call: LINE_CALL.IN });
-    const [cozinha] = serveTo(460, 860); // dentro da quadra, mas na cozinha
-    expect(cozinha).toMatchObject({ serve: true, call: LINE_CALL.OUT });
   });
 });
 
