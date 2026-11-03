@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { toast } from 'sonner';
-import { ScanLine, Camera } from 'lucide-react';
+import { ScanLine, Camera, MonitorPlay } from 'lucide-react';
 
 import { V2Surface, V2Button, V2Toggle } from '@/v2/ui/primitives';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -21,6 +21,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useMyGameDays, useUpdateGameDay, useSetGameDaysLineControl } from '@/modules/games/hooks/useGameDays';
 import { lineControlTargets } from '@/modules/linecall/domain/lineControlTargets';
+import { layoutById } from '@/modules/linecall/domain/cameraLayouts';
 import { todayISO } from '@/modules/arenas/domain/calendar';
 import { t } from '@/core/i18n';
 
@@ -42,7 +43,8 @@ function LineControlCard({ gameDay }) {
 
   if (!podeConfigurar && !on) return null;
 
-  const abrir = () => window.open(`/dia-de-jogo/${gameDay.id}/linhas`, '_blank', 'noopener,noreferrer');
+  const abrir = (modo) => window.open(`/dia-de-jogo/${gameDay.id}/linhas?modo=${modo}`, '_blank', 'noopener,noreferrer');
+  const arranjo = layoutById(gameDay.line_control_layout);
 
   const alternar = (valor) => update.mutate(
     { id: gameDay.id, patch: { line_control: valor } },
@@ -78,26 +80,34 @@ function LineControlCard({ gameDay }) {
           ) : (
             <>
               <p className="text-sm font-semibold text-ink">{t('Controle de linhas ligado')}</p>
-              <p className="text-xs leading-5 text-gray-500">{t('Uma câmera acompanha as linhas deste jogo. Na dúvida, ela diz "revisar" e a decisão volta para a quadra.')}</p>
+              <p className="text-xs leading-5 text-gray-500">{t('As câmeras acompanham as linhas deste jogo. Quem participa pode usar o próprio celular como uma delas. Na dúvida, a câmera diz "revisar" e a decisão volta para a quadra.')}</p>
             </>
           )}
         </div>
       </div>
-      {podeConfigurar && (
-        <div className="flex flex-wrap gap-2">
-          {on && (
-            <V2Button size="sm" onClick={abrir}>
+      {on && <p className="text-xs text-gray-500">{t('Arranjo: {l}', { l: t(arranjo.label) })}</p>}
+      <div className="flex flex-wrap gap-2">
+        {on && (
+          <>
+            <V2Button size="sm" onClick={() => abrir('camera')}>
               <Camera className="mr-1.5 h-4 w-4" /> {t('Abrir câmera')}
             </V2Button>
-          )}
-          <V2Button size="sm" variant="secondary" disabled={setMany.isPending || !meus.isSuccess} onClick={() => todos(true)}>
-            {t('Ligar em todos os meus jogos')}
-          </V2Button>
-          <V2Button size="sm" variant="ghost" disabled={setMany.isPending || !meus.isSuccess} onClick={() => todos(false)}>
-            {t('Desligar em todos')}
-          </V2Button>
-        </div>
-      )}
+            <V2Button size="sm" variant="secondary" onClick={() => abrir('central')}>
+              <MonitorPlay className="mr-1.5 h-4 w-4" /> {t('Abrir central')}
+            </V2Button>
+          </>
+        )}
+        {podeConfigurar && (
+          <>
+            <V2Button size="sm" variant="secondary" disabled={setMany.isPending || !meus.isSuccess} onClick={() => todos(true)}>
+              {t('Ligar em todos os meus jogos')}
+            </V2Button>
+            <V2Button size="sm" variant="ghost" disabled={setMany.isPending || !meus.isSuccess} onClick={() => todos(false)}>
+              {t('Desligar em todos')}
+            </V2Button>
+          </>
+        )}
+      </div>
     </V2Surface>
   );
 }

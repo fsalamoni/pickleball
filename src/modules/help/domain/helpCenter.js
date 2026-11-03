@@ -1607,6 +1607,34 @@ const ATLETA = {
       ],
     },
     {
+      id: 'controle-de-linhas',
+      flags: ['line_control'],
+      title: tk('Controle de linhas por câmera'),
+      summary: tk('Uma ou várias câmeras (celular, webcam, câmera de ação) marcam se a bola quicou dentro ou fora e se houve pé na cozinha no voleio.'),
+      keywords: [
+        'câmera', 'linha', 'fora', 'dentro', 'cozinha', 'pé na cozinha', 'voleio', 'arbitragem',
+        'celular', 'webcam', 'gopro', 'tripé', 'calibrar', 'central', 'revisar',
+      ],
+      blocks: [
+        p(tk('Quem organiza o dia de jogo liga o "Controle de linhas por câmera" no cartão do dia (num jogo, ou em todos os seus, até com o jogo em andamento). Depois, cada aparelho que vai filmar abre o dia, toca em "Abrir câmera" e escolhe a posição. A central junta o que todas as câmeras viram e mostra cada lance.')),
+        list(
+          tk('QUANTAS CÂMERAS — de 1 a 5. Para começar, uma câmera no FUNDO, atrás da linha de fundo, no alto. Com duas, a melhor dupla é fundo + LATERAL DA REDE (a lateral é a que melhor vê o pé na cozinha). Com quatro, os dois fundos + as duas laterais da rede.'),
+          tk('CÂMERA DE CIMA (no centro, apontando para baixo) — ótima para ONDE a bola caiu, mas precisa de 7 a 9 m de altura (ou 4 a 5 m com lente grande-angular linear), não vê bem o momento do quique e não julga o pé na cozinha. Use como complemento.'),
+          tk('VÁRIOS CELULARES — cada pessoa usa o próprio celular, entrando com a própria conta (quem participa ou organiza o dia). Também dá para usar a mesma conta em vários aparelhos. Cada um escolhe uma posição diferente; o desenho mostra quais já estão ocupadas.'),
+          tk('O VÍDEO NÃO SAI DO APARELHO — só as marcações (dentro/fora, a distância e a hora) vão para a central.'),
+        ),
+        steps(
+          tk('Combine com quem vai filmar qual é o lado A da quadra (por exemplo, o lado da entrada). Todos usam o mesmo desenho.'),
+          tk('Em cada aparelho: "Abrir câmera" → escolha a posição → leia "Como posicionar esta câmera" e monte o tripé no lugar e na altura indicados.'),
+          tk('Abra a câmera (a traseira, no celular), toque nos quatro pontos da quadra na ordem que o desenho pisca e confira se as linhas azuis caem em cima das linhas da quadra.'),
+          tk('Se a bola não for amarela ou verde-limão, toque nela parada no chão para ensinar a cor. Depois, "Analisar".'),
+          tk('Na mesa da organização (ou numa TV), abra "Abrir central": as câmeras no ar e cada lance, com o que cada uma viu.'),
+        ),
+        tip(tk('"Revisar" quer dizer que a distância até a linha é menor que a precisão da câmera, ou que as câmeras discordaram. Aí a decisão volta para a quadra, como sem câmera.')),
+        warn(tk('A câmera ajuda; não substitui a regra do jogo. Câmera Wi-Fi não abre direto no navegador (use o OBS Studio com a "Câmera virtual" num computador) e Bluetooth não transmite vídeo.')),
+      ],
+    },
+    {
       id: 'play-grupos',
       title: tk('Dividir o Play em grupos'),
       summary: tk('Grupos por nível ou por tipo de dupla, cada um com a sua fila.'),
@@ -2729,6 +2757,8 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   // --- dia de jogo ---------------------------------------------------------
   { pattern: '/clubes/*/eventos/*', label: tk('este dia de jogo do clube'),
     refs: [[HELP_SECTION.ATHLETE, 'dia-de-jogo'], [HELP_SECTION.ATHLETE, 'organizar-dia-de-jogo'], [HELP_SECTION.ATHLETE, 'comunidade']] },
+  { pattern: '/dia-de-jogo/*/linhas', label: tk('o controle de linhas'),
+    refs: [[HELP_SECTION.ATHLETE, 'controle-de-linhas']] },
   { pattern: '/dia-de-jogo/*', label: tk('este dia de jogo'),
     refs: [[HELP_SECTION.ATHLETE, 'dia-de-jogo'], [HELP_SECTION.ATHLETE, 'organizar-dia-de-jogo'], [HELP_SECTION.ATHLETE, 'play-grupos']] },
   { pattern: '/dia-de-jogo', label: tk('dia de jogo'),

@@ -38,7 +38,9 @@ describe('tamanho do firestore.rules', () => {
 
   it('⭐ as regras usam os atalhos em vez de escrever as expressões por extenso', () => {
     const codigo = compactarRegras(REGRAS);
-    for (const atalho of ['function nd()', 'function od()', 'function me()', 'function chg()', 'function arenaOd()', 'function clubOd()']) expect(codigo).toContain(atalho);
+    for (const atalho of ['function nd()', 'function od()', 'function me()', 'function chg()', 'function arenaOd()', 'function clubOd()', 'function adm()']) expect(codigo).toContain(atalho);
+    // `isPlatformAdmin()` só na definição e no atalho `adm()`.
+    expect((codigo.match(/isPlatformAdmin\(\)/g) || []).length).toBeLessThanOrEqual(2);
     // Por extenso, só nas próprias definições.
     expect((codigo.match(/request\.resource\.data/g) || []).length).toBeLessThanOrEqual(2);
     expect((codigo.match(/(?<![\w.])resource\.data/g) || []).length).toBeLessThanOrEqual(2);

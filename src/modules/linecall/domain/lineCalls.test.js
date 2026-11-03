@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { solveHomography, applyHomography, invertHomography, metersPerPixel } from './homography.js';
-import { COURT, CALIBRATION_CORNERS, insideMargin, kitchenDepth } from './court.js';
+import { COURT, insideMargin, kitchenDepth, courtSide } from './court.js';
+import {
+  CAMERA_LAYOUTS, CAMERA_POSITIONS, calibrationPoints, layoutById, layoutsByCount, layoutJudges, DEFAULT_LAYOUT,
+} from './cameraLayouts.js';
+import { fuseLineCalls, isCamOnline, positionOccupancy } from './fusion.js';
+
+const CALIBRATION_CORNERS = calibrationPoints('fundo_a');
 import { createLineCallEngine, decide, LINE_CALL, VOLLEY_CALL } from './lineCallEngine.js';
 import { findBallCandidates, pickBall, rgbToHsv } from './ballDetection.js';
 import { lineControlTargets } from './lineControlTargets.js';
@@ -140,5 +146,98 @@ describe('câmera', () => {
     expect(worstLevel(assessCamera({ width: 1280, height: 720, frameRate: 30 }))).toBe(CAMERA_LEVEL.WARN);
     expect(worstLevel(assessCamera({ width: 640, height: 480, frameRate: 30 }))).toBe(CAMERA_LEVEL.BLOCK);
     expect(worstCmPerPixel(H_CM, [{ x: 0, y: 0 }])).toBeCloseTo(1);
+  });
+});
+
+/** Câmera de cima: a bola segue em +y a 10 m/s e passa a 7 m/s (quique) ou volta (batida). */
+function overhead(startCm, after) {
+  const e = createLineCallEngine({ H: H_CM, options: { mode: 'overhead' } });
+  const ys = [0, 1, 2, 3].map((i) => startCm + (1000 / 60) * i);
+  for (let i = 1; i <= 3; i += 1) ys.push(ys[3] + (after * 100 / 60) * i);
+  return ys.flatMap((y, i) => e.push({ t: i / 60, ball: { x: 300, y } }));
+}
+
+describe('motor: câmera de cima', () => {
+  it('o quique é a freada no chão, sem mudar de rumo', () => {
+    const [dentro, ...resto] = overhead(100, 7);
+    expect(resto).toEqual([]);
+    expect(dentro).toMatchObject({ type: 'bounce', call: LINE_CALL.IN });
+    expect(dentro.point.y).toBeCloseTo(1.417, 2);
+    expect(overhead(1316, 7)[0].call).toBe(LINE_CALL.OUT);
+  });
+
+  it('a bola que volta é batida, não quique', () => {
+    expect(overhead(400, -8)).toEqual([]);
+  });
+
+  it('seguir no mesmo ritmo não é nada', () => {
+    expect(overhead(400, 10)).toEqual([]);
+  });
+});
+
+describe('posições e arranjos', () => {
+  it('todo arranjo usa posições que existem, sem repetir, e os ids não mudam', () => {
+    CAMERA_LAYOUTS.forEach((l) => {
+      expect(l.positions.every((p) => CAMERA_POSITIONS[p])).toBe(true);
+      expect(new Set(l.positions).size).toBe(l.positions.length);
+    });
+    expect(layoutsByCount().map(([n]) => n)).toEqual([1, 2, 3, 4, 5]);
+    expect(layoutById('nao-existe').id).toBe(DEFAULT_LAYOUT);
+    expect(Object.keys(CAMERA_POSITIONS)).toEqual(
+      ['fundo_a', 'fundo_b', 'topo', 'rede_1', 'rede_2', 'canto_a1', 'canto_a2', 'canto_b1', 'canto_b2'],
+    );
+  });
+
+  it('a câmera de cima não julga o pé; a lateral calibra pelas cozinhas', () => {
+    expect(layoutJudges('solo_topo')).toEqual({ bounce: true, feet: false });
+    expect(layoutJudges('topo_rede').feet).toBe(true);
+    expect(calibrationPoints('rede_1').map((p) => p.id)).toEqual(['KA1', 'KA2', 'KB2', 'KB1']);
+    expect(calibrationPoints('topo').map((p) => p.id)).toEqual(['A1', 'A2', 'B2', 'B1']);
+    expect(courtSide({ y: 1 })).toBe('A');
+    expect(courtSide({ y: 12 })).toBe('B');
+  });
+});
+
+describe('central: juntar as câmeras', () => {
+  const q = (id, position, call, t, extra = {}) => ({
+    id, position, kind: 'bounce', call, t_ms: t, uncertainty_m: 0.03, x: 3, y: 13.3, ...extra,
+  });
+
+  it('o mesmo quique visto por duas câmeras vira um lance', () => {
+    const [l] = fuseLineCalls([q('1', 'fundo_a', 'out', 1000), q('2', 'fundo_b', 'out', 1200, { uncertainty_m: 0.01 })]);
+    expect(l).toMatchObject({ call: 'out', disagree: false, positions: ['fundo_a', 'fundo_b'] });
+    expect(l.best.position).toBe('fundo_b');
+  });
+
+  it('câmeras seguras que discordam ⇒ revisar; "revisar" de uma não desmente a outra', () => {
+    expect(fuseLineCalls([q('1', 'fundo_a', 'in', 1000), q('2', 'fundo_b', 'out', 1100)])[0])
+      .toMatchObject({ call: 'review', disagree: true });
+    expect(fuseLineCalls([q('1', 'fundo_a', 'review', 1000), q('2', 'topo', 'in', 1100)])[0].call).toBe('in');
+  });
+
+  it('longe no tempo ou no chão são lances diferentes', () => {
+    expect(fuseLineCalls([q('1', 'fundo_a', 'in', 1000), q('2', 'fundo_b', 'in', 3000)])).toHaveLength(2);
+    expect(fuseLineCalls([q('1', 'fundo_a', 'in', 1000), q('2', 'fundo_b', 'in', 1100, { y: 1 })])).toHaveLength(2);
+    // a mesma câmera não vota duas vezes no mesmo lance
+    expect(fuseLineCalls([q('1', 'fundo_a', 'in', 1000), q('2', 'fundo_a', 'in', 1200)])).toHaveLength(2);
+  });
+
+  it('no pé vale a câmera que vê melhor: o "sem falta" do fundo não desmente a lateral', () => {
+    const v = (id, position, call, t) => ({ id, position, kind: 'volley', call, t_ms: t, uncertainty_m: 0.05, x: 3, y: 8 });
+    const [l] = fuseLineCalls([v('1', 'fundo_a', 'clean', 1000), v('2', 'rede_1', 'fault', 1050)]);
+    expect(l).toMatchObject({ call: 'fault', disagree: false });
+    expect(fuseLineCalls([v('1', 'rede_1', 'clean', 1000), v('2', 'rede_2', 'fault', 1050)])[0].call).toBe('review');
+  });
+
+  it('câmera no ar e quem ocupa cada posição', () => {
+    const cams = [
+      { position: 'fundo_a', seen_ms: 100000, name: 'velha' },
+      { position: 'fundo_a', seen_ms: 130000, name: 'nova' },
+      { position: 'rede_1', seen_ms: 10000, name: 'parada' },
+    ];
+    expect(isCamOnline(cams[2], 140000)).toBe(false);
+    const occ = positionOccupancy(['fundo_a', 'rede_1'], cams, 140000);
+    expect(occ.fundo_a.name).toBe('nova');
+    expect(occ.rede_1).toBeNull();
   });
 });

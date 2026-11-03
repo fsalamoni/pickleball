@@ -748,8 +748,18 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
   DUPR, escolha de quem configura o dia (cartão de configurações); `null` =
   padrão da plataforma. Ver `docs/51` §8
 - `line_control` (**opcional**, `true|false`) — controle de linhas por câmera
-  ligado neste dia (flag `line_control`). Só diz que o jogo usa câmera: vídeo,
-  calibração e marcações ficam no aparelho. Ausente = desligado. Ver `docs/53`
+  ligado neste dia (flag `line_control`). Ausente = desligado. Ver `docs/53`
+- `line_control_layout` (**opcional**, string) — o arranjo das câmeras
+  (`solo_fundo`, `fundo_rede`, `fundos_redes`…); ausente = `solo_fundo`. O id
+  é gravado: nunca renomeie
+- subcoleção `line_cams/{uid}_{posição}` — câmera no ar (`uid, name, position,
+  layout, calibrated, analyzing, fps, seen_ms, updated_at`), renovada a cada
+  15 s e apagada ao sair; subcoleção `line_calls/{auto}` — cada marcação
+  (`uid, position, kind, call, t_ms, margin_m, uncertainty_m, depth_m, x, y,
+  created_at`), **sem imagem**. Grava só com `line_control == true`, em nome
+  próprio, quem participa/organiza; zero índice (a central lê `orderBy
+  created_at` numa subcoleção, que é índice simples). Vídeo e calibração ficam
+  no aparelho
 - `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
   operar as partidas (sortear, criar próxima partida, substituir jogador, marcar
   indisponível, vincular dupla, incluir/excluir participante). **Ausente, nulo ou

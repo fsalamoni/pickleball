@@ -34,6 +34,9 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(me()))
         && get(/databases/$(database)/documents/users/$(me())).data.role == 'platform_admin';
     }
+    // Atalho de isPlatformAdmin() — o nome longo, repetido ~400 vezes, custava
+    // ~5 KB no ruleset compilado (teto de 250 KB, ver firestoreRulesTamanho).
+    function adm() { return isPlatformAdmin(); }
     function tokenEmailVerified() {
       return isAuthed() && request.auth.token.get('email_verified', false) == true;
     }
@@ -57,7 +60,7 @@ service cloud.firestore {
       return ex('tournaments/' + tid)
         && (
           gd('tournaments/' + tid).get('archived', false) != true
-          || isPlatformAdmin()
+          || adm()
           || isTournamentCreator(tid)
         );
     }
@@ -185,6 +188,17 @@ service cloud.firestore {
           && (me() in gameDayData(gdId).member_uids)
         );
     }
+    // Controle de linhas: quem organiza o dia (criador, gestor da arena/clube).
+    function lineOrgOf(gdId) {
+      return isGameDayOwnerOf(gdId) || isArenaGameDayManagerOf(gdId)
+        || isClubGameDayManagerOf(gdId) || adm();
+    }
+    // ...e quem pode ser uma CÂMERA: quem organiza, o administrador nomeado ou
+    // quem participa — e só com o controle ligado naquele jogo.
+    function lineCamOk(gdId) {
+      return isOwner(nd().uid) && gameDayData(gdId).get('line_control', false) == true
+        && (me() in gameDayData(gdId).get('member_uids', []) || isGameDayAdminOf(gdId) || lineOrgOf(gdId));
+    }
     // Quem pode ver um dia de jogo: dono, membro, qualquer um se público — e,
     // num dia de jogo de CLUBE, quem é do clube.
     function canAccessGameDay(gdId) {
@@ -193,7 +207,7 @@ service cloud.firestore {
         || (me() in gameDayData(gdId).member_uids)
         || gameDayData(gdId).visibility == 'public'
         || isClubGameDayMemberOf(gdId)
-        || isPlatformAdmin()
+        || adm()
       );
     }
     // O pagamento é de uma venda de que quem paga FAZ PARTE (comprador ou quem
@@ -238,7 +252,7 @@ service cloud.firestore {
       return isAuthed() && resource == null && (
         docId == docId.split('_')[0] + '_' + me()
         || isArenaManager(docId.split('_')[0])
-        || isPlatformAdmin()
+        || adm()
       );
     }
     // Dados/relações de um evento (para validar subcoleções pelo documento-pai).
@@ -262,7 +276,7 @@ service cloud.firestore {
     function isEventParticipant(eventId) {
       return isAuthed()
         && ex('club_events/' + eventId)
-        && (isPlatformAdmin()
+        && (adm()
             || eventData(eventId).created_by == me()
             || isClubAdmin(eventClubId(eventId))
             || isEventInvitee(eventId)
@@ -274,7 +288,7 @@ service cloud.firestore {
     function isEventClubModerator(eventId) {
       return isAuthed()
         && ex('club_events/' + eventId)
-        && (isClubAdmin(eventClubId(eventId)) || isPlatformAdmin()
+        && (isClubAdmin(eventClubId(eventId)) || adm()
             || eventData(eventId).created_by == me());
     }
     // Membro de uma conversa (validação pelo documento-pai para as mensagens).
@@ -295,7 +309,7 @@ service cloud.firestore {
     function isForumThreadModerator(tid) {
       return isAuthed()
         && ex('club_forum_threads/' + tid)
-        && (isClubAdmin(forumThreadClubId(tid)) || isPlatformAdmin());
+        && (isClubAdmin(forumThreadClubId(tid)) || adm());
     }
     // ---- P0-02: o contato do inscrito sai do documento público -----------
     // `tournament_registrations` é lido SEM login (quadro do torneio,
@@ -410,7 +424,7 @@ service cloud.firestore {
     // master da plataforma.
     match /platform_settings/{docId} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if adm();
     }
 
     // ---- Rankings da plataforma (ELO, 2.0–8.0 e duplas) ------------------
@@ -455,11 +469,11 @@ service cloud.firestore {
     // `club_id` para queries. Read público (faz parte do clube
     // visível para os membros). Write só do admin do clube + platform
     // admin — o Cloud Function roda com service account (admin SDK,
-    // ignora regras) e o `isPlatformAdmin()` cobre a escrita manual.
+    // ignora regras) e o `adm()` cobre a escrita manual.
     match /club_internal_ratings/{docId} {
       allow read: if true;
       allow write: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || (resource != null && clubOd())
         || (request.resource != null && isClubAdmin(nd().club_id))
       );
@@ -467,7 +481,7 @@ service cloud.firestore {
     match /club_internal_ratings_ext/{docId} {
       allow read: if true;
       allow write: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || (resource != null && clubOd())
         || (request.resource != null && isClubAdmin(nd().club_id))
       );
@@ -475,7 +489,7 @@ service cloud.firestore {
     match /club_internal_doubles_ratings/{docId} {
       allow read: if true;
       allow write: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || (resource != null && clubOd())
         || (request.resource != null && isClubAdmin(nd().club_id))
       );
@@ -483,7 +497,7 @@ service cloud.firestore {
     match /club_internal_doubles_ratings_ext/{docId} {
       allow read: if true;
       allow write: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || (resource != null && clubOd())
         || (request.resource != null && isClubAdmin(nd().club_id))
       );
@@ -508,9 +522,9 @@ service cloud.firestore {
     // admin do torneio (ou admin master).
     match /tournament_photos/{id} {
       allow read: if true;
-      allow create: if isTournamentAdmin(nd().tournament_id) || isPlatformAdmin();
+      allow create: if isTournamentAdmin(nd().tournament_id) || adm();
       allow delete: if (od().tournament_id != null
-        && isTournamentAdmin(od().tournament_id)) || isPlatformAdmin();
+        && isTournamentAdmin(od().tournament_id)) || adm();
     }
 
     // ---- Seguir atletas --------------------------------------------------
@@ -529,7 +543,7 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow create: if isOwner(nd().created_by);
       allow update, delete: if isAuthed()
-        && (od().created_by == me() || isPlatformAdmin());
+        && (od().created_by == me() || adm());
     }
 
     // ---- Consentimento aos documentos legais (legal_consents) -------------
@@ -538,14 +552,14 @@ service cloud.firestore {
     // o platform admin pode ler (auditoria). ADITIVO.
     match /legal_consents/{consentId} {
       allow read: if isAuthed()
-        && (od().user_id == me() || isPlatformAdmin());
+        && (od().user_id == me() || adm());
       // A prova de aceite é de quem aceitou: o update confere o dono ATUAL.
       allow create: if isAuthed()
         && nd().user_id == me();
       allow update: if isAuthed()
         && od().user_id == me()
         && nd().user_id == me();
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // ---- Tokens de push (push_tokens) ------------------------------------
@@ -554,7 +568,7 @@ service cloud.firestore {
     // é feito por Cloud Function (Admin SDK, ignora regras). ADITIVO.
     match /push_tokens/{tokenId} {
       allow read: if isAuthed()
-        && (od().user_id == me() || isPlatformAdmin());
+        && (od().user_id == me() || adm());
       allow create, update: if isAuthed()
         && nd().user_id == me();
       allow delete: if isAuthed()
@@ -574,7 +588,7 @@ service cloud.firestore {
         // próprio documento já carregado) em vez de `isClubGameDayMemberOf`,
         // que faria um `get` a mais do mesmo documento.
         || myClubDay()
-        || isPlatformAdmin()
+        || adm()
       );
       // Dia de ARENA só quem gere a arena cria, e dia de CLUBE só quem é do
       // clube: sem isso qualquer conta criava um dia "da arena X" com as
@@ -584,9 +598,9 @@ service cloud.firestore {
       // nunca é criado já vinculado.
       allow create: if isOwner(nd().created_by)
         && (nd().get('arena_id', null) == null
-            || arenaNd() || isPlatformAdmin())
+            || arenaNd() || adm())
         && (nd().get('club_id', null) == null
-            || isClubMember(nd().club_id) || isPlatformAdmin())
+            || isClubMember(nd().club_id) || adm())
         && !nd().keys().hasAny(['link_club_id', 'link_arena_id']);
       // Edição plena pelo criador/admin. Um atleta pode se auto-incluir como
       // membro quando o dia de jogo é público (fluxo "participar"), sem alterar
@@ -606,7 +620,7 @@ service cloud.firestore {
           // Manter ou remover o vínculo que já tem é sempre livre.
           && (lkOk('link_club_id') || isClubAdmin(nd().link_club_id))
           && (lkOk('link_arena_id') || isArenaManager(nd().link_arena_id)))
-        || isPlatformAdmin()
+        || adm()
         // Dia de jogo de ARENA: quem gerencia a arena configura o dia todo
         // (título, data, quadras, horários, limites, modo de gestão). A arena
         // é a dona do evento — amarrá-lo a uma pessoa deixaria o dia órfão
@@ -681,7 +695,7 @@ service cloud.firestore {
         od().created_by == me()
         || isArenaGameDayManagerOf(gdId)
         || isClubGameDayManagerOf(gdId)
-        || isPlatformAdmin()
+        || adm()
       );
 
       match /participants/{pid} {
@@ -722,6 +736,28 @@ service cloud.firestore {
           || canManageGameDayOf(gdId)
           || isPlayGameDayMember(gdId);
       }
+
+      // CONTROLE DE LINHAS (flag `line_control`, docs/53): o que as câmeras do
+      // jogo dividem — nunca vídeo nem foto. `line_cams` é a câmera "no ar"
+      // (id `{uid}_{posição}`), `line_calls` cada marcação. Grava só quem
+      // organiza ou participa do dia, só com o controle ligado NAQUELE jogo e
+      // só em nome próprio; marcação não se edita, quem organiza limpa.
+      match /line_cams/{camId} {
+        allow read: if canAccessGameDay(gdId);
+        allow create, update: if lineCamOk(gdId)
+          && nd().position is string && nd().position.size() <= 20
+          && camId == me() + '_' + nd().position
+          && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at']);
+        allow delete: if isOwner(od().uid) || lineOrgOf(gdId);
+      }
+      match /line_calls/{callId} {
+        allow read: if canAccessGameDay(gdId);
+        allow create: if lineCamOk(gdId)
+          && nd().kind in ['bounce', 'volley']
+          && nd().call in ['in', 'out', 'review', 'fault', 'clean']
+          && nd().keys().hasOnly(['uid', 'position', 'kind', 'call', 't_ms', 'margin_m', 'uncertainty_m', 'depth_m', 'x', 'y', 'created_at']);
+        allow delete: if lineOrgOf(gdId);
+      }
     }
 
     // ---- Afiliados e parcerias -------------------------------------------
@@ -729,7 +765,7 @@ service cloud.firestore {
     // de parceiros é aberta). Escrita só do admin master.
     match /affiliate_links/{linkId} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if adm();
     }
 
     // ---- Arenas -----------------------------------------------------------
@@ -741,11 +777,11 @@ service cloud.firestore {
       allow create: if isOwner(nd().owner_id);
       // O gestor edita a arena, mas o DONO só muda pelo próprio dono (senão o
       // gestor se tornava dono e passava a poder apagá-la).
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || (isArenaManager(arenaId)
             && (nd().get('owner_id', null) == od().get('owner_id', null)
                 || od().get('owner_id', null) == me()));
-      allow delete: if (isOwner(od().owner_id)) || isPlatformAdmin();
+      allow delete: if (isOwner(od().owner_id)) || adm();
     }
     // Gestores da arena (id determinístico arenaId_uid). O criador registra a si
     // mesmo como dono; gestores existentes adicionam outros; cada um pode sair.
@@ -765,9 +801,9 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/arenas/$(nd().arena_id)).data.owner_id == me()
           )
           || arenaNd()
-          || isPlatformAdmin()
+          || adm()
         );
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || (arenaOd()
             && nd().arena_id == od().arena_id
             && nd().user_id == od().user_id
@@ -779,7 +815,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         od().user_id == me()
         || (arenaOd() && od().get('role', '') != 'owner')
-        || isPlatformAdmin());
+        || adm());
     }
     // Reservas: legíveis/gerenciáveis pelo atleta solicitante e pelos gestores
     // da arena. Criação só pelo próprio atleta.
@@ -832,19 +868,19 @@ service cloud.firestore {
         || od().get('coach_id', null) == me()
         || od().get('open_join', false) == true
         || arenaOd()
-        || isPlatformAdmin());
+        || adm());
       // Cria: o próprio atleta, o professor (coach_id), o gestor (reserva
       // manual, athlete_id pode ser null) ou o admin.
       allow create: if isAuthed() && (
         nd().athlete_id == me()
         || nd().get('coach_id', null) == me()
         || arenaNd()
-        || isPlatformAdmin())
+        || adm())
         && bookingReferralOkOnCreate()
         // Quem não opera a arena só PEDE: nasce pedida (ou confirmada quando a
         // arena aceita reserva instantânea), sem valor acordado e sem
         // pagamento. Antes dava para gravar a reserva já confirmada e paga.
-        && (arenaNd() || isPlatformAdmin()
+        && (arenaNd() || adm()
           || (nd().get('agreed_price', null) == null
             && nd().get('payment_status', 'none') == 'none'
             && (nd().get('status', 'requested') == 'requested'
@@ -861,21 +897,21 @@ service cloud.firestore {
         || (od().get('open_join', false) == true
             && me() in nd().get('participant_ids', []))
         || arenaOd()
-        || isPlatformAdmin())
+        || adm())
         // A indicação da reserva só a ARENA decide (Onda BY): ninguém mais
         // altera `referral` depois do pedido. (Só no update: num delete não há
         // `request.resource`, e a condição recusaria toda exclusão.)
         && (nd().get('referral', null) == od().get('referral', null)
             || arenaOd()
-            || isPlatformAdmin())
-        && (arenaOd() || isPlatformAdmin() || bookingClientUpdateOk());
+            || adm())
+        && (arenaOd() || adm() || bookingClientUpdateOk());
       allow delete: if isAuthed() && (
         od().athlete_id == me()
         || me() in od().get('participant_ids', [])
         || me() in od().get('invited_ids', [])
         || od().get('coach_id', null) == me()
         || arenaOd()
-        || isPlatformAdmin());
+        || adm());
     }
     // Avaliações/reclamações/sugestões — leitura pública; cada um cria/edita as
     // suas; a própria arena e o admin podem remover.
@@ -889,14 +925,14 @@ service cloud.firestore {
         (od().user_id == me()
           && nd().user_id == od().user_id
           && nd().arena_id == od().arena_id)
-        || ((arenaOd() || isPlatformAdmin())
+        || ((arenaOd() || adm())
           && chg()
               .hasOnly(['response', 'responded_at', 'responded_by', 'updated_at']))
       );
       allow delete: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin());
+        || adm());
     }
     // Favoritos do atleta (id determinístico uid_arenaId) — só o próprio dono.
     match /arena_favorites/{docId} {
@@ -911,13 +947,13 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isOwner(nd().user_id);
       allow delete: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
     }
     // Quadras da arena (Sprint 1, ARE-01). Leitura pública (atletas
@@ -926,17 +962,17 @@ service cloud.firestore {
     match /arena_courts/{courtId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       );
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
       // deixava o gestor da arena A puxar o documento da arena B para a sua.
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
     }
     // Janelas de horário recorrentes (Sprint 1, ARE-04). Mesma regra
@@ -944,17 +980,17 @@ service cloud.firestore {
     match /arena_court_schedules/{scheduleId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       );
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
       // deixava o gestor da arena A puxar o documento da arena B para a sua.
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
     }
 
@@ -962,9 +998,9 @@ service cloud.firestore {
     // Settings da arena (1:1 com arenas/{id}). Leitura/escrita só por
     // gestores da arena + platform admin.
     match /arena_settings/{arenaId} {
-      allow read: if isAuthed() && (isArenaManager(arenaId) || isPlatformAdmin());
-      allow create, update: if isAuthed() && (isArenaManager(arenaId) || isPlatformAdmin());
-      allow delete: if isPlatformAdmin();
+      allow read: if isAuthed() && (isArenaManager(arenaId) || adm());
+      allow create, update: if isAuthed() && (isArenaManager(arenaId) || adm());
+      allow delete: if adm();
     }
     // Estado dos módulos opt-in por arena. Doc id: {arenaId}_{moduleId}.
     // Leitura pública (atletas precisam saber o que a arena oferece).
@@ -972,7 +1008,7 @@ service cloud.firestore {
     match /arena_module_states/{docId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       )
         && docId == nd().arena_id + '_' + nd().module_id;
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
@@ -980,26 +1016,26 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
     }
     // Open Match slots (sprint 1) — vagas abertas publicadas pela arena.
     match /arena_open_slots/{slotId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       );
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
         || openSlotSelfJoinLeave()
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
 
       // 🐞 O ATLETA entra e sai do jogo aberto (2026-09-24). Entrar grava
@@ -1048,7 +1084,7 @@ service cloud.firestore {
       // A arena mexe em tudo; o atleta só RESPONDE à própria chamada (aceitar
       // ou recusar) — antes nem isso, e a vaga ficava presa até o prazo.
       allow update: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
         || (od().athlete_id == me()
           && od().get('status', 'waiting') == 'notified'
           && nd().get('status', '') in ['accepted', 'declined']
@@ -1058,7 +1094,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         od().athlete_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
     }
     // Members (sprint 2) — relação atleta-arena.
@@ -1066,11 +1102,11 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow get: if canGetMissingArenaUserDoc(docId);
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       )
         && docId == nd().arena_id + '_' + nd().user_id;
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
@@ -1078,29 +1114,29 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
     }
     // Packages (sprint 2) — pacotes pré-pagos. Leitura pública (catálogo).
     match /arena_packages/{pkgId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       );
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
       // deixava o gestor da arena A puxar o documento da arena B para a sua.
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
     }
     // Wallets (sprint 2) — wallet do atleta na arena.
@@ -1108,11 +1144,11 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow get: if canGetMissingArenaUserDoc(docId);
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       )
         && docId == nd().arena_id + '_' + nd().user_id;
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
@@ -1120,20 +1156,20 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
     // Subscriptions (sprint 2) — mensalidades.
     match /arena_subscriptions/{subId} {
       allow read: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow get: if canGetMissingArenaUserDoc(subId);
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       )
         && subId == nd().arena_id + '_' + nd().user_id;
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
@@ -1141,25 +1177,25 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
     // Products (sprint 3) — catálogo PDV.
     match /arena_products/{prodId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        arenaNd() || isPlatformAdmin()
+        arenaNd() || adm()
       );
       // A arena do documento ATUAL decide, e ela não muda: conferir só a nova
       // deixava o gestor da arena A puxar o documento da arena B para a sua.
       allow update: if isAuthed() && (
         (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
     }
     // Sales (sprint 3) — vendas / pedidos da loja do app.
@@ -1171,7 +1207,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().buyer_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
         || me() in od().get('split_with', [])
       );
       // Antes: `if isAuthed()` — qualquer conta forjava venda em QUALQUER
@@ -1181,7 +1217,7 @@ service cloud.firestore {
       // "entregue", e ela entrava no caixa e nos números da arena assim.
       allow create: if isAuthed() && (
         arenaNd()
-        || isPlatformAdmin()
+        || adm()
         || (nd().buyer_id == me()
             && nd().get('status', 'pending') == 'pending'
             && nd().get('stock_applied', false) == false)
@@ -1191,7 +1227,7 @@ service cloud.firestore {
       // parte paga por outra pessoa: essa se cancela no balcão).
       allow update: if isAuthed() && (
         arenaOd()
-        || isPlatformAdmin()
+        || adm()
         || (od().buyer_id == me()
             && od().get('status', 'pending') == 'pending'
             && od().get('stock_applied', false) == false
@@ -1202,7 +1238,7 @@ service cloud.firestore {
                  .hasOnly(['status', 'cancel_reason', 'cancelled_by', 'updated_at']))
       );
       allow delete: if isAuthed() && (
-        arenaOd() || isPlatformAdmin()
+        arenaOd() || adm()
       );
     }
     // Payments (sprint 3).
@@ -1210,7 +1246,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().payer_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
       // Idem `arena_sales`: o pagamento é de quem paga, ou da arena. Quem paga
       // registra a parte como PENDENTE (quem confirma o recebimento é a
@@ -1218,7 +1254,7 @@ service cloud.firestore {
       // qualquer conta semeava "pagamentos" na lista de qualquer arena.
       allow create: if isAuthed() && (
         arenaNd()
-        || isPlatformAdmin()
+        || adm()
         || (nd().payer_id == me()
             && nd().get('status', 'pending') == 'pending'
             && paymentBelongsToSale(nd()))
@@ -1229,23 +1265,23 @@ service cloud.firestore {
       // confirmado; "pago" é a arena quem marca.
       allow update: if isAuthed() && (
         arenaOd()
-        || isPlatformAdmin()
+        || adm()
         || (od().payer_id == me()
             && od().get('status', 'pending') != 'paid'
             && nd().get('status', 'pending') in ['pending', 'cancelled']
             && chg()
                  .hasOnly(['payment_method', 'status', 'updated_at']))
       );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
-      allow read: if isOwner(userId) || isPlatformAdmin();
+      allow read: if isOwner(userId) || adm();
 
       // ⚠️ SEGURANÇA — CAMPOS DE PODER (`role`, `can_create_pools`) e de
       // MODERAÇÃO (`hidden*`) NUNCA podem ser escritos pelo próprio usuário.
-      // `isPlatformAdmin()` é decidido lendo `users/{uid}.role`; se o dono do
+      // `adm()` é decidido lendo `users/{uid}.role`; se o dono do
       // documento pudesse escrever esse campo, qualquer conta se promoveria a
       // platform_admin e leria/apagaria a base inteira. O dono da plataforma é
       // reconhecido pelo e-mail do TOKEN de autenticação (não por dado
@@ -1298,7 +1334,7 @@ service cloud.firestore {
           && duprOk()
         )
         || (isOwner(userId) && isPlatformOwnerEmail())
-        || (isPlatformAdmin()
+        || (adm()
             && chg()
                  .hasOnly(['hidden', 'hidden_at', 'hidden_by', 'updated_at']))
         // CORREÇÃO DE CADASTRO pelo admin (aba Cadastros).
@@ -1316,7 +1352,7 @@ service cloud.firestore {
         //
         // Uma escrita que misture campo permitido com proibido é recusada
         // INTEIRA (hasOnly), não parcialmente aplicada.
-        || (isPlatformAdmin()
+        || (adm()
             && chg().hasOnly([
               'platform_name', 'full_name', 'birth_date', 'birth_date_at',
               'phone', 'gender', 'city', 'state', 'address',
@@ -1354,7 +1390,7 @@ service cloud.firestore {
               'role_revoked_at', 'role_revoked_by', 'role_previous',
             ]));
 
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // ---- Tournaments -----------------------------------------------------
@@ -1363,7 +1399,7 @@ service cloud.firestore {
       // e criador continuam vendo (preserva histórico pra eles, esconde
       // da UI pública, das listas de torneio e da visão de espectador).
       allow read: if od().get('archived', false) != true
-        || isPlatformAdmin()
+        || adm()
         || isTournamentCreator(tid);
       // Sede: quem não gere a arena cria o torneio com a sede PENDENTE
       // (`arena_confirmed: false`) — a arena confirma ou recusa. Antes qualquer
@@ -1378,17 +1414,17 @@ service cloud.firestore {
       //  - só platform_admin ou criador podem alterá-lo (NÃO tournament_admin);
       //  - arquivar (archived: true) só é permitido se o status atual for
       //    'cancelled' (validação servidor — o service valida cliente-side).
-      allow update: if (isPlatformAdmin() || isTournamentAdmin(tid)
+      allow update: if (adm() || isTournamentAdmin(tid)
         || (isOwner(od().creator_uid)))
         && (
           !chg().hasAny(['archived'])
           || (
-            (isPlatformAdmin() || (isOwner(od().creator_uid)))
+            (adm() || (isOwner(od().creator_uid)))
             && (!nd().archived || od().status == 'cancelled')
           )
         )
         // O co-administrador não se torna criador (que arquiva e apaga).
-        && (isPlatformAdmin()
+        && (adm()
           || nd().get('creator_uid', null) == od().get('creator_uid', null))
         && (!chg().hasAny(['arena_id', 'arena_confirmed'])
           || tournamentArenaOk())
@@ -1416,13 +1452,13 @@ service cloud.firestore {
                 && nd().get('arena_confirmed', false) == true)
             || (nd().get('arena_id', null) == null
                 && nd().get('arena_confirmed', false) == false)));
-      allow delete: if isPlatformAdmin()
+      allow delete: if adm()
         || (isOwner(od().creator_uid));
     }
     // Sem federação, ou o PEDIDO de chancela (pendente, por quem pede) a uma
     // federação aprovada com o módulo de torneios ligado. Aprovar é da federação.
     function tournamentFederationOk() {
-      return isPlatformAdmin()
+      return adm()
         || (nd().get('federation_id', null) == null
           && nd().get('federation_sanction', null) == null)
         || (nd().federation_id is string
@@ -1462,13 +1498,13 @@ service cloud.firestore {
     // (`sports`) com a associação ligada. O torneio segue sendo da plataforma; só ganha o selo.
     function tournamentClubOk() {
       return nd().get('club_id', null) == null
-        || isPlatformAdmin()
+        || adm()
         || (nd().club_id is string && cxOn() && cxHas(nd().club_id, ['sports']));
     }
     function tournamentArenaOk() {
       return nd().get('arena_id', null) == null
         || nd().get('arena_confirmed', null) == false
-        || isPlatformAdmin()
+        || adm()
         || (nd().arena_id is string && arenaNd());
     }
 
@@ -1489,9 +1525,9 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/tournaments/$(nd().tournament_id)).data.creator_uid == me()
           )
           || isTournamentAdmin(nd().tournament_id)
-          || isPlatformAdmin()
+          || adm()
         );
-      allow update, delete: if isPlatformAdmin()
+      allow update, delete: if adm()
         || isTournamentAdmin(od().tournament_id);
     }
 
@@ -1503,11 +1539,11 @@ service cloud.firestore {
       // o limite de lookups do Firestore (4 lookups × N docs/query)
       // e causa permission-denied pra todo mundo.
       allow read: if true;
-      allow create: if isPlatformAdmin() || isTournamentAdmin(nd().tournament_id);
-      allow update: if isPlatformAdmin()
+      allow create: if adm() || isTournamentAdmin(nd().tournament_id);
+      allow update: if adm()
         || (isTournamentAdmin(od().tournament_id)
             && nd().tournament_id == od().tournament_id);
-      allow delete: if isPlatformAdmin() || isTournamentAdmin(od().tournament_id);
+      allow delete: if adm() || isTournamentAdmin(od().tournament_id);
     }
 
     match /tournament_registrations/{rid} {
@@ -1527,7 +1563,7 @@ service cloud.firestore {
       // só em modalidade sem taxa — confirmado, e sem cabeça de chave.
       allow create: if isAuthed()
         && (isTournamentAdmin(nd().tournament_id)
-            || isPlatformAdmin()
+            || adm()
             || (nd().created_by == me()
                 && nd().get('seed', null) == null
                 && tournamentMembershipOk(nd().tournament_id)
@@ -1537,7 +1573,7 @@ service cloud.firestore {
       // Quem criou a inscrição edita os dados dela, faz/desfaz o check-in e
       // desiste — mas não confirma a si mesmo (pagamento e lista de espera são
       // da organização), não muda de torneio/modalidade nem de cabeça de chave.
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || isTournamentAdmin(od().tournament_id)
         || (isOwner(od().created_by)
             && nd().tournament_id == od().tournament_id
@@ -1557,17 +1593,17 @@ service cloud.firestore {
             'partner_invite_responded_at',
             'updated_at',
           ]));
-      allow delete: if isPlatformAdmin() || isTournamentAdmin(od().tournament_id);
+      allow delete: if adm() || isTournamentAdmin(od().tournament_id);
 
       // ---- P0-02 · contato do inscrito (NÃO público) ----------------------
       // O e-mail do inscrito vive AQUI, não no documento acima. Quem lê:
       // o titular, a dupla, quem criou a inscrição, o organizador do torneio
       // e o admin da plataforma. Nunca alguém sem login.
       match /private/{docId} {
-        allow read: if isPlatformAdmin()
+        allow read: if adm()
           || isRegistrationOrganizer(rid)
           || isRegistrationParty(rid);
-        allow write: if isPlatformAdmin()
+        allow write: if adm()
           || isRegistrationOrganizer(rid)
           || isRegistrationParty(rid);
       }
@@ -1583,7 +1619,7 @@ service cloud.firestore {
     // Id determinístico `{rid}_a` / `{rid}_b` para que a regra de
     // `tournament_registrations` possa conferir a posse sem hash.
     match /provisional_claims/{claimId} {
-      allow read: if isPlatformAdmin()
+      allow read: if adm()
         || (hasTokenEmail() && od().get('email_lc', '') == tokenEmailLc());
       // Cria/ajusta quem pode mexer na inscrição de origem.
       // O id é a prova (`isProvisionalClaimOwner` lê `{rid}_{slot}`): amarrado
@@ -1591,10 +1627,10 @@ service cloud.firestore {
       // OUTRA pessoa e `registration_id` da minha me dava a inscrição dela.
       allow create: if (claimId == nd().get('registration_id', '') + '_' + nd().get('slot', '')
           && nd().get('slot', '') in ['a', 'b'])
-        && (isPlatformAdmin()
+        && (adm()
           || isRegistrationOrganizer(nd().get('registration_id', ''))
           || isRegistrationParty(nd().get('registration_id', '')));
-      allow update: if (isPlatformAdmin()
+      allow update: if (adm()
         || ((isRegistrationOrganizer(od().get('registration_id', ''))
             || isRegistrationParty(od().get('registration_id', '')))
           && nd().get('registration_id', '') == od().get('registration_id', '')
@@ -1606,7 +1642,7 @@ service cloud.firestore {
             && chg()
                  .hasOnly(['claimed', 'claimed_by', 'claimed_at', 'updated_at'])
             && nd().get('claimed_by', '') == me());
-      allow delete: if isPlatformAdmin()
+      allow delete: if adm()
         || isRegistrationOrganizer(od().get('registration_id', ''));
     }
 
@@ -1614,9 +1650,9 @@ service cloud.firestore {
       // Avisos do organizador (flag tournament_announcements): histórico
       // legível por autenticados; escrita apenas por admins do torneio.
       allow read: if isAuthed();
-      allow create: if isPlatformAdmin()
+      allow create: if adm()
         || isTournamentAdmin(nd().tournament_id);
-      allow update, delete: if isPlatformAdmin()
+      allow update, delete: if adm()
         || isTournamentAdmin(od().tournament_id);
     }
 
@@ -1629,14 +1665,14 @@ service cloud.firestore {
       allow read: if true;
       // Null-safe: create usa request.resource (doc novo); update/delete usam
       // resource (doc existente) — evita desreferenciar null no delete do re-sorteio.
-      allow create: if isPlatformAdmin() || isTournamentAdmin(nd().tournament_id);
+      allow create: if adm() || isTournamentAdmin(nd().tournament_id);
       // Quem manda é o torneio do documento ATUAL, e ele não muda: conferir o
       // `tournament_id` NOVO deixava o dono de um torneio qualquer reescrever
       // o placar de um jogo alheio gravando o id do próprio torneio.
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || (isTournamentAdmin(od().tournament_id)
             && nd().tournament_id == od().tournament_id);
-      allow delete: if isPlatformAdmin() || isTournamentAdmin(od().tournament_id);
+      allow delete: if adm() || isTournamentAdmin(od().tournament_id);
     }
 
     match /tournament_groups/{gid} {
@@ -1650,24 +1686,24 @@ service cloud.firestore {
       allow read: if true;
       // Null-safe: create usa request.resource (doc novo); update/delete usam
       // resource (doc existente) — evita desreferenciar null no delete do re-sorteio.
-      allow create: if isPlatformAdmin() || isTournamentAdmin(nd().tournament_id);
+      allow create: if adm() || isTournamentAdmin(nd().tournament_id);
       // Quem manda é o torneio do documento ATUAL, e ele não muda: conferir o
       // `tournament_id` NOVO deixava o dono de um torneio qualquer reescrever
       // o placar de um jogo alheio gravando o id do próprio torneio.
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || (isTournamentAdmin(od().tournament_id)
             && nd().tournament_id == od().tournament_id);
-      allow delete: if isPlatformAdmin() || isTournamentAdmin(od().tournament_id);
+      allow delete: if adm() || isTournamentAdmin(od().tournament_id);
     }
 
     match /tournament_rankings/{rid} {
       // Ranking materializado: leitura respeita o flag 'archived' do torneio-pai.
       allow read: if isTournamentVisibleByTid(od().tournament_id);
-      allow create: if isPlatformAdmin() || isTournamentAdmin(nd().tournament_id);
-      allow update: if isPlatformAdmin()
+      allow create: if adm() || isTournamentAdmin(nd().tournament_id);
+      allow update: if adm()
         || (isTournamentAdmin(od().tournament_id)
             && nd().tournament_id == od().tournament_id);
-      allow delete: if isPlatformAdmin() || isTournamentAdmin(od().tournament_id);
+      allow delete: if adm() || isTournamentAdmin(od().tournament_id);
     }
 
     match /tournament_courts/{cid} {
@@ -1675,7 +1711,7 @@ service cloud.firestore {
       // O flag 'archived' do torneio-pai já é filtrado pela rule de
       // /tournaments/{tid} — público não chega num torneio arquivado.
       allow read: if true;
-      allow create, update, delete: if isPlatformAdmin()
+      allow create, update, delete: if adm()
         || isTournamentAdmin(nd().tournament_id)
         || isTournamentAdmin(od().tournament_id);
     }
@@ -1751,8 +1787,8 @@ service cloud.firestore {
         // canais do aviso em massa (`broadcast`) só valem do admin.
         && nd().get('sent_by', me()) == me()
         && !nd().keys().hasAny(['origin', 'essential'])
-        && (!('broadcast' in nd()) || isPlatformAdmin());
-      allow delete: if isPlatformAdmin();
+        && (!('broadcast' in nd()) || adm());
+      allow delete: if adm();
     }
 
     // ---- Avisos por e-mail e celular (docs/49) ---------------------------
@@ -1763,7 +1799,7 @@ service cloud.firestore {
     // O registro do que saiu (e-mail, WhatsApp, SMS): fila, contagem e prova.
     // A pessoa lê o dela (exportação); o admin lê tudo. Só o servidor escreve.
     match /message_outbox/{oid} {
-      allow read: if (isOwner(od().user_id) || isPlatformAdmin());
+      allow read: if (isOwner(od().user_id) || adm());
       allow write: if false;
     }
     // Endereços bloqueados (devolução, reclamação, PARAR) e o código do
@@ -1776,7 +1812,7 @@ service cloud.firestore {
     }
     // Denúncia de e-mail pelo link do rodapé: o admin lê; o servidor escreve.
     match /message_reports/{rid} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       allow write: if false;
     }
 
@@ -1785,13 +1821,13 @@ service cloud.firestore {
     // Registro INTERNO: só o admin lê (decisão do dono, 2026-10-11 — o titular
     // não é avisado nem vê o registro). Guarda hash do valor, nunca o valor.
     match /admin_access_logs/{aid} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       allow create, update, delete: if false;
     }
 
     // ---- Audit logs (read by platform admin only) ------------------------
     match /audit_logs/{lid} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       // ⚠️ INTEGRIDADE — o ator registrado tem de ser quem está escrevendo.
       // Sem isso a trilha pode ser atribuída a terceiros, e ela é justamente
       // a prova em caso de incidente. `auditService.createAuditLog` já grava
@@ -1842,19 +1878,19 @@ service cloud.firestore {
       // `restoreAthleteProfileFromUserDoc` e pela re-sincronização em lote.
       // A ocultação pela moderação (`hidden*`) é do admin: o dono não a
       // desfaz — nem gravando `hidden: false`, nem apagando e recriando.
-      allow create: if (isPlatformAdmin() && contatosMarcados(nd()))
+      allow create: if (adm() && contatosMarcados(nd()))
         || (isOwner(uid) && nd().get('hidden', false) == false
             && !nd().keys().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
             && duprNum(nd())
             && contatosDoDonoPermitidos(uid, nd()));
-      allow update: if (isPlatformAdmin()
+      allow update: if (adm()
             && (!mexeEmContato() || contatosMarcados(nd())))
         || (isOwner(uid) && !chg()
               .hasAny(['hidden', 'hidden_at', 'hidden_by'])
             && duprSeloIntacto()
             && duprOk()
             && contatosDoDonoPermitidos(uid, nd()));
-      allow delete: if isPlatformAdmin()
+      allow delete: if adm()
         || (isOwner(uid) && od().get('hidden', false) != true);
     }
 
@@ -1864,7 +1900,7 @@ service cloud.firestore {
     // `dupr_link_tokens` (tokens do login no DUPR) e `dupr_ids` (um ID, uma
     // conta) ficam fechados ao navegador.
     match /dupr_links/{uid} {
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow read: if isOwner(uid) || adm();
       allow write: if false;
     }
     match /dupr_link_tokens/{uid} {
@@ -1876,17 +1912,17 @@ service cloud.firestore {
     // Piloto do DUPR (Painel admin → DUPR): jogadores e partidas de teste que
     // existem só ali. Só o admin lê; só o servidor escreve (`pilot_*`).
     match /dupr_pilot_players/{id} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       allow write: if false;
     }
     match /dupr_pilot_matches/{id} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       allow write: if false;
     }
     // Livro do envio automático ao DUPR (`duprSubmitWorker`): o admin, os
     // jogadores da partida (`uids`) e quem organizou leem; só o servidor escreve.
     match /dupr_submissions/{id} {
-      allow read: if isPlatformAdmin() || me() in od().uids || od().organizer_uid == me();
+      allow read: if adm() || me() in od().uids || od().organizer_uid == me();
       allow write: if false;
     }
 
@@ -1898,10 +1934,10 @@ service cloud.firestore {
       allow create: if isOwner(nd().created_by);
       // Admins editam tudo; qualquer membro pode atualizar apenas o contador
       // cosmético de membros (entrar/sair do clube).
-      allow update: if isClubAdmin(clubId) || isPlatformAdmin()
+      allow update: if isClubAdmin(clubId) || adm()
         || (isAuthed()
             && chg().hasOnly(['member_count', 'updated_at']));
-      allow delete: if isPlatformAdmin()
+      allow delete: if adm()
         || (isOwner(od().created_by));
     }
 
@@ -1928,27 +1964,27 @@ service cloud.firestore {
     // descoberto varrendo a coleção.
     match /club_invite_codes/{code} {
       allow get: if isAuthed();
-      allow list: if isAuthed() && (clubOd() || isPlatformAdmin());
+      allow list: if isAuthed() && (clubOd() || adm());
       allow create: if isAuthed()
         && code.matches('^[A-Z0-9]{4,12}$')
         && nd().code == code
-        && (isClubAdmin(nd().club_id) || isPlatformAdmin());
+        && (isClubAdmin(nd().club_id) || adm());
       allow update: if false;
-      allow delete: if isAuthed() && (clubOd() || isPlatformAdmin());
+      allow delete: if isAuthed() && (clubOd() || adm());
     }
 
     // A prova de quem entrou pelo código (`{clube}_{uid}`). Só o dono e os
     // admins do clube leem — o código não vai para club_members, que é público.
     match /club_code_joins/{docId} {
       allow read: if (isOwner(od().user_id)
-        || clubOd() || isPlatformAdmin());
+        || clubOd() || adm());
       allow create: if isAuthed()
         && nd().user_id == me()
         && docId == nd().club_id + '_' + me()
         && validClubCode(nd().club_id, nd().code);
       allow update: if false;
       allow delete: if (isOwner(od().user_id)
-        || clubOd() || isPlatformAdmin());
+        || clubOd() || adm());
     }
 
     match /club_members/{docId} {
@@ -1973,13 +2009,13 @@ service cloud.firestore {
               || (nd().role == 'member'
                 && (hasPendingClubInvite(docId) || hasClubCodeJoin(docId, nd().club_id)))))
           || isClubAdmin(nd().club_id)
-          || isPlatformAdmin()
+          || adm()
         );
-      allow update: if (clubOd() || isPlatformAdmin())
+      allow update: if (clubOd() || adm())
         && nd().club_id == od().club_id
         && nd().user_id == od().user_id;
       // Admin remove membros; qualquer um remove a própria associação (sair).
-      allow delete: if clubOd() || isPlatformAdmin()
+      allow delete: if clubOd() || adm()
         || (isOwner(od().user_id));
     }
 
@@ -1989,18 +2025,18 @@ service cloud.firestore {
         resource == null
         || od().user_id == me()
         || clubOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().user_id == me()
         && nd().status == 'pending'
         && !isClubMember(nd().club_id);
       allow update: if isAuthed() && (
-        clubOd() || isPlatformAdmin()
+        clubOd() || adm()
         || od().user_id == me()
       );
       allow delete: if isAuthed() && (
-        clubOd() || isPlatformAdmin()
+        clubOd() || adm()
         || od().user_id == me()
       );
     }
@@ -2011,24 +2047,24 @@ service cloud.firestore {
         resource == null
         || od().user_id == me()
         || clubOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
-        && (isClubAdmin(nd().club_id) || isPlatformAdmin());
+        && (isClubAdmin(nd().club_id) || adm());
       allow update: if isAuthed() && (
         od().user_id == me()
-        || clubOd() || isPlatformAdmin()
+        || clubOd() || adm()
       );
       allow delete: if isAuthed() && (
         od().user_id == me()
-        || clubOd() || isPlatformAdmin()
+        || clubOd() || adm()
       );
     }
 
     match /club_events/{eventId} {
       // Público (ou legado sem o campo): qualquer membro do clube lê.
       // Privado: apenas criador, admin do clube, plataforma ou convidado.
-      allow read: if isPlatformAdmin()
+      allow read: if adm()
         || (isOwner(od().created_by))
         || clubOd()
         || isEventInvitee(eventId)
@@ -2036,23 +2072,23 @@ service cloud.firestore {
       allow create: if isClubMember(nd().club_id)
         && nd().created_by == me();
       // Criador, admin e participantes (incluindo convidados) editam livremente.
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || (isOwner(od().created_by))
         || clubOd()
         || isEventInvitee(eventId)
         || (od().get('visibility', 'public') != 'private' && isClubMember(od().club_id));
-      allow delete: if clubOd() || isPlatformAdmin()
+      allow delete: if clubOd() || adm()
         || (isOwner(od().created_by));
 
       // Datas do evento (data, local, horário) — editáveis pelos participantes.
       match /dates/{dateId} {
-        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
-        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow read: if isEventClubMember(eventId) || adm();
+        allow create, update, delete: if isEventClubMember(eventId) || adm();
       }
 
       // Resposta por data (vou/talvez/não vou). Cada um grava a própria resposta.
       match /date_rsvps/{docId} {
-        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow read: if isEventClubMember(eventId) || adm();
         allow create: if isAuthed()
           && nd().user_id == me()
           && isEventClubMember(eventId);
@@ -2066,7 +2102,7 @@ service cloud.firestore {
 
       // Chat cronológico do evento.
       match /messages/{messageId} {
-        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow read: if isEventClubMember(eventId) || adm();
         allow create: if isEventClubMember(eventId)
           && nd().sender_id == me();
         allow update, delete: if (isOwner(od().sender_id))
@@ -2075,14 +2111,14 @@ service cloud.firestore {
 
       // Participantes do dia de jogo (edição livre pelos participantes).
       match /participants/{participantId} {
-        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
-        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow read: if isEventClubMember(eventId) || adm();
+        allow create, update, delete: if isEventClubMember(eventId) || adm();
       }
 
       // Jogos organizados/sorteados (edição livre pelos participantes).
       match /games/{gameId} {
-        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
-        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow read: if isEventClubMember(eventId) || adm();
+        allow create, update, delete: if isEventClubMember(eventId) || adm();
       }
     }
 
@@ -2144,7 +2180,7 @@ service cloud.firestore {
       // admin da plataforma. Validação de schema: side_a_ids/side_b_ids
       // paralelos ao tamanho do `kind` (singles=1, doubles=2).
       allow create: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || isGameDayOwnerOf(nd().event_id)
         // Dia de jogo de ARENA: quem gerencia a arena publica os resultados.
         // Sem isto, só quem clicou em "criar" conseguiria — e um dia de jogo
@@ -2171,7 +2207,7 @@ service cloud.firestore {
       );
       // Atualização: mesmos perfis. Imutável em `event_id`/`date_id`/`club_id`.
       allow update: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || isGameDayOwnerOf(nd().event_id)
         || isArenaGameDayManagerOf(nd().event_id)
         || isClubEventCreator(nd().event_id)
@@ -2184,7 +2220,7 @@ service cloud.firestore {
       // Exclusão: despublicar um dia de jogo. Admin da plataforma, criador do
       // dia de jogo do atleta, criador do evento ou admin do clube vinculado.
       allow delete: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || isGameDayOwnerOf(od().event_id)
         || isArenaGameDayManagerOf(od().event_id)
         || isClubEventCreator(od().event_id)
@@ -2201,22 +2237,22 @@ service cloud.firestore {
     }
 
     match /club_event_rsvps/{docId} {
-      allow read: if isClubMember(od().club_id) || isPlatformAdmin();
+      allow read: if isClubMember(od().club_id) || adm();
       allow create: if isAuthed()
         && nd().user_id == me()
         && isClubMember(nd().club_id);
       allow update: if isOwner(od().user_id);
       allow delete: if (isOwner(od().user_id))
-        || clubOd() || isPlatformAdmin();
+        || clubOd() || adm();
     }
 
     match /club_posts/{postId} {
-      allow read: if isClubMember(od().club_id) || isPlatformAdmin();
+      allow read: if isClubMember(od().club_id) || adm();
       allow create: if isClubMember(nd().club_id)
         && nd().author_id == me();
       allow update: if isOwner(od().author_id);
       allow delete: if (isOwner(od().author_id))
-        || clubOd() || isPlatformAdmin();
+        || clubOd() || adm();
     }
 
     // ---- Club forum: threads, comments and poll votes --------------------
@@ -2224,21 +2260,21 @@ service cloud.firestore {
     // do tópico-pai. Isso evita índices compostos e mantém o acesso restrito
     // aos membros do clube.
     match /club_forum_threads/{threadId} {
-      allow read: if isClubMember(od().club_id) || isPlatformAdmin();
+      allow read: if isClubMember(od().club_id) || adm();
       allow create: if isClubMember(nd().club_id)
         && nd().author_id == me();
       // Autor edita o próprio tópico; admins moderam; qualquer membro pode
       // apenas atualizar os campos cosméticos ao comentar (contador/atividade).
-      allow update: if clubOd() || isPlatformAdmin()
+      allow update: if clubOd() || adm()
         || (isOwner(od().author_id))
         || (isClubMember(od().club_id)
             && chg()
                  .hasOnly(['comment_count', 'last_activity_ms', 'participant_ids', 'updated_at']));
-      allow delete: if clubOd() || isPlatformAdmin()
+      allow delete: if clubOd() || adm()
         || (isOwner(od().author_id));
 
       match /comments/{commentId} {
-        allow read: if isForumThreadMember(threadId) || isPlatformAdmin();
+        allow read: if isForumThreadMember(threadId) || adm();
         allow create: if isForumThreadMember(threadId)
           && nd().author_id == me();
         allow update: if isOwner(od().author_id);
@@ -2247,7 +2283,7 @@ service cloud.firestore {
       }
 
       match /poll_votes/{voterId} {
-        allow read: if isForumThreadMember(threadId) || isPlatformAdmin();
+        allow read: if isForumThreadMember(threadId) || adm();
         // O id do documento é o uid do votante: cada um só grava o próprio voto.
         allow create, update: if isAuthed()
           && voterId == me()
@@ -2327,23 +2363,23 @@ service cloud.firestore {
     // Sprint 4: Aulas, instrutores e reservas de aulas
     match /arena_coaches/{coachId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update: if arenaOd() || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
+      allow update: if arenaOd() || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     match /arena_classes/{classId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update: if arenaOd() || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
+      allow update: if arenaOd() || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     match /arena_class_bookings/{bookingId} {
       allow read: if isAuthed() && (
         od().user_id == me() ||
         arenaOd() ||
-        isPlatformAdmin() ||
+        adm() ||
         // O PROFESSOR da aula lê as matrículas dela (2026-09-24). 🐞 Antes
         // só o aluno e a arena liam: o professor abria a própria aula e via
         // "ninguém matriculado" com a turma cheia. Quem é professor é o
@@ -2367,7 +2403,7 @@ service cloud.firestore {
       // valores e a que aula/arena/professor ela pertence (2026-09-24).
       allow update: if isAuthed() && (
         arenaOd()
-        || isPlatformAdmin()
+        || adm()
         || (od().user_id == me()
           && !chg().hasAny([
             'paid', 'paid_at', 'amount', 'arena_amount', 'coach_amount',
@@ -2377,17 +2413,17 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
     }
 
     // Sprint 5: Torneios internos e ladder
     match /arena_internal_tournaments/{tournamentId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update: if arenaOd() || isPlatformAdmin()
+      allow create: if arenaNd() || adm();
+      allow update: if arenaOd() || adm()
         || internalTournamentSelfSignup();
-      allow delete: if arenaOd() || isPlatformAdmin();
+      allow delete: if arenaOd() || adm();
 
       // 🐞 O ATLETA se inscreve e sai (2026-09-24). A inscrição grava no
       // próprio documento do torneio (`participants`, `roster`, `enrolled`) e
@@ -2427,8 +2463,8 @@ service cloud.firestore {
 
     match /arena_ladders/{ladderId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update, delete: if arenaOd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
+      allow update, delete: if arenaOd() || adm();
     }
 
     // Sprint 6: Marketing (cupons, campanhas, NPS, referral)
@@ -2437,24 +2473,24 @@ service cloud.firestore {
     // aqui: fica em `arena_settings.coupon_costs`, que só o gestor lê.
     match /arena_coupons/{couponId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
       // A arena dona edita — mas não MUDA O CUPOM DE ARENA (2026-09-25). 🐞
       // Antes o gestor de A podia trocar o `arena_id` para B: o cupom virava
       // promoção na página de B e desconto nas reservas de B, sem B saber.
       allow update: if (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+        || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     match /arena_campaigns/{campaignId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
       // Mesma trava do cupom: a campanha não muda de arena (2026-09-25).
       allow update: if (arenaOd()
           && nd().arena_id == od().arena_id)
-        || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+        || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     // A leitura olhava `request.resource.data`, que em leitura é NULO: a arena
@@ -2463,10 +2499,10 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().user_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isOwner(nd().user_id);
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if adm();
     }
 
     match /arena_referrals/{referralId} {
@@ -2478,7 +2514,7 @@ service cloud.firestore {
         od().referrer_id == me() ||
         od().referred_id == me() ||
         arenaOd() ||
-        isPlatformAdmin()
+        adm()
       );
       allow get: if canGetMissingArenaUserDoc(referralId);
       // Só se pode indicar EM NOME PRÓPRIO. Antes bastava estar logado, e dava
@@ -2504,41 +2540,41 @@ service cloud.firestore {
           && nd().arena_id == od().arena_id
           && nd().referrer_id == od().referrer_id
           && nd().get('code', null) == od().get('code', null))
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
         od().referrer_id == me()
         || arenaOd()
-        || isPlatformAdmin()
+        || adm()
       );
     }
 
     // Sprint 7: Operações (checklists, manutenção)
     match /arena_checklists/{checklistId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update: if arenaOd() || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
+      allow update: if arenaOd() || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     match /arena_maintenance_orders/{orderId} {
-      allow read: if arenaOd() || isPlatformAdmin();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update: if arenaOd() || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+      allow read: if arenaOd() || adm();
+      allow create: if arenaNd() || adm();
+      allow update: if arenaOd() || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     // Sprints 8-11: IoT, Multi-unit (network)
     match /arena_devices/{deviceId} {
       allow read: if isAuthed();
-      allow create: if arenaNd() || isPlatformAdmin();
-      allow update: if arenaOd() || isPlatformAdmin();
-      allow delete: if arenaOd() || isPlatformAdmin();
+      allow create: if arenaNd() || adm();
+      allow update: if arenaOd() || adm();
+      allow delete: if arenaOd() || adm();
     }
 
     match /arena_networks/{networkId} {
       allow read: if isAuthed();
-      // 🐞 Era `if isPlatformAdmin()` para tudo — e o módulo "multi-unidade" é
+      // 🐞 Era `if adm()` para tudo — e o módulo "multi-unidade" é
       // oferecido À ARENA, em Gestão → Configurações → Módulos. A arena
       // ligava o módulo, abria a tela, clicava em "Criar rede" e recebia
       // permissão negada: o módulo não tinha como funcionar para ninguém.
@@ -2547,20 +2583,20 @@ service cloud.firestore {
       // a criou, e ele precisa gerir a arena fundadora — sem isso qualquer
       // conta criaria redes em nome de arenas alheias.
       allow create: if isAuthed() && (
-        isPlatformAdmin() || (
+        adm() || (
           nd().owner_id == me()
           && isArenaManager(nd().owner_arena_id)
         )
       );
       // O dono não muda de mãos por edição: quem edita continua sendo o dono.
       allow update: if isAuthed() && (
-        isPlatformAdmin() || (
+        adm() || (
           od().owner_id == me()
           && nd().owner_id == me()
         )
       );
       allow delete: if isAuthed() && (
-        isPlatformAdmin() || od().owner_id == me()
+        adm() || od().owner_id == me()
       );
     }
 
@@ -2574,17 +2610,17 @@ service cloud.firestore {
       // Rede entre donos diferentes continua sendo caso do admin da
       // plataforma — é uma decisão comercial, não uma operação de tela.
       allow create: if isAuthed() && (
-        isPlatformAdmin() || (
+        adm() || (
           arenaNd()
           && ex('arena_networks/' + nd().network_id)
           && gd('arena_networks/' + nd().network_id).owner_id == me()
         )
       );
-      allow update: if isPlatformAdmin();
+      allow update: if adm();
       // Sair da rede é direito de quem administra a unidade, e também do dono
       // da rede: prender uma arena numa rede seria a pior parte do módulo.
       allow delete: if isAuthed() && (
-        isPlatformAdmin()
+        adm()
         || arenaOd()
         || (
           ex('arena_networks/' + od().network_id)
@@ -2596,35 +2632,35 @@ service cloud.firestore {
     // Sprint 2: Configuração de tiers (apenas platform admin)
     match /arena_tier_configs/{configId} {
       allow read: if isAuthed();
-      allow write: if isPlatformAdmin();
+      allow write: if adm();
     }
 
     // ---- Sprint 4 ORG-20: Circuitos (séries de torneios) ----
     // Sprint 4 ORG-20: admin de circuito
     function isCircuitAdmin(circuitId) {
       return isAuthed() && (
-        isPlatformAdmin() ||
+        adm() ||
         (circuitId != null && ex('circuit_admins/' + (circuitId + '_' + me())))
       );
     }
     match /circuits/{circuitId} {
       allow read: if true;
       allow create: if isAuthed();
-      allow update, delete: if isCircuitAdmin(circuitId) || isPlatformAdmin();
+      allow update, delete: if isCircuitAdmin(circuitId) || adm();
     }
     match /circuit_admins/{adminId} {
-      allow read: if isAuthed() && (isPlatformAdmin() || od().user_id == me());
-      allow create, update, delete: if isPlatformAdmin() || (
+      allow read: if isAuthed() && (adm() || od().user_id == me());
+      allow create, update, delete: if adm() || (
         isAuthed() && gd('circuits/' + adminId.split('_')[0]).created_by == me()
       );
     }
     match /circuit_tournaments/{linkId} {
       allow read: if true;
-      allow create, delete: if isCircuitAdmin(linkId.split('_')[0]) || isPlatformAdmin();
+      allow create, delete: if isCircuitAdmin(linkId.split('_')[0]) || adm();
     }
     match /circuit_results/{resultId} {
       allow read: if true;
-      allow create, update, delete: if isCircuitAdmin(resultId.split('_')[0]) || isPlatformAdmin();
+      allow create, update, delete: if isCircuitAdmin(resultId.split('_')[0]) || adm();
     }
 
 
@@ -2640,16 +2676,16 @@ service cloud.firestore {
     match /arena_unavailabilities/{unavId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        isPlatformAdmin() || arenaNd()
+        adm() || arenaNd()
       );
       allow update: if isAuthed() && (
-        isPlatformAdmin() || (
+        adm() || (
           arenaOd()
           && arenaNd()
         )
       );
       allow delete: if isAuthed() && (
-        isPlatformAdmin() || arenaOd()
+        adm() || arenaOd()
       );
     }
 
@@ -2658,9 +2694,9 @@ service cloud.firestore {
     match /coaches/{coachId} {
       allow read: if true;
       allow create, update: if isAuthed() && (
-        me() == coachId || isPlatformAdmin()
+        me() == coachId || adm()
       );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
     // coach_favorites/{uid_coachId} — professor favorito do atleta
     match /coach_favorites/{favId} {
@@ -2675,7 +2711,7 @@ service cloud.firestore {
     match /coach_arenas/{resId} {
       allow read: if true;
       allow create, update, delete: if isAuthed() && (
-        isPlatformAdmin() ||
+        adm() ||
         // coach pode adicionar/remover residência dele
         me() == resId.split('_')[0] ||
         // arena manager pode adicionar/remover
@@ -2689,7 +2725,7 @@ service cloud.firestore {
     match /coach_availability/{coachId} {
       allow read: if true;
       allow create, update, delete: if isAuthed() && (
-        me() == coachId || isPlatformAdmin()
+        me() == coachId || adm()
       );
     }
     // coach_lessons/{lessonId} — aula (avulsa/recorrente).
@@ -2723,20 +2759,20 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         me() == od().coach_id ||
         me() == od().student_id ||
-        isPlatformAdmin()
+        adm()
       );
       allow create: if isAuthed() && (
         me() == nd().coach_id ||
-        isPlatformAdmin() ||
+        adm() ||
         (me() == nd().student_id && isLessonStudentRequest())
       );
       allow update: if isAuthed() && (
         me() == od().coach_id ||
-        isPlatformAdmin() ||
+        adm() ||
         (me() == od().student_id && isLessonStudentCancel())
       );
       allow delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
     }
     // coach_busy_slots/{coachId} — os horários JÁ CONFIRMADOS do professor
@@ -2769,7 +2805,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         me() == od().user_id ||
         me() == od().coach_id ||
-        isPlatformAdmin()
+        adm()
       );
       allow create: if isAuthed()
         && nd().user_id == me()
@@ -2790,7 +2826,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         me() == od().user_id ||
         me() == od().coach_id ||
-        isPlatformAdmin()
+        adm()
       );
     }
     // coach_student_notes/{coachId_studentId} — notas privadas do professor sobre
@@ -2798,15 +2834,15 @@ service cloud.firestore {
     // esconde campo; por isso a nota mora aqui, só do professor e do admin.
     // Lê-se por CONSULTA (`coach_id == uid`): `get` de id inexistente seria recusado.
     match /coach_student_notes/{noteId} {
-      allow read: if isAuthed() && (me() == od().coach_id || isPlatformAdmin());
+      allow read: if isAuthed() && (me() == od().coach_id || adm());
       allow create: if isAuthed()
         && noteId == nd().coach_id + '_' + nd().student_id
-        && (me() == nd().coach_id || isPlatformAdmin());
+        && (me() == nd().coach_id || adm());
       allow update: if isAuthed()
         && nd().coach_id == od().coach_id
         && nd().student_id == od().student_id
-        && (me() == od().coach_id || isPlatformAdmin());
-      allow delete: if isAuthed() && (me() == od().coach_id || isPlatformAdmin());
+        && (me() == od().coach_id || adm());
+      allow delete: if isAuthed() && (me() == od().coach_id || adm());
     }
     // coach_students/{coachId_studentId} — vínculo aluno↔professor.
     // Lê o professor e o aluno. Cria/edita/remove o professor; o aluno pode
@@ -2815,7 +2851,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         me() == od().coach_id ||
         me() == od().student_id ||
-        isPlatformAdmin()
+        adm()
       );
       // 🔒 F0 (2026-10-08): o id do vínculo É `{coach_id}_{student_id}` — é por
       // esse caminho que as regras decidem "aluno ativo" (conteúdo "só alunos",
@@ -2824,7 +2860,7 @@ service cloud.firestore {
       // professor. Todo cliente já grava por `studentDocId(coach, aluno)`.
       allow create: if isAuthed()
         && linkId == nd().coach_id + '_' + nd().student_id
-        && (me() == nd().coach_id || isPlatformAdmin());
+        && (me() == nd().coach_id || adm());
       // 🔒 F0 (2026-10-08): o ALUNO só aceita o convite — muda `status` de
       // `invited` para `active` (e `updated_at`), nada mais. Antes a regra
       // deixava o aluno reescrever o documento inteiro, inclusive as notas
@@ -2841,7 +2877,7 @@ service cloud.firestore {
       // aceitar o convite, e é aí que o `ended_at` sai. Vínculo sem `ended_at`
       // segue exatamente como antes.
       allow update: if isAuthed() && (
-        ((me() == od().coach_id || isPlatformAdmin())
+        ((me() == od().coach_id || adm())
           && nd().coach_id == od().coach_id
           && nd().student_id == od().student_id
           && (nd().get('status', '') != 'ended' || 'ended_at' in nd())
@@ -2868,7 +2904,7 @@ service cloud.firestore {
         // encerrada não guarda mais a história de ninguém, e o professor a tira.
         || (me() == od().coach_id
           && !ex('users/' + od().student_id))
-        || isPlatformAdmin()
+        || adm()
       );
     }
     // coach_level_validations/{coachId_studentId} — nível validado por professor
@@ -2884,10 +2920,10 @@ service cloud.firestore {
           && nd().coach_id != nd().student_id
           && validationId == nd().coach_id + '_' + nd().student_id
           && (resource == null || od().coach_id == me()))
-        || isPlatformAdmin()
+        || adm()
       );
       allow delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
     }
     // coach_clinics/{id} — clínica/workshop aberto (flag coach_clinics).
@@ -2895,10 +2931,10 @@ service cloud.firestore {
     match /coach_clinics/{clinicId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        me() == nd().coach_id || isPlatformAdmin()
+        me() == nd().coach_id || adm()
       );
       allow update, delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
       // O atleta mexe só no contador de vagas, de um em um, junto com a
       // PRÓPRIA inscrição (mesmo lote): entra se ainda há vaga e a clínica
@@ -2935,7 +2971,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         me() == od().athlete_id ||
         me() == od().coach_id ||
-        isPlatformAdmin()
+        adm()
       );
     }
     // coach_packages/{id} — definição de pacote. Leitura pública (aluno vê a
@@ -2943,10 +2979,10 @@ service cloud.firestore {
     match /coach_packages/{packageId} {
       allow read: if true;
       allow create: if isAuthed() && (
-        me() == nd().coach_id || isPlatformAdmin()
+        me() == nd().coach_id || adm()
       );
       allow update, delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
     }
     // coach_package_sales/{id} — venda/crédito. Lê o professor e o aluno;
@@ -2955,13 +2991,13 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         me() == od().coach_id ||
         me() == od().student_id ||
-        isPlatformAdmin()
+        adm()
       );
       allow create: if isAuthed() && (
-        me() == nd().coach_id || isPlatformAdmin()
+        me() == nd().coach_id || adm()
       );
       allow update, delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
     }
     // coach_content/{id} — biblioteca de conteúdo do professor. Lê: público, o
@@ -2973,27 +3009,27 @@ service cloud.firestore {
     match /coach_content/{contentId} {
       allow read: if od().visibility == 'public' || (isAuthed() && (
         me() == od().coach_id ||
-        isPlatformAdmin() ||
+        adm() ||
         isActiveStudentOf(od().coach_id)
       ));
       allow create: if isAuthed() && (
-        me() == nd().coach_id || isPlatformAdmin()
+        me() == nd().coach_id || adm()
       );
       allow update, delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
     }
     // coach_products/{id} — loja do professor. Lê: produtos públicos (qualquer
     // um) e todos os do próprio professor/admin. Escreve: o professor/admin.
     match /coach_products/{productId} {
       allow read: if od().visible_public == true || (isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       ));
       allow create: if isAuthed() && (
-        me() == nd().coach_id || isPlatformAdmin()
+        me() == nd().coach_id || adm()
       );
       allow update, delete: if isAuthed() && (
-        me() == od().coach_id || isPlatformAdmin()
+        me() == od().coach_id || adm()
       );
     }
 
@@ -3006,32 +3042,32 @@ service cloud.firestore {
     match /arena_inventory_products/{productId} {
       allow read: if isAuthed();
       allow create: if isAuthed() && (
-        isPlatformAdmin() || arenaNd()
+        adm() || arenaNd()
       );
       allow update, delete: if isAuthed() && (
-        isPlatformAdmin() || arenaOd()
+        adm() || arenaOd()
       );
     }
     match /arena_inventory_entries/{entryId} {
       allow read: if isAuthed() && (
-        isPlatformAdmin() || arenaOd()
+        adm() || arenaOd()
       );
       allow create: if isAuthed() && (
-        isPlatformAdmin() || arenaNd()
+        adm() || arenaNd()
       );
       allow update, delete: if isAuthed() && (
-        isPlatformAdmin() || arenaOd()
+        adm() || arenaOd()
       );
     }
     match /arena_inventory_exits/{exitId} {
       allow read: if isAuthed() && (
-        isPlatformAdmin() || arenaOd()
+        adm() || arenaOd()
       );
       allow create: if isAuthed() && (
-        isPlatformAdmin() || arenaNd()
+        adm() || arenaNd()
       );
       allow update, delete: if isAuthed() && (
-        isPlatformAdmin() || arenaOd()
+        adm() || arenaOd()
       );
     }
 
@@ -3043,13 +3079,13 @@ service cloud.firestore {
     match /catalog_products/{productId} {
       allow read: if isAuthed();
       allow create: if isAuthed() && (
-        isPlatformAdmin() ||
+        adm() ||
         (
           nd().contributed_by_arena_id != null &&
           isArenaManager(nd().contributed_by_arena_id)
         )
       );
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if adm();
     }
 
     // ---- Relatórios do mercado (flag arena_market_reports) ----
@@ -3057,15 +3093,15 @@ service cloud.firestore {
     // escreve. Id determinístico arenaId_periodType_periodKey.
     match /arena_market_reports/{reportId} {
       allow read: if isAuthed() && (
-        isPlatformAdmin() ||
+        adm() ||
         ex('arena_managers/' + (od().arena_id + '_' + me()))
       );
       allow create: if isAuthed() && (
-        isPlatformAdmin() ||
+        adm() ||
         arenaNd()
       );
       allow update, delete: if isAuthed() && (
-        isPlatformAdmin() ||
+        adm() ||
         arenaOd()
       );
     }
@@ -3075,7 +3111,7 @@ service cloud.firestore {
     // (exported/submitted) e os carimbos de data. Governança sensível: apenas o
     // platform_admin lê e escreve. Aditivo — sem a feature, a coleção nem existe.
     match /dupr_export_log/{matchId} {
-      allow read, write: if isPlatformAdmin();
+      allow read, write: if adm();
     }
 
     // ---- GAMIFICATION V2 (flag GAMIFICATION_V2) --------------------------------
@@ -3133,17 +3169,17 @@ service cloud.firestore {
         || gd('user_gamification_prefs/' + uid).get('privacy', {}).get('showOnPublicProfile', true) != false;
     }
     match /user_progression_v2/{uid} {
-      allow read: if isAuthed() && (isOwner(uid) || isPlatformAdmin() || gamificationPublicOk(uid));
+      allow read: if isAuthed() && (isOwner(uid) || adm() || gamificationPublicOk(uid));
       allow create: if isOwner(uid)
         && nd().uid == uid
         && nd().schemaVersion == 1
         && progressionV2FieldsOk();
-      allow update: if (isOwner(uid) || isPlatformAdmin())
+      allow update: if (isOwner(uid) || adm())
         && nd().uid == od().uid
         && nd().schemaVersion == od().schemaVersion
         && progressionV2FieldsOk();
-      allow create, update: if isPlatformAdmin();
-      allow delete: if isPlatformAdmin();
+      allow create, update: if adm();
+      allow delete: if adm();
     }
 
     // user_missions/{uid}_{date} — missões geradas (docId = uid + "_" + YYYY-MM-DD)
@@ -3172,7 +3208,7 @@ service cloud.firestore {
     }
     match /user_missions/{missionId} {
       allow read: if isAuthed() && (
-        resource == null || me() == od().uid || isPlatformAdmin()
+        resource == null || me() == od().uid || adm()
       );
       allow create: if isOwner(nd().uid)
         && nd().scope in ['daily', 'weekly', 'monthly']
@@ -3183,14 +3219,14 @@ service cloud.firestore {
         && nd().scope == od().scope
         && nd().date == od().date
         && missionDocShapeOk(missionId);
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // user_achievements_v2/{uid}_{achId} — conquistas desbloqueadas
     // Leitura pública (autenticada): é o conteúdo de /conquistas/:uid.
     match /user_achievements_v2/{achId} {
       allow read: if isAuthed() && (
-        resource == null || od().uid == me() || isPlatformAdmin()
+        resource == null || od().uid == me() || adm()
         || gamificationPublicOk(od().uid)
       );
       allow create: if isOwner(nd().uid)
@@ -3205,14 +3241,14 @@ service cloud.firestore {
         && nd().progress is number
         && nd().progress >= od().progress
         && nd().progress <= 1;
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // user_streak_meta/{uid} — grace + freeze + vacation + comeback
     // Privado. freezesUsed é acumulativo (sem teto) — só nunca pode regredir.
     match /user_streak_meta/{uid} {
-      allow read: if isAuthed() && (me() == uid || isPlatformAdmin());
-      allow create, update: if isAuthed() && (me() == uid || isPlatformAdmin())
+      allow read: if isAuthed() && (me() == uid || adm());
+      allow create, update: if isAuthed() && (me() == uid || adm())
         && nd().uid == uid
         && nd().graceDaysRemaining is int
         && nd().graceDaysRemaining >= 0
@@ -3222,7 +3258,7 @@ service cloud.firestore {
         && nd().freezesAvailable <= 3
         && nd().freezesUsed is int
         && nd().freezesUsed >= 0;
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // ---- Gamificação V2 · sub-sistemas (Fase 16) -------------------------
@@ -3240,14 +3276,14 @@ service cloud.firestore {
     }
     match /user_referral_codes/{uid} {
       allow read: if isAuthed();
-      allow create: if isAuthed() && (me() == uid || isPlatformAdmin())
+      allow create: if isAuthed() && (me() == uid || adm())
         && nd().uid == uid
         && nd().schemaVersion == 2
         && nd().code is string
         && nd().monthlyCount is int
         && nd().monthlyCount >= 0
         && nd().monthlyCount <= 50;
-      allow update: if isAuthed() && (me() == uid || isPlatformAdmin())
+      allow update: if isAuthed() && (me() == uid || adm())
         && nd().uid == uid
         && nd().schemaVersion == 2
         && nd().monthlyCount is int
@@ -3261,7 +3297,7 @@ service cloud.firestore {
         && nd().totalActivated >= od().totalActivated
         && nd().totalActivated <= od().totalActivated + 1
         && nd().totalXpEarned >= od().totalXpEarned;
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // user_referrals/{refereeUid} — quem indicou esse user
@@ -3270,13 +3306,13 @@ service cloud.firestore {
         resource == null
         || me() == od().refereeUid
         || me() == od().referrerUid
-        || isPlatformAdmin()
+        || adm()
       );
       // criado pelo próprio indicado (docId = uid dele) ou pelo admin
       allow create: if isAuthed()
         && nd().refereeUid == refereeUid
         && nd().referrerUid != refereeUid
-        && (me() == refereeUid || isPlatformAdmin());
+        && (me() == refereeUid || adm());
       // os dois lados podem atualizar, sem trocar quem é quem
       allow update: if isAuthed()
         && nd().refereeUid == od().refereeUid
@@ -3284,9 +3320,9 @@ service cloud.firestore {
         && (
           me() == od().refereeUid
           || me() == od().referrerUid
-          || isPlatformAdmin()
+          || adm()
         );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // user_kudos/{kudoId} — kudos dados (visíveis para os 2 envolvidos)
@@ -3295,7 +3331,7 @@ service cloud.firestore {
         resource == null
         || me() == od().fromUid
         || me() == od().toUid
-        || isPlatformAdmin()
+        || adm()
       );
       // só pode criar se você é o fromUid
       allow create: if isOwner(nd().fromUid)
@@ -3303,7 +3339,7 @@ service cloud.firestore {
         && nd().toUid is string
         && nd().type is string;
       // não pode editar nem deletar (kudo é imutável)
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if adm();
     }
 
     // user_kudos_index/{uid} — contadores diários e totais
@@ -3320,23 +3356,23 @@ service cloud.firestore {
         && nd().givenToday <= 50;
     }
     match /user_kudos_index/{uid} {
-      allow read: if isAuthed() && (me() == uid || isPlatformAdmin());
+      allow read: if isAuthed() && (me() == uid || adm());
       allow create: if isAuthed() && kudoIndexShapeOk(uid)
         && (
           me() == uid
-          || isPlatformAdmin()
+          || adm()
           // criação do índice de quem recebe o primeiro kudo
           || (nd().receivedCount == 1 && nd().givenCount == 0)
         );
       allow update: if isAuthed() && kudoIndexShapeOk(uid)
-        && (me() == uid || isPlatformAdmin());
+        && (me() == uid || adm());
       // terceiro creditando um kudo recebido: só sobe recebidos, +1, e não
       // mexe nos contadores de quem deu
       allow update: if isAuthed() && me() != uid
         && kudoIndexShapeOk(uid)
         && nd().receivedCount == od().receivedCount + 1
         && nd().givenCount == od().givenCount;
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // user_rivals/{pairKey} — par de rivais (os dois lados escrevem)
@@ -3345,7 +3381,7 @@ service cloud.firestore {
         resource == null
         || me() == od().userA
         || me() == od().userB
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().pairKey == pairKey
@@ -3353,7 +3389,7 @@ service cloud.firestore {
         && (
           me() == nd().userA
           || me() == nd().userB
-          || isPlatformAdmin()
+          || adm()
         );
       allow update: if isAuthed()
         && nd().userA == od().userA
@@ -3361,9 +3397,9 @@ service cloud.firestore {
         && (
           me() == od().userA
           || me() == od().userB
-          || isPlatformAdmin()
+          || adm()
         );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // crews/{crewId} — crew pública ou privada
@@ -3379,7 +3415,7 @@ service cloud.firestore {
         || od().isPublic == true
         || me() == od().createdBy
         || isCrewMember(crewId)
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isOwner(nd().createdBy)
         && nd().crewId == crewId
@@ -3389,7 +3425,7 @@ service cloud.firestore {
         && nd().membersCount <= 50;
       allow update: if isAuthed()
         && nd().createdBy == od().createdBy
-        && (me() == od().createdBy || isPlatformAdmin());
+        && (me() == od().createdBy || adm());
       // entrar/sair mexe só no contador, de 1 em 1, dentro do limite
       allow update: if isAuthed()
         && nd().createdBy == od().createdBy
@@ -3402,7 +3438,7 @@ service cloud.firestore {
           nd().membersCount == od().membersCount + 1
           || nd().membersCount == od().membersCount - 1
         );
-      allow delete: if isAuthed() && (me() == od().createdBy || isPlatformAdmin());
+      allow delete: if isAuthed() && (me() == od().createdBy || adm());
     }
 
     // crew_members/{crewId}_{uid} — membros de crew
@@ -3417,10 +3453,10 @@ service cloud.firestore {
         && (getAfter(/databases/$(database)/documents/crews/$(nd().crewId)).data.createdBy == me()
             || (nd().role == 'member'
                 && getAfter(/databases/$(database)/documents/crews/$(nd().crewId)).data.get('isPublic', false) == true));
-      allow update: if isPlatformAdmin()
+      allow update: if adm()
         || (isOwner(od().uid)
             && !chg().hasAny(['uid', 'crewId', 'role']));
-      allow delete: if isAuthed() && (me() == od().uid || isPlatformAdmin());
+      allow delete: if isAuthed() && (me() == od().uid || adm());
     }
 
     // mentorships/{pairKey} — mentoria (os dois lados escrevem)
@@ -3433,7 +3469,7 @@ service cloud.firestore {
         resource == null
         || me() == od().mentorUid
         || me() == od().apprenticeUid
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().pairKey == pairKey
@@ -3445,7 +3481,7 @@ service cloud.firestore {
             && nd().get('proposedBy', '') == me()
             && (me() == nd().mentorUid
               || me() == nd().apprenticeUid))
-          || isPlatformAdmin()
+          || adm()
         );
       allow update: if isAuthed()
         && nd().schemaVersion == 2
@@ -3456,10 +3492,10 @@ service cloud.firestore {
         && (
           me() == od().mentorUid
           || me() == od().apprenticeUid
-          || isPlatformAdmin()
+          || adm()
         )
         && (
-          isPlatformAdmin()
+          adm()
           // Depois de respondido, vale o que sempre valeu.
           || (od().status != 'pending' && nd().status != 'pending')
           // Convite em aberto: qualquer lado o encerra (recusa ou retira)...
@@ -3468,7 +3504,7 @@ service cloud.firestore {
           || (od().status == 'pending' && nd().status == 'active'
               && me() != od().get('proposedBy', ''))
         );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // season_rankings/{seasonId}_{uid} — XP sazonal
@@ -3476,7 +3512,7 @@ service cloud.firestore {
     // Escrita só admin / Cloud Function sazonal — o cliente não decide posição.
     match /season_rankings/{rid} {
       allow read: if isAuthed();
-      allow create, update, delete: if isPlatformAdmin();
+      allow create, update, delete: if adm();
     }
 
     // ---- Divulgação da PLATAFORMA e dos PROFESSORES (Onda CG) --------------
@@ -3494,7 +3530,7 @@ service cloud.firestore {
     // outro professor sem ele saber.
     function isPromoIssuer(type, id) {
       return isAuthed() && (
-        (type == 'platform' && id == 'platform' && isPlatformAdmin())
+        (type == 'platform' && id == 'platform' && adm())
         || (type == 'coach' && id == me()
           && ex('coaches/' + me()))
         // PR 4: a federação (módulo `promos`) emite pela equipe de comunicação.
@@ -3520,20 +3556,20 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id) && promoPageOk();
       allow update: if (isPromoIssuer(od().issuer_type, od().issuer_id) && promoIssuerKept())
-        || isPlatformAdmin();
-      allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || isPlatformAdmin();
+        || adm();
+      allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || adm();
     }
     match /promo_campaigns/{campaignId} {
       allow read: if isAuthed();
       allow create: if isPromoIssuer(nd().issuer_type, nd().issuer_id) && promoPageOk();
       allow update: if (isPromoIssuer(od().issuer_type, od().issuer_id) && promoIssuerKept())
-        || isPlatformAdmin();
-      allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || isPlatformAdmin();
+        || adm();
+      allow delete: if isPromoIssuer(od().issuer_type, od().issuer_id) || adm();
     }
     // Configurações PRIVADAS do emissor: modelos de banner e de cupom, e o
     // custo interno de cada vale. Id = 'platform' ou o uid do professor.
     match /promo_settings/{issuerId} {
-      allow read, write: if isPlatformAdmin()
+      allow read, write: if adm()
         || (issuerId != 'platform' && (isPromoIssuer('coach', issuerId) || isPromoIssuer('federation', issuerId) || isPromoIssuer('club', issuerId)));
     }
 
@@ -3554,7 +3590,7 @@ service cloud.firestore {
     //  · professor   → o próprio professor, que tem perfil de professor.
     function isGamificationIssuer(type, id) {
       return isAuthed() && (
-        (type == 'platform' && id == 'platform' && isPlatformAdmin())
+        (type == 'platform' && id == 'platform' && adm())
         || (type == 'arena' && isArenaManager(id))
         || (type == 'club' && isClubAdmin(id))
         || (type == 'coach' && id == me()
@@ -3571,7 +3607,7 @@ service cloud.firestore {
     // gamificação. PRIVADO: o servidor (que ignora as regras) o lê para
     // respeitar a escolha — não aparecer no placar, não receber duelo etc.
     match /user_gamification_prefs/{uid} {
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow read: if isOwner(uid) || adm();
       allow create, update: if isOwner(uid)
         && nd().keys().hasOnly([
           'uid', 'schemaVersion', 'privacy', 'social', 'notifications',
@@ -3590,28 +3626,28 @@ service cloud.firestore {
         && nd().onboarding.done.size() <= 24
         && nd().celebrated is map
         && nd().celebrated.size() <= 120;
-      allow delete: if isOwner(uid) || isPlatformAdmin();
+      allow delete: if isOwner(uid) || adm();
     }
 
     // user_xp_grants/{uid}_{tipo}_{ref} — XP que o SERVIDOR concede (prêmio de
     // temporada, duelo, desafio). Ninguém escreve pelo cliente, o admin
     // inclusive: a conta fecha na regra, não na boa vontade de quem usa o app.
     match /user_xp_grants/{grantId} {
-      allow read: if (isOwner(od().uid) || isPlatformAdmin());
+      allow read: if (isOwner(od().uid) || adm());
       allow write: if false;
     }
 
     // gamification_moderation/{uid} — decisão do admin sobre uma conta: tirar do
     // placar (`excluded`) ou só ocultar do público (`hiddenFromPublic`).
     match /gamification_moderation/{uid} {
-      allow read, write: if isPlatformAdmin();
+      allow read, write: if adm();
     }
 
     // gamification_flags/{id} — sinais de integridade que o SERVIDOR abre e o
     // admin revisa. O admin só muda o veredito, nunca o sinal.
     match /gamification_flags/{flagId} {
-      allow read: if isPlatformAdmin();
-      allow update: if isPlatformAdmin()
+      allow read: if adm();
+      allow update: if adm()
         && chg()
           .hasOnly(['status', 'reviewNote', 'reviewedBy', 'reviewedAt'])
         && nd().status in ['open', 'reviewed', 'dismissed', 'actioned'];
@@ -3622,7 +3658,7 @@ service cloud.firestore {
     // diário do funil (admin lê) e a fotografia de XP da última passada (só o
     // servidor). Sem escrita de cliente.
     match /gamification_metrics/{day} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       allow write: if false;
     }
     match /gamification_integrity/{uid} {
@@ -3641,7 +3677,7 @@ service cloud.firestore {
     // agregado em `user_reputation`. Imutável: sem edição, e a única saída é
     // retirar (apagar). Sem texto livre — estrelas, elogios e categorias.
     match /match_reviews/{reviewId} {
-      allow read: if (isOwner(od().fromUid) || isPlatformAdmin());
+      allow read: if (isOwner(od().fromUid) || adm());
       allow create: if isAuthed()
         && nd().keys().hasOnly([
           'fromUid', 'toUid', 'matchKey', 'rating', 'tags', 'issues', 'relation', 'createdAt'
@@ -3665,7 +3701,7 @@ service cloud.firestore {
         // Uma por jogo e por par: o id carrega os dois lados.
         && reviewId.matches('^.+__' + me() + '__' + nd().toUid + '$');
       allow update: if false;
-      allow delete: if (isOwner(od().fromUid) || isPlatformAdmin());
+      allow delete: if (isOwner(od().fromUid) || adm());
     }
 
     // user_reputation/{uid} (público) e user_reputation_private/{uid} (o
@@ -3675,7 +3711,7 @@ service cloud.firestore {
       allow write: if false;
     }
     match /user_reputation_private/{uid} {
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow read: if isOwner(uid) || adm();
       allow write: if false;
     }
 
@@ -3685,7 +3721,7 @@ service cloud.firestore {
     // só por quem escreveu e pelo admin (moderação). O destinatário só marca
     // como lida ou denuncia — não edita o texto.
     match /partner_letters/{letterId} {
-      allow read: if (isOwner(od().toUid) || isPlatformAdmin());
+      allow read: if (isOwner(od().toUid) || adm());
       allow create: if isAuthed()
         && nd().keys().hasOnly([
           'toUid', 'fromUid', 'fromName', 'text', 'showName', 'matchKey', 'createdAt', 'readAt', 'reported'
@@ -3708,16 +3744,16 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/partner_letter_authors/$(letterId)).data.fromUid == me();
       allow update: if isOwner(od().toUid)
         && chg().hasOnly(['readAt', 'reported']);
-      allow delete: if isOwner(od().toUid) || isPlatformAdmin();
+      allow delete: if isOwner(od().toUid) || adm();
     }
     match /partner_letter_authors/{letterId} {
-      allow read: if (isOwner(od().fromUid) || isPlatformAdmin());
+      allow read: if (isOwner(od().fromUid) || adm());
       allow create: if isAuthed()
         && nd().keys().hasOnly(['fromUid', 'toUid', 'matchKey', 'createdAt'])
         && nd().fromUid == me()
         && nd().toUid != me()
         && letterId.matches('^.+__' + me() + '__' + nd().toUid + '$');
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if adm();
     }
 
     // gamification_challenges/{id} — desafios e eventos. O EMISSOR cria e edita
@@ -3729,7 +3765,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().status != 'draft'
         || isGamificationIssuer(od().issuerType, od().issuerId)
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isGamificationIssuer(nd().issuerType, nd().issuerId)
         && nd().createdBy == me()
@@ -3753,10 +3789,10 @@ service cloud.firestore {
           && od().status in ['draft', 'active']
           && nd().status in ['draft', 'active', 'cancelled']
           && nd().endsAt - nd().startsAt <= 92 * 86400000)
-        || isPlatformAdmin();
+        || adm();
       allow delete: if (isGamificationIssuer(od().issuerType, od().issuerId)
           && od().status in ['draft', 'cancelled'])
-        || isPlatformAdmin();
+        || adm();
     }
 
     // challenge_entries/{desafio}_{atleta} ou {desafio}_club_{clube} — quem
@@ -3794,7 +3830,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && od().finalized != true && (
           od().uid == me()
           || (od().subjectType == 'club' && isClubAdmin(od().subjectId))
-        ) || isPlatformAdmin();
+        ) || adm();
     }
 
     // duels/{semana}_{uidA}_{uidB} — o duelo da semana. O SERVIDOR emparelha e
@@ -3803,7 +3839,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().uidA == me()
         || od().uidB == me()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create, delete: if false;
       allow update: if isAuthed()
@@ -3832,9 +3868,9 @@ service cloud.firestore {
           && nd().status in ['active', 'paused', 'ended']
           && nd().approvedCount >= od().approvedCount
           && nd().approvedCount <= od().approvedCount + 1)
-        || isPlatformAdmin();
+        || adm();
       allow delete: if isGamificationIssuer(od().issuerType, od().issuerId)
-        || isPlatformAdmin();
+        || adm();
     }
 
     // reward_claims/{recompensa}_{atleta} — o PEDIDO. A pessoa pede (com um
@@ -3851,7 +3887,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().uid == me()
         || isGamificationIssuer(od().issuerType, od().issuerId)
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().uid == me()
@@ -3875,7 +3911,7 @@ service cloud.firestore {
           && ((od().status == 'requested' && nd().status in ['approved', 'rejected'])
             || (od().status == 'approved' && nd().status in ['redeemed', 'rejected'])))
       );
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
     }
 
     // gamification_goals/{tipo}_{dono}_{mês} — as metas do mês de um professor,
@@ -3899,14 +3935,14 @@ service cloud.firestore {
     }
     match /gamification_goals/{goalsId} {
       allow get: if canGetMissingGoals(goalsId);
-      allow read: if isGoalsOwner(od().ownerType, od().ownerId) || isPlatformAdmin();
+      allow read: if isGoalsOwner(od().ownerType, od().ownerId) || adm();
       allow create, update: if isGoalsOwner(nd().ownerType, nd().ownerId)
         && nd().keys().hasOnly(['ownerType', 'ownerId', 'month', 'goals', 'updatedAt'])
         && nd().ownerType in ['coach', 'arena', 'club']
         && goalsId == nd().ownerType + '_' + nd().ownerId + '_' + nd().month
         && nd().goals is list
         && nd().goals.size() <= 6;
-      allow delete: if isGoalsOwner(od().ownerType, od().ownerId) || isPlatformAdmin();
+      allow delete: if isGoalsOwner(od().ownerType, od().ownerId) || adm();
     }
 
     // ==== Centro de Treino (flag `training_center`) ========================
@@ -3947,7 +3983,7 @@ service cloud.firestore {
     // sempre o autor aqui: `trainingAuthorOk` amarra o papel 'professor' à
     // própria conta, e o autor não muda na edição.
     function trainingAutoApproved(role) {
-      return isPlatformAdmin()
+      return adm()
         || (role == 'professor' && (trainingSetting('public_review_professor', true) == false
           || me() in trainingSetting('verified_professors', [])))
         || (role == 'atleta' && trainingSetting('public_review_atleta', true) == false);
@@ -3973,7 +4009,7 @@ service cloud.firestore {
     // de professor; ninguém cria em nome de outra pessoa.
     function trainingAuthorOk(d) {
       return d.created_by == me() && (
-        (d.author_uid == 'plataforma' && d.author_role == 'plataforma' && isPlatformAdmin())
+        (d.author_uid == 'plataforma' && d.author_role == 'plataforma' && adm())
         || (d.author_uid == me() && (
           d.author_role == 'atleta'
           || (d.author_role == 'professor' && isCoachUser(me()))))
@@ -4025,7 +4061,7 @@ service cloud.firestore {
         || (od().visibility == 'publico' && od().review == 'aprovado' && od().hidden == false)
         || (od().hidden == false && me() in od().shared_uids)
         || (od().visibility == 'alunos' && od().hidden == false && isActiveStudentOf(od().author_uid))
-        || isPlatformAdmin()
+        || adm()
       );
       // O admin pode criar já destacado/aprovado; os demais nascem sem
       // moderação (oculto=false, destaque=false, sem nota de revisão).
@@ -4033,7 +4069,7 @@ service cloud.firestore {
       allow create: if isAuthed()
         && trainingItemShapeOk(nd())
         && trainingAuthorOk(nd())
-        && (isPlatformAdmin() || (
+        && (adm() || (
           !itemId.matches('pickle_.*')
           && trainingReviewOk(nd())
           && trainingPublicAllowed(nd())
@@ -4046,7 +4082,7 @@ service cloud.firestore {
           && !('hidden_reason' in nd())));
       allow update: if isAuthed() && (
         // Admin: edita, oculta, destaca, aprova — mas não troca o autor.
-        (isPlatformAdmin()
+        (adm()
           && nd().author_uid == od().author_uid
           && nd().author_role == od().author_role
           && nd().created_by == od().created_by
@@ -4078,7 +4114,7 @@ service cloud.firestore {
               && (od().visibility == 'publico' || trainingPublicAllowed(nd())))
           ))
       );
-      allow delete: if (isOwner(od().author_uid) || isPlatformAdmin());
+      allow delete: if (isOwner(od().author_uid) || adm());
     }
 
     // Compartilhar/indicar. `indicacao`: qualquer pessoa, do próprio item ou
@@ -4098,7 +4134,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().from_uid == me()
         || od().to_uid == me()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().keys().hasOnly(['from_uid', 'from_name', 'from_role', 'to_uid', 'item_id',
@@ -4130,7 +4166,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         od().from_uid == me()
         || od().to_uid == me()
-        || isPlatformAdmin()
+        || adm()
       );
     }
 
@@ -4149,7 +4185,7 @@ service cloud.firestore {
     function trainingSessionReadable(sid) {
       return isAuthed() && ex('training_sessions/' + sid) && (
         gd('training_sessions/' + sid).uid == me()
-        || isPlatformAdmin()
+        || adm()
         || (gd('training_sessions/' + sid).get('shared_coach_id', null) == me()
           && hasActiveStudent(me(), gd('training_sessions/' + sid).uid))
       );
@@ -4159,7 +4195,7 @@ service cloud.firestore {
         od().uid == me()
         || (od().get('shared_coach_id', null) == me()
           && hasActiveStudent(me(), od().uid))
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().uid == me()
@@ -4179,7 +4215,7 @@ service cloud.firestore {
           && hasActiveStudent(me(), od().uid)
           && chg().hasOnly(['coach_confirmed_at', 'updated_at']))
       );
-      allow delete: if (isOwner(od().uid) || isPlatformAdmin());
+      allow delete: if (isOwner(od().uid) || adm());
 
       match /comments/{commentId} {
         allow read: if trainingSessionReadable(sessionId);
@@ -4191,14 +4227,14 @@ service cloud.firestore {
         allow delete: if isAuthed() && (
           od().uid == me()
           || gd('training_sessions/' + sessionId).uid == me()
-          || isPlatformAdmin()
+          || adm()
         );
       }
     }
 
     // Planos: do atleta, só ele lê e escreve.
     match /training_plans/{planId} {
-      allow read: if (isOwner(od().uid) || isPlatformAdmin());
+      allow read: if (isOwner(od().uid) || adm());
       allow create: if isAuthed()
         && nd().uid == me()
         && nd().title is string && nd().title.size() <= 120
@@ -4212,12 +4248,12 @@ service cloud.firestore {
         && nd().weeks is int && nd().weeks >= 1 && nd().weeks <= 16
         && nd().slots is list && nd().slots.size() <= 112
         && nd().days is list && nd().days.size() <= 7;
-      allow delete: if (isOwner(od().uid) || isPlatformAdmin());
+      allow delete: if (isOwner(od().uid) || adm());
     }
 
     // Preferências e progresso do treino de cada pessoa (id = uid).
     match /training_meta/{uid} {
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow read: if isOwner(uid) || adm();
       allow create, update: if isOwner(uid)
         && nd().keys().hasOnly(['favorites', 'routine', 'onboarding_done', 'mastery',
           'assessments', 'focus_hint', 'debrief', 'updated_at'])
@@ -4229,7 +4265,7 @@ service cloud.firestore {
         && nd().get('assessments', []).size() <= 24
         && nd().get('mastery', {}) is map
         && nd().get('mastery', {}).size() <= 300;
-      allow delete: if isOwner(uid) || isPlatformAdmin();
+      allow delete: if isOwner(uid) || adm();
     }
 
     // Balanço do jogo (flag `game_debrief`): só da pessoa. O id começa pelo
@@ -4255,12 +4291,12 @@ service cloud.firestore {
         && (d.get('applied', null) == null || d.applied is map);
     }
     match /training_debriefs/{debriefId} {
-      allow read: if (isOwner(od().uid) || isPlatformAdmin());
+      allow read: if (isOwner(od().uid) || adm());
       allow create, update: if isAuthed()
         && nd().uid == me()
         && debriefId.matches(me() + '_.+')
         && trainingDebriefShapeOk(nd());
-      allow delete: if (isOwner(od().uid) || isPlatformAdmin());
+      allow delete: if (isOwner(od().uid) || adm());
     }
 
     // Dúvidas: privadas entre quem pergunta e o professor (vínculo ATIVO para
@@ -4275,7 +4311,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().asker_uid == me()
         || od().coach_uid == me()
-        || isPlatformAdmin()
+        || adm()
       );
       allow create: if isAuthed()
         && nd().asker_uid == me()
@@ -4289,10 +4325,10 @@ service cloud.firestore {
         && (od().asker_uid == me() || od().coach_uid == me())
         && chg().hasOnly(['status', 'last_from', 'updated_at'])
         && nd().status in ['aberta', 'respondida', 'encerrada'];
-      allow delete: if (isOwner(od().asker_uid) || isPlatformAdmin());
+      allow delete: if (isOwner(od().asker_uid) || adm());
 
       match /messages/{messageId} {
-        allow read: if trainingQuestionParty(questionId) || isPlatformAdmin();
+        allow read: if trainingQuestionParty(questionId) || adm();
         // Escrever só enquanto o vínculo estiver ativo: encerrado (ou pausado),
         // a conversa fica para consulta, sem mensagem nova.
         allow create: if trainingQuestionParty(questionId)
@@ -4304,7 +4340,7 @@ service cloud.firestore {
           && nd().text is string
           && nd().text.size() >= 1 && nd().text.size() <= 2000;
         // Quem perguntou apaga a conversa inteira (mensagens antes da dúvida).
-        allow delete: if isPlatformAdmin()
+        allow delete: if adm()
           || (isAuthed() && ex('training_questions/' + questionId)
             && gd('training_questions/' + questionId).asker_uid == me());
       }
@@ -4313,7 +4349,7 @@ service cloud.firestore {
     // Denúncias de conteúdo: qualquer conta denuncia; só quem denunciou e o
     // admin leem; só o admin resolve.
     match /training_reports/{reportId} {
-      allow read: if (isOwner(od().reporter_uid) || isPlatformAdmin());
+      allow read: if (isOwner(od().reporter_uid) || adm());
       allow create: if isAuthed()
         && nd().reporter_uid == me()
         && nd().status == 'aberta'
@@ -4322,7 +4358,7 @@ service cloud.firestore {
         && nd().get('text', '') is string
         && nd().get('text', '').size() <= 500
         && !('resolved_by' in nd());
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if adm();
     }
 
     // =====================================================================
@@ -4385,7 +4421,7 @@ service cloud.firestore {
         );
       // A loja recusada pode pedir de novo (volta a "em análise"); fora isso,
       // o operador edita a vitrine, nunca o que dá confiança.
-      allow update: if isPlatformAdmin() || (isMarketOperator(key)
+      allow update: if adm() || (isMarketOperator(key)
         // O CNPJ que o admin aprovou não muda pela própria loja.
         && !(od().status == 'active' && chg().hasAny(['cnpj_masked']))
         && (
@@ -4395,11 +4431,11 @@ service cloud.firestore {
           && !chg()
             .difference(['status', 'reject_reason'].toSet()).hasAny(marketSellerLocked()))
       ));
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
 
       // Pix, telefone e CNPJ: só quem opera o vendedor e o admin.
       match /private/{docId} {
-        allow read, write: if docId == 'data' && (isMarketOperator(key) || isPlatformAdmin());
+        allow read, write: if docId == 'data' && (isMarketOperator(key) || adm());
       }
     }
 
@@ -4441,7 +4477,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().status in ['active', 'sold_out']
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow create: if marketOn() && isMarketOperator(nd().seller_key)
         && ex('market_sellers/' + nd().seller_key)
         && marketSeller(nd().seller_key).status == 'active'
@@ -4451,7 +4487,7 @@ service cloud.firestore {
         && nd().status in ['draft', 'active']
         && !nd().keys().hasAny(marketListingLocked())
         && marketListingShapeOk(nd());
-      allow update: if isPlatformAdmin() || marketViewBumpOk() || (
+      allow update: if adm() || marketViewBumpOk() || (
         isMarketOperator(od().seller_key)
         && od().status != 'removed'
         && nd().status in ['draft', 'active', 'paused', 'sold_out', 'closed']
@@ -4467,7 +4503,7 @@ service cloud.firestore {
           || nd().seller_name == marketSeller(od().seller_key).display_name)
         && marketListingShapeOk(nd()));
       // Apagar só o que nunca vendeu (o pedido guarda a foto do anúncio).
-      allow delete: if isPlatformAdmin() || (
+      allow delete: if adm() || (
         isMarketOperator(od().seller_key)
         && od().get('quantity_sold', 0) == 0);
     }
@@ -4477,7 +4513,7 @@ service cloud.firestore {
         od().status in ['open', 'answered']
         || od().asker_uid == me()
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow create: if marketOn() && isAuthed()
         && nd().keys().hasOnly(['listing_id', 'listing_title', 'seller_key', 'asker_uid', 'asker_name', 'text', 'status', 'created_at', 'created_at_ms'])
         && nd().asker_uid == me()
@@ -4490,7 +4526,7 @@ service cloud.firestore {
         && gd('market_listings/' + nd().listing_id).status in ['active', 'sold_out']
         && !isMarketOperator(nd().seller_key);
       // Quem vende responde (só a resposta); o admin esconde.
-      allow update: if isPlatformAdmin() || (
+      allow update: if adm() || (
         isMarketOperator(od().seller_key)
         && od().status in ['open', 'answered']
         && chg().hasOnly(['answer', 'answered_at', 'answered_by', 'status'])
@@ -4498,7 +4534,7 @@ service cloud.firestore {
         && nd().answered_by == me()
         && nd().answer is string
         && nd().answer.size() >= 2 && nd().answer.size() <= 1000);
-      allow delete: if isPlatformAdmin()
+      allow delete: if adm()
         || (isOwner(od().asker_uid) && od().status == 'open');
     }
 
@@ -4576,21 +4612,21 @@ service cloud.firestore {
       allow list: if isAuthed() && (
         (od().public == true && od().active == true)
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow create: if marketOn() && isMarketOperator(nd().seller_key)
         && couponId == nd().seller_key + '_' + nd().code
         && nd().get('uses_count', 0) == 0
         && nd().created_by == me()
         && marketCouponShapeOk(nd());
-      allow update: if isPlatformAdmin() || (
+      allow update: if adm() || (
         isMarketOperator(od().seller_key)
         && !chg()
           .hasAny(['seller_key', 'code', 'uses_count', 'last_used_at_ms', 'created_by'])
         && marketCouponShapeOk(nd()));
-      allow delete: if isPlatformAdmin() || isMarketOperator(od().seller_key);
+      allow delete: if adm() || isMarketOperator(od().seller_key);
       // Quantas vezes CADA pessoa usou: a própria pessoa lê o seu; só o servidor escreve.
       match /market_coupon_uses/{uid} {
-        allow get: if isOwner(uid) || isPlatformAdmin();
+        allow get: if isOwner(uid) || adm();
         allow write: if false;
       }
     }
@@ -4604,14 +4640,14 @@ service cloud.firestore {
         od().holder_uid == me()
         || od().buyer_uid == me()
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow write: if false;
     }
     match /market_offers/{offerId} {
       allow read: if isAuthed() && (
         od().buyer_uid == me()
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow write: if false;
     }
 
@@ -4619,14 +4655,14 @@ service cloud.firestore {
       return isAuthed() && ex('market_orders/' + orderId) && (
         gd('market_orders/' + orderId).buyer_uid == me()
         || isMarketOperator(gd('market_orders/' + orderId).seller_key)
-        || isPlatformAdmin());
+        || adm());
     }
 
     match /market_orders/{orderId} {
       allow read: if isAuthed() && (
         od().buyer_uid == me()
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow write: if false;
 
       match /events/{eventId} {
@@ -4638,7 +4674,7 @@ service cloud.firestore {
       match /private/{docId} {
         allow read: if isAuthed() && ex('market_orders/' + orderId) && (
           gd('market_orders/' + orderId).buyer_uid == me()
-          || isPlatformAdmin()
+          || adm()
           || (gd('market_orders/' + orderId).get('shipping_visible', false) == true
             && isMarketOperator(gd('market_orders/' + orderId).seller_key)));
         allow write: if false;
@@ -4651,7 +4687,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().visible == true
         || od().author_uid == me()
-        || isPlatformAdmin());
+        || adm());
       allow create, delete: if false;
       allow update: if marketOn() && isMarketOperator(od().seller_key)
         && od().author_role == 'buyer' && od().visible == true
@@ -4665,7 +4701,7 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         od().buyer_uid == me()
         || isMarketOperator(od().seller_key)
-        || isPlatformAdmin());
+        || adm());
       allow write: if false;
     }
 
@@ -4674,8 +4710,8 @@ service cloud.firestore {
     match /market_reports/{reportId} {
       // `get` pelo id (que termina no uid) funciona mesmo sem o documento:
       // é como a tela sabe se a pessoa já denunciou.
-      allow get: if isAuthed() && (reportId.matches('.+_' + me()) || isPlatformAdmin());
-      allow list: if (isOwner(od().reporter_uid) || isPlatformAdmin());
+      allow get: if isAuthed() && (reportId.matches('.+_' + me()) || adm());
+      allow list: if (isOwner(od().reporter_uid) || adm());
       allow create: if marketOn() && isAuthed()
         && reportId == nd().listing_id + '_' + me()
         && nd().keys().hasOnly(['listing_id', 'listing_title', 'seller_key', 'reporter_uid', 'reason', 'text', 'status', 'created_at', 'created_at_ms'])
@@ -4689,7 +4725,7 @@ service cloud.firestore {
         && nd().get('text', '').size() <= 500
         && nd().get('listing_title', '') is string
         && nd().get('listing_title', '').size() <= 120;
-      allow update, delete: if isPlatformAdmin();
+      allow update, delete: if adm();
     }
 
     // =====================================================================
@@ -4755,9 +4791,9 @@ service cloud.firestore {
     // O admin da plataforma só administra uma federação com o acesso
     // JUSTIFICADO valendo: motivo e prazo (até 8 h) registrados pelo servidor
     // (`federationAdminAccess` → `admin_access_logs`). A revisão (aprovar,
-    // suspender) e a leitura dos pedidos seguem com `isPlatformAdmin()`.
+    // suspender) e a leitura dos pedidos seguem com `adm()`.
     function fedPlat(fedId) {
-      return isPlatformAdmin()
+      return adm()
         && exists(/databases/$(database)/documents/federation_admin_grants/$(fedId + '_' + me()))
         && get(/databases/$(database)/documents/federation_admin_grants/$(fedId + '_' + me())).data.expires_ms > request.time.toMillis();
     }
@@ -4807,7 +4843,7 @@ service cloud.firestore {
       // consulta pública filtra `status` e `published` em igualdade. Oculta:
       // quem pediu, a equipe (qualquer cargo), quem é filiado e o admin.
       allow read: if (od().status == 'approved' && od().published == true)
-        || isPlatformAdmin()
+        || adm()
         || (isOwner(od().created_by))
         || fedPerms(fedId).size() > 0
         || fedMemberActive(fedId);
@@ -4832,11 +4868,11 @@ service cloud.firestore {
         // O financeiro informa o Pix que recebe as filiações (a aba Recebimento é dele).
         || (fedOn() && fedHas(fedId, 'finance')
           && chg().hasOnly(['payment', 'updated_at']));
-      allow delete: if isPlatformAdmin();
+      allow delete: if adm();
 
       // CNPJ completo, razão social: quem pediu (enquanto pendente), a equipe (admin) e o admin da plataforma.
       match /private/{docId} {
-        allow read: if docId == 'data' && (isPlatformAdmin() || fedHas(fedId, 'admin')
+        allow read: if docId == 'data' && (adm() || fedHas(fedId, 'admin')
           || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId)) && fedDoc(fedId).created_by == me()));
         allow write: if docId == 'data' && fedOn() && (fedHas(fedId, 'admin')
           || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId))
@@ -4848,7 +4884,7 @@ service cloud.firestore {
       // A equipe de uma federação APROVADA é a diretoria dela: qualquer conta
       // logada lê (é assim que um clube, um organizador ou um filiado avisa a
       // equipe de um pedido). Da federação pendente, só quem é dela e o admin.
-      allow read: if isPlatformAdmin()
+      allow read: if adm()
         || (isOwner(od().user_id))
         || (isAuthed() && fedSees(od().federation_id))
         || fedAny(od().federation_id, ['admin', 'members', 'finance']);
@@ -4861,7 +4897,7 @@ service cloud.firestore {
     // O acesso justificado do admin da plataforma a uma federação (`fedPlat`):
     // só o servidor abre e fecha; o admin lê o próprio para saber até quando vale.
     match /federation_admin_grants/{grantId} {
-      allow read: if isPlatformAdmin();
+      allow read: if adm();
       allow write: if false;
     }
 
@@ -5663,7 +5699,7 @@ service cloud.firestore {
         || (k in ['docs', 'events'] && od().get('members', false) == true && isClubMember(c))
         || (k == 'news' && od().get('status', '') == 'published' && od().get('audience', '') == 'members' && isClubMember(c))
         || (isAuthed() && k in ['aff', 'charges', 'cases'] && od().get('user_id', '') == me())
-        || cxHas(c, cxReadPerms(k)) || isPlatformAdmin();
+        || cxHas(c, cxReadPerms(k)) || adm();
       allow create, update: if cxOn() && cxHas(c, cxWritePerms(k))
         && (k != 'plans' || (nd().get('club_id', '') == c && nd().price_cents is int && nd().price_cents >= 0
           && nd().price_cents <= 100000000 && nd().name is string && nd().name.size() <= 80));

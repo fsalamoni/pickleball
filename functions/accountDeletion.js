@@ -935,6 +935,7 @@ async function coletarDiasDeJogo(db, uid) {
       .forEach((g) => ids.add(String(g.event_id)));
   }
   const itens = [];
+  const deletes = [];
   for (const id of ids) {
     let pai = doc.get(id);
     // eslint-disable-next-line no-await-in-loop
@@ -958,8 +959,15 @@ async function coletarDiasDeJogo(db, uid) {
       const p = patchGameSides(d.data(), uid, participantIds);
       if (p) itens.push({ ref: refDe(d), patch: p });
     });
+    // Controle de linhas (docs/53): a câmera e as marcações da pessoa são
+    // dados técnicos do jogo, sem valor de histórico — saem com a conta.
+    for (const sub of ['line_cams', 'line_calls']) {
+      // eslint-disable-next-line no-await-in-loop
+      const r = await pai.ref.collection(sub).where('uid', '==', uid).limit(QUERY_LIMIT).get();
+      r.docs.forEach((d) => deletes.push(d.ref));
+    }
   }
-  return { itens, deletes: [], truncated: false };
+  return { itens, deletes, truncated: false };
 }
 
 /**

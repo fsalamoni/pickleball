@@ -251,8 +251,12 @@ export async function updateGameDay(id, patch, actor) {
   // Escolha de quem cria: enviar (ou não) os resultados ao DUPR. `null` = vale o padrão.
   if ('dupr_submit' in patch) editable.dupr_submit = typeof patch.dupr_submit === 'boolean' ? patch.dupr_submit : null;
   // Controle de linhas por câmera (flag `line_control`): só diz que o jogo usa
-  // a câmera; o vídeo e as marcações ficam no aparelho.
+  // câmeras; o vídeo fica no aparelho (docs/53).
   if ('line_control' in patch) editable.line_control = patch.line_control === true;
+  // ...e o ARRANJO das câmeras que quem organiza escolheu (`cameraLayouts.js`).
+  if ('line_control_layout' in patch) {
+    editable.line_control_layout = typeof patch.line_control_layout === 'string' ? patch.line_control_layout.slice(0, 40) : null;
+  }
 
   // VÍNCULO a clube/arena (ver `domain/gameDayLink.js`): só o dia do atleta, os
   // dois lados juntos, e o dia vinculado nunca é "só para membros".

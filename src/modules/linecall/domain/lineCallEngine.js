@@ -1,5 +1,6 @@
 /**
- * O motor de decisão do controle de linhas — puro, quadro a quadro.
+ * O motor de decisão do controle de linhas — puro, quadro a quadro, UM por
+ * câmera.
  *
  * Recebe, a cada quadro do vídeo, onde a bola está NA IMAGEM (ou `null`) e os
  * pés e punhos de quem está em quadra (do detector de pose), e devolve os
@@ -11,18 +12,22 @@
  *
  * ## Como ele decide (e por que às vezes diz "revisar")
  *
- * Quique e batida são as duas MUDANÇAS BRUSCAS de direção da bola na imagem
- * (a gravidade muda a direção devagar, quadro a quadro). A que acontece
- * colada a um punho é batida; a outra é quique. O ponto do quique é a
- * interseção da trajetória de antes com a de depois (precisão abaixo de um
- * quadro), levado ao chão pela homografia da calibração.
+ * Quique e batida são as duas MUDANÇAS BRUSCAS de direção da bola (a
+ * gravidade muda a direção devagar, quadro a quadro). A que acontece colada a
+ * um punho é batida; a outra é quique. O ponto do quique é a interseção da
+ * trajetória de antes com a de depois (precisão abaixo de um quadro), levado
+ * ao chão pela homografia da calibração.
+ *
+ * Câmera de CIMA (`mode: 'overhead'`) não vê a bola descer — a altura não
+ * aparece na imagem. Nela o motor trabalha no CHÃO: batida é a bola que
+ * inverte o sentido; quique é a bola que segue no mesmo rumo e FREIA de
+ * repente (o atrito com o piso). Menos certo que a quina vista de lado; por
+ * isso a câmera de cima é melhor como complemento (ver `cameraLayouts.js`).
  *
  * Toda medida sai com a sua INCERTEZA, em metros: o tamanho do pixel naquele
  * ponto do chão, o deslocamento da bola em meio quadro e o erro da
  * calibração. Se a bola caiu a 8 cm da linha com incerteza de 3 cm, é FORA;
- * a 2 cm com incerteza de 3 cm, o motor NÃO inventa — diz "revisar". Com uma
- * câmera só, a 60 quadros, a faixa de "revisar" fica em poucos centímetros
- * em volta da linha; é exatamente a bola NA linha, que não importa em si.
+ * a 2 cm com incerteza de 3 cm, o motor NÃO inventa — diz "revisar".
  *
  * Pé na cozinha: depois de um voleio a pessoa não pode tocar a cozinha (a
  * linha inclusa) nem enquanto bate nem pelo impulso logo depois. O motor
@@ -57,6 +62,12 @@ export const ENGINE_DEFAULTS = Object.freeze({
   groundPx: 4,
   /** sem bola por mais que isto, a jogada acabou (s) */
   rallyGapS: 2,
+  /** `image` (de lado ou de trás) ou `overhead` (de cima) */
+  mode: 'image',
+  /** modo `overhead`: mudança brusca mínima da velocidade no chão, em m/s */
+  kinkMS: 2.5,
+  /** modo `overhead`: quanto a bola perde, no mínimo, de velocidade no quique */
+  bounceSlowdown: 0.15,
 });
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -65,6 +76,7 @@ const centroid = (pts) => ({
   y: pts.reduce((s, p) => s + p.y, 0) / pts.length,
 });
 const quad = (...xs) => Math.sqrt(xs.reduce((s, v) => s + v * v, 0));
+const vel = (a, b) => ({ x: (b.x - a.x) / (b.t - a.t), y: (b.y - a.y) / (b.t - a.t) });
 
 /** Decide dentro/fora/revisar por margem e incerteza (metros). */
 export function decide(marginM, uncertaintyM) {
@@ -88,10 +100,11 @@ export function kinkPoint(a, b, c, d) {
 
 /**
  * @param {{ H: number[], options?: Partial<typeof ENGINE_DEFAULTS> }} cfg
- *   `H` leva a IMAGEM ao CHÃO (metros).
+ *   `H` leva a IMAGEM ao CHÃO (metros, coordenadas comuns de `court.js`).
  */
 export function createLineCallEngine({ H, options = {} }) {
   const o = { ...ENGINE_DEFAULTS, ...options };
+  const overhead = o.mode === 'overhead';
   let track = [];
   let lastKinkT = -Infinity;
   let lastContact = null; // { t, bouncedSince }
@@ -116,13 +129,14 @@ export function createLineCallEngine({ H, options = {} }) {
       .filter((p) => p.feet?.length)
       .map((p) => ({ p, d: dist(centroid(p.feet), watch.feetAt) }))
       .sort((a, b) => a.d - b.d)[0]?.p;
+    const base = { type: 'volley', t: watch.t, imagePoint: watch.imagePoint, point: watch.point };
     if (player) {
       const s = footState(player, watch.prevFeet);
       watch.prevFeet = player.feet;
       watch.feetAt = centroid(player.feet);
       if (s.depth > -s.u) {
         if (s.grounded && s.depth >= s.u) {
-          events.push({ type: 'volley', t: watch.t, call: VOLLEY_CALL.FAULT, depthM: s.depth, uncertaintyM: s.u, imagePoint: watch.imagePoint });
+          events.push({ ...base, call: VOLLEY_CALL.FAULT, depthM: s.depth, uncertaintyM: s.u });
           watch = null;
           return;
         }
@@ -131,17 +145,48 @@ export function createLineCallEngine({ H, options = {} }) {
     }
     if (frame.t - watch.t >= o.momentumS) {
       events.push(watch.near
-        ? { type: 'volley', t: watch.t, call: VOLLEY_CALL.REVIEW, depthM: watch.near.depth, uncertaintyM: watch.near.u, imagePoint: watch.imagePoint }
-        : { type: 'volley', t: watch.t, call: VOLLEY_CALL.CLEAN, imagePoint: watch.imagePoint });
+        ? { ...base, call: VOLLEY_CALL.REVIEW, depthM: watch.near.depth, uncertaintyM: watch.near.u }
+        : { ...base, call: VOLLEY_CALL.CLEAN });
       watch = null;
     }
+  }
+
+  function bounce(k, ground, u, events) {
+    if (lastContact) lastContact.bouncedSince = true;
+    const marginM = insideMargin(ground);
+    events.push({ type: 'bounce', t: k.t, call: decide(marginM, u), marginM, uncertaintyM: u, point: ground, imagePoint: k });
+  }
+
+  /** Câmera de cima: tudo no chão. Batida inverte o sentido; quique freia. */
+  function kinkOverhead(events) {
+    if (track.length < 4) return;
+    const [a, b, c, d] = track.slice(-4).map((p) => ({ ...applyHomography(H, p), t: p.t, img: p }));
+    const vin = vel(a, b);
+    const vout = vel(c, d);
+    if (Math.hypot(vout.x - vin.x, vout.y - vin.y) < o.kinkMS) return;
+    if (b.t <= lastKinkT) return;
+    lastKinkT = c.t;
+    const sin = Math.hypot(vin.x, vin.y);
+    const sout = Math.hypot(vout.x, vout.y);
+    const cos = (vin.x * vout.x + vin.y * vout.y) / ((sin * sout) || 1);
+    if (cos < 0) {
+      lastContact = { t: c.t, bouncedSince: false };
+      return;
+    }
+    if (cos < 0.7 || sout > sin * (1 - o.bounceSlowdown)) return;
+    // O ponto é o fim da trajetória de chegada (a bola no chão).
+    const t = (b.t + c.t) / 2;
+    const ground = { x: b.x + vin.x * (t - b.t), y: b.y + vin.y * (t - b.t) };
+    const mpp = metersPerPixel(H, b.img);
+    const u = quad(mpp * o.ballPx, sin * (c.t - b.t) / 4, o.calibrationM);
+    bounce({ t, x: (b.img.x + c.img.x) / 2, y: (b.img.y + c.img.y) / 2 }, ground, u, events);
   }
 
   function kink(frame, events) {
     if (track.length < 4) return;
     const [a, b, c, d] = track.slice(-4);
-    const vin = { x: (b.x - a.x) / (b.t - a.t), y: (b.y - a.y) / (b.t - a.t) };
-    const vout = { x: (d.x - c.x) / (d.t - c.t), y: (d.y - c.y) / (d.t - c.t) };
+    const vin = vel(a, b);
+    const vout = vel(c, d);
     if (Math.hypot(vout.x - vin.x, vout.y - vin.y) < o.kinkPxS) return;
     if (b.t <= lastKinkT) return; // a mesma quina, vista de novo
     lastKinkT = c.t;
@@ -154,20 +199,17 @@ export function createLineCallEngine({ H, options = {} }) {
       const isVolley = lastContact && !lastContact.bouncedSince;
       lastContact = { t: k.t, bouncedSince: false };
       if (isVolley && hitter.p.feet?.length) {
-        watch = { t: k.t, imagePoint: k, feetAt: centroid(hitter.p.feet), prevFeet: null, near: null };
+        const feetAt = centroid(hitter.p.feet);
+        watch = { t: k.t, imagePoint: k, point: applyHomography(H, feetAt), feetAt, prevFeet: null, near: null };
       }
       return;
     }
     // QUIQUE: só a bola descendo na imagem que passa a subir.
     if (!(vin.y > 0 && vout.y < 0)) return;
-    if (lastContact) lastContact.bouncedSince = true;
-    const ground = applyHomography(H, k);
     const mpp = metersPerPixel(H, k);
     const speed = Math.hypot(vin.x, vin.y);
-    const frameDt = c.t - b.t;
-    const u = quad(mpp * o.ballPx, mpp * speed * frameDt / 4, o.calibrationM);
-    const marginM = insideMargin(ground);
-    events.push({ type: 'bounce', t: k.t, call: decide(marginM, u), marginM, uncertaintyM: u, point: ground, imagePoint: k });
+    const u = quad(mpp * o.ballPx, mpp * speed * (c.t - b.t) / 4, o.calibrationM);
+    bounce(k, applyHomography(H, k), u, events);
   }
 
   return {
@@ -187,7 +229,8 @@ export function createLineCallEngine({ H, options = {} }) {
         lastBallT = frame.t;
         track.push({ t: frame.t, x: frame.ball.x, y: frame.ball.y });
         if (track.length > 8) track.shift();
-        kink(frame, events);
+        if (overhead) kinkOverhead(events);
+        else kink(frame, events);
       } else if (track.length && frame.t - track[track.length - 1].t > 0.1) {
         track = []; // buraco no rastro: não liga pontos de antes e depois dele
       }

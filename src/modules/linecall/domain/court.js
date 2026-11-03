@@ -5,9 +5,11 @@
  * área que ela delimita — bola na linha de fundo é DENTRO, pé na linha da
  * cozinha é DENTRO da cozinha.
  *
- * Coordenadas: x atravessa a largura (0 = lateral esquerda de quem olha da
- * câmera), y percorre o comprimento (0 = fundo do lado de LÁ, `LENGTH` = fundo
- * do lado da câmera).
+ * Coordenadas COMUNS a todas as câmeras (é o que deixa juntar o que cada uma
+ * viu): x atravessa a largura (0 = lateral do LADO 1), y percorre o
+ * comprimento (0 = fundo do LADO A, `LENGTH` = fundo do LADO B). Quem está no
+ * lado A olhando para a rede tem o lado 1 à esquerda. Nos desenhos, o lado A
+ * fica embaixo.
  */
 
 export const COURT = Object.freeze({
@@ -18,24 +20,37 @@ export const COURT = Object.freeze({
   LINE: 0.0508,
 });
 
+const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
+
 /**
- * Os quatro cantos externos, na ordem em que a pessoa toca na imagem:
- * fundo de lá à esquerda, fundo de lá à direita, fundo de cá à direita,
- * fundo de cá à esquerda.
+ * Os pontos que a pessoa toca na imagem para calibrar. Cada posição de câmera
+ * usa quatro deles (ver `cameraLayouts.js`): os cantos da quadra, ou — na
+ * câmera baixa da lateral da rede, que não vê bem os fundos — os cantos das
+ * duas cozinhas. O `id` é contrato (fica na calibração guardada no aparelho).
  */
-export const CALIBRATION_CORNERS = Object.freeze([
-  { x: 0, y: 0 },
-  { x: COURT.WIDTH, y: 0 },
-  { x: COURT.WIDTH, y: COURT.LENGTH },
-  { x: 0, y: COURT.LENGTH },
-]);
+export const COURT_POINTS = Object.freeze({
+  A1: Object.freeze({ x: 0, y: 0 }),
+  A2: Object.freeze({ x: W, y: 0 }),
+  B1: Object.freeze({ x: 0, y: L }),
+  B2: Object.freeze({ x: W, y: L }),
+  KA1: Object.freeze({ x: 0, y: N - K }),
+  KA2: Object.freeze({ x: W, y: N - K }),
+  KB1: Object.freeze({ x: 0, y: N + K }),
+  KB2: Object.freeze({ x: W, y: N + K }),
+});
+
+/** Os quatro cantos da quadra e os quatro cantos das cozinhas, na ordem de toque. */
+export const CORNER_SET = Object.freeze({
+  court: Object.freeze(['A1', 'A2', 'B2', 'B1']),
+  kitchens: Object.freeze(['KA1', 'KA2', 'KB2', 'KB1']),
+});
 
 /**
  * Distância COM SINAL do ponto até o limite da quadra: positiva dentro
  * (quanto falta para sair), negativa fora (quanto passou).
  */
 export function insideMargin({ x, y }) {
-  return Math.min(x, COURT.WIDTH - x, y, COURT.LENGTH - y);
+  return Math.min(x, W - x, y, L - y);
 }
 
 /**
@@ -44,14 +59,16 @@ export function insideMargin({ x, y }) {
  * cozinha não é falta.
  */
 export function kitchenDepth({ x, y }) {
-  const along = COURT.KITCHEN - Math.abs(y - COURT.NET_Y);
-  const across = Math.min(x, COURT.WIDTH - x);
+  const along = K - Math.abs(y - N);
+  const across = Math.min(x, W - x);
   return Math.min(along, across);
 }
 
+/** De que lado da rede o ponto está. */
+export const courtSide = ({ y }) => (y < N ? 'A' : 'B');
+
 /** As linhas da quadra, como segmentos no chão — para desenhar a conferência. */
 export function courtSegments() {
-  const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
   const h = (y) => [{ x: 0, y }, { x: W, y }];
   return [
     h(0), h(L), [{ x: 0, y: 0 }, { x: 0, y: L }], [{ x: W, y: 0 }, { x: W, y: L }],
