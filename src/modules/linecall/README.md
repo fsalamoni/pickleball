@@ -13,7 +13,7 @@ marcações (`line_calls`), subcoleções de `game_days`.
 - `domain/fusion.js` — junta as marcações de várias câmeras por janela de tempo; quem está no ar.
 - `domain/ballDetection.js` — bola por cor + movimento (trocável por um modelo TrackNet).
 - `domain/cameraCheck.js` — a câmera entrega o mínimo? (30 q/s e 720p; bom: 60 e 1080p).
-- `domain/replay.js` — anel de quadros e janela do replay; `domain/report.js` — resumo e CSV do jogo; `domain/calibrationCheck.js` — o 5º ponto (erro em cm); `domain/cameraHealth.js` — a câmera saiu do lugar / pouca luz; `domain/snapCorner.js` — "Grudar na linha" (canto externo do L branco); `domain/setupKits.js` — os quatro kits de montagem, o que o aparelho aguenta e a fonte da câmera (OBS, NDI, celular sem fio, captura).
+- `domain/replay.js` — anel de quadros e janela do replay; `domain/report.js` — resumo e CSV do jogo; `domain/calibrationCheck.js` — o 5º ponto (erro em cm); `domain/cameraHealth.js` — a câmera saiu do lugar / pouca luz; `domain/snapCorner.js` — "Grudar na linha" (canto externo do L branco); `domain/readiness.js` — "Pronto para começar?" da central; `domain/setupKits.js` — os quatro kits de montagem, o que o aparelho aguenta e a fonte da câmera (OBS, NDI, celular sem fio, captura).
 - `domain/lineControlTargets.js` — "ligar em todos os meus jogos".
 - `services/cameraService.js` — `getUserMedia`; `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
 - `services/lineCallSync.js` — presença da câmera e envio das marcações.

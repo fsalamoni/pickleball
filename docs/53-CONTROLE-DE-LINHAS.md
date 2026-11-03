@@ -168,6 +168,10 @@ dos kits são `basico`, `celulares`, `computador`, `estudio` — nunca renomeie.
   câmera (plug-in de câmera virtual múltipla ou "Webcam Input" das ferramentas
   NDI) ou uma cópia do OBS por câmera. Vídeo do OBS em 1080p **60** (o padrão é
   30). Sem fio: roteador só das câmeras, 5 GHz, perto da quadra.
+- **Pronto para começar?** (`domain/readiness.js`, no topo da central): sem
+  câmera, sem calibrar ou em pausa **bloqueiam** (a posição não julga);
+  menos de 24 q/s, bateria ≤ 20% fora do carregador e erro do 5º ponto acima
+  de 6 cm só **avisam**.
 - **Telão** (`TelaoLineTicker` + `telaoLineStatus` em `fusion.js`): faixa fixa
   "Controle de linhas ativo · N câmera(s)" ou quais posições pararam; "Lance em
   revisão" enquanto o último lance é "revisar" sem decisão (até 90 s,

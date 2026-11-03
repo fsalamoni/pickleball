@@ -375,4 +375,13 @@ export default {
   "Controle de linhas parado: nenhuma câmera analisando": "Line control stopped: no camera analyzing",
   "Controle de linhas: {n} de {m} câmeras · parada: {p}": "Line control: {n} of {m} cameras · stopped: {p}",
   "Abrir outra câmera neste computador": "Open another camera on this computer",
+  "Pronto para começar: todas as câmeras analisando.": "Ready to start: all cameras analyzing.",
+  "Ainda não está pronto: {n} posição(ões) sem julgar.": "Not ready yet: {n} position(s) not judging.",
+  "Dá para começar, com {n} aviso(s).": "You can start, with {n} warning(s).",
+  "sem câmera": "no camera",
+  "falta calibrar": "needs calibration",
+  "calibrada, mas sem analisar": "calibrated, but not analyzing",
+  "menos de 24 quadros/s": "under 24 frames/s",
+  "bateria baixa fora do carregador": "low battery, not charging",
+  "calibração com erro acima de 6 cm": "calibration error above 6 cm",
 };
