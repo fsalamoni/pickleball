@@ -52,7 +52,7 @@ import {
  * }}
  */
 export function useGameDayRoles(gameDay, participants = null) {
-  const { user } = useAuth();
+  const { user, isPlatformAdmin = false } = useAuth();
   const { data: arenasGeridas = [] } = useMyManagedArenas();
   // Só consulta quando o dia de jogo é de clube — `useMyMembership` já vem
   // desabilitado sem clubId.
@@ -63,20 +63,25 @@ export function useGameDayRoles(gameDay, participants = null) {
     const ehGestorDaArena = isArenaGameDay(gameDay)
       && (arenasGeridas || []).some((a) => a?.id === gameDay.arena_id);
     const ehAdminDoClube = isClubGameDay(gameDay) && membership?.role === CLUB_ROLE.ADMIN;
-    const opts = { participants, arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube };
+    // O administrador da plataforma configura e conduz o dia de QUALQUER pessoa
+    // (a regra já o deixa por `adm()`); "ver como usuário" desliga isso.
+    const papel = { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube, platformAdmin: isPlatformAdmin === true };
+    const ehCriador = isGameDayCreator(gameDay, uid);
     return {
       uid,
-      ehCriador: isGameDayCreator(gameDay, uid),
+      ehCriador,
       ehGestorDaArena,
       ehAdminDoClube,
-      ehAdmin: isGameDayAdmin(gameDay, uid, { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube }),
-      podeGerenciar: canManageGameDay(gameDay, uid, opts),
-      podeConfigurar: canConfigureGameDay(gameDay, uid, { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube }),
+      // Está configurando o dia de outra pessoa SÓ por ser admin da plataforma.
+      ehAdminDaPlataforma: papel.platformAdmin && !ehCriador && !ehGestorDaArena && !ehAdminDoClube,
+      ehAdmin: isGameDayAdmin(gameDay, uid, papel),
+      podeGerenciar: canManageGameDay(gameDay, uid, { participants, ...papel }),
+      podeConfigurar: canConfigureGameDay(gameDay, uid, papel),
       // Os GRUPOS do Play são a única configuração que o administrador NOMEADO
       // divide com o criador (ver `canEditPlayGroups`).
-      podeEditarGrupos: canEditPlayGroups(gameDay, uid, { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube }),
+      podeEditarGrupos: canEditPlayGroups(gameDay, uid, papel),
       // Controle de linhas: quem organiza + o administrador nomeado do jogo.
-      podeConfigurarLinhas: canConfigureLineControl(gameDay, uid, { arenaManager: ehGestorDaArena, clubManager: ehAdminDoClube }),
+      podeConfigurarLinhas: canConfigureLineControl(gameDay, uid, papel),
     };
-  }, [gameDay, participants, arenasGeridas, membership, uid]);
+  }, [gameDay, participants, arenasGeridas, membership, uid, isPlatformAdmin]);
 }

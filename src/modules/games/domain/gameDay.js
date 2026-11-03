@@ -15,7 +15,7 @@
  */
 
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
-import { formatDateShortBR } from '@/modules/arenas/domain/calendar.js';
+import { formatDateISO, formatDateShortBR, parseDate } from '@/modules/arenas/domain/calendar.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
 import { t, tk } from '@/core/i18n';
 
@@ -71,18 +71,38 @@ function trimmed(value) {
   return String(value ?? '').trim();
 }
 
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const HORA = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+
+/**
+ * O dia (local, 'YYYY-MM-DD') em que o dia de jogo foi CRIADO — é a data que
+ * vale quando quem cria não escolhe outra. Sem `created_at_ms` (documento
+ * antigo), o dia de hoje.
+ */
+export function gameDayCreationDate(gameDay, now = Date.now()) {
+  const ms = Number(gameDay?.created_at_ms);
+  return formatDateISO(new Date(Number.isFinite(ms) && ms > 0 ? ms : now));
+}
+
 /**
  * Normaliza e valida o input de criação/edição de um dia de jogo.
+ *
+ * Data e horário de INÍCIO são obrigatórios. A data em branco não é erro: vale
+ * `defaultDate` (o dia em que o dia de jogo é criado — quem chama passa
+ * `todayISO()` na criação e `gameDayCreationDate(atual)` na edição). O horário
+ * em branco é erro: não há horário que se possa supor.
+ *
  * @param {object} input
+ * @param {{ defaultDate?: string|null }} [options]
  * @returns {{ valid: boolean, errors: Record<string,string>, value: object }}
  */
-export function normalizeGameDayInput(input = {}) {
+export function normalizeGameDayInput(input = {}, { defaultDate = null } = {}) {
   const value = {
     title: trimmed(input.title).slice(0, GAME_DAY_LIMITS.TITLE_MAX),
     visibility: Object.values(GAME_DAY_VISIBILITY).includes(input.visibility)
       ? input.visibility
       : GAME_DAY_VISIBILITY.PRIVATE,
-    date: trimmed(input.date) || null,
+    date: trimmed(input.date) || trimmed(defaultDate) || null,
     time: trimmed(input.time) || null,
     location: trimmed(input.location).slice(0, 160) || null,
     city: trimmed(input.city).slice(0, 80) || null,
@@ -101,6 +121,8 @@ export function normalizeGameDayInput(input = {}) {
 
   const errors = {};
   if (!value.title) errors.title = t('Dê um nome ao seu dia de jogo.');
+  if (!value.date || !DATA_ISO.test(value.date) || !parseDate(value.date)) errors.date = t('Escolha a data do dia de jogo.');
+  if (!value.time || !HORA.test(value.time)) errors.time = t('Informe o horário de início.');
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }

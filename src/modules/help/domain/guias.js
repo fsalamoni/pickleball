@@ -307,7 +307,7 @@ const GUIAS_BASE = [
         route: '/dia-de-jogo',
         target: 'dia-de-jogo-data',
         title: tk('Quando'),
-        body: tk('Data e horário de início. Local e cidade ajudam quem vem de fora.'),
+        body: tk('Data e horário de início são obrigatórios — a data já vem com hoje. Local e cidade ajudam quem vem de fora.'),
       },
       {
         id: 'formato',

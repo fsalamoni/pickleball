@@ -776,7 +776,7 @@ export default {
   "Dá para tirar férias de novo depois de {diasEntreFerias} dias, para a pausa não virar atalho.": "Se pueden tomar vacaciones de nuevo después de {diasEntreFerias} días, para que la pausa no se vuelva un atajo.",
   "DATA — a reunião não pode ser marcada antes da própria convocação, e depois de registrado o resultado a data não muda mais.": "FECHA — la reunión no puede fijarse antes de su propia convocatoria y, registrado el resultado, la fecha ya no cambia.",
   "Data de nascimento serve para faixa etária em torneios; não vira informação pública.": "La fecha de nacimiento sirve para el rango de edad en torneos; no se vuelve información pública.",
-  "Data e horário de início. Local e cidade ajudam quem vem de fora.": "Fecha y hora de inicio. Lugar y ciudad ayudan a quien viene de afuera.",
+  "Data e horário de início são obrigatórios — a data já vem com hoje. Local e cidade ajudam quem vem de fora.": "La fecha y la hora de inicio son obligatorias — la fecha ya viene con hoy. Lugar y ciudad ayudan a quien viene de afuera.",
   "Datas e prazo": "Fechas y plazo",
   "De 1 a 16 semanas, nos dias e no tempo que você tem.": "De 1 a 16 semanas, en los días y con el tiempo que tienes.",
   "De onde vem o seu XP": "De dónde viene tu XP",

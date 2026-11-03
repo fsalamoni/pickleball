@@ -50,6 +50,16 @@ saíram (nada lia o que gravavam).
   conta oculta/suspensa/bloqueada fora), `notifyUsers` + auditoria
   `admin_broadcast_sent`. Zero coleção.
 
+## Dias de jogo (2026-11-03)
+
+Torneios → **Dias de jogo** (`v2/components/admin/AdminGameDaysTab.jsx`, aba
+`game-days`) lista os dias de jogo de todo mundo, com busca, origem e os
+filtros Próximos, Todos, Passados, Sem data ou horário e Arquivados. Tocar num
+dia abre `/dia-de-jogo/:id`, onde o admin da plataforma configura e conduz o
+dia como se fosse o criador (`platformAdmin` em `gameDayRoles.js`). As mudanças
+vão para a auditoria com o nome dele. Detalhes em
+`docs/15-DIA-DE-JOGO-PERMISSOES.md` §2.
+
 ## Funções no ar (2026-10-23)
 
 Sistema → Diagnóstico abre com o cartão **"Funções no ar"**

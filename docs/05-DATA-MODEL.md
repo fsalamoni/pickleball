@@ -739,6 +739,14 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 - `created_by`, `creator_name`, `creator_photo`
 - `title`, `visibility: 'public'|'private'`, `date`, `time`, `location`,
   `city`, `state`, `notes`, `format`
+  - `date` ('YYYY-MM-DD') e `time` ('HH:MM', o horário de INÍCIO) são
+    obrigatórios desde 2026-11-03 em todo dia NOVO e em toda edição que mexe
+    neles (`normalizeGameDayInput`). Sem data escolhida vale o dia LOCAL da
+    criação (`todayISO()`; na edição, `gameDayCreationDate`). Dia antigo sem
+    horário não é migrado: segue aceitando outras mudanças, e o Painel admin
+    → Torneios → Dias de jogo o aponta em "Sem data ou horário". Dia de
+    arena: a data é obrigatória e o início vem de `arena_slots[].start_time`.
+    Dia de clube: os dois vêm de `date_time` da data do evento.
 - `member_uids[]` — dono + convidados + quem entrou pelo convite (query de
   visibilidade `array-contains`); `invited_uids[]`
 - `open_game_id` — convite público vinculado em `open_games` (`kind='game_day'`)

@@ -14,14 +14,14 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, serverTimestamp, writeBatch, arrayUnion, arrayRemove,
+  query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion, arrayRemove,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
-  normalizeGameDayInput, computeMemberUids, GAME_DAY_STATUS,
+  normalizeGameDayInput, gameDayCreationDate, computeMemberUids, GAME_DAY_STATUS,
   GD_PARTICIPANT_SOURCE, isPublicGameDay, GAME_DAY_VISIBILITY,
 } from '../domain/gameDay.js';
 import { GAME_DAY_MANAGE_MODE } from '../domain/gameDayRoles.js';
@@ -57,6 +57,7 @@ import {
   drawAmericanoLiveRoundForFreeCourts,
 } from '../domain/americanoLive.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
+import { todayISO } from '@/modules/arenas/domain/calendar.js';
 import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
 import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 import { resultFromSets } from '../domain/gameSets.js';
@@ -82,7 +83,8 @@ function displayName(u, p) {
 /** Cria um dia de jogo do atleta autenticado (+ convite público se aplicável). */
 export async function createGameDay(input, actor, profile) {
   if (!actor?.uid) throw new Error(t('É preciso estar autenticado.'));
-  const { valid, errors, value } = normalizeGameDayInput(input);
+  // Sem data escolhida, vale o dia em que o dia de jogo é criado.
+  const { valid, errors, value } = normalizeGameDayInput(input, { defaultDate: todayISO() });
   if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
 
   const id = doc(collection(db, COL)).id;
@@ -134,6 +136,19 @@ export async function listMyGameDays(uid) {
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED)
     .sort((a, b) => Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0));
+}
+
+/**
+ * TODOS os dias de jogo, do criado mais recente ao mais antigo — só para o
+ * Painel admin (a regra deixa só o admin da plataforma ler sem filtro). Um
+ * `orderBy` sozinho, sem `where`: índice de campo único, nenhum composto.
+ * ponytail: corta nos `max` mais recentes; paginar com `startAfter` quando
+ * houver mais dias do que isso.
+ */
+export async function listAllGameDaysForAdmin({ max = 500 } = {}) {
+  if (!db) return [];
+  const snap = await getDocs(query(collection(db, COL), orderBy('created_at_ms', 'desc'), limit(max)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 /**
@@ -244,7 +259,12 @@ export async function updateGameDay(id, patch, actor) {
   if (!current) throw new Error(t('Dia de jogo não encontrado.'));
 
   // Normaliza sobre os valores atuais + patch, mantendo só os campos presentes.
-  const { value } = normalizeGameDayInput({ ...current, ...patch });
+  // A data apagada volta ao dia em que o dia de jogo foi criado; o horário de
+  // início não pode ficar em branco. Só o que a edição TOCA é conferido: um dia
+  // antigo sem horário continua aceitando mudar o formato ou as quadras.
+  const { errors, value } = normalizeGameDayInput({ ...current, ...patch }, { defaultDate: gameDayCreationDate(current) });
+  const erro = ['title', 'date', 'time'].find((k) => k in patch && errors[k]);
+  if (erro) throw new Error(errors[erro]);
   const editable = {};
   ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format', 'play_courts', 'manage_mode']
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
@@ -275,7 +295,7 @@ export async function updateGameDay(id, patch, actor) {
   // Sincroniza o convite público (open_games) conforme a visibilidade resultante.
   const merged = { ...current, ...editable, id };
   const creatorName = current.creator_name || displayName(actor);
-  const creatorPhoto = current.creator_photo || actor?.photoURL || null;
+  const creatorPhoto = current.creator_photo || (actor?.uid === current.created_by ? actor?.photoURL : null) || null;
   // Dia de jogo de ARENA é público para o atleta ENXERGAR na página da arena,
   // não para virar anúncio em "Procura-se jogo" — o canal dele é o calendário
   // da arena. Sem esta guarda, qualquer edição criaria um convite que a arena
@@ -368,7 +388,9 @@ async function publishGameDayInvite(gameDay, actor, creatorName, creatorPhoto) {
     level: null,
     format: 'doubles',
     notes: gameDay.notes || '',
-    created_by: actor.uid,
+    // O convite é de quem CRIOU o dia, mesmo quando o administrador da
+    // plataforma o torna público (a regra de `open_games` deixa o admin).
+    created_by: gameDay.created_by || actor.uid,
     creator_name: creatorName,
     creator_photo: creatorPhoto,
     status: 'open',
