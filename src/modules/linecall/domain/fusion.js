@@ -118,3 +118,25 @@ export function positionOccupancy(positions, cams, nowMs) {
   });
   return out;
 }
+
+/** Por quanto tempo um "revisar" sem decisão segue como "em revisão" no telão (ms). */
+export const REVIEW_HOLD_MS = 90000;
+
+/**
+ * O que o TELÃO diz sobre o controle de linhas: quantas câmeras estão
+ * ANALISANDO, quais posições estão sem câmera ou paradas, e se o último lance
+ * está esperando a palavra de quem organiza.
+ */
+export function telaoLineStatus({ positions = [], cams = [], lances = [], nowMs }) {
+  const occ = positionOccupancy(positions, cams, nowMs);
+  const down = positions.filter((p) => !occ[p]?.analyzing);
+  const last = lances[0];
+  const inReview = Boolean(last && last.call === 'review' && !last.decided && nowMs - last.t_ms <= REVIEW_HOLD_MS);
+  return {
+    total: positions.length,
+    analyzing: positions.length - down.length,
+    down,
+    ready: positions.length > 0 && down.length === 0,
+    inReview: inReview ? last : null,
+  };
+}

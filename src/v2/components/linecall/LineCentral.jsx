@@ -26,6 +26,7 @@ import { useAnnounce, canSpeak } from '@/modules/linecall/hooks/useAnnounce';
 import { clearLineCalls, decideLance } from '@/modules/linecall/services/lineCallSync';
 import CourtDiagram from './CourtDiagram';
 import CourtMark from './CourtMark';
+import CameraInvite from './CameraInvite';
 import { CALL_TEXT, CALL_TONE, CALL_LABEL, callLabel, callDetail, callSpoken } from './callLabels';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
@@ -187,7 +188,10 @@ export default function LineCentral({ gameDay, live, podeLimpar = false }) {
                         {c.name && <span className="text-xs text-gray-500">{c.name}</span>}
                       </>
                     ) : (
-                      <V2Badge tone="neutral">{t('Sem câmera')}</V2Badge>
+                      <>
+                        <V2Badge tone="neutral">{t('Sem câmera')}</V2Badge>
+                        <CameraInvite gameDayId={gameDay.id} position={p} positionLabel={t(CAMERA_POSITIONS[p].label)} />
+                      </>
                     )}
                   </li>
                 );

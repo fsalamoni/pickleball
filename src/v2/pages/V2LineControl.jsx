@@ -17,7 +17,7 @@
 
 import React from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Camera, MonitorPlay, ArrowLeftRight, Radio } from 'lucide-react';
+import { Camera, MonitorPlay, ArrowLeftRight, Radio, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -34,6 +34,7 @@ import { positionOccupancy } from '@/modules/linecall/domain/fusion';
 import CameraStation from '@/v2/components/linecall/CameraStation';
 import LineCentral from '@/v2/components/linecall/LineCentral';
 import LayoutPicker from '@/v2/components/linecall/LayoutPicker';
+import SetupGuide, { useDeviceProfile } from '@/v2/components/linecall/SetupGuide';
 import CourtDiagram from '@/v2/components/linecall/CourtDiagram';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
@@ -148,6 +149,7 @@ export default function V2LineControl() {
   const update = useUpdateGameDay();
   const ativo = Boolean(ligada && gameDay?.line_control === true);
   const live = useLineControlLive(gameDay?.id, { enabled: ativo });
+  const device = useDeviceProfile();
 
   const modo = params.get('modo');
   const posicao = CAMERA_POSITIONS[params.get('posicao')] ? params.get('posicao') : null;
@@ -195,9 +197,19 @@ export default function V2LineControl() {
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm text-gray-600">{t('Este aparelho é a câmera: {p}', { p: t(CAMERA_POSITIONS[posicao].label) })}</p>
-                <V2Button size="sm" variant="ghost" onClick={() => ir({ posicao: null })}>
-                  <ArrowLeftRight className="mr-1.5 h-4 w-4" /> {t('Trocar posição')}
-                </V2Button>
+                <div className="flex flex-wrap gap-2">
+                  {device.kind === 'computer' && (
+                    <V2Button size="sm" variant="secondary"
+                      onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/linhas?modo=camera`, '_blank', 'noopener,noreferrer')}
+                      data-dica="linhas-outra-aba"
+                    >
+                      <Plus className="mr-1.5 h-4 w-4" /> {t('Abrir outra câmera neste computador')}
+                    </V2Button>
+                  )}
+                  <V2Button size="sm" variant="ghost" onClick={() => ir({ posicao: null })}>
+                    <ArrowLeftRight className="mr-1.5 h-4 w-4" /> {t('Trocar posição')}
+                  </V2Button>
+                </div>
               </div>
               <CameraStation key={posicao} gameDayId={gameDay.id} position={posicao} layout={layout.id} layoutPositions={layout.positions} />
             </>
@@ -235,6 +247,7 @@ export default function V2LineControl() {
           {!camera && (
             <p className="text-sm text-gray-600">{t('Para ser uma câmera, entre no dia de jogo como participante (ou peça a quem organiza para usar a conta dele no aparelho).')}</p>
           )}
+          <SetupGuide gameDay={gameDay} podeConfigurar={podeConfigurar} />
           <LayoutSection gameDay={gameDay} podeConfigurar={podeConfigurar} />
         </div>
       );
