@@ -1120,7 +1120,8 @@ const GUIAS_BASE = [
         awayText: tk('Abra o dia de jogo que você organiza: o cartão "Controle de linhas por câmera" fica nele.'),
         target: 'dia-linhas',
         title: tk('Cada quadra liga o seu'),
-        body: tk('O cartão lista as quadras do dia. Ligue só as que vão ter câmera — pode ser com o jogo em andamento.'),
+        body: tk('Toque no cartão para abrir: ele lista as quadras do dia. Ligue só as que vão ter câmera — pode ser com o jogo em andamento.'),
+        advanceOn: { appears: 'linhas-quadras' },
       },
       {
         id: 'arranjo',

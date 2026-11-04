@@ -17,8 +17,13 @@ Com a flag ligada, quem **organiza** o dia — criador, gestor da arena, admin d
 clube e o **administrador nomeado** (`canConfigureLineControl`,
 `useGameDayRoles().podeConfigurarLinhas`; a regra é `lineOrgOf`) — vê o cartão
 **Controle de linhas por câmera** dentro do `GameDayModule` (as três origens por
-construção). O cartão é o `LineCourtsBoard`, o MESMO quadro da página de linhas
-do dia e da do torneio:
+construção). É um `V2CollapsibleCard` como os demais cartões do dia (seção
+`GAME_DAY_SECTION.LINE_CONTROL`, `gameday:line-control`, preferência por
+pessoa): para quem organiza nasce **recolhido**, e o cabeçalho diz como está
+("Quadra 1: 1 câmera(s) · Quadra 3: 5 câmera(s)" ou "Desligado nas 3
+quadra(s)"); abrir é para mudar. Para quem só participa nasce aberto. Por
+dentro, o `LineCourtsBoard`, o MESMO quadro da página de linhas do dia e da do
+torneio:
 
 - **as quadras do dia** (`gameDayLineCourts`, `domain/gameDayLine.js`): de 1 a
   `play_courts`, mais as quadras dos jogos já criados e as que já têm

@@ -2587,7 +2587,7 @@ export default {
   "Quadra por quadra: quais têm câmera, quantas e em que arranjo.": "Court by court: which have cameras, how many and in which layout.",
   "Abra o dia de jogo que você organiza: o cartão \"Controle de linhas por câmera\" fica nele.": "Open the game day you organize: the \"Camera line calling\" card is there.",
   "Cada quadra liga o seu": "Each court turns its own on",
-  "O cartão lista as quadras do dia. Ligue só as que vão ter câmera — pode ser com o jogo em andamento.": "The card lists the day's courts. Turn on only the ones that will have cameras — even with the game under way.",
+  "Toque no cartão para abrir: ele lista as quadras do dia. Ligue só as que vão ter câmera — pode ser com o jogo em andamento.": "Tap the card to open it: it lists the day's courts. Turn on only the ones that will have cameras — even with the game under way.",
   "Quantas câmeras em cada quadra": "How many cameras on each court",
   "Em cada quadra ligada, escolha o arranjo: de 1 a 5 câmeras. Uma quadra pode ter uma câmera e a do lado, cinco.": "On each court that is on, choose the layout: 1 to 5 cameras. One court can have one camera and the next one five.",
   "\"Abrir câmera\" e \"Abrir central\" já levam à quadra certa; \"Copiar para os meus próximos dias de jogo\" repete a configuração.": "\"Open camera\" and \"Open hub\" already go to the right court; \"Copy to my upcoming game days\" repeats the setup.",

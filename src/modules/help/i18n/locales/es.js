@@ -2587,7 +2587,7 @@ export default {
   "Quadra por quadra: quais têm câmera, quantas e em que arranjo.": "Cancha por cancha: cuáles tienen cámara, cuántas y en qué disposición.",
   "Abra o dia de jogo que você organiza: o cartão \"Controle de linhas por câmera\" fica nele.": "Abre el día de juego que organizas: la tarjeta \"Control de líneas por cámara\" está ahí.",
   "Cada quadra liga o seu": "Cada cancha activa el suyo",
-  "O cartão lista as quadras do dia. Ligue só as que vão ter câmera — pode ser com o jogo em andamento.": "La tarjeta lista las canchas del día. Activa solo las que tendrán cámara — puede ser con el juego en marcha.",
+  "Toque no cartão para abrir: ele lista as quadras do dia. Ligue só as que vão ter câmera — pode ser com o jogo em andamento.": "Toca la tarjeta para abrirla: lista las canchas del día. Activa solo las que tendrán cámara — puede ser con el juego en marcha.",
   "Quantas câmeras em cada quadra": "Cuántas cámaras en cada cancha",
   "Em cada quadra ligada, escolha o arranjo: de 1 a 5 câmeras. Uma quadra pode ter uma câmera e a do lado, cinco.": "En cada cancha activada, elige la disposición: de 1 a 5 cámaras. Una cancha puede tener una cámara y la de al lado, cinco.",
   "\"Abrir câmera\" e \"Abrir central\" já levam à quadra certa; \"Copiar para os meus próximos dias de jogo\" repete a configuração.": "\"Abrir cámara\" y \"Abrir central\" ya llevan a la cancha correcta; \"Copiar a mis próximos días de juego\" repite la configuración.",

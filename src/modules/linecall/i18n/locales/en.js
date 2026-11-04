@@ -472,4 +472,6 @@ export default {
   "Pé {d} cm dentro da cozinha {q} (±{u} cm)": "Foot {d} cm inside the kitchen {q} (±{u} cm)",
   "Quem organiza o jogo liga o controle de linhas de cada quadra.": "Whoever organizes the game turns on line control for each court.",
   "Quadra não encontrada neste dia de jogo": "Court not found in this game day",
+  "Desligado nas {total} quadra(s)": "Off on all {total} court(s)",
+  "Quadra {n}: {cams} câmera(s)": "Court {n}: {cams} camera(s)",
 };

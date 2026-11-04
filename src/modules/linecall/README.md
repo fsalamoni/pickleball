@@ -32,7 +32,7 @@ caminho da quadra). As regras do jogo julgadas, com o número da regra: docs/53 
 - `hooks/useAnnounce.js` — toque na hora (`domain/alertTones.js` + `services/alertSound.js`), vibração e voz (preferências por pessoa); só a falta é dita, e no aparelho que filma o "revisar" fica calado.
 - `hooks/useLineControlLive.js` — a central: câmeras no ar e lances juntados (tempo real).
 
-Telas: `v2/components/games/GameDayLineControlCard.jsx` (no `GameDayModule`),
+Telas: `v2/components/games/GameDayLineControlCard.jsx` (no `GameDayModule`, colapsável como os demais cartões do dia),
 `v2/pages/V2LineControl.jsx` (`/dia-de-jogo/:id/linhas`, `?quadra=court-N&modo=camera|central`),
 `v2/pages/V2TournamentLineControl.jsx` (`/torneios/:id/linhas`) e
 `v2/components/linecall/` (`LineCourtsBoard` — o quadro das quadras, o mesmo

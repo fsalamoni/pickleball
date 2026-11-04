@@ -16,7 +16,9 @@ import React from 'react';
 import { toast } from 'sonner';
 import { ScanLine, CopyCheck } from 'lucide-react';
 
-import { V2Surface, V2Button, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState } from '@/v2/ui/primitives';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -24,6 +26,7 @@ import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useMyGameDays, useGameDayGames } from '@/modules/games/hooks/useGameDays';
 import { useGameDayLineCourts, useSaveGameDayLineCourts } from '@/modules/linecall/hooks/useGameDayLineCourts';
 import { canBeLineCamera, gameDayLineCourts, gameDayLinePage, lineCourtCopyPlan } from '@/modules/linecall/domain/gameDayLine';
+import { layoutById } from '@/modules/linecall/domain/cameraLayouts';
 import { todayISO } from '@/modules/arenas/domain/calendar';
 import LineCourtsBoard from '@/v2/components/linecall/LineCourtsBoard';
 import { t } from '@/core/i18n';
@@ -45,9 +48,17 @@ function LineControlCard({ gameDay }) {
   const meus = useMyGameDays({ enabled: podeConfigurar });
   const docs = Object.fromEntries((quadras.data || []).map((d) => [d.id, d]));
   const courts = gameDayLineCourts(gameDay, { games: jogos.data || [], docs: quadras.data || [] });
-  const algumaLigada = courts.some((c) => docs[c.id]?.line_control === true);
+  const ligadas = courts.filter((c) => docs[c.id]?.line_control === true);
+  const algumaLigada = ligadas.length > 0;
 
   if (!podeConfigurar && !algumaLigada) return null;
+
+  // O resumo diz como está, quadra por quadra: abrir o cartão é para mudar.
+  const resumo = !quadras.isSuccess ? null
+    : !algumaLigada ? t('Desligado nas {total} quadra(s)', { total: courts.length })
+      : ligadas.map((c) => t('Quadra {n}: {cams} câmera(s)', {
+        n: c.index, cams: layoutById(docs[c.id]?.line_control_layout).positions.length,
+      })).join(' · ');
 
   const gravar = (items, ok) => salvar.mutate(
     items.map((i) => ({ ...i, gameDayId: i.gameDayId || gameDay.id })),
@@ -71,18 +82,20 @@ function LineControlCard({ gameDay }) {
   };
 
   return (
-    <V2Surface className="space-y-3 p-4" data-dica="dia-linhas">
-      <div className="flex items-start gap-3">
-        <ScanLine className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">{t('Controle de linhas por câmera')}</p>
-          <p className="text-xs leading-5 text-gray-500">
-            {podeConfigurar
-              ? t('Ligue em cada quadra que vai ter câmera e escolha quantas câmeras ela usa — cada quadra pode ter um número diferente. As câmeras marcam bola fora, saque fora da área ou na cozinha, pé na cozinha no voleio, pé no saque e dois quiques. Pode ligar com o jogo em andamento.')
-              : t('As câmeras acompanham as linhas das quadras ligadas. Quem participa pode usar o próprio celular como uma delas. Na dúvida, a câmera diz "revisar" e a decisão volta para a quadra.')}
-          </p>
-        </div>
-      </div>
+    <V2CollapsibleCard
+      icon={ScanLine}
+      title={t('Controle de linhas por câmera')}
+      summary={resumo}
+      dica="dia-linhas"
+      sectionId={GAME_DAY_SECTION.LINE_CONTROL}
+      defaultCollapsed={podeConfigurar}
+    >
+      <div className="space-y-3">
+      <p className="text-xs leading-5 text-gray-500">
+        {podeConfigurar
+          ? t('Ligue em cada quadra que vai ter câmera e escolha quantas câmeras ela usa — cada quadra pode ter um número diferente. As câmeras marcam bola fora, saque fora da área ou na cozinha, pé na cozinha no voleio, pé no saque e dois quiques. Pode ligar com o jogo em andamento.')
+          : t('As câmeras acompanham as linhas das quadras ligadas. Quem participa pode usar o próprio celular como uma delas. Na dúvida, a câmera diz "revisar" e a decisão volta para a quadra.')}
+      </p>
       {quadras.isError ? (
         <V2ErrorState inline onRetry={quadras.refetch} />
       ) : quadras.isLoading ? null : (
@@ -102,6 +115,7 @@ function LineControlCard({ gameDay }) {
           <CopyCheck className="mr-1.5 h-4 w-4" /> {t('Copiar para os meus próximos dias de jogo')}
         </V2Button>
       )}
-    </V2Surface>
+      </div>
+    </V2CollapsibleCard>
   );
 }
