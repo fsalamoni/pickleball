@@ -15,7 +15,7 @@ import { usePeriodReview } from '@/modules/progression/hooks/usePeriodReview';
 import { useGameRecords } from '@/modules/progression/hooks/useGameRecords';
 import { useUserCurrentSeason } from '@/modules/progression/hooks/useUserSeasonRanking';
 import { buildEligibilitySnapshot } from '@/modules/progression/domain/rewards';
-import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
+import { getAchievementV2ById } from '@/modules/achievements/domain/achievementsV2';
 import TierBadge from '@/modules/progression/components/TierBadge';
 import SkillTreeBars from '@/modules/progression/components/SkillTreeBars';
 import ReferralCard from '@/modules/progression/components/ReferralCard';
@@ -137,7 +137,7 @@ function V2GamificationHomeOn() {
       if (telemetryOn) track('gamification_mission_completed', { mission_id: m.id, xp: m.xp });
     },
     onAchievementUnlocked: (a) => {
-      setCelebratedAchievement(ACHIEVEMENTS_V2.find((def) => def.id === a.achievementId) || null);
+      setCelebratedAchievement(getAchievementV2ById(a.achievementId));
       if (telemetryOn) track('gamification_achievement_unlocked', { achievement_id: a.achievementId, family: a.family, rarity: a.rarity });
     },
   });

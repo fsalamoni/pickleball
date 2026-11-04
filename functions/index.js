@@ -2085,6 +2085,7 @@ exports.clubAssociationSweep = onSchedule(
 // `functions/career.js`. `career_partner` é escrita de terceiro: só o servidor.
 // =====================================================================
 const career = require('./career');
+const careerXp = require('./careerXp');
 exports.career = federationCallable('career', career.career);
 
 /** O torneio de fora mudou: impressão ("confirmar de novo"), pedidos órfãos e o vínculo das duas fichas. */
@@ -2095,6 +2096,24 @@ exports.careerEventWritten = onDocumentWritten(
       await career.eventWritten(fedCtx(), event.params.id, antes(event), depois(event));
     } catch (err) {
       logger.error('careerEventWritten: erro.', err);
+    }
+    // O XP da ficha completa falha sozinho: a dupla não espera por ele, nem ele pela dupla.
+    try {
+      await careerXp.onEvent(fedCtx(), event.params.id, antes(event), depois(event));
+    } catch (err) {
+      logger.error('careerEventWritten: erro no XP da ficha.', err);
+    }
+  },
+);
+
+/** O balanço de um torneio de fora (`{uid}_externo_{evento}`) completa ou descompleta a ficha. */
+exports.careerDebriefWritten = onDocumentWritten(
+  { document: 'training_debriefs/{id}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    try {
+      await careerXp.onDebrief(fedCtx(), event.params.id, antes(event), depois(event));
+    } catch (err) {
+      logger.error('careerDebriefWritten: erro.', err);
     }
   },
 );

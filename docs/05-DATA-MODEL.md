@@ -2850,7 +2850,11 @@ O servidor a lê para respeitar as escolhas.
 #### `user_xp_grants/{uid}_{kind}_{ref}`
 Crédito de XP. `uid`, `kind`, `xp`, `label`, `refId`, `at`, `serverAt`,
 `schemaVersion`. Só o servidor escreve (com `create`, para nunca creditar duas
-vezes). Lê o dono ou o admin.
+vezes). Lê o dono ou o admin. `kind`: `season`, `duel`, `challenge`, `event`,
+`admin`, `career`. O de `career` (ficha completa da Minha carreira,
+`functions/careerXp.js`) leva também `month` (AAAA-MM de Brasília, para o teto
+mensal) e, quando a ficha é desfeita, `xp: 0` + `revoked_at` — o documento
+fica, para a mesma ficha não pagar de novo (docs/54 §4.6a).
 
 #### `gamification_moderation/{uid}`
 `excluded`, `hiddenFromPublic`, `reason`, `by`, `at`. Só o admin lê e escreve;

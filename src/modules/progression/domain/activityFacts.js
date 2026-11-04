@@ -31,14 +31,22 @@
 import { instanteEmMs } from '@/core/domain/instant.js';
 import { missionDateKey } from './missionDay.js';
 import { hasDeclaredLevel, isRegistrationComplete } from '@/core/lib/profileValidation.js';
+import { careerHabitCounts } from '@/modules/career/domain/careerHabits.js';
 
 /** Nomes das fontes — o contrato entre o serviço que busca e quem monta. */
 export const FACT_SOURCES = Object.freeze([
   'following', 'followers', 'bookings', 'lessons', 'clinicSignups', 'packageSales',
   'clubs', 'clubEventsCreated', 'gameDaysCreated', 'arenaReviews', 'kudosIndex',
   'sentKudos', 'referral', 'consents', 'matchReviews', 'partnerLetters', 'reputation',
-  'challengeEntries', 'registrations', 'debriefs',
+  'challengeEntries', 'registrations', 'debriefs', 'careerEvents', 'careerGoals',
 ]);
+
+/**
+ * As fontes da Minha carreira (flag `athlete_career`). Com a flag desligada
+ * elas nem são buscadas e saem de `unknown`: não há o que medir, e a família
+ * de conquistas não existe para a pessoa (`computeAchievementsV2` com `career`).
+ */
+export const CAREER_FACT_SOURCES = Object.freeze(['careerEvents', 'careerGoals']);
 
 /** Quanto tempo depois de acabar a reserva ela vale como "jogada". */
 const STATUS_RESERVA_JOGADA = new Set(['completed']);
@@ -75,10 +83,12 @@ function dataDaReserva(r) {
 
 /**
  * @param {Record<string, any>} src fontes (ver `FACT_SOURCES`); `undefined` = não carregou
- * @param {{ profile?: object|null, now?: Date }} [ctx]
+ * @param {{ profile?: object|null, now?: Date, career?: boolean }} [ctx] `career`: a flag da Minha carreira
  */
-export function buildActivityFacts(src = {}, { profile = null, now = new Date() } = {}) {
-  const unknown = FACT_SOURCES.filter((nome) => src[nome] === undefined || src[nome] === null);
+export function buildActivityFacts(src = {}, { profile = null, now = new Date(), career = false } = {}) {
+  const unknown = FACT_SOURCES
+    .filter((nome) => career || !CAREER_FACT_SOURCES.includes(nome))
+    .filter((nome) => src[nome] === undefined || src[nome] === null);
   const conhecido = (nome) => !unknown.includes(nome);
   const agoraMs = now.getTime();
 
@@ -118,9 +128,17 @@ export function buildActivityFacts(src = {}, { profile = null, now = new Date() 
   const kudos = src.kudosIndex || null;
   const referral = src.referral || null;
 
+  // Minha carreira: só CONTAGENS de hábito (registrar, completar, refletir) —
+  // a colocação declarada não entra em nada (guarda `carreiraNaoPontua`).
+  const carreira = career ? careerHabitCounts({
+    events: lista(src.careerEvents) || [], goals: lista(src.careerGoals) || [],
+    debriefs: lista(src.debriefs) || [], hoje: missionDateKey(now),
+  }) : null;
+
   return {
     unknown,
     known: conhecido,
+    career: Boolean(career),
     profile: {
       hasPhoto: Boolean(String(profile?.photo_url || '').trim()),
       hasLevel: profile ? hasDeclaredLevel(profile) : false,
@@ -161,6 +179,10 @@ export function buildActivityFacts(src = {}, { profile = null, now = new Date() 
       challengesJoined: challengeEntries.length,
       tournamentRegistrations: registrations.length,
       debriefs: debriefs.length,
+      careerRecords: carreira ? carreira.records : 0,
+      careerCompleteRecords: carreira ? carreira.completeRecords : 0,
+      careerDebriefs: carreira ? carreira.debriefs : 0,
+      careerProcessGoalsDone: carreira ? carreira.processGoalsDone : 0,
     },
     /** Datas (ms) de cada tipo de ato — o que permite recortar semana e mês. */
     dates: {
@@ -301,6 +323,16 @@ export function achievementUserFromFacts(facts, base = {}) {
   set('legal_consents', c.policyAccepted ? ['aceito'] : [], 'consents');
   set('letters_sent', c.lettersSent, 'partnerLetters');
   set('match_reviews_5star', c.fiveStarReceived, 'reputation');
+  if (facts?.career) {
+    // Os registros sem os balanços (ou o contrário) contariam pela metade:
+    // as três contagens exigem as duas fontes. Falhou = "não deu para medir".
+    if (ok('careerEvents') && ok('debriefs')) {
+      user.career_records = c.careerRecords;
+      user.career_complete_records = c.careerCompleteRecords;
+      user.career_debriefs = c.careerDebriefs;
+    }
+    set('career_process_goals_done', c.careerProcessGoalsDone, 'careerGoals');
+  }
   set('november_purchase', facts?.dates?.packages ? monthsFromDates(facts.dates.packages)[10] : 0, 'packageSales');
   return user;
 }

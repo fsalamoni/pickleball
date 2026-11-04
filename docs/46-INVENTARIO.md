@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 245 |
 | Blocos `match` (raiz + subcoleções) | 270 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 123 |
+| Cloud Functions exportadas | 124 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 10 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 13 |
-| Arquivos de teste (`*.test.js(x)`) | 940 |
+| Arquivos de teste (`*.test.js(x)`) | 942 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 60 |
 
@@ -42,7 +42,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `analytics` | 1 | · | 1 | 1 | · | · | sim |
 | `arenas` | 62 | 24 | 17 | 6 | · | 2 | sim |
 | `athletes` | 8 | 1 | 2 | 1 | · | · | sim |
-| `career` | 9 | 2 | 1 | · | · | 2 | sim |
+| `career` | 10 | 2 | 1 | · | · | 2 | sim |
 | `chat` | 2 | 1 | 1 | 1 | · | · | sim |
 | `circuits` | 1 | 1 | 1 | · | · | · | sim |
 | `clubs` | 21 | 15 | 14 | 7 | · | 2 | sim |
@@ -84,7 +84,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `analytics` | 2 | `games`, `tournament` | — |
 | `arenas` | 9 | `clubs`, `coaches`, `federations`, `games`, `home`, `marketplace`, `promo`, `tournament`, `trophies` | `athletes`, `clubs`, `games`, `rating`, `sharing`, `tournament` |
 | `athletes` | 12 | `admin`, `arenas`, `chat`, `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `search`, `tournament`, `trophies` | `games`, `performance`, `rating`, `tournament` |
-| `career` | 0 | — | `federations`, `games`, `progression`, `tournament`, `training`, `trophies` |
+| `career` | 1 | `progression` | `federations`, `games`, `progression`, `tournament`, `training`, `trophies` |
 | `chat` | 0 | — | `athletes` |
 | `circuits` | 0 | — | — |
 | `clubs` | 6 | `arenas`, `games`, `help`, `home`, `progression`, `training` | `arenas`, `athletes`, `federations`, `games`, `tournament` |
@@ -103,7 +103,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `notifications` | 1 | `messaging` | — |
 | `partners` | 0 | — | — |
 | `performance` | 3 | `athletes`, `games`, `progression` | `games`, `tournament` |
-| `progression` | 4 | `achievements`, `career`, `help`, `training` | `achievements`, `athletes`, `clubs`, `coaches`, `games`, `performance`, `rating` |
+| `progression` | 4 | `achievements`, `career`, `help`, `training` | `achievements`, `athletes`, `career`, `clubs`, `coaches`, `games`, `performance`, `rating` |
 | `promo` | 1 | `coaches` | `arenas`, `coaches`, `federations` |
 | `rating` | 8 | `admin`, `arenas`, `athletes`, `coaches`, `games`, `progression`, `tournament`, `training` | `athletes`, `games`, `leveling`, `tournament` |
 | `search` | 0 | — | `athletes` |
@@ -439,6 +439,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `clubAssociationSweep` | agendada | `every day 05:20` |
 | `career` | federationCallable |  |
 | `careerEventWritten` | gatilho Firestore | `career_events/{id}` |
+| `careerDebriefWritten` | gatilho Firestore | `training_debriefs/{id}` |
 | `careerReminders` | agendada | `0 9 * * *` |
 
 ## 8. Feature flags

@@ -33,7 +33,7 @@ describe('AdminGamificationConfig', () => {
   it('lista todos os módulos por grupo, com a explicação de cada um', async () => {
     await render();
     ['Jornada do atleta', 'Competição e recompensas', 'Social', 'Quem oferece'].forEach((g) => expect(container.textContent).toContain(g));
-    expect(container.querySelectorAll('[role="switch"][id^="mod-"]').length).toBe(13);
+    expect(container.querySelectorAll('[role="switch"][id^="mod-"]').length).toBe(14);
     expect(container.textContent).toContain('Duelo da semana');
   });
 
@@ -103,12 +103,12 @@ describe('AdminGamificationConfig', () => {
   it('⭐ os números vêm agrupados pela parte da gamificação (temporada, duelo, avaliações, integridade)', async () => {
     await render();
     const grupos = Array.from(container.querySelectorAll('[data-grupo]')).map((g) => g.getAttribute('data-grupo'));
-    expect(grupos).toEqual(['season', 'duels', 'reviews', 'antiFarm']);
+    expect(grupos).toEqual(['season', 'duels', 'reviews', 'antiFarm', 'career']);
     expect(container.querySelector('[data-grupo="season"] [id="cfg-mintier"]')).not.toBeNull();
     expect(container.querySelector('[data-grupo="duels"] [id="cfg-duels.maxLevelGap"]')).not.toBeNull();
     expect(container.querySelector('[data-grupo="antiFarm"] [id="cfg-antiFarm.kudosRingMin"]')).not.toBeNull();
     // todo campo editável continua existindo (nada se perdeu no agrupamento)
-    expect(container.querySelectorAll('input[id^="cfg-"][type="number"]').length).toBe(11);
+    expect(container.querySelectorAll('input[id^="cfg-"][type="number"]').length).toBe(13);
   });
 
   it('⭐ módulo desligado: o grupo diz que o valor só vale quando ele for ligado — e o campo segue editável', async () => {

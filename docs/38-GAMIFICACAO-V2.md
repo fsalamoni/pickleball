@@ -17,7 +17,7 @@ desafios e recompensas** — sem cobrança. Ninguém perde pontos por ficar para
 | Professor | Saúde da base, metas, desafios e recompensas para os alunos | Painel do professor (`/aulas`) → Engajamento (`?aba=engajamento`) |
 | Arena | Saúde, metas, desafios e recompensas para quem joga na arena | Central → Desempenho → Engajamento (`?aba=engajamento`) |
 | Clube | Atividade, metas, desafios e recompensas do clube | Central do clube → Engajamento (`/clubes/:id/gerir?aba=engajamento`, só a administração) |
-| Admin da plataforma | Configuração (13 módulos, regras, temporada), desafios e recompensas da plataforma, integridade (revisão antifarm) e métricas | Painel admin → Gamificação (`gam-config`, `gam-challenges`, `gam-rewards`, `gam-integrity`, `gam-metrics`) |
+| Admin da plataforma | Configuração (14 módulos, regras, temporada), desafios e recompensas da plataforma, integridade (revisão antifarm) e métricas | Painel admin → Gamificação (`gam-config`, `gam-challenges`, `gam-rewards`, `gam-integrity`, `gam-metrics`) |
 
 ## 2. Princípios que não podem regredir
 
@@ -60,9 +60,18 @@ Cada uma tem teste que falha sem ela:
 - **Exclusão e exportação** — as coleções da gamificação entraram na exclusão de conta e a exportação ganhou o bloco `gamification` (`gamificationExportService.js`); tabela em `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`. O guarda `exclusaoCobreColecoes.test.js` vigia a família inteira.
 - **Metas pessoais** — o `GoalsCard` de Meu desempenho diz "Não deu para carregar as metas" com "Tentar de novo" quando a leitura falha, em vez de "Você ainda não definiu metas".
 
+### 4.2 XP da Minha carreira (PR 5 da carreira, 2026-11-04)
+
+- **`kind: 'career'`** em `user_xp_grants`, nos dois lados (`XP_GRANT_KIND.CAREER` no cliente, `XP_GRANT_KINDS` no servidor; paridade em `serverParity.test.js`). Grants antigos e os outros tipos não mudam.
+- Quem grava é `functions/careerXp.js` (`sync`), chamado por `careerEventWritten` e pelo gatilho novo `careerDebriefWritten` (`training_debriefs/{id}`; só o balanço `externo` faz algo). Id `{uid}_career_{eventoId}`; campo extra `month` (AAAA-MM de Brasília) para o teto.
+- Configuração nova `career: { xpPerRecord: 25, monthlyCap: 4 }` em `platform_settings/gamification` (faixas 0–100 e 0–20; paridade cliente × servidor), editável em Painel admin → Gamificação → Configuração → "Minha carreira".
+- O resultado declarado rende 0: só a ficha completa (resultado + foto + balanço) paga, uma vez; apagar ou descompletar ZERA (`xp: 0`); o teto conta os zerados. Regras completas em `docs/54-CARREIRA-DO-ATLETA.md` §4.6a.
+- Família de conquistas `my_career` (`CAREER_ACHIEVEMENTS`), só com a flag `athlete_career` (`computeAchievementsV2(user, { career })`); fontes `careerEvents`/`careerGoals` em `FACT_SOURCES`, buscadas só com a flag. Guarda `carreiraNaoPontua.test.js`. A família **não é gravada** em `user_achievements_v2` (legível por toda conta logada; a carreira é privada): só o dono a vê, calculada. Menor de 18 (ou nascimento desconhecido) não ganha o XP de carreira; ficha barrada pelo teto não é reprocessada (docs/54 §4.6a).
+- Guia: termo `ficha-completa` (módulo `career_xp`) e uma pergunta, montados por `buildGamificationGuide(config, { career })`, com os números da configuração.
+
 ## 5. Módulos ligáveis pelo admin
 
-`missions_weekly`, `missions_monthly`, `onboarding`, `weekly_review`, `celebrations`, `hall_of_fame`, `duels`, `challenges`, `rewards`, `match_reviews`, `partner_letters`, `social_bonds`, `supply_panels`. Módulo desligado some da tela (nunca aparece desabilitado) e **não consulta**.
+`missions_weekly`, `missions_monthly`, `onboarding`, `weekly_review`, `celebrations`, `hall_of_fame`, `duels`, `challenges`, `rewards`, `match_reviews`, `partner_letters`, `social_bonds`, `supply_panels`, `career_xp` (XP da ficha completa da Minha carreira; o servidor confere o módulo E a flag `athlete_career`). Módulo desligado some da tela (nunca aparece desabilitado) e **não consulta**.
 
 ## 6. Mapa do código
 

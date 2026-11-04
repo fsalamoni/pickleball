@@ -88,6 +88,11 @@ export const GAMIFICATION_MODULES = Object.freeze({
     description: tk('Health score, metas do mês e sugestões para quem oferece aulas, quadras e comunidade.'),
     grupo: 'oferta',
   },
+  career_xp: {
+    label: tk('XP da Minha carreira'),
+    description: tk('A ficha completa de um torneio de fora (resultado, foto e balanço) rende um XP pequeno, com teto por mês. O resultado declarado não rende nada. Só vale com a Minha carreira ligada.'),
+    grupo: 'jornada',
+  },
 });
 
 export const GAMIFICATION_MODULE_GROUPS = Object.freeze([
@@ -136,6 +141,11 @@ export const DEFAULT_GAMIFICATION_CONFIG = Object.freeze({
     duels: true,
     challengeResults: true,
   }),
+  /** Minha carreira: XP da ficha completa e o teto de fichas pagas por mês (servidor, `careerXp.js`). */
+  career: Object.freeze({
+    xpPerRecord: 25,
+    monthlyCap: 4,
+  }),
 });
 
 /** Faixa válida de cada número editável (o admin não consegue sair dela). */
@@ -151,6 +161,8 @@ export const GAMIFICATION_CONFIG_LIMITS = Object.freeze({
   'antiFarm.xpJumpPerDay': [500, 50000],
   'antiFarm.kudosRingMin': [3, 30],
   'antiFarm.unverifiedXpFactor': [1.5, 10],
+  'career.xpPerRecord': [0, 100],
+  'career.monthlyCap': [0, 20],
 });
 
 const TIERS_PUBLICOS = ['Calouro', 'Aprendiz', 'Jogador', 'Regular', 'Veterano', 'Expert', 'Elite', 'Lenda', 'Imortal'];
@@ -211,6 +223,10 @@ export function normalizeGamificationConfig(bruto) {
       weeklyReview: bool(src.notifications?.weeklyReview, d.notifications.weeklyReview),
       duels: bool(src.notifications?.duels, d.notifications.duels),
       challengeResults: bool(src.notifications?.challengeResults, d.notifications.challengeResults),
+    },
+    career: {
+      xpPerRecord: inteiro(src.career?.xpPerRecord, d.career.xpPerRecord, L['career.xpPerRecord']),
+      monthlyCap: inteiro(src.career?.monthlyCap, d.career.monthlyCap, L['career.monthlyCap']),
     },
   };
 }

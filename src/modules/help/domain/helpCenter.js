@@ -2040,6 +2040,24 @@ const ATLETA = {
       ],
     },
     {
+      id: 'carreira-xp',
+      flags: ['athlete_career'],
+      title: tk('A carreira na gamificação: ficha completa e conquistas'),
+      summary: tk('O que a Minha carreira rende de XP e de conquistas — e por que o resultado declarado não rende nada.'),
+      keywords: ['xp', 'ficha completa', 'gamificação', 'conquista', 'historiador', 'teto', 'carreira', 'pontos', 'nível'],
+      blocks: [
+        p(tk('A plataforma premia registrar e refletir sobre os torneios de fora, nunca o resultado que você digitou: campeão e fase de grupos rendem o mesmo.')),
+        list(
+          tk('FICHA COMPLETA — a ficha de um torneio já jogado com a colocação de cada categoria, ao menos uma foto e o balanço respondido rende um pouco de XP, concedido pelo servidor, uma vez por torneio e com teto por mês. Os valores de hoje estão no guia da gamificação.'),
+          tk('DESFAZER — apagar o registro, tirar a foto ou apagar o balanço zera o XP daquela ficha. Refazer a mesma ficha não rende de novo.'),
+          tk('FORA DA TEMPORADA — o XP da ficha não entra no placar da temporada, como os outros prêmios do servidor. O torneio ligado a um do PickleRush ("É este") não rende: o oficial já conta.'),
+          tk('CONQUISTAS — a família "Minha carreira" tem conquistas de hábito: o primeiro registro, a coleção de registros, as fichas completas, balanços e a meta de processo cumprida.'),
+        ),
+        link('/gamification/como-funciona?termo=ficha-completa', tk('Os valores exatos, no guia')),
+        warn(tk('O resultado declarado nunca entra em ranking, rating, placar da temporada nem conquista.')),
+      ],
+    },
+    {
       id: 'balanco-do-jogo',
       title: tk('O balanço do jogo e a semana de treino sugerida'),
       summary: tk('Depois de jogar, contar como foi — e receber drills para a semana.'),
@@ -2907,7 +2925,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
   // Minha carreira (as abas são `?aba=`, por isso sem `/carreira/*`).
   { pattern: '/carreira', label: tk('a sua carreira'),
-    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos'], [HELP_SECTION.ATHLETE, 'carreira-dupla']] },
+    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos'], [HELP_SECTION.ATHLETE, 'carreira-dupla'], [HELP_SECTION.ATHLETE, 'carreira-xp']] },
   { pattern: '/circuits', label: tk('circuitos'),
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: tk('seus jogos'),

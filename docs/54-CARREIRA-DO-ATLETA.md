@@ -299,6 +299,64 @@ da plataforma já está na aba Torneios, não se repete aqui. Torneio do modo
 lista mostra só o ano (`dateLabel`), na estante e no cartão. Ver
 `docs/43-TROFEUS-E-CARTOES.md`.
 
+### 4.6a Gamificação da carreira (PR 5)
+
+Premia **registrar, refletir e completar**; o resultado declarado rende
+**zero**. O motor de XP continua um só (`useGamificationEngine`).
+
+- **Ficha completa** — torneio de fora JÁ JOGADO (`status: 'played'`, data
+  até hoje) com a colocação de toda participação, ao menos uma foto e o
+  balanço `externo` respondido. A foto só conta se o `path` está na pasta da
+  pessoa (`carreira/{uid}/`): a regra do registro é rasa e `photos: [{}]`
+  gravado pelo SDK não completa nada. A régua é `isCompleteCareerRecord`
+  (`career/domain/careerHabits.js`) com cópia no servidor
+  (`functions/careerXp.js`, paridade em `careerHabits.test.js`). A dupla não
+  entra (plano §7.1).
+- **XP da ficha** — `user_xp_grants/{uid}_career_{eventoId}` (`kind:
+  'career'`, campo novo `month` AAAA-MM de Brasília), gravado SÓ pelo
+  servidor: o gatilho do registro (`careerEventWritten`) e o do balanço
+  (`careerDebriefWritten`, `training_debriefs/{uid}_externo_{evento}`)
+  chamam `careerXp.sync`, numa transação. `career.xpPerRecord` (padrão 25)
+  e `career.monthlyCap` (padrão 4) vêm de `platform_settings/gamification`.
+  Paga só com a flag E o módulo de gamificação `career_xp` ligados.
+  - campeão e fase de grupos pagam o mesmo (o VALOR da colocação nunca é lido);
+  - a mesma ficha nunca paga duas vezes (o documento existe ⇒ não paga);
+  - registro apagado, foto ou balanço retirados ⇒ grant ZERADO (`xp: 0`,
+    `revoked_at`), não apagado — refazer não paga de novo;
+  - o teto conta todos os grants de carreira do mês, os zerados também:
+    apagar e criar outro registro cai no mesmo teto;
+  - torneio ligado a um da plataforma (`platform_tournament_id`) não paga —
+    o oficial já conta;
+  - o XP concedido sai do placar da temporada (`xpTotal − grantsXp`) e do
+    sinal `xp_unverified`, como todo grant;
+  - **menor de 18 (ou nascimento desconhecido) não ganha** o XP de carreira
+    (`'minor'`, `isAdult` de `careerPolicy.js`): ele entraria no placar
+    público de sempre (plano §13.4);
+  - o gatilho do balanço tira o evento do ID do documento, não do `source`
+    de agora: trocar o tipo ou o `ref_id` do balanço também zera;
+  - **não há reprocessamento**: a ficha barrada pelo teto, completada com a
+    flag/o módulo desligados, ou já completa antes do deploy só é conferida
+    de novo quando o registro ou o balanço mudam. Acima do teto ela não rende
+    XP, nem no mês seguinte (a ajuda diz isso).
+- **Conquistas da família "Minha carreira"** (`CAREER_ACHIEVEMENTS`,
+  família `my_career`, `xpBonus` 0): Primeiro registro, Historiador (20),
+  Ficha completa, Arquivo em dia (10 fichas), Olhar para trás (5 balanços),
+  Meta de processo cumprida. Fora de `ACHIEVEMENTS_V2` de propósito: só
+  entram em `computeAchievementsV2(user, { career: true })`. Os fatos vêm
+  das fontes `careerEvents` e `careerGoals` de `FACT_SOURCES`, buscadas só
+  com a flag (`useActivityFacts`); fonte que falhou deixa o campo
+  `undefined` ("não deu para medir"), nunca zero. A família **não é gravada**
+  em `user_achievements_v2` (legível por qualquer conta logada): o motor a
+  calcula para o dono a cada visita e o sync a filtra
+  (`useGamificationEngine`). Por isso ela não entra na contagem pública, no
+  Hall da Fama, nos títulos nem no aviso de desbloqueio — a vitrine é o PR 7.
+  "Subi de faixa" e "Primeiro federado confirmado" (plano §7.2) ficam para
+  depois: a primeira pede o histórico de faixa, a segunda ler
+  `career_partner`, que só o servidor grava.
+- **Ajuda** — termo "Ficha completa" (`ficha-completa`) no guia da
+  gamificação, só com a flag, com os números da configuração; pergunta
+  "Ser campeão num torneio de fora rende XP?"; artigo `carreira-xp`.
+
 ### 4.7 Retrospectiva da temporada (PR 2)
 
 Na linha do tempo, cada temporada que já pode tê-la ganha o botão
@@ -497,8 +555,11 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
 
 ## 6. O que não pode regredir
 
-1. **Declarado nunca pontua**: nenhum motor de ranking, rating, federação ou
-   XP lê `career_*` (guarda `carreiraNaoPontua.test.js`).
+1. **Declarado nunca pontua**: nenhum motor de ranking, rating ou federação
+   lê `career_*`; o motor de XP conta só HÁBITOS, pela fonte `careerEvents` e
+   por `careerHabits.js`, e a colocação declarada não muda conquista, XP da
+   ficha nem placar da temporada (guarda `carreiraNaoPontua.test.js`, por
+   leitura do código e por comportamento).
 2. **Só o dono** lê e escreve; a flag vale **na regra** só para criar e
    editar.
 3. **Fonte que falhou é dita**, nunca vira "você ainda não jogou".
@@ -527,10 +588,14 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
     das preferências.
 14. "Pôr no meu plano" nunca grava sozinho; enums `priority`/`focus_result`,
     `kind`/`status` das metas e `?aba=proximos|metas` são gravados/contrato.
+15. **XP da ficha só o servidor grava** (`careerXp.js`): id determinístico,
+    zerar em vez de apagar, teto do mês com os zerados, números da
+    configuração, flag + módulo `career_xp`. `kind: 'career'` existe nos DOIS
+    lados (`xpGrants.js` × `XP_GRANT_KINDS`, paridade).
 
 ## 7. Fora destes PRs
 
-XP da ficha, vitrine pública, dupla sem conta (convite por link), faixas
+Vitrine pública, dupla sem conta (convite por link), faixas
 de preparação e o histórico do DUPR (a série `rating_points` existe; nada a
 mostra ainda).
 

@@ -23,6 +23,8 @@ export const XP_GRANT_KIND = Object.freeze({
   CHALLENGE: 'challenge',
   EVENT: 'event',
   ADMIN: 'admin',
+  /** Minha carreira: a ficha completa do torneio de fora (`functions/careerXp.js`). */
+  CAREER: 'career',
 });
 
 export const XP_GRANT_KIND_LABEL = Object.freeze({
@@ -31,6 +33,7 @@ export const XP_GRANT_KIND_LABEL = Object.freeze({
   challenge: tk('Desafio'),
   event: tk('Evento'),
   admin: tk('Bônus da plataforma'),
+  career: tk('Ficha completa da carreira'),
 });
 
 /** Teto por concessão — o servidor também respeita; defesa em profundidade. */

@@ -31,6 +31,9 @@ const FAMILY_TABS = [
   { key: ACHIEVEMENT_FAMILY.COMMUNITY, get label() { return t('Comunidade'); } },
 ];
 
+/** Só aparece com a flag da Minha carreira (a família vem do motor). */
+const MY_CAREER_TAB = { key: ACHIEVEMENT_FAMILY.MY_CAREER, get label() { return t('Minha carreira'); } };
+
 const RARITY_FILTERS = [
   { key: 'all', get label() { return t('Todas raridades'); } },
   { key: ACHIEVEMENT_RARITY.COMMON, get label() { return t('Comum'); } },
@@ -125,7 +128,7 @@ function V2AchievementsOn({ user }) {
         <div>
           <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">{t('Família')}</p>
           <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('Filtrar por família')}>
-            {FAMILY_TABS.map((aba) => (
+            {(result.byFamily?.[ACHIEVEMENT_FAMILY.MY_CAREER] ? [...FAMILY_TABS, MY_CAREER_TAB] : FAMILY_TABS).map((aba) => (
               <button
                 key={aba.key}
                 type="button"
@@ -178,7 +181,7 @@ function V2AchievementsOn({ user }) {
 
         {/* Stats por família */}
         <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-5">
-          {Object.entries(ACHIEVEMENT_FAMILY_META).map(([key, meta]) => {
+          {Object.entries(ACHIEVEMENT_FAMILY_META).filter(([key]) => key !== ACHIEVEMENT_FAMILY.MY_CAREER || result.byFamily?.[key]).map(([key, meta]) => {
             const f = result.byFamily[key] || { unlocked: 0, total: 0 };
             return (
               <div key={key} className="rounded-2xl bg-paper p-3 text-center">

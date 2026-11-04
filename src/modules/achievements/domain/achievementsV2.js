@@ -41,6 +41,8 @@ export const ACHIEVEMENT_FAMILY = Object.freeze({
   DISCOVERY: 'discovery',
   SEASONAL: 'seasonal',
   COMMUNITY: 'community',
+  /** Minha carreira (flag `athlete_career`): hábito de registrar e refletir os torneios de fora. */
+  MY_CAREER: 'my_career',
 });
 
 export const ACHIEVEMENT_FAMILY_META = Object.freeze({
@@ -73,6 +75,12 @@ export const ACHIEVEMENT_FAMILY_META = Object.freeze({
     color: 'purple',
     icon: '🏛️',
     description: tk('Clubes, ajudar novatos, mentorear.'),
+  },
+  [ACHIEVEMENT_FAMILY.MY_CAREER]: {
+    name: tk('Minha carreira'),
+    color: 'teal',
+    icon: '📒',
+    description: tk('Registrar, completar e refletir os torneios de fora. O resultado declarado não conta.'),
   },
 });
 
@@ -640,6 +648,45 @@ export const ACHIEVEMENTS_V2 = Object.freeze([
     { icon: '🎓', xpBonus: 5000, lore: tk('Você multiplicou o esporte em 100 pessoas.') }),
 ]);
 
+/**
+ * Família "Minha carreira" (flag `athlete_career`, docs/54 §9). Só HÁBITO:
+ * registrar, completar a ficha, fazer o balanço, cumprir a meta de processo.
+ * Nenhuma lê a colocação declarada — "fui campeão" digitado não desbloqueia
+ * nada (guarda `carreiraNaoPontua`). `xpBonus` 0: o XP da carreira é o da
+ * ficha completa, concedido pelo servidor com teto.
+ *
+ * Fica FORA de `ACHIEVEMENTS_V2` de propósito: com a flag desligada a família
+ * não existe (não entra no "x de y" nem no catálogo). Entra em
+ * `computeAchievementsV2` com `context.career`; o campo que a fonte não mediu
+ * fica `undefined` e a conquista segue bloqueada sem afirmar que "não fez".
+ */
+const contagem = (campo, alvo) => (u) => {
+  const n = u?.[campo];
+  if (typeof n !== 'number') return { unlocked: false, progress: 0, reason: 'sem-dado' };
+  return { unlocked: n >= alvo, progress: Math.min(1, n / alvo) };
+};
+
+export const CAREER_ACHIEVEMENTS = Object.freeze([
+  def('mycareer_first_record', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.COMMON,
+    tk('Primeiro registro'), tk('Registrou o primeiro torneio de fora na Minha carreira.'),
+    contagem('career_records', 1), { icon: '📝' }),
+  def('mycareer_historian', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.RARE,
+    tk('Historiador'), tk('Registrou 20 torneios de fora.'),
+    contagem('career_records', 20), { icon: '📚' }),
+  def('mycareer_complete_record', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.COMMON,
+    tk('Ficha completa'), tk('Completou a ficha de um torneio: resultado, foto e balanço.'),
+    contagem('career_complete_records', 1), { icon: '🗂️' }),
+  def('mycareer_complete_10', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.UNCOMMON,
+    tk('Arquivo em dia'), tk('Completou a ficha de 10 torneios.'),
+    contagem('career_complete_records', 10), { icon: '🗄️' }),
+  def('mycareer_debriefs_5', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.UNCOMMON,
+    tk('Olhar para trás'), tk('Fez o balanço de 5 torneios de fora.'),
+    contagem('career_debriefs', 5), { icon: '🔍' }),
+  def('mycareer_process_goal', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.UNCOMMON,
+    tk('Meta de processo cumprida'), tk('Cumpriu uma meta de processo da temporada (o que depende de você, não do placar).'),
+    contagem('career_process_goals_done', 1), { icon: '🎯' }),
+]);
+
 // ────────────────────────────────────────────────────────────────────────────
 // 3. COMPUTAÇÃO
 // ────────────────────────────────────────────────────────────────────────────
@@ -685,7 +732,7 @@ export function evaluateAchievement(def, user, context = {}) {
  * Computa todas as conquistas V2 (unlocked + locked) a partir do user.
  *
  * @param {object} user
- * @param {object} [context]
+ * @param {{ career?: boolean }} [context] `career`: a flag da Minha carreira (inclui a família)
  * @param {{ family?: string, rarity?: string }} [filters]
  * @returns {{
  *   unlocked: Array<{ id, name, description, family, rarity, icon, lore, xpBonus, shareable, progress, reason }>,
@@ -703,7 +750,8 @@ export function computeAchievementsV2(user, context = {}, filters = {}) {
   const byFamily = {};
   const byRarity = {};
 
-  for (const def of ACHIEVEMENTS_V2) {
+  const catalogo = context?.career ? [...ACHIEVEMENTS_V2, ...CAREER_ACHIEVEMENTS] : ACHIEVEMENTS_V2;
+  for (const def of catalogo) {
     // Aplicar filtros
     if (filters.family && def.family !== filters.family) continue;
     if (filters.rarity && def.rarity !== filters.rarity) continue;
@@ -742,7 +790,7 @@ export function computeAchievementsV2(user, context = {}, filters = {}) {
   return {
     unlocked,
     locked,
-    total: ACHIEVEMENTS_V2.length,
+    total: catalogo.length,
     unlockedCount: unlocked.length,
     byFamily,
     byRarity,
@@ -767,7 +815,7 @@ export function totalAchievementXp(user) {
  * @returns {object|null}
  */
 export function getAchievementV2ById(id) {
-  return ACHIEVEMENTS_V2.find((a) => a.id === id) || null;
+  return ACHIEVEMENTS_V2.find((a) => a.id === id) || CAREER_ACHIEVEMENTS.find((a) => a.id === id) || null;
 }
 
 /**
