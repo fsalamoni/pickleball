@@ -472,4 +472,6 @@ export default {
   "Pé {d} cm dentro da cozinha {q} (±{u} cm)": "Pie {d} cm dentro de la cocina {q} (±{u} cm)",
   "Quem organiza o jogo liga o controle de linhas de cada quadra.": "Quien organiza el juego activa el control de líneas de cada cancha.",
   "Quadra não encontrada neste dia de jogo": "Cancha no encontrada en este día de juego",
+  "Desligado nas {total} quadra(s)": "Apagado en las {total} cancha(s)",
+  "Quadra {n}: {cams} câmera(s)": "Cancha {n}: {cams} cámara(s)",
 };

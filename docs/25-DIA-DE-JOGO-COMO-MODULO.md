@@ -699,7 +699,9 @@ QUADRAS do dia (`play_courts`, as dos jogos e as já configuradas) e cada uma
 liga o seu controle e escolhe o seu arranjo, de 1 a 5 câmeras — a quadra 1
 pode ter uma câmera e a 2, cinco. Quem liga é quem organiza (criador, gestor da
 arena, admin do clube, administrador nomeado: `canConfigureLineControl`); a
-origem não muda nada.
+origem não muda nada. É colapsável como os demais cartões do dia
+(`GAME_DAY_SECTION.LINE_CONTROL`): recolhido para quem organiza, com o resumo
+das quadras ligadas no cabeçalho.
 
 - **Banco**: subcoleção `game_days/{id}/line_courts/court-N`, com as câmeras e
   marcações embaixo. Os campos `line_control`/`line_control_layout` no próprio

@@ -13,6 +13,8 @@ export const GAME_DAY_SECTION = Object.freeze({
   /* Configurações do dia — IGUAIS em toda origem (atleta, arena e clube),
      porque o cartão é montado dentro do `GameDayModule`. */
   SETTINGS: 'gameday:settings',
+  /* Controle de linhas por câmera (flag `line_control`), também do `GameDayModule`. */
+  LINE_CONTROL: 'gameday:line-control',
 
   /* Dia de jogo do atleta — grade (Americano, Mexicano, Rei da Quadra) */
   PARTICIPANTS: 'gameday:participants',

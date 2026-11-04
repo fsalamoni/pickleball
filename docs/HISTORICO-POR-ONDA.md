@@ -2369,3 +2369,7 @@ da cozinha), pé na cozinha no voleio ou no impulso depois dele, pé no saque.
   mesmo quadro; a marca do lance punha a tinta do lado errado da linha no saque
   curto e no pé no saque; e o replay não guardava o "antes" do voleio que só sai
   quando o impulso acaba. Detalhe em `docs/53-CONTROLE-DE-LINHAS.md` §3, §6 e §7a.
+
+## Cartão do controle de linhas colapsável (2026-11-04)
+
+No dia de jogo, o cartão do controle de linhas era uma superfície sempre aberta, diferente dos outros cartões. Virou `V2CollapsibleCard` (`gameday:line-control`): recolhido para quem organiza, com o resumo das quadras ligadas e quantas câmeras cada uma tem; o guia pede para abrir o cartão antes de apontar as quadras.
