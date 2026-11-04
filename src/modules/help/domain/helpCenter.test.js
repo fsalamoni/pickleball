@@ -310,7 +310,9 @@ describe('helpForRoute', () => {
   it('não confunde /atletas com /atleta/:uid', () => {
     // Um casamento por PREFIXO DE TEXTO mandaria quem está vendo um perfil
     // para o artigo do diretório.
-    expect(helpForRoute('/atleta/abc123')).toBeNull();
+    // Desde o PR 7 o perfil tem pista própria (a vitrine da carreira) — não a do diretório.
+    expect(helpForRoute('/atleta/abc123')?.label).toBe('o perfil de um atleta');
+    expect(helpForRoute('/atletas')?.label).toBe('o diretório de atletas');
   });
 });
 

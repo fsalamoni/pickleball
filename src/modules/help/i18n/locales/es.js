@@ -1506,6 +1506,7 @@ export default {
   "O DIA vira à meia-noite (horário de Brasília), a SEMANA na segunda-feira e o MÊS no dia 1º.": "El DÍA cambia a medianoche (hora de Brasilia), la SEMANA el lunes y el MES el día 1.",
   "O diário": "El diario",
   "o diretório de atletas": "el directorio de atletas",
+  "o perfil de um atleta": "el perfil de un atleta",
   "O duelo da semana": "El duelo de la semana",
   "O edital com a pauta e o quórum, o prazo do estatuto, e depois a presença, o que se decidiu em cada item e a ata.": "El edicto con el orden del día y el quórum, el plazo del estatuto y, después, la asistencia, lo que se decidió en cada punto y el acta.",
   "O EFEITO — sem curso e certidão em dia, a escala de arbitragem, a licença de professor e a chancela com diretor de torneio são recusadas. Um mês antes de vencer, a pessoa é avisada.": "EL EFECTO — sin curso y certificado al día, la designación de arbitraje, la licencia de profesor y el aval con director de torneo se rechazan. Un mes antes de vencer, la persona recibe un aviso.",

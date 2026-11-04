@@ -564,6 +564,14 @@ export const PONTOS_DE_DICA = Object.freeze([
     flags: ['athlete_career'],
   },
   {
+    id: 'carreira:vitrine',
+    route: '/carreira',
+    target: 'carreira-vitrine',
+    title: tk('No seu perfil público?'),
+    body: tk('Só vai ao perfil o torneio que você escolher aqui, com o selo à vista. Anotações, balanço e a visão da dupla nunca vão; "Tirar do perfil" apaga na hora.'),
+    flags: ['athlete_career'],
+  },
+  {
     id: 'federacao:filiar',
     route: '/federacoes/*',
     target: 'federacao-filiar',

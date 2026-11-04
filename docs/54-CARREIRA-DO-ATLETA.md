@@ -171,6 +171,35 @@ mostra só essas; a da temporada mora na carreira). As métricas novas
 (`goalProgress`); os valores saem de `careerGoalValues`, nunca do motor de XP.
 Nenhuma regra nova: `player_goals` já é só do dono.
 
+### 2.8 `career_public/{uid}_{evento}` — a vitrine pública (PR 7)
+
+O id é o do registro (`career_events/{uid}_{sufixo}`). **Só o servidor
+grava** (`functions/careerPublic.js`, régua em `careerPublicPolicy.js` com
+paridade contra `src/modules/career/domain/careerPublic.js`); **qualquer pessoa
+lê**. Campos: `uid`, `event_id`, `seal` (`official` · `confirmed` ·
+`declared`, recalculado pelo servidor), os do torneio na lista fechada
+`SHOWCASE_EVENT_FIELDS` (nome, datas e precisão, cidade/UF, federado, sigla e
+nome da federação, etapa), `entries[]` na lista fechada
+`SHOWCASE_ENTRY_FIELDS` (formato, gênero, idade, faixa de nível, colocação) +
+`partner: { uid, name, photo_url }` **só com o "sim" da dupla** (senão
+`with_partner: true`), `photos[] { path, url, kind, alt }`,
+`published_at_ms`, `updated_at_ms`. Com selo Oficial a colocação **não** vai
+(o selo confere só que a pessoa jogou; a colocação oficial é a do pódio, na
+estante). Nunca vão: anotações, link, custo, plano, metas, balanço, visão da
+dupla, equipe. Limites (`SHOWCASE_LIMITS`): 20 torneios, 6 fotos na vitrine
+toda, 5 parcerias no perfil.
+
+- **Storage `carreira-publica/{uid}/{evento}__{arquivo}`**: a cópia pública da
+  foto, feita pelo servidor a partir de `carreira/{uid}/` (caminho de outra
+  pasta ou com `..` é recusado), sem metadados (JPEG limpo; PNG/WebP com bloco
+  de metadado recusado). `get` público, sem listagem, escrita só do servidor.
+- **Consentimento da dupla** em `career_partner`: `public_ok_partner`
+  (true/false), `public_ok_at_ms` e `public_asked_at_ms` (o aviso "quer
+  mostrar o torneio com você" sai uma vez só). Só a ação `public_consent` da
+  PRÓPRIA dupla, maior de 18, com o pedido confirmado.
+
+Revisão de privacidade: `docs/20-SEGURANCA-E-PRIVACIDADE/21-CARREIRA-VITRINE.md`.
+
 ## 3. Quem pode o quê
 
 ```
@@ -193,6 +222,11 @@ match /career_partner_reports/{id} {
 match /career_partner_invites/{id} {
   allow read: if isOwner(od().owner_uid);
 }
+match /career_public/{id} {          // PR 7: a vitrine
+  allow read: if isAuthed();         // escrita: só o servidor
+}
+// storage.rules
+match /carreira-publica/{uid}/{fileName} { allow get: if isAuthed(); }
 ```
 
 - **Só o dono** lê e escreve. Nem o admin lê pelo cliente. A exceção (PR 4)
@@ -487,6 +521,35 @@ Treino → Alunos → o aluno (`CoachStudentCareer`, lazy, só com a flag): os
 torneios mandados, categorias, meta, foco e os pontos fortes e a melhorar do
 balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
 
+### 4.13 A vitrine pública (PR 7)
+
+- **Na ficha** (`CareerShowcaseLayer`, seção "Perfil público",
+  `data-dica="carreira-vitrine"`): só para torneio JOGADO e salvo, e só para
+  maiores de 18. Diz antes o que vai e o que nunca vai, escolhe as fotos (com
+  descrição, até 6 na vitrine toda) e chama `publish` / `unpublish` da função
+  `career`. Ficha com mudança não salva não publica ("a vitrine mostra o que
+  está salvo"). Leitura falhando ⇒ "Não deu para saber se este torneio está no
+  seu perfil", nunca "não publicado".
+- **Nos pedidos das duplas** (`CareerPartnerUi`): no pedido confirmado, o
+  interruptor "Meu nome na vitrine de {quem}" (`public_consent`), revogável.
+- **No perfil público** (`/atleta/:uid`, `CareerPublicBlock`, lazy, só com a
+  flag, `data-dica="carreira-publica"`): o bloco "Carreira" com o selo à vista,
+  as **Parcerias** (`showcasePartnerships`: só duplas com nome publicado,
+  quem mais jogou junto primeiro) e as fotos. Sem nada publicado o bloco some;
+  leitura falhando diz "Não carregou a carreira". **Parabenizar** um pódio de
+  fora é o kudo `positive` de sempre (`CongratulateButton`, `contextId =
+  trofeu:ext:{evento}:{categoria}:{colocação}`, `showcaseTrophyContextId`).
+- **O servidor** (`functions/careerPublic.js`): `publish` exige a flag, o dono,
+  maior de 18 (menor recebe a MESMA resposta e nada é gravado), torneio jogado
+  (não planejado, não cancelado, data ≤ hoje, não plano de torneio daqui),
+  fotos da própria pasta e com descrição, e os limites; avisa uma vez as duplas
+  confirmadas que ainda não decidiram. `unpublish` vale mesmo com a flag
+  desligada. Os gatilhos `careerEventWritten` (editou/apagou o torneio) e
+  `careerPartnerWritten` (a dupla confirmou, desfez, permitiu ou retirou)
+  reconstroem ou removem o item — `rebuild` só regrava quando algo mudou e
+  apaga as fotos que saíram. Toda ação grava auditoria
+  (`career_public_published|unpublished|partner_allowed|partner_revoked`).
+
 ## 5. Outros lugares
 
 - **Início** (PR 4): card **Carreira** (`HOME_CARD.CARREIRA`, grupo
@@ -683,19 +746,34 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
     `tests/rules/career.rules.test.js`; validade, token e `namedPartners`
     com paridade em `careerPolicy.parity.test.js`. A rota
     `/carreira/convite/:token` é contrato (o link vai no WhatsApp).
+17. **A vitrine (PR 7) só o servidor grava** (`career_public` e
+    `carreira-publica/`): só o que o dono escolheu, só a lista fechada de
+    campos, o selo calculado (com Oficial, sem a colocação declarada), o nome
+    da dupla só com o "sim" dela, menor nunca publica (resposta igual), foto
+    só da própria pasta e sem metadados, e tirar/apagar remove item e fotos.
+    A régua tem cópia (`careerPublicPolicy.js`, paridade); a vitrine entra na
+    exclusão e na exportação. O declarado à vista nunca pontua.
 
 ## 7. Fora destes PRs
 
-Vitrine pública, faixas
+Faixas
 de preparação e o histórico do DUPR (a série `rating_points` existe; nada a
 mostra ainda).
 
 **Pendências registradas na revisão do PR 1:**
 
-- **Vitrine pública (antes dela)**: o selo Oficial confere só que a pessoa
-  JOGOU o torneio da plataforma; a colocação continua a declarada. Antes de
-  qualquer cartão público, a colocação do vínculo oficial tem de vir do pódio
-  (`modalityPodium`), ou o selo diz só "torneio da plataforma".
+- ✅ **Vitrine pública (PR 7)**: o selo Oficial confere só que a pessoa
+  JOGOU o torneio da plataforma; por isso o item da vitrine com selo Oficial
+  sai **sem** a colocação declarada (a oficial é a do pódio, na estante).
+  Puxar a colocação do `modalityPodium` para o item fica para depois.
+- **Vitrine — o que ficou para depois**: denúncia de item/foto da vitrine por
+  terceiros; a "frase de ponto forte" da dupla NÃO é publicada (a visão da
+  dupla nunca sai do par); em **Parcerias**, tocar no nome da dupla e ver os
+  resultados que os dois tiveram juntos (no `/carreira`, derivado da linha do
+  tempo) — hoje o perfil mostra só a lista de quem mais jogou junto, das
+  participações publicadas e consentidas. A vitrine já é só para contas
+  logadas (`isAuthed()`, como o perfil). Ver
+  `docs/20-SEGURANCA-E-PRIVACIDADE/21-CARREIRA-VITRINE.md` §10.
 - ✅ **PR 3 (dupla)**: a exclusão de conta apaga os `career_events` e os
   `career_partner` da pessoa (os dois lados) e, nos registros de quem a
   escolheu como dupla, tira `partner.uid`/`partner_uids`/`linked_event` e

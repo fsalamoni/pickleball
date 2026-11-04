@@ -207,3 +207,26 @@ describe('carreira/ — fotos dos torneios de fora (Minha carreira)', () => {
     await assertSucceeds(deleteObject(ref(asDono(), 'carreira/dono_uid/1-a.webp')));
   });
 });
+
+describe('carreira-publica/ — a cópia da vitrine (só o servidor grava)', () => {
+  const img = { contentType: 'image/jpeg' };
+  const caminho = 'carreira-publica/dono_uid/dono_uid_a__1-a.jpg';
+  const semente = () => env.withSecurityRulesDisabled((ctx) => uploadBytes(ref(ctx.storage(), caminho), bytes(), img));
+
+  it('34. ⭐ quem tem conta lê a foto publicada; sem conta, não', async () => {
+    await semente();
+    await assertSucceeds(getBytes(ref(asOutro(), caminho)));
+    await assertFails(getBytes(ref(asAnon(), caminho)));
+  });
+  it('35. 🔴 ninguém envia pelo cliente — nem o dono (a cópia passa pelo servidor, sem EXIF), nem outra conta', async () => {
+    await assertFails(uploadBytes(ref(asDono(), 'carreira-publica/dono_uid/novo.jpg'), bytes(), img));
+    await assertFails(uploadBytes(ref(asOutro(), 'carreira-publica/dono_uid/novo.jpg'), bytes(), img));
+    await assertFails(uploadBytes(ref(asOutro(), 'carreira-publica/outro_uid/novo.jpg'), bytes(), img));
+  });
+  it('36. 🔴 ninguém lista a pasta nem apaga pelo cliente', async () => {
+    await semente();
+    await assertFails(listAll(ref(asOutro(), 'carreira-publica/dono_uid')));
+    await assertFails(listAll(ref(asDono(), 'carreira-publica/dono_uid')));
+    await assertFails(deleteObject(ref(asDono(), caminho)));
+  });
+});

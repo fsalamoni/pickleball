@@ -1506,6 +1506,7 @@ export default {
   "O DIA vira à meia-noite (horário de Brasília), a SEMANA na segunda-feira e o MÊS no dia 1º.": "The DAY resets at midnight (Brasília time), the WEEK on Monday and the MONTH on the 1st.",
   "O diário": "The log",
   "o diretório de atletas": "the athlete directory",
+  "o perfil de um atleta": "an athlete's profile",
   "O duelo da semana": "The week's duel",
   "O edital com a pauta e o quórum, o prazo do estatuto, e depois a presença, o que se decidiu em cada item e a ata.": "The notice with the agenda and quorum, the bylaws deadline, and then attendance, what was decided on each item and the minutes.",
   "O EFEITO — sem curso e certidão em dia, a escala de arbitragem, a licença de professor e a chancela com diretor de torneio são recusadas. Um mês antes de vencer, a pessoa é avisada.": "THE EFFECT — without an up-to-date course and certificate, the referee assignment, the coach license and the sanction with a tournament director are refused. A month before expiry, the person is notified.",

@@ -1612,6 +1612,12 @@ O servidor usa `open ==` (fila) e `event_id ==`. Entra na exclusão
 salvos antes do PR 3 não têm `partner_uids`: a exclusão de conta não os acha
 até a próxima gravação (nada migrado).
 
+PR 7: o pedido ganha `public_ok_partner` (o "sim" da dupla para o nome dela
+aparecer na vitrine do dono), `public_ok_at_ms`, `public_asked_at_ms` (o
+aviso saiu, uma vez) e `public_fp` (a impressão do torneio — datas, resultado,
+nome, cidade, federação, etapa — no instante do "sim"; mudou, o nome sai e a
+dupla é perguntada de novo). Opcionais; só o servidor grava (ação `public_consent`).
+
 ### `career_partner_invites/{sha256(token)}` (NOVO, PR 6 — dupla sem conta)
 O convite pelo WhatsApp para a dupla digitada só com o nome: `owner_uid`,
 `owner_name`, `event_id`, `event_name`, `name_key` (o nome sem caixa nem
@@ -1624,6 +1630,26 @@ servidor usa `event_id ==`. Entra na exclusão (`owner_uid`) e na exportação.
 O aceite grava no `career_events` do dono só `entries[i].partner.uid`,
 `partner_uids` e `updated_at_ms`, e o pedido `career_partner` ganha
 `via_link: true` (opcional). Zero índice.
+
+### `career_public/{uid}_{evento}` (NOVO, PR 7, flag `athlete_career`)
+A vitrine pública da carreira: o torneio de fora que o dono escolheu mostrar
+no perfil. `uid`, `event_id`, `seal` (`official|confirmed|declared`,
+calculado), os campos do torneio numa lista fechada (`name`, `start_date`,
+`end_date`, `date_precision`, `city`, `state`, `federated`,
+`federation_name`, `federation_acronym`, `stage_tier`), `entries[]` (`format`,
+`gender`, `age`, `age_label`, `level_bracket`, `level_label`, `placement`,
+`placement_n` — sem colocação quando o selo é oficial — e `partner { uid, name,
+photo_url }` só com o "sim" da dupla, senão `with_partner: true`),
+`named_uids` (quem aparece com nome — a exclusão de conta da dupla acha o item
+por `array-contains`), `photos[]
+{ path, url, kind, alt }`, `published_at_ms`, `updated_at_ms`. **Leitura
+de quem tem conta (`isAuthed()`), escrita só do servidor.** Consulta: `uid ==` (perfil e exportação),
+zero índice. Entra na exclusão (por `uid`; e, na vitrine dos OUTROS, a dupla excluída vira
+"com dupla" por `named_uids`) e na exportação. Ver `docs/54` §2.8.
+
+### Storage: `carreira-publica/{uid}/{evento}__{nonce}__{arquivo}` (NOVO, PR 7)
+A cópia pública (sem metadados) da foto escolhida para a vitrine. `get`
+de quem tem conta, sem listagem; só o servidor grava e apaga. Entra na exclusão.
 
 ### Storage: `carreira/{uid}/{arquivo}` (NOVO, flag `athlete_career`)
 As fotos da Minha carreira. Só o dono lê, lista e apaga; cria só arquivo novo

@@ -90,6 +90,16 @@ service firebase.storage {
         && request.resource.size < 3 * 1024 * 1024;
     }
 
+    // A VITRINE pública da carreira (PR 7): a CÓPIA, sem EXIF, das fotos que a
+    // pessoa escolheu mostrar. Quem copia é o servidor (`functions/careerPublic.js`,
+    // só da pasta `carreira/{uid}/` de quem pede). Leitura de um arquivo para
+    // quem tem conta (como o perfil público); nada de `list` (ninguém enumera a
+    // pasta) e nenhuma escrita pelo cliente — tirar da vitrine apaga pelo
+    // servidor. ADITIVO.
+    match /carreira-publica/{uid}/{fileName} {
+      allow get: if isAuthed();
+    }
+
     // Mercado (flag `marketplace`): fotos e vídeos dos anúncios e o
     // comprovante do Pix. Mesmo desenho do `treino/`: `get` para conta logada
     // (o anúncio é público; o comprovante tem nome aleatório e só o pedido

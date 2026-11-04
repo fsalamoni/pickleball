@@ -40,6 +40,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listAthletes } from '@/modules/athletes/services/athleteService';
 import PartnerPicker from '@/v2/components/people/PartnerPicker';
 import { CareerPartnerLayer } from './CareerPartnerUi';
+import CareerShowcaseLayer from './CareerShowcaseLayer';
 import { CareerCoachShare, CareerHowItWent, CareerPlanFields } from './CareerPlanFields';
 import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { ChoiceGroup, FORMAT_CHOICES, GENDER_CHOICES_ALL, SealBadge, careerDateLabel } from './careerUi';
@@ -464,6 +465,11 @@ export default function CareerEventSheet({
             )}
           </Camada>
         )}
+
+        <section data-dica="carreira-vitrine" className="space-y-3 rounded-3xl border border-gray-100 p-4">
+          <h3 className="font-display text-base font-bold text-ink">{t('Perfil público')}</h3>
+          <CareerShowcaseLayer event={gravado} saved={saved} dirty={JSON.stringify(f) !== JSON.stringify(gravado)} />
+        </section>
 
         <CareerCoachShare event={{ ...gravado, shared_coach_id: f.shared_coach_id }} saved={saved}
           onShared={(coachId) => setF((x) => ({ ...x, shared_coach_id: coachId || undefined }))} />

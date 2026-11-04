@@ -21,7 +21,7 @@ import {
   CAREER_PENDING_PREF, addPending, parsePending, removePending, serializePending,
 } from '../domain/draftQueue.js';
 import {
-  CareerError, careerAction, deleteCareerEvent, deleteCareerRank, listCareerEvents, listCareerRanks,
+  CareerError, careerAction, deleteCareerEvent, deleteCareerRank, listCareerEvents, listCareerPublic, listCareerRanks,
   listMyCareerPartnerDocs, listMyCareerPartnerInvites, listStudentCareerShares, saveCareerEvent, saveCareerEventsBatch, saveCareerRank,
   shareCareerWithCoach,
 } from '../services/careerService.js';
@@ -32,6 +32,7 @@ export const careerKeys = Object.freeze({
   events: (uid) => ['career', 'events', uid],
   partners: (uid) => ['career', 'partners', uid],
   invites: (uid) => ['career', 'invites', uid],
+  publicOf: (uid) => ['career', 'public', uid],
   moderation: ['career', 'moderation'],
   // A MESMA chave de `fedKeys.myPoints` (useFederations): um cache só para os
   // pontos. Não importamos aquele arquivo para não puxar a federação inteira
@@ -119,6 +120,19 @@ export function useCareerPartnerAction() {
     // Também na recusa: o servidor pode ter mudado o registro (a dupla aceitou o
     // link) e a tela segue oferecendo o que já não vale.
     onSettled: invalidar,
+  });
+}
+
+/**
+ * A VITRINE pública de `uid` (o perfil público e a própria ficha). A chave fica
+ * sob `career`: publicar/tirar (`useCareerPartnerAction`) invalida junto.
+ */
+export function useCareerPublic(uid, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: careerKeys.publicOf(uid),
+    queryFn: () => listCareerPublic(uid),
+    enabled: Boolean(uid) && enabled,
+    staleTime: 60_000,
   });
 }
 
