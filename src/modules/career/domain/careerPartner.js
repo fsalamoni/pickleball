@@ -128,6 +128,77 @@ export function normalizePartnerFeedback(raw = {}) {
   return { valid: true, error: '', value };
 }
 
+/* ------------------------------------------- dupla SEM conta (PR 6) -- */
+
+/**
+ * O convite pelo WhatsApp (`career_partner_invites/{sha256 do token}`): só o
+ * SERVIDOR grava; o token nunca é guardado, só o hash (que é o id). Uso único:
+ * aceito ou cancelado, o documento some.
+ */
+export const CAREER_PARTNER_INVITES = 'career_partner_invites';
+/** Validade do link (dias). */
+export const INVITE_TTL_DAYS = 14;
+/** O token do link: 24 bytes aleatórios em base64url (32 caracteres). */
+export const INVITE_TOKEN_PATTERN = '^[A-Za-z0-9_-]{32}$';
+
+/** O nome digitado comparado sem caixa, acento nem espaço repetido. */
+export function partnerNameKey(name) {
+  return s(name).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * As duplas digitadas SÓ COM O NOME (sem conta), uma por nome:
+ * `[{ name, key, indexes }]`. Simples não tem dupla.
+ */
+export function namedPartners(event) {
+  const m = new Map();
+  (event?.entries || []).forEach((e, i) => {
+    if (!e || e.format === CAREER_FORMAT.SINGLES || !e.partner || e.partner.uid) return;
+    const key = partnerNameKey(e.partner.name);
+    if (!key) return;
+    if (!m.has(key)) m.set(key, { name: s(e.partner.name).trim(), key, indexes: [] });
+    m.get(key).indexes.push(i);
+  });
+  return [...m.values()];
+}
+
+/**
+ * O convite deste nome neste evento: `{ invite, state }` com `state`
+ * `'pending'` (aguardando), `'expired'` (venceu) ou `null` (nenhum).
+ */
+export function inviteStateFor(invites, eventId, key, nowMs = Date.now()) {
+  const invite = (invites || []).find((i) => i && i.event_id === eventId && i.name_key === key) || null;
+  if (!invite) return { invite: null, state: null };
+  return { invite, state: Number(invite.expires_at_ms) > nowMs ? 'pending' : 'expired' };
+}
+
+/**
+ * Salvar uma ficha aberta ANTES do aceite pelo link não pode apagar a conta que
+ * o servidor ligou: se o registro gravado é mais novo que o carregado
+ * (`loadedAtMs`, o `updated_at_ms` que a ficha abriu), a categoria que segue
+ * com o MESMO nome, agora sem conta, recupera a conta gravada. Devolve `next`
+ * (novo objeto só se mudou).
+ */
+export function keepServerLinkedPartners(next, current, loadedAtMs) {
+  if (!next || !current || !(Number(current.updated_at_ms) > Number(loadedAtMs))) return next;
+  let mudou = false;
+  const entries = (next.entries || []).map((e, i) => {
+    const cur = current.entries?.[i]?.partner;
+    if (!e?.partner || e.partner.uid || !cur?.uid || !partnerNameKey(e.partner.name)) return e;
+    if (partnerNameKey(e.partner.name) !== partnerNameKey(cur.name)) return e;
+    mudou = true;
+    return { ...e, partner: { ...e.partner, uid: cur.uid } };
+  });
+  if (!mudou) return next;
+  return { ...next, entries, partner_uids: [...new Set(entries.map((e) => e?.partner?.uid).filter(Boolean))] };
+}
+
+/** O link que vai no WhatsApp: `/carreira/convite/:token`. */
+export const careerInvitePath = (token) => `/carreira/convite/${encodeURIComponent(token)}`;
+
+/** `https://wa.me/?text=…` — sem número: a pessoa escolhe o contato no WhatsApp. */
+export const whatsappShareUrl = (text) => `https://wa.me/?text=${encodeURIComponent(text)}`;
+
 /* ------------------------------------------------------- o que a tela deriva -- */
 
 const docsDoEvento = (docs, eventId) => (docs || []).filter((d) => d && d.event_id === eventId);

@@ -167,6 +167,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'career_partner', field: 'partner_uid', label: 'Confirmações da dupla (Minha carreira)' },
   { col: 'career_partner_reports', field: 'owner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
   { col: 'career_partner_reports', field: 'partner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
+  { col: 'career_partner_invites', field: 'owner_uid', label: 'Convites à dupla sem conta (Minha carreira)' },
   { col: 'user_missions', field: 'uid', label: 'Missões (gamificação)' },
   { col: 'user_achievements_v2', field: 'uid', label: 'Conquistas (gamificação)' },
   { col: 'season_rankings', field: 'uid', label: 'Ranking da temporada' },

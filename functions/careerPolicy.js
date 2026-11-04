@@ -10,7 +10,9 @@
  *    torneio NÃO entra — corrigir o nome não pede nova confirmação);
  *  - maioridade (nascimento desconhecido conta como menor);
  *  - a visão da dupla normalizada (aspectos de `GAME_ASPECTS`, textos ≤ 280);
- *  - o link do aviso com a régua de `isInternalLink` do `firestore.rules`.
+ *  - o link do aviso com a régua de `isInternalLink` do `firestore.rules`;
+ *  - a dupla SEM conta (PR 6): validade do convite, o nome comparável e as
+ *    duplas digitadas só com o nome.
  */
 
 const PARTNER_STATUS = Object.freeze({
@@ -83,6 +85,34 @@ function linkDeAviso(link) {
   return typeof link === 'string' && link.length <= 400 && new RegExp(INTERNAL_LINK_PATTERN).test(link) ? link : null;
 }
 
+/* ------------------------------------------- dupla SEM conta (PR 6) -- */
+
+/** Validade do link de convite pelo WhatsApp (uso único). */
+const INVITE_TTL_DAYS = 14;
+/** O token do link: 24 bytes aleatórios em base64url (32 caracteres). */
+const INVITE_TOKEN_PATTERN = '^[A-Za-z0-9_-]{32}$';
+
+/** O nome digitado comparado sem caixa, acento nem espaço repetido. */
+function partnerNameKey(name) {
+  return s(name).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * As duplas digitadas SÓ COM O NOME (sem conta), uma por nome:
+ * `[{ name, key, indexes }]`. Simples não tem dupla.
+ */
+function namedPartners(event) {
+  const m = new Map();
+  ((event && event.entries) || []).forEach((e, i) => {
+    if (!e || e.format === 'singles' || !e.partner || e.partner.uid) return;
+    const key = partnerNameKey(e.partner.name);
+    if (!key) return;
+    if (!m.has(key)) m.set(key, { name: s(e.partner.name).trim(), key, indexes: [] });
+    m.get(key).indexes.push(i);
+  });
+  return [...m.values()];
+}
+
 module.exports = {
   PARTNER_STATUS,
   OWNER_DECISION,
@@ -98,4 +128,8 @@ module.exports = {
   isAdult,
   normalizePartnerFeedback,
   linkDeAviso,
+  INVITE_TTL_DAYS,
+  INVITE_TOKEN_PATTERN,
+  partnerNameKey,
+  namedPartners,
 };

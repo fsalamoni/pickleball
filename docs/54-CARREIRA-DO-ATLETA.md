@@ -108,6 +108,27 @@ citadas — é por ele que a exclusão de conta acha os registros dos outros) e
 `linked_event` (`{ uid, id }` do registro de quem convidou, no espelho).
 Zero índice composto (consultas de uma igualdade).
 
+### 2.4a `career_partner_invites/{sha256(token)}` (PR 6 — dupla sem conta)
+
+O convite pelo WhatsApp para a dupla digitada **só com o nome**. **Só o
+servidor grava** (`functions/career.js`); lê só quem convidou (`owner_uid ==`).
+O **token nunca é guardado**: o id do documento é o SHA-256 dele, e o token
+(24 bytes aleatórios, base64url, 32 caracteres) só existe na resposta da ação
+e no link. **Nenhum telefone**: o WhatsApp abre no aparelho do dono
+(`https://wa.me/?text=…`, sem número) e ele escolhe o contato.
+
+| Campo | O quê |
+|---|---|
+| `owner_uid`, `owner_name` | quem convidou |
+| `event_id`, `event_name` | o registro |
+| `name_key`, `partner_name` | o nome digitado (`partnerNameKey`: sem caixa, acento nem espaço repetido) |
+| `created_at_ms`, `expires_at_ms` | validade de **14 dias** (`INVITE_TTL_DAYS`) |
+
+Um convite por (registro, nome): gerar de novo apaga o anterior. **Uso
+único**: aceito ou cancelado, o documento é apagado (na mesma transação do
+aceite). Registro apagado leva os convites (gatilho). O pedido de
+confirmação aberto pelo aceite (`career_partner`) leva `via_link: true`.
+
 ### 2.5 Os campos do planejado em `career_events` (PR 4)
 
 Todos opcionais, gravados por `normalizeCareerEvent`; ausentes, nada muda.
@@ -169,6 +190,9 @@ match /career_partner/{id} {
 match /career_partner_reports/{id} {
   allow read: if isOwner(od().reporter_uid);
 }
+match /career_partner_invites/{id} {
+  allow read: if isOwner(od().owner_uid);
+}
 ```
 
 - **Só o dono** lê e escreve. Nem o admin lê pelo cliente. A exceção (PR 4)
@@ -186,6 +210,10 @@ match /career_partner_reports/{id} {
   nem o admin): tudo passa pela função `career`. Terceiro não lê — a visão
   da dupla fica entre os dois. A fila de moderação o admin lê pelo servidor
   (ação `queue`), sem uid.
+- `career_partner_invites` (PR 6) também **ninguém grava pelo cliente**: nem
+  criar, nem estender a validade, nem cancelar, nem aceitar — e quem tem o
+  link não lê o documento nem preenche a dupla do registro alheio (a regra de
+  `career_events` segue só do dono; quem preenche é o servidor).
 - Prova no emulador: `tests/rules/career.rules.test.js` (dono, dupla citada,
   terceiro, menor — nenhuma conta admin) e os casos de `carreira/` em
   `tests/rules/storage.rules.test.js`.
@@ -553,6 +581,60 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
   acrescenta "Aguardando a dupla". Confirmado continua **declarado** para
   pontuação: não entra em ranking, rating, federação nem XP.
 
+### 4.13 A dupla sem conta: "Convidar pelo WhatsApp" (PR 6)
+
+- **Na ficha** (camada Dupla, `NamedPartnerInvites` em `CareerPartnerUi.jsx`):
+  cada dupla digitada só com o nome (`namedPartners`, uma por nome) ganha
+  "Convidar pelo WhatsApp" (âncora `carreira-convidar-whatsapp`) — só com a
+  ficha salva, torneio jogado e o dono maior de 18. A ação `invite_link`
+  devolve o token; a tela monta a mensagem com o link
+  `/carreira/convite/:token` e abre `wa.me/?text=…` (sem número), com o
+  link "Abrir o WhatsApp" de reserva se o navegador bloquear a janela.
+  Depois: **"Convite enviado · aguardando"**, até quando vale, "Mandar um
+  link novo" (derruba o anterior) e **"Cancelar o convite"** (`invite_cancel`,
+  o link para de valer na hora). Vencido: "O convite venceu". A lista dos
+  convites que falhou é dita (`V2ErrorState`), nunca "nenhum convite".
+- **O link** (`/carreira/convite/:token`, `V2CareerInvite`, lazy, em
+  `<Isolada>`): sem conta, o `App.jsx` (`MainEntry`) mostra a explicação e
+  "Criar conta ou entrar" → `/login?next=<este link>` (o redirecionamento do
+  login de sempre; nada é gravado). Com conta, `invite_peek` mostra de quem é
+  o convite ("{quem} registrou o {torneio} com "{nome}" como dupla") e
+  **"Sou eu, aceitar o convite"** chama `invite_accept`: numa TRANSAÇÃO, o
+  servidor confere o convite (existe, não venceu, registro do mesmo dono,
+  não cancelado, quem aceita é maior de 18) e que a dupla com aquele nome
+  **ainda está vazia**; preenche `entries[i].partner.uid` (o nome digitado
+  fica) e `partner_uids`, apaga o convite, abre o pedido `career_partner`
+  (`invited`) e avisa o dono ("{nome} aceitou o seu convite",
+  `type: 'career'`, `origin: 'server'`). A tela vai para
+  `/carreira?dupla=<pedido>` — a confirmação de sempre (§4.8).
+- **Resposta neutra**: link usado, vencido, cancelado, inexistente,
+  malformado, de registro apagado, com a dupla já preenchida ou aberto por
+  menor recebem a MESMA mensagem ("Este convite não vale mais…"), e nada é
+  gravado. O dono que abre o próprio link vê "Este convite é seu".
+  Também valem neutros: o torneio que voltou a ter data futura e o pedido que
+  a moderação retirou (`remove_link`) — o link não o faz renascer.
+- **Conta recém-criada sem nascimento**: a tela não consulta o servidor (ele
+  trataria como menor); pede "Complete o seu cadastro" e consulta assim que a
+  data chega ao perfil (a data está na chave da consulta). Com a flag
+  desligada, quem não entrou vê "Este link não está disponível agora".
+- **Nunca troca uma conta**: dupla que já tem `uid` não está em
+  `namedPartners`, então o link é recusado; o dono não aceita o próprio.
+- **Ficha aberta durante o aceite**: salvar a ficha carregada antes do aceite
+  não apaga a conta ligada — `saveCareerEvent` relê o registro e, se ele é
+  mais novo que o carregado, a categoria com o mesmo nome recupera a conta
+  (`keepServerLinkedPartners`).
+- **Um convite por NOME**: o mesmo nome em várias categorias recebe um link
+  só, e quem aceita vira a dupla de todas — a ficha diz "o mesmo link vale
+  para as N categorias". Pessoas diferentes com o mesmo nome precisam de
+  nomes que as distingam. Gerar um link novo apaga também os convites
+  vencidos do torneio; o resto vence sozinho ou sai com o registro/a conta.
+- **O token não vai para a ajuda**: `helpLinkFor` troca o token da rota por
+  `link` (a pista `/carreira/convite/*` segue valendo).
+- **Ajuda**: artigo `carreira-dupla-sem-conta`, passo `whatsapp` do guia
+  `carreira-registrar`, ponto `carreira:convidar-whatsapp` e a pista
+  `/carreira/convite/*` (antes de `/carreira`), todos com
+  `flags: ['athlete_career']`.
+
 ## 6. O que não pode regredir
 
 1. **Declarado nunca pontua**: nenhum motor de ranking, rating ou federação
@@ -592,10 +674,19 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
     zerar em vez de apagar, teto do mês com os zerados, números da
     configuração, flag + módulo `career_xp`. `kind: 'career'` existe nos DOIS
     lados (`xpGrants.js` × `XP_GRANT_KINDS`, paridade).
+16. **Convite da dupla sem conta (PR 6)**: `career_partner_invites` só o
+    servidor grava; o token nunca é guardado (o id é o hash) e nenhum
+    telefone; o link vale UMA vez e por 14 dias; o aceite só preenche a dupla
+    VAZIA e nunca troca uma conta; o dono não se liga a si mesmo; menor não
+    convida nem é convidado; usado, vencido, cancelado e inexistente
+    respondem igual. Provado em `functions/careerInvite.test.js` e
+    `tests/rules/career.rules.test.js`; validade, token e `namedPartners`
+    com paridade em `careerPolicy.parity.test.js`. A rota
+    `/carreira/convite/:token` é contrato (o link vai no WhatsApp).
 
 ## 7. Fora destes PRs
 
-Vitrine pública, dupla sem conta (convite por link), faixas
+Vitrine pública, faixas
 de preparação e o histórico do DUPR (a série `rating_points` existe; nada a
 mostra ainda).
 

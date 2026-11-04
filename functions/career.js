@@ -13,7 +13,12 @@
  *  - `remove`   o dono apaga o pedido; a dupla retira a visão (ou desfaz a confirmação);
  *  - `report`   qualquer uma das duas denuncia;
  *  - `moderate` o admin decide a denúncia (com motivo, auditoria e aviso ao autor);
- *  - `queue`    o admin lista as denúncias abertas (a crítica nunca é lida pelo cliente fora das duas pontas).
+ *  - `queue`    o admin lista as denúncias abertas (a crítica nunca é lida pelo cliente fora das duas pontas);
+ *  - `invite_link` / `invite_cancel` (PR 6) o dono gera ou cancela o link de
+ *    uso único para a dupla SEM conta ("Convidar pelo WhatsApp");
+ *  - `invite_peek` / `invite_accept` (PR 6) quem abriu o link vê de quem é e
+ *    aceita: a conta preenche a dupla VAZIA (nunca troca uma conta) e o pedido
+ *    de confirmação abre.
  *
  * Gatilho `eventWritten` (`careerEventWritten`, em `career_events/{id}`):
  *  - recalcula a IMPRESSÃO do que foi confirmado: mudou data, categoria ou
@@ -27,6 +32,7 @@
  * não convida nem é convidado; a crítica fica entre as duas pessoas (e o admin,
  * só na denúncia). Nada daqui pontua (guarda `carreiraNaoPontua`).
  */
+const crypto = require('node:crypto');
 const P = require('./careerPolicy.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const { FederationError } = require('./federations.js');
@@ -407,7 +413,176 @@ async function queue(ctx, actor) {
   return { items: itens.filter(Boolean).sort((a, b) => a.reported_at_ms - b.reported_at_ms) };
 }
 
-const ACOES = { invite, respond, feedback, decide, remove, report, moderate, queue };
+/* ------------------------------------ dupla SEM conta: o convite (PR 6) -- */
+
+/**
+ * `career_partner_invites/{sha256(token)}`: o token NUNCA é guardado — o id é
+ * o hash dele. Nenhum telefone: o WhatsApp é aberto no aparelho do dono, que
+ * escolhe o contato. Uso único: aceito ou cancelado, o documento some.
+ */
+const INV = 'career_partner_invites';
+const hashToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
+const tokenOk = (token) => typeof token === 'string' && new RegExp(P.INVITE_TOKEN_PATTERN).test(token);
+/** A MESMA resposta para usado, vencido, cancelado, inexistente, menor e dupla já preenchida. */
+const CONVITE_NEUTRO = 'Este convite não vale mais. Peça um link novo a quem convidou.';
+const DIA_MS = 86400000;
+
+/** O dono gera (ou troca) o link de convite de uma dupla digitada só com o nome. */
+async function inviteLink(ctx, actor, data) {
+  await exigeFlag(ctx);
+  const eventId = texto(data.eventId, 200);
+  const key = P.partnerNameKey(texto(data.partnerName, 120));
+  if (!eventId || !key) falha('invalid-argument', 'Escolha o torneio e a dupla.');
+  const evSnap = await ctx.db.collection(EV).doc(eventId).get();
+  if (!evSnap.exists || evSnap.data().uid !== actor.uid) falha('permission-denied', 'Este torneio não é seu.');
+  const ev = evSnap.data();
+  if (!ev.start_date || ev.start_date > hojeBR(ctx.now) || ev.status === 'cancelled') falha('failed-precondition', 'Só dá para convidar a dupla de torneio já jogado.');
+  const alvo = P.namedPartners(ev).find((p) => p.key === key);
+  if (!alvo) falha('failed-precondition', 'Esta dupla não está mais só com o nome neste torneio (pode já ter entrado com a conta). Abra a ficha de novo.');
+  const eu = await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não convidam a dupla.');
+  // Um convite por (torneio, nome): gerar de novo derruba o link anterior.
+  const antigos = await ctx.db.collection(INV).where('event_id', '==', eventId).get();
+  const token = crypto.randomBytes(24).toString('base64url');
+  const id = hashToken(token);
+  const expires = ctx.now + P.INVITE_TTL_DAYS * DIA_MS;
+  // Sai também o que já venceu neste torneio (guarda o nome de um terceiro sem conta).
+  const doNome = antigos.docs.filter((d) => d.data().owner_uid === actor.uid
+    && (d.data().name_key === key || !(Number(d.data().expires_at_ms) > ctx.now)));
+  const batch = ctx.db.batch();
+  doNome.forEach((d) => batch.delete(d.ref));
+  batch.set(ctx.db.collection(INV).doc(id), {
+    owner_uid: actor.uid,
+    event_id: eventId,
+    name_key: key,
+    partner_name: texto(alvo.name, 80),
+    owner_name: nomeDe(eu),
+    event_name: texto(ev.name, 120),
+    created_at_ms: ctx.now,
+    expires_at_ms: expires,
+  });
+  auditoria(ctx, batch, actor, 'career_partner_link_created', { event_id: eventId, renewed: doNome.length > 0 });
+  await batch.commit();
+  return { id, token, expires_at_ms: expires };
+}
+
+/** O dono cancela: o link para de valer na hora. */
+async function inviteCancel(ctx, actor, data) {
+  const id = texto(data.id, 64);
+  if (!/^[a-f0-9]{64}$/.test(id)) falha('invalid-argument', 'Convite inválido.');
+  const ref = ctx.db.collection(INV).doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) return { id };
+  if (snap.data().owner_uid !== actor.uid) falha('permission-denied', 'Este convite não é seu.');
+  const batch = ctx.db.batch();
+  batch.delete(ref);
+  auditoria(ctx, batch, actor, 'career_partner_link_cancelled', { event_id: snap.data().event_id });
+  await batch.commit();
+  return { id };
+}
+
+/**
+ * O convite ainda vale para quem abriu? Devolve a dupla digitada a preencher,
+ * ou `null` (o motivo nunca sai daqui: a resposta é a mesma para todos).
+ */
+function conviteVale(ctx, inv, ev, eu, rep) {
+  if (!inv || !(Number(inv.expires_at_ms) > ctx.now)) return null;
+  if (!ev || ev.uid !== inv.owner_uid || ev.status === 'cancelled') return null;
+  // Como no `invite`: só torneio já jogado (a data pode ter mudado depois do link).
+  if (!ev.start_date || ev.start_date > hojeBR(ctx.now)) return null;
+  if (!eu || !P.isAdult(eu.birth_date, hojeBR(ctx.now))) return null;
+  // A moderação retirou o pedido desta pessoa neste torneio: o link não o desfaz.
+  if (rep && rep.exists && rep.data().moderation && rep.data().moderation.decision === 'remove_link') return null;
+  // Só preenche o que está VAZIO: dupla que já tem conta não é trocada.
+  return P.namedPartners(ev).find((p) => p.key === inv.name_key) || null;
+}
+
+/** Quem abriu o link vê de quem é o convite antes de aceitar (nada é gravado). */
+async function invitePeek(ctx, actor, data) {
+  await exigeFlag(ctx);
+  if (!tokenOk(data.token)) return { valid: false };
+  const inv = await ctx.db.collection(INV).doc(hashToken(data.token)).get();
+  if (!inv.exists) return { valid: false };
+  const d = inv.data();
+  if (d.owner_uid === actor.uid) return { valid: false, own: true };
+  const repRef = ctx.db.collection(REP).doc(reportId(P.partnerDocId(d.event_id, actor.uid), 'partner'));
+  const [evSnap, eu, rep] = await Promise.all([ctx.db.collection(EV).doc(d.event_id).get(), usuario(ctx, actor.uid), repRef.get()]);
+  const ev = evSnap.exists ? evSnap.data() : null;
+  if (!conviteVale(ctx, d, ev, eu, rep)) return { valid: false };
+  return {
+    valid: true,
+    owner_name: d.owner_name || '',
+    partner_name: d.partner_name || '',
+    event_name: texto(ev.name, 120),
+    start_date: texto(ev.start_date, 10),
+    date_precision: ev.date_precision === 'year' ? 'year' : 'day',
+  };
+}
+
+/**
+ * Quem abriu o link aceita: numa transação, confere o convite, preenche a
+ * dupla VAZIA do registro com a conta, consome o convite e abre o pedido de
+ * confirmação do PR 3 (a pessoa confirma em seguida, na tela de sempre).
+ */
+async function inviteAccept(ctx, actor, data) {
+  await exigeFlag(ctx);
+  if (!tokenOk(data.token)) falha('failed-precondition', CONVITE_NEUTRO);
+  const invRef = ctx.db.collection(INV).doc(hashToken(data.token));
+  return ctx.db.runTransaction(async (tr) => {
+    const invSnap = await tr.get(invRef);
+    if (!invSnap.exists) falha('failed-precondition', CONVITE_NEUTRO);
+    const inv = invSnap.data();
+    if (inv.owner_uid === actor.uid) falha('failed-precondition', 'Este convite é seu: mande o link para a sua dupla.');
+    const evRef = ctx.db.collection(EV).doc(inv.event_id);
+    const pedidoRef = ctx.db.collection(COL).doc(P.partnerDocId(inv.event_id, actor.uid));
+    const [evSnap, euSnap, pedidoSnap, repSnap] = await Promise.all([
+      tr.get(evRef), tr.get(ctx.db.collection('users').doc(actor.uid)), tr.get(pedidoRef),
+      tr.get(ctx.db.collection(REP).doc(reportId(pedidoRef.id, 'partner'))),
+    ]);
+    const ev = evSnap.exists ? evSnap.data() : null;
+    const eu = euSnap.exists ? euSnap.data() : null;
+    const alvo = conviteVale(ctx, inv, ev, eu, repSnap);
+    // Menor, vencido, dupla já preenchida, registro apagado: a mesma resposta, nada gravado.
+    if (!alvo) falha('failed-precondition', CONVITE_NEUTRO);
+
+    const entries = ev.entries.map((e, i) => (alvo.indexes.includes(i) ? { ...e, partner: { uid: actor.uid, name: e.partner.name } } : e));
+    const novo = { ...ev, entries };
+    const partnerUids = [...new Set([...(Array.isArray(ev.partner_uids) ? ev.partner_uids : []), actor.uid])];
+    tr.update(evRef, { entries, partner_uids: partnerUids, updated_at_ms: ctx.now });
+    tr.delete(invRef);
+    const idx = P.citedEntryIndexes(novo, actor.uid);
+    if (!pedidoSnap.exists) {
+      tr.set(pedidoRef, {
+        owner_uid: inv.owner_uid,
+        partner_uid: actor.uid,
+        event_id: inv.event_id,
+        owner_name: inv.owner_name || 'Atleta',
+        partner_name: nomeDe(eu),
+        entry_indexes: idx,
+        summary: resumo(novo, idx),
+        status: P.PARTNER_STATUS.INVITED,
+        fingerprint: P.careerFingerprint(novo, idx),
+        feedback: null,
+        owner_decision: null,
+        partner_event_id: null,
+        invited_at_ms: ctx.now,
+        answered_at_ms: null,
+        via_link: true,
+      });
+    }
+    aviso(ctx, tr, inv.owner_uid, {
+      title: tx('{nome} aceitou o seu convite', { nome: nomeDe(eu) }),
+      message: tx('A conta de {nome} entrou no {torneio} e agora pode confirmar o resultado.', { nome: nomeDe(eu), torneio: texto(ev.name, 120) }),
+      link: linkDoEvento(inv.event_id),
+    });
+    auditoria(ctx, tr, actor, 'career_partner_link_accepted', { doc_id: pedidoRef.id, event_id: inv.event_id, user_id: inv.owner_uid });
+    return { docId: pedidoRef.id };
+  });
+}
+
+const ACOES = {
+  invite, respond, feedback, decide, remove, report, moderate, queue,
+  invite_link: inviteLink, invite_cancel: inviteCancel, invite_peek: invitePeek, invite_accept: inviteAccept,
+};
 
 async function career(ctx, actor, data = {}) {
   const fn = ACOES[data.action];
@@ -437,6 +612,9 @@ async function eventWritten(ctx, eventId, before, after) {
     // Quem tinha posto este torneio na carreira dele também: o vínculo some dos dois lados.
     const espelhos = await db.collection(EV).where('linked_event.id', '==', eventId).get();
     espelhos.docs.forEach((doc) => { batch.update(doc.ref, { linked_event: null }); escritas += 1; });
+    // Os convites pelo WhatsApp deste registro param de valer (PR 6).
+    const convites = await db.collection(INV).where('event_id', '==', eventId).get();
+    convites.docs.forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
   } else {
     for (const doc of pedidos.docs) {
       const d = doc.data();

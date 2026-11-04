@@ -1612,6 +1612,19 @@ O servidor usa `open ==` (fila) e `event_id ==`. Entra na exclusão
 salvos antes do PR 3 não têm `partner_uids`: a exclusão de conta não os acha
 até a próxima gravação (nada migrado).
 
+### `career_partner_invites/{sha256(token)}` (NOVO, PR 6 — dupla sem conta)
+O convite pelo WhatsApp para a dupla digitada só com o nome: `owner_uid`,
+`owner_name`, `event_id`, `event_name`, `name_key` (o nome sem caixa nem
+acento), `partner_name`, `created_at_ms`, `expires_at_ms` (14 dias). O id é o
+hash do token — **o token nunca é guardado** — e **não há telefone**. Só o
+servidor grava (função `career`: `invite_link`, `invite_cancel`,
+`invite_accept`); lê só quem convidou (`owner_uid ==`). Uso único: aceito ou
+cancelado, o documento é apagado; registro apagado leva os convites. O
+servidor usa `event_id ==`. Entra na exclusão (`owner_uid`) e na exportação.
+O aceite grava no `career_events` do dono só `entries[i].partner.uid`,
+`partner_uids` e `updated_at_ms`, e o pedido `career_partner` ganha
+`via_link: true` (opcional). Zero índice.
+
 ### Storage: `carreira/{uid}/{arquivo}` (NOVO, flag `athlete_career`)
 As fotos da Minha carreira. Só o dono lê, lista e apaga; cria só arquivo novo
 `image/(webp|jpeg|png)` < 3 MB. Enviadas por `prepareUpload` (sem EXIF).

@@ -1304,6 +1304,13 @@ const GUIAS_BASE = [
         title: tk('A dupla confirma'),
         body: tk('Escolhida a dupla da lista de usuários, a camada "Dupla" da ficha pede que ela confirme o resultado. Confirmado, o torneio ganha o selo "Confirmado pela dupla".'),
       },
+      {
+        id: 'whatsapp',
+        route: '/carreira',
+        target: ['carreira-convidar-whatsapp', 'carreira-dupla', 'carreira-abas'],
+        title: tk('A dupla sem conta'),
+        body: tk('Dupla digitada só com o nome? "Convidar pelo WhatsApp" manda um link que vale uma vez, por 14 dias. Quem entrar por ele vira a dupla do torneio e confirma.'),
+      },
     ],
   },
   {

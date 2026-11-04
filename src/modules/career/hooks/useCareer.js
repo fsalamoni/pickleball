@@ -22,7 +22,7 @@ import {
 } from '../domain/draftQueue.js';
 import {
   CareerError, careerAction, deleteCareerEvent, deleteCareerRank, listCareerEvents, listCareerRanks,
-  listMyCareerPartnerDocs, listStudentCareerShares, saveCareerEvent, saveCareerEventsBatch, saveCareerRank,
+  listMyCareerPartnerDocs, listMyCareerPartnerInvites, listStudentCareerShares, saveCareerEvent, saveCareerEventsBatch, saveCareerRank,
   shareCareerWithCoach,
 } from '../services/careerService.js';
 import { partnerVoices } from '../domain/careerPartner.js';
@@ -31,6 +31,7 @@ export const careerKeys = Object.freeze({
   all: ['career'],
   events: (uid) => ['career', 'events', uid],
   partners: (uid) => ['career', 'partners', uid],
+  invites: (uid) => ['career', 'invites', uid],
   moderation: ['career', 'moderation'],
   // A MESMA chave de `fedKeys.myPoints` (useFederations): um cache só para os
   // pontos. Não importamos aquele arquivo para não puxar a federação inteira
@@ -83,6 +84,18 @@ export function useCareerPartners({ enabled = true } = {}) {
   return usePartnersOf(user?.uid, enabled);
 }
 
+/** Os convites pelo WhatsApp que a pessoa mandou à dupla sem conta (PR 6). */
+export function useCareerPartnerInvites({ enabled = true } = {}) {
+  const { user } = useAuth();
+  const uid = user?.uid;
+  return useQuery({
+    queryKey: careerKeys.invites(uid),
+    queryFn: () => listMyCareerPartnerInvites(uid),
+    enabled: Boolean(uid) && enabled,
+    staleTime: 60_000,
+  });
+}
+
 /**
  * A voz da dupla para o foco do balanço (de `uid`): `[]` com a flag desligada
  * ou sem visões usadas; falha também vira `[]` — a voz SOMA ao foco, nunca o
@@ -103,7 +116,9 @@ export function useCareerPartnerAction() {
   const invalidar = useInvalidar();
   return useMutation({
     mutationFn: ({ action, ...payload }) => careerAction(action, payload),
-    onSuccess: invalidar,
+    // Também na recusa: o servidor pode ter mudado o registro (a dupla aceitou o
+    // link) e a tela segue oferecendo o que já não vale.
+    onSettled: invalidar,
   });
 }
 

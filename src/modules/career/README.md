@@ -14,7 +14,8 @@ career/
 │   ├── draftQueue.js   # a fila do aparelho para quando não há sinal
 │   ├── careerDebrief.js # torneio de fora → origem `externo` do balanço (sem importar debrief.js)
 │   ├── careerPartner.js # a DUPLA (PR 3): citação, impressão, maioridade, visão, selo,
-│   │                    # pendências, voz no balanço, espelho, "com quem já jogou"
+│   │                    # pendências, voz no balanço, espelho, "com quem já jogou";
+│   │                    # PR 6: a dupla sem conta (namedPartners, convite, link do WhatsApp)
 │   ├── careerUpcoming.js # PR 4: descoberta, plano, contagem, prazo, ICS, foco sugerido, pendências
 │   ├── careerGoals.js  # PR 4: métricas das metas da temporada e de onde cada uma conta
 │   ├── careerRank.js   # PR 4: posição no ranking (digitada × oficial), séries e tendência
@@ -82,3 +83,14 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
 13. O professor só lê o que foi MANDADO, com vínculo ATIVO (`coachSees`).
 14. Os avisos D-3/D+1 são do servidor, com id determinístico, e a categoria
     Carreira existe nas duas cópias das preferências.
+15. **Dupla sem conta (PR 6)**: "Convidar pelo WhatsApp" na ficha
+    (`NamedPartnerInvites`, em `CareerPartnerUi.jsx`) e o link
+    `/carreira/convite/:token` (`V2CareerInvite`; sem login, o `App.jsx`
+    mostra a explicação). `career_partner_invites/{sha256(token)}` só o
+    servidor grava (`invite_link`/`invite_cancel`/`invite_peek`/`invite_accept`);
+    o token nunca é guardado e não há telefone; uso único, 14 dias; o aceite
+    só preenche a dupla VAZIA (`namedPartners`) e nunca troca uma conta; o
+    dono não aceita o próprio; menor não convida nem é convidado; usado,
+    vencido, cancelado e inexistente respondem igual. `INVITE_TTL_DAYS`,
+    `INVITE_TOKEN_PATTERN`, `partnerNameKey` e `namedPartners` têm cópia em
+    `functions/careerPolicy.js` com paridade. Hook `useCareerPartnerInvites`.

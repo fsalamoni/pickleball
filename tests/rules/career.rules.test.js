@@ -160,6 +160,42 @@ describe('career_partner_reports (a denúncia fica fora do pedido)', () => {
   });
 });
 
+/* ------------------------------------------------------------- PR 6 -- */
+
+describe('career_partner_invites (o convite à dupla sem conta: só o servidor grava)', () => {
+  const HASH = 'a'.repeat(64);
+  const convite = (extra = {}) => ({
+    owner_uid: DONO, event_id: `${DONO}_a`, name_key: 'ze ninguem', partner_name: 'Zé Ninguém', expires_at_ms: Date.now() + 86400000, ...extra,
+  });
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'career_partner_invites', HASH), convite()));
+  });
+
+  it('⭐ quem convidou lê e consulta os próprios convites', async () => {
+    await assertSucceeds(getDoc(doc(como(DONO), 'career_partner_invites', HASH)));
+    await assertSucceeds(getDocs(query(collection(como(DONO), 'career_partner_invites'), where('owner_uid', '==', DONO))));
+  });
+
+  it('🔴 ninguém mais lê (nem quem tem o link); sem conta também não', async () => {
+    await assertFails(getDoc(doc(como(OUTRO), 'career_partner_invites', HASH)));
+    await assertFails(getDocs(query(collection(como(OUTRO), 'career_partner_invites'), where('owner_uid', '==', DONO))));
+    await assertFails(getDocs(query(collection(como(OUTRO), 'career_partner_invites'), where('event_id', '==', `${DONO}_a`))));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'career_partner_invites', HASH)));
+  });
+
+  it('🔴 ninguém grava pelo cliente: nem criar, nem estender, nem cancelar, nem aceitar', async () => {
+    await assertFails(setDoc(doc(como(DONO), 'career_partner_invites', 'b'.repeat(64)), convite()));
+    await assertFails(updateDoc(doc(como(DONO), 'career_partner_invites', HASH), { expires_at_ms: Date.now() + 999 * 86400000 }));
+    await assertFails(deleteDoc(doc(como(DONO), 'career_partner_invites', HASH)));
+    await assertFails(deleteDoc(doc(como(OUTRO), 'career_partner_invites', HASH)));
+    await assertFails(setDoc(doc(como(OUTRO), 'career_partner_invites', 'c'.repeat(64)), convite({ owner_uid: OUTRO })));
+  });
+
+  it('🔴 quem tem o link não preenche a dupla do registro alheio pelo cliente', async () => {
+    await assertFails(updateDoc(doc(como(OUTRO), 'career_events', `${DONO}_a`), { partner_uids: [OUTRO] }));
+  });
+});
+
 /* ------------------------------------------------------------- PR 4 -- */
 
 describe('career_rank (a posição no ranking da federação)', () => {

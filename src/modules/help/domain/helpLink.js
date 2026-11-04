@@ -22,5 +22,7 @@ export function helpLinkFor(pathname) {
   // dúvida, mesmo que do outro lado só se compare contra uma tabela fixa.
   if (!p.startsWith('/') || p.startsWith('//')) return '/ajuda';
   if (p === '/ajuda' || p.startsWith('/ajuda/')) return '/ajuda';
-  return `/ajuda?de=${encodeURIComponent(p)}`;
+  // O token do convite da carreira não viaja para outra URL (a pista é `/carreira/convite/*`).
+  const semToken = p.replace(/^\/carreira\/convite\/[^/]+/, '/carreira/convite/link');
+  return `/ajuda?de=${encodeURIComponent(semToken)}`;
 }

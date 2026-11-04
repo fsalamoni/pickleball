@@ -7,7 +7,8 @@
  */
 import { tk } from '@/core/i18n';
 import {
-  listCareerEvents, listCareerRanks, listMyCareerPartnerDocs, listMyCareerPartnerReports, listMyCareerPhotoPaths,
+  listCareerEvents, listCareerRanks, listMyCareerPartnerDocs, listMyCareerPartnerInvites, listMyCareerPartnerReports,
+  listMyCareerPhotoPaths,
 } from './careerService.js';
 
 /** @returns {Promise<{ career: object, incomplete: string[] }>} `incomplete` em `tk` (a tela traduz). */
@@ -16,6 +17,7 @@ export async function collectCareerExport(uid) {
     ['events', tk('Torneios de fora (Minha carreira)'), () => listCareerEvents(uid)],
     ['partners', tk('Confirmações da dupla (Minha carreira)'), () => listMyCareerPartnerDocs(uid)],
     ['partnerReports', tk('Denúncias que você fez (Minha carreira)'), () => listMyCareerPartnerReports(uid)],
+    ['partnerInvites', tk('Convites à dupla sem conta (Minha carreira)'), () => listMyCareerPartnerInvites(uid)],
     ['photos', tk('Lista das fotos da Minha carreira'), () => listMyCareerPhotoPaths(uid)],
     ['ranks', tk('Posições anotadas no ranking (Minha carreira)'), () => listCareerRanks(uid)],
   ];

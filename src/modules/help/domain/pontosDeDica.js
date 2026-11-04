@@ -546,6 +546,15 @@ export const PONTOS_DE_DICA = Object.freeze([
     flags: ['athlete_career'],
   },
   {
+    id: 'carreira:convidar-whatsapp',
+    route: '/carreira',
+    target: 'carreira-convidar-whatsapp',
+    title: tk('Dupla sem conta'),
+    body: tk('O link vai pelo WhatsApp e vale uma vez, por 14 dias. Quem entrar por ele vira a dupla do torneio e confirma o resultado. Nenhum telefone fica guardado.'),
+    guide: 'carreira-registrar',
+    flags: ['athlete_career'],
+  },
+  {
     id: 'carreira:descoberta',
     route: '/carreira',
     target: 'carreira-descoberta',
