@@ -119,4 +119,10 @@ describe('userAreaPending — Minha carreira (a dupla)', () => {
     expect(userAreaPending({ carreira: undefined })).toEqual([]);
     expect(userAreaPending({ carreira: { convites: 0, visoes: 0 } })).toEqual([]);
   });
+  it('o plano: "como foi?" e inscrição fechando levam ao torneio', () => {
+    const itens = userAreaPending({ carreira: { comoFoi: 1, comoFoiEvento: 'u_a', prazos: 2, prazoEvento: null } });
+    expect(itens.map((i) => [i.id, i.count, i.to])).toEqual([
+      ['carreira:como-foi', 1, '/carreira?evento=u_a'], ['carreira:prazos', 2, '/carreira?aba=proximos'],
+    ]);
+  });
 });

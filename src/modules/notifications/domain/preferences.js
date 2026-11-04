@@ -40,7 +40,13 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
     id: 'partners',
     label: tk('Parcerias de dupla'),
     description: tk('Convites de dupla e respostas dos parceiros.'),
-    types: ['partner_invite', 'partner_response', 'career'],
+    types: ['partner_invite', 'partner_response'],
+  },
+  {
+    id: 'career',
+    label: tk('Carreira'),
+    description: tk('Minha carreira: a dupla que confirma, o prazo de inscrição que vai fechar e o "como foi?" depois do torneio.'),
+    types: ['career'],
   },
   {
     id: 'training',
@@ -106,6 +112,9 @@ export function normalizeNotificationPrefs(raw) {
     NOTIFICATION_CATEGORIES.forEach((cat) => {
       if (typeof raw[cat.id] === 'boolean') prefs[cat.id] = raw[cat.id];
     });
+    // "Carreira" saiu de "Parcerias de dupla" (PR 4): sem escolha própria, herda a de lá
+    // (mesma regra em `functions/notificationPrefs.js`, com paridade).
+    if (typeof raw.career !== 'boolean' && raw.partners === false) prefs.career = false;
   }
   return prefs;
 }

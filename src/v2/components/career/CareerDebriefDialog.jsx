@@ -11,7 +11,7 @@ import React from 'react';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
 import DebriefDialog from '@/v2/components/training/debrief/DebriefDialog';
 
-export default function CareerDebriefDialog({ open, onOpenChange, source, history = [], initial = null }) {
+export default function CareerDebriefDialog({ open, onOpenChange, source, history = [], initial = null, sharedCoachId = null }) {
   const identity = useTrainingIdentity();
-  return <DebriefDialog open={open} onOpenChange={onOpenChange} identity={identity} source={source} history={history} initial={initial} />;
+  return <DebriefDialog open={open} onOpenChange={onOpenChange} identity={identity} source={source} history={history} initial={initial} sharedCoachId={sharedCoachId} />;
 }

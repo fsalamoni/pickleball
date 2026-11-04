@@ -47,6 +47,7 @@ export const HOME_CARD = Object.freeze({
   MERCADO: 'mercado',
   FEDERACAO: 'federacao',
   ASSOCIACAO_CLUBE: 'associacao_clube',
+  CARREIRA: 'carreira',
 });
 
 /** ⭐ O que todo mundo vê sem ter escolhido — nesta ordem. */
@@ -150,6 +151,14 @@ export const HOME_CARD_META = Object.freeze({
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
     requer: 'associacaoClube',
+  }),
+  [HOME_CARD.CARREIRA]: Object.freeze({
+    label: tk('Carreira'),
+    description: tk('O torneio principal que vem aí, o prazo de inscrição perto e o "como foi?" depois.'),
+    icon: 'Medal',
+    group: HOME_CARD_GROUP.COMPETIR,
+    focos: [],
+    requer: 'carreira',
   }),
   [HOME_CARD.TORNEIOS]: Object.freeze({
     label: tk('Torneios'),

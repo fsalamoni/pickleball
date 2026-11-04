@@ -30,6 +30,7 @@ const ICONE = {
   [AGENDA_KIND.AULA_ARENA]: GraduationCap,
   [AGENDA_KIND.JOGO_ABERTO]: Megaphone,
   [AGENDA_KIND.EVENTO_CLUBE]: Users,
+  [AGENDA_KIND.CARREIRA]: Trophy,
 };
 
 /** Quantos compromissos a tela inicial mostra (o resto está em cada tela). */

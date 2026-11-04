@@ -29,7 +29,7 @@ export async function listMyDebriefs(uid) {
 }
 
 /** Grava as respostas (cria ou substitui). @returns {Promise<string>} o id */
-export async function saveDebrief(uid, input, { suggestion = null } = {}) {
+export async function saveDebrief(uid, input, { suggestion = null, sharedCoachId = null } = {}) {
   if (!uid) throw new TrainingItemError(t('Entre na sua conta.'));
   const { valid, error, value } = normalizeDebrief(input);
   if (!valid) throw new TrainingItemError(error);
@@ -43,6 +43,8 @@ export async function saveDebrief(uid, input, { suggestion = null } = {}) {
       light: suggestion.light === true,
     } : null,
     applied: null,
+    // "Mandar ao meu professor" (torneio de fora): o balanço segue o evento. A regra confere o vínculo.
+    ...(sharedCoachId ? { shared_coach_id: sharedCoachId } : {}),
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });

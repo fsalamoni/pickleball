@@ -297,3 +297,36 @@ describe('a visão da dupla, a decisão e a moderação', () => {
     await expect(chamar(cenario(), ANA, { action: 'publish' })).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 });
+
+describe('lembretes do planejado (varredura diária)', () => {
+  const plano = (extra) => ({ uid: 'ana111', name: 'Open Floripa', status: 'planned', start_date: '2026-11-20', ...extra });
+  const base = (flag = true) => ({
+    db: createFakeDb({
+      'platform_settings/global': { feature_flags: { athlete_career: flag } },
+      'career_events/ana111_p1': plano({ registration_deadline: '2026-11-07' }),
+      'career_events/ana111_p2': plano({ registration_deadline: '2026-11-07', registered: true }),
+      'career_events/ana111_p3': plano({ start_date: '2026-11-03', focus_aspect: 'third_shot' }),
+      'career_events/ana111_p4': plano({ start_date: '2026-11-01', end_date: '2026-11-03' }),
+      'career_events/ana111_p5': plano({ start_date: '2026-11-03', end_date: '2026-11-04' }),
+      // O plano de um torneio DAQUI não pergunta "Como foi?": vale o oficial.
+      'career_events/ana111_p6': plano({ start_date: '2026-11-03', origin_ref: 'tor:t1' }),
+      'career_events/ana111_j1': evento({ start_date: '2026-11-03', status: 'played' }),
+    }),
+  });
+  it('D-3 só para quem não se inscreveu; D+1 do planejado que terminou ontem; sem repetir', async () => {
+    const k = base();
+    expect(await c.reminders(ctx(k))).toEqual({ avisos: 3 });
+    const ids = [...k.db.store.docs.keys()].filter((p) => p.startsWith('notifications/')).sort();
+    expect(ids).toEqual([
+      'notifications/carreira_d1_ana111_p3', 'notifications/carreira_d1_ana111_p4', 'notifications/carreira_prazo_ana111_p1_2026-11-07',
+    ]);
+    avisos(k).forEach((a) => expect(a).toMatchObject({ user_id: 'ana111', type: 'career', origin: 'server', read: false }));
+    expect(avisos(k).every((a) => !a.link.includes('#'))).toBe(true);
+    expect(await c.reminders(ctx(k))).toEqual({ avisos: 0 });
+  });
+  it('sem a flag, nada', async () => {
+    const k = base(false);
+    expect(await c.reminders(ctx(k))).toMatchObject({ avisos: 0, desligada: true });
+    expect(avisos(k)).toHaveLength(0);
+  });
+});

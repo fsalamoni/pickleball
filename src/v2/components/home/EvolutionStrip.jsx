@@ -31,7 +31,8 @@ export function EvolutionStrip({ uid, className }) {
   const level = useMemo(() => levelFromXp(xp), [xp]);
   const achievements = useMemo(() => computeAchievements(summary), [summary]);
   const nextAchievement = achievements.locked[0] || null;
-  const activeGoals = Array.isArray(goals) ? goals.length : 0;
+  // A meta da temporada (com `kind`) só conta enquanto está ativa (concluída e deixada de lado, não).
+  const activeGoals = Array.isArray(goals) ? goals.filter((g) => !g.kind || !g.status || g.status === 'active').length : 0;
 
   return (
     <section className={className}>

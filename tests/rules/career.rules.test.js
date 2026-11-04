@@ -13,7 +13,7 @@ import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where,
 } from 'firebase/firestore';
 
 const DONO = 'dono_uid';
@@ -157,5 +157,104 @@ describe('career_partner_reports (a denúncia fica fora do pedido)', () => {
     await assertFails(updateDoc(doc(como(DONO), 'career_partner_reports', REP), { open: false }));
     await assertFails(deleteDoc(doc(como(DONO), 'career_partner_reports', REP)));
     await assertFails(setDoc(doc(como(DUPLA), 'career_partner_reports', `${PEDIDO}__partner`), { reporter_uid: DUPLA, open: true }));
+  });
+});
+
+/* ------------------------------------------------------------- PR 4 -- */
+
+describe('career_rank (a posição no ranking da federação)', () => {
+  const pos = (uid, extra = {}) => ({ uid, federation_name: 'FPP', ranking_label: 'Duplas 4.0', date: '2026-03-01', position: 12, ...extra });
+  it('⭐ só o dono lê, consulta, escreve e apaga', async () => {
+    await assertSucceeds(setDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`), pos(DONO)));
+    await assertSucceeds(getDocs(query(collection(como(DONO), 'career_rank'), where('uid', '==', DONO))));
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`), { position: 9 }));
+    await assertFails(getDoc(doc(como(OUTRO), 'career_rank', `${DONO}_r1`)));
+    await assertFails(getDocs(query(collection(como(OUTRO), 'career_rank'), where('uid', '==', DONO))));
+    await assertFails(setDoc(doc(como(OUTRO), 'career_rank', `${DONO}_r2`), pos(DONO)));
+    await assertFails(updateDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`), { uid: OUTRO }));
+    await assertSucceeds(deleteDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`)));
+  });
+  it('⭐ flag desligada: recusa escrever, deixa ler e apagar', async () => {
+    await assertSucceeds(setDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`), pos(DONO)));
+    await flag(false);
+    await assertFails(setDoc(doc(como(DONO), 'career_rank', `${DONO}_r2`), pos(DONO)));
+    await assertSucceeds(getDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`)));
+    await assertSucceeds(deleteDoc(doc(como(DONO), 'career_rank', `${DONO}_r1`)));
+  });
+});
+
+describe('"Mandar ao meu professor" (career_events + training_debriefs) — contas que não são admin', () => {
+  const PROF = 'prof_uid';
+  const vinculo = (status) => testEnv.withSecurityRulesDisabled((ctx) =>
+    setDoc(doc(ctx.firestore(), 'coach_students', `${PROF}_${DONO}`), { coach_id: PROF, student_id: DONO, status }));
+  const BAL = `${DONO}_externo_${DONO}_a`;
+  const balanco = (extra = {}) => ({
+    uid: DONO, status: 'respondido', rating: 4, strengths: [], weaknesses: ['devolucao'],
+    source: { type: 'externo', ref_id: `${DONO}_a`, title: 'Open', date: '2025-05-10' }, ...extra,
+  });
+  const doProf = () => [where('shared_coach_id', '==', PROF), where('uid', '==', DONO)];
+
+  it('⭐ com vínculo ativo: o aluno manda, o professor lê e consulta (fixando o aluno)', async () => {
+    await vinculo('active');
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: PROF }));
+    await assertSucceeds(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco({ shared_coach_id: PROF })));
+    await assertSucceeds(getDoc(doc(como(PROF), 'career_events', `${DONO}_a`)));
+    await assertSucceeds(getDocs(query(collection(como(PROF), 'career_events'), ...doProf())));
+    await assertSucceeds(getDocs(query(collection(como(PROF), 'training_debriefs'), ...doProf())));
+  });
+
+  it('🔴 o professor não escreve nem apaga; não lista sem fixar o aluno', async () => {
+    await vinculo('active');
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: PROF }));
+    await assertFails(updateDoc(doc(como(PROF), 'career_events', `${DONO}_a`), { name: 'x' }));
+    await assertFails(deleteDoc(doc(como(PROF), 'career_events', `${DONO}_a`)));
+    await assertFails(getDocs(query(collection(como(PROF), 'career_events'), where('shared_coach_id', '==', PROF))));
+  });
+
+  it('🔴 sem vínculo ativo não se manda (nem a um professor qualquer)', async () => {
+    await vinculo('invited');
+    await assertFails(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: PROF }));
+    await assertFails(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco({ shared_coach_id: PROF })));
+    await assertFails(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: OUTRO }));
+  });
+
+  it('⭐ vínculo encerrado fecha o acesso; o aluno segue editando e pode desfazer', async () => {
+    await vinculo('active');
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: PROF }));
+    await assertSucceeds(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco({ shared_coach_id: PROF })));
+    await vinculo('ended');
+    await assertFails(getDoc(doc(como(PROF), 'career_events', `${DONO}_a`)));
+    await assertFails(getDoc(doc(como(PROF), 'training_debriefs', BAL)));
+    await assertFails(getDocs(query(collection(como(PROF), 'career_events'), ...doProf())));
+    await assertFails(getDocs(query(collection(como(PROF), 'training_debriefs'), ...doProf())));
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { name: 'Open 2025' }));
+    await assertSucceeds(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco({ shared_coach_id: PROF, rating: 5 })));
+    await assertSucceeds(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco()));
+  });
+
+  it('⭐ vínculo encerrado: o balanço NOVO do torneio é criado sem o professor', async () => {
+    await vinculo('active');
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: PROF }));
+    await vinculo('ended');
+    // A ficha só passa o professor com o vínculo ativo; com ele, a criação seria recusada.
+    await assertFails(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco({ shared_coach_id: PROF })));
+    await assertSucceeds(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco()));
+  });
+
+  it('⭐ flag desligada: o aluno ainda deixa de mostrar (e só isso)', async () => {
+    await vinculo('active');
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: PROF }));
+    await flag(false);
+    await assertFails(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: OUTRO, updated_at_ms: 1 }));
+    await assertFails(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: deleteField(), name: 'x' }));
+    await assertFails(updateDoc(doc(como(OUTRO), 'career_events', `${DONO}_a`), { shared_coach_id: deleteField() }));
+    await assertSucceeds(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { shared_coach_id: deleteField(), updated_at_ms: 2 }));
+    await assertFails(getDoc(doc(como(PROF), 'career_events', `${DONO}_a`)));
+  });
+
+  it('🔴 terceiro não lê o balanço mandado ao professor', async () => {
+    await vinculo('active');
+    await assertSucceeds(setDoc(doc(como(DONO), 'training_debriefs', BAL), balanco({ shared_coach_id: PROF })));
+    await assertFails(getDoc(doc(como(OUTRO), 'training_debriefs', BAL)));
   });
 });

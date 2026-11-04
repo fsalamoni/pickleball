@@ -35,10 +35,12 @@ import { aspectLabel } from '@/modules/training/domain/debrief.js';
 import { useMyDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { deleteCareerPhoto, uploadCareerPhoto } from '@/modules/career/services/careerService';
 import { useDeleteCareerEvent } from '@/modules/career/hooks/useCareer';
+import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
 import { useQuery } from '@tanstack/react-query';
 import { listAthletes } from '@/modules/athletes/services/athleteService';
 import PartnerPicker from '@/v2/components/people/PartnerPicker';
 import { CareerPartnerLayer } from './CareerPartnerUi';
+import { CareerCoachShare, CareerHowItWent, CareerPlanFields } from './CareerPlanFields';
 import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { ChoiceGroup, FORMAT_CHOICES, GENDER_CHOICES_ALL, SealBadge, careerDateLabel } from './careerUi';
 import { t } from '@/core/i18n';
@@ -178,13 +180,22 @@ export default function CareerEventSheet({
 
   const [balanco, setBalanco] = useState(false);
 
-  useEffect(() => { if (open) { setF(withDerivedStatus(event)); setErro(''); setApagar(false); } }, [open, event]);
+  // O rascunho recomeça ao ABRIR ou ao trocar de torneio — nunca a cada recarga da
+  // lista (mandar ao professor recarrega, e o que estava sendo editado sumiria).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setF(withDerivedStatus(event)); setErro(''); setApagar(false); } }, [open, event?.id]);
+  // O balanço só leva o professor com o vínculo ATIVO: com ele encerrado, a regra
+  // recusaria a CRIAÇÃO do balanço (`coachOk` confere `hasActiveStudent`).
+  const identity = useTrainingIdentity();
+  const professorDoBalanco = f?.shared_coach_id && (identity.coachLinks || []).some((l) => l.coach_id === f.shared_coach_id)
+    ? f.shared_coach_id : null;
 
   const match = useMemo(() => (f && !naoE.split(',').includes(f.id) ? matchPlatformTournament(f, myTournaments) : null), [f, myTournaments, naoE]);
   // Camada 4: o balanço — só de torneio JOGADO (a origem sai do documento gravado, não do rascunho da tela).
   const gravado = useMemo(() => withDerivedStatus(event), [event]);
   const fonteBalanco = useMemo(() => careerDebriefSource(gravado), [gravado]);
-  const balancos = useMyDebriefs(uid, { enabled: open && Boolean(fonteBalanco) });
+  // Os balanços servem à camada 4 (jogado) e ao foco SUGERIDO do planejado.
+  const balancos = useMyDebriefs(uid, { enabled: open && (Boolean(fonteBalanco) || gravado?.status === CAREER_STATUS.PLANNED) });
   const feito = balancos.isSuccess ? careerDebriefFor(gravado, balancos.data) : null;
   // Só com a origem GRAVADA a camada vale: o rascunho que virou "jogado" ainda não abre o diálogo.
   const completude = f ? careerCompleteness(f, fonteBalanco && balancos.isSuccess ? { debriefDone: Boolean(feito) } : {}) : null;
@@ -303,6 +314,8 @@ export default function CareerEventSheet({
           </div>
         )}
 
+        {f.planned_passed && <CareerHowItWent value={f} onChange={setF} />}
+
         <div className="grid gap-3 sm:grid-cols-2">
           <V2Field label={t('Nome do torneio')} htmlFor="ficha-nome" required className="sm:col-span-2">
             <V2Input id="ficha-nome" value={f.name} maxLength={CAREER_LIMITS.name} onChange={(e) => set('name', e.target.value)} />
@@ -328,6 +341,8 @@ export default function CareerEventSheet({
             </V2Field>
           </div>
         </div>
+
+        {!jogado && <CareerPlanFields value={f} onChange={setF} debriefs={balancos.isSuccess ? balancos.data : []} />}
 
         <Camada n={1} titulo={t('Resultado')}>
           {f.entries.map((e, i) => (
@@ -450,6 +465,9 @@ export default function CareerEventSheet({
           </Camada>
         )}
 
+        <CareerCoachShare event={{ ...gravado, shared_coach_id: f.shared_coach_id }} saved={saved}
+          onShared={(coachId) => setF((x) => ({ ...x, shared_coach_id: coachId || undefined }))} />
+
         <V2Field label={t('Anotações (só você vê)')} htmlFor="ficha-notas">
           <V2Textarea id="ficha-notas" rows={3} value={f.notes || ''} maxLength={CAREER_LIMITS.notes} onChange={(e) => set('notes', e.target.value)} />
         </V2Field>
@@ -484,6 +502,7 @@ export default function CareerEventSheet({
             source={fonteBalanco}
             history={balancos.data || []}
             initial={feito}
+            sharedCoachId={professorDoBalanco}
           />
         </Suspense>
       )}

@@ -16,6 +16,8 @@ const ARQUIVOS = ['functions/ranking.js', 'functions/platformRankings.js', 'func
 const PASTAS = ['src/modules/rating/domain', 'functions/engines'];
 // O motor de XP já tem conquistas chamadas `career_*` (a carreira DENTRO da
 // plataforma), então ali o guarda olha a coleção e o módulo, não o prefixo.
+// A métrica de META `career_events_played` (docs/54 §4.10) é só um nome: os
+// valores saem de `career/domain/careerGoals.js`, nunca do motor de XP.
 const XP = 'src/modules/progression';
 
 function listar(dir, out = []) {
@@ -39,7 +41,7 @@ describe('o resultado declarado da carreira não pontua', () => {
   });
 
   it('o motor de XP não lê os torneios de fora (nem a coleção, nem o módulo)', () => {
-    const fora = listar(XP).filter((arq) => /career_events|modules\/career\//.test(readFileSync(arq, 'utf8')));
+    const fora = listar(XP).filter((arq) => /career_events\b|modules\/career\//.test(readFileSync(arq, 'utf8')));
     expect(fora).toEqual([]);
   });
 });

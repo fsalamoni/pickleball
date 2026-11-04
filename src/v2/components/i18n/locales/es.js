@@ -320,6 +320,8 @@ export default {
   "Convite aberto": "Invitación abierta",
   "convites": "invitaciones",
   "Convites de dupla e respostas dos parceiros.": "Invitaciones de pareja y respuestas de los compañeros.",
+  "Carreira": "Carrera",
+  "Minha carreira: a dupla que confirma, o prazo de inscrição que vai fechar e o \"como foi?\" depois do torneio.": "Mi carrera: la pareja que confirma, el plazo de inscripción a punto de cerrar y el \"¿cómo fue?\" después del torneo.",
   "Convites, pedidos de ingresso, aprovações e novos eventos de clube.": "Invitaciones, solicitudes de ingreso, aprobaciones y nuevos eventos del club.",
   "Convites, respostas de reserva, resultados e novidades dos seus clubes chegam aqui.": "Invitaciones, respuestas de reservas, resultados y novedades de tus clubes llegan aquí.",
   "Convites, respostas de reserva, resultados e novidades dos seus clubes vão aparecer aqui — os novos e os antigos.": "Invitaciones, respuestas de reservas, resultados y novedades de tus clubes aparecerán aquí, los nuevos y los antiguos.",

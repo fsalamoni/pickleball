@@ -2016,6 +2016,30 @@ const ATLETA = {
       ],
     },
     {
+      id: 'carreira-planejar',
+      flags: ['athlete_career'],
+      title: tk('Os próximos torneios, as metas e o professor'),
+      summary: tk('Planejar a temporada: o plano com prazos e foco, as metas, a posição no ranking e o que mostrar ao professor.'),
+      keywords: [
+        'próximos', 'planejar', 'plano', 'prazo de inscrição', 'contagem', 'principal', 'meta', 'metas da temporada',
+        'foco', 'professor', 'ranking', 'posição', 'calendário', 'carreira',
+      ],
+      guias: ['carreira-planejar'],
+      blocks: [
+        p(tk('A aba "Próximos" da Minha carreira junta o seu plano e os torneios que vêm por aí: os da agenda das federações em que você é filiado, os chancelados e os públicos do PickleRush, na sua região. "Pôr no meu plano" cria o torneio planejado já preenchido; nada entra sem o seu toque.')),
+        list(
+          tk('PRIORIDADE — Principal, Importante ou Só para jogar. O principal mais próximo ganha a contagem regressiva, aqui e no card "Carreira" do início.'),
+          tk('PRAZO DE INSCRIÇÃO — com o prazo na ficha, chega um aviso 3 dias antes, enquanto você não marcar "Já me inscrevi". Um dia depois do torneio chega o "Como foi?".'),
+          tk('META E FOCO — a ficha do planejado guarda a meta do torneio e o foco do treino até lá, sugerido pelo que mais aparece a melhorar nos seus balanços. Depois do torneio, a ficha pergunta se o foco funcionou.'),
+          tk('METAS DA TEMPORADA — de resultado (torneios jogados, pódios, federados) ou de processo. Cada número diz de onde conta; deixar uma meta de lado não é falhar.'),
+          tk('POSIÇÃO NO RANKING — a oficial vem do ranking das federações daqui; a de outro ranking você anota. As duas nunca se misturam na mesma linha do gráfico.'),
+          tk('MANDAR AO MEU PROFESSOR — na ficha, mostra o torneio e o balanço dele ao professor, enquanto o vínculo estiver ativo. Terminou o vínculo, o acesso fecha sozinho.'),
+        ),
+        link('/carreira?aba=proximos', tk('Abrir os próximos')),
+        warn(tk('Planejar, metas e posições anotadas nunca entram em ranking, rating nem XP.')),
+      ],
+    },
+    {
       id: 'balanco-do-jogo',
       title: tk('O balanço do jogo e a semana de treino sugerida'),
       summary: tk('Depois de jogar, contar como foi — e receber drills para a semana.'),

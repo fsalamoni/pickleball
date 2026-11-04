@@ -320,6 +320,8 @@ export default {
   "Convite aberto": "Open invite",
   "convites": "invites",
   "Convites de dupla e respostas dos parceiros.": "Partner invites and partner replies.",
+  "Carreira": "Career",
+  "Minha carreira: a dupla que confirma, o prazo de inscrição que vai fechar e o \"como foi?\" depois do torneio.": "My career: the partner who confirms, the registration deadline about to close and the \"how did it go?\" after the tournament.",
   "Convites, pedidos de ingresso, aprovações e novos eventos de clube.": "Invites, join requests, approvals, and new club events.",
   "Convites, respostas de reserva, resultados e novidades dos seus clubes chegam aqui.": "Invites, booking replies, results, and news from your clubs show up here.",
   "Convites, respostas de reserva, resultados e novidades dos seus clubes vão aparecer aqui — os novos e os antigos.": "Invites, booking replies, results, and news from your clubs will show up here, new and old.",

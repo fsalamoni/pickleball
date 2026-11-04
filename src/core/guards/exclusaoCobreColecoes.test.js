@@ -292,6 +292,7 @@ const CARREIRA_EXPORTADA_POR = {
   career_events: ['listCareerEvents'],
   career_partner: ['listMyCareerPartnerDocs'],
   career_partner_reports: ['listMyCareerPartnerReports'],
+  career_rank: ['listCareerRanks'],
 };
 const CARREIRA_FORA_DA_EXPORTACAO = {
   // vazio: tudo o que é da carreira é exportado.
@@ -317,7 +318,7 @@ describe('a exclusão e a exportação cobrem a Minha carreira', () => {
     Object.entries(CARREIRA_EXPORTADA_POR).forEach(([col, fns]) => fns.forEach((fn) => {
       expect(EXPORTA_CARREIRA, `${fn} não é usada pela exportação da carreira`).toMatch(new RegExp(`\\b${fn}\\b`));
       expect(servico, `${fn} não está no serviço da carreira`).toMatch(new RegExp(`export async function ${fn}\\b`));
-      const dominio = ['careerEvent.js', 'careerPartner.js'].map((f) => readFileSync(`src/modules/career/domain/${f}`, 'utf8')).join('\n');
+      const dominio = ['careerEvent.js', 'careerPartner.js', 'careerRank.js'].map((f) => readFileSync(`src/modules/career/domain/${f}`, 'utf8')).join('\n');
       expect(servico + dominio, `o serviço não cita '${col}'`).toContain(`'${col}'`);
     }));
   });

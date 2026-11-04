@@ -313,7 +313,7 @@ e-mail verificado**.
 `registrationLink.test.js`; `accountDeletion.carreira.test.js`. Guarda de cobertura de coleções:
 `src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado/
 carreira tem de entrar na exclusão e na exportação). A Minha carreira
-(`docs/54`) entra por `career_events` (por `uid`), `career_partner` (por
+(`docs/54`) entra por `career_events` e `career_rank` (por `uid`), `career_partner` (por
 `owner_uid` e por `partner_uid`), o registro dos OUTROS em que a pessoa foi a
 dupla (fica o nome, sai o uid — `patchCareerPartner`, por `partner_uids`) e o
 prefixo `carreira/` do Storage. A gamificação (PR 0b da carreira, 2026-11-04) entra inteira:
@@ -359,6 +359,7 @@ confere `POST /api/erro` → 204 depois de publicar (aviso, não falha).
 | Função | Gatilho | O que faz | Escreve |
 |---|---|---|---|
 | `career` | callable (`federationCallable`) — ações `invite`, `respond`, `feedback`, `decide`, `remove`, `report`, `moderate`, `queue` | Pedir à dupla que confirme um torneio de fora, responder, deixar a visão, decidir se ela entra no treino, retirar, denunciar e (admin) moderar. Confere: flag ligada, só o dono pede, só a dupla citada responde, os dois maiores de 18, registro jogado; moderação só do admin, com motivo ≥ 5; convite a menor devolve a mesma resposta sem gravar; a denúncia fica fora do pedido e editar a visão denunciada é recusado | `career_partner`, `career_partner_reports`, `notifications` (`type: 'career'`, `origin: 'server'`, link por `linkDeAviso`), `audit_logs` (sem o texto da visão) |
+| `careerReminders` | `onSchedule` `0 9 * * *` (America/Sao_Paulo), PR 4 | Só com a flag: aviso D-3 do prazo de inscrição do planejado ainda não inscrito (`registration_deadline == hoje+3`) e "Como foi?" no dia seguinte ao torneio (`end_date == ontem`, ou `start_date == ontem` sem fim). Id determinístico (`carreira_prazo_{evento}_{prazo}`, `carreira_d1_{evento}`): o aviso que já existe não é regravado | `notifications` (`type: 'career'`, `origin: 'server'`, categoria Carreira) |
 | `careerEventWritten` | `onDocumentWritten` em `career_events/{id}` | Data ou resultado mudou ⇒ o pedido confirmado vira `reconfirm` e a dupla é avisada (o nome não conta); dupla tirada do registro ⇒ pedido apagado; registro apagado ⇒ pedidos apagados e `linked_event` soltos; confere o `linked_event` do espelho (pedido confirmado, os dois uids) e liga `partner_event_id` — o forjado é desfeito | `career_partner`, `career_events` (só `linked_event`), `notifications` |
 
 Régua copiada do cliente em `functions/careerPolicy.js` (citação, impressão,

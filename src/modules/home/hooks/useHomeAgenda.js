@@ -24,10 +24,12 @@ import { useStudentLessons, useCoachLessons } from '@/modules/coaches/hooks/useL
 import { useMyClassEnrollments, useMyOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
 import { useAvailableEvents, useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { enrollmentRows } from '@/modules/arenas/domain/classAgenda';
 import {
   agendaFromArenaEnrollments, agendaFromBookings, agendaFromClubEvents, agendaFromGameDays,
-  agendaFromLessons, agendaFromOpenSlots, agendaFromTournamentMatches, juntarEventosAosDias, mergeAgenda,
+  agendaFromCareerEvents, agendaFromLessons, agendaFromOpenSlots, agendaFromTournamentMatches, juntarEventosAosDias, mergeAgenda,
 } from '../domain/homeAgenda.js';
 import { hojeLocal } from '../domain/freshness.js';
 
@@ -62,6 +64,15 @@ export function useHomeAgenda({
   const matriculas = useMyClassEnrollments({ enabled: arenaModulesOn });
   const vagas = useMyOpenSlots({ enabled: arenaModulesOn });
   const eventos = useAvailableEvents({ enabled: comClubes });
+  // Os torneios de fora planejados (Minha carreira). Mesma chave de `careerKeys.events`;
+  // o serviço entra por import dinâmico (fora do pacote inicial).
+  const comCarreira = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
+  const carreira = useQuery({
+    queryKey: ['career', 'events', uid],
+    queryFn: async () => (await import('@/modules/career/services/careerService')).listCareerEvents(uid),
+    enabled: !!uid && comCarreira,
+    staleTime: 60_000,
+  });
   // De que clubes a pessoa é membro: decide se o dia de um clube é "Clube"
   // (membro) ou "Dia de jogo" (convidado de fora). Mesma chave da tela inicial.
   const clubes = useMyClubs();
@@ -79,8 +90,9 @@ export function useHomeAgenda({
     { id: 'aulas-arena', label: t('aulas nas arenas'), q: matriculas, ligada: !!uid && arenaModulesOn },
     { id: 'jogos-abertos', label: t('jogos abertos'), q: vagas, ligada: !!uid && arenaModulesOn },
     { id: 'clubes', label: t('eventos dos clubes'), q: eventos, ligada: !!uid && comClubes },
-  ], [uid, ehProfessor, competindo, arenaModulesOn, comClubes,
-    diasDeJogo, reservas, aulasAluno, aulasProfessor, jogosTorneio, matriculas, vagas, eventos]);
+    { id: 'carreira', label: t('torneios planejados'), q: carreira, ligada: !!uid && comCarreira },
+  ], [uid, ehProfessor, competindo, arenaModulesOn, comClubes, comCarreira,
+    diasDeJogo, reservas, aulasAluno, aulasProfessor, jogosTorneio, matriculas, vagas, eventos, carreira]);
 
   const itens = useMemo(() => {
     const ctx = { agora, meusClubes };
@@ -104,8 +116,9 @@ export function useHomeAgenda({
         ctx,
       ),
       agendaFromOpenSlots(arenaModulesOn ? vagas.data || [] : [], { ...ctx, gameDayIds: idsDias }),
+      agendaFromCareerEvents(comCarreira ? carreira.data || [] : [], ctx),
     ]);
-  }, [agora, meusClubes, competindo, ehProfessor, arenaModulesOn, comClubes,
+  }, [agora, meusClubes, competindo, ehProfessor, arenaModulesOn, comClubes, comCarreira, carreira.data,
     diasDeJogo.data, reservas.data, aulasAluno.data, aulasProfessor.data, jogosTorneio.data,
     matriculas.data, vagas.data, eventos.data]);
 

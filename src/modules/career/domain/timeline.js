@@ -16,7 +16,7 @@ import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { toISODate, todayLocal } from '@/modules/training/domain/dates.js';
 import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
 import {
-  CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, placementText,
+  CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, isPlatformPlan, placementText, platformPlanTournamentId,
 } from './careerEvent.js';
 import { careerDebriefFor } from './careerDebrief.js';
 import { partnerSealFor } from './careerPartner.js';
@@ -119,7 +119,12 @@ export function buildCareerTimeline(fontes = {}) {
   // Os pontos do torneio ligado também não viram um item "Federação" à parte.
   ligados.forEach((id) => pontosPorTorneio.delete(id));
 
-  (fontes.career || []).forEach((ev) => itens.push(itemDeFora(ev, myTournaments, fontes.partners)));
+  // O plano de um torneio do PickleRush: só enquanto vem e a pessoa não está
+  // inscrita (inscrita, o próprio torneio aparece); passado, vale o oficial.
+  const inscrito = new Set((myTournaments || []).filter(isCareerPlatformTournament).map((tt) => tt.id));
+  (fontes.career || []).filter((ev) => !isPlatformPlan(ev)
+    || (ev.status === CAREER_STATUS.PLANNED && !inscrito.has(platformPlanTournamentId(ev))))
+    .forEach((ev) => itens.push(itemDeFora(ev, myTournaments, fontes.partners)));
 
   (myTournaments || []).filter((tt) => isCareerPlatformTournament(tt) && !ligados.has(tt.id)).forEach((tt) => {
     const data = dia(tt.starts_at) || dia(tt.start_date);
@@ -319,8 +324,10 @@ export function careerTrophyCounts(trophies) {
 
 /* ------------------------------------------------------- abas e resumo -- */
 
-/** As abas de `/carreira` (`?aba=`). Contrato de link: nunca renomeie. `proximos` e `metas` chegam no PR 4. */
-export const CAREER_TAB = Object.freeze({ TIMELINE: 'linha-do-tempo', ACHIEVEMENTS: 'conquistas' });
+/** As abas de `/carreira` (`?aba=`). Contrato de link: nunca renomeie. */
+export const CAREER_TAB = Object.freeze({
+  TIMELINE: 'linha-do-tempo', UPCOMING: 'proximos', GOALS: 'metas', ACHIEVEMENTS: 'conquistas',
+});
 
 /** A aba pedida na URL, ou a linha do tempo. */
 export function careerTabFromParam(v) {
@@ -363,13 +370,13 @@ export function careerAreaSummary(events, { debriefs } = {}) {
 export function careerPerformanceSummary(events) {
   if (!Array.isArray(events)) return null;
   const jogados = events.filter((e) => e.status === CAREER_STATUS.PLAYED);
-  const declarados = jogados.filter((e) => !e.platform_tournament_id);
+  const declarados = jogados.filter((e) => !e.platform_tournament_id && !isPlatformPlan(e));
   const entradas = declarados.flatMap((e) => e.entries || []);
   const pos = (en) => ({ champion: 1, runner_up: 2, third: 3 }[en.placement] || null);
   return {
     tournaments: declarados.length,
     podiums: entradas.filter(pos).length,
     titles: entradas.filter((en) => pos(en) === 1).length,
-    linked: jogados.length - declarados.length,
+    linked: jogados.filter((e) => e.platform_tournament_id).length,
   };
 }

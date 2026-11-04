@@ -1543,8 +1543,12 @@ Balanço depois de um jogo: `uid`, `source { type: dia_de_jogo|torneio|reserva|a
 ref_id, title, date, games, wins }`, `status` (`respondido|dispensado`),
 `rating` (1–5), `strengths[]`, `weaknesses[]` (≤ 3, ids de `GAME_ASPECTS`),
 `evolution`, `body`, `mind`, `note` (≤ 500), `suggestion { focus[], item_ids[],
-light }`, `applied { plan_id, mode, dates[], at }`. Só o dono (o admin lê e
-apaga); a regra confere o prefixo do id e a forma. Zero índice. Ver
+light }`, `applied { plan_id, mode, dates[], at }`, `shared_coach_id`
+(opcional, PR 4 da carreira: o balanço do torneio mandado ao professor). Só o
+dono escreve (o admin lê e apaga); o **professor com vínculo ATIVO** lê o que
+tem `shared_coach_id` dele (`coachSees`), e o dono só grava `shared_coach_id`
+de professor ativo (`coachOk` — por isso a ficha só o passa com o vínculo
+ativo). A regra confere o prefixo do id e a forma. Zero índice. Ver
 `docs/42-BALANCO-DO-JOGO.md`.
 
 ### `career_events/{uid}_{sufixo}` (NOVO, flag `athlete_career`)
@@ -1563,7 +1567,26 @@ registro de quem convidou, no "Pôr na minha carreira também"),
 pelo uid); criar e editar exigem a flag na regra (`careerOn()`), ler e apagar
 não. Resultado DECLARADO: nada de ranking, rating nem XP lê esta coleção.
 Zero índice (`uid ==`). Entra na exclusão e na exportação. Ver
-`docs/54-CARREIRA-DO-ATLETA.md`.
+`docs/54-CARREIRA-DO-ATLETA.md`. PR 4 (opcionais, só no planejado):
+`registration_deadline`, `registered`, `priority` (`main|important|casual`),
+`aim`, `focus_aspect`, `if_then`, `focus_result` (`yes|partly|no`),
+`shared_coach_id` (o professor a quem a pessoa mandou — com vínculo ATIVO
+ele lê o registro, `coachSees`) e `origin_ref` (`fed:…|tor:…`).
+
+### `career_rank/{uid}_{sufixo}` (NOVO, PR 4, flag `athlete_career`)
+A posição DIGITADA num ranking de fora: `uid`, `federation_id`,
+`federation_name`, `ranking_label`, `date`, `position`, `points_total`,
+`created_at_ms`, `updated_at_ms`. Só o dono lê e escreve; criar e editar
+exigem a flag na regra. Zero índice (`uid ==`). Na exclusão e na exportação.
+Declarada: nunca entra em ranking. A posição oficial não é gravada (sai do
+`federation_rankings`).
+
+### `player_goals` — meta da temporada (PR 4, campos opcionais)
+Com `kind` (`outcome|process`): `title`, `since`, `due_date`, `status`
+(`active|done|dropped`), `if_then`, `aspect_id`, `metric` + `target` ou
+`progress_manual` (0–100). Métricas novas: `career_events_played`,
+`career_podiums`, `federated_events`, `dupr_rating`. Meta sem `kind` segue
+como era. Nenhuma regra nova.
 
 ### `career_partner/{eventoId}__{uidDaDupla}` (NOVO, PR 3, flag `athlete_career`)
 O pedido para a dupla confirmar um torneio de fora: `owner_uid`,

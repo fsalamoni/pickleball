@@ -163,8 +163,11 @@ Artigo `balanco-do-jogo` (parte Atleta) e guia `treino-balanco`, ambos com
 
 ## 8. Fica para depois
 
-- Enviar o balanço ao professor (com a permissão da pessoa) e o professor
-  sugerir a semana.
+- O professor sugerir a semana. (Enviar o balanço do TORNEIO DE FORA ao
+  professor já existe: "Mandar ao meu professor" da Minha carreira grava
+  `shared_coach_id` no balanço e o professor com vínculo ativo o lê —
+  `docs/54-CARREIRA-DO-ATLETA.md` §4.12. O balanço do jogo da plataforma
+  ainda não tem o botão.)
 - Usar o placar real do jogo (pontos perdidos por golpe) quando a plataforma
   passar a registrá-lo.
 - Push lembrando do balanço (hoje só aparece ao abrir o app).

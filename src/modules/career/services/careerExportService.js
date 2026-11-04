@@ -6,7 +6,9 @@
  * Entra sempre, com a flag ligada ou não: o que a pessoa registrou é dela.
  */
 import { tk } from '@/core/i18n';
-import { listCareerEvents, listMyCareerPartnerDocs, listMyCareerPartnerReports, listMyCareerPhotoPaths } from './careerService.js';
+import {
+  listCareerEvents, listCareerRanks, listMyCareerPartnerDocs, listMyCareerPartnerReports, listMyCareerPhotoPaths,
+} from './careerService.js';
 
 /** @returns {Promise<{ career: object, incomplete: string[] }>} `incomplete` em `tk` (a tela traduz). */
 export async function collectCareerExport(uid) {
@@ -15,6 +17,7 @@ export async function collectCareerExport(uid) {
     ['partners', tk('Confirmações da dupla (Minha carreira)'), () => listMyCareerPartnerDocs(uid)],
     ['partnerReports', tk('Denúncias que você fez (Minha carreira)'), () => listMyCareerPartnerReports(uid)],
     ['photos', tk('Lista das fotos da Minha carreira'), () => listMyCareerPhotoPaths(uid)],
+    ['ranks', tk('Posições anotadas no ranking (Minha carreira)'), () => listCareerRanks(uid)],
   ];
   const lidas = await Promise.allSettled(partes.map(([, , ler]) => ler()));
   const career = {};

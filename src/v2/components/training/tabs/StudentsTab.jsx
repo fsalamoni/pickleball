@@ -6,7 +6,7 @@
  *
  * Falha ≠ vazio: cada parte que não carregou diz que não carregou.
  */
-import React, { useMemo, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -28,6 +28,11 @@ import SessionComments from '@/v2/components/training/SessionComments';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
 import { rosterForTraining, studentsOverview } from '@/v2/components/training/students/studentsView';
 import { t, tn } from '@/core/i18n';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+
+// Minha carreira (flag `athlete_career`): os torneios que o aluno mandou. Só carrega com o aluno aberto.
+const CoachStudentCareer = lazy(() => import('@/v2/components/career/CoachStudentCareer'));
 
 const SESSOES_POR_ALUNO = 10;
 
@@ -69,6 +74,7 @@ function SessaoDoAluno({ s, identity, acoes, hoje }) {
 
 function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk, enviosFalharam }) {
   const [aberto, setAberto] = useState(false);
+  const carreira = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const nome = a.student.student_name || t('Aluno');
   const resumo = [
     sessoesOk && (a.thisWeek ? tn(a.thisWeek, '{n} treino nesta semana', '{n} treinos nesta semana') : t('sem treino nesta semana')),
@@ -121,6 +127,11 @@ function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk,
                   </ul>
                 )}
           </section>
+          {carreira && (
+            <Suspense fallback={null}>
+              <CoachStudentCareer coachUid={identity.uid} studentUid={a.student.student_id} nome={nome} />
+            </Suspense>
+          )}
         </div>
       )}
     </V2Surface>
