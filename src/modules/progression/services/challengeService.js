@@ -92,9 +92,9 @@ export async function listEntries(challengeId) {
 }
 
 /** As entradas da pessoa (em quais desafios ela está). */
-export async function listMyEntries(uid) {
+export async function listMyEntries(uid, max = 100) {
   if (!uid) return [];
-  const snap = await getDocs(query(collection(db(), 'challenge_entries'), where('uid', '==', uid), limit(100)));
+  const snap = await getDocs(query(collection(db(), 'challenge_entries'), where('uid', '==', uid), limit(max)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
@@ -125,11 +125,11 @@ export async function leaveChallenge(entryId) {
 /* ------------------------------------------------------------------ duelos -- */
 
 /** Os duelos da pessoa: uma consulta por lado (a regra confere cada um). */
-export async function listMyDuels(uid) {
+export async function listMyDuels(uid, max = 60) {
   if (!uid) return [];
   const [a, b] = await Promise.all([
-    getDocs(query(collection(db(), 'duels'), where('uidA', '==', uid), limit(60))),
-    getDocs(query(collection(db(), 'duels'), where('uidB', '==', uid), limit(60))),
+    getDocs(query(collection(db(), 'duels'), where('uidA', '==', uid), limit(max))),
+    getDocs(query(collection(db(), 'duels'), where('uidB', '==', uid), limit(max))),
   ]);
   const porId = new Map();
   [...a.docs, ...b.docs].forEach((d) => porId.set(d.id, { id: d.id, ...d.data() }));

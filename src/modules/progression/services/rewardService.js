@@ -64,9 +64,9 @@ export async function deleteReward(id) {
 
 /* ------------------------------------------------------------------ pedidos -- */
 
-export async function listMyClaims(uid) {
+export async function listMyClaims(uid, max = 200) {
   if (!uid) return [];
-  const snap = await getDocs(query(collection(db(), 'reward_claims'), where('uid', '==', uid), limit(200)));
+  const snap = await getDocs(query(collection(db(), 'reward_claims'), where('uid', '==', uid), limit(max)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 

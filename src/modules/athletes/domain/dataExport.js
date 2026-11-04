@@ -135,7 +135,7 @@ function clubsBlock(c = {}) {
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, career, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, career, gamification, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -159,6 +159,18 @@ export function buildDataExport({
   if (clubAssociations !== undefined) out.club_associations = clubsBlock(clubAssociations || {});
   // E-mails, WhatsApp e SMS que a plataforma mandou (90 dias; endereço mascarado).
   if (messages !== undefined) out.messages = lista(messages);
+  // Gamificação (`collectGamificationExport`): XP, missões, conquistas, kudos,
+  // cartas, avaliações que fez, reputação, desafios, duelos e recompensas.
+  if (gamification !== undefined) {
+    out.gamification = {
+      ...limpo(gamification || {}),
+      not_included: [
+        'Os sinais de integridade, a fotografia do antifarm e a decisão de moderação (são do admin e do servidor).',
+        'Quem avaliou você: só o agregado (a reputação) é seu; a avaliação é de quem a escreveu.',
+        'O autor de uma carta anônima que você recebeu.',
+      ],
+    };
+  }
   // Minha carreira: os torneios de fora e a lista das fotos (`carreira/{uid}/`).
   if (career !== undefined) {
     const events = lista(career?.events);

@@ -240,6 +240,33 @@ ar**. Excluir o ALUNO encerra o vínculo com o professor. Denúncias **ficam**
 `docs/40-CENTRO-DE-TREINO.md` §9; o guarda `exclusaoCobreColecoes.test.js`
 reprova coleção `training_*` nova que fique fora da exclusão.
 
+**Gamificação** (2026-11-04, PR 0b da Minha carreira): onze coleções não
+estavam na exclusão e nenhuma coleção da gamificação ia na exportação.
+Agora:
+
+| Destino | O quê |
+|---|---|
+| **Apagado** | XP concedido pelo servidor (`user_xp_grants`), preferências (`user_gamification_prefs`), reputação pública e privada (`user_reputation`, `user_reputation_private`), linha do Hall da Fama (nome e foto), fotografia do antifarm (`gamification_integrity`), decisão de moderação (`gamification_moderation` — o histórico fica em `audit_logs`), sinais de integridade SOBRE a conta (`gamification_flags.subjectUid`), **avaliações SOBRE ela** (`match_reviews.toUid` — sem isso o servidor recriaria a reputação), entradas em desafio **como atleta** (`challenge_entries`), metas do mês como professor (`gamification_goals` com `ownerType: 'coach'` — a meta de uma casa nunca sai por coincidência de id) |
+| **Apagado dos dois lados** | **a carta ao companheiro** (`partner_letters` + `partner_letter_authors`): a recebida e a escrita — inclusive a **anônima**, achada pelo registro de autoria de mesmo id (`coletarCartas`). A carta é das duas pessoas e sai com a exclusão de qualquer uma |
+| **Pseudonimizado** | o duelo da semana (`duels`): fica para o adversário, com "Atleta removido" |
+| **Retido como está** (só o uid) | a avaliação que ELA escreveu (só estrelas e elogios, compõe a nota de outra pessoa), o pedido de recompensa (registro do benefício do emissor), o desafio e a recompensa que criou como emissor, a entrada de CLUBE em desafio (o `uid` é só de quem inscreveu; a prévia a conta), o sinal de integridade em que ela é só a OUTRA metade do par (`otherUid` — é sobre quem fica e segue para o admin; senão bastaria excluir a conta descartável do anel de kudos) |
+
+`gamification_metrics` fica de fora com motivo (agregado diário, sem uid). A
+**exportação** (Configurações → Exportar meus dados) ganhou o bloco
+`gamification` (`collectGamificationExport`, `progression/services/
+gamificationExportService.js`): progressão, missões, conquistas, sequência,
+XP concedido, preferências, código e convites, kudos, rivalidades, avaliações
+que fez, reputação (as duas partes), cartas recebidas e enviadas, Hall da
+Fama, desafios, duelos e pedidos de recompensa — cada parte falha sozinha e
+vai escrita em `incomplete`, e a lista que enche o teto de leitura (2.000)
+também vai, como "só os primeiros". A carta anônima recebida sai sem o id do
+documento (ele traz o uid de quem escreveu). Ficam fora, ditos em `not_included`: sinais,
+fotografia e moderação (do admin e do servidor), quem avaliou a pessoa e o
+autor de carta anônima recebida. O guarda `exclusaoCobreColecoes.test.js`
+vigia a família inteira (`user_*`, `gamification_*`, `partner_letter*`,
+`match_reviews`, `hall_of_fame`, `challenge_entries`, `duels`,
+`reward_claims`) nos dois sentidos.
+
 ### O que IMPEDE (e o que fazer)
 
 A pergunta é *excluir quebra o serviço de outra pessoa?* Se sim, o admin

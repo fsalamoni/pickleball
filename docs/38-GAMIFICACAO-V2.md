@@ -49,6 +49,17 @@ Campos **opcionais** acrescentados a documentos que já existiam (nenhuma regra 
 
 `gamificationChallengeStandings`, `gamificationWeeklyDuels`, `gamificationWeeklyDigest`, `gamificationDailyUpkeep` (agendadas). Núcleo puro em `functions/gamificationCore.js`; a temporada em `functions/seasonRanking.js` (linhas com `percent`, `public`, `publicPosition`…). O deploy é por nome (`scripts/functions-deploy.sh` lê os `exports.*` de `functions/index.js`).
 
+### 4.1 Correções do PR 0b da Minha carreira (2026-11-04)
+
+Cada uma tem teste que falha sem ela:
+
+- **Teto e tipo da concessão** — `conceder()` (`functions/gamification.js`) grava no máximo `MAX_GRANT_XP` (5.000) e recusa `kind` fora de `XP_GRANT_KINDS`. Antes, um prêmio de desafio acima do teto era gravado inteiro e o cliente (`isValidGrant`) o **ignorava**: a pessoa via o prêmio anunciado e o XP não entrava. Lista de tipos e teto têm paridade com `xpGrants.js` (`serverParity.test.js`).
+- **Salto de XP sobre o XP próprio** — `integritySignals` mede o `xp_jump` sobre `xpTotal − grantsXp`, com o `grantsXp` limitado ao que o servidor de fato concedeu (`grantsXpByUid`, lido de `user_xp_grants`: o dono grava o campo, e um valor forjado esconderia o salto), e a fotografia de `gamification_integrity` passou a guardar o próprio. Fechar a temporada ou um desafio (concessões do servidor) abria sinal de salto para o admin. A fotografia antiga (com o total) só deixa o delta menor na primeira passada — nunca abre sinal falso.
+- **Configuração lida igual nos dois lados** — paridade de `normalizarConfig` (servidor) × `normalizeGamificationConfig` (cliente) sobre entradas boas e quebradas. A divergência achada: tier público desconhecido passava no servidor e `tierRank` o lia como "Calouro" — o placar abria para todo mundo enquanto o painel do admin mostrava "Jogador". A lista de tiers do servidor é uma só (`TIER_ORDEM`, exportada por `gamification.js` e lida por `seasonRanking.js`).
+- **Código morto** — `XP_CAPS_V2`, `applyXpCapV2` e a opção `applyCaps` de `computeXpV2` saíram: ninguém as passava, então o teto diário/semanal nunca valeu. O antifarm é do servidor e marca para revisão (princípio 5).
+- **Exclusão e exportação** — as coleções da gamificação entraram na exclusão de conta e a exportação ganhou o bloco `gamification` (`gamificationExportService.js`); tabela em `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`. O guarda `exclusaoCobreColecoes.test.js` vigia a família inteira.
+- **Metas pessoais** — o `GoalsCard` de Meu desempenho diz "Não deu para carregar as metas" com "Tentar de novo" quando a leitura falha, em vez de "Você ainda não definiu metas".
+
 ## 5. Módulos ligáveis pelo admin
 
 `missions_weekly`, `missions_monthly`, `onboarding`, `weekly_review`, `celebrations`, `hall_of_fame`, `duels`, `challenges`, `rewards`, `match_reviews`, `partner_letters`, `social_bonds`, `supply_panels`. Módulo desligado some da tela (nunca aparece desabilitado) e **não consulta**.

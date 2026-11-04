@@ -308,13 +308,17 @@ e-mail verificado**.
 
 **Testes**: `accountDeletion.test.js`, `accountDeletion.engine.test.js`,
 `accountDeletion.pseudo.test.js`, `accountDeletion.mercado.test.js`,
-`accountDeletion.treino.test.js`; `accountMerge.test.js`;
+`accountDeletion.treino.test.js`, `accountDeletion.gamificacao.test.js`; `accountMerge.test.js`;
 `accountStatus.test.js`; `supportAccess.test.js`;
 `registrationLink.test.js`. Guarda de cobertura de coleções:
 `src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado/
 carreira tem de entrar na exclusão e na exportação). A Minha carreira
 (`docs/54`) entra por `career_events` (por `uid`) e o prefixo `carreira/` do
-Storage. Docs:
+Storage. A gamificação (PR 0b da carreira, 2026-11-04) entra inteira:
+concessões, preferências, reputação, Hall da Fama, integridade, moderação,
+sinais, avaliações recebidas, cartas (as escritas também, pelo registro de
+autoria — `coletarCartas`), entradas de atleta em desafio
+(`coletarEntradasDeDesafio`) e o nome no duelo. Docs:
 `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`, `05-ADMIN-SUPORTE.md`.
 
 **Controle de linhas** (docs/53 §4): `coletarLinhas` apaga as câmeras

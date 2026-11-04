@@ -5,23 +5,21 @@
  *  - `XP_WEIGHTS_V2` é congelado e tem as chaves esperadas
  *  - `computeXpV2` retorna total correto a partir de mapa
  *  - `computeXpV2` ignora fontes desconhecidas (não quebra)
- *  - `computeXpV2` com `applyCaps` aplica daily/weekly/burst
  *  - `levelFromXpV2` mantém compat com V1 (mesma curva)
  *  - `levelThresholds` retorna thresholds até nível 30
  *  - `computeWeekStreakV2` mantém mesmo algoritmo
  *  - `summaryToXpBySource` mapeia V1 → V2 corretamente
  *  - `computeXpCompatV1` retorna mesmo valor de V1 `computeXp`
- *  - `applyXpCapV2` classifica heavy vs light corretamente
+ *  - o teto anti-farm morto (`XP_CAPS_V2`/`applyXpCapV2`) não volta
  *  - Edge cases: zero, negativo, NaN, valores extremos
  */
 
 import { describe, it, expect } from 'vitest';
+import * as modulo from './progressionV2.js';
 import {
   XP_WEIGHTS_V2,
-  XP_CAPS_V2,
   computeXpV2,
   computeXpCompatV1,
-  applyXpCapV2,
   levelFromXpV2,
   levelThresholds,
   computeWeekStreakV2,
@@ -69,15 +67,10 @@ describe('progressionV2 · XP_WEIGHTS_V2', () => {
   });
 });
 
-describe('progressionV2 · XP_CAPS_V2', () => {
-  it('é um Object congelado', () => {
-    expect(Object.isFrozen(XP_CAPS_V2)).toBe(true);
-  });
-
-  it('tem os 3 caps esperados', () => {
-    expect(XP_CAPS_V2.daily).toBe(500);
-    expect(XP_CAPS_V2.weekly).toBe(2500);
-    expect(XP_CAPS_V2.burst).toBe(200);
+describe('progressionV2 · sem teto anti-farm no cliente', () => {
+  it('o teto morto (nunca passado por ninguém) não volta: antifarm é do servidor', () => {
+    expect(modulo.XP_CAPS_V2).toBeUndefined();
+    expect(modulo.applyXpCapV2).toBeUndefined();
   });
 });
 
@@ -170,49 +163,6 @@ describe('progressionV2 · compat com V1', () => {
     // V2 a partir do adapter dá o mesmo total que V1
     const v2 = computeXpV2(map);
     expect(v2.xpTotal).toBe(3020);
-  });
-});
-
-describe('progressionV2 · applyXpCapV2', () => {
-  it('não aplica cap quando ações são todas pesadas (heavy)', () => {
-    const events = [
-      { source: 'tournament_title', amount: 120, ts: Date.now() },
-      { source: 'club_100_members', amount: 2500, ts: Date.now() },
-    ];
-    const out = applyXpCapV2(events, { now: new Date() });
-    expect(out.kept).toHaveLength(2);
-    expect(out.dropped).toHaveLength(0);
-  });
-
-  it('aplica cap diário em ações leves', () => {
-    const now = new Date('2026-09-01T15:00:00Z');
-    const events = [
-      { source: 'kudos_given', amount: 100, ts: now.getTime() }, // cap em 500
-      { source: 'kudos_received', amount: 100, ts: now.getTime() },
-      { source: 'kudos_given', amount: 100, ts: now.getTime() },
-      { source: 'kudos_given', amount: 100, ts: now.getTime() },
-      { source: 'kudos_given', amount: 100, ts: now.getTime() },
-      { source: 'kudos_given', amount: 100, ts: now.getTime() }, // 6º = 600 total → bloqueia
-    ];
-    const out = applyXpCapV2(events, { now });
-    expect(out.dropped.length).toBeGreaterThan(0);
-    expect(out.totals.dayXp).toBeLessThanOrEqual(XP_CAPS_V2.daily);
-  });
-
-  it('aplica cap burst (> 200 num único evento)', () => {
-    const events = [
-      { source: 'tournament_title', amount: 5000, ts: Date.now() }, // > burst
-    ];
-    const out = applyXpCapV2(events, { now: new Date() });
-    expect(out.kept[0].capped).toBe(true);
-    expect(out.kept[0].amount).toBe(XP_CAPS_V2.burst);
-  });
-
-  it('lida com array vazio', () => {
-    const out = applyXpCapV2([], { now: new Date() });
-    expect(out.kept).toEqual([]);
-    expect(out.dropped).toEqual([]);
-    expect(out.totals.totalXp).toBe(0);
   });
 });
 

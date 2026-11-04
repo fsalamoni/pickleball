@@ -43,6 +43,20 @@ describe('flag mestra e módulos', () => {
   });
 });
 
+describe('concessão de XP (conceder)', () => {
+  it('⭐ respeita o teto por concessão: acima de MAX_GRANT_XP grava o teto (o cliente ignora o que passa dele)', async () => {
+    const db = createRichFakeDb({});
+    expect(await g.conceder(db, { uid: 'ana', kind: 'challenge', ref: 'd1', xp: 9000, label: 'Desafio' })).toBe(true);
+    expect(db.dump('user_xp_grants')['ana_challenge_d1'].xp).toBe(g.MAX_GRANT_XP);
+  });
+
+  it('⭐ tipo desconhecido não é concedido (o cliente não somaria)', async () => {
+    const db = createRichFakeDb({});
+    expect(await g.conceder(db, { uid: 'ana', kind: 'bonus_secreto', ref: 'x', xp: 100 })).toBe(false);
+    expect(db.dump('user_xp_grants')).toEqual({});
+  });
+});
+
 describe('duelo da semana', () => {
   const base = () => seed(
     LIGADA,
@@ -280,6 +294,33 @@ describe('integridade', () => {
     const r2 = await g.runIntegrity(db, { now: NOW + 86_400_000, logger });
     expect(r2.flags).toBe(0);
     expect(db.dump('gamification_flags').xp_unverified_trapaceiro.status).toBe('dismissed');
+  });
+
+  it('⭐ a fotografia guarda o XP PRÓPRIO, e prêmio do servidor entre duas passadas não vira salto', async () => {
+    const db = createRichFakeDb({
+      ...LIGADA,
+      'user_progression_v2/premiada': { uid: 'premiada', xpTotal: 2000, grantsXp: 0, updatedAt: 1 },
+      'user_xp_grants/premiada_season_s1': { uid: 'premiada', kind: 'season', xp: 5000 },
+      'user_xp_grants/premiada_challenge_c1': { uid: 'premiada', kind: 'challenge', xp: 5000 },
+    });
+    await g.runIntegrity(db, { now: NOW, logger });
+    // fechou a temporada e um desafio: +10.000 de concessão em poucas horas
+    await db.collection('user_progression_v2').doc('premiada').update({ xpTotal: 12000, grantsXp: 10000 });
+    await g.runIntegrity(db, { now: NOW + 6 * 3600_000, logger });
+    expect(Object.values(db.dump('gamification_flags')).map((f) => f.type)).not.toContain('xp_jump');
+    expect(db.dump('gamification_integrity').premiada.xp).toBe(2000);
+  });
+
+  it('⭐ `grantsXp` forjado pelo dono (sem concessão gravada) não esconde o salto', async () => {
+    const db = createRichFakeDb({
+      ...LIGADA,
+      'user_progression_v2/forjador': { uid: 'forjador', xpTotal: 300, grantsXp: 0, updatedAt: 1 },
+    });
+    await g.runIntegrity(db, { now: NOW, logger });
+    await db.collection('user_progression_v2').doc('forjador').update({ xpTotal: 50000, grantsXp: 50000 });
+    await g.runIntegrity(db, { now: NOW + 6 * 3600_000, logger });
+    expect(Object.values(db.dump('gamification_flags')).map((f) => f.type)).toContain('xp_jump');
+    expect(db.dump('gamification_integrity').forjador.xp).toBe(50000);
   });
 
   it('anel de kudos e vingança nas avaliações', async () => {

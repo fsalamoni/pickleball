@@ -8,7 +8,7 @@
  *  - Mantém 100% compatibilidade numérica com V1 quando as fontes V1
  *    são usadas (escrita "shim" via `computeXpCompatV1`).
  *  - Funções novas: `computeXpV2`, `computeXpBySourceV2`,
- *    `applyXpCapV2`, `computeDailyMissionProgress`, etc.
+ *    `computeDailyMissionProgress`, etc.
  *
  * **O QUE NÃO MUDA**:
  *  - `levelFromXp` (mesma curva incremental de 500*L).
@@ -183,112 +183,14 @@ export function computeXpCompatV1(summary = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 2. CAPS ANTI-FARM
+// 2. (sem teto anti-farm aqui)
 // ────────────────────────────────────────────────────────────────────────────
 
-/**
- * Limites para evitar farming de XP. Aplicados em `applyXpCapV2`.
- *
- * - `daily`: máximo de XP por dia de ações "fáceis" (follow, kudos, chat,
- *   post). Ações pesadas (tournament_title, club_created) NÃO contam
- *   contra este cap.
- * - `weekly`: máximo semanal geral.
- * - `burst`: máximo por evento único (anti double-counting).
- */
-export const XP_CAPS_V2 = Object.freeze({
-  daily: 500,
-  weekly: 2500,
-  burst: 200,
-});
-
-/**
- * Fontes de XP que NÃO contam contra o cap diário. Ações pesadas continuam
- * recompensando mesmo se o usuário já atingiu o cap de ações fáceis.
- */
-const HEAVY_SOURCES = new Set([
-  'tournament_title',
-  'tournament_16plus_created',
-  'tournament_recurring_created',
-  'tournament_created',
-  'club_100_members',
-  'club_created',
-  'teacher_100_students',
-  'teacher_5star_20reviews',
-  'arena_referred',
-  'level_validated_by_coach',
-  'package_completed',
-  'referral_organized_tournament',
-  'loyalty_veteran_90d_return',
-  'comeback_after_4w_break',
-]);
-
-/**
- * Aplica caps de XP a um conjunto de eventos do dia/semana.
- *
- * @param {Array<{ source: string, amount: number, ts?: number }>} events —
- *   eventos de XP (cada um com sua fonte e quantidade)
- * @param {{ now?: Date, daily?: number, weekly?: number, burst?: number }} [options]
- * @returns {{ kept: Array<{ source: string, amount: number, capped: boolean }>,
- *             dropped: Array<{ source: string, amount: number, reason: string }>,
- *             totals: { dayXp: number, weekXp: number, totalXp: number } }}
- */
-export function applyXpCapV2(events, options = {}) {
-  const { now = new Date(), daily = XP_CAPS_V2.daily, weekly = XP_CAPS_V2.weekly, burst = XP_CAPS_V2.burst } = options;
-  const list = Array.isArray(events) ? events : [];
-
-  const sorted = [...list].sort((a, b) => {
-    const at = Number(a?.ts) || 0;
-    const bt = Number(b?.ts) || 0;
-    return at - bt;
-  });
-
-  const kept = [];
-  const dropped = [];
-  let dayXp = 0;
-  let weekXp = 0;
-  const dayStart = new Date(now);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayStartMs = dayStart.getTime();
-  const weekStartMs = dayStartMs - 6 * WEEK_MS; // rolling 7-day window
-
-  for (const ev of sorted) {
-    const source = String(ev?.source || '').trim();
-    const amount = Number(ev?.amount) || 0;
-    const ts = Number(ev?.ts) || dayStartMs;
-    const isHeavy = HEAVY_SOURCES.has(source);
-
-    // Burst cap (sempre aplicável, mesmo para heavy)
-    if (Math.abs(amount) > burst) {
-      const capped = amount > 0 ? burst : -burst;
-      kept.push({ source, amount: capped, capped: true });
-      if (!isHeavy) {
-        if (ts >= dayStartMs) dayXp += capped;
-        if (ts >= weekStartMs) weekXp += capped;
-      } else {
-        if (ts >= dayStartMs) dayXp += capped;
-        if (ts >= weekStartMs) weekXp += capped;
-      }
-      continue;
-    }
-
-    // Daily/weekly caps (só aplicam a ações "leves")
-    if (!isHeavy) {
-      const wouldExceedDay = ts >= dayStartMs && dayXp + amount > daily;
-      const wouldExceedWeek = ts >= weekStartMs && weekXp + amount > weekly;
-      if (wouldExceedDay || wouldExceedWeek) {
-        dropped.push({ source, amount, reason: wouldExceedDay ? 'daily_cap' : 'weekly_cap' });
-        continue;
-      }
-    }
-
-    kept.push({ source, amount, capped: false });
-    if (ts >= dayStartMs) dayXp += amount;
-    if (ts >= weekStartMs) weekXp += amount;
-  }
-
-  const totalXp = kept.reduce((s, e) => s + e.amount, 0);
-  return { kept, dropped, totals: { dayXp, weekXp, totalXp } };
-}
+// `XP_CAPS_V2`/`applyXpCapV2` (teto diário/semanal/por evento) saíram em
+// 2026-11 (PR 0b da carreira): nenhuma tela nem serviço passava `applyCaps`,
+// então o teto nunca valeu e só confundia quem lia. O XP é derivado de fatos
+// (`xpTotal.js`) e o antifarm é do servidor: marca para o admin revisar,
+// nunca corta (`functions/gamificationCore.js` → `integritySignals`).
 
 // ────────────────────────────────────────────────────────────────────────────
 // 3. COMPUTAÇÃO PRINCIPAL
@@ -302,10 +204,9 @@ export function applyXpCapV2(events, options = {}) {
  * você passa o delta direto: cada chave é uma fonte do `XP_WEIGHTS_V2`.
  *
  * @param {Record<string, number>} xpBySource — mapa fonte → quantidade
- * @param {{ applyCaps?: boolean, now?: Date, todayEvents?: Array }} [options]
- * @returns {{ xpTotal: number, xpBySource: object, capped?: object }}
+ * @returns {{ xpTotal: number, xpBySource: object }}
  */
-export function computeXpV2(xpBySource = {}, options = {}) {
+export function computeXpV2(xpBySource = {}) {
   const map = xpBySource && typeof xpBySource === 'object' ? xpBySource : {};
   const out = {};
   let total = 0;
@@ -321,31 +222,6 @@ export function computeXpV2(xpBySource = {}, options = {}) {
     const n = Number(amount) || 0;
     out[source] = n * weight;
     total += n * weight;
-  }
-
-  if (options.applyCaps) {
-    const events = Object.entries(map)
-      .filter(([source]) => XP_WEIGHTS_V2[source] !== undefined)
-      .map(([source, count]) => ({
-        source,
-        amount: count * XP_WEIGHTS_V2[source],
-        ts: options.now ? options.now.getTime() : Date.now(),
-      }));
-    const capped = applyXpCapV2(events, { now: options.now });
-    // Se capou algo, sobrescreve total e remove fontes zeradas
-    const cappedSources = {};
-    for (const e of capped.kept) {
-      cappedSources[e.source] = (cappedSources[e.source] || 0) + e.amount;
-    }
-    return {
-      xpTotal: capped.totals.totalXp,
-      xpBySource: cappedSources,
-      capped: {
-        dropped: capped.dropped,
-        dayXp: capped.totals.dayXp,
-        weekXp: capped.totals.weekXp,
-      },
-    };
   }
 
   return { xpTotal: total, xpBySource: out };

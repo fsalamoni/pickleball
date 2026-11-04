@@ -45,6 +45,13 @@ function parseDoc(data, validator) {
   return validator(parsed).success ? parsed : null;
 }
 
+/** O código da pessoa, só LENDO (a exportação não pode criar um). */
+export async function getReferralCode(uid) {
+  if (!uid) return null;
+  const snap = await getDoc(doc(db(), referralCodePath(uid)));
+  return snap.exists() ? parseDoc(snap.data(), validateUserReferralCode) : null;
+}
+
 export async function getOrCreateReferralCode(uid) {
   if (!uid) return null;
   const ref = doc(db(), referralCodePath(uid));

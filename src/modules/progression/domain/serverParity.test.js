@@ -19,6 +19,10 @@ import { rankEntries } from './challenges.js';
 import { XP_WEIGHTS_V2 } from './progressionV2.js';
 import { TIER_NAMES } from './tiers.js';
 import { ONBOARDING_STEPS } from './onboarding.js';
+import { XP_GRANT_KIND, MAX_GRANT_XP } from './xpGrants.js';
+import {
+  normalizeGamificationConfig, isModuleOn, GAMIFICATION_MODULES, DEFAULT_GAMIFICATION_CONFIG,
+} from './gamificationConfig.js';
 
 const requerer = createRequire(import.meta.url);
 const core = requerer('../../../../functions/gamificationCore.js');
@@ -127,10 +131,9 @@ describe('vocabulário e pesos', () => {
   });
 
   it('a ordem dos tiers do placar público é a do cliente', () => {
-    const fonte = readFileSync('functions/seasonRanking.js', 'utf8');
-    const m = /const TIER_ORDEM = \[([^\]]+)\]/.exec(fonte);
-    const servidor = m[1].split(',').map((s) => s.trim().replace(/['"]/g, ''));
-    expect(servidor).toEqual([...TIER_NAMES]);
+    // Uma cópia só no servidor (gamification.js), lida pelo placar e pela configuração.
+    expect([...requerer('../../../../functions/gamification.js').TIER_ORDEM]).toEqual([...TIER_NAMES]);
+    expect(readFileSync('functions/seasonRanking.js', 'utf8')).not.toMatch(/const TIER_ORDEM = \[/);
   });
 });
 
@@ -138,5 +141,57 @@ describe('primeiros passos: o funil das métricas conta as mesmas etapas do rote
   it('os ids que o servidor conta são os do catálogo do cliente, na mesma ordem', () => {
     const servidor = requerer('../../../../functions/gamification.js').ONBOARDING_STEP_IDS;
     expect([...servidor]).toEqual(ONBOARDING_STEPS.map((p) => p.id));
+  });
+});
+
+describe('concessões de XP: o que o servidor grava é o que o cliente soma', () => {
+  const g = requerer('../../../../functions/gamification.js');
+
+  it('os tipos de concessão são os mesmos', () => {
+    expect([...g.XP_GRANT_KINDS].sort()).toEqual(Object.values(XP_GRANT_KIND).sort());
+  });
+
+  it('o teto por concessão é o mesmo', () => {
+    expect(g.MAX_GRANT_XP).toBe(MAX_GRANT_XP);
+  });
+});
+
+describe('configuração do admin: os dois lados leem o mesmo documento do mesmo jeito', () => {
+  const g = requerer('../../../../functions/gamification.js');
+  const ENTRADAS = [
+    null, undefined, 'lixo', {},
+    { season: { prizeTop1: 99999, prizeTop10Percent: -5, prizeParticipation: '40', publicMinTier: 'Elite' } },
+    { season: { publicMinTier: 'Inexistente' } },
+    { season: { publicMinTier: 42 } },
+    { duels: { winnerXp: 12.6, participationXp: 'abc', maxLevelGap: 0.1 } },
+    { duels: { maxLevelGap: 9 } },
+    { reviews: { minForPublicScore: 1, windowDays: 999 } },
+    { antiFarm: { xpJumpPerDay: 100, kudosRingMin: 100, unverifiedXpFactor: 1 } },
+    { antiFarm: { xpJumpPerDay: 7777.4, unverifiedXpFactor: 4.5 } },
+    { notifications: { weeklyReview: false, duels: 'nao', challengeResults: false } },
+    { modules: { duels: false, challenges: true, match_reviews: 'false', hall_of_fame: false } },
+    { modules: 'lixo' },
+  ];
+  // eslint-disable-next-line no-unused-vars
+  const semModulos = ({ schemaVersion, modules, ...resto }) => resto;
+
+  it('números, tier público e avisos saem iguais', () => {
+    ENTRADAS.forEach((bruto) => {
+      expect(semModulos(g.normalizarConfig(bruto)), JSON.stringify(bruto)).toEqual(semModulos(normalizeGamificationConfig(bruto)));
+    });
+  });
+
+  it('o módulo ligado/desligado é o mesmo', () => {
+    ENTRADAS.forEach((bruto) => {
+      const cliente = normalizeGamificationConfig(bruto);
+      const servidor = g.normalizarConfig(bruto);
+      Object.keys(GAMIFICATION_MODULES).forEach((id) => {
+        expect(g.moduloLigado(servidor, id), `${id} ${JSON.stringify(bruto)}`).toBe(isModuleOn(cliente, id));
+      });
+    });
+  });
+
+  it('os padrões são os mesmos', () => {
+    expect(semModulos(g.normalizarConfig(null))).toEqual(semModulos(DEFAULT_GAMIFICATION_CONFIG));
   });
 });

@@ -131,3 +131,14 @@ describe('exportação: Minha carreira', () => {
     expect(buildDataExport({ uid: 'u1', career: {} }).career.counts).toEqual({ events: 0, photos: 0 });
   });
 });
+
+describe('exportação: gamificação', () => {
+  it('⭐ entra só quando coletada, com as datas em ISO e o que não foi exportado de propósito', () => {
+    expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('gamification');
+    const ts = { toDate: () => new Date('2026-11-01T12:00:00Z') };
+    const out = buildDataExport({ uid: 'u1', gamification: { xp_grants: [{ id: 'g', xp: 500, serverAt: ts }], reputation: null } });
+    expect(out.gamification.xp_grants).toEqual([{ id: 'g', xp: 500, serverAt: '2026-11-01T12:00:00.000Z' }]);
+    expect(out.gamification.reputation).toBeNull();
+    expect(out.gamification.not_included.length).toBeGreaterThan(0);
+  });
+});

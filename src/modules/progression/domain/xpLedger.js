@@ -132,12 +132,11 @@ export function eventsToXpBySource(events = []) {
  * Converte lista de eventos em XP total + breakdown por source (em XP, não unidades).
  *
  * @param {XpEvent[]} events
- * @param {{ applyCaps?: boolean, now?: Date }} [options]
- * @returns {{ xpTotal: number, xpBySource: object, capped?: object }}
+ * @returns {{ xpTotal: number, xpBySource: object }}
  */
-export function computeXpFromEvents(events, options = {}) {
+export function computeXpFromEvents(events) {
   const map = eventsToXpBySource(events);
-  return computeXpV2(map, options);
+  return computeXpV2(map);
 }
 
 /**

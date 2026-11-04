@@ -133,6 +133,16 @@ describe('antifarm', () => {
     expect(lento).toEqual([]);
   });
 
+  it('⭐ o salto é medido sobre o XP PRÓPRIO (xpTotal − grantsXp): prêmio do servidor não é salto', () => {
+    // 10.000 de prêmio (temporada + desafio) caíram de uma vez; o XP próprio quase não mudou.
+    const premio = core.integritySignals({ xpTotal: 13000, grantsXp: 10000, verified: { games: 500, wins: 300 }, previous: { xp: 2500, at: agora - 6 * 3600_000 }, now: agora }, cfg);
+    expect(premio.map((x) => x.type)).not.toContain('xp_jump');
+    // XP próprio saltando continua sinalizado, e o detalhe mostra o próprio.
+    const proprio = core.integritySignals({ xpTotal: 30000, grantsXp: 10000, verified: { games: 500, wins: 300 }, previous: { xp: 2500, at: agora - 6 * 3600_000 }, now: agora }, cfg);
+    const salto = proprio.find((x) => x.type === 'xp_jump');
+    expect(salto.detail).toMatchObject({ from: 2500, to: 20000 });
+  });
+
   it('anel de kudos: só quando os dois lados passam do mínimo', () => {
     const k = (f, t, n) => Array.from({ length: n }, () => ({ fromUid: f, toUid: t }));
     expect(core.kudosRings([...k('a', 'b', 6), ...k('b', 'a', 5)], 5)).toEqual([{ a: 'a', b: 'b', ab: 6, ba: 5 }]);

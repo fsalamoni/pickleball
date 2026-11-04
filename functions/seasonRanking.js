@@ -106,8 +106,7 @@ function buildSeasonRows(progressoes, existentes, now = Date.now()) {
 }
 
 /** Ordem dos tiers (espelha `TIER_NAMES` do cliente) — para o "tier mínimo" do placar público. */
-const TIER_ORDEM = ['Calouro', 'Aprendiz', 'Jogador', 'Regular', 'Veterano', 'Expert', 'Elite', 'Lenda', 'Imortal'];
-const tierRank = (nome) => Math.max(0, TIER_ORDEM.indexOf(nome));
+const tierRank = (nome) => Math.max(0, require('./gamification').TIER_ORDEM.indexOf(nome));
 
 /**
  * As linhas da temporada E do Hall da Fama — a regra de privacidade inteira

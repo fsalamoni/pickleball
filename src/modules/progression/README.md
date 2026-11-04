@@ -87,6 +87,22 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
    a missão concluída continua concluída — tirar do usuário algo que ele já
    viu conquistado é pior que a imprecisão.
 
+10. **Coleção nova da gamificação entra na exclusão E na exportação.**
+   A exclusão é `functions/accountDeletion.js`; a exportação,
+   `services/gamificationExportService.js` (`collectGamificationExport`,
+   chamada em Configurações → Exportar meus dados). O guarda
+   `src/core/guards/exclusaoCobreColecoes.test.js` lê o `firestore.rules`
+   e reprova `user_*`, `gamification_*`, `partner_letter*`,
+   `match_reviews`, `hall_of_fame`, `challenge_entries`, `duels` ou
+   `reward_claims` sem tratamento (isenção só com motivo escrito).
+
+11. **Concessão do servidor respeita o que o cliente soma.** `conceder()`
+   grava no máximo `MAX_GRANT_XP` e só tipos de `XP_GRANT_KIND`; o salto
+   de XP do antifarm é medido sem as concessões — as que o SERVIDOR leu em
+   `user_xp_grants`, nunca o `grantsXp` que o dono grava. Paridade em
+   `domain/serverParity.test.js` (tipos, teto, tiers e a configuração do
+   admin inteira). Ver `docs/38-GAMIFICACAO-V2.md` §4.1.
+
 ## De onde vem o XP
 
 `xpTotal` = **atividade** + **bônus das conquistas registradas** + **XP das
