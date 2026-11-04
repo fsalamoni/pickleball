@@ -326,7 +326,10 @@ linha é menor que ela, ele diz **Revisar**.
   na FAIXA DA REDE — descendo até a fita ou voltando rente a ela, `netBandM`;
   perdê-la no ar perto de quem bateu não conta; sumida mais de 0,25 s e de volta
   fora do rumo que levava — na mão, no bolso —, é bola nova e o buraco conta;
-  a que só passou atrás de um corpo volta no rumo, `onCourse`), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
+  a que só passou atrás de um corpo volta no rumo, `onCourse`. O rumo é uma
+  reta na imagem: o lob escondido perto do alto da curva, ou a bola escondida
+  logo na batida, pode não "voltar no rumo" — o "fora" longo dela sai
+  **revisar**, nunca o contrário; medido, ~2% das bolas escondidas), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
   "fora" vira **revisar**.
 - **Entre um ponto e outro não há marcação (7.D.4).** A bola devolvida a quem
   vai sacar sai da mão de alguém atrás do fundo, como um saque. Depois de um
