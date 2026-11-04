@@ -128,6 +128,15 @@ export default function V2Settings() {
           clubes = { clubs: undefined, incomplete: [t('Associações em clubes')] };
         }
       }
+      // Minha carreira: os torneios de fora e as fotos. Entra sempre (com a flag
+      // desligada, o que a pessoa registrou continua sendo dela).
+      let carreira = { career: undefined, incomplete: [] };
+      try {
+        const { collectCareerExport } = await import('@/modules/career/services/careerExportService');
+        carreira = await collectCareerExport(user?.uid);
+      } catch (_) {
+        carreira = { career: undefined, incomplete: [t('Minha carreira')] };
+      }
       // O que saiu por e-mail, WhatsApp e SMS (registro dos últimos 90 dias).
       let mensagens;
       let mensagensFalhou = false;
@@ -146,6 +155,7 @@ export default function V2Settings() {
         ...mercado.incomplete,
         ...federacoes.incomplete,
         ...clubes.incomplete.map((i) => t(i)),
+        ...carreira.incomplete.map((i) => t(i)),
       ];
       const pkg = buildDataExport({
         uid: user?.uid,
@@ -158,6 +168,7 @@ export default function V2Settings() {
         federations: federacoes.federations,
         clubAssociations: clubes.clubs === undefined ? undefined : { clubs: clubes.clubs },
         messages: mensagens,
+        career: carreira.career,
         incomplete,
       });
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });

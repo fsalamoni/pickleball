@@ -1926,6 +1926,46 @@ const ATLETA = {
       ],
     },
     {
+      id: 'carreira-registrar',
+      flags: ['athlete_career'],
+      title: tk('Registrar um torneio de fora'),
+      summary: tk('A Minha carreira junta os torneios daqui e os que você jogou fora do PickleRush, numa linha do tempo só sua.'),
+      keywords: [
+        'carreira', 'minha carreira', 'torneio de fora', 'registrar torneio', 'histórico', 'linha do tempo',
+        'medalha', 'pódio', 'foto', 'federação', 'modo lista', 'vários de uma vez', 'repetir',
+      ],
+      guias: ['carreira-registrar'],
+      blocks: [
+        p(tk('Em Minha carreira, "Registrar torneio" pede só o nome, a data, o formato (Simples, Duplas ou Equipe), a categoria (Masc, Fem ou Mista) e, se quiser, a medalha. Data passada entra como jogado; data futura, como planejado. Depois de salvar, "Outra categoria" acrescenta mais uma.')),
+        list(
+          tk('A FICHA — toque no torneio para completar em camadas: o resultado (colocação, faixa, pontos que a federação deu, a federação e o link) e a foto da medalha, do pódio ou da chave. O cartão diz "2 de 3" e o próximo passo.'),
+          tk('VÁRIOS DE UMA VEZ — para o passado: uma linha por torneio (ano, nome, categoria, medalha), tudo salvo junto.'),
+          tk('REPETIR — o torneio do ano passado volta com o nome, o organizador, a cidade e a federação preenchidos.'),
+          tk('SEM SINAL — o que você salvou fica guardado no aparelho e é enviado quando a conexão volta.'),
+          tk('É ESTE? — se o torneio parece um do PickleRush em que você jogou, a ficha pergunta. Confirmando, ele aparece uma vez só, com o selo oficial.'),
+        ),
+        p(tk('Os pódios de fora aparecem na estante de troféus, na aba "Fora da plataforma", com o cartão para compartilhar (com o rodapé "resultado declarado").')),
+        link('/carreira', tk('Abrir a Minha carreira')),
+        tip(tk('Só você vê a sua carreira: os torneios, as fotos e as anotações. Ninguém mais lê.')),
+        warn(tk('O resultado que você digita é declarado: ele nunca entra em ranking, rating nem XP. Evite fotos com o rosto de crianças.')),
+      ],
+    },
+    {
+      id: 'carreira-selos',
+      flags: ['athlete_career'],
+      title: tk('Selos de confiança da carreira'),
+      summary: tk('Declarado ou oficial: de onde veio cada resultado da sua linha do tempo.'),
+      keywords: ['selo', 'declarado', 'oficial', 'confiança', 'verificado', 'carreira'],
+      blocks: [
+        p(tk('Cada item da linha do tempo leva um selo, que a plataforma calcula — ninguém o digita.')),
+        list(
+          tk('OFICIAL — veio da plataforma: um torneio do PickleRush em que você jogou, um dia de jogo publicado ou os pontos lançados por uma federação. Também o torneio de fora em que você respondeu "É este" a um torneio daqui.'),
+          tk('DECLARADO — você registrou. Fica na sua carreira e na estante "Fora da plataforma", mas nunca soma em ranking, rating nem XP.'),
+        ),
+        link('/carreira', tk('Abrir a Minha carreira')),
+      ],
+    },
+    {
       id: 'balanco-do-jogo',
       title: tk('O balanço do jogo e a semana de treino sugerida'),
       summary: tk('Depois de jogar, contar como foi — e receber drills para a semana.'),
@@ -2789,6 +2829,9 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'treino']] },
   { pattern: '/treino', label: tk('o treino'),
     refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
+  // Minha carreira (as abas são `?aba=`, por isso sem `/carreira/*`).
+  { pattern: '/carreira', label: tk('a sua carreira'),
+    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-selos']] },
   { pattern: '/circuits', label: tk('circuitos'),
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: tk('seus jogos'),

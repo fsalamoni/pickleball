@@ -40,6 +40,13 @@ describe('buildMedalCard', () => {
     expect(c.shareText).toContain('Bronze: Eva e Fê');
   });
 
+  it('⭐ torneio de fora (Minha carreira): o cartão e o texto dizem "resultado declarado"', () => {
+    const c = buildMedalCard({ places, event: { ...event, declared: true }, position: 1 });
+    expect(c.event.declared).toBe(true);
+    expect(c.shareText).toContain('Resultado declarado');
+    expect(buildMedalCard({ places, event, position: 1 }).event.declared).toBe(false);
+  });
+
   it('⭐ data sem hora é o dia LOCAL (o torneio de 12/10 não vira 11/10)', () => {
     expect(dataPorExtenso('2026-10-12')).toBe('12 de outubro de 2026');
   });

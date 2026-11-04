@@ -43,6 +43,7 @@ Centro de Treino (`docs/40-CENTRO-DE-TREINO.md`) entra por aqui.
 | | `jogos` — **Meus jogos** (o que vem: reservas, aulas, dias de jogo; o que foi: desempenho e ranking — um link por destino), `torneios` (os que eu jogo) | todos |
 | | `mercado` — **Mercado**: *Comprando* (Minhas compras, Carrinho com a contagem, Favoritos, Buscas salvas, Vales-presente) e *Vendendo* (Painel de vendas com os anúncios no ar, Novo anúncio, Vendas, Ofertas e Perguntas com o "esperando você"; sem ficha, "Começar a vender") | com a flag `marketplace` |
 | | `clubes` (meus clubes e convites para responder) | membro de clube **ou** quem tem convite pendente |
+| | `carreira` — **Minha carreira** (`CareerAreaSection`: quantos torneios de fora, pódios e planejados; o último registro com o que falta; "Registrar torneio" e "Ver a linha do tempo") | com a flag `athlete_career` (ver `docs/54-CARREIRA-DO-ATLETA.md`) |
 | **Gerencio** | `professor` | quem tem `coaches/{uid}` |
 | | `arenas` | quem gere arena |
 | | `admin` | administrador da plataforma |

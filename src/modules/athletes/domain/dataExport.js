@@ -135,7 +135,7 @@ function clubsBlock(c = {}) {
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, career, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -159,6 +159,12 @@ export function buildDataExport({
   if (clubAssociations !== undefined) out.club_associations = clubsBlock(clubAssociations || {});
   // E-mails, WhatsApp e SMS que a plataforma mandou (90 dias; endereço mascarado).
   if (messages !== undefined) out.messages = lista(messages);
+  // Minha carreira: os torneios de fora e a lista das fotos (`carreira/{uid}/`).
+  if (career !== undefined) {
+    const events = lista(career?.events);
+    const photos = (Array.isArray(career?.photos) ? career.photos : []).map(String);
+    out.career = { events, photos, counts: { events: events.length, photos: photos.length } };
+  }
   return out;
 }
 

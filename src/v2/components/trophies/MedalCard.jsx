@@ -154,7 +154,11 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
 
         {/* Rodapé: a frase e o QR */}
         <footer className="flex items-end justify-between border-t border-white/15" style={{ marginTop: '5cqw', paddingTop: '4cqw', gap: '4cqw' }}>
-          <p className="italic leading-snug text-white/85" style={{ fontSize: F.frase, maxWidth: qrDataUrl ? '68%' : '100%' }}>“{card.saying}”</p>
+          <div style={{ maxWidth: qrDataUrl ? '68%' : '100%' }}>
+            <p className="italic leading-snug text-white/85" style={{ fontSize: F.frase }}>“{card.saying}”</p>
+            {/* Torneio de fora (Minha carreira): quem vê o cartão sabe que o resultado foi declarado. */}
+            {card.event.declared && <p className="font-bold uppercase tracking-widest text-white/60" style={{ fontSize: F.micro, marginTop: '0.8em' }}>{t('Resultado declarado')}</p>}
+          </div>
           {qrDataUrl && (
             <div className="flex shrink-0 flex-col items-center" style={{ gap: '0.4em', fontSize: F.micro }}>
               <img src={qrDataUrl} alt={t('QR Code')} className="rounded-md bg-white" style={{ width: '17cqw', height: '17cqw', padding: '0.3em' }} />

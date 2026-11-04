@@ -8,12 +8,17 @@
  */
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Medal, Trophy, Swords, Share2 } from 'lucide-react';
+import { Medal, Trophy, Swords, Share2, Route } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useCareerEvents } from '@/modules/career/hooks/useCareer';
+import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
+import { careerTrophies, careerTrophyCounts } from '@/modules/career/domain/timeline.js';
 import { useTrophies } from '@/modules/trophies/hooks/useTrophies';
 import { groupTrophies, trophyContextId, TROPHY_KIND } from '@/modules/trophies/domain/trophies.js';
 import { dataPorExtenso } from '@/modules/trophies/domain/medalCard.js';
-import { V2Button, V2ErrorState, V2FilterChip, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2FilterChip, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeEmpty, HomeAction } from '@/v2/components/home/personal/HomeSection';
 import { cn } from '@/core/lib/utils';
 import { METAL } from './MedalCard';
@@ -21,6 +26,9 @@ import CongratulateButton from './CongratulateButton';
 import { t, fmtLista } from '@/core/i18n';
 
 const MedalCardDialog = lazy(() => import('./MedalCardDialog'));
+
+/** A aba dos torneios de fora (Minha carreira) — o mesmo valor do `kind` dos troféus declarados. */
+export const ABA_FORA = 'fora';
 
 function Contagem({ contagem }) {
   return (
@@ -63,7 +71,7 @@ function TrofeuCard({ t: trofeu, onOpen, children }) {
           </span>
         </span>
         <span className="text-sm text-gray-500">
-          {trofeu.subtitle}{trofeu.date ? ` · ${dataPorExtenso(trofeu.date)}` : ''}
+          {trofeu.subtitle}{trofeu.dateLabel || trofeu.date ? ` · ${trofeu.dateLabel || dataPorExtenso(trofeu.date)}` : ''}
           {trofeu.record ? ` · ${t('{v} de {n} jogos', { v: trofeu.record.won, n: trofeu.record.played })}` : ''}
         </span>
         <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-ink"><Share2 className="h-3.5 w-3.5" /> {t('Ver o cartão')}</span>
@@ -76,20 +84,36 @@ function TrofeuCard({ t: trofeu, onOpen, children }) {
 /**
  * @param {{ uid: string, nome?: string, mine?: boolean, compacto?: boolean }} props
  */
-export default function TrophyShelf({ uid, nome = '', mine = false, compacto = false }) {
+export default function TrophyShelf({ uid, nome = '', mine = false, compacto = false, abaInicial = TROPHY_KIND.TOURNAMENT }) {
   const { user } = useAuth();
   const q = useTrophies(uid);
   const grupo = useMemo(() => groupTrophies(q.data || {}), [q.data]);
-  const [aba, setAba] = useState(TROPHY_KIND.TOURNAMENT);
+  // Minha carreira: os pódios DECLARADOS (torneios de fora), só na estante
+  // da própria pessoa. Contagens próprias; o `destaque` segue só o verificado.
+  const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER) && mine;
+  const foraQ = useCareerEvents({ enabled: carreiraOn });
+  // Os torneios em que joguei dão o selo "oficial" ao ligado pelo "É este" (o mesmo da linha do tempo).
+  const meusQ = useMyTournaments({ enabled: carreiraOn });
+  const meus = meusQ.isSuccess ? meusQ.data : undefined;
+  const fora = useMemo(() => {
+    if (!carreiraOn || !foraQ.isSuccess) return [];
+    // Ligado a um torneio cujo pódio já está na aba Torneios: não repete em "Fora".
+    const noPodio = new Set((q.data?.torneios || []).map((x) => x.tournamentId));
+    return careerTrophies(foraQ.data, { myTournaments: meus, me: { uid, name: nome || t('Você') } })
+      .filter((x) => !(x.seal === 'official' && noPodio.has(x.platformTournamentId)));
+  }, [carreiraOn, foraQ.isSuccess, foraQ.data, meus, q.data, uid, nome]);
+  const foraConta = careerTrophyCounts(fora);
+  const [aba, setAba] = useState(abaInicial);
   const [aberto, setAberto] = useState(null);
 
-  if (q.isPending) return <V2Skeleton lines={4} />;
+  if (q.isPending || (carreiraOn && foraQ.isPending)) return <V2Skeleton lines={4} />;
   if (q.isError) {
     return <V2ErrorState inline title={t('Não carregou os troféus')} description={t('Eles continuam lá — a conexão é que falhou.')} onRetry={() => q.refetch()} />;
   }
 
-  const lista = aba === TROPHY_KIND.TOURNAMENT ? grupo.torneios : grupo.diasDeJogo;
-  const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0;
+  const ehFora = aba === ABA_FORA && carreiraOn;
+  const lista = ehFora ? fora : (aba === TROPHY_KIND.GAME_DAY ? grupo.diasDeJogo : grupo.torneios);
+  const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0 && fora.length === 0 && !foraQ.isError;
   const quem = mine ? t('Você') : (nome || t('Esta pessoa'));
 
   return (
@@ -108,23 +132,36 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
         </HomeEmpty>
       ) : (
         <>
-          <Contagem contagem={grupo.contagem} />
+          <Contagem contagem={ehFora ? foraConta : grupo.contagem} />
           <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('Tipo de conquista')}>
-            <V2FilterChip role="tab" aria-selected={aba === TROPHY_KIND.TOURNAMENT} active={aba === TROPHY_KIND.TOURNAMENT} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
-              <Trophy className="mr-1.5 h-3.5 w-3.5" /> Torneios ({grupo.contagem.torneios.total})
+            <V2FilterChip role="tab" aria-selected={!ehFora && aba !== TROPHY_KIND.GAME_DAY} active={!ehFora && aba !== TROPHY_KIND.GAME_DAY} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
+              <Trophy className="mr-1.5 h-3.5 w-3.5" /> {t('Torneios')} ({grupo.contagem.torneios.total})
             </V2FilterChip>
-            <V2FilterChip role="tab" aria-selected={aba === TROPHY_KIND.GAME_DAY} active={aba === TROPHY_KIND.GAME_DAY} onClick={() => setAba(TROPHY_KIND.GAME_DAY)}>
-              <Swords className="mr-1.5 h-3.5 w-3.5" /> Dias de jogo ({grupo.contagem.diasDeJogo.total})
+            <V2FilterChip role="tab" aria-selected={!ehFora && aba === TROPHY_KIND.GAME_DAY} active={!ehFora && aba === TROPHY_KIND.GAME_DAY} onClick={() => setAba(TROPHY_KIND.GAME_DAY)}>
+              <Swords className="mr-1.5 h-3.5 w-3.5" /> {t('Dias de jogo')} ({grupo.contagem.diasDeJogo.total})
             </V2FilterChip>
+            {carreiraOn && (
+              <V2FilterChip role="tab" aria-selected={ehFora} active={ehFora} onClick={() => setAba(ABA_FORA)}>
+                <Route className="mr-1.5 h-3.5 w-3.5" /> {t('Fora da plataforma')} ({foraQ.isError ? '—' : foraConta.total})
+              </V2FilterChip>
+            )}
           </div>
-          {lista.length === 0 ? (
+          {ehFora && (
+            <p className="text-xs text-gray-500">{t('Declarados por você na Minha carreira. Não entram em ranking, rating nem XP.')}</p>
+          )}
+          {ehFora && foraQ.isError ? (
+            <V2ErrorState inline title={t('Não carregaram os torneios de fora')} onRetry={() => foraQ.refetch()} />
+          ) : lista.length === 0 ? (
             <p className="text-sm text-gray-500">
-              {aba === TROPHY_KIND.TOURNAMENT ? t('Nenhum pódio de torneio ainda.') : t('Nenhum pódio de dia de jogo publicado ainda.')}
+              {ehFora
+                ? t('Nenhum pódio de fora registrado ainda. Registre um torneio na Minha carreira.')
+                : aba === TROPHY_KIND.GAME_DAY ? t('Nenhum pódio de dia de jogo publicado ainda.') : t('Nenhum pódio de torneio ainda.')}
             </p>
           ) : (
             <ul className={cn('grid gap-3', compacto ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
               {(compacto ? lista.slice(0, 4) : lista).map((tr) => (
                 <TrofeuCard key={tr.id} t={tr} onOpen={() => setAberto(tr)}>
+                  {tr.declared && <V2Badge tone="neutral">{t('Declarado')}</V2Badge>}
                   {!mine && user?.uid !== uid && (
                     <CongratulateButton
                       className="w-full"
@@ -136,7 +173,7 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
                     />
                   )}
                   {tr.link && (
-                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === TROPHY_KIND.TOURNAMENT ? t('Ver o torneio') : t('Ver o dia de jogo')}</Link></V2Button>
+                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === ABA_FORA ? t('Abrir a ficha') : tr.kind === TROPHY_KIND.TOURNAMENT ? t('Ver o torneio') : t('Ver o dia de jogo')}</Link></V2Button>
                   )}
                 </TrofeuCard>
               ))}
@@ -154,8 +191,9 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
             open
             onOpenChange={(v) => { if (!v) setAberto(null); }}
             places={[{ position: aberto.position, label: aberto.placeLabel, entries: [{ label: aberto.people.map((p) => p.name).join(' / '), people: aberto.people }] }]}
-            event={{ title: aberto.title, subtitle: aberto.subtitle, date: aberto.date, city: aberto.city, state: aberto.state, kind: aberto.kind }}
-            link={aberto.publicLink || aberto.link}
+            event={{ title: aberto.title, subtitle: aberto.subtitle, date: aberto.date, dateLabel: aberto.dateLabel || null, city: aberto.city, state: aberto.state, kind: aberto.kind, declared: aberto.declared === true }}
+            // O de fora não tem página pública: o cartão sai sem link nem QR.
+            link={aberto.kind === ABA_FORA ? null : aberto.publicLink || aberto.link}
             initialPosition={aberto.position}
           />
         </Suspense>
