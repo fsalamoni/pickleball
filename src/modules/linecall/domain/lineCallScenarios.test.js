@@ -12,9 +12,9 @@ import { CAMS, ballPath, bounce, player, frames, run } from './testkit/courtSim.
 
 const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
 
-function play({ cam, ball, players, tail = 3.5, options = {}, seed = 3, lift = true }) {
+function play({ cam, ball, players, tail = 3.5, options = {}, seed = 3, lift = true, fps = 60 }) {
   const e = createLineCallEngine({ H: cam.H, options: { ...(lift ? { imageSize: cam.size } : {}), ...options } });
-  const fr = frames({ cam, ball: ballPath(ball), players, from: ball[0].t - 0.3, to: ball[ball.length - 1].t + tail, seed });
+  const fr = frames({ cam, ball: ballPath(ball), players, from: ball[0].t - 0.3, to: ball[ball.length - 1].t + tail, seed, fps });
   return run(e, fr);
 }
 /** Cada marcação numa linha: tipo, decisão, o motivo (quando não é "dentro" nem "sem falta") e a jogada. */
@@ -69,11 +69,13 @@ function serveB(cam, land, flight = 0.9) {
   return play({ cam, ball: [...serveFromB(p, land, flight), away(flight + 0.4, land[0], land[1] - 3, 0.9)], players: all(p) });
 }
 /** O voleio de A na cozinha (com `o` mudando os jogadores), e a bola quicando no fundo de B. */
-function volleyA(cam, o) {
+function volleyA(cam, o, fps = 60) {
   const p = four(o);
   const ball = [...opening(p), paddle(p.pA, 3.2, 0.9), bounce(3.8, 2.0, 11.0), away(4.1, 1.9, 12.5, 0.8)];
-  return play({ cam, ball, players: all(p) });
+  return play({ cam, ball, players: all(p), fps });
 }
+/** As duas taxas de quadros que a tela aceita (30 é o mínimo, 60 o bom). */
+const FPS = [30, 60];
 /** O saque de A com o pé em `spot`. */
 function serveA(spot) {
   const sA = player(spot);
@@ -133,7 +135,11 @@ describe('saque (7.E, 8.B, 8.C): a área em diagonal, além da cozinha', () => {
     const p = four();
     const c = paddle(p.sB, 0);
     const ball = [dropBefore(c), c, { t: 0.6, p: [2.6, N + 0.15, 0.5] }, bounce(0.95, 2.5, N + 0.9), away(1.4, 2.4, N + 1.6, 0.2)];
-    expect(brief(play({ cam: CAMS.fundoB(), ball, players: all(p) }))).toEqual(['serve_foot clean', 'bounce out net 1']);
+    const ev = play({ cam: CAMS.fundoB(), ball, players: all(p) });
+    expect(brief(ev)).toEqual(['serve_foot clean', 'bounce out net 1']);
+    // 🐞 a margem era a da linha da cozinha de lá (3 m): é a distância até a REDE
+    expect(Math.abs(ev[1].marginM + 0.9)).toBeLessThan(0.15);
+    expect(ev[1].serve).toBe(true);
   });
 
   it('pegou na fita e caiu na área: dentro (o saque que toca a rede não se repete)', () => {
@@ -189,9 +195,69 @@ describe('voleio e a cozinha (11.A)', () => {
     });
   });
 
+  // pA voleia na linha (a ponta do pé 13 cm atrás) e anda de lado; pB devolve
+  // curto, a bola quica na cozinha de A e pA entra para jogar DEPOIS do quique.
+  function shuffleThenDink(cam, fps, shuffleTo, pauseS, dx = -0.8) {
+    const stepFrom = shuffleTo + pauseS;
+    const pA = player({ x: 4.5, y: N - K - 0.27, moves: [{ from: 3.25, to: shuffleTo, dx }, { from: stepFrom, to: stepFrom + 0.25, dy: 0.9 }] });
+    const p = { ...four(), pA };
+    const ball = [...opening(p), paddle(pA, 3.2, 0.9), paddle(p.pB, 3.75, 0.7), bounce(4.5, 3.75, 5.7), paddle(pA, 4.7, 0.25), bounce(5.6, 2.0, 9.0), away(5.9, 2.0, 10.0, 0.6)];
+    return brief(play({ cam: CAMS[cam](), ball, players: all(p), fps }));
+  }
+
+  it('andar de lado depois do voleio encerra o impulso: entrar na cozinha para jogar a bola que quicou não é falta (11.A.2)', () => {
+    // 🐞 o impulso só acabava com a pessoa PARADA 0,3 s (ou recuando): quem seguia
+    // andando de lado levava o voleio aberto até a devolução de lá, e a entrada
+    // legal na cozinha virava falta certa de impulso — e o ponto acabava.
+    FPS.forEach((fps) => ['fundoA', 'rede1'].forEach((c) => {
+      const still = shuffleThenDink(c, fps, 3.25, 0.95, 0);
+      expect(still.join()).not.toContain('volley fault');
+      [[4.2, 0], [3.9, 0], [3.9, 0.15], [3.6, 0.3]].forEach(([to, pause]) => {
+        expect(shuffleThenDink(c, fps, to, pause), `${c} ${fps} q/s, de lado até ${to} s`).toEqual(still);
+      });
+    }));
+  });
+
+  it('o embalo que só chega à cozinha depois da devolução de lá: revisar — ainda é o embalo, ou foi buscar a bola? (11.A.2)', () => {
+    FPS.forEach((fps) => ['fundoA', 'rede1'].forEach((c) => {
+      const pA = player({ x: 4.5, y: 4.0, moves: [{ from: 3.25, to: 4.25, dy: 0.8 }] });
+      const p = { ...four(), pA };
+      const ball = [...opening(p), paddle(pA, 3.2, 0.9), paddle(p.pB, 3.75, 0.7), bounce(4.6, 2.0, 2.5), paddle(p.rA, 4.9, 0.5), bounce(5.9, 2.0, 11.0), away(6.2, 2.0, 12.4, 0.6)];
+      const ev = brief(play({ cam: CAMS[c](), ball, players: all(p), fps }));
+      expect(ev, `${c} ${fps} q/s`).toContain('volley review momentum');
+      expect(ev.join()).not.toContain('volley fault');
+    }));
+  });
+
+  it('o embalo que leva à cozinha com a bola já morta (o 2º quique de lá): falta assim mesmo (11.A.2, 9.B.1)', () => {
+    FPS.forEach((fps) => ['fundoA', 'rede1'].forEach((c) => {
+      const pA = player({ x: 4.5, y: 4.0, moves: [{ from: 3.25, to: 4.2, dy: 0.8 }] });
+      const p = { ...four(), pA };
+      const ball = [...opening(p), paddle(pA, 3.2, 0.9), bounce(3.8, 2.0, 10.0), bounce(4.3, 1.9, 11.6), away(4.6, 1.85, 12.5, 0.3)];
+      expect(brief(play({ cam: CAMS[c](), ball, players: all(p), fps })), `${c} ${fps} q/s`).toContain('volley fault momentum');
+    }));
+  });
+
   it('saiu da cozinha pulando e voleou antes de firmar os dois pés fora: falta (11.A.3)', () => {
     const reentry = { pA: { y: 5.2, moves: [{ from: 2.95, to: 3.3, dy: -1.3 }], lift: [{ from: 2.95, to: 3.35, foot: 0, z: 0.3 }, { from: 2.95, to: 3.35, foot: 1, z: 0.3 }] } };
     expect(brief(volleyA(CAMS.fundoA(), reentry))).toEqual(['bounce in 1', 'bounce in 2', 'volley fault reentry']);
+  });
+
+  it('saiu da cozinha e parou com a ponta do pé logo atrás da linha: o mesmo que quem nunca entrou — revisar, nunca falta certa (11.A.3)', () => {
+    // 🐞 o estado "na cozinha" não baixava para "talvez": a medida dentro da
+    // incerteza virava falta de reentrada certa, e o ponto acabava ali.
+    FPS.forEach((fps) => [0.02, 0.06, 0.12].forEach((behind) => {
+      const y = N - K - behind - 0.14; // a ponta do pé `behind` atrás da linha
+      ['fundoA', 'rede1'].forEach((c) => {
+        const back = volleyA(CAMS[c](), { pA: { y: 5.0, moves: [{ from: 2.55, to: 2.85, dy: y - 5.0 }] } }, fps);
+        const never = volleyA(CAMS[c](), { pA: { y } }, fps);
+        expect(brief(back), `${c} ${fps} q/s, ${behind * 100} cm`).toEqual(brief(never));
+        expect(brief(back).join()).not.toContain('volley fault');
+      });
+    }));
+    // pulando para fora, os dois pés ainda no ar na batida: segue falta
+    const jump = { pA: { y: 5.2, moves: [{ from: 2.95, to: 3.3, dy: -1.3 }], lift: [{ from: 2.95, to: 3.35, foot: 0, z: 0.3 }, { from: 2.95, to: 3.35, foot: 1, z: 0.3 }] } };
+    FPS.forEach((fps) => expect(brief(volleyA(CAMS.fundoA(), jump, fps))).toEqual(['bounce in 1', 'bounce in 2', 'volley fault reentry']));
   });
 
   it('pé em cima da linha da cozinha: revisar, e a câmera da rede vê com o dobro da precisão', () => {
@@ -201,6 +267,26 @@ describe('voleio e a cozinha (11.A)', () => {
     expect(brief(a)).toEqual(['bounce in 1', 'bounce in 2', 'volley review contact', 'bounce in 4']);
     expect(brief(r)).toEqual(['bounce in 1', 'bounce in 2', 'volley review contact', 'bounce in 4']);
     expect(r[2].uncertaintyM * 1.8).toBeLessThan(a[2].uncertaintyM);
+  });
+
+  it('na cozinha, a bola quicou e foi batida logo em seguida (meia-volta): não é voleio — nunca falta certa, nem na câmera de lado', () => {
+    // 🐞 na câmera da rede toda virada de rumo era batida CERTA, mesmo com a
+    // marca do quique e o punho baixo: quique e batida juntos numa quina viravam
+    // "voleio" na cozinha — e jogar a bola que quicou na cozinha é permitido (11.A).
+    FPS.forEach((fps) => [0.01, 0.02].forEach((gap) => {
+      const p = four();
+      p.pA = player({ x: 4.5, y: 5.0, wrist: (t) => [4.85, 5.2, t > 3.4 && t < 4.0 ? 0.3 : 0.95] });
+      const tb = 3.7;
+      const ball = [
+        ...serveFromB(p, [1.5, 2.5]), paddle(p.rA, 1.15), bounce(2.25, 4.3, 12.0), { t: 2.5, p: [4.95, L - 0.01, 1.0] },
+        bounce(tb, 4.85, 5.5), { t: tb + gap, p: [4.85, 5.5 - 5.3 * gap, 0.037 + 5 * gap - 4.9 * gap * gap] },
+        bounce(tb + gap + 1.18, 2.0, 11.0), away(tb + gap + 1.48, 1.9, 12.5, 0.8),
+      ];
+      ['rede1', 'fundoA'].forEach((c) => {
+        const ev = brief(play({ cam: CAMS[c](), ball, players: all(p), fps }));
+        expect(ev.join(), `${c} ${fps} q/s, ${gap * 1000} ms`).not.toContain('volley fault');
+      });
+    }));
   });
 
   describe('a cozinha do outro lado', () => {
@@ -215,6 +301,27 @@ describe('voleio e a cozinha (11.A)', () => {
       const fa = play({ cam: CAMS.fundoA(), ball, players: all(p) });
       expect(fa.filter((e) => e.type === 'volley')).toEqual([]);
     });
+  });
+});
+
+describe('rede na troca: a bola caiu do lado de quem bateu', () => {
+  const netBall = (dy, cam, fps) => {
+    const p = four();
+    const ball = [...opening(p), bounce(3.8, 3.5, 5.6), paddle(p.pA, 4.1, 0.4), bounce(4.7, 3.0, N + dy), away(4.95, 3.0, N + dy - 0.15, 0.3)];
+    return brief(play({ cam: CAMS[cam](), ball, players: all(p), fps })).slice(3);
+  };
+
+  it('colada na rede, dentro da incerteza: revisar — logo depois da rede a bola de jogo cai DENTRO (8.D)', () => {
+    // 🐞 era "fora" forçado: perto da rede o lado do quique é incerto, e na troca
+    // a cozinha do outro lado vale (só no saque ela é curta).
+    FPS.forEach((fps) => {
+      [-0.03, -0.06].forEach((dy) => expect(netBall(dy, 'fundoA', fps), `${fps} q/s, ${dy}`).toEqual(['bounce review net 4']));
+      expect(netBall(-0.01, 'rede1', fps)).toEqual(['bounce review net 4']);
+    });
+  });
+
+  it('longe da fita: fora (rede)', () => {
+    FPS.forEach((fps) => ['fundoA', 'rede1'].forEach((c) => expect(netBall(-0.4, c, fps)).toEqual(['bounce out net 4'])));
   });
 });
 

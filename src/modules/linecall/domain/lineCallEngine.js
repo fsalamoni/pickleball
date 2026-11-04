@@ -103,9 +103,12 @@
  * ## O impulso (11.A.2)
  *
  * O voleio só termina quando a pessoa recupera o equilíbrio ou para de ir em
- * direção à cozinha — não há relógio na regra. O motor observa até ela ficar
- * parada (`balanceS`) ou recuar (`retreatM`), no mínimo `momentumS` e no
- * máximo `momentumMaxS`, e segue observando mesmo com a bola já morta (9.B.1).
+ * direção à cozinha — não há relógio na regra. O motor observa até ela parar
+ * de avançar para a cozinha por `balanceS` (parada ou andando de lado) ou
+ * recuar (`retreatM`), no mínimo `momentumS` e no máximo `momentumMaxS`, e
+ * segue observando mesmo com a bola já morta (9.B.1). O pé que só chega à
+ * cozinha depois de o outro lado bater de novo é REVISAR: pode ser o embalo,
+ * pode ser a pessoa indo jogar a bola que vai quicar ali (o que vale).
  *
  * ## O que ele não julga
  *
@@ -167,10 +170,12 @@ export const ENGINE_DEFAULTS = Object.freeze({
   bodyTopM: 2.4,
   /** o impulso depois do voleio dura NO MÍNIMO isto (s) */
   momentumS: 0.5,
-  /** ...e no máximo isto, se a pessoa não parar (s) */
-  momentumMaxS: 3,
-  /** a pessoa parou: todos os pontos do pé apoiados por este tempo (s) */
+  /** ...e no máximo isto, se a pessoa não parar de avançar (s) */
+  momentumMaxS: 2,
+  /** o impulso acabou: este tempo (s) sem avançar para a cozinha (parada, ou andando de lado) */
   balanceS: 0.3,
+  /** avançar para a cozinha é chegar mais perto dela que isto (m); menos é o tremor do detector */
+  progressM: 0.05,
   /** recuou isto para longe da cozinha depois do voleio: o impulso para lá acabou (m) */
   retreatM: 0.3,
   /** pé "apoiado": moveu menos que `groundPx` (px) nos últimos `groundFrames` quadros */
@@ -376,8 +381,16 @@ export function createLineCallEngine({ H, options = {} }) {
   function updateNvz(tr, feet) {
     const use = feet.filter((f) => f.seen && !f.hidden);
     const down = use.filter((f) => f.grounded).map(kz);
+    const landed = (i) => { const pts = use.filter((f) => f.foot === i); return pts.length > 0 && pts.every((f) => f.grounded); };
     if (down.some((k) => k.depthM >= k.uncertaintyM)) tr.nvz = { inside: true, maybe: false, re: [false, false] };
     else if (down.some((k) => k.depthM > -k.uncertaintyM) && !tr.nvz.inside) tr.nvz = { inside: false, maybe: true, re: [false, false] };
+    else if (tr.nvz.inside && [0, 1].every((i) => tr.nvz.re[i] || landed(i))) {
+      // Os dois pés de volta no chão e nenhum ponto CERTAMENTE na cozinha: a
+      // ponta do pé perto da linha, dentro da incerteza, pode já estar fora.
+      // Vira "talvez" — reentrada para REVISAR, nunca falta certa (11.A.3). Pé
+      // ainda no ar (o pulo para fora) segue "dentro": não firmou fora.
+      tr.nvz = { inside: false, maybe: true, re: tr.nvz.re };
+    }
     if (tr.nvz.inside || tr.nvz.maybe) {
       const re = [...tr.nvz.re];
       [0, 1].forEach((i) => {
@@ -597,8 +610,8 @@ export function createLineCallEngine({ H, options = {} }) {
     if (!h.track) return;
     const e = h.entry;
     const w = {
-      t0: h.t, track: h.track, certain, img: h.img, point: null, closest: null,
-      fault: null, near: null, seenS: 0, lastSeenT: null, stableSince: null, judged: false, provisional: h.provisional,
+      t0: h.t, hit: h, track: h.track, certain, img: h.img, point: null, closest: null,
+      fault: null, near: null, seenS: 0, lastSeenT: null, progressRef: null, progressT: null, judged: false, provisional: h.provisional,
     };
     if (e) {
       const use = e.feet.filter((f) => f.seen && !f.hidden);
@@ -650,15 +663,24 @@ export function createLineCallEngine({ H, options = {} }) {
           use.filter((f) => f.grounded).forEach((f) => {
             const { depthM: d, uncertaintyM: u } = kz(f);
             if (d >= u && (!w.fault || (w.fault.depth != null && d > w.fault.depth))) {
-              if (!w.fault) w.fault = { depth: d, u, reason: CALL_REASON.MOMENTUM };
+              if (!w.fault) {
+                w.fault = { depth: d, u, reason: CALL_REASON.MOMENTUM };
+                // O outro lado já bateu de novo: ainda é o embalo do voleio, ou a
+                // pessoa foi buscar a bola (entrar na cozinha para a bola que quica
+                // vale)? Revisar. Com a bola morta, sem batida nova, segue falta (9.B.1).
+                if (rally && rally.lastHit !== w.hit) w.certain = false;
+              }
             } else if (d > -u && (!w.near || (w.near.depth != null && d > w.near.depth + (w.near.reason === CALL_REASON.CONTACT ? u / 2 : 0)))) {
               // o pé parado na linha oscila no detector: só é "embalo" se foi mais fundo de verdade
               w.near = { depth: d, u, reason: CALL_REASON.MOMENTUM };
             }
           });
-          const allDown = use.every((f) => f.grounded);
-          w.stableSince = allDown ? (w.stableSince ?? t) : null;
           const out = -kitchenDepth(centroid(use.map((f) => f.p)));
+          // Ainda avançando para a cozinha (mais que o tremor do detector)? O
+          // impulso segue. Parado ou andando de lado não é impulso para lá — e
+          // "parado" pelo pé apoiado engana: o pé que anda ao longo da quadra
+          // quase não se mexe na imagem da câmera do fundo.
+          if (w.progressRef == null || out <= w.progressRef - o.progressM) { w.progressRef = out; w.progressT = t; }
           w.closest = w.closest == null ? out : Math.min(w.closest, out);
           // recuou: o impulso para a cozinha acabou, e voltar depois é outro movimento
           w.retreated = w.retreated || out - w.closest >= o.retreatM;
@@ -671,7 +693,9 @@ export function createLineCallEngine({ H, options = {} }) {
         return;
       }
       const elapsed = t - w.t0;
-      const settled = (w.stableSince != null && t - w.stableSince >= o.balanceS) || w.retreated;
+      // Sem avançar por `balanceS` — medido até o último quadro em que o pé foi
+      // visto: o pé escondido não fecha o voleio sozinho.
+      const settled = (w.progressT != null && w.lastSeenT - w.progressT >= o.balanceS) || w.retreated;
       if ((elapsed >= o.momentumS && settled) || elapsed >= o.momentumMaxS) {
         if (w.provisional) { w.done = true; keep.push(w); return; }
         const ev = finishWatch(w);
@@ -852,7 +876,11 @@ export function createLineCallEngine({ H, options = {} }) {
         confirmServe();
         if (!rally) return;
         if (ownSideIsNet(b, s.t)) {
-          const ev = bounceEvent(b, otherSide(s.side), boxHalf, { shot: 1 }, true);
+          // A margem é a da REDE (a conta de quique de jogo, com a linha da rede);
+          // `serve: true` só marca o lance. Fora mesmo perto da fita, sem
+          // "revisar": o saque que mal passa a rede cai na cozinha de lá, que no
+          // saque também é fora (curta, 7.E).
+          const ev = bounceEvent(b, otherSide(s.side), null, { shot: 1, serve: true });
           emit(careful({ ...ev, call: LINE_CALL.OUT, reason: CALL_REASON.NET }));
           endPoint();
           return;
@@ -893,13 +921,12 @@ export function createLineCallEngine({ H, options = {} }) {
       const at = centroidOf(hitter) || hitter.ground || null;
       if (quick && at && dist(b.p, at) < o.dropZoneM) { endPoint(); return; }
       if (ownSideIsNet(b, hitter.t)) {
-        if (rally.chainOk) {
-          emit(careful({ ...bounceEvent(b, target, null, { shot: rally.shot }), call: LINE_CALL.OUT, reason: CALL_REASON.NET }));
-          endPoint();
-          return;
-        }
-        // Sem a sequência inteira à vista, não dá para dizer quem bateu: vale a quadra toda.
-        const ev = careful(bounceEvent(b, null, null, { shot: rally.shot }));
+        // Com a sequência à vista, o alvo é o lado de lá e a margem é a da REDE:
+        // fora só quando é certo. Colada na fita, dentro da incerteza, é revisar —
+        // a bola de jogo que mal passa a rede cai DENTRO, na cozinha de lá (só no
+        // saque ela é curta, 7.E), e revisar sem decisão segue em jogo (8.D).
+        // Sem a sequência, não dá para dizer quem bateu: vale a quadra toda.
+        const ev = careful(bounceEvent(b, rally.chainOk ? target : null, null, { shot: rally.shot }));
         emit(ev);
         rally.bounces = 1;
         rally.bounceSide = bSide;
@@ -946,7 +973,7 @@ export function createLineCallEngine({ H, options = {} }) {
         if (fresh && fresh.track === p.watch.track && fresh.t0 === p.t) {
           Object.assign(fresh, {
             fault: fresh.fault || p.watch.fault, near: fresh.near || p.watch.near, seenS: p.watch.seenS,
-            lastSeenT: p.watch.lastSeenT, stableSince: p.watch.stableSince, judged: fresh.judged || p.watch.judged,
+            lastSeenT: p.watch.lastSeenT, progressRef: p.watch.progressRef, progressT: p.watch.progressT, judged: fresh.judged || p.watch.judged,
             closest: p.watch.closest, retreated: p.watch.retreated,
           });
           if (p.watch.done) {
@@ -1163,7 +1190,10 @@ export function createLineCallEngine({ H, options = {} }) {
     const bodyOnly = Boolean(near?.body);
     const kk = {
       kind, t: k.t, img: { x: k.x, y: k.y }, track: near?.tr || null, entry: near?.e || null, bounceData, bodyOnly,
-      certain: kind === 'hit' && !bodyOnly && (!bounceSig || side || (wh != null && wh >= o.wristHighM)),
+      // Batida CERTA só sem a marca do quique, ou com o punho alto. Também na
+      // câmera de lado: a bola que quica e é batida logo em seguida (meia-volta)
+      // vira UMA quina que volta — e a cozinha só vale no voleio (11.A).
+      certain: kind === 'hit' && !bodyOnly && (!bounceSig || (wh != null && wh >= o.wristHighM)),
       highWrist: wh != null && wh >= o.wristHighM,
       groundSide: kind === 'hit' && !near ? courtSide(toGround(k, 1).p) : null,
     };
