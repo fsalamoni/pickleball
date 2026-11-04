@@ -541,6 +541,20 @@ describe('a bola perdida perto de quem bateu não é quique escondido pela rede'
       expect(brief(ev), `${fps} q/s`).toEqual(['bounce out long 4']);
     });
   });
+
+  it('a bola que passa um instante atrás do corpo de alguém, em voo, e cai longa lá no fundo: "fora" certo', () => {
+    // Sumir mais que `startGapS` só faz bola nova quando ela não volta no rumo.
+    const p = four();
+    const ball = [...opening(p), bounce(3.8, 3.5, 5.6), paddle(p.pA, 4.1, 0.4), bounce(5.1, 2.0, L + 0.6), away(5.4, 1.9, L + 1.6, 0.8)];
+    const path = ballPath(ball);
+    [[4.2, 4.48], [4.3, 4.65], [4.4, 4.8], [4.6, 4.88]].forEach(([a, b]) => FPS.forEach((fps) => {
+      const cam = CAMS.fundoA();
+      const e = createLineCallEngine({ H: cam.H, options: { imageSize: cam.size } });
+      const fr = frames({ cam, ball: (t) => (t >= a && t < b ? null : path(t)), players: all(p), from: -0.65, to: 8, fps });
+      const ev = run(e, fr).filter((x) => x.type === 'bounce' && x.t > 5);
+      expect(brief(ev), `${a}–${b} ${fps} q/s`).toEqual(['bounce out long 4']);
+    }));
+  });
 });
 
 describe('paralaxe: a bola tem altura, e só o toque no chão conta (8.E)', () => {

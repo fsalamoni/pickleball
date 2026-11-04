@@ -311,6 +311,22 @@ const centroid = (pts) => ({
 const quad = (...xs) => Math.sqrt(xs.reduce((s, v) => s + v * v, 0));
 const vel = (a, b) => ({ x: (b.x - a.x) / (b.t - a.t), y: (b.y - a.y) / (b.t - a.t) });
 const dot = (a, b) => a.x * b.x + a.y * b.y;
+/**
+ * A bola que reaparece em `q` (no instante `t`) seguiu o rumo que levava em
+ * p0 → p1? Ela tem de ter AVANÇADO nele (a de voo escondida atrás de um corpo
+ * anda ao menos 30% do previsto: a gravidade a freia na imagem) e não pode ter
+ * desviado muito. A que volta onde sumiu, ou quase parada, é bola nova.
+ */
+const onCourse = (p0, p1, q, t) => {
+  if (!p0 || !p1 || p1.t <= p0.t) return false;
+  const v = vel(p0, p1);
+  const dt = t - p1.t;
+  const speed = Math.hypot(v.x, v.y);
+  const travel = speed * dt;
+  if (travel < 20) return false;
+  const along = ((q.x - p1.x) * v.x + (q.y - p1.y) * v.y) / speed;
+  return along >= 0.3 * travel && dist(q, { x: p1.x + v.x * dt, y: p1.y + v.y * dt }) <= 0.6 * travel + 20;
+};
 
 /** Decide dentro/fora/revisar por margem e incerteza (metros). */
 export function decide(marginM, uncertaintyM) {
@@ -1507,13 +1523,14 @@ export function createLineCallEngine({ H, options = {} }) {
           // não diz nada — e a projeção de uma bola alta no chão não diria o lado.
           // Sumir atrás da fita é descer na imagem até ela (a bola longe caindo);
           // a que sobe na imagem ainda está no ar, indo embora. E a bola que ficou
-          // fora de vista mais que `startGapS` (na mão, no bolso) volta como bola
-          // nova: a quina do toque de raquete de quem a devolve, lá no fundo, não
-          // pode virar um "fora" certo.
+          // fora de vista mais que `startGapS` e não volta no rumo que levava (na
+          // mão, no bolso) é bola nova: a quina do toque de raquete de quem a
+          // devolve, lá no fundo, não pode virar um "fora" certo. A que só passou
+          // atrás de um corpo volta no rumo, e o "fora" dela segue certo.
           const [p0, p1] = recent.slice(-2);
           const atNet = (q) => Boolean(q) && !overhead && hidden(applyHomography(H, q), o.netBandM);
           const sank = Boolean(p0 && p1) && p1.y > p0.y && atNet(p1);
-          gaps.push({ end: frame.t, net: atNet(frame.ball) || sank || gap > o.startGapS });
+          gaps.push({ end: frame.t, net: atNet(frame.ball) || sank || (gap > o.startGapS && !onCourse(p0, p1, frame.ball, frame.t)) });
         }
         if (!track.length) start = gap > o.startGapS ? { t: frame.t, x: frame.ball.x, y: frame.ball.y, quiet: gap > o.rallyGapS, n: 0 } : null;
         lastBallT = frame.t;
