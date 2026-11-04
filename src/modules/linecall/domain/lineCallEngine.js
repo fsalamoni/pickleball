@@ -192,6 +192,12 @@ export const ENGINE_DEFAULTS = Object.freeze({
   startGapS: 0.25,
   /** buraco no rastro maior que isto tira a certeza de "não quicou" (s) */
   continuityS: 0.12,
+  /**
+   * o buraco que acabou pelo menos isto ANTES de um quique pode ter escondido
+   * outro quique antes dele (dois quiques de bola em jogo nunca ficam tão
+   * perto); o que acaba depois é só o próprio quique mal visto (s)
+   */
+  hiddenBounceS: 0.2,
   /** descida que vira subida mais devagar que a quina: possível quique suave (px/s) */
   softBouncePxS: 80,
   /** quanto tempo esperar o lance seguinte para saber se foi quique ou batida (s) */
@@ -355,6 +361,10 @@ export function createLineCallEngine({ H, options = {} }) {
   /** A cozinha por este pé: a profundidade (positiva dentro) e a incerteza da linha que decide. */
   const kz = (f) => kitchenMargin(f.p, f.uxy);
   const hidden = (p, margin) => netHides(overhead ? null : cam, p, margin);
+  // O lado em que a rede esconde o chão desta câmera (o de lá, logo depois da
+  // fita): a bola que some por um tempo pode ter quicado ali sem ser vista.
+  const farY = cam && cam.y < COURT.NET_Y ? COURT.NET_Y + 0.3 : COURT.NET_Y - 0.3;
+  const farSide = cam && hidden({ x: cam.x, y: farY }) ? courtSide({ y: farY }) : null;
   /** Metros por pixel na horizontal da imagem (a escala de quem está de pé ali). */
   const mppX = (img) => {
     const a = applyHomography(H, img);
@@ -521,7 +531,8 @@ export function createLineCallEngine({ H, options = {} }) {
   let lastKinkT = -Infinity;
   let kcand = null; // a quina mais forte, esperando o quadro seguinte
   let lastBallT = -Infinity;
-  let gapMax = 0; // maior buraco no rastro desde a última batida
+  let gaps = []; // desde o último lance, os buracos no rastro maiores que `continuityS`: quando a bola voltou
+  let hiddenSides = new Set(); // lados com uma quina que podia ser quique escondido pela rede
   let softB = null; // último possível quique suave: { t, side } (o lado em que teria sido)
   let start = null; // a bola que acabou de aparecer: talvez o saque
   let restT = -Infinity; // a última vez que a bola esteve parada (na mão) ou fora de vista
@@ -806,7 +817,10 @@ export function createLineCallEngine({ H, options = {} }) {
           return;
         }
         if (h.bounceData && !h.bounceData.hidden) applyBounce(h.bounceData, { soft: h.bodyOnly });
-        else rally.chainOk = false;
+        else {
+          rally.chainOk = false;
+          if (h.bounceData) hiddenSides.add(courtSide(h.bounceData.p));
+        }
         return;
       }
       // Quicou do outro lado e este lado bate de novo: alguém de lá devolveu sem esta câmera ver.
@@ -815,7 +829,7 @@ export function createLineCallEngine({ H, options = {} }) {
     const isVolley = rally.bounces === 0;
     // O quique suave que o motor talvez não viu só importa se foi do lado de quem bate.
     const soft = softB && softB.t > rally.eventT + 0.05 && softB.t < h.t - 0.05 && (!side || !softB.side || softB.side === side);
-    const certain = isVolley && rally.chainOk && h.certain && gapMax <= o.continuityS && !soft;
+    const certain = isVolley && rally.chainOk && h.certain && !gaps.length && !soft;
     if (rally.phase === 'serve') {
       // A devolução do saque: o saque foi de verdade.
       confirmServe();
@@ -850,7 +864,10 @@ export function createLineCallEngine({ H, options = {} }) {
    * o maior buraco no rastro e se houve alguma mudança de direção sem explicação.
    */
   function sinceEvent(t) {
-    gapMax = 0;
+    // A quina ambígua só se resolve no lance seguinte: o buraco que acabou bem
+    // depois dela já é do que veio depois, e fica.
+    gaps = gaps.filter((end) => end > t + o.hiddenBounceS);
+    hiddenSides = new Set();
     if (rally) { rally.chainOk = true; rally.eventT = t; }
   }
 
@@ -896,8 +913,14 @@ export function createLineCallEngine({ H, options = {} }) {
    */
   function applyBounce(b, { soft = false } = {}) {
     if (!rally) return; // fora de jogo: antes do saque não há marcação (7.D.4)
-    const careful = (ev) => (soft && ev.call === LINE_CALL.OUT ? { ...ev, call: LINE_CALL.REVIEW } : ev);
+    /** "fora" vira "revisar" quando `doubt` */
+    const review = (doubt) => (ev) => (doubt && ev.call === LINE_CALL.OUT ? { ...ev, call: LINE_CALL.REVIEW } : ev);
+    const careful = review(soft);
     const bSide = courtSide(b.p);
+    // Um quique deste lado que a rede escondeu pode ter vindo antes deste (uma
+    // quina atrás da fita, ou a bola sumida ali por um tempo): este talvez seja
+    // o 2º, que não se julga (10.B.1). Fora, então, só revisar.
+    const first = review(hiddenSides.has(bSide) || (bSide === farSide && gaps.some((end) => end <= b.t - o.hiddenBounceS)));
     answerWatches(bSide, false);
     if (rally.phase === 'serve') {
       const s = rally.serve;
@@ -922,7 +945,7 @@ export function createLineCallEngine({ H, options = {} }) {
       } else {
         confirmServe();
         if (!rally) return;
-        const ev = careful(bounceEvent(b, bSide, boxHalf, { shot: 1 }, true));
+        const ev = first(careful(bounceEvent(b, bSide, boxHalf, { shot: 1 }, true)));
         emit(ev);
         if (ev.call === LINE_CALL.OUT) { endPoint(); return; }
         rally.phase = 'play';
@@ -958,7 +981,11 @@ export function createLineCallEngine({ H, options = {} }) {
         // a bola de jogo que mal passa a rede cai DENTRO, na cozinha de lá (só no
         // saque ela é curta, 7.E), e revisar sem decisão segue em jogo (8.D).
         // Sem a sequência, não dá para dizer quem bateu: vale a quadra toda.
-        const ev = careful(bounceEvent(b, rally.chainOk ? target : null, null, { shot: rally.shot }));
+        // A "batida" deduzida de quem está do lado em que a rede esconde o chão (a
+        // quina podia ser o quique escondido) não prova que a bola não passou: só
+        // revisar. A do lado de cá é o voleio no ar, que só se projeta lá longe.
+        const guess = hitter.guessed && hitter.side === farSide;
+        const ev = review(guess)(careful(bounceEvent(b, rally.chainOk ? target : null, null, { shot: rally.shot })));
         emit(ev);
         rally.bounces = 1;
         rally.bounceSide = bSide;
@@ -970,7 +997,7 @@ export function createLineCallEngine({ H, options = {} }) {
       hitter = rally.lastHit;
       target = otherSide(hitter.side);
     }
-    const ev = careful(bounceEvent(b, target, null, { shot: rally.shot }));
+    const ev = first(careful(bounceEvent(b, target, null, { shot: rally.shot })));
     emit(ev);
     rally.bounces = 1;
     rally.bounceSide = bSide;
@@ -1066,6 +1093,8 @@ export function createLineCallEngine({ H, options = {} }) {
     if (kk.kind === 'hit') applyHit(kk);
     else if (kk.kind === 'bounce') applyBounce(kk.bounceData);
     else if (rally) rally.chainOk = false;
+    // A quina com cara de quique num chão que a rede esconde: o quique pode ter sido ali.
+    if (rally && kk.kind === 'other' && kk.bounceData?.hidden) hiddenSides.add(courtSide(kk.bounceData.p));
   }
 
   /** O quique visto em `k`, a bola chegando a `vImg` (px/s): o erro do instante é um quarto de quadro. */
@@ -1217,7 +1246,8 @@ export function createLineCallEngine({ H, options = {} }) {
     }
     if (kind === 'bounce' && bounceData.hidden) kind = 'other';
     // Se fosse quique, seria num chão que a rede esconde desta câmera: foi a batida.
-    if (kind === 'ambiguous' && bounceData.hidden) kind = 'hit';
+    const guessed = kind === 'ambiguous' && bounceData.hidden;
+    if (guessed) kind = 'hit';
     const wh = near ? wristHeightM(near) : null;
     const bodyOnly = Boolean(near?.body);
     const kk = {
@@ -1228,6 +1258,7 @@ export function createLineCallEngine({ H, options = {} }) {
       certain: kind === 'hit' && !bodyOnly && (!bounceSig || (wh != null && wh >= o.wristHighM)),
       highWrist: wh != null && wh >= o.wristHighM,
       groundSide: kind === 'hit' && !near ? courtSide(toGround(k, 1).p) : null,
+      guessed,
     };
     onKink(kk);
   }
@@ -1358,7 +1389,8 @@ export function createLineCallEngine({ H, options = {} }) {
           rally = null;
           over = false;
         }
-        if (lastBallT > -Infinity) gapMax = Math.max(gapMax, gap);
+        if (!rally && !pending) gaps = []; // fora de jogo, buraco nenhum importa
+        if (lastBallT > -Infinity && gap > o.continuityS) gaps.push(frame.t);
         if (!track.length) start = gap > o.startGapS ? { t: frame.t, x: frame.ball.x, y: frame.ball.y, quiet: gap > o.rallyGapS, n: 0 } : null;
         lastBallT = frame.t;
         track.push({ t: frame.t, x: frame.ball.x, y: frame.ball.y });

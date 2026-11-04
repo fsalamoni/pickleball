@@ -417,3 +417,61 @@ describe('a câmera de cima', () => {
     expect(brief(ov([toss, s0, short, rebound(s0, short, 0.3)]))).toEqual(['bounce out short 1']);
   });
 });
+
+/** O 2º quique de verdade depois de `b`, vindo de `prev`: segue o rumo 20% mais devagar e sobe com 75% da velocidade. */
+function nextBounce(prev, b) {
+  const T = b.t - prev.t;
+  const vx = (b.p[0] - prev.p[0]) / T;
+  const vy = (b.p[1] - prev.p[1]) / T;
+  const vzDown = (b.p[2] - prev.p[2] + 0.5 * 9.81 * T * T) / T - 9.81 * T;
+  const dt = (2 * -0.75 * vzDown) / 9.81;
+  return bounce(b.t + dt, b.p[0] + 0.8 * vx * dt, b.p[1] + 0.8 * vy * dt);
+}
+
+describe('o 1º quique onde a rede esconde o chão (10.C.1): o 2º não é julgado como o 1º', () => {
+  // Do fundo A, o chão logo depois da rede (a cozinha de lá e um pedaço da área)
+  // fica atrás da rede. A bola que cai DENTRO ali some — e o quique seguinte,
+  // longe, atrás da linha de fundo ou fora da lateral, era julgado como o 1º:
+  // "fora" certo numa bola boa. 🐞 Três caminhos davam nisso: a bola sumida ali
+  // sem quina nenhuma, a quina vista como "não era quique" e a quina tomada pela
+  // batida de quem está ali (e o 2º quique virava a bola dele na rede).
+  // Cada caso: quadros/s, semente do ruído, onde o 1º quique cai, a altura do
+  // voleio de A e quando a bola quica.
+  const cases = [
+    [30, 7, 4.2, 2.5, 0.9, 3.7], [30, 7, 5.2, 2.8, 0.9, 3.7], [60, 7, 5.2, 2.8, 1.1, 3.8],
+    [60, 11, 3.0, 2.4, 0.9, 3.7], [30, 3, 1.4, 3.0, 1.1, 3.8], [60, 5, 2.0, 3.2, 0.9, 3.7],
+  ];
+  cases.forEach(([fps, seed, x, dy, z, t]) => {
+    it(`${fps} q/s, semente ${seed}: a bola de A cai dentro ${dy} m depois da rede e ninguém joga — nunca "fora" certo`, () => {
+      const p = four();
+      const volley = paddle(p.pA, 3.2, z);
+      const b1 = bounce(t, x, N + dy);
+      const b2 = nextBounce(volley, b1);
+      const ev = play({ cam: CAMS.fundoA(), ball: [...opening(p), volley, b1, b2, rebound(b1, b2, 0.3)], players: all(p), fps, seed });
+      expect(ev.filter((e) => e.type === 'bounce' && e.call === LINE_CALL.OUT), brief(ev).join(', ')).toEqual([]);
+    });
+  });
+
+  it('o fora longo que a câmera viu inteiro segue fora certo', () => {
+    const p = four();
+    const volley = paddle(p.pA, 3.2, 0.9);
+    const b1 = bounce(4.0, 3.9, L + 0.6);
+    const ev = play({ cam: CAMS.fundoA(), ball: [...opening(p), volley, b1, rebound(volley, b1, 0.3)], players: all(p) });
+    expect(brief(ev).slice(-1)).toEqual(['bounce out long 4']);
+  });
+
+  // O mesmo no saque, da câmera atrás de quem saca: a bola cai DENTRO da área,
+  // logo depois da cozinha, onde a rede esconde o chão; o 2º quique, atrás do
+  // fundo, era o "Saque: fora". O último caso é o saque que só se confirma no
+  // lance seguinte (a quina dele fica em dúvida até lá).
+  [[30, 3, 4.0, 2.8, 1.0], [60, 5, 4.0, 2.8, 0.85], [60, 3, 3.6, 2.6, 0.7]].forEach(([fps, seed, x, dy, t]) => {
+    it(`${fps} q/s, semente ${seed}: o saque de A cai dentro ${dy} m depois da rede — nunca "Saque: fora" certo`, () => {
+      const sA = player({ x: 1.6, y: -0.3 });
+      const c = paddle(sA, 0);
+      const b1 = bounce(t, x, N + dy);
+      const b2 = nextBounce(c, b1);
+      const ev = play({ cam: CAMS.fundoA(), ball: [dropBefore(c), c, b1, b2, rebound(b1, b2, 0.3)], players: [sA, player({ x: 4.6, y: L + 0.3 })], fps, seed });
+      expect(ev.filter((e) => e.type === 'bounce' && e.call === LINE_CALL.OUT), brief(ev).join(', ')).toEqual([]);
+    });
+  });
+});
