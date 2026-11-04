@@ -9,7 +9,7 @@
  * `firestore.rules` e reprova a coleção que ficou de fora — isenção só com
  * motivo escrito.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
@@ -317,5 +317,90 @@ describe('a exclusão e a exportação cobrem a Minha carreira', () => {
       expect(servico, `${fn} não está no serviço da carreira`).toMatch(new RegExp(`export async function ${fn}\\b`));
       expect(servico + readFileSync('src/modules/career/domain/careerEvent.js', 'utf8'), `o serviço não cita '${col}'`).toContain(`'${col}'`);
     }));
+  });
+});
+
+/* -------------------------------------------------------- Gamificação -- */
+
+/**
+ * PR 0b da carreira: onze coleções da gamificação (concessões de XP, cartas,
+ * avaliações, reputação, preferências, Hall da Fama, sinais, integridade e
+ * moderação) não estavam na exclusão de conta, e nenhuma ia na exportação.
+ * O guarda vigia os PREFIXOS da família — coleção nova com o mesmo nome de
+ * família sem tratamento reprova.
+ */
+/**
+ * Coleção `user_*` que NÃO é da gamificação (o prefixo é largo): ponha aqui,
+ * com o motivo, e ela sai deste bloco — mas continua precisando entrar na
+ * exclusão e na exportação pelo caminho do próprio módulo.
+ */
+const USER_FORA_DA_GAMIFICACAO = {
+  // vazio: hoje todo `user_*` do rules é da gamificação.
+};
+const DA_GAMIFICACAO = [...REGRAS.matchAll(
+  /^\s{4}match \/((?:user_[a-z0-9_]+)|(?:gamification_[a-z_]+)|(?:partner_letter[a-z_]*)|match_reviews|hall_of_fame|challenge_entries|duels|reward_claims)\//gm,
+)].map((m) => m[1]).filter((c) => !USER_FORA_DA_GAMIFICACAO[c]);
+const EXPORTA_GAMIF_ARQ = 'src/modules/progression/services/gamificationExportService.js';
+const EXPORTA_GAMIF = readFileSync(EXPORTA_GAMIF_ARQ, 'utf8');
+/** Como cada coleção da gamificação chega à exportação (a função lida pelo serviço). */
+const GAMIFICACAO_EXPORTADA_POR = {
+  user_progression_v2: ['getUserProgressionV2'],
+  user_missions: ['listUserMissions'],
+  user_achievements_v2: ['listUserAchievementsV2'],
+  user_streak_meta: ['getStreakMeta'],
+  user_xp_grants: ['listXpGrants'],
+  user_gamification_prefs: ['getGamificationPrefs'],
+  user_referral_codes: ['getReferralCode'],
+  user_referrals: ['listReferralsByReferrer', 'getReferralForReferee'],
+  user_kudos: ['listKudosReceivedBy', 'listKudosGivenBy'],
+  user_kudos_index: ['getKudoIndex'],
+  user_rivals: ['listRivalsFor'],
+  match_reviews: ['listMyReviews'],
+  user_reputation: ['getReputation'],
+  user_reputation_private: ['getMyPrivateReputation'],
+  partner_letters: ['listReceivedLetters'],
+  partner_letter_authors: ['listSentLetters'],
+  hall_of_fame: ['fetchMyHallRow'],
+  challenge_entries: ['listMyEntries'],
+  duels: ['listMyDuels'],
+  reward_claims: ['listMyClaims'],
+};
+const GAMIFICACAO_FORA_DA_EXPORTACAO = {
+  gamification_flags: 'Sinal de integridade que o servidor abre para o admin revisar; a regra não deixa a pessoa ler, e ele não guarda nada que ela forneceu.',
+  gamification_integrity: 'Fotografia do XP que só o servidor lê para medir o salto; o XP em si já sai na progressão exportada.',
+  gamification_moderation: 'Decisão do admin sobre a conta (só o admin lê); o histórico fica na auditoria.',
+  gamification_metrics: 'Retrato diário agregado do funil (contagens da plataforma), sem uid de ninguém.',
+  gamification_challenges: 'O desafio é do emissor (texto, regras, prêmios); a participação da pessoa já sai nas entradas exportadas.',
+  gamification_rewards: 'A recompensa é do emissor (título, regras, estoque); o pedido da pessoa já sai exportado.',
+  gamification_goals: 'Metas do mês do painel de engajamento do professor, da arena ou do clube: são números do negócio, não dado pessoal.',
+};
+/** Fica fora da EXCLUSÃO de propósito (não há o que achar pela pessoa) — sempre com o motivo. */
+const GAMIFICACAO_FORA_DA_EXCLUSAO = {
+  gamification_metrics: 'Retrato diário agregado (contagens), sem uid nem nome de ninguém: não há documento da pessoa para apagar.',
+};
+
+describe('a exclusão e a exportação cobrem a gamificação', () => {
+  it('o rules tem as coleções da gamificação', () => {
+    expect(DA_GAMIFICACAO).toEqual(expect.arrayContaining(['user_xp_grants', 'partner_letters', 'match_reviews', 'hall_of_fame', 'gamification_flags']));
+  });
+
+  it('⭐ toda coleção da gamificação entra na exclusão de conta', () => {
+    const cobre = colecoesDaExclusao();
+    expect(DA_GAMIFICACAO.filter((c) => !cobre.has(c) && !GAMIFICACAO_FORA_DA_EXCLUSAO[c]), 'coleção da gamificação sem tratamento na exclusão').toEqual([]);
+    Object.keys(GAMIFICACAO_FORA_DA_EXCLUSAO).forEach((c) => expect(cobre.has(c), `${c} está isenta e tratada ao mesmo tempo`).toBe(false));
+  });
+
+  it('⭐ toda coleção da gamificação tem caminho para a exportação (ou isenção com motivo)', () => {
+    expect(DA_GAMIFICACAO.filter((c) => !GAMIFICACAO_EXPORTADA_POR[c] && !GAMIFICACAO_FORA_DA_EXPORTACAO[c])).toEqual([]);
+    Object.values(GAMIFICACAO_FORA_DA_EXPORTACAO).forEach((motivo) => expect(String(motivo).length).toBeGreaterThan(20));
+    const tela = readFileSync('src/v2/pages/V2Settings.jsx', 'utf8');
+    expect(tela, 'a exportação da conta não chama collectGamificationExport').toMatch(/\bcollectGamificationExport\b/);
+    const servicos = ['src/modules/progression/services', 'src/modules/achievements/services'].flatMap((dir) => (
+      readdirSync(dir).filter((f) => f.endsWith('.js') && !f.includes('.test.')).map((f) => readFileSync(`${dir}/${f}`, 'utf8'))
+    )).join('\n');
+    Object.values(GAMIFICACAO_EXPORTADA_POR).flat().forEach((fn) => {
+      expect(EXPORTA_GAMIF, `${fn} não é usada pela exportação da gamificação`).toMatch(new RegExp(`\\b${fn}\\(`));
+      expect(servicos, `${fn} não está nos serviços da gamificação`).toMatch(new RegExp(`export async function ${fn}\\b`));
+    });
   });
 });

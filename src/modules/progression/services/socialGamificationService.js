@@ -21,9 +21,9 @@ const db = () => gamificationDb();
 /* ---------------------------------------------------------- avaliações ---- */
 
 /** As avaliações que a pessoa escreveu. */
-export async function listMyReviews(uid) {
+export async function listMyReviews(uid, max = 300) {
   if (!uid) return [];
-  const snap = await getDocs(query(collection(db(), 'match_reviews'), where('fromUid', '==', uid), limit(300)));
+  const snap = await getDocs(query(collection(db(), 'match_reviews'), where('fromUid', '==', uid), limit(max)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
@@ -99,16 +99,16 @@ export async function sendPartnerLetter({ fromUid, fromName = '', toUid, matchKe
 }
 
 /** As cartas que a pessoa RECEBEU. */
-export async function listReceivedLetters(uid) {
+export async function listReceivedLetters(uid, max = 100) {
   if (!uid) return [];
-  const snap = await getDocs(query(collection(db(), 'partner_letters'), where('toUid', '==', uid), limit(100)));
+  const snap = await getDocs(query(collection(db(), 'partner_letters'), where('toUid', '==', uid), limit(max)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 /** As cartas que a pessoa ENVIOU (pelo registro de autoria). */
-export async function listSentLetters(uid) {
+export async function listSentLetters(uid, max = 300) {
   if (!uid) return [];
-  const snap = await getDocs(query(collection(db(), 'partner_letter_authors'), where('fromUid', '==', uid), limit(300)));
+  const snap = await getDocs(query(collection(db(), 'partner_letter_authors'), where('fromUid', '==', uid), limit(max)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 

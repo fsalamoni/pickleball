@@ -117,6 +117,19 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'user_referral_codes', label: 'Código de convite' },
   { col: 'user_referrals', label: 'Registro de quem convidou' },
   { col: 'user_kudos_index', label: 'Índice de kudos' },
+  // Gamificação (PR 0b da carreira: lacunas que existiam). Tudo de id = uid.
+  { col: 'user_gamification_prefs', label: 'Preferências da gamificação' },
+  // A reputação é o AGREGADO das avaliações sobre a pessoa (que também somem,
+  // senão o servidor a recriaria na próxima passada).
+  { col: 'user_reputation', label: 'Reputação pública (gamificação)' },
+  { col: 'user_reputation_private', label: 'Reputação privada (gamificação)' },
+  // A linha do Hall da Fama tem nome e foto (pública).
+  { col: 'hall_of_fame', label: 'Linha no Hall da Fama' },
+  // A fotografia do XP para o antifarm (só o servidor lê).
+  { col: 'gamification_integrity', label: 'Fotografia do XP para o antifarm' },
+  // A decisão do admin sobre a conta: sem a conta não vale nada, e o
+  // histórico dela fica na auditoria (`gamification_account_moderated`).
+  { col: 'gamification_moderation', label: 'Decisão de moderação da gamificação' },
   { col: 'coaches', label: 'Perfil de professor' },
   { col: 'coach_availability', label: 'Disponibilidade de professor' },
   { col: 'coach_busy_slots', label: 'Horários ocupados de professor (público, sem aluno)' },
@@ -184,6 +197,19 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'user_rivals', field: 'userB', label: 'Rivalidades (gamificação)' },
   { col: 'mentorships', field: 'mentorUid', label: 'Mentorias (gamificação)' },
   { col: 'mentorships', field: 'apprenticeUid', label: 'Mentorias (gamificação)' },
+  // Gamificação (PR 0b da carreira).
+  { col: 'user_xp_grants', field: 'uid', label: 'XP concedido pelo servidor (gamificação)' },
+  // As avaliações SOBRE a pessoa: o avaliado nunca as leu (só o agregado),
+  // e deixá-las faria o servidor recriar a reputação de quem saiu.
+  { col: 'match_reviews', field: 'toUid', label: 'Avaliações pós-jogo recebidas' },
+  // Sinais de integridade SOBRE a conta. O sinal em que ela é só a outra
+  // metade do par (`otherUid`) é sobre quem fica e segue para o admin
+  // (RETAINED_AS_IS): senão bastaria excluir a conta descartável do anel.
+  { col: 'gamification_flags', field: 'subjectUid', label: 'Sinais de integridade da gamificação' },
+  // Metas do mês do PROFESSOR saem por `coletarMetasDoProfessor` (filtra `ownerType`).
+  // As cartas RECEBIDAS (as escritas saem por `coletarCartas`).
+  { col: 'partner_letters', field: 'toUid', label: 'Cartas ao companheiro recebidas' },
+  { col: 'partner_letter_authors', field: 'toUid', label: 'Cartas ao companheiro recebidas' },
   // Centro de Treino: o plano e os envios são só da pessoa (o envio é uma
   // mensagem entre duas pessoas — some dos dois lados, como a notificação).
   { col: 'training_plans', field: 'uid', label: 'Planos de treino' },
@@ -237,6 +263,18 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'coach_content', field: 'coach_id', label: 'Conteúdo publicado como professor' },
   { col: 'coach_packages', field: 'coach_id', label: 'Pacotes de aula oferecidos' },
   { col: 'coach_products', field: 'coach_id', label: 'Produtos da loja do professor' },
+  // Gamificação (PR 0b da carreira). A avaliação que a pessoa ESCREVEU é só
+  // estrelas, elogios e o uid (sem nome nem texto) e compõe a reputação de
+  // OUTRA pessoa: apagá-la mudaria a nota de quem fica.
+  { col: 'match_reviews', field: 'fromUid', label: 'Avaliações pós-jogo que fez (só estrelas e o uid)' },
+  // Desafio e recompensa são do EMISSOR (professor, arena, clube): ficam, com o uid de quem criou.
+  { col: 'gamification_challenges', field: 'createdBy', label: 'Desafios que criou (como emissor)' },
+  { col: 'gamification_rewards', field: 'createdBy', label: 'Recompensas que criou (como emissor)' },
+  // O sinal de integridade sobre OUTRA conta (anel de kudos, vingança na
+  // avaliação) em que esta é a outra metade: é do admin, sem nome.
+  { col: 'gamification_flags', field: 'otherUid', label: 'Sinais de integridade sobre outra conta (ficam para o admin)' },
+  // O pedido de recompensa é o registro do benefício que o emissor deu (código e situação, sem nome).
+  { col: 'reward_claims', field: 'uid', label: 'Pedidos de recompensa que fez' },
   // A disputa é do pedido (o pedido fica, sem o nome) e não guarda nome.
   { col: 'market_disputes', field: 'buyer_uid', label: 'Problemas relatados em pedidos do Mercado' },
   // A denúncia de anúncio é sobre o conteúdo de OUTRA pessoa (como a do treino) e não guarda nome.
@@ -1325,6 +1363,46 @@ async function coletarDuvidas(db, uid) {
 }
 
 /**
+ * Cartas ao companheiro que a pessoa ESCREVEU. A carta é das duas pessoas e
+ * sai com a exclusão de qualquer uma (docs/20, carreira §9). A ANÔNIMA não
+ * carrega o autor no documento do destinatário: quem a acha é o registro de
+ * autoria, que tem o MESMO id.
+ */
+async function coletarCartas(db, uid) {
+  const deletes = [];
+  const autorias = await consultar(db, 'partner_letter_authors', 'fromUid', '==', uid);
+  for (const a of autorias.docs) {
+    deletes.push(a.ref);
+    // eslint-disable-next-line no-await-in-loop
+    const carta = await db.collection('partner_letters').doc(a.id).get();
+    if (carta.exists) deletes.push(carta.ref);
+  }
+  return { itens: [], deletes, truncated: autorias.truncated };
+}
+
+/**
+ * Entradas em desafio: a do ATLETA é da pessoa e some; a de CLUBE é do clube
+ * (o `uid` é só de quem o inscreveu) e fica.
+ */
+async function coletarEntradasDeDesafio(db, uid) {
+  const r = await consultar(db, 'challenge_entries', 'uid', '==', uid);
+  const deClube = (d) => (d.data() || {}).subjectType === 'club';
+  const deletes = r.docs.filter((d) => !deClube(d)).map((d) => d.ref);
+  // `count` = as de clube, que FICAM (a prévia diz o que fica guardado).
+  return { itens: [], deletes, truncated: r.truncated, count: r.docs.filter(deClube).length };
+}
+
+/**
+ * Metas do mês do PROFESSOR (`ownerId` = uid). Filtra `ownerType` em memória:
+ * as de arena e clube têm o id da casa, e nunca podem sair por coincidência.
+ */
+async function coletarMetasDoProfessor(db, uid) {
+  const r = await consultar(db, 'gamification_goals', 'ownerId', '==', uid);
+  const deletes = r.docs.filter((d) => (d.data() || {}).ownerType === 'coach').map((d) => d.ref);
+  return { itens: [], deletes, truncated: r.truncated, count: 0 };
+}
+
+/**
  * Cupom e campanha do PROFESSOR ficam (são conteúdo criado), mas saem do ar:
  * seguiriam no carrossel do início oferecendo aula de quem não existe mais.
  * O emissor da plataforma é 'platform', que nunca é um uid.
@@ -1485,6 +1563,11 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },
   { label: 'Perguntas feitas no Mercado', col: 'market_questions', wheres: [['asker_uid', '==']], patch: campos('asker_uid', ['asker_name'], [], REMOVED_USER) },
   { label: 'Avaliações no Mercado', col: 'market_reviews', wheres: [['author_uid', '==']], patch: campos('author_uid', ['author_name'], [], REMOVED_USER) },
+  // Gamificação (PR 0b da carreira)
+  { label: 'Cartas ao companheiro que escreveu', collect: coletarCartas, deleteLabel: 'Cartas ao companheiro que escreveu (somem também para quem recebeu)', cols: ['partner_letters', 'partner_letter_authors'] },
+  { label: 'Inscrições de clube em desafios (ficam com o clube)', bucket: 'retained', collect: coletarEntradasDeDesafio, deleteLabel: 'Entradas em desafios (como atleta)', cols: ['challenge_entries'] },
+  { label: 'Metas do mês (como professor)', bucket: 'retained', collect: coletarMetasDoProfessor, deleteLabel: 'Metas do mês (como professor)', cols: ['gamification_goals'] },
+  { label: 'Duelos da semana', col: 'duels', wheres: [['uidA', '=='], ['uidB', '==']], patch: (d, uid) => patchFlatFields(d, uid, [{ idField: 'uidA', name: ['nameA'] }, { idField: 'uidB', name: ['nameB'] }]) },
   // E-mail e celular
   { label: 'Bloqueios de envio (ficam, sem o endereço)', bucket: 'retained', col: 'message_suppressions', wheres: [['user_ids', 'array-contains']], patch: patchSuppression },
   { label: 'Avisos que mandou por e-mail ou celular (ficam com quem recebeu)', col: 'message_outbox', wheres: [['sent_by', '==']], patch: patchOutboxSender },

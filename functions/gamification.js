@@ -42,6 +42,9 @@ const CFG_PADRAO = Object.freeze({
   notifications: { weeklyReview: true, duels: true, challengeResults: true },
 });
 
+/** Os tiers, na ordem (cópia de `TIER_NAMES` do cliente; paridade em `serverParity.test.js`). */
+const TIER_ORDEM = Object.freeze(['Calouro', 'Aprendiz', 'Jogador', 'Regular', 'Veterano', 'Expert', 'Elite', 'Lenda', 'Imortal']);
+
 const num = (v, d, min, max) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : d;
@@ -58,7 +61,10 @@ function normalizarConfig(bruto) {
       prizeTop1: Math.round(num(s.season && s.season.prizeTop1, d.season.prizeTop1, 0, 5000)),
       prizeTop10Percent: Math.round(num(s.season && s.season.prizeTop10Percent, d.season.prizeTop10Percent, 0, 5000)),
       prizeParticipation: Math.round(num(s.season && s.season.prizeParticipation, d.season.prizeParticipation, 0, 1000)),
-      publicMinTier: (s.season && typeof s.season.publicMinTier === 'string') ? s.season.publicMinTier : d.season.publicMinTier,
+      // Tier fora da lista volta ao padrão (como no cliente). Antes passava
+      // qualquer texto, e `tierRank` o lia como "Calouro": o placar público
+      // abria para todo mundo enquanto o painel do admin mostrava "Jogador".
+      publicMinTier: TIER_ORDEM.includes(s.season && s.season.publicMinTier) ? s.season.publicMinTier : d.season.publicMinTier,
     },
     duels: {
       winnerXp: Math.round(num(s.duels && s.duels.winnerXp, d.duels.winnerXp, 0, 1000)),
@@ -150,13 +156,22 @@ async function avisar(db, id, { userId, title, message, link, type = 'gamificati
   }
 }
 
+/**
+ * Tipos de concessão e teto por concessão — cópias de `xpGrants.js` do cliente
+ * (paridade em `serverParity.test.js`). O cliente NÃO soma concessão de tipo
+ * desconhecido nem acima do teto: gravá-la seria um prêmio que a pessoa vê
+ * anunciado e nunca entra no XP.
+ */
+const XP_GRANT_KINDS = Object.freeze(['season', 'duel', 'challenge', 'event', 'admin']);
+const MAX_GRANT_XP = 5000;
+
 /** Concede XP. `create`: a mesma concessão nunca vale duas vezes. */
 async function conceder(db, { uid, kind, ref, xp, label }) {
-  if (!uid || !(xp > 0)) return false;
+  if (!uid || !(xp > 0) || !XP_GRANT_KINDS.includes(kind)) return false;
   const id = `${uid}_${kind}_${String(ref).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80)}`;
   try {
     await db.collection('user_xp_grants').doc(id).create({
-      uid, kind, xp: Math.round(xp), label: String(label || '').slice(0, 120), refId: String(ref).slice(0, 120),
+      uid, kind, xp: Math.min(MAX_GRANT_XP, Math.round(xp)), label: String(label || '').slice(0, 120), refId: String(ref).slice(0, 120),
       at: Date.now(), serverAt: FieldValue.serverTimestamp(), schemaVersion: 1,
     });
     return true;
@@ -574,6 +589,10 @@ async function runIntegrity(db, { now = Date.now(), logger = console } = {}) {
   const jogosPorUid = core.gamesByUid(await carregarJogos(db));
   const progs = await lerColecao(db, 'user_progression_v2', (q) => q.orderBy('xpTotal', 'desc'));
   const anteriores = await lerPorIds(db, 'gamification_integrity', progs.map((p) => p.uid || p.id));
+  // O `grantsXp` do documento é gravado pelo DONO: vale só até o que o
+  // servidor de fato concedeu (forjado para cima, o salto sumiria).
+  const concedido = core.grantsXpByUid(await lerColecao(db, 'user_xp_grants'), { kinds: XP_GRANT_KINDS, max: MAX_GRANT_XP });
+  const grantsDe = (p) => Math.min(Number(p.grantsXp) || 0, concedido.get(p.uid || p.id) || 0);
   const dia = core.brDay(now);
   let abertas = 0;
 
@@ -582,7 +601,7 @@ async function runIntegrity(db, { now = Date.now(), logger = console } = {}) {
     const lista = jogosPorUid.get(uid) || [];
     const verificado = { games: lista.length, wins: lista.filter((g) => g.won).length };
     const ant = anteriores.get(uid);
-    const grants = Number(p.grantsXp) || 0;
+    const grants = grantsDe(p);
     const sinais = core.integritySignals({
       xpTotal: Number(p.xpTotal) || 0, grantsXp: grants, verified: verificado,
       previous: ant ? { xp: Number(ant.xp) || 0, at: Number(ant.at) || 0 } : null, now,
@@ -597,7 +616,10 @@ async function runIntegrity(db, { now = Date.now(), logger = console } = {}) {
   // Fotografia para a próxima comparação (um documento por pessoa, em lotes).
   for (const fatia of emFatias(progs, BATCH)) {
     const batch = db.batch();
-    fatia.forEach((p) => batch.set(db.collection('gamification_integrity').doc(p.uid || p.id), { xp: Number(p.xpTotal) || 0, at: now }));
+    // Guarda o XP PRÓPRIO (sem as concessões do servidor): é o que o salto mede.
+    fatia.forEach((p) => batch.set(db.collection('gamification_integrity').doc(p.uid || p.id), {
+      xp: Math.max(0, (Number(p.xpTotal) || 0) - grantsDe(p)), at: now,
+    }));
     // eslint-disable-next-line no-await-in-loop
     await batch.commit();
   }
@@ -727,6 +749,6 @@ async function runMetricsSnapshot(db, { now = Date.now(), logger = console } = {
 module.exports = {
   normalizarConfig, carregarConfig, gamificacaoLigada, moduloLigado,
   runChallengeStandings, runWeeklyDuels, runReputation, runIntegrity, runWeeklyDigest, runMetricsSnapshot,
-  ONBOARDING_STEP_IDS, conceder, avisar, carregarJogos, lerPorIds, lerColecao, lerPrefs,
+  ONBOARDING_STEP_IDS, XP_GRANT_KINDS, MAX_GRANT_XP, TIER_ORDEM, conceder, avisar, carregarJogos, lerPorIds, lerColecao, lerPrefs,
   elegivelParaDesafio, verificarAvaliacoes,
 };

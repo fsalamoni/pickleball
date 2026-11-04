@@ -247,6 +247,30 @@ function verifiedActivityXp({ games = 0, wins = 0 }) {
 }
 
 /**
+ * XP concedido pelo servidor, por uid, lido de `user_xp_grants` (que só o
+ * servidor escreve). O antifarm NÃO pode confiar no `grantsXp` de
+ * `user_progression_v2`: o dono grava esse campo, e um `grantsXp` forjado
+ * esconderia o salto. Mesma validade do cliente (`sumGrants`): tipo conhecido,
+ * 0 < xp <= teto, uma vez por id.
+ *
+ * @param {Array<{ id?: string, uid: string, kind: string, xp: number }>} docs
+ * @param {{ kinds: string[], max: number }} regra
+ * @returns {Map<string, number>}
+ */
+function grantsXpByUid(docs, { kinds, max }) {
+  const somas = new Map();
+  const vistos = new Set();
+  (docs || []).forEach((g) => {
+    const xp = Number(g && g.xp);
+    if (!g || !g.uid || !kinds.includes(g.kind) || !(xp > 0) || xp > max) return;
+    if (g.id && vistos.has(g.id)) return;
+    if (g.id) vistos.add(g.id);
+    somas.set(g.uid, (somas.get(g.uid) || 0) + Math.round(xp));
+  });
+  return somas;
+}
+
+/**
  * Sinais de integridade de UMA pessoa. Devolve os motivos para o admin olhar —
  * NUNCA pune. Cada sinal carrega os números, para o admin decidir em segundos.
  *
@@ -267,9 +291,13 @@ function integritySignals(p, cfg) {
   }
   if (p.previous && Number.isFinite(p.previous.at) && p.now > p.previous.at) {
     const dias = Math.max(1 / 24, (p.now - p.previous.at) / DAY_MS);
-    const delta = (p.xpTotal || 0) - (p.previous.xp || 0);
+    // O salto é do XP PRÓPRIO: o que o servidor concedeu (temporada, desafio,
+    // duelo) cai de uma vez por desenho e não é sinal de nada. A fotografia
+    // (`previous.xp`) também guarda o próprio; a antiga, com o total, só
+    // deixa o delta menor na primeira passada — nunca abre sinal falso.
+    const delta = xpProprio - (p.previous.xp || 0);
     if (delta / dias > cfg.xpJumpPerDay && delta > cfg.xpJumpPerDay) {
-      sinais.push({ type: 'xp_jump', severity: 'medium', detail: { from: p.previous.xp, to: p.xpTotal, hours: Math.round(dias * 24) } });
+      sinais.push({ type: 'xp_jump', severity: 'medium', detail: { from: p.previous.xp, to: xpProprio, hours: Math.round(dias * 24) } });
     }
   }
   return sinais;
@@ -321,5 +349,5 @@ module.exports = {
   TZ, DAY_MS, brDay, addDays, dayStartMs, weekKey, weekWindow, monthKey, monthWindow, previousMonthKey,
   gamesByUid, metricValue, rankEntries, pairDuels, duelId, duelOutcome,
   REVIEW_TAGS, aggregateReputation, suspiciousReviewPairs,
-  verifiedActivityXp, integritySignals, kudosRings, seasonPrize,
+  verifiedActivityXp, grantsXpByUid, integritySignals, kudosRings, seasonPrize,
 };

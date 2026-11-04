@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { V2ErrorState } from '@/v2/ui/primitives';
 import { GOAL_METRIC, GOAL_METRIC_LABELS, goalProgress } from '../domain/progression.js';
 import { useGoals, useCreateGoal, useDeleteGoal } from '../hooks/useProgression.js';
 import { t } from '@/core/i18n';
@@ -18,7 +19,9 @@ import { t } from '@/core/i18n';
 export default function GoalsCard({ uid, values, semRating = false }) {
   // `semRating`: com o DUPR oficial valendo, o rating próprio sai da tela — e a
   // meta de rating, que mede ele, some junto (volta se o DUPR for desligado).
-  const { data: todas = [] } = useGoals(uid);
+  // Falha não é vazio (docs/27): sem a lista na mão, não se afirma "não definiu metas".
+  const consulta = useGoals(uid);
+  const todas = consulta.data || [];
   const goals = semRating ? todas.filter((g) => g.metric !== GOAL_METRIC.RATING) : todas;
   const metricas = Object.entries(GOAL_METRIC_LABELS).filter(([m]) => !semRating || m !== GOAL_METRIC.RATING);
   const create = useCreateGoal();
@@ -44,6 +47,8 @@ export default function GoalsCard({ uid, values, semRating = false }) {
           <Target className="h-4 w-4 text-green-600" /> {t('Minhas metas')}
         </h2>
 
+        {/* Sem a lista na mão não se oferece criar: duplicaria a meta que existe (docs/27 §10). */}
+        {consulta.data && (
         <form onSubmit={handleAdd} className="mb-4 flex flex-wrap items-end gap-2">
           <label className="flex-1">
             <span className="mb-1 block text-xs text-gray-500">{t('Métrica')}</span>
@@ -65,8 +70,15 @@ export default function GoalsCard({ uid, values, semRating = false }) {
             <Plus className="h-4 w-4" /> <span className="ml-1">{t('Adicionar')}</span>
           </Button>
         </form>
+        )}
 
-        {goals.length === 0 ? (
+        {/* Falha numa atualização de fundo mantém o dado: avisa por cima, sem esconder as metas. */}
+        {consulta.isError && (
+          <V2ErrorState inline title={t('Não deu para carregar as metas')} onRetry={() => consulta.refetch()} />
+        )}
+        {!consulta.data ? (
+          !consulta.isError && <p className="text-sm text-gray-500">{t('Carregando as metas…')}</p>
+        ) : goals.length === 0 ? (
           <p className="text-sm text-gray-500">{t('Você ainda não definiu metas. Crie uma acima.')}</p>
         ) : (
           <div className="space-y-2">
