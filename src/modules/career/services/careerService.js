@@ -17,6 +17,7 @@ import { t } from '@/core/i18n';
 import {
   CAREER_EVENTS, newCareerEventId, normalizeCareerEvent, withDerivedStatus,
 } from '../domain/careerEvent.js';
+import { CAREER_DEBRIEF_COLLECTION, careerDebriefDocId } from '../domain/careerDebrief.js';
 
 export class CareerError extends Error {}
 
@@ -61,11 +62,20 @@ export async function saveCareerEventsBatch(uid, events) {
   return gravados;
 }
 
-/** Apaga o torneio e as fotos dele (as fotos, best-effort: o documento é o que importa). */
+/**
+ * Apaga o torneio, as fotos e o BALANÇO dele (fotos e balanço best-effort: o
+ * documento é o que importa). Quem apaga o torneio espera que tudo dele saia —
+ * o balanço seguiria pesando no foco das semanas com o título antigo.
+ */
 export async function deleteCareerEvent(event) {
   if (!event?.id) return;
   await deleteDoc(doc(db, CAREER_EVENTS, event.id));
-  await Promise.all((event.photos || []).map((p) => deleteCareerPhoto(p.path)));
+  const uid = event.uid || String(event.id).split('_')[0];
+  await Promise.all([
+    ...(event.photos || []).map((p) => deleteCareerPhoto(p.path)),
+    // Balanço que não existe: a regra de delete olha `resource` (nulo) e recusa — ignorado.
+    deleteDoc(doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id))).catch(() => {}),
+  ]);
 }
 
 /* -------------------------------------------------------------- fotos -- */

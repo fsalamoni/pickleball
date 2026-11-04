@@ -2,9 +2,12 @@
  * A FICHA do torneio de fora (Minha carreira, docs/54 §4.2), em camadas:
  *  1. Resultado — colocação, faixa, pontuação declarada, federação, link;
  *  2. Foto — medalha, pódio, chave (destrava o cartão para compartilhar);
- *  3. Dupla — neste PR só o nome (e a conta, quando escolhida da lista de
- *     usuários). O convite à dupla é do PR 3; o balanço, do PR 2.
- * O cabeçalho diz "2 de 3" e o ÚNICO próximo passo.
+ *  3. Dupla — o nome (e a conta, quando escolhida da lista de usuários). O
+ *     convite à dupla é do PR 3;
+ *  4. Balanço — o balanço do jogo com a origem `externo` (só torneio JOGADO),
+ *     que dá a semana de drills sugerida. Nada entra nos treinos sem "Adicionar".
+ * O cabeçalho diz "3 de 4" e o ÚNICO próximo passo. Com os balanços sem
+ * carregar, a conta não aparece (não afirma o que falta sem saber).
  *
  * "É este?": o torneio parece um da plataforma em que a pessoa jogou? Ela
  * confirma (o registro passa a apontar para o oficial) ou diz "não é".
@@ -22,18 +25,22 @@ import { AGE_CATEGORY_LABELS } from '@/modules/tournament/domain/constants.js';
 import { usePublicFederations } from '@/modules/federations/hooks/useFederations';
 import { prepareUpload } from '@/modules/training/services/mediaUploadService';
 import {
-  CAREER_AGES, CAREER_FORMAT, CAREER_LIMITS, CAREER_STATUS, LEVEL_BRACKETS, PHOTO_KIND, PHOTO_KIND_LABEL, PLACEMENT, PLACEMENT_LABEL,
+  CAREER_AGES, CAREER_FORMAT, CAREER_LAYER, CAREER_LIMITS, CAREER_STATUS, LEVEL_BRACKETS, PHOTO_KIND, PHOTO_KIND_LABEL, PLACEMENT, PLACEMENT_LABEL,
   bestPosition, careerCompleteness, careerSeal, entryLabel, matchPlatformTournament, withDerivedStatus,
 } from '@/modules/career/domain/careerEvent.js';
 import { careerTrophies } from '@/modules/career/domain/timeline.js';
+import { careerDebriefFor, careerDebriefSource } from '@/modules/career/domain/careerDebrief.js';
+import { aspectLabel } from '@/modules/training/domain/debrief.js';
+import { useMyDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { deleteCareerPhoto, uploadCareerPhoto } from '@/modules/career/services/careerService';
 import { useDeleteCareerEvent } from '@/modules/career/hooks/useCareer';
 import FedPersonPicker from '@/v2/components/federations/manage/FedPersonPicker';
-import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { ChoiceGroup, FORMAT_CHOICES, GENDER_CHOICES_ALL, SealBadge, careerDateLabel } from './careerUi';
 import { t } from '@/core/i18n';
 
 const MedalCardDialog = lazy(() => import('@/v2/components/trophies/MedalCardDialog'));
+const CareerDebriefDialog = lazy(() => import('./CareerDebriefDialog'));
 
 /** Só imagem, < 3 MB (o `storage.rules` confere o mesmo). */
 const LIMITES_FOTO = Object.freeze({ imageMb: 3, videoEnabled: false, videoMb: 0, videoSeconds: 0 });
@@ -152,10 +159,20 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
   const fedOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const fedQ = usePublicFederations({ enabled: open && fedOn && Boolean(f?.federated) });
 
+  const [balanco, setBalanco] = useState(false);
+
   useEffect(() => { if (open) { setF(withDerivedStatus(event)); setErro(''); setApagar(false); } }, [open, event]);
 
   const match = useMemo(() => (f && !naoE.split(',').includes(f.id) ? matchPlatformTournament(f, myTournaments) : null), [f, myTournaments, naoE]);
-  const completude = f ? careerCompleteness(f) : null;
+  // Camada 4: o balanço — só de torneio JOGADO (a origem sai do documento gravado, não do rascunho da tela).
+  const gravado = useMemo(() => withDerivedStatus(event), [event]);
+  const fonteBalanco = useMemo(() => careerDebriefSource(gravado), [gravado]);
+  const balancos = useMyDebriefs(uid, { enabled: open && Boolean(fonteBalanco) });
+  const feito = balancos.isSuccess ? careerDebriefFor(gravado, balancos.data) : null;
+  // Só com a origem GRAVADA a camada vale: o rascunho que virou "jogado" ainda não abre o diálogo.
+  const completude = f ? careerCompleteness(f, fonteBalanco && balancos.isSuccess ? { debriefDone: Boolean(feito) } : {}) : null;
+  // Sem saber do balanço, a conta "3 de 3" diria que a ficha está completa: não mostra.
+  const contaConhecida = !fonteBalanco || balancos.isSuccess;
   const trofeus = useMemo(() => (f ? careerTrophies([f], { myTournaments, me: { uid, name: userProfile?.platform_name || user?.displayName || t('Você'), photo_url: userProfile?.photo_url || null } }) : []), [f, myTournaments, uid, userProfile, user]);
   if (!f) return null;
 
@@ -240,10 +257,20 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
 
         <div className="flex flex-wrap items-center gap-2">
           <SealBadge seal={careerSeal(f, myTournaments)} />
-          {completude && (
+          {completude && contaConhecida && (
             <span className="text-sm font-semibold text-ink">
               {t('{feito} de {total}', { feito: completude.done, total: completude.total })}
-              {completude.next && <span className="font-normal text-gray-500"> · {t('Próximo passo: {passo}', { passo: completude.next.label })}</span>}
+              {completude.next && (
+                <span className="font-normal text-gray-500">
+                  {' · '}
+                  {completude.next.id === CAREER_LAYER.DEBRIEF ? (
+                    // O próximo passo que é o balanço já o oferece: um toque abre o diálogo.
+                    <button type="button" className="font-semibold text-ink underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink" onClick={() => setBalanco(true)}>
+                      {t('Próximo passo: {passo}', { passo: completude.next.label })}
+                    </button>
+                  ) : t('Próximo passo: {passo}', { passo: completude.next.label })}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -367,6 +394,32 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
           )}
         </Camada>
 
+        {fonteBalanco && (
+          <Camada n={4} titulo={t('Balanço')} dica="carreira-balanco">
+            {balancos.isPending ? (
+              <V2Skeleton lines={2} />
+            ) : balancos.isError ? (
+              <V2ErrorState inline title={t('Não carregaram os seus balanços')} description={t('Sem eles não dá para saber se este torneio já tem balanço.')} onRetry={() => balancos.refetch()} />
+            ) : feito ? (
+              <>
+                <p className="text-sm text-gray-600">
+                  {[
+                    t('Balanço feito.'),
+                    feito.suggestion?.focus?.length ? t('Foco sugerido: {focos}.', { focos: feito.suggestion.focus.map((a) => aspectLabel(a).toLowerCase()).join(', ') }) : '',
+                    feito.applied ? t('A semana entrou nos seus treinos.') : '',
+                  ].filter(Boolean).join(' ')}
+                </p>
+                <V2Button type="button" size="sm" variant="secondary" onClick={() => setBalanco(true)}>{t('Refazer o balanço')}</V2Button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500">{t('Como foi, o que funcionou e o que faltou — até 3 de cada. Daí sai a semana de drills sugerida, que só entra nos seus treinos se você tocar em “Adicionar”.')}</p>
+                <V2Button type="button" size="sm" variant="secondary" onClick={() => setBalanco(true)}>{t('Fazer o balanço')}</V2Button>
+              </>
+            )}
+          </Camada>
+        )}
+
         <V2Field label={t('Anotações (só você vê)')} htmlFor="ficha-notas">
           <V2Textarea id="ficha-notas" rows={3} value={f.notes || ''} maxLength={CAREER_LIMITS.notes} onChange={(e) => set('notes', e.target.value)} />
         </V2Field>
@@ -392,6 +445,18 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
           </div>
         </div>
       </DialogContent>
+
+      {balanco && fonteBalanco && (
+        <Suspense fallback={null}>
+          <CareerDebriefDialog
+            open
+            onOpenChange={(v) => { if (!v) setBalanco(false); }}
+            source={fonteBalanco}
+            history={balancos.data || []}
+            initial={feito}
+          />
+        </Suspense>
+      )}
 
       {cartao && trofeus.length > 0 && (
         <Suspense fallback={null}>

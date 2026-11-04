@@ -199,12 +199,13 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     <Dialog open={open} onOpenChange={fechar}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{salvo ? t('Sugestão para esta semana') : t('Balanço do jogo')}</DialogTitle>
+          <DialogTitle>{salvo ? t('Sugestão para esta semana') : source?.type === DEBRIEF_SOURCE.EXTERNO ? t('Balanço do torneio') : t('Balanço do jogo')}</DialogTitle>
           <DialogDescription>
             {salvo
               ? t('Escolha os dias que entram nos seus treinos. Você muda qualquer coisa depois, no plano.')
               : source
-                ? `${source.title} · ${formatDayLabel(source.date, hoje)}${resumo ? ` · ${resumo}` : ''}`
+                // `dateLabel`: o torneio de fora do modo lista sabe só o ano.
+                ? `${source.title} · ${source.dateLabel || formatDayLabel(source.date, hoje)}${resumo ? ` · ${resumo}` : ''}`
                 : t('Um jogo que a plataforma não registrou: diga quando foi.')}
           </DialogDescription>
         </DialogHeader>

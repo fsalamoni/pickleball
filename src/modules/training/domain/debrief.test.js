@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   GAME_ASPECTS, debriefSourceKey, debriefId, debriefEnabledFor, debriefSince, normalizeDebrief,
   pendingDebriefs, answeredDebriefs, debriefFocus, needsLightWeek, suggestWeek, debriefPlanChange, debriefTrends,
@@ -77,6 +79,28 @@ describe('normalizeDebrief', () => {
     });
     expect(value.source).toMatchObject({ games: 4, wins: 9, title: 'Dia de jogo' });
     expect(value.note).toHaveLength(500);
+  });
+
+  it('⭐ torneio de fora (`externo`): mesmo id `{uid}_{tipo}_{ref}`, um por torneio', () => {
+    const fora = { type: 'externo', ref_id: 'u1_mabc123', title: 'Open de Floripa', date: '2026-05-10' };
+    expect(debriefId('u1', fora)).toBe('u1_externo_u1_mabc123');
+    const r = normalizeDebrief({ source: fora, rating: 4, weaknesses: ['devolucao'] });
+    expect(r.valid).toBe(true);
+    expect(r.value.source).toEqual({ ...fora, games: null, wins: null });
+  });
+
+  it('⭐ os balanços antigos continuam válidos (as quatro origens de antes)', () => {
+    ['dia_de_jogo', 'torneio', 'reserva', 'avulso'].forEach((type) => {
+      expect(normalizeDebrief({ source: src({ type }), rating: 3 }).valid).toBe(true);
+      expect(debriefId('u1', src({ type }))).toBe(`u1_${type}_gd1`);
+    });
+    expect(normalizeDebrief({ source: src({ type: 'treino' }), rating: 3 }).valid).toBe(false);
+  });
+
+  it('o torneio de fora nunca vira pendência: quem alimenta as pendências não lê a carreira', () => {
+    // Guarda de fonte: `listRecentPlay` é a única entrada de `pendingDebriefs`.
+    const fonte = readFileSync(resolve(process.cwd(), 'src/modules/training/services/recentPlayService.js'), 'utf8');
+    expect(fonte).not.toMatch(/career/i);
   });
 });
 

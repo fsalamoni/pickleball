@@ -168,6 +168,10 @@ test.describe('@emuladores com conta', () => {
       await expect(page.getByText(/Algo deu errado|Não conseguimos abrir/i)).toHaveCount(0);
     }
     await expect(page.locator('[data-dica="carreira-registrar"]')).toBeVisible();
+    // PR 2: Meu desempenho ganha o bloco "Fora da plataforma" (o interruptor mora na URL).
+    await page.goto('/meu-desempenho?declarados=1');
+    await expect(page.locator('[data-dica="desempenho-fora"]')).toBeVisible();
+    await expect(page.getByText(/Algo deu errado|Não conseguimos abrir/i)).toHaveCount(0);
     expect(errosDaPagina).toEqual([]);
   });
 

@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 10 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 13 |
-| Arquivos de teste (`*.test.js(x)`) | 918 |
+| Arquivos de teste (`*.test.js(x)`) | 920 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 60 |
 
@@ -42,7 +42,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `analytics` | 1 | · | 1 | 1 | · | · | sim |
 | `arenas` | 62 | 24 | 17 | 6 | · | 2 | sim |
 | `athletes` | 8 | 1 | 2 | 1 | · | · | sim |
-| `career` | 3 | 2 | 1 | · | · | 2 | sim |
+| `career` | 5 | 2 | 1 | · | · | 2 | sim |
 | `chat` | 2 | 1 | 1 | 1 | · | · | sim |
 | `circuits` | 1 | 1 | 1 | · | · | · | sim |
 | `clubs` | 21 | 15 | 14 | 7 | · | 2 | sim |

@@ -18,6 +18,7 @@ import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
 import {
   CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, placementText,
 } from './careerEvent.js';
+import { careerDebriefFor } from './careerDebrief.js';
 
 /** Origem de um item. `fora` = declarado pela pessoa. Valor de `?origem=` (contrato). */
 export const TIMELINE_SOURCE = Object.freeze({
@@ -77,7 +78,12 @@ function itemDeFora(ev, myTournaments) {
  */
 export function buildCareerTimeline(fontes = {}) {
   const today = fontes.today || todayLocal();
-  const faltou = Object.entries(FONTE_ROTULO).filter(([k]) => fontes[k] === undefined).map(([, v]) => t(v));
+  // Os pódios vêm de DUAS leituras (`listMyTrophies`, allSettled): a metade que
+  // falhou também é "faltou", senão a linha do tempo e a retrospectiva saem
+  // com menos medalhas sem dizer.
+  const ausente = (k) => fontes[k] === undefined
+    || (k === 'trophies' && (fontes.trophies.torneios === undefined || fontes.trophies.diasDeJogo === undefined));
+  const faltou = Object.entries(FONTE_ROTULO).filter(([k]) => ausente(k)).map(([, v]) => t(v));
   const myTournaments = fontes.tournaments;
   const itens = [];
 
@@ -317,9 +323,11 @@ export function careerTabFromParam(v) {
 /**
  * O resumo da seção Carreira da Minha área: quantos torneios de fora, o
  * último jogado e o que falta nele (o ÚNICO próximo passo). `null` quando a
- * lista não carregou — nunca "nenhum torneio".
+ * lista não carregou — nunca "nenhum torneio". `debriefs` (os balanços da
+ * pessoa) põe o balanço na conta ("N de 4"); `undefined` — não carregou — tira
+ * a camada da conta em vez de afirmar que falta.
  */
-export function careerAreaSummary(events) {
+export function careerAreaSummary(events, { debriefs } = {}) {
   if (!Array.isArray(events)) return null;
   const jogados = events.filter((e) => e.status === CAREER_STATUS.PLAYED)
     .sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)) || (Number(b.updated_at_ms) || 0) - (Number(a.updated_at_ms) || 0));
@@ -330,6 +338,31 @@ export function careerAreaSummary(events) {
     planned: events.filter((e) => e.status === CAREER_STATUS.PLANNED).length,
     podiums: jogados.filter((e) => bestPosition(e)).length,
     last,
-    lastCompleteness: last ? careerCompleteness(last) : null,
+    lastCompleteness: last
+      ? careerCompleteness(last, Array.isArray(debriefs) ? { debriefDone: Boolean(careerDebriefFor(last, debriefs)) } : {})
+      : null,
+  };
+}
+
+/* ------------------------------------------------- Meu desempenho -- */
+
+/**
+ * O bloco "Fora da plataforma (declarado por você)" de Meu desempenho: os
+ * torneios de fora JOGADOS, os pódios e os títulos declarados. O torneio ligado
+ * a um da plataforma ("É este") fica de fora da conta — ele já está nos números
+ * verificados, e somar de novo seria contar duas vezes. `null` quando a lista
+ * não carregou (nunca zero). Nada aqui entra em ranking, rating nem XP.
+ */
+export function careerPerformanceSummary(events) {
+  if (!Array.isArray(events)) return null;
+  const jogados = events.filter((e) => e.status === CAREER_STATUS.PLAYED);
+  const declarados = jogados.filter((e) => !e.platform_tournament_id);
+  const entradas = declarados.flatMap((e) => e.entries || []);
+  const pos = (en) => ({ champion: 1, runner_up: 2, third: 3 }[en.placement] || null);
+  return {
+    tournaments: declarados.length,
+    podiums: entradas.filter(pos).length,
+    titles: entradas.filter((en) => pos(en) === 1).length,
+    linked: jogados.length - declarados.length,
   };
 }

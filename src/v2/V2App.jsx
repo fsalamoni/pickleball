@@ -258,7 +258,7 @@ export default function V2App() {
           <Route path="parceiros" element={<V2Partners />} />
 
           {/* Você */}
-          <Route path="meu-desempenho" element={<V2Performance />} />
+          <Route path="meu-desempenho" element={<Isolada nome="meu-desempenho"><V2Performance /></Isolada>} />
           {/* Gamificação V2 — cada rota isolada num ErrorBoundary: se a
               seção quebrar, o resto da plataforma continua de pé. */}
           <Route path="conquistas" element={<Gamified><V2Achievements /></Gamified>} />
