@@ -607,6 +607,15 @@ service cloud.firestore {
       allow read: if isOwner(od().owner_uid);
     }
 
+    // A VITRINE pública (`{eventoId}`, PR 7): uma cópia ESCOLHIDA, com a lista
+    // fechada de campos, o selo recalculado e a dupla só com o "sim" dela. Lê
+    // quem tem CONTA (o perfil público, `/atleta/:uid`, também só abre logado —
+    // minimização: visitante sem login não copia a coleção); grava SÓ o servidor
+    // (`careerPublic.js`).
+    match /career_public/{id} {
+      allow read: if isAuthed();
+    }
+
     // ---- Galeria de fotos do torneio -------------------------------------
     // Leitura pública (aparece na visão de espectador). Envio/remoção só por
     // admin do torneio (ou admin master).

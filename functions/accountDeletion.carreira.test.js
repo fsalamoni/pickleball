@@ -55,6 +55,22 @@ describe('exclusão de conta × Minha carreira', () => {
     expect(db.store.docs.get('career_events/ana_2')).toEqual(antes.get('career_events/ana_2'));
   });
 
+  it('🔴 o nome e a foto de quem sai somem da vitrine pública de OUTRA pessoa na hora (sem depender do gatilho)', async () => {
+    const { db, ctx } = cenario();
+    db.store.docs.set('career_public/ana_1', {
+      uid: 'ana', event_id: 'ana_1', seal: 'confirmed', named_uids: ['bia', 'cau'],
+      entries: [{ format: 'doubles', placement: 'champion', partner: { uid: 'bia', name: 'Bia', photo_url: 'https://f/bia' } }, { format: 'doubles', partner: { uid: 'cau', name: 'Cau', photo_url: null } }],
+    });
+    db.store.docs.set('career_public/bia_1', { uid: 'bia', event_id: 'bia_1', named_uids: [], entries: [] });
+    await executeAccountDeletion(ctx, 'bia', { actor: ADMIN, reason: 'pedido da titular', hojeISO: '2026-11-04', FieldValue: FakeFieldValue });
+    const v = db.store.docs.get('career_public/ana_1');
+    expect(v.entries[0]).toEqual({ format: 'doubles', placement: 'champion', with_partner: true });
+    expect(v.entries[1].partner.uid).toBe('cau');
+    expect(v.named_uids).toEqual(['cau']);
+    expect(JSON.stringify(v)).not.toContain('bia');
+    expect(db.store.docs.has('career_public/bia_1')).toBe(false);
+  });
+
   it('o registro que não cita a pessoa não muda', () => {
     expect(patchCareerPartner({ entries: [{ partner: { uid: 'x', name: 'X' } }] }, 'bia')).toBeNull();
     expect(patchCareerPartner(null, 'bia')).toBeNull();

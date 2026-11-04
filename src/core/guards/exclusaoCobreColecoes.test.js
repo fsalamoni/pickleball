@@ -294,6 +294,7 @@ const CARREIRA_EXPORTADA_POR = {
   career_partner_reports: ['listMyCareerPartnerReports'],
   career_partner_invites: ['listMyCareerPartnerInvites'],
   career_rank: ['listCareerRanks'],
+  career_public: ['listCareerPublic'],
 };
 const CARREIRA_FORA_DA_EXPORTACAO = {
   // vazio: tudo o que é da carreira é exportado.
@@ -307,7 +308,7 @@ describe('a exclusão e a exportação cobrem a Minha carreira', () => {
   it('⭐ toda coleção `career_*` entra na exclusão de conta, e as fotos também', () => {
     const cobre = colecoesDaExclusao();
     expect(DA_CARREIRA.filter((c) => !cobre.has(c)), 'coleção da carreira sem tratamento na exclusão').toEqual([]);
-    expect(exclusao.STORAGE_PREFIXES.map((f) => f('u1'))).toContain('carreira/u1/');
+    expect(exclusao.STORAGE_PREFIXES.map((f) => f('u1'))).toEqual(expect.arrayContaining(['carreira/u1/', 'carreira-publica/u1/']));
   });
 
   it('⭐ toda coleção `career_*` tem caminho para a exportação (ou isenção com motivo), e a lista das fotos vai junto', () => {
@@ -319,7 +320,7 @@ describe('a exclusão e a exportação cobrem a Minha carreira', () => {
     Object.entries(CARREIRA_EXPORTADA_POR).forEach(([col, fns]) => fns.forEach((fn) => {
       expect(EXPORTA_CARREIRA, `${fn} não é usada pela exportação da carreira`).toMatch(new RegExp(`\\b${fn}\\b`));
       expect(servico, `${fn} não está no serviço da carreira`).toMatch(new RegExp(`export async function ${fn}\\b`));
-      const dominio = ['careerEvent.js', 'careerPartner.js', 'careerRank.js'].map((f) => readFileSync(`src/modules/career/domain/${f}`, 'utf8')).join('\n');
+      const dominio = ['careerEvent.js', 'careerPartner.js', 'careerRank.js', 'careerPublic.js'].map((f) => readFileSync(`src/modules/career/domain/${f}`, 'utf8')).join('\n');
       expect(servico + dominio, `o serviço não cita '${col}'`).toContain(`'${col}'`);
     }));
   });

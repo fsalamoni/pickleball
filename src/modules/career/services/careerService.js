@@ -21,6 +21,7 @@ import {
 } from '../domain/careerEvent.js';
 import { CAREER_DEBRIEF_COLLECTION, careerDebriefDocId } from '../domain/careerDebrief.js';
 import { CAREER_PARTNER, CAREER_PARTNER_INVITES, keepServerLinkedPartners } from '../domain/careerPartner.js';
+import { CAREER_PUBLIC, sortShowcase } from '../domain/careerPublic.js';
 
 export class CareerError extends Error {}
 
@@ -193,6 +194,19 @@ export async function listMyCareerPartnerInvites(uid) {
   return snap.docs.map(toDoc);
 }
 
+/* ------------------------------------------------- a vitrine pública -- */
+
+/**
+ * A VITRINE pública de `uid` (`career_public`, `uid ==`, leitura aberta — o
+ * perfil público e a própria pessoa). Só o servidor grava: publicar e tirar
+ * passam por `careerAction('publish' | 'unpublish')`.
+ */
+export async function listCareerPublic(uid) {
+  if (!db || !uid) return [];
+  const snap = await getDocs(query(collection(db, CAREER_PUBLIC), where('uid', '==', uid)));
+  return sortShowcase(snap.docs.map(toDoc));
+}
+
 function mensagemDoServidor(err) {
   const code = String(err?.code || '');
   if (code.endsWith('unauthenticated')) return t('Entre na sua conta.');
@@ -203,8 +217,9 @@ function mensagemDoServidor(err) {
 
 /**
  * Uma ação da dupla no servidor (`functions/career.js`): `invite`, `respond`,
- * `feedback`, `decide`, `remove`, `report`, `moderate`, `queue` e, da dupla
- * sem conta (PR 6), `invite_link`, `invite_cancel`, `invite_peek`, `invite_accept`.
+ * `feedback`, `decide`, `remove`, `report`, `moderate`, `queue`; da dupla
+ * sem conta (PR 6), `invite_link`, `invite_cancel`, `invite_peek`, `invite_accept`;
+ * e as da vitrine (`functions/careerPublic.js`): `publish`, `unpublish`, `public_consent`.
  */
 export async function careerAction(action, payload = {}) {
   if (!functions) throw new CareerError(t('Firebase não está configurado neste ambiente.'));

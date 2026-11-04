@@ -22,9 +22,11 @@ career/
 │   ├── careerHabits.js # PR 5: a ÚNICA porta para a gamificação — ficha completa
 │   │                   # (isCompleteCareerRecord, cópia em functions/careerXp.js) e
 │   │                   # contagens de hábito; nunca lê o valor da colocação
+│   ├── careerPublic.js # PR 7: a vitrine pública — campos que vão (lista fechada), fotos publicáveis,
+│   │                   # maioridade, parcerias, contextId do parabéns (cópia em functions/careerPublicPolicy.js)
 │   └── seasonRecap.js  # retrospectiva da temporada (zero banco): quando oferecer, parceria do ano
 ├── services/
-│   ├── careerService.js        # career_events + career_rank + Storage carreira/{uid}/ + career_partner (ler) + callable `career` + "mandar ao professor"
+│   ├── careerService.js        # career_events + career_rank + Storage carreira/{uid}/ + career_partner (ler) + career_public (ler, PR 7) + callable `career` + "mandar ao professor"
 │   └── careerExportService.js  # o bloco `career` da exportação de dados
 ├── hooks/useCareer.js  # useCareerEvents, useCareerTimeline, mutações, useCareerSaveWithDraft,
 │                       # useCareerPartners, useCareerPartnerVoices, useCareerPartnerAction, useCareerModerationQueue,
@@ -94,3 +96,10 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
     vencido, cancelado e inexistente respondem igual. `INVITE_TTL_DAYS`,
     `INVITE_TOKEN_PATTERN`, `partnerNameKey` e `namedPartners` têm cópia em
     `functions/careerPolicy.js` com paridade. Hook `useCareerPartnerInvites`.
+15. **Vitrine pública (PR 7)**: `career_public` e o Storage `carreira-publica/`
+    só o servidor grava (`functions/careerPublic.js`); só o que o dono
+    escolheu, lista fechada de campos, selo calculado (Oficial sem a colocação
+    declarada), nome da dupla só com o "sim" dela (`public_consent`, com a impressão `public_fp` do que ela viu), menor
+    nunca publica (mesma resposta), foto só da própria pasta e sem metadados;
+    tirar ou apagar remove item e fotos. Revisão de privacidade em
+    `docs/20-SEGURANCA-E-PRIVACIDADE/21-CARREIRA-VITRINE.md`.

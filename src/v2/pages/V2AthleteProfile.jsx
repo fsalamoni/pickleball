@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Award, Building2, ChevronRight, GraduationCap, Hash, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
@@ -20,7 +20,11 @@ import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { t, tn, fmtData } from '@/core/i18n';
+
+const CareerPublicBlock = lazy(() => import('@/v2/components/career/CareerPublicBlock'));
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
@@ -41,6 +45,7 @@ export default function V2AthleteProfile() {
   const achievementsOn = true;
   const coachResidentOn = true;
   const levelingOn = true;
+  const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const { uid } = useParams();
   const { data, isLoading, isError, refetch } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
@@ -251,6 +256,11 @@ export default function V2AthleteProfile() {
         <h2 className="mb-4 inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Medal className="h-5 w-5" aria-hidden="true" /> {t('Troféus')}</h2>
         <TrophyShelf uid={uid} nome={athlete?.name || ''} compacto />
       </V2Surface>
+
+      {/* Minha carreira (PR 7): os torneios de fora que a pessoa escolheu mostrar. */}
+      {carreiraOn && (
+        <Suspense fallback={null}><CareerPublicBlock uid={uid} nome={athlete?.name || ''} /></Suspense>
+      )}
 
       {gameDayGames.length > 0 && <RecentGameDayGames games={gameDayGames} />}
 

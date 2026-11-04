@@ -69,6 +69,13 @@ antifarm, limite diário. Quem recebe ganha o aviso no sino (tipo
 deslogado vira "Entre para parabenizar"; "já parabenizei" fica no navegador
 por pessoa e conquista.
 
+Desde o PR 7 da carreira, o pódio de um torneio de FORA que a pessoa escolheu
+mostrar no perfil público (bloco "Carreira", `CareerPublicBlock`) também tem o
+botão, com `contextId = trofeu:ext:{evento}:{categoria}:{colocação}`
+(`showcaseTrophyContextId`) e escopo `universal` — o mesmo kudo, nenhuma conta
+de pontos nova. O resultado declarado continua sem pontuar
+(`docs/54-CARREIRA-DO-ATLETA.md` §4.13).
+
 ## 4. O que saiu
 
 `CertificateButton`/`CertificateDialog` (o certificado em que qualquer um

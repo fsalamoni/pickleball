@@ -219,6 +219,28 @@ describe('career_rank (a posição no ranking da federação)', () => {
   });
 });
 
+/* ------------------------------------------------------------- PR 7 -- */
+
+describe('career_public (a vitrine: lê qualquer pessoa, grava só o servidor)', () => {
+  const item = (uid, extra = {}) => ({ uid, event_id: `${uid}_a`, name: 'Open', seal: 'declared', entries: [], photos: [], ...extra });
+  beforeEach(() => testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'career_public', `${DONO}_a`), item(DONO))));
+
+  it('⭐ quem tem conta lê e consulta por `uid ==`; sem conta, não (minimização)', async () => {
+    await assertSucceeds(getDoc(doc(como(OUTRO), 'career_public', `${DONO}_a`)));
+    await assertSucceeds(getDocs(query(collection(como(OUTRO), 'career_public'), where('uid', '==', DONO))));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'career_public', `${DONO}_a`)));
+    await assertFails(getDocs(collection(testEnv.unauthenticatedContext().firestore(), 'career_public')));
+  });
+
+  it('🔴 ninguém grava pelo cliente: nem o dono (selo forjado, dupla sem "sim"), nem outra conta; nem apaga', async () => {
+    await assertFails(setDoc(doc(como(DONO), 'career_public', `${DONO}_b`), item(DONO)));
+    await assertFails(updateDoc(doc(como(DONO), 'career_public', `${DONO}_a`), { seal: 'official' }));
+    await assertFails(updateDoc(doc(como(DONO), 'career_public', `${DONO}_a`), { entries: [{ partner: { uid: OUTRO, name: 'X' } }] }));
+    await assertFails(deleteDoc(doc(como(DONO), 'career_public', `${DONO}_a`)));
+    await assertFails(setDoc(doc(como(OUTRO), 'career_public', `${OUTRO}_a`), item(OUTRO)));
+  });
+});
+
 describe('"Mandar ao meu professor" (career_events + training_debriefs) — contas que não são admin', () => {
   const PROF = 'prof_uid';
   const vinculo = (status) => testEnv.withSecurityRulesDisabled((ctx) =>

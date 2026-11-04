@@ -26,7 +26,7 @@ import {
 import { CAREER_STATUS, entryLabel, placementText } from '@/modules/career/domain/careerEvent.js';
 import { aspectLabel } from '@/modules/training/domain/debrief.js';
 import { useCareerPartnerAction, useCareerPartnerInvites } from '@/modules/career/hooks/useCareer';
-import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { careerDateLabel } from './careerUi';
 import { fmtData, t } from '@/core/i18n';
 
@@ -351,6 +351,8 @@ function FeedbackForm({ doc, onDone }) {
 
 /** Um pedido recebido, do lado da dupla. */
 function InboxItem({ doc, focado, onMirror }) {
+  const { userProfile } = useAuth();
+  const adulto = isAdult(userProfile?.birth_date, todayLocal());
   const acao = useCareerPartnerAction();
   const [visao, setVisao] = useState(false);
   // "Pôr na minha carreira também": um toque só (o vínculo chega pelo servidor depois).
@@ -403,6 +405,16 @@ function InboxItem({ doc, focado, onMirror }) {
               </V2Button>
               <ReportControl docId={doc.id} />
             </div>
+          )}
+          {/* PR 7: o NOME (e a foto) da dupla na vitrine de quem registrou só com o "sim" dela; tirar vale sempre. */}
+          {(adulto || doc.public_ok_partner === true) && (
+            <V2Toggle id={`vitrine-${doc.id}`} checked={doc.public_ok_partner === true} disabled={acao.isPending}
+              label={t('Meu nome na vitrine de {quem}', { quem })}
+              hint={t('Se {quem} mostrar este torneio no perfil público, o seu nome e a sua foto aparecem junto. Sem isso, aparece só "com dupla". Você muda quando quiser.', { quem })}
+              onChange={(v) => rodar({ action: 'public_consent', docId: doc.id, ok: v }, v ? t('Seu nome pode aparecer.') : t('Seu nome não aparece mais.'))} />
+          )}
+          {!adulto && doc.public_ok_partner !== true && ageOn(userProfile?.birth_date, todayLocal()) === null && (
+            <p className="text-xs text-gray-500">{t('Preencha a sua data de nascimento no perfil para decidir se o seu nome aparece na vitrine de {quem}.', { quem })}</p>
           )}
         </>
       )}

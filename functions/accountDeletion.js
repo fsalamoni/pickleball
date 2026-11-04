@@ -168,6 +168,10 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'career_partner_reports', field: 'owner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
   { col: 'career_partner_reports', field: 'partner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
   { col: 'career_partner_invites', field: 'owner_uid', label: 'Convites à dupla sem conta (Minha carreira)' },
+  // A vitrine pública (PR 7) sai inteira; o NOME de quem sai na vitrine de OUTRA
+  // pessoa sai aqui mesmo (`patchCareerPublicPartner`, por `named_uids`) —
+  // o gatilho `careerPartnerWritten` refaz depois, mas não é a única defesa.
+  { col: 'career_public', field: 'uid', label: 'Vitrine pública da carreira' },
   { col: 'user_missions', field: 'uid', label: 'Missões (gamificação)' },
   { col: 'user_achievements_v2', field: 'uid', label: 'Conquistas (gamificação)' },
   { col: 'season_rankings', field: 'uid', label: 'Ranking da temporada' },
@@ -1302,6 +1306,19 @@ function patchCareerPartner(ev, uid) {
   };
 }
 
+/** A vitrine pública de OUTRA pessoa (PR 7): o nome, o uid e a foto de quem sai viram "com dupla", na hora. */
+function patchCareerPublicPartner(item, uid) {
+  if (!item || !Array.isArray(item.entries) || !item.entries.some((e) => e && e.partner && e.partner.uid === uid)) return null;
+  return {
+    entries: item.entries.map((e) => {
+      if (!e || !e.partner || e.partner.uid !== uid) return e;
+      const { partner: _fora, ...resto } = e;
+      return { ...resto, with_partner: true };
+    }),
+    named_uids: (item.named_uids || []).filter((u) => u !== uid),
+  };
+}
+
 function patchSharedUids(it, uid) {
   if (!it || !Array.isArray(it.shared_uids) || !it.shared_uids.includes(uid)) return null;
   return { shared_uids: it.shared_uids.filter((u) => u !== uid) };
@@ -1564,6 +1581,7 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Itens de treino que criou (ficam, com a autoria)', bucket: 'retained', collect: coletarItensDeTreino, deleteLabel: 'Itens de treino privados, não compartilhados', cols: ['training_items'] },
   { label: 'Acesso a itens de treino de outras pessoas', col: 'training_items', wheres: [['shared_uids', 'array-contains']], patch: patchSharedUids },
   { label: 'Dupla em torneios de fora de outras pessoas (fica o nome)', col: 'career_events', wheres: [['partner_uids', 'array-contains']], patch: patchCareerPartner },
+  { label: 'Nome na vitrine pública de outras pessoas (vira "com dupla")', col: 'career_public', wheres: [['named_uids', 'array-contains']], patch: patchCareerPublicPartner },
   { label: 'Diários de alunos que acompanhava (os comentários ficam)', bucket: 'retained', collect: coletarDiario, deleteLabel: 'Diário de treino e comentários', cols: ['training_sessions'] },
   { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
   { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
@@ -1685,7 +1703,7 @@ async function contaDeLoginExiste(auth, uid) {
  * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
  * (`federacao/`), e as fotos dos torneios de fora da Minha carreira (`carreira/`).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `carreira/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `carreira/${uid}/`, (uid) => `carreira-publica/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {

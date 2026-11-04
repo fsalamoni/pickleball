@@ -67,7 +67,7 @@ export default {
   },
 
   privacidade: {
-    fonte: '1137e065',
+    fonte: '2e57d012',
     title: 'Política de Privacidad',
     eyebrow: 'Documento esencial · LGPD',
     description: 'Cómo tratamos, protegemos y compartimos sus datos personales, conforme a la LGPD (Ley General de Protección de Datos de Brasil, Ley 13.709/2018).',
@@ -92,6 +92,7 @@ export default {
         paragraphs: [
           'El nombre, las inscripciones, los resultados y el ranking son visibles para otros participantes del mismo contexto (torneo, club, día de juego). Los datos de contacto (teléfono, correo electrónico) no se muestran públicamente.',
           'Solo compartimos datos con los encargados necesarios para prestar el servicio (por ejemplo, infraestructura en la nube — Google Firebase) y cuando la ley lo exige. No vendemos datos personales.',
+          'Los torneos de fuera de la plataforma registrados en Mi carrera son solo tuyos. Solo va a tu perfil público el torneo que elijas mostrar (nombre, fecha, ciudad, categoría, posición, sello y las fotos elegidas, sin metadatos); notas, balances y evaluaciones nunca van. El nombre de tu pareja solo aparece con su consentimiento, los menores de 18 años no tienen vitrina pública y quitarlo del perfil, borrar el torneo o la cuenta lo elimina al instante.',
         ],
       },
       {

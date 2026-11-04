@@ -2086,7 +2086,17 @@ exports.clubAssociationSweep = onSchedule(
 // =====================================================================
 const career = require('./career');
 const careerXp = require('./careerXp');
-exports.career = federationCallable('career', career.career);
+// A VITRINE pública (PR 7) mora em `careerPublic.js`, com Storage: as ações dela
+// são despachadas para lá; as da dupla seguem em `career.js`.
+const careerPublic = require('./careerPublic');
+const careerCtx = () => {
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('careerPublic: Storage indisponível.', err); }
+  return { ...fedCtx(), bucket };
+};
+exports.career = federationCallable('career', (ctx, actor, data) => (careerPublic.ACOES[data && data.action]
+  ? careerPublic.careerPublic({ ...ctx, bucket: careerCtx().bucket }, actor, data)
+  : career.career(ctx, actor, data)), { timeoutSeconds: 120, memory: '512MiB' });
 
 /** O torneio de fora mudou: impressão ("confirmar de novo"), pedidos órfãos e o vínculo das duas fichas. */
 exports.careerEventWritten = onDocumentWritten(
@@ -2102,6 +2112,24 @@ exports.careerEventWritten = onDocumentWritten(
       await careerXp.onEvent(fedCtx(), event.params.id, antes(event), depois(event));
     } catch (err) {
       logger.error('careerEventWritten: erro no XP da ficha.', err);
+    }
+    // A vitrine pública (só quem tem): editar atualiza, apagar ou deixar de jogar tira.
+    try {
+      await careerPublic.onEvent(careerCtx(), event.params.id);
+    } catch (err) {
+      logger.error('careerEventWritten: erro na vitrine.', err);
+    }
+  },
+);
+
+/** O pedido da dupla mudou (confirmou, "não", consentiu, apagou): a vitrine de quem registrou é refeita. */
+exports.careerPartnerWritten = onDocumentWritten(
+  { document: 'career_partner/{id}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    try {
+      await careerPublic.onPartner(careerCtx(), antes(event), depois(event));
+    } catch (err) {
+      logger.error('careerPartnerWritten: erro.', err);
     }
   },
 );
