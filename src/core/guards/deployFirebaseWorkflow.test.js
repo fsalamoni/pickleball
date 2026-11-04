@@ -73,6 +73,10 @@ describe('workflow de deploy do Firebase', () => {
 
   it('⭐ regra pendente não passa calada: job vermelho no fim e vigilância que publica depois', () => {
     expect(workflow).toMatch(/if: always\(\) && steps\.firestore_rules\.outputs\.status == 'pending'/);
+    // 🐞 Deploy do PR #393: o passo vermelho vinha antes da conferência do
+    // site no ar, e ela era pulada. Ele tem de ser o ÚLTIMO passo.
+    const passos = [...workflow.matchAll(/^ {6}- name: (.+)$/gm)].map((m) => m[1].trim());
+    expect(passos.at(-1)).toBe('Regras do Firestore pendentes');
     expect(CATCHUP).toMatch(/cron:/);
     expect(CATCHUP).toMatch(/group: firestore-rules/);
     expect(CATCHUP).toMatch(/firestore-rules-compactar\.mjs --escrever/);

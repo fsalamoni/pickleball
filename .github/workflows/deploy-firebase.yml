@@ -397,16 +397,6 @@ jobs:
           done
           exit $FAILED
 
-      # Regras pendentes (serviço de regras fora do ar) não seguram o resto do
-      # deploy, mas também não podem passar caladas: o job fica vermelho aqui,
-      # no fim, depois de site, funções e Storage. A vigilância
-      # firestore-rules-catchup.yml publica as regras sozinha em até 30 min.
-      - name: Regras do Firestore pendentes
-        if: always() && steps.firestore_rules.outputs.status == 'pending'
-        run: |
-          echo "::error title=Regras do Firestore pendentes::O serviço de regras ficou indisponível durante o deploy. Site, funções e Storage saíram; a vigilância firestore-rules-catchup.yml publica as regras assim que o serviço voltar (a cada 30 min)."
-          exit 1
-
       # O site no ar abre de verdade? Navegador real nas rotas públicas, depois
       # do deploy (o build de produção, com o Firebase de produção). E o
       # monitoramento de erros responde em /api/erro (corpo vazio não grava nada).
@@ -419,3 +409,14 @@ jobs:
           if [ "$CODE" != "204" ]; then
             echo "::warning title=Monitoramento de erros::POST /api/erro respondeu $CODE (esperado 204). Confira se a função clientErrorReport foi publicada (passo das Cloud Functions acima)."
           fi
+
+      # Regras pendentes (serviço de regras fora do ar) não seguram o resto do
+      # deploy, mas também não podem passar caladas: o job fica vermelho aqui,
+      # no fim, depois de site, funções, Storage e da conferência do site no ar
+      # (antes dela, o vermelho daqui pulava a conferência). A vigilância
+      # firestore-rules-catchup.yml publica as regras sozinha em até 30 min.
+      - name: Regras do Firestore pendentes
+        if: always() && steps.firestore_rules.outputs.status == 'pending'
+        run: |
+          echo "::error title=Regras do Firestore pendentes::O serviço de regras ficou indisponível durante o deploy. Site, funções e Storage saíram; a vigilância firestore-rules-catchup.yml publica as regras assim que o serviço voltar (a cada 30 min)."
+          exit 1

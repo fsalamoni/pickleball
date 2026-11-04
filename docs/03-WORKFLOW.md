@@ -279,7 +279,7 @@ push em main
           tentativa após 30 s (falha passageira, 2026-10-16)
       12. Conferir o site no ar: Playwright nas rotas públicas de
           https://picklerush.web.app (falha o job) + POST /api/erro → 204
-      13. Regras do Firestore pendentes (só quando o passo 7 ficou `pending`):
+      13. Regras do Firestore pendentes (só quando o passo 7 ficou `pending`; é o ÚLTIMO passo, para não pular o 12):
           falha o job. A vigilância `firestore-rules-catchup.yml` (cron
           :22/:52, grupo próprio `firestore-rules` para não cancelar deploy
           na fila) publica as regras do `main` assim que o serviço volta;
