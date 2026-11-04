@@ -101,7 +101,7 @@ const vazio = () => ({ rating: null, strengths: [], weaknesses: [], evolution: E
  *   `source` nulo = jogo avulso (a pessoa diz a data e o nome); `initial` = o
  *   balanço anterior, para refazer partindo do que já foi dito.
  */
-export default function DebriefDialog({ open, onOpenChange, identity, source = null, history = [], initial = null }) {
+export default function DebriefDialog({ open, onOpenChange, identity, source = null, history = [], initial = null, sharedCoachId = null }) {
   const hoje = todayLocal();
   const uid = identity.uid;
   const acoes = useDebriefActions(uid);
@@ -148,7 +148,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     const sugestao = suggestWeek({
       debrief: value, history: anteriores, items: visiveis.items, level, routine: meta.data?.routine || null, today: hoje, partnerVoices: partnerVoices || [],
     });
-    acoes.save.mutate({ input, suggestion: sugestao }, {
+    acoes.save.mutate({ input, suggestion: sugestao, sharedCoachId }, {
       onSuccess: (id) => { setSalvo({ id, sugestao }); setFora([]); },
       onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível salvar o balanço agora.'))),
     });

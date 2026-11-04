@@ -154,14 +154,14 @@ test.describe('@emuladores com conta', () => {
 
   // Minha carreira (flag `athlete_career`, docs/54): `/carreira` só existe com
   // a flag ligada (desligada, redireciona para a Minha área).
-  test('⭐ Minha carreira: /carreira abre com a flag ligada, nas duas abas', async ({ page }) => {
+  test('⭐ Minha carreira: /carreira abre com a flag ligada, em todas as abas', async ({ page }) => {
     const errosDaPagina = [];
     page.on('pageerror', (e) => errosDaPagina.push(`${page.url()}: ${e.message}`));
     await ligarFlag('athlete_career');
     await entrar(page, await criarAtleta());
     await aceitar(page, page.getByRole('dialog', { name: 'Antes de continuar' }), 'Aceitar e continuar');
 
-    for (const tela of ['/carreira', '/carreira?aba=conquistas']) {
+    for (const tela of ['/carreira', '/carreira?aba=proximos', '/carreira?aba=metas', '/carreira?aba=conquistas']) {
       await page.goto(tela);
       await expect(page.locator('main h1').first(), `título de ${tela}`).toHaveText('Minha carreira');
       await expect(page.locator('[role="alert"]').filter({ hasText: /Tentar de novo|Recarregar/ })).toHaveCount(0);

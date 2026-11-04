@@ -1,9 +1,10 @@
 /**
  * MINHA CARREIRA (`/carreira`, flag `athlete_career`, docs/54).
  *
- * Abas (`?aba=`, contrato): `linha-do-tempo` (abre aqui) e `conquistas` (a
- * estante, com "Fora da plataforma"). `proximos` e `metas` chegam no PR 4 —
- * não há aba vazia. Só a aba aberta consulta.
+ * Abas (`?aba=`, contrato): `linha-do-tempo` (abre aqui), `proximos` (o plano
+ * e a descoberta), `metas` (as metas da temporada) e `conquistas` (a estante,
+ * com "Fora da plataforma"). Só a aba aberta consulta (a linha do tempo serve
+ * às três primeiras: os próximos e as metas saem dela).
  *
  * Outros parâmetros: `?evento=<id>` abre a ficha de um torneio de fora,
  * `?registrar=1` abre o registro rápido, `?lista=1` o modo lista e
@@ -14,7 +15,7 @@
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ListPlus, Medal, Plus, Route } from 'lucide-react';
+import { CalendarClock, Flag, ListPlus, Medal, Plus, Route } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -32,9 +33,14 @@ import { t, tk } from '@/core/i18n';
 const CareerQuickRegister = lazy(() => import('@/v2/components/career/CareerQuickRegister'));
 const CareerEventSheet = lazy(() => import('@/v2/components/career/CareerEventSheet'));
 const CareerListMode = lazy(() => import('@/v2/components/career/CareerListMode'));
+const CareerUpcomingTab = lazy(() => import('@/v2/components/career/CareerUpcomingTab'));
+const CareerGoalsTab = lazy(() => import('@/v2/components/career/CareerGoalsTab'));
+const CareerRankPanel = lazy(() => import('@/v2/components/career/CareerRankPanel'));
 
 const ABAS = [
   { value: CAREER_TAB.TIMELINE, label: tk('Linha do tempo'), icon: Route, dica: 'carreira-aba-linha-do-tempo' },
+  { value: CAREER_TAB.UPCOMING, label: tk('Próximos'), icon: CalendarClock, dica: 'carreira-aba-proximos' },
+  { value: CAREER_TAB.GOALS, label: tk('Metas'), icon: Flag, dica: 'carreira-aba-metas' },
   { value: CAREER_TAB.ACHIEVEMENTS, label: tk('Conquistas'), icon: Medal, dica: 'carreira-aba-conquistas' },
 ];
 
@@ -42,7 +48,7 @@ function Carreira() {
   const { user, userProfile } = useAuth();
   const [params, setParams] = useSearchParams();
   const aba = careerTabFromParam(params.get('aba'));
-  const linhaDoTempo = useCareerTimeline({ enabled: aba === CAREER_TAB.TIMELINE });
+  const linhaDoTempo = useCareerTimeline({ enabled: aba !== CAREER_TAB.ACHIEVEMENTS });
   const rascunho = useCareerSaveWithDraft();
   const [repetir, setRepetir] = useState(null);
   // O recém-registrado (ainda fora da lista, ou guardado sem sinal) abre a ficha mesmo assim.
@@ -53,7 +59,7 @@ function Carreira() {
     mexer(p);
     setParams(p, { replace: false });
   };
-  const abrirFicha = (id) => muda((p) => { p.set('evento', id); p.delete('registrar'); });
+  const abrirFicha = (id, local) => { if (local) setFichaLocal(local); muda((p) => { p.set('evento', id); p.delete('registrar'); }); };
   const fechar = (k) => muda((p) => p.delete(k));
 
   const eventoId = params.get('evento');
@@ -125,6 +131,21 @@ function Carreira() {
           onRegister={() => muda((p) => p.set('registrar', '1'))}
         />
       )}
+      {aba === CAREER_TAB.TIMELINE && !linhaDoTempo.isPending && (
+        <Suspense fallback={<V2Skeleton lines={2} />}>
+          <CareerRankPanel federationPoints={linhaDoTempo.federationPoints} onRetryPoints={linhaDoTempo.retry} />
+        </Suspense>
+      )}
+      {aba === CAREER_TAB.UPCOMING && (
+        <Suspense fallback={<V2Skeleton lines={4} />}>
+          <CareerUpcomingTab data={linhaDoTempo} save={rascunho.save} onOpenEvent={abrirFicha} onRegister={() => muda((p) => p.set('registrar', '1'))} />
+        </Suspense>
+      )}
+      {aba === CAREER_TAB.GOALS && (
+        <Suspense fallback={<V2Skeleton lines={4} />}>
+          <CareerGoalsTab data={linhaDoTempo} />
+        </Suspense>
+      )}
       {aba === CAREER_TAB.ACHIEVEMENTS && (
         <TrophyShelf uid={user?.uid} nome={userProfile?.platform_name || user?.displayName || ''} mine abaInicial={ABA_FORA} />
       )}
@@ -159,7 +180,7 @@ function Carreira() {
         {lista && <CareerListMode open onOpenChange={(v) => { if (!v) fechar('lista'); }} />}
       </Suspense>
       {/* Link para a ficha com a lista falhando: dizer por que ela não abriu. */}
-      {eventoId && !evento && aba === CAREER_TAB.TIMELINE && !linhaDoTempo.isPending && linhaDoTempo.events === undefined && (
+      {eventoId && !evento && aba !== CAREER_TAB.ACHIEVEMENTS && !linhaDoTempo.isPending && linhaDoTempo.events === undefined && (
         <V2ErrorState
           inline
           title={t('Não deu para abrir a ficha deste torneio')}

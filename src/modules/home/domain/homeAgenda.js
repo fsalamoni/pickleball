@@ -20,7 +20,7 @@
  * listas com `mergeAgenda` — e é ela que diz quando uma fonte FALHOU, porque
  * agenda vazia só pode ser afirmada com todas as fontes carregadas.
  */
-import { t, tk } from '@/core/i18n';
+import { t, tk, tn } from '@/core/i18n';
 import { formatDateShortBR } from '../../arenas/domain/calendar.js';
 import { bookingSlots, sortSlots } from '../../arenas/domain/booking.js';
 import { BOOKING_STATUS } from '../../arenas/domain/constants.js';
@@ -40,6 +40,7 @@ export const AGENDA_KIND = Object.freeze({
   AULA_ARENA: 'aula_arena',         // aula de arena em que estou matriculado
   JOGO_ABERTO: 'jogo_aberto',
   EVENTO_CLUBE: 'evento_clube',
+  CARREIRA: 'carreira',             // torneio de fora planejado (Minha carreira)
 });
 
 /** Rótulo curto do tipo, para o selo do item. */
@@ -52,6 +53,7 @@ export const AGENDA_KIND_LABEL = Object.freeze({
   [AGENDA_KIND.AULA_ARENA]: tk('Aula'),
   [AGENDA_KIND.JOGO_ABERTO]: tk('Jogo aberto'),
   [AGENDA_KIND.EVENTO_CLUBE]: tk('Clube'),
+  [AGENDA_KIND.CARREIRA]: tk('Planejado'),
 });
 
 /** Quanto tempo um compromisso sem hora de fim "dura", para sair da tela. */
@@ -299,6 +301,32 @@ export function agendaFromClubEvents(events = [], { agora = Date.now(), meusClub
       acao: st === INVITE_STATUS.INVITED,
       link: e.club_id ? `/clubes/${e.club_id}/eventos/${e.id}` : '/clubes',
       eventId: e.id,
+    });
+  }).filter(Boolean);
+}
+
+/**
+ * Os torneios de FORA planejados (Minha carreira, `career_events`): o dia
+ * inteiro, sem hora. Inscrição fechando em até 3 dias sem "Já me inscrevi"
+ * pede ação. O ligado a um torneio do PickleRush não entra (já vem pelos jogos).
+ */
+export function agendaFromCareerEvents(events = [], { agora = Date.now() } = {}) {
+  const hoje = hojeLocal(new Date(agora));
+  return (events || []).map((e) => {
+    if (!e?.id || e.status !== 'planned' || e.platform_tournament_id) return null;
+    const prazo = diaLocal(e.registration_deadline);
+    const dias = prazo ? diasAte(prazo, hoje) : null;
+    const fechando = !e.registered && dias !== null && dias >= 0 && dias <= 3;
+    return item({
+      key: `carreira:${e.id}`,
+      kind: AGENDA_KIND.CARREIRA,
+      dia: e.start_date,
+      agora,
+      title: str(e.name) || t('Torneio'),
+      subtitle: [e.city, e.state].filter(Boolean).join(' - '),
+      status: fechando ? (dias === 0 ? t('Inscrição fecha hoje') : tn(dias, 'Inscrição fecha em {n} dia', 'Inscrição fecha em {n} dias')) : (e.registered ? t('Inscrito') : null),
+      acao: fechando,
+      link: `/carreira?aba=proximos&evento=${encodeURIComponent(e.id)}`,
     });
   }).filter(Boolean);
 }

@@ -7,8 +7,9 @@
  * Tudo passa por `normalizeCareerEvent` antes de gravar (a regra é rasa).
  */
 import {
-  collection, deleteDoc, doc, getDocs, query, setDoc, where, writeBatch,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
+import { CAREER_RANK, normalizeCareerRank } from '../domain/careerRank.js';
 import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, storage } from '@/core/config/firebase';
@@ -78,6 +79,72 @@ export async function deleteCareerEvent(event) {
     // Balanço que não existe: a regra de delete olha `resource` (nulo) e recusa — ignorado.
     deleteDoc(doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id))).catch(() => {}),
   ]);
+}
+
+/* --------------------------------------------- "Mandar ao meu professor" -- */
+
+/**
+ * Mostra (ou deixa de mostrar, `coachId` nulo) o torneio — e o balanço dele —
+ * ao professor. Ato explícito. A regra confere o vínculo ATIVO e só deixa
+ * mandar a quem é professor da pessoa; o balanço que ainda não existe
+ * recebe o professor quando for feito (a ficha o passa ao salvar).
+ */
+export async function shareCareerWithCoach(event, coachId) {
+  if (!event?.id) throw new CareerError(t('Torneio inválido.'));
+  const uid = event.uid || String(event.id).split('_')[0];
+  const coach = coachId || null;
+  await updateDoc(doc(db, CAREER_EVENTS, event.id), { shared_coach_id: coach || deleteField(), updated_at_ms: Date.now() });
+  // Balanço que ainda não existe: nada a fazer (ele leva o professor ao ser feito).
+  // O que EXISTE e falha sobe — a tela não pode afirmar que o professor o vê.
+  const balanco = doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id));
+  const existe = await getDoc(balanco).then((s) => s.exists(), (err) => {
+    if (err?.code === 'permission-denied') return false; // inexistente: a regra olha `resource` nulo
+    throw err;
+  });
+  if (existe) await updateDoc(balanco, { shared_coach_id: coach || deleteField() });
+}
+
+/**
+ * O que os ALUNOS mandaram ao professor: torneios e balanços de torneio, de UM
+ * aluno. As consultas fixam `uid ==` do aluno e `shared_coach_id ==` o
+ * professor — é o que torna a regra (`hasActiveStudent`) provável. Vínculo
+ * encerrado ⇒ a regra recusa: a tela diz que o acesso fechou.
+ */
+export async function listStudentCareerShares(coachUid, studentUid) {
+  if (!db || !coachUid || !studentUid) return { events: [], debriefs: [] };
+  const filtro = [where('shared_coach_id', '==', coachUid), where('uid', '==', studentUid)];
+  const [evs, bal] = await Promise.all([
+    getDocs(query(collection(db, CAREER_EVENTS), ...filtro)),
+    getDocs(query(collection(db, CAREER_DEBRIEF_COLLECTION), ...filtro)),
+  ]);
+  return {
+    events: evs.docs.map((d) => withDerivedStatus(toDoc(d))).sort(porData),
+    debriefs: bal.docs.map(toDoc).filter((d) => d.source?.type === 'externo'),
+  };
+}
+
+/* ------------------------------------------------ posição no ranking -- */
+
+/** As posições digitadas da pessoa (`career_rank`, `uid ==`). */
+export async function listCareerRanks(uid) {
+  if (!db || !uid) return [];
+  const snap = await getDocs(query(collection(db, CAREER_RANK), where('uid', '==', uid)));
+  return snap.docs.map(toDoc).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
+/** Grava (cria ou substitui) uma posição digitada. */
+export async function saveCareerRank(uid, input) {
+  if (!uid) throw new CareerError(t('Entre na sua conta.'));
+  const { valid, error, value } = normalizeCareerRank(input, { uid });
+  if (!valid) throw new CareerError(error);
+  const id = input.id && String(input.id).startsWith(`${uid}_`) ? input.id : newCareerEventId(uid);
+  await setDoc(doc(db, CAREER_RANK, id), value);
+  return { id, ...value };
+}
+
+export async function deleteCareerRank(id) {
+  if (!id) return;
+  await deleteDoc(doc(db, CAREER_RANK, id));
 }
 
 /* ------------------------------------------------------------- a dupla -- */

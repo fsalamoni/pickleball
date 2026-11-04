@@ -56,7 +56,9 @@ export default function V2Settings() {
   const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const clubesOn = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
   // Categoria de aviso de funcionalidade desligada não aparece (nem conta).
-  const categoriaVisivel = (cat) => (cat.id !== 'training' || treinoOn) && (cat.id !== 'market' || mercadoOn);
+  const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
+  const categoriaVisivel = (cat) => (cat.id !== 'training' || treinoOn) && (cat.id !== 'market' || mercadoOn)
+    && (cat.id !== 'career' || carreiraOn);
   // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) e
   // `/configuracoes#minha-regiao` caem no cartão certo.
   useHashScroll();

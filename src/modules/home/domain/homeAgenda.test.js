@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   AGENDA_KIND, agendaFromTournamentMatches, agendaFromGameDays, agendaFromBookings,
   agendaFromLessons, agendaFromArenaEnrollments, agendaFromOpenSlots, agendaFromClubEvents,
-  mergeAgenda, groupAgendaByDay, agendaDayLabel, countToday, juntarEventosAosDias,
+  mergeAgenda, groupAgendaByDay, agendaDayLabel, countToday, juntarEventosAosDias, agendaFromCareerEvents,
 } from './homeAgenda.js';
 
 // Sábado, 26/09/2026, 15:00 (hora local).
@@ -187,5 +187,20 @@ describe('mergeAgenda / groupAgendaByDay', () => {
     expect(agendaDayLabel(HOJE, HOJE)).toBe('Hoje');
     expect(agendaDayLabel('2026-09-27', HOJE)).toBe('Amanhã');
     expect(agendaDayLabel('2026-09-29', HOJE)).toBe('Ter, 29/09');
+  });
+});
+
+describe('agendaFromCareerEvents (Minha carreira)', () => {
+  it('o planejado de fora entra; prazo perto sem inscrição pede ação; ligado ao PickleRush, jogado e passado não', () => {
+    const r = agendaFromCareerEvents([
+      { id: 'u_a', status: 'planned', name: 'Open Sul', start_date: '2026-10-10', city: 'Curitiba', state: 'PR', registration_deadline: '2026-09-28' },
+      { id: 'u_b', status: 'planned', name: 'Copa', start_date: '2026-10-12', registration_deadline: '2026-09-27', registered: true },
+      { id: 'u_c', status: 'planned', name: 'Ligado', start_date: '2026-10-12', platform_tournament_id: 't1' },
+      { id: 'u_d', status: 'played', name: 'Jogado', start_date: '2026-10-12' },
+      { id: 'u_e', status: 'planned', name: 'Passado', start_date: '2026-09-20' },
+    ], ctx);
+    expect(r.map((i) => i.key)).toEqual(['carreira:u_a', 'carreira:u_b']);
+    expect(r[0]).toMatchObject({ kind: AGENDA_KIND.CARREIRA, acao: true, status: 'Inscrição fecha em 2 dias', link: '/carreira?aba=proximos&evento=u_a' });
+    expect(r[1]).toMatchObject({ acao: false, status: 'Inscrito' });
   });
 });

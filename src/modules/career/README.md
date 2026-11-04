@@ -15,12 +15,17 @@ career/
 │   ├── careerDebrief.js # torneio de fora → origem `externo` do balanço (sem importar debrief.js)
 │   ├── careerPartner.js # a DUPLA (PR 3): citação, impressão, maioridade, visão, selo,
 │   │                    # pendências, voz no balanço, espelho, "com quem já jogou"
+│   ├── careerUpcoming.js # PR 4: descoberta, plano, contagem, prazo, ICS, foco sugerido, pendências
+│   ├── careerGoals.js  # PR 4: métricas das metas da temporada e de onde cada uma conta
+│   ├── careerRank.js   # PR 4: posição no ranking (digitada × oficial), séries e tendência
 │   └── seasonRecap.js  # retrospectiva da temporada (zero banco): quando oferecer, parceria do ano
 ├── services/
-│   ├── careerService.js        # career_events + Storage carreira/{uid}/ + career_partner (ler) + callable `career`
+│   ├── careerService.js        # career_events + career_rank + Storage carreira/{uid}/ + career_partner (ler) + callable `career` + "mandar ao professor"
 │   └── careerExportService.js  # o bloco `career` da exportação de dados
 ├── hooks/useCareer.js  # useCareerEvents, useCareerTimeline, mutações, useCareerSaveWithDraft,
-│                       # useCareerPartners, useCareerPartnerVoices, useCareerPartnerAction, useCareerModerationQueue
+│                       # useCareerPartners, useCareerPartnerVoices, useCareerPartnerAction, useCareerModerationQueue,
+│                       # PR 4: useCareerRanks, useOfficialRanks, useSaveCareerRank, useDeleteCareerRank,
+│                       # useShareCareerWithCoach, useStudentCareerShares, useFederationAgendaForMe
 └── i18n/locales/       # en.js, es.js
 ```
 
@@ -32,7 +37,12 @@ a retrospectiva é o `MedalCardDialog` com `season`; a aba "Fora da plataforma" 
 ficha e os pedidos que chegaram, no topo da linha do tempo), o seletor único
 `v2/components/people/PartnerPicker.jsx` e a fila do admin
 `v2/components/admin/career/AdminCareerModeration.jsx`. Servidor:
-`functions/career.js` (+ `careerPolicy.js`, com paridade).
+`functions/career.js` (+ `careerPolicy.js`, com paridade; PR 4: a varredura
+`careerReminders`). PR 4: abas `CareerUpcomingTab` (`?aba=proximos`) e
+`CareerGoalsTab` (`?aba=metas`), `CareerPlanFields` (plano, "Como foi?" e
+"Mandar ao meu professor" na ficha), `CareerRankPanel` (linha do tempo),
+`CoachStudentCareer` (Centro de Treino → Alunos) e `HomeCareerCard` (card
+Carreira do início).
 
 ## O que não pode regredir
 
@@ -58,3 +68,8 @@ ficha e os pedidos que chegaram, no topo da linha do tempo), o seletor único
     em `career_partner_reports` (fora do pedido: o denunciado não a lê) e
     editar a visão denunciada é recusado.
 11. O seletor de dupla é UM (`PartnerPicker`, o da inscrição de torneio).
+12. Plano, metas e posição anotada nunca pontuam; Oficial e Declarado
+    nunca dividem a linha do gráfico; "Pôr no meu plano" nunca grava sozinho.
+13. O professor só lê o que foi MANDADO, com vínculo ATIVO (`coachSees`).
+14. Os avisos D-3/D+1 são do servidor, com id determinístico, e a categoria
+    Carreira existe nas duas cópias das preferências.

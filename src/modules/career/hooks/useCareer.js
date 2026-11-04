@@ -11,15 +11,19 @@ import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreferen
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useTrophies } from '@/modules/trophies/hooks/useTrophies';
 import { usePublishedGameDayGames } from '@/modules/games/hooks/usePublishedGameDayGames';
-import { listMyFederationPoints } from '@/modules/federations/services/federationService';
+import {
+  getFederationRanking, listFederationEvents, listMyFederationPoints, listMyMemberships,
+} from '@/modules/federations/services/federationService';
+import { officialRankPoints } from '../domain/careerRank.js';
 import { buildCareerTimeline } from '../domain/timeline.js';
 import { newCareerEventId, normalizeCareerEvent } from '../domain/careerEvent.js';
 import {
   CAREER_PENDING_PREF, addPending, parsePending, removePending, serializePending,
 } from '../domain/draftQueue.js';
 import {
-  CareerError, careerAction, deleteCareerEvent, listCareerEvents, listMyCareerPartnerDocs,
-  saveCareerEvent, saveCareerEventsBatch,
+  CareerError, careerAction, deleteCareerEvent, deleteCareerRank, listCareerEvents, listCareerRanks,
+  listMyCareerPartnerDocs, listStudentCareerShares, saveCareerEvent, saveCareerEventsBatch, saveCareerRank,
+  shareCareerWithCoach,
 } from '../services/careerService.js';
 import { partnerVoices } from '../domain/careerPartner.js';
 
@@ -32,6 +36,12 @@ export const careerKeys = Object.freeze({
   // pontos. Não importamos aquele arquivo para não puxar a federação inteira
   // para a estante de troféus.
   officialPoints: (uid) => ['federacoes', 'meus-pontos', uid],
+  // A MESMA de `fedKeys.myMemberships` (cache compartilhado com o card do início).
+  myMemberships: (uid) => ['federacoes', 'minhas-filiacoes', uid],
+  ranks: (uid) => ['career', 'ranks', uid],
+  officialRanks: (uid, pares) => ['career', 'official-ranks', uid, pares],
+  studentShares: (coach, student) => ['career', 'student-shares', coach, student],
+  fedAgenda: (ids) => ['career', 'fed-agenda', ids],
 });
 
 /** Prazo para o servidor confirmar a gravação; passou, vale o rascunho no aparelho. */
@@ -155,8 +165,127 @@ export function useCareerTimeline({ enabled = true } = {}) {
     // Os pódios da plataforma (com a dupla): a retrospectiva da temporada acha a melhor parceria.
     trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
     partners: partnersQ.isSuccess ? partnersQ.data : undefined,
+    // Os lançamentos oficiais: de que federações sair a posição oficial no ranking.
+    federationPoints: pointsQ.isSuccess ? pointsQ.data : undefined,
     partnersError: partnersQ.isError,
     retryPartners: () => partnersQ.refetch(),
+  };
+}
+
+/* ------------------------------------------- posição no ranking (PR 4) -- */
+
+/** As posições digitadas (`career_rank`). */
+export function useCareerRanks({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: careerKeys.ranks(user?.uid),
+    queryFn: () => listCareerRanks(user?.uid),
+    enabled: Boolean(user?.uid) && enabled,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * As posições OFICIAIS, sem digitar: das federações e temporadas em que a
+ * pessoa tem pontos lançados, lê o ranking que o servidor grava. Cada ranking
+ * falha sozinho (`incompleto`). `points` indefinido = os lançamentos não
+ * carregaram (a consulta nem sai).
+ */
+export function useOfficialRanks(points, { enabled = true } = {}) {
+  const { user } = useAuth();
+  const pares = useMemo(() => {
+    const m = new Map();
+    (points || []).filter((p) => p?.federation_id && p.status !== 'cancelled' && Number(p.season)).forEach((p) => {
+      m.set(`${p.federation_id}_${p.season}`, { federation_id: p.federation_id, acronym: p.federation_acronym || '', season: Number(p.season) });
+    });
+    return [...m.values()].slice(0, 12);
+  }, [points]);
+  return useQuery({
+    queryKey: careerKeys.officialRanks(user?.uid, pares.map((p) => `${p.federation_id}_${p.season}`).join(',')),
+    queryFn: async () => {
+      const res = await Promise.allSettled(pares.map(async (p) => ({ ...p, doc: await getFederationRanking(p.federation_id, p.season) })));
+      return {
+        points: officialRankPoints(res.filter((r) => r.status === 'fulfilled').map((r) => r.value), user?.uid),
+        incompleto: res.some((r) => r.status === 'rejected'),
+      };
+    },
+    enabled: Boolean(user?.uid) && enabled && Array.isArray(points),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSaveCareerRank() {
+  const { user } = useAuth();
+  const invalidar = useInvalidar();
+  return useMutation({ mutationFn: (input) => saveCareerRank(user?.uid, input), onSuccess: invalidar });
+}
+
+export function useDeleteCareerRank() {
+  const invalidar = useInvalidar();
+  return useMutation({ mutationFn: (id) => deleteCareerRank(id), onSuccess: invalidar });
+}
+
+/* ------------------------------------------ "Mandar ao meu professor" -- */
+
+export function useShareCareerWithCoach() {
+  const invalidar = useInvalidar();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ event, coachId }) => shareCareerWithCoach(event, coachId),
+    onSuccess: () => { invalidar(); qc.invalidateQueries({ queryKey: ['treino', 'balanco'] }); },
+  });
+}
+
+/** O que UM aluno mandou ao professor (só quando o professor abre o aluno). */
+export function useStudentCareerShares(coachUid, studentUid, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: careerKeys.studentShares(coachUid, studentUid),
+    queryFn: () => listStudentCareerShares(coachUid, studentUid),
+    enabled: Boolean(coachUid && studentUid) && enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/* --------------------------------------------- a descoberta (PR 4) -- */
+
+/**
+ * A agenda pública das federações em que a pessoa é filiada (uma consulta
+ * por federação, cada uma falha sozinha). `undefined` em `data.events`
+ * quando as filiações não carregaram.
+ */
+export function useFederationAgendaForMe({ enabled = true } = {}) {
+  const { user } = useAuth();
+  const memb = useQuery({
+    queryKey: careerKeys.myMemberships(user?.uid),
+    queryFn: () => listMyMemberships(user?.uid),
+    enabled: Boolean(user?.uid) && enabled,
+    staleTime: 5 * 60_000,
+  });
+  const feds = useMemo(() => {
+    const m = new Map();
+    // Filiação cancelada ou recusada não é "a minha federação".
+    (memb.data || []).forEach((x) => { if (x?.federation_id && !['cancelled', 'rejected'].includes(x.status)) m.set(x.federation_id, { name: x.federation_name || '', acronym: x.federation_acronym || '' }); });
+    return m;
+  }, [memb.data]);
+  const ids = [...feds.keys()].slice(0, 10);
+  const agenda = useQuery({
+    queryKey: careerKeys.fedAgenda(ids.join(',')),
+    queryFn: async () => {
+      const res = await Promise.allSettled(ids.map((id) => listFederationEvents(id, 'public')));
+      return { events: res.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value), incompleto: res.some((r) => r.status === 'rejected') };
+    },
+    enabled: Boolean(user?.uid) && enabled && memb.isSuccess && ids.length > 0,
+    staleTime: 5 * 60_000,
+  });
+  const semFiliacao = memb.isSuccess && ids.length === 0;
+  return {
+    isPending: enabled && (memb.isPending || (!semFiliacao && agenda.isPending)),
+    isError: memb.isError || agenda.isError,
+    incompleto: Boolean(agenda.data?.incompleto),
+    events: semFiliacao ? [] : (agenda.isSuccess ? agenda.data.events : undefined),
+    federations: Object.fromEntries(feds),
+    retry: () => { if (memb.isError) memb.refetch(); if (agenda.isError || agenda.data?.incompleto) agenda.refetch(); },
   };
 }
 

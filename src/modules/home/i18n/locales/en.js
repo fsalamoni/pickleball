@@ -280,6 +280,8 @@ export default {
   "Convite sem resposta": "Invitation not answered",
   "convites": "invitations",
   "Convites de dupla e respostas dos parceiros.": "Pair invitations and partners' answers.",
+  "Carreira": "Career",
+  "Minha carreira: a dupla que confirma, o prazo de inscrição que vai fechar e o \"como foi?\" depois do torneio.": "My career: the partner who confirms, the registration deadline about to close and the \"how did it go?\" after the tournament.",
   "Convites para responder": "Invitations to answer",
   "Convites, pedidos de ingresso, aprovações e novos eventos de clube.": "Invitations, join requests, approvals and new club events.",
   "Convites, respostas de reserva, resultados e novidades dos seus clubes chegam aqui.": "Invitations, booking replies, results and news from your clubs arrive here.",

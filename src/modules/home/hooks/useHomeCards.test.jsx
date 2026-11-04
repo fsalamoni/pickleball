@@ -82,7 +82,7 @@ describe('flags', () => {
   it('o início sob medida vale sempre, e o contexto oferece todos os cards (funcionalidades permanentes)', () => {
     montar(<Flags />);
     expect(vistos.on).toBe(true);
-    expect(vistos.ctx).toEqual({ evolucao: true, treino: true, mercado: false, federacao: false, associacaoClube: false });
+    expect(vistos.ctx).toEqual({ evolucao: true, treino: true, mercado: false, federacao: false, associacaoClube: false, carreira: false });
     estado.flags = { marketplace: true };
     montar(<Flags />);
     expect(vistos.ctx.mercado).toBe(true);

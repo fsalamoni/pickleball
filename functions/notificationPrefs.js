@@ -21,7 +21,8 @@ const CATEGORY_TYPES = Object.freeze({
     'club_event_published',
   ],
   tournaments: ['tournament_open', 'tournament_announcement'],
-  partners: ['partner_invite', 'partner_response', 'career'],
+  partners: ['partner_invite', 'partner_response'],
+  career: ['career'],
   training: ['training_share', 'training_review', 'training_comment', 'training_question', 'training_answer'],
   market: ['market'],
   federations: ['federation'],
@@ -45,7 +46,10 @@ function categoryOfType(type) {
 function isNotificationMuted(prefs, type) {
   const cat = categoryOfType(type);
   if (!cat) return false;
-  return Boolean(prefs) && typeof prefs === 'object' && prefs[cat] === false;
+  if (!prefs || typeof prefs !== 'object') return false;
+  // "Carreira" saiu de "Parcerias de dupla" (PR 4): sem escolha própria, herda a de lá.
+  if (cat === 'career' && typeof prefs.career !== 'boolean') return prefs.partners === false;
+  return prefs[cat] === false;
 }
 
 /* ------------------------------------------------ a ÁREA do aviso ------ */

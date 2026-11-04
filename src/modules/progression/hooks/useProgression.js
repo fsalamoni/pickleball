@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getPlayerH2HRecords } from '@/modules/rating/services/headToHeadService';
-import { createGoal, listGoals, deleteGoal } from '../services/goalService.js';
+import { createGoal, listGoals, deleteGoal, updateGoal } from '../services/goalService.js';
 
 /**
  * Os registros de confronto de torneio do atleta (`{ opponent, won, at, ... }`).
@@ -36,6 +36,16 @@ export function useCreateGoal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input) => createGoal(input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['player-goals', user?.uid] }),
+  });
+}
+
+/** Concluir, abandonar ou ajustar a meta da temporada. */
+export function useUpdateGoal() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goal, patch }) => updateGoal(goal, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['player-goals', user?.uid] }),
   });
 }

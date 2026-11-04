@@ -479,4 +479,73 @@ async function eventWritten(ctx, eventId, before, after) {
   return { escritas };
 }
 
-module.exports = { career, eventWritten, ACOES };
+/* ---------------------------------------------- lembretes do planejado -- */
+
+const somaDias = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+
+/**
+ * Varredura diária (`careerReminders`): D-3 do prazo de inscrição de quem
+ * ainda não marcou "Já me inscrevi", e D+1 do torneio PLANEJADO ("Como foi?").
+ * Uma igualdade por consulta (zero índice); o resto em memória. Id do aviso
+ * DETERMINÍSTICO: rodar de novo no mesmo dia não repete o aviso.
+ */
+async function reminders(ctx) {
+  if (!(await flagLigada(ctx))) return { avisos: 0, desligada: true };
+  const { db } = ctx;
+  const hoje = hojeBR(ctx.now);
+  const ontem = somaDias(hoje, -1);
+  const [prazo, fimOntem, inicioOntem] = await Promise.all([
+    db.collection(EV).where('registration_deadline', '==', somaDias(hoje, 3)).get(),
+    db.collection(EV).where('end_date', '==', ontem).get(),
+    db.collection(EV).where('start_date', '==', ontem).get(),
+  ]);
+  const planejado = (d) => d.status === 'planned' && d.uid;
+  const fila = [];
+  prazo.docs.forEach((doc) => {
+    const d = doc.data();
+    if (!planejado(d) || d.registered === true) return;
+    fila.push({
+      id: `carreira_prazo_${doc.id}_${d.registration_deadline}`, uid: d.uid,
+      title: tx('A inscrição fecha em 3 dias'),
+      message: tx('{torneio}: se ainda vai jogar, garanta a inscrição.', { torneio: texto(d.name, 120) }),
+      link: `/carreira?aba=proximos&evento=${encodeURIComponent(doc.id)}`,
+    });
+  });
+  const vistos = new Set();
+  [...fimOntem.docs, ...inicioOntem.docs.filter((doc) => !doc.data().end_date)].forEach((doc) => {
+    const d = doc.data();
+    // O plano de um torneio do PickleRush (`origin_ref: 'tor:…'`) não pergunta: vale o oficial.
+    if (!planejado(d) || vistos.has(doc.id) || String(d.origin_ref || '').startsWith('tor:')) return;
+    vistos.add(doc.id);
+    fila.push({
+      id: `carreira_d1_${doc.id}`, uid: d.uid,
+      title: tx('Como foi o {torneio}?', { torneio: texto(d.name, 120) }),
+      message: d.focus_aspect
+        ? tx('Conte o resultado e se o foco que você escolheu funcionou.')
+        : tx('Conte o resultado: a carreira guarda o que você jogou.'),
+      link: linkDoEvento(doc.id),
+    });
+  });
+  let avisos = 0;
+  for (let i = 0; i < fila.length; i += 200) {
+    const lote = fila.slice(i, i + 200);
+    const existe = await Promise.all(lote.map((a) => db.collection('notifications').doc(a.id).get()));
+    const batch = db.batch();
+    let n = 0;
+    lote.forEach((a, j) => {
+      if (existe[j].exists) return;
+      const i18n = i18nDoAviso({ title: a.title, message: a.message });
+      batch.set(db.collection('notifications').doc(a.id), {
+        user_id: a.uid, title: textoDoAviso(a.title), message: textoDoAviso(a.message), ...(i18n ? { i18n } : {}),
+        type: 'career', link: P.linkDeAviso(a.link), read: false, archived: false, origin: 'server',
+        created_at: ctx.Timestamp.fromMillis(ctx.now),
+      });
+      n += 1;
+    });
+    if (n) await batch.commit();
+    avisos += n;
+  }
+  return { avisos };
+}
+
+module.exports = { career, eventWritten, reminders, ACOES };

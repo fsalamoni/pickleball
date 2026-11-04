@@ -75,8 +75,59 @@ export const GOAL_METRIC_LABELS = Object.freeze({
   [GOAL_METRIC.RATING]: tk('Rating'),
 });
 
-/** Normaliza/valida o input de uma meta. */
+/**
+ * META DA TEMPORADA (Minha carreira, docs/54 §4.10): a meta com `kind`.
+ * As antigas (sem `kind`) seguem idênticas — `{ metric, target }`, contadores
+ * de toda a vida. Valores GRAVADOS: nunca renomeie.
+ */
+export const GOAL_KIND = Object.freeze({ OUTCOME: 'outcome', PROCESS: 'process' });
+export const GOAL_STATUS = Object.freeze({ ACTIVE: 'active', DONE: 'done', DROPPED: 'dropped' });
+/** Métricas da carreira: contam DATAS na janela da meta (`since` → `due_date`). */
+export const SEASON_GOAL_METRIC = Object.freeze({
+  CAREER_EVENTS_PLAYED: 'career_events_played',
+  CAREER_PODIUMS: 'career_podiums',
+  FEDERATED_EVENTS: 'federated_events',
+  DUPR_RATING: 'dupr_rating',
+});
+export const GOAL_LIMITS = Object.freeze({ title: 120, ifThen: 200 });
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const TODAS_AS_METRICAS = new Set([...Object.values(GOAL_METRIC), ...Object.values(SEASON_GOAL_METRIC)]);
+/** Métricas de NÍVEL (um número de agora, não uma contagem): a janela não se aplica. */
+const METRICA_DE_NIVEL = new Set([GOAL_METRIC.RATING, SEASON_GOAL_METRIC.DUPR_RATING]);
+const txtMeta = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+function normalizeSeasonGoal(input) {
+  const errors = {};
+  const kind = input.kind === GOAL_KIND.PROCESS ? GOAL_KIND.PROCESS : GOAL_KIND.OUTCOME;
+  const title = txtMeta(input.title, GOAL_LIMITS.title);
+  if (!title) errors.title = t('Dê um nome à meta.');
+  const since = ISO.test(String(input.since || '')) ? input.since : null;
+  const due = ISO.test(String(input.due_date || '')) ? input.due_date : null;
+  if (!due) errors.due_date = t('Escolha o prazo da meta.');
+  else if (since && due < since) errors.due_date = t('O prazo vem depois do início.');
+  const value = {
+    kind, title, since, due_date: due,
+    status: Object.values(GOAL_STATUS).includes(input.status) ? input.status : GOAL_STATUS.ACTIVE,
+  };
+  const ifThen = txtMeta(input.if_then, GOAL_LIMITS.ifThen);
+  if (ifThen) value.if_then = ifThen;
+  if (typeof input.aspect_id === 'string' && /^[a-z_]{2,40}$/.test(input.aspect_id)) value.aspect_id = input.aspect_id;
+  if (kind === GOAL_KIND.PROCESS) {
+    value.progress_manual = Math.max(0, Math.min(100, Math.round(Number(input.progress_manual) || 0)));
+  } else if (TODAS_AS_METRICAS.has(input.metric)) {
+    value.metric = input.metric;
+    const alvo = Number(input.target);
+    if (!Number.isFinite(alvo) || alvo <= 0) errors.target = t('Defina um alvo maior que zero.');
+    // Rating tem casas decimais; contagem é inteira.
+    value.target = METRICA_DE_NIVEL.has(input.metric) ? Math.round(alvo * 1000) / 1000 : Math.max(1, Math.floor(alvo || 0));
+  }
+  return { valid: Object.keys(errors).length === 0, errors, value };
+}
+
+/** Normaliza/valida o input de uma meta. Com `kind` é a meta da temporada; sem, a de sempre. */
 export function normalizeGoalInput(input = {}) {
+  if (input.kind) return normalizeSeasonGoal(input);
   const metric = Object.values(GOAL_METRIC).includes(input.metric) ? input.metric : GOAL_METRIC.GAMES;
   const target = Math.max(1, Math.floor(Number(input.target) || 0));
   const errors = {};
@@ -84,10 +135,39 @@ export function normalizeGoalInput(input = {}) {
   return { valid: Object.keys(errors).length === 0, errors, value: { metric, target } };
 }
 
-/** Progresso de uma meta dado os valores atuais do jogador. */
+/**
+ * Progresso de uma meta dado os valores atuais do jogador.
+ *
+ * Meta antiga: `values[metric]` é o contador de toda a vida (igual a sempre).
+ * Meta da temporada: a de PROCESSO usa `progress_manual` (0–100); a de
+ * resultado conta só as DATAS (`values[metric]` = lista `AAAA-MM-DD`) dentro
+ * da janela `since` → `due_date`. Valor que não veio (fonte que falhou) ⇒
+ * `unknown: true` — nunca vira zero. Concluída à mão ⇒ `done`; abandonada ⇒
+ * `dropped` (não é falha: só sai das ativas).
+ */
 export function goalProgress(goal, values = {}) {
-  const current = Number(values[goal.metric]) || 0;
+  if (!goal?.kind) {
+    const current = Number(values[goal.metric]) || 0;
+    const target = Number(goal.target) || 0;
+    const ratio = target > 0 ? Math.min(current / target, 1) : 0;
+    return { current, target, ratio, done: current >= target && target > 0 };
+  }
+  const marcado = { done: goal.status === GOAL_STATUS.DONE, dropped: goal.status === GOAL_STATUS.DROPPED };
+  if (goal.kind === GOAL_KIND.PROCESS) {
+    const current = Number(goal.progress_manual) || 0;
+    return { current, target: 100, ratio: current / 100, unknown: false, ...marcado, done: marcado.done || current >= 100 };
+  }
+  if (!goal.metric) return { current: null, target: null, ratio: marcado.done ? 1 : 0, unknown: false, manual: true, ...marcado };
   const target = Number(goal.target) || 0;
+  const v = values[goal.metric];
+  let current;
+  if (Array.isArray(v)) {
+    current = v.filter((d) => ISO.test(String(d)) && (!goal.since || d >= goal.since) && (!goal.due_date || d <= goal.due_date)).length;
+  } else if (METRICA_DE_NIVEL.has(goal.metric) && Number.isFinite(Number(v)) && v !== null && v !== '') {
+    current = Number(v);
+  } else {
+    return { current: null, target, ratio: 0, unknown: true, ...marcado };
+  }
   const ratio = target > 0 ? Math.min(current / target, 1) : 0;
-  return { current, target, ratio, done: current >= target && target > 0 };
+  return { current, target, ratio, unknown: false, ...marcado, done: marcado.done || (current >= target && target > 0) };
 }

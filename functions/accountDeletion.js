@@ -162,6 +162,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'follows', field: 'target_uid', label: 'Quem o segue' },
   { col: 'player_goals', field: 'uid', label: 'Metas pessoais' },
   { col: 'career_events', field: 'uid', label: 'Torneios de fora (Minha carreira)' },
+  { col: 'career_rank', field: 'uid', label: 'Posições anotadas no ranking (Minha carreira)' },
   { col: 'career_partner', field: 'owner_uid', label: 'Confirmações da dupla (Minha carreira)' },
   { col: 'career_partner', field: 'partner_uid', label: 'Confirmações da dupla (Minha carreira)' },
   { col: 'career_partner_reports', field: 'owner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },

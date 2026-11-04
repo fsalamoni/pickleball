@@ -97,7 +97,7 @@ export function useDebriefActions(uid) {
   const qc = useQueryClient();
   const inv = () => qc.invalidateQueries({ queryKey: trainingKeys.debriefs(uid) });
   return {
-    save: useMutation({ mutationFn: ({ input, suggestion }) => saveDebrief(uid, input, { suggestion }), onSuccess: inv }),
+    save: useMutation({ mutationFn: ({ input, suggestion, sharedCoachId }) => saveDebrief(uid, input, { suggestion, sharedCoachId }), onSuccess: inv }),
     skip: useMutation({ mutationFn: (source) => skipDebrief(uid, source), onSuccess: inv }),
     applied: useMutation({ mutationFn: ({ id, ...rest }) => markDebriefApplied(id, rest), onSuccess: inv }),
     remove: useMutation({ mutationFn: deleteDebrief, onSuccess: inv }),

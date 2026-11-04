@@ -546,6 +546,15 @@ export const PONTOS_DE_DICA = Object.freeze([
     flags: ['athlete_career'],
   },
   {
+    id: 'carreira:descoberta',
+    route: '/carreira',
+    target: 'carreira-descoberta',
+    title: tk('Para pôr no plano'),
+    body: tk('Torneios da agenda das suas federações, os chancelados e os públicos do PickleRush, na sua região. Nada entra no plano sem o seu toque.'),
+    guide: 'carreira-planejar',
+    flags: ['athlete_career'],
+  },
+  {
     id: 'federacao:filiar',
     route: '/federacoes/*',
     target: 'federacao-filiar',

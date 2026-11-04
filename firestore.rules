@@ -567,9 +567,26 @@ service cloud.firestore {
     function careerOn() {
       return gd('platform_settings/global').get('feature_flags', {}).get('athlete_career', false) == true;
     }
+    // O dono grava o próprio (`{uid}_…`, com a flag). Usado por `career_events`
+    // e `career_rank`.
+    function careerW(id) {
+      return isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
+    }
+    // "Mandar ao meu professor" (PR 4): o professor ATIVO lê o torneio que o
+    // aluno lhe mandou (`coachSees`/`coachOk`, o desenho do diário de treino).
     match /career_events/{id} {
+      allow read: if isOwner(od().uid) || coachSees();
+      allow delete: if isOwner(od().uid);
+      allow create, update: if careerW(id) && coachOk();
+      // Deixar de mostrar ao professor vale mesmo com a flag desligada (como apagar):
+      // a leitura do professor não depende da flag, então tirá-la não pode depender.
+      allow update: if isOwner(od().uid) && chg().hasOnly(['shared_coach_id', 'updated_at_ms'])
+        && ng('shared_coach_id', null) == null;
+    }
+    // A posição no ranking da federação (digitada): só o dono lê e escreve.
+    match /career_rank/{id} {
       allow read, delete: if isOwner(od().uid);
-      allow create, update: if isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
+      allow create, update: if careerW(id);
     }
     // A DUPLA confirma e comenta (`{evento}__{dupla}`): escrita de TERCEIRO, só
     // o servidor grava (`functions/career.js`). Lê quem registrou e quem foi
@@ -4300,30 +4317,35 @@ service cloud.firestore {
           && hasActiveStudent(me(), gd('training_sessions/' + sid).uid))
       );
     }
+    // "Mostrar/Mandar ao professor" (`shared_coach_id`), o mesmo desenho em
+    // `training_sessions`, `training_debriefs` e `career_events`:
+    //  - coachSees: o professor lê o que o aluno lhe mandou, só com o vínculo
+    //    ATIVO (a consulta dele fixa `uid ==` do aluno e `shared_coach_id ==`
+    //    ele mesmo). Vínculo encerrado ⇒ fecha sozinho;
+    //  - coachOk: quem grava só manda a quem é professor ATIVO dele; manter o
+    //    mesmo professor vale sempre (editar não trava com o vínculo encerrado).
+    function coachSees() {
+      return og('shared_coach_id', null) == me() && hasActiveStudent(me(), od().uid);
+    }
+    function coachOk() {
+      return ng('shared_coach_id', null) == null
+        || (resource != null && ng('shared_coach_id', null) == og('shared_coach_id', null))
+        || hasActiveStudent(nd().shared_coach_id, me());
+    }
     match /training_sessions/{sessionId} {
-      allow read: if isAuthed() && (
-        od().uid == me()
-        || (og('shared_coach_id', null) == me()
-          && hasActiveStudent(me(), od().uid))
-        || adm()
-      );
+      allow read: if isOwner(od().uid) || coachSees() || adm();
       allow create: if isAuthed()
         && nd().uid == me()
         && trainingSessionShapeOk(nd())
         && ng('coach_confirmed_at', null) == null
-        && (ng('shared_coach_id', null) == null
-          || hasActiveStudent(nd().shared_coach_id, me()));
+        && coachOk();
       allow update: if isAuthed() && (
         (od().uid == me()
           && nd().uid == od().uid
           && trainingSessionShapeOk(nd())
           && ng('coach_confirmed_at', null) == og('coach_confirmed_at', null)
-          && (ng('shared_coach_id', null) == null
-            || ng('shared_coach_id', null) == og('shared_coach_id', null)
-            || hasActiveStudent(nd().shared_coach_id, me())))
-        || (og('shared_coach_id', null) == me()
-          && hasActiveStudent(me(), od().uid)
-          && chg().hasOnly(['coach_confirmed_at', 'updated_at']))
+          && coachOk())
+        || (coachSees() && chg().hasOnly(['coach_confirmed_at', 'updated_at']))
       );
       allow delete: if (isOwner(od().uid) || adm());
 
@@ -4386,7 +4408,7 @@ service cloud.firestore {
     // moram no evento.
     function trainingDebriefShapeOk(d) {
       return d.keys().hasOnly(['uid', 'source', 'status', 'rating', 'strengths', 'weaknesses', 'evolution',
-          'body', 'mind', 'note', 'suggestion', 'applied', 'created_at', 'updated_at'])
+          'body', 'mind', 'note', 'suggestion', 'applied', 'created_at', 'updated_at', 'shared_coach_id'])
         && d.status in ['respondido', 'dispensado']
         && d.source is map
         && d.source.keys().hasOnly(['type', 'ref_id', 'title', 'date', 'games', 'wins'])
@@ -4403,12 +4425,15 @@ service cloud.firestore {
           || (d.suggestion is map && d.suggestion.get('item_ids', []) is list && d.suggestion.get('item_ids', []).size() <= 16))
         && (d.get('applied', null) == null || d.applied is map);
     }
+    // "Mandar ao meu professor" (Minha carreira, PR 4): o balanço do torneio
+    // vai junto com o torneio — `coachSees`/`coachOk`, como no diário.
     match /training_debriefs/{debriefId} {
-      allow read: if (isOwner(od().uid) || adm());
+      allow read: if isOwner(od().uid) || adm() || coachSees();
       allow create, update: if isAuthed()
         && nd().uid == me()
         && debriefId.matches(me() + '_.+')
-        && trainingDebriefShapeOk(nd());
+        && trainingDebriefShapeOk(nd())
+        && coachOk();
       allow delete: if (isOwner(od().uid) || adm());
     }
 

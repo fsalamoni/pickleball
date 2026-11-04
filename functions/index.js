@@ -2098,3 +2098,16 @@ exports.careerEventWritten = onDocumentWritten(
     }
   },
 );
+
+/** Todo dia às 9h: D-3 do prazo de inscrição e D+1 do torneio planejado ("Como foi?"). Sem a flag, nada. */
+exports.careerReminders = onSchedule(
+  { schedule: '0 9 * * *', timeZone: 'America/Sao_Paulo', region: REGION },
+  async () => {
+    try {
+      const r = await career.reminders(fedCtx());
+      logger.info('careerReminders', r);
+    } catch (err) {
+      logger.error('careerReminders: erro.', err);
+    }
+  },
+);

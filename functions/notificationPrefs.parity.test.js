@@ -37,6 +37,8 @@ const PREFS = [
   Object.fromEntries(NOTIFICATION_CATEGORIES.map((c) => [c.id, true])),
   { training: 'false', social: 0, clubs: null },
   { categoria_inventada: false },
+  { partners: false, career: true },
+  { partners: true, career: false },
 ];
 
 const LINKS = [
@@ -66,6 +68,15 @@ describe('paridade: a categoria e o silêncio', () => {
 
   it('a categoria de cada tipo é a mesma', () => {
     TIPOS.forEach((tipo) => expect(servidor.categoryOfType(tipo), String(tipo)).toBe(clienteCategoria(tipo)));
+  });
+
+  it('⭐ "Carreira" sem escolha própria herda "Parcerias de dupla" (o tipo era de lá até o PR 4)', () => {
+    [servidor.isNotificationMuted, clienteSilenciado].forEach((silenciado) => {
+      expect(silenciado({ partners: false }, 'career')).toBe(true);
+      expect(silenciado({ partners: false, career: true }, 'career')).toBe(false);
+      expect(silenciado({ career: false }, 'career')).toBe(true);
+      expect(silenciado({}, 'career')).toBe(false);
+    });
   });
 
   it('⭐ os avisos do TREINO obedecem a "Treino" nos dois lados', () => {

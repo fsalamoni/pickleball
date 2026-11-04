@@ -71,7 +71,13 @@ export const CAREER_PRIORITY = Object.freeze(['main', 'important', 'casual']);
 export const CAREER_LIMITS = Object.freeze({
   name: 120, organizer: 120, city: 80, link: 300, stage: 40, notes: 2000,
   entries: 6, photos: 6, label: 40, partner: 80, alt: 140, federation: 120, acronym: 16,
+  aim: 120, ifThen: 200,
 });
+
+/** "O foco funcionou?" (depois do planejado com foco). Gravado: nunca renomeie. */
+export const FOCUS_RESULT = Object.freeze(['yes', 'partly', 'no']);
+
+const ID_OK = /^[\w-]{6,128}$/;
 
 const txt = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 const umDe = (v, lista, padrao = null) => (lista.includes(v) ? v : padrao);
@@ -153,13 +159,24 @@ export function deriveCareerStatus(startDate, { current = null, today = todayLoc
 }
 
 /**
+ * O planejado que veio de um torneio do PickleRush ("Pôr no meu plano",
+ * `origin_ref: 'tor:…'`). É só PLANO: não liga ao torneio (isso é o "É este"),
+ * não pergunta "Como foi?" e, passada a data, sai da linha do tempo — o
+ * resultado, se a pessoa jogou, é o oficial.
+ */
+export const isPlatformPlan = (ev) => typeof ev?.origin_ref === 'string' && ev.origin_ref.startsWith('tor:');
+export const platformPlanTournamentId = (ev) => (isPlatformPlan(ev) ? ev.origin_ref.slice(4) : null);
+
+/**
  * O evento com o status de HOJE: o gravado é o do dia em que se salvou, e o
  * planejado cuja data passou é jogado. Aplicado na leitura (`listCareerEvents`).
  */
 export function withDerivedStatus(ev, today = todayLocal()) {
   if (!ev) return ev;
   const status = deriveCareerStatus(ev.start_date, { current: ev.status, today });
-  return status === ev.status ? ev : { ...ev, status };
+  // `planned_passed`: era planejado e a data passou — a ficha pergunta "Como foi?" (não é gravado).
+  // O plano de um torneio do PickleRush não pergunta: quem jogou tem o resultado oficial.
+  return status === ev.status ? ev : { ...ev, status, ...(ev.status === CAREER_STATUS.PLANNED && !isPlatformPlan(ev) ? { planned_passed: true } : {}) };
 }
 
 /**
@@ -206,6 +223,19 @@ export function normalizeCareerEvent(raw = {}, { uid = null, today = todayLocal(
     updated_at_ms: nowMs,
   };
   if (status === CAREER_STATUS.PLANNED) value.priority = umDe(raw.priority, CAREER_PRIORITY, 'casual');
+  // PR 4 — o planejado: prazo de inscrição, "Já me inscrevi", a meta e o foco do torneio.
+  if (isISODate(raw.registration_deadline) && raw.registration_deadline <= start) value.registration_deadline = raw.registration_deadline;
+  if (raw.registered === true) value.registered = true;
+  const aim = txt(raw.aim, CAREER_LIMITS.aim);
+  if (aim) value.aim = aim;
+  if (typeof raw.focus_aspect === 'string' && /^[a-z_]{2,40}$/.test(raw.focus_aspect)) value.focus_aspect = raw.focus_aspect;
+  const ifThen = txt(raw.if_then, CAREER_LIMITS.ifThen);
+  if (ifThen) value.if_then = ifThen;
+  if (value.focus_aspect && FOCUS_RESULT.includes(raw.focus_result)) value.focus_result = raw.focus_result;
+  // "Mandar ao meu professor": ato explícito; a regra confere o vínculo ATIVO.
+  if (typeof raw.shared_coach_id === 'string' && ID_OK.test(raw.shared_coach_id)) value.shared_coach_id = raw.shared_coach_id;
+  // "Pôr no meu plano": de onde veio (não oferecer de novo o que já está no plano).
+  if (typeof raw.origin_ref === 'string' && /^(fed|tor):[\w:-]{1,150}$/.test(raw.origin_ref)) value.origin_ref = raw.origin_ref;
   return { valid: true, error: '', value };
 }
 

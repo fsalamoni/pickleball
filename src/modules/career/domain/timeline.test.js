@@ -4,10 +4,29 @@ import {
   timelineFiltersFromParams, TIMELINE_SOURCE,
 } from './timeline.js';
 
+describe('o plano de um torneio daqui ("Pôr no meu plano")', () => {
+  const plano = { id: 'u_p', uid: 'u', status: 'played', planned_passed: false, start_date: '2026-10-10', name: 'Open', origin_ref: 'tor:t1', entries: [{ format: 'doubles' }] };
+  const jogado = { id: 't1', name: 'Open', is_player: true, my_registration_status: 'confirmed', status: 'finished', starts_at: '2026-10-10' };
+  it('passado e jogado: vale o oficial, com o pódio — o plano some', () => {
+    const tl = buildCareerTimeline({
+      career: [plano], tournaments: [jogado], trophies: { torneios: [{ tournamentId: 't1', position: 1 }], diasDeJogo: [] },
+      gameDayGames: [], federationPoints: [], today: '2026-11-04',
+    });
+    const itens = tl.seasons.flatMap((x) => x.items);
+    expect(itens.some((i) => i.id === 'fora:u_p')).toBe(false);
+    expect(itens.find((i) => i.id === 'torneio:t1')?.position).toBe(1);
+  });
+  it('não conta como declarado em Meu desempenho', () => {
+    expect(careerPerformanceSummary([plano])).toMatchObject({ tournaments: 0, linked: 0 });
+  });
+});
+
 describe('abas e resumo da Minha área', () => {
-  it('a aba da URL; desconhecida (ou do PR 4) abre a linha do tempo', () => {
+  it('a aba da URL (valores são contrato); desconhecida abre a linha do tempo', () => {
     expect(careerTabFromParam('conquistas')).toBe(CAREER_TAB.ACHIEVEMENTS);
-    expect(careerTabFromParam('proximos')).toBe(CAREER_TAB.TIMELINE);
+    expect(careerTabFromParam('proximos')).toBe('proximos');
+    expect(careerTabFromParam('metas')).toBe('metas');
+    expect(careerTabFromParam('zzz')).toBe(CAREER_TAB.TIMELINE);
     expect(careerTabFromParam(null)).toBe('linha-do-tempo');
   });
 

@@ -136,7 +136,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   mercado?: ReturnType<typeof marketPendingCounts>,
  *   clubesAssociados?: { pagar?: number, vencendo?: number, vencida?: number, convocacoes?: number, eleicoes?: number, sancoes?: number },
  *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number, convites?: number, escalas?: number, finais?: number, diretor?: number, convocacoes?: number, licenca?: number },
- *   carreira?: { convites?: number, visoes?: number },
+ *   carreira?: { convites?: number, visoes?: number, comoFoi?: number, comoFoiEvento?: string|null, prazos?: number, prazoEvento?: string|null },
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
  */
@@ -219,6 +219,24 @@ export function userAreaPending(fontes = {}) {
       id: 'carreira:visoes', count: visoesDupla,
       to: fontes.carreira?.visaoEvento ? `/carreira?evento=${encodeURIComponent(fontes.carreira.visaoEvento)}` : '/carreira',
       label: tn(visoesDupla, '{n} visão da dupla para decidir', '{n} visões da dupla para decidir'),
+    });
+  }
+
+  // O plano da carreira: planejado que passou sem resultado e inscrição que fecha em até 3 dias.
+  const comoFoi = numero(fontes.carreira?.comoFoi);
+  if (comoFoi) {
+    itens.push({
+      id: 'carreira:como-foi', count: comoFoi,
+      to: fontes.carreira?.comoFoiEvento ? `/carreira?evento=${encodeURIComponent(fontes.carreira.comoFoiEvento)}` : '/carreira',
+      label: tn(comoFoi, '{n} torneio planejado esperando o "como foi?"', '{n} torneios planejados esperando o "como foi?"'),
+    });
+  }
+  const prazos = numero(fontes.carreira?.prazos);
+  if (prazos) {
+    itens.push({
+      id: 'carreira:prazos', count: prazos,
+      to: fontes.carreira?.prazoEvento ? `/carreira?aba=proximos&evento=${encodeURIComponent(fontes.carreira.prazoEvento)}` : '/carreira?aba=proximos',
+      label: tn(prazos, '{n} inscrição de torneio fechando em breve', '{n} inscrições de torneio fechando em breve'),
     });
   }
 
