@@ -2,8 +2,9 @@ name: Vigilância das regras do Firestore
 
 # O deploy (deploy-firebase.yml) não segura site, funções e Storage quando o
 # serviço de regras do Firebase está fora do ar: ele marca as regras como
-# PENDENTES e o job fica vermelho no fim. Esta vigilância publica as regras
-# que estão no `main` assim que o serviço volta a responder.
+# PENDENTES e deixa um aviso. Esta vigilância publica as regras que estão
+# no `main` assim que o serviço volta a responder, e fica vermelha se elas
+# seguirem fora do ar por mais de 3 h.
 # 🐞 Em 2026-11-03/04 o endpoint `:test` da API respondeu 503 por horas.
 # Quando a regra no ar já é igual à do código, a vigilância só faz duas
 # leituras e não grava nada. Ver docs/03-WORKFLOW.md §4.3.
@@ -61,6 +62,13 @@ jobs:
           node scripts/firestore-rules-publicar.mjs firestore.rules
           RC=$?
           if [ $RC -eq 75 ]; then
+            # Alarme de verdade só quando as regras do main seguem fora do ar
+            # há mais de 3 h (o deploy, nesse caso, só deixou um aviso).
+            IDADE=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+            if [ "$IDADE" -gt 10800 ]; then
+              echo "::error title=Regras do Firestore fora do ar há mais de 3 h::O serviço de regras segue indisponível e as regras do main (commit de $((IDADE / 3600)) h atrás) não estão publicadas."
+              exit 1
+            fi
             echo "Serviço de regras ainda indisponível; a próxima passada tenta de novo."
             exit 0
           fi

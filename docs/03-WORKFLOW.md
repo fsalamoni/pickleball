@@ -261,8 +261,8 @@ push em main
           nos 5xx/429/rede por ~13 min. Mostra a resposta real do serviço
           (a CLI escondia o PATCH recusado atrás de "409 already exists").
           Serviço fora do ar até o fim ⇒ status `pending`: o deploy SEGUE
-          (regras são aditivas, o novo fica atrás de flag) e o job fica
-          vermelho no último passo, "Regras do Firestore pendentes".
+          (regras são aditivas, o novo fica atrás de flag) e o último
+          passo, "Regras do Firestore pendentes", deixa um AVISO (não falha).
           🐞 2026-11-03/04: o endpoint `:test`, que a CLI chama antes de
           publicar, respondeu 503 por horas e cinco deploys seguidos
           (PRs #383–#390) pararam ali, levando site e funções junto.
@@ -280,10 +280,13 @@ push em main
       12. Conferir o site no ar: Playwright nas rotas públicas de
           https://picklerush.web.app (falha o job) + POST /api/erro → 204
       13. Regras do Firestore pendentes (só quando o passo 7 ficou `pending`; é o ÚLTIMO passo, para não pular o 12):
-          falha o job. A vigilância `firestore-rules-catchup.yml` (cron
+          só AVISA (o job segue verde). 🐞 Até o PR #394 ele falhava o job:
+          o deploy do #393 ficou vermelho com tudo no ar e as regras
+          publicadas pela vigilância minutos depois. A vigilância `firestore-rules-catchup.yml` (cron
           :22/:52, grupo próprio `firestore-rules` para não cancelar deploy
           na fila) publica as regras do `main` assim que o serviço volta;
-          com a regra igual, só lê
+          com a regra igual, só lê. Ela é o alarme: fica VERMELHA se o
+          serviço segue fora do ar e o commit do `main` tem mais de 3 h
           (monitoramento de erros; só avisa)
   ↓
 ✅ Site atualizado em https://picklerush.web.app

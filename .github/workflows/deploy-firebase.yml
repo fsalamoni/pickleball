@@ -411,12 +411,14 @@ jobs:
           fi
 
       # Regras pendentes (serviço de regras fora do ar) não seguram o resto do
-      # deploy, mas também não podem passar caladas: o job fica vermelho aqui,
-      # no fim, depois de site, funções, Storage e da conferência do site no ar
-      # (antes dela, o vermelho daqui pulava a conferência). A vigilância
-      # firestore-rules-catchup.yml publica as regras sozinha em até 30 min.
+      # deploy. Aqui elas viram AVISO, não falha: a vigilância
+      # firestore-rules-catchup.yml publica sozinha em até 30 min, e é ELA que
+      # fica vermelha se as regras do main seguirem fora do ar por mais de 3 h.
+      # 🐞 Antes este passo dava `exit 1`: o deploy do PR #393 ficou vermelho
+      # com site, funções e Storage no ar e as regras publicadas pela
+      # vigilância minutos depois — um alarme falso. Fica no FIM para não
+      # pular a conferência do site.
       - name: Regras do Firestore pendentes
         if: always() && steps.firestore_rules.outputs.status == 'pending'
         run: |
-          echo "::error title=Regras do Firestore pendentes::O serviço de regras ficou indisponível durante o deploy. Site, funções e Storage saíram; a vigilância firestore-rules-catchup.yml publica as regras assim que o serviço voltar (a cada 30 min)."
-          exit 1
+          echo "::warning title=Regras do Firestore pendentes::O serviço de regras ficou indisponível durante o deploy. Site, funções e Storage saíram; a vigilância firestore-rules-catchup.yml publica as regras assim que o serviço voltar (a cada 30 min) e fica vermelha se elas seguirem fora do ar por mais de 3 h."
