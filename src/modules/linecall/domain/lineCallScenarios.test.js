@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { createLineCallEngine, LINE_CALL, VOLLEY_CALL } from './lineCallEngine.js';
 import { COURT } from './court.js';
-import { CAMS, ballPath, bounce, player, frames, run } from './testkit/courtSim.js';
+import { CAMS, ballPath, bounce, makeCamera, player, frames, run } from './testkit/courtSim.js';
 
 const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
 
@@ -511,6 +511,17 @@ describe('entre um ponto e outro: a bola devolvida a quem vai sacar não é saqu
     FPS.forEach((fps) => {
       const ev = playParts({ cam: CAMS.fundoA(), parts: [firstServe(q), shot(q.sB, 8, [4.5, 2.5], 0.85)], players: [q.sB, lost, q.rA, q.pA], fps });
       expect(brief(ev), `${fps} q/s`).toEqual(['bounce out long 1', 'bounce out wrong_box 1']);
+    });
+  });
+
+  it('a câmera do canto de B, que não vê o fim do ponto: o toque de quem devolve a bola, lá no fundo, não é "fora" certo', () => {
+    // 🐞 A bola some na mão de quem recebeu e volta com o toque de raquete dele,
+    // ~3 m atrás do fundo de A: a quina do toque era tomada pelo 1º quique.
+    const cam = makeCamera({ C: [W + 2, L + 3, 3.5], L: [2, L - 8, 0], f: 900 });
+    const q = four({ sB: { x: 4.6, y: L - 2 }, pA: { x: 2, y: 1.5 } });
+    [2, 3].forEach((T) => {
+      const ev = playParts({ cam, parts: [firstServe(q), shot(q.rA, T, [1.5, L - 2])], players: all(q) });
+      expect(certain(ev), `${T} s: ${brief(ev).join(', ')}`).toEqual([]);
     });
   });
 });

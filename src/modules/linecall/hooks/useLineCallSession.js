@@ -277,10 +277,15 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     // Com o tamanho da imagem o motor tira da calibração onde a câmera está e
     // corrige a altura da bola e do pé; o erro medido no 5º ponto entra na
     // incerteza de cada medida (nunca abaixo do erro típico de quem toca).
-    const imageSize = video.videoWidth && video.videoHeight ? { w: video.videoWidth, h: video.videoHeight } : null;
-    const options = { mode: pos.mode, imageSize };
-    if (Number.isFinite(checkCm)) options.calibrationM = Math.max(0.015, checkCm / 100);
-    const engine = createLineCallEngine({ H, options });
+    // Criado no 1º quadro: logo depois de trocar de câmera o vídeo novo ainda
+    // não diz o tamanho.
+    let engine = null;
+    const makeEngine = () => {
+      const imageSize = video.videoWidth && video.videoHeight ? { w: video.videoWidth, h: video.videoHeight } : null;
+      const options = { mode: pos.mode, imageSize };
+      if (Number.isFinite(checkCm)) options.calibrationM = Math.max(0.015, checkCm / 100);
+      return createLineCallEngine({ H, options });
+    };
     const scan = document.createElement('canvas');
     const sctx = scan.getContext('2d', { willReadFrequently: true });
     const snap = document.createElement('canvas');
@@ -367,6 +372,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         const t = meta?.mediaTime ?? now / 1000;
         record(t, w, h, last);
         // Com a câmera fora do lugar a medida não vale: o lance vai para revisão.
+        engine ??= makeEngine();
         const found = engine.push({ t, ball: last, players })
           .map((e) => (moved ? { ...e, call: 'review', moved: true } : e));
         if (found.length) {
@@ -424,7 +430,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       setBall(null);
       setFps(0);
     };
-  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm]);
+  // `stream`: trocar de câmera recomeça o relógio do vídeo, então o motor, o
+  // replay e o lance pendente nascem de novo com ele.
+  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream]);
 
   return {
     position: pos, targets, checkPoint,

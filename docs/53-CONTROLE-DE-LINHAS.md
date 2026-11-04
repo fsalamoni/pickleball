@@ -160,8 +160,9 @@ motor (o pé e o quique do saque saem no mesmo quadro) a manchete vai na frente
 (`newArrivals`, pela chave das marcações — o id do lance muda quando uma
 câmera atrasada entra na junção); o que já estava na tela ao abrir não toca, e
 a tela que pisca não troca a falta pelo "dentro" que chegou depois. Trocar de
-câmera no aparelho limpa os lances da anterior: o relógio do vídeo recomeça do
-zero, e um lance velho seguiria de manchete.
+câmera no aparelho limpa os lances da anterior e recomeça a análise (o motor, o
+replay e o lance pendente): o relógio do vídeo recomeça do zero, e um lance
+velho seguiria de manchete.
 
 ## 4. O que é gravado
 
@@ -323,7 +324,8 @@ linha é menor que ela, ele diz **Revisar**.
   da rede fica atrás dela. Quando há sinal de um quique ali desde o último lance
   (a quina com cara de quique atrás da fita, ou a bola sumida mais de 0,12 s
   na FAIXA DA REDE — descendo até a fita ou voltando rente a ela, `netBandM`;
-  perdê-la no ar perto de quem bateu não conta), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
+  perdê-la no ar perto de quem bateu não conta; sumida mais de 0,25 s, na mão
+  ou no bolso, ela volta como bola nova e o buraco conta), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
   "fora" vira **revisar**.
 - **Entre um ponto e outro não há marcação (7.D.4).** A bola devolvida a quem
   vai sacar sai da mão de alguém atrás do fundo, como um saque. Depois de um

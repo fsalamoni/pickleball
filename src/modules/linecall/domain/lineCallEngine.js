@@ -1506,11 +1506,14 @@ export function createLineCallEngine({ H, options = {} }) {
           // o chão cai na sombra da rede). Perdê-la no ar, perto de quem bateu,
           // não diz nada — e a projeção de uma bola alta no chão não diria o lado.
           // Sumir atrás da fita é descer na imagem até ela (a bola longe caindo);
-          // a que sobe na imagem ainda está no ar, indo embora.
+          // a que sobe na imagem ainda está no ar, indo embora. E a bola que ficou
+          // fora de vista mais que `startGapS` (na mão, no bolso) volta como bola
+          // nova: a quina do toque de raquete de quem a devolve, lá no fundo, não
+          // pode virar um "fora" certo.
           const [p0, p1] = recent.slice(-2);
           const atNet = (q) => Boolean(q) && !overhead && hidden(applyHomography(H, q), o.netBandM);
           const sank = Boolean(p0 && p1) && p1.y > p0.y && atNet(p1);
-          gaps.push({ end: frame.t, net: atNet(frame.ball) || sank });
+          gaps.push({ end: frame.t, net: atNet(frame.ball) || sank || gap > o.startGapS });
         }
         if (!track.length) start = gap > o.startGapS ? { t: frame.t, x: frame.ball.x, y: frame.ball.y, quiet: gap > o.rallyGapS, n: 0 } : null;
         lastBallT = frame.t;
