@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const WORKFLOW = readFileSync('.github/workflows/deploy-firebase.yml', 'utf8');
+const CATCHUP = readFileSync('.github/workflows/firestore-rules-catchup.yml', 'utf8');
 
 const linhasSemComentarios = (texto) => texto.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n');
 
@@ -46,17 +47,36 @@ describe('workflow de deploy do Firebase', () => {
     expect(bancos).toEqual(['pickleball']);
     expect(workflow).toMatch(/FIRESTORE_DATABASE_ID: pickleball/);
 
-    const alvos = [...workflow.matchAll(/firebase deploy --only "([^"]*firestore[^"]*)"/g)].map((m) => m[1]);
-    expect(alvos.length).toBeGreaterThanOrEqual(2);
+    const alvos = [...workflow.matchAll(/firebase deploy (?:--config \S+ )?--only "([^"]*firestore[^"]*)"/g)].map((m) => m[1]);
+    expect(alvos.length).toBeGreaterThanOrEqual(1);
     for (const alvo of alvos) {
       expect(alvo.split(','), `alvo sem o banco nomeado: ${alvo}`).toContain('firestore:$FIRESTORE_DATABASE_ID');
     }
-    expect(alvos).toContain('firestore:rules,firestore:$FIRESTORE_DATABASE_ID');
     expect(alvos).toContain('firestore:indexes,firestore:$FIRESTORE_DATABASE_ID');
   });
 
-  it('⭐ o passo de regras não fica verde sem a CLI confirmar a publicação', () => {
-    expect(workflow).toMatch(/grep -q "released rules"/);
+  // 🐞 2026-11-03/04: o endpoint `:test` da API de regras respondeu 503 por
+  // horas. A CLI o chama antes de publicar regras E no deploy de índices, e
+  // cinco deploys seguidos pararam ali, levando site e funções junto.
+  it('⭐ as regras saem pela API (script), nunca pela CLI', () => {
+    expect(workflow).toMatch(/id: firestore_rules/);
+    expect(workflow).toMatch(/node scripts\/firestore-rules-publicar\.mjs/);
+    expect(workflow).not.toMatch(/firebase deploy --only "firestore:rules/);
     expect(workflow).toMatch(/::error title=Regras do Firestore não publicadas::/);
+  });
+
+  it('⭐ o deploy de índices não compila as regras (cópia do firebase.json sem rules) e repete no 5xx', () => {
+    expect(workflow).toMatch(/jq '\.firestore \|= map\(del\(\.rules\)\)' firebase\.json > firebase\.indices\.json/);
+    expect(workflow).toMatch(/--config firebase\.indices\.json --only "firestore:indexes/);
+    expect(workflow).toMatch(/for TENTATIVA in 1 2 3/);
+  });
+
+  it('⭐ regra pendente não passa calada: job vermelho no fim e vigilância que publica depois', () => {
+    expect(workflow).toMatch(/if: always\(\) && steps\.firestore_rules\.outputs\.status == 'pending'/);
+    expect(CATCHUP).toMatch(/cron:/);
+    expect(CATCHUP).toMatch(/group: firestore-rules/);
+    expect(CATCHUP).toMatch(/firestore-rules-compactar\.mjs --escrever/);
+    expect(CATCHUP).toMatch(/firestore-rules-publicar\.mjs/);
+    expect(CATCHUP).toMatch(/FIRESTORE_DATABASE_ID: pickleball/);
   });
 });

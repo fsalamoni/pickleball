@@ -70,16 +70,18 @@ describe('tamanho do firestore.rules', () => {
   });
 
   it('⭐ o deploy compacta as regras antes de publicá-las', () => {
-    const passos = WORKFLOW.split('\n').filter((l) => /^\s+- name:|firestore-rules-compactar|firebase deploy --only "firestore:rules/.test(l));
+    const passos = WORKFLOW.split('\n').filter((l) => /^\s+- name:|firestore-rules-compactar|firestore-rules-publicar/.test(l));
     const compacta = passos.findIndex((l) => /node scripts\/firestore-rules-compactar\.mjs --escrever/.test(l));
-    const publica = passos.findIndex((l) => /firebase deploy --only "firestore:rules/.test(l));
+    const publica = passos.findIndex((l) => /node scripts\/firestore-rules-publicar\.mjs/.test(l));
     expect(compacta).toBeGreaterThan(-1);
     expect(publica).toBeGreaterThan(compacta);
   });
 
-  it('⭐ quando a publicação falha, o deploy repete com --debug e mostra a resposta do serviço de regras', () => {
-    expect(WORKFLOW).toMatch(/firebase deploy --only "firestore:rules,firestore:\$FIRESTORE_DATABASE_ID"[^\n]*--debug/);
-    // 409 com o PATCH só atrasado: a repetição publica e o deploy segue.
-    expect(WORKFLOW).toMatch(/\[ \$DRC -eq 0 \] && echo "\$DBG" \| grep -qE "released rules\|updated release"/);
+  it('⭐ quando a publicação falha, o deploy mostra a resposta do serviço de regras', () => {
+    // O publicador fala direto com a API (sem a CLI, que escondia o erro real
+    // atrás de "409 already exists") e imprime o corpo da resposta.
+    const PUBLICADOR = readFileSync('scripts/firestore-rules-publicar.mjs', 'utf8');
+    expect(PUBLICADOR).toMatch(/texto\.slice\(0, 3000\)/);
+    expect(PUBLICADOR).toMatch(/250 KB/);
   });
 });

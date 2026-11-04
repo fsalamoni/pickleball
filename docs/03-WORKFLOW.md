@@ -254,18 +254,24 @@ push em main
           sem comentário, linha vazia nem recuo — o Firebase recusa fonte
           ≥ 262144 bytes; e o compactado tem de ficar < 140 KB, porque o
           COMPILADO tem teto de 250 KB) + Deploy Firestore rules
-          → --only firestore:rules,firestore:pickleball
-          (falha se a CLI não disser "released rules"; erro 5xx/"currently
-          unavailable" do serviço de regras ganha até 5 tentativas com espera
-          crescente de 45 s, 90 s, 135 s e 180 s, cerca de 7,5 min ao todo
-          (2026-11-03: o deploy do PR #379 desistiu depois de 3 tentativas em
-          2 min de 503); num 409 repete com --debug e mostra a
-          resposta do serviço de regras — e essa repetição também ganha até
-          5 tentativas num 5xx passageiro, desde o deploy do PR #364, que
-          parou num 503 depois de um 409 de PATCH lento)
+          → scripts/firestore-rules-publicar.mjs, direto pela API de regras,
+          SEM a CLI: lê a release `cloud.firestore/pickleball`; regra igual à
+          do código ⇒ não publica nada; mudou ⇒ cria o ruleset (o serviço
+          compila e recusa a que não compila) e aponta a release, repetindo
+          nos 5xx/429/rede por ~13 min. Mostra a resposta real do serviço
+          (a CLI escondia o PATCH recusado atrás de "409 already exists").
+          Serviço fora do ar até o fim ⇒ status `pending`: o deploy SEGUE
+          (regras são aditivas, o novo fica atrás de flag) e o job fica
+          vermelho no último passo, "Regras do Firestore pendentes".
+          🐞 2026-11-03/04: o endpoint `:test`, que a CLI chama antes de
+          publicar, respondeu 503 por horas e cinco deploys seguidos
+          (PRs #383–#390) pararam ali, levando site e funções junto.
        8. Deploy Firestore indexes → --only firestore:indexes,firestore:pickleball
+          com `--config firebase.indices.json` (cópia do firebase.json SEM
+          `rules`, porque a CLI chama o `:test` das regras até num deploy só
+          de índices), até 3 tentativas num 5xx
           (sem --force: índice remoto não versionado é preservado e avisado)
-       9. Install functions deps + Deploy Cloud Functions (não fatal)
+      9. Install functions deps + Deploy Cloud Functions (não fatal)
           → scripts/functions-deploy.sh (codebase `picklerush`, por nome)
       10. Deploy Storage rules (não fatal)
       11. Deploy Hosting (picklerush e pickletour; pickletour é redirect-only).
@@ -273,6 +279,11 @@ push em main
           tentativa após 30 s (falha passageira, 2026-10-16)
       12. Conferir o site no ar: Playwright nas rotas públicas de
           https://picklerush.web.app (falha o job) + POST /api/erro → 204
+      13. Regras do Firestore pendentes (só quando o passo 7 ficou `pending`):
+          falha o job. A vigilância `firestore-rules-catchup.yml` (cron
+          :22/:52, grupo próprio `firestore-rules` para não cancelar deploy
+          na fila) publica as regras do `main` assim que o serviço volta;
+          com a regra igual, só lê
           (monitoramento de erros; só avisa)
   ↓
 ✅ Site atualizado em https://picklerush.web.app
@@ -315,7 +326,7 @@ Ou no GitHub: **Actions** tab → último workflow → verificar verde.
 | `An unexpected error has occurred` no passo do **Hosting** | Falha passageira do Firebase ao publicar o site | O workflow tenta de novo uma vez, 30 s depois (passo 11). Falhou duas vezes: reexecute o job; nesta sessão sem permissão de reexecutar, um PR mergeado publica de novo. Não confundir com a linha dos índices, abaixo |
 | `Pass the --force flag` ao publicar índices | Existe índice remoto que não está em `firestore.indexes.json` | **Não use `--force` às cegas**: ele apagaria o índice remoto. O workflow preserva o índice e continua; importe o índice para o JSON antes de voltar a tratar índices como bloqueantes. A divergência de 2026-09-28 (`tournament_matches`: `modality_id`, `stage_index`, `round` — criado pelo link de erro, é o que serve a lista de jogos da fase) foi importada em 2026-09-30. |
 | `Total size of sources must be smaller than 262144` no passo de regras | O `firestore.rules` (com os comentários) passou do teto de 256 KiB que o Firebase aceita como fonte de regras | O deploy publica a cópia compactada por `scripts/firestore-rules-compactar.mjs --escrever` (sem comentário, linha vazia nem recuo; o CI testa as regras no emulador já compactadas). 🐞 Foi o que segurou os deploys dos PRs #282 e #283 em 2026-10-18: produção ficou sem regras, site e funções dos dois. Se a versão compactada chegar a 90% do teto, o guarda `src/core/guards/firestoreRulesTamanho.test.js` reprova antes do PR. `node scripts/firestore-rules-compactar.mjs` (sem `--escrever`) só mede |
-| `HTTP Error: 409, Release projects/…/releases/cloud.firestore/pickleball already exists` no passo de regras | O ruleset **COMPILADO** passou do teto de 250 KB do Firebase (o segundo teto, além dos 256 KiB da fonte). A CLI tenta atualizar a release, o PATCH falha calado, ela tenta CRIAR e o serviço responde 409 — a mensagem não diz a causa | 🐞 Foi o que segurou os deploys dos PRs #281 a #284 em 2026-10-18 (depois do teto da fonte): 141,7 KB compactados publicaram (PR #280), 149,1 KB não (PR #281); o compilado fica em ~1,7–1,8× o compactado. Saída: **fatorar repetições em funções** — as regras usam `nd()` (= `request.resource.data`), `od()` (= `resource.data`), `me()` (= `request.auth.uid`), `chg()` (= `request.resource.data.diff(resource.data).affectedKeys()`), `isOwner(x)`, `arenaOd()`/`arenaNd()` (gestor da arena do documento), `clubOd()`, `adm()` (= `isPlatformAdmin()`) — 161 KB → 125 KB. Desde a PR 0a da carreira (2026-11-03, 139.350 → 136.830 bytes compactados) também `ng(k, d)`/`og(k, d)` (= `nd().get(k, d)`/`od().get(k, d)`) e a leitura de outro documento por coleção + id: `exc(c, i)`/`gdc(c, i)` (= `exists(…)`/`get(…).data`), `exa(c, i)`/`gac(c, i)` (= `existsAfter(…)`/`getAfter(…).data`) e `dp(c, i)` (o caminho, com o id num segmento `$(…)` — o mesmo do caminho escrito por extenso); `/databases/$(database)/documents/` só aparece dentro desses cinco atalhos (o caminho vai escrito em cada um, e não por `dp`, porque cada chamada a mais conta no teto de 1.000 expressões por pedido). O guarda `firestoreRulesTamanho.test.js` reprova compactado ≥ 140 KB (`TETO_COMPACTO`) e a expressão por extenso. O deploy, ao receber 409, repete com `--debug` e imprime o diálogo com o serviço de regras — e, se a repetição publicar (o 409 também vem de um PATCH que só demorou: a release foi atualizada e a CLI desistiu; foi o deploy do PR #297), o passo passa com aviso e o deploy segue; o workflow manual **Diagnóstico das regras do Firestore** (`firestore-rules-diagnostico.yml`, Actions → Run workflow) faz só isso, para investigar sem publicar o resto |
+| `HTTP Error: 409, Release projects/…/releases/cloud.firestore/pickleball already exists` no passo de regras | O ruleset **COMPILADO** passou do teto de 250 KB do Firebase (o segundo teto, além dos 256 KiB da fonte). A CLI tenta atualizar a release, o PATCH falha calado, ela tenta CRIAR e o serviço responde 409 — a mensagem não diz a causa | 🐞 Foi o que segurou os deploys dos PRs #281 a #284 em 2026-10-18 (depois do teto da fonte): 141,7 KB compactados publicaram (PR #280), 149,1 KB não (PR #281); o compilado fica em ~1,7–1,8× o compactado. Saída: **fatorar repetições em funções** — as regras usam `nd()` (= `request.resource.data`), `od()` (= `resource.data`), `me()` (= `request.auth.uid`), `chg()` (= `request.resource.data.diff(resource.data).affectedKeys()`), `isOwner(x)`, `arenaOd()`/`arenaNd()` (gestor da arena do documento), `clubOd()`, `adm()` (= `isPlatformAdmin()`) — 161 KB → 125 KB. Desde a PR 0a da carreira (2026-11-03, 139.350 → 136.830 bytes compactados) também `ng(k, d)`/`og(k, d)` (= `nd().get(k, d)`/`od().get(k, d)`) e a leitura de outro documento por coleção + id: `exc(c, i)`/`gdc(c, i)` (= `exists(…)`/`get(…).data`), `exa(c, i)`/`gac(c, i)` (= `existsAfter(…)`/`getAfter(…).data`) e `dp(c, i)` (o caminho, com o id num segmento `$(…)` — o mesmo do caminho escrito por extenso); `/databases/$(database)/documents/` só aparece dentro desses cinco atalhos (o caminho vai escrito em cada um, e não por `dp`, porque cada chamada a mais conta no teto de 1.000 expressões por pedido). O guarda `firestoreRulesTamanho.test.js` reprova compactado ≥ 140 KB (`TETO_COMPACTO`) e a expressão por extenso. Desde 2026-11-04 as regras saem por `scripts/firestore-rules-publicar.mjs` (API direta), que mostra a resposta do PATCH recusado em vez do 409 da CLI; o workflow manual **Diagnóstico das regras do Firestore** (`firestore-rules-diagnostico.yml`, Actions → Run workflow) faz só isso, para investigar sem publicar o resto |
 | `An unexpected error has occurred` logo depois de "deploying indexes…", ou o passo de regras verde **sem** "released rules" | O `--only` não nomeia o banco. O `firebase.json` declara o banco nomeado em LISTA, e a firebase-tools 13 só o enxerga quando o alvo o nomeia: `firestore:rules` sozinho resolve **zero** bancos (verde sem publicar nada) e `firestore:indexes` sozinho quebra | Use sempre o PAR `firestore:<parte>,firestore:pickleball`. 🐞 Foi o que segurou os deploys de 29/09 (PRs #175–#178): o site parou no #174 e as regras de segurança novas nunca foram publicadas, com o passo de regras verde. Guarda em `src/core/guards/deployFirebaseWorkflow.test.js` |
 
 ### 4.4 Deploy manual (emergência)
