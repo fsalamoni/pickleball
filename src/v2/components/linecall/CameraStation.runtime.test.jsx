@@ -4,7 +4,7 @@
  * pisca — é o do lance mais grave do lote, nunca o primeiro da lista: o
  * "Saque: fora" não pode sumir atrás de um "Saque sem falta de pé" calado.
  */
-import React from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CAMERA_POSITIONS } from '@/modules/linecall/domain/cameraLayouts';
@@ -35,6 +35,7 @@ let container;
 let root;
 const vibrate = vi.fn();
 beforeEach(() => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -43,12 +44,13 @@ beforeEach(() => {
   Object.defineProperty(window.navigator, 'vibrate', { value: vibrate, configurable: true });
   window.localStorage.clear();
 });
-afterEach(() => { root.unmount(); container.remove(); });
+afterEach(() => { act(() => root.unmount()); container.remove(); });
 
-const show = (events, wait = 30, extra = {}) => new Promise((resolve) => {
+/** Cada lote é uma renderização inteira, com o aviso (efeitos) já rodado; `wait` deixa o relógio do aviso andar. */
+const show = (events, wait = 0, extra = {}) => act(async () => {
   session.current = { ...base(events), ...extra };
   root.render(<CameraStation gameDayId="game_days/G1/line_courts/court-1" position="fundo_a" layout="solo_fundo" layoutPositions={['fundo_a']} />);
-  setTimeout(resolve, wait);
+  if (wait) await new Promise((resolve) => { setTimeout(resolve, wait); });
 });
 const flash = () => container.querySelector('[role="alert"]')?.textContent || '';
 

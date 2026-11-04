@@ -60,6 +60,18 @@ describe('LineCentral: o aviso do lance', () => {
     expect(grande()).toMatch(/Falta no saque: pé na linha de fundo/);
   });
 
+  it('o "Saque: dentro" que chega DEPOIS da falta do pé não apaga a tela que pisca', async () => {
+    // A ordem real em dois_fundos: o fundo B solta o pé na batida; o fundo A, o quique 250 ms depois.
+    await show([]);
+    await show([peFalta]);
+    expect(flash()).toMatch(/Falta no saque/);
+    await show([peFalta, quiqueDentro]);
+    expect(flash()).toMatch(/Falta no saque/);
+    expect(grande()).toMatch(/Falta no saque/);
+    // O "dentro" é calado (sequência vazia): só a falta tocou.
+    expect(sound.playTones.mock.calls.filter(([notes]) => notes.length)).toEqual([[tonesFor('fault')]]);
+  });
+
   it('o "revisar" do pé no saque toca, e a palavra final fica no lance grande', async () => {
     const peRevisar = { ...peFalta, position: 'fundo_a', call: 'review' };
     await show([]);

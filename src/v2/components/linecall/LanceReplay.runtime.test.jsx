@@ -5,7 +5,7 @@
  * recentes) é uma coisa; o que nunca foi guardado, ou ainda está sendo
  * recortado, é outra.
  */
-import React from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -16,6 +16,7 @@ let container;
 let root;
 let getContext;
 beforeEach(() => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -26,7 +27,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
-  root.unmount();
+  act(() => root.unmount());
   container.remove();
   HTMLCanvasElement.prototype.getContext = getContext;
 });
@@ -35,9 +36,8 @@ const lance = (clip) => ({
   id: 'e1', type: 'bounce', call: 'out', reason: 'long', marginM: -0.05, uncertaintyM: 0.02,
   image: 'data:,', point: { x: 2, y: 13.6 }, ...(clip === undefined ? {} : { clip }),
 });
-const open = (event) => new Promise((resolve) => {
+const open = (event) => act(async () => {
   root.render(<LanceReplay event={event} Hinv={null} onClose={noop} />);
-  setTimeout(resolve, 30);
 });
 const dialog = () => document.body.querySelector('[role="dialog"]');
 const slider = () => dialog().querySelector('input[type="range"]');

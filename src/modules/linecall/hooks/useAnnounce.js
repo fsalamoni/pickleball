@@ -9,9 +9,11 @@
  *
  * Cada lance que chega é avisado UMA vez (`newArrivals`, pelas marcações que o
  * formam). Chegando vários juntos — o motor solta no mesmo quadro o pé de quem
- * saca e o quique do saque —, o toque, a vibração e a tela que pisca são do
- * mais grave (`pickHeadline`), e a voz diz todos, o mais grave primeiro, numa
- * frase só (cada fala corta a anterior).
+ * saca e o quique do saque —, o toque e a vibração são do mais grave
+ * (`pickHeadline`), e a voz diz todos, o mais grave primeiro, numa frase só
+ * (cada fala corta a anterior). A tela que pisca é a manchete da lista inteira,
+ * e só quando ela é um dos que chegaram: um lance mais brando que chega depois
+ * (de outra câmera, na central) não troca o aviso que ainda está na tela.
  *
  * Só a FALTA grita. "Revisar" é a câmera dizendo que não tem certeza — e bola
  * que não se vê claramente fora segue em jogo (8.D) —, então no aparelho que
@@ -82,7 +84,11 @@ export function useAnnounce(items, toText, prefKey, { quietReview = false } = {}
     const { fresh, seen: next } = newArrivals(items, seen.current);
     seen.current = next;
     if (!fresh.length) return;
-    setFlash(pickHeadline(fresh));
+    // A tela pisca a MANCHETE da lista inteira, e só quando ela acabou de
+    // chegar: o "Saque: dentro" que outra câmera solta 250 ms depois da falta
+    // do pé não apaga o vermelho com um verde.
+    const head = pickHeadline(items);
+    if (fresh.includes(head)) setFlash(head);
     const audible = quietReview ? fresh.filter((l) => l.call !== 'review') : fresh;
     const top = pickHeadline(audible);
     if (!top) return;
