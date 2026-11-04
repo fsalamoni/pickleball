@@ -148,6 +148,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'follows', field: 'follower_uid', label: 'Quem segue' },
   { col: 'follows', field: 'target_uid', label: 'Quem o segue' },
   { col: 'player_goals', field: 'uid', label: 'Metas pessoais' },
+  { col: 'career_events', field: 'uid', label: 'Torneios de fora (Minha carreira)' },
   { col: 'user_missions', field: 'uid', label: 'Missões (gamificação)' },
   { col: 'user_achievements_v2', field: 'uid', label: 'Conquistas (gamificação)' },
   { col: 'season_rankings', field: 'uid', label: 'Ranking da temporada' },
@@ -1576,9 +1577,9 @@ async function contaDeLoginExiste(auth, uid) {
  * As pastas da pessoa no Storage: as fotos e anexos (`uploads/`) e as fotos e
  * vídeos do treino (`treino/`, fora de `uploads/` porque tem regra própria de
  * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
- * (`federacao/`).
+ * (`federacao/`), e as fotos dos torneios de fora da Minha carreira (`carreira/`).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `carreira/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {

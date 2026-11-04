@@ -217,6 +217,24 @@ describe('dupr — webhook de rating', () => {
     expect((await dupr.webhook(ctx, post({ ...evento(), event: 'OUTRO' }))).body.ignored).toBe(true);
     expect(dados(db, 'dupr_links/ana').ratings.doubles).toBe(3.875);
   });
+
+  it('⭐ a série do rating (Minha carreira) só ganha ponto quando o rating MUDA', async () => {
+    const { ctx, db } = await vinculado();
+    await dupr.webhook({ ...ctx, now: NOW + 1 }, post(evento()));
+    await dupr.webhook({ ...ctx, now: NOW + 2 }, post(evento()));
+    expect(dados(db, 'dupr_links/ana').rating_points).toEqual([{ ms: NOW + 1, singles: 3.4, doubles: 4.01 }]);
+    await dupr.webhook({ ...ctx, now: NOW + 3 }, post(evento({ rating: { singles: '3.400', doubles: '4.100' } })));
+    expect(dados(db, 'dupr_links/ana').rating_points.map((p) => p.doubles)).toEqual([4.01, 4.1]);
+  });
+
+  it('a série é limitada aos mais novos e não grava rating vazio', () => {
+    const cheia = Array.from({ length: dupr.RATING_POINTS_MAX }, (_, i) => ({ ms: i, singles: null, doubles: 3 + i / 1000 }));
+    const nova = dupr.proximosPontosDupr(cheia, { singles: null, doubles: 7 }, 999);
+    expect(nova).toHaveLength(dupr.RATING_POINTS_MAX);
+    expect(nova[nova.length - 1]).toEqual({ ms: 999, singles: null, doubles: 7 });
+    expect(nova[0].ms).toBe(1);
+    expect(dupr.proximosPontosDupr([], { singles: null, doubles: null }, 1)).toBeNull();
+  });
 });
 
 describe('dupr — status e assinaturas (cache de 24 h)', () => {

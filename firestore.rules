@@ -15,11 +15,25 @@ service cloud.firestore {
     function ex(p) { return exists(dx(p)); }   // o documento existe?
     function gd(p) { return get(dx(p)).data; } // os dados do documento
     function chg() { return request.resource.data.diff(resource.data).affectedKeys(); }  // o que o update muda
+    // Atalhos da PR 0a (2026-11-03, −2 KB compactados): `ng(k, d)` e `og(k, d)`
+    // no lugar de `nd().get(k, d)` / `od().get(k, d)`, e as leituras de outro
+    // documento por coleção + id — `exc`/`gdc` (exists/get().data) e
+    // `exa`/`gac` (existsAfter/getAfter().data). `dp` monta o caminho com o id
+    // num segmento `$(…)`, exatamente como o caminho escrito por extenso. O
+    // caminho vai escrito em cada atalho (e não por `dp`) porque cada chamada a
+    // mais conta no teto de 1.000 expressões avaliadas por pedido.
+    function ng(k, d) { return nd().get(k, d); }
+    function og(k, d) { return od().get(k, d); }
+    function dp(c, i) { return /databases/$(database)/documents/$(c)/$(i); }
+    function exc(c, i) { return exists(/databases/$(database)/documents/$(c)/$(i)); }
+    function gdc(c, i) { return get(/databases/$(database)/documents/$(c)/$(i)).data; }
+    function exa(c, i) { return existsAfter(/databases/$(database)/documents/$(c)/$(i)); }
+    function gac(c, i) { return getAfter(/databases/$(database)/documents/$(c)/$(i)).data; }
     function isOwner(uid) { return isAuthed() && uid == me(); }
     // DUPR verificado (update do DONO): não mexe no selo e, com ele, não reescreve ID nem ratings.
     function duprSeloIntacto() {
       return !chg().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
-        && !(od().get('dupr_verified', false) == true
+        && !(og('dupr_verified', false) == true
              && chg().hasAny(['dupr_id', 'dupr_rating', 'dupr_rating_singles']));
     }
     // Rating DUPR digitado: ausente/nulo ou número de 2 a 8 — nunca "4525" limitado a 8.
@@ -31,8 +45,8 @@ service cloud.firestore {
     function duprOk() { return !chg().hasAny(['dupr_rating']) || duprNum(nd()); }
     function isPlatformAdmin() {
       return isAuthed()
-        && exists(/databases/$(database)/documents/users/$(me()))
-        && get(/databases/$(database)/documents/users/$(me())).data.role == 'platform_admin';
+        && exc('users', me())
+        && gdc('users', me()).role == 'platform_admin';
     }
     // Atalho de isPlatformAdmin() — o nome longo, repetido ~400 vezes, custava
     // ~5 KB no ruleset compilado (teto de 250 KB, ver firestoreRulesTamanho).
@@ -66,12 +80,12 @@ service cloud.firestore {
     }
     function isClubMember(clubId) {
       return isAuthed()
-        && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + me()));
+        && exc('club_members', clubId + '_' + me());
     }
     function isClubAdmin(clubId) {
       return isAuthed()
-        && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + me()))
-        && get(/databases/$(database)/documents/club_members/$(clubId + '_' + me())).data.role == 'admin';
+        && exc('club_members', clubId + '_' + me())
+        && gdc('club_members', clubId + '_' + me()).role == 'admin';
     }
     // Idem (tamanho): quem gere a arena / administra o clube DO documento.
     function arenaOd() { return isArenaManager(od().arena_id); }
@@ -90,7 +104,7 @@ service cloud.firestore {
       return ex('game_days/' + gdId);
     }
     // Campo de vínculo do dia que fica como estava ou é REMOVIDO (sem valor novo a conferir).
-    function lkOk(f) { return nd().get(f, null) == null || nd().get(f, null) == od().get(f, null); }
+    function lkOk(f) { return ng(f, null) == null || ng(f, null) == og(f, null); }
     // ENTRAR / SAIR de um dia: a lista de membros nova é EXATAMENTE a antiga
     // mais (ou menos) quem pede, mexendo só nas chaves dadas — senão "entrar"
     // viraria brecha para reescrever a lista dos outros.
@@ -260,7 +274,7 @@ service cloud.firestore {
     }
     function isArenaManager(arenaId) {
       return isAuthed()
-        && exists(/databases/$(database)/documents/arena_managers/$(arenaId + '_' + me()));
+        && exc('arena_managers', arenaId + '_' + me());
     }
     // Ler um documento `{arena}_{uid}` que AINDA NÃO EXISTE (2026-09-24).
     //
@@ -544,6 +558,20 @@ service cloud.firestore {
       allow update, delete: if isOwner(od().uid);
     }
 
+    // ---- Minha carreira (flag `athlete_career`, docs/54) -----------------
+    // Torneio de FORA da plataforma (`{uid}_{id}`): só o dono lê e escreve.
+    // A flag vale só em create/update — apagar o próprio dado segue valendo
+    // com a flag desligada (LGPD). Forma rasa: os limites ficam no domínio e
+    // no serviço (`career/domain/careerEvent.js`), como em `player_goals`.
+    // O `uid` não muda: o update exige `uid` = quem grava e o id com o prefixo.
+    function careerOn() {
+      return gd('platform_settings/global').get('feature_flags', {}).get('athlete_career', false) == true;
+    }
+    match /career_events/{id} {
+      allow read, delete: if isOwner(od().uid);
+      allow create, update: if isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
+    }
+
     // ---- Galeria de fotos do torneio -------------------------------------
     // Leitura pública (aparece na visão de espectador). Envio/remoção só por
     // admin do torneio (ou admin master).
@@ -625,9 +653,9 @@ service cloud.firestore {
       // O VÍNCULO a um clube/arena (`link_*`) nasce depois, na edição: o dia
       // nunca é criado já vinculado.
       allow create: if isOwner(nd().created_by)
-        && (nd().get('arena_id', null) == null
+        && (ng('arena_id', null) == null
             || arenaNd() || adm())
-        && (nd().get('club_id', null) == null
+        && (ng('club_id', null) == null
             || isClubMember(nd().club_id) || adm())
         && !nd().keys().hasAny(['link_club_id', 'link_arena_id']);
       // Edição plena pelo criador/admin. Um atleta pode se auto-incluir como
@@ -637,8 +665,8 @@ service cloud.firestore {
         // O criador não troca a arena nem o clube do dia (pelo mesmo motivo
         // da criação).
         (od().created_by == me()
-          && nd().get('arena_id', null) == od().get('arena_id', null)
-          && nd().get('club_id', null) == od().get('club_id', null)
+          && ng('arena_id', null) == og('arena_id', null)
+          && ng('club_id', null) == og('club_id', null)
           // VÍNCULO (atribuição das estatísticas do dia, sem dar poder ao
           // clube/arena): o criador só vincula a clube que ADMINISTRA e a
           // arena que gere. É ato institucional — o dia vai para a página e
@@ -810,8 +838,8 @@ service cloud.firestore {
       // gestor se tornava dono e passava a poder apagá-la).
       allow update: if adm()
         || (isArenaManager(arenaId)
-            && (nd().get('owner_id', null) == od().get('owner_id', null)
-                || od().get('owner_id', null) == me()));
+            && (ng('owner_id', null) == og('owner_id', null)
+                || og('owner_id', null) == me()));
       allow delete: if (isOwner(od().owner_id)) || adm();
     }
     // Gestores da arena (id determinístico arenaId_uid). O criador registra a si
@@ -829,7 +857,7 @@ service cloud.firestore {
           (
             nd().user_id == me()
             && nd().role == 'owner'
-            && getAfter(/databases/$(database)/documents/arenas/$(nd().arena_id)).data.owner_id == me()
+            && gac('arenas', nd().arena_id).owner_id == me()
           )
           || arenaNd()
           || adm()
@@ -838,14 +866,14 @@ service cloud.firestore {
         || (arenaOd()
             && nd().arena_id == od().arena_id
             && nd().user_id == od().user_id
-            && (od().get('role', '') != 'owner'
-                || nd().get('role', '') == 'owner'
+            && (og('role', '') != 'owner'
+                || ng('role', '') == 'owner'
                 || od().user_id == me()));
       // O vínculo do DONO só sai pelo próprio dono (ou pelo admin): outro
       // gestor não o tira da arena.
       allow delete: if isAuthed() && (
         od().user_id == me()
-        || (arenaOd() && od().get('role', '') != 'owner')
+        || (arenaOd() && og('role', '') != 'owner')
         || adm());
     }
     // Reservas: legíveis/gerenciáveis pelo atleta solicitante e pelos gestores
@@ -894,17 +922,17 @@ service cloud.firestore {
       // o gestor da arena e o admin.
       allow read: if isAuthed() && (
         od().athlete_id == me()
-        || me() in od().get('participant_ids', [])
-        || me() in od().get('invited_ids', [])
-        || od().get('coach_id', null) == me()
-        || od().get('open_join', false) == true
+        || me() in og('participant_ids', [])
+        || me() in og('invited_ids', [])
+        || og('coach_id', null) == me()
+        || og('open_join', false) == true
         || arenaOd()
         || adm());
       // Cria: o próprio atleta, o professor (coach_id), o gestor (reserva
       // manual, athlete_id pode ser null) ou o admin.
       allow create: if isAuthed() && (
         nd().athlete_id == me()
-        || nd().get('coach_id', null) == me()
+        || ng('coach_id', null) == me()
         || arenaNd()
         || adm())
         && bookingReferralOkOnCreate()
@@ -912,9 +940,9 @@ service cloud.firestore {
         // arena aceita reserva instantânea), sem valor acordado e sem
         // pagamento. Antes dava para gravar a reserva já confirmada e paga.
         && (arenaNd() || adm()
-          || (nd().get('agreed_price', null) == null
-            && nd().get('payment_status', 'none') == 'none'
-            && (nd().get('status', 'requested') == 'requested'
+          || (ng('agreed_price', null) == null
+            && ng('payment_status', 'none') == 'none'
+            && (ng('status', 'requested') == 'requested'
               || (nd().status == 'confirmed'
                 && gd('arenas/' + nd().arena_id).get('allow_instant_booking', false) == true))));
       // Atualiza/exclui: dono original, participantes (aceitos e convidados —
@@ -922,25 +950,25 @@ service cloud.firestore {
       // reserva aberta (aparece nos novos participant_ids), o gestor e o admin.
       allow update: if isAuthed() && (
         od().athlete_id == me()
-        || me() in od().get('participant_ids', [])
-        || me() in od().get('invited_ids', [])
-        || od().get('coach_id', null) == me()
-        || (od().get('open_join', false) == true
-            && me() in nd().get('participant_ids', []))
+        || me() in og('participant_ids', [])
+        || me() in og('invited_ids', [])
+        || og('coach_id', null) == me()
+        || (og('open_join', false) == true
+            && me() in ng('participant_ids', []))
         || arenaOd()
         || adm())
         // A indicação da reserva só a ARENA decide (Onda BY): ninguém mais
         // altera `referral` depois do pedido. (Só no update: num delete não há
         // `request.resource`, e a condição recusaria toda exclusão.)
-        && (nd().get('referral', null) == od().get('referral', null)
+        && (ng('referral', null) == og('referral', null)
             || arenaOd()
             || adm())
         && (arenaOd() || adm() || bookingClientUpdateOk());
       allow delete: if isAuthed() && (
         od().athlete_id == me()
-        || me() in od().get('participant_ids', [])
-        || me() in od().get('invited_ids', [])
-        || od().get('coach_id', null) == me()
+        || me() in og('participant_ids', [])
+        || me() in og('invited_ids', [])
+        || og('coach_id', null) == me()
         || arenaOd()
         || adm());
     }
@@ -1077,21 +1105,21 @@ service cloud.firestore {
       // pé, sem passar do número de lugares, e o que se grava tem de bater
       // (contagem = lista; "lotado" só quando lotou).
       function openSlotSelfJoinLeave() {
-        return od().get('status', 'open') in ['open', 'full']
+        return og('status', 'open') in ['open', 'full']
           && chg()
               .hasOnly(['participants', 'filled_spots', 'status', 'updated_at'])
-          && nd().get('status', 'open') in ['open', 'full']
-          && nd().get('filled_spots', 0) == nd().participants.size()
-          && ((nd().get('status', 'open') == 'full')
-              == (nd().participants.size() >= od().get('total_spots', 0)))
+          && ng('status', 'open') in ['open', 'full']
+          && ng('filled_spots', 0) == nd().participants.size()
+          && ((ng('status', 'open') == 'full')
+              == (nd().participants.size() >= og('total_spots', 0)))
           && (
-            (!(me() in od().get('participants', []))
+            (!(me() in og('participants', []))
               && nd().participants.toSet()
-                  == od().get('participants', []).toSet().union([me()].toSet())
-              && nd().participants.size() <= od().get('total_spots', 0))
-            || ((me() in od().get('participants', []))
+                  == og('participants', []).toSet().union([me()].toSet())
+              && nd().participants.size() <= og('total_spots', 0))
+            || ((me() in og('participants', []))
               && nd().participants.toSet()
-                  == od().get('participants', []).toSet().difference([me()].toSet()))
+                  == og('participants', []).toSet().difference([me()].toSet()))
           );
       }
     }
@@ -1108,7 +1136,7 @@ service cloud.firestore {
       // uma entrada por pessoa por vaga, e na arena DA VAGA.
       allow create: if isAuthed()
         && nd().athlete_id == me()
-        && nd().get('status', 'waiting') == 'waiting'
+        && ng('status', 'waiting') == 'waiting'
         && waitlistId == nd().slot_id + '_' + me()
         && gd('arena_open_slots/' + nd().slot_id).arena_id
             == nd().arena_id;
@@ -1117,8 +1145,8 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         arenaOd() || adm()
         || (od().athlete_id == me()
-          && od().get('status', 'waiting') == 'notified'
-          && nd().get('status', '') in ['accepted', 'declined']
+          && og('status', 'waiting') == 'notified'
+          && ng('status', '') in ['accepted', 'declined']
           && chg()
               .hasOnly(['status', 'accepted_at', 'declined_at', 'updated_at']))
       );
@@ -1239,7 +1267,7 @@ service cloud.firestore {
         od().buyer_id == me()
         || arenaOd()
         || adm()
-        || me() in od().get('split_with', [])
+        || me() in og('split_with', [])
       );
       // Antes: `if isAuthed()` — qualquer conta forjava venda em QUALQUER
       // arena, com qualquer valor. Agora a venda é do próprio comprador ou de
@@ -1250,8 +1278,8 @@ service cloud.firestore {
         arenaNd()
         || adm()
         || (nd().buyer_id == me()
-            && nd().get('status', 'pending') == 'pending'
-            && nd().get('stock_applied', false) == false)
+            && ng('status', 'pending') == 'pending'
+            && ng('stock_applied', false) == false)
       );
       // Quem pediu pode DESISTIR — só isso, e só enquanto o pedido está em
       // aberto, não foi entregue e não é dividido (conta dividida pode ter
@@ -1260,11 +1288,11 @@ service cloud.firestore {
         arenaOd()
         || adm()
         || (od().buyer_id == me()
-            && od().get('status', 'pending') == 'pending'
-            && od().get('stock_applied', false) == false
-            && od().get('split_with', []).size() <= 1
+            && og('status', 'pending') == 'pending'
+            && og('stock_applied', false) == false
+            && og('split_with', []).size() <= 1
             && nd().status == 'cancelled'
-            && nd().get('cancelled_by', me()) == me()
+            && ng('cancelled_by', me()) == me()
             && chg()
                  .hasOnly(['status', 'cancel_reason', 'cancelled_by', 'updated_at']))
       );
@@ -1287,7 +1315,7 @@ service cloud.firestore {
         arenaNd()
         || adm()
         || (nd().payer_id == me()
-            && nd().get('status', 'pending') == 'pending'
+            && ng('status', 'pending') == 'pending'
             && paymentBelongsToSale(nd()))
       );
       // 🐞 Quem paga podia atualizar o próprio pagamento para "pago" — o
@@ -1298,8 +1326,8 @@ service cloud.firestore {
         arenaOd()
         || adm()
         || (od().payer_id == me()
-            && od().get('status', 'pending') != 'paid'
-            && nd().get('status', 'pending') in ['pending', 'cancelled']
+            && og('status', 'pending') != 'paid'
+            && ng('status', 'pending') in ['pending', 'cancelled']
             && chg()
                  .hasOnly(['payment_method', 'status', 'updated_at']))
       );
@@ -1323,8 +1351,8 @@ service cloud.firestore {
       allow create: if isOwner(userId) && (
         isPlatformOwnerEmail()
         || (
-          nd().get('role', 'user') == 'user'
-          && nd().get('can_create_pools', false) == false
+          ng('role', 'user') == 'user'
+          && ng('can_create_pools', false) == false
           && !nd().keys().hasAny(['hidden', 'hidden_at', 'hidden_by'])
           // Ninguém nasce suspenso nem "se reativa" criando o documento de novo.
           && !nd().keys().hasAny(['account_status', 'status_reason', 'status_until', 'status_set_at', 'status_set_by'])
@@ -1344,10 +1372,10 @@ service cloud.firestore {
       allow update: if
         (
           isOwner(userId)
-          && nd().get('role', 'user')
-               == od().get('role', 'user')
-          && nd().get('can_create_pools', false)
-               == od().get('can_create_pools', false)
+          && ng('role', 'user')
+               == og('role', 'user')
+          && ng('can_create_pools', false)
+               == og('can_create_pools', false)
           && !chg()
                 .hasAny(['hidden', 'hidden_at', 'hidden_by'])
           // SUSPENSÃO/BLOQUEIO (`account_status*`): só o servidor escreve
@@ -1415,7 +1443,7 @@ service cloud.firestore {
         || (isPlatformOwnerEmail()
             && me() != userId
             && nd().role == 'user'
-            && nd().get('can_create_pools', false) == false
+            && ng('can_create_pools', false) == false
             && chg().hasOnly([
               'role', 'can_create_pools', 'updated_at',
               'role_revoked_at', 'role_revoked_by', 'role_previous',
@@ -1429,7 +1457,7 @@ service cloud.firestore {
       // Leitura: pública se NÃO arquivado; se arquivado, só platform_admin
       // e criador continuam vendo (preserva histórico pra eles, esconde
       // da UI pública, das listas de torneio e da visão de espectador).
-      allow read: if od().get('archived', false) != true
+      allow read: if og('archived', false) != true
         || adm()
         || isTournamentCreator(tid);
       // Sede: quem não gere a arena cria o torneio com a sede PENDENTE
@@ -1456,7 +1484,7 @@ service cloud.firestore {
         )
         // O co-administrador não se torna criador (que arquiva e apaga).
         && (adm()
-          || nd().get('creator_uid', null) == od().get('creator_uid', null))
+          || ng('creator_uid', null) == og('creator_uid', null))
         && (!chg().hasAny(['arena_id', 'arena_confirmed'])
           || tournamentArenaOk())
         && (!chg().hasAny(['club_id', 'club_name'])
@@ -1466,23 +1494,23 @@ service cloud.firestore {
           || (tournamentFederationOk()
             // Aprovada, a chancela é decisão da federação: o organizador não a
             // retira nem a reabre como pendente (só a federação revoga).
-            && (od().get('federation_sanction', null) == null
+            && (og('federation_sanction', null) == null
               || od().federation_sanction.get('status', '') != 'approved')))
         // A federação (competições) decide a chancela: aprova, recusa, revoga — e só ela.
-        || (od().get('federation_id', null) is string
+        || (og('federation_id', null) is string
           && fedOn()
           && fedHas(od().federation_id, 'competitions')
           && chg().hasOnly(['federation_sanction', 'updated_at'])
-          && nd().get('federation_id', null) == od().federation_id
+          && ng('federation_id', null) == od().federation_id
           && nd().federation_sanction.status in ['approved', 'rejected', 'revoked'])
         // A arena decide sobre a sede: confirma, ou recusa (o torneio sai dela).
-        || (od().get('arena_id', null) is string
+        || (og('arena_id', null) is string
           && arenaOd()
           && chg().hasOnly(['arena_id', 'arena_confirmed', 'updated_at'])
-          && ((nd().get('arena_id', null) == od().arena_id
-                && nd().get('arena_confirmed', false) == true)
-            || (nd().get('arena_id', null) == null
-                && nd().get('arena_confirmed', false) == false)));
+          && ((ng('arena_id', null) == od().arena_id
+                && ng('arena_confirmed', false) == true)
+            || (ng('arena_id', null) == null
+                && ng('arena_confirmed', false) == false)));
       allow delete: if adm()
         || (isOwner(od().creator_uid));
     }
@@ -1490,8 +1518,8 @@ service cloud.firestore {
     // federação aprovada com o módulo de torneios ligado. Aprovar é da federação.
     function tournamentFederationOk() {
       return adm()
-        || (nd().get('federation_id', null) == null
-          && nd().get('federation_sanction', null) == null)
+        || (ng('federation_id', null) == null
+          && ng('federation_sanction', null) == null)
         || (nd().federation_id is string
           && fedOn()
           && fedModuleOn(nd().federation_id, 'tournaments')
@@ -1505,7 +1533,7 @@ service cloud.firestore {
     // Ativo, sem suspensão em vigor e — se a federação trava (`rules.block_expired_docs`) —
     // sem documento exigido vencido (`docs_block`, só o servidor grava).
     function fedMemberOk(fid, uid) {
-      let p = /databases/$(database)/documents/federation_members/$(fid + '_' + uid);
+      let p = dp('federation_members', fid + '_' + uid);
       return exists(p) && get(p).data.status == 'active'
         && get(p).data.get('discipline_until_ms', 0) < request.time.toMillis()
         && get(p).data.get('docs_block', false) != true;
@@ -1520,21 +1548,21 @@ service cloud.firestore {
         || tdoc.get('federation_sanction', {}).get('status', '') != 'approved'
         || tdoc.get('federation_sanction', {}).get('requires_membership', false) != true
         || (fedMemberOk(tdoc.federation_id, me())
-          && (nd().get('player_b_user_id', null) == null
-            ? nd().get('player_b_name', '') == ''
+          && (ng('player_b_user_id', null) == null
+            ? ng('player_b_name', '') == ''
             : (nd().player_b_user_id == me() || fedMemberOk(tdoc.federation_id, nd().player_b_user_id))));
     }
     // Sem sede, sede pendente, ou gerir a arena (o admin da plataforma também).
     // Torneio do clube (Bloco E3b): sem clube, ou a administração / a diretoria esportiva do clube
     // (`sports`) com a associação ligada. O torneio segue sendo da plataforma; só ganha o selo.
     function tournamentClubOk() {
-      return nd().get('club_id', null) == null
+      return ng('club_id', null) == null
         || adm()
         || (nd().club_id is string && cxOn() && cxHas(nd().club_id, ['sports']));
     }
     function tournamentArenaOk() {
-      return nd().get('arena_id', null) == null
-        || nd().get('arena_confirmed', null) == false
+      return ng('arena_id', null) == null
+        || ng('arena_confirmed', null) == false
         || adm()
         || (nd().arena_id is string && arenaNd());
     }
@@ -1592,7 +1620,7 @@ service cloud.firestore {
           (
             nd().user_id == me()
             && nd().role == 'owner'
-            && getAfter(/databases/$(database)/documents/tournaments/$(nd().tournament_id)).data.creator_uid == me()
+            && gac('tournaments', nd().tournament_id).creator_uid == me()
           )
           || isTournamentAdmin(nd().tournament_id)
           || adm()
@@ -1635,10 +1663,10 @@ service cloud.firestore {
         && (isTournamentAdmin(nd().tournament_id)
             || adm()
             || (nd().created_by == me()
-                && nd().get('seed', null) == null
+                && ng('seed', null) == null
                 && tournamentMembershipOk(nd().tournament_id)
-                && (nd().get('status', '') in ['waitlist', 'pending_payment']
-                    || (nd().get('status', '') == 'confirmed'
+                && (ng('status', '') in ['waitlist', 'pending_payment']
+                    || (ng('status', '') == 'confirmed'
                         && gd('tournament_modalities/' + nd().modality_id).get('entry_fee_cents', 0) == 0))));
       // Quem criou a inscrição edita os dados dela, faz/desfaz o check-in e
       // desiste — mas não confirma a si mesmo (pagamento e lista de espera são
@@ -1647,12 +1675,12 @@ service cloud.firestore {
         || isTournamentAdmin(od().tournament_id)
         || (isOwner(od().created_by)
             && nd().tournament_id == od().tournament_id
-            && nd().get('modality_id', null) == od().get('modality_id', null)
-            && nd().get('seed', null) == od().get('seed', null)
-            && (nd().get('status', '') == od().get('status', '')
-                || nd().get('status', '') in ['cancelled', 'withdrawn']
-                || (nd().get('status', '') == 'checked_in' && od().get('status', '') == 'confirmed')
-                || (nd().get('status', '') == 'confirmed' && od().get('status', '') == 'checked_in')))
+            && ng('modality_id', null) == og('modality_id', null)
+            && ng('seed', null) == og('seed', null)
+            && (ng('status', '') == og('status', '')
+                || ng('status', '') in ['cancelled', 'withdrawn']
+                || (ng('status', '') == 'checked_in' && og('status', '') == 'confirmed')
+                || (ng('status', '') == 'confirmed' && og('status', '') == 'checked_in')))
         || isRegistrationEmailOwnerUpdate(rid)
         // Convite de dupla (flag partner_invites): o convidado responde ao
         // convite alterando SOMENTE os campos do convite.
@@ -1690,30 +1718,30 @@ service cloud.firestore {
     // `tournament_registrations` possa conferir a posse sem hash.
     match /provisional_claims/{claimId} {
       allow read: if adm()
-        || (hasTokenEmail() && od().get('email_lc', '') == tokenEmailLc());
+        || (hasTokenEmail() && og('email_lc', '') == tokenEmailLc());
       // Cria/ajusta quem pode mexer na inscrição de origem.
       // O id é a prova (`isProvisionalClaimOwner` lê `{rid}_{slot}`): amarrado
       // à inscrição citada, senão uma prova gravada com o id da inscrição de
       // OUTRA pessoa e `registration_id` da minha me dava a inscrição dela.
-      allow create: if (claimId == nd().get('registration_id', '') + '_' + nd().get('slot', '')
-          && nd().get('slot', '') in ['a', 'b'])
+      allow create: if (claimId == ng('registration_id', '') + '_' + ng('slot', '')
+          && ng('slot', '') in ['a', 'b'])
         && (adm()
-          || isRegistrationOrganizer(nd().get('registration_id', ''))
-          || isRegistrationParty(nd().get('registration_id', '')));
+          || isRegistrationOrganizer(ng('registration_id', ''))
+          || isRegistrationParty(ng('registration_id', '')));
       allow update: if (adm()
-        || ((isRegistrationOrganizer(od().get('registration_id', ''))
-            || isRegistrationParty(od().get('registration_id', '')))
-          && nd().get('registration_id', '') == od().get('registration_id', '')
-          && nd().get('slot', '') == od().get('slot', '')))
+        || ((isRegistrationOrganizer(og('registration_id', ''))
+            || isRegistrationParty(og('registration_id', '')))
+          && ng('registration_id', '') == og('registration_id', '')
+          && ng('slot', '') == og('slot', '')))
         // O titular apenas MARCA como reivindicada — não reescreve o e-mail
         // nem aponta a entrada para outra inscrição.
         || (hasTokenEmail()
-            && od().get('email_lc', '') == tokenEmailLc()
+            && og('email_lc', '') == tokenEmailLc()
             && chg()
                  .hasOnly(['claimed', 'claimed_by', 'claimed_at', 'updated_at'])
-            && nd().get('claimed_by', '') == me());
+            && ng('claimed_by', '') == me());
       allow delete: if adm()
-        || isRegistrationOrganizer(od().get('registration_id', ''));
+        || isRegistrationOrganizer(og('registration_id', ''));
     }
 
     match /tournament_announcements/{aid} {
@@ -1839,23 +1867,23 @@ service cloud.firestore {
       allow create: if isAuthed()
         && nd().user_id is string
         && nd().user_id.size() > 0
-        && isKnownNotificationType(nd().get('type', 'generic'))
+        && isKnownNotificationType(ng('type', 'generic'))
         // FOLGA PROPOSITAL: o serviço corta em 140/300, mas ele conta em
         // unidades UTF-16 do JavaScript e a regra conta caracteres. Com emoji
         // os dois números divergem, e uma notificação legítima seria recusada
         // em silêncio. O limite aqui existe para barrar payload gigante, não
         // para repetir a validação do cliente — então vai com margem.
-        && nd().get('title', '').size() <= 300
-        && nd().get('message', '').size() <= 600
-        && isInternalLink(nd().get('link', null))
+        && ng('title', '').size() <= 300
+        && ng('message', '').size() <= 600
+        && isInternalLink(ng('link', null))
         // Nasce sempre não lida — ninguém cria já marcada para escapar do sino.
-        && nd().get('read', false) == false
+        && ng('read', false) == false
         // E-MAIL E CELULAR (docs/49): o servidor decide se o aviso sai da
         // plataforma pela ORIGEM. `origin`/`essential` só o servidor grava
         // (Admin SDK, fora destas regras); `sent_by` é sempre quem escreve —
         // é ele que leva "Enviado por" e o botão de denunciar ao e-mail; e os
         // canais do aviso em massa (`broadcast`) só valem do admin.
-        && nd().get('sent_by', me()) == me()
+        && ng('sent_by', me()) == me()
         && !nd().keys().hasAny(['origin', 'essential'])
         && (!('broadcast' in nd()) || adm());
       allow delete: if adm();
@@ -1949,7 +1977,7 @@ service cloud.firestore {
       // A ocultação pela moderação (`hidden*`) é do admin: o dono não a
       // desfaz — nem gravando `hidden: false`, nem apagando e recriando.
       allow create: if (adm() && contatosMarcados(nd()))
-        || (isOwner(uid) && nd().get('hidden', false) == false
+        || (isOwner(uid) && ng('hidden', false) == false
             && !nd().keys().hasAny(['dupr_verified', 'dupr_verified_at_ms'])
             && duprNum(nd())
             && contatosDoDonoPermitidos(uid, nd()));
@@ -1961,7 +1989,7 @@ service cloud.firestore {
             && duprOk()
             && contatosDoDonoPermitidos(uid, nd()));
       allow delete: if adm()
-        || (isOwner(uid) && od().get('hidden', false) != true);
+        || (isOwner(uid) && og('hidden', false) != true);
     }
 
     // ---- DUPR oficial (flag `dupr_official_sync`) ------------------------
@@ -2025,8 +2053,8 @@ service cloud.firestore {
           || gd('clubs/' + clubId).get('invite_code', '') == code);
     }
     function hasClubCodeJoin(docId, clubId) {
-      return existsAfter(/databases/$(database)/documents/club_code_joins/$(docId))
-        && validClubCode(clubId, getAfter(/databases/$(database)/documents/club_code_joins/$(docId)).data.code);
+      return exa('club_code_joins', docId)
+        && validClubCode(clubId, gac('club_code_joins', docId).code);
     }
 
     // id = o próprio código: quem sabe o código lê (é assim que o código leva
@@ -2138,7 +2166,7 @@ service cloud.firestore {
         || (isOwner(od().created_by))
         || clubOd()
         || isEventInvitee(eventId)
-        || (od().get('visibility', 'public') != 'private' && isClubMember(od().club_id));
+        || (og('visibility', 'public') != 'private' && isClubMember(od().club_id));
       allow create: if isClubMember(nd().club_id)
         && nd().created_by == me();
       // Criador, admin e participantes (incluindo convidados) editam livremente.
@@ -2146,7 +2174,7 @@ service cloud.firestore {
         || (isOwner(od().created_by))
         || clubOd()
         || isEventInvitee(eventId)
-        || (od().get('visibility', 'public') != 'private' && isClubMember(od().club_id));
+        || (og('visibility', 'public') != 'private' && isClubMember(od().club_id));
       allow delete: if clubOd() || adm()
         || (isOwner(od().created_by));
 
@@ -2457,7 +2485,7 @@ service cloud.firestore {
         // com a conta da pessoa em `user_id` — ninguém se faz professor.
         // A consulta do professor filtra por `coach_id`, que é o que deixa o
         // Firestore provar esta condição para a lista inteira.
-        (od().get('coach_id', null) is string &&
+        (og('coach_id', null) is string &&
           gd('arena_coaches/' + od().coach_id).get('user_id', null) == me())
       );
       // O aluno se matricula em nome próprio, sem se declarar PAGO (2026-09-24)
@@ -2465,7 +2493,7 @@ service cloud.firestore {
       // na lista de alunos de outra arena.
       allow create: if isAuthed()
         && nd().user_id == me()
-        && nd().get('paid', false) == false
+        && ng('paid', false) == false
         && gd('arena_classes/' + nd().class_id).arena_id == nd().arena_id;
       // A arena também cancela/remarca: era só do aluno, e a arena ficava sem
       // como desfazer uma aula na própria agenda. O aluno continua podendo
@@ -2504,30 +2532,30 @@ service cloud.firestore {
       // toca em mais nada do documento.
       function internalTournamentSelfSignup() {
         return isAuthed()
-          && od().get('status', 'scheduled') == 'scheduled'
-          && od().get('game_day_id', null) == null
+          && og('status', 'scheduled') == 'scheduled'
+          && og('game_day_id', null) == null
           && chg()
               .hasOnly(['participants', 'roster', 'enrolled', 'updated_at'])
           && (internalTournamentJoin() || internalTournamentLeave());
       }
       function internalTournamentJoin() {
-        return !(me() in od().get('participants', []))
+        return !(me() in og('participants', []))
           && nd().participants.toSet()
-              == od().get('participants', []).toSet().union([me()].toSet())
-          && nd().get('enrolled', 0) == od().get('enrolled', 0) + 1
-          && (od().get('max_participants', 0) <= 0
-              || nd().get('enrolled', 0) <= od().max_participants)
-          && nd().get('roster', []).size() == od().get('roster', []).size() + 1
-          && nd().get('roster', []).hasAll(od().get('roster', []));
+              == og('participants', []).toSet().union([me()].toSet())
+          && ng('enrolled', 0) == og('enrolled', 0) + 1
+          && (og('max_participants', 0) <= 0
+              || ng('enrolled', 0) <= od().max_participants)
+          && ng('roster', []).size() == og('roster', []).size() + 1
+          && ng('roster', []).hasAll(og('roster', []));
       }
       function internalTournamentLeave() {
-        return (me() in od().get('participants', []))
+        return (me() in og('participants', []))
           && nd().participants.toSet()
-              == od().get('participants', []).toSet().difference([me()].toSet())
-          && od().get('roster', []).hasAll(nd().get('roster', []))
-          && ((od().get('enrolled', 0) > 0
-                && nd().get('enrolled', 0) == od().get('enrolled', 0) - 1)
-              || (od().get('enrolled', 0) <= 0 && nd().get('enrolled', 0) == 0));
+              == og('participants', []).toSet().difference([me()].toSet())
+          && og('roster', []).hasAll(ng('roster', []))
+          && ((og('enrolled', 0) > 0
+                && ng('enrolled', 0) == og('enrolled', 0) - 1)
+              || (og('enrolled', 0) <= 0 && ng('enrolled', 0) == 0));
       }
     }
 
@@ -2599,7 +2627,7 @@ service cloud.firestore {
       allow create: if isAuthed()
         && nd().referrer_id == me()
         && referralId == nd().arena_id + '_' + me()
-        && nd().get('redeemed_count', 0) == 0
+        && ng('redeemed_count', 0) == 0
         && !('redeemed_by' in nd())
         && !('reward_total' in nd());
       // Quem atualiza é a ARENA (resgate: contagem, quem foi creditado, quanto
@@ -2609,7 +2637,7 @@ service cloud.firestore {
         (arenaOd()
           && nd().arena_id == od().arena_id
           && nd().referrer_id == od().referrer_id
-          && nd().get('code', null) == od().get('code', null))
+          && ng('code', null) == og('code', null))
         || adm()
       );
       allow delete: if isAuthed() && (
@@ -2823,7 +2851,7 @@ service cloud.firestore {
     function isLessonStudentCancel() {
       return chg().hasOnly(['status', 'updated_at'])
         && nd().status == 'cancelled'
-        && od().get('status', '') in ['requested', 'negotiating', 'confirmed'];
+        && og('status', '') in ['requested', 'negotiating', 'confirmed'];
     }
     match /coach_lessons/{lessonId} {
       allow read: if isAuthed() && (
@@ -2950,9 +2978,9 @@ service cloud.firestore {
         ((me() == od().coach_id || adm())
           && nd().coach_id == od().coach_id
           && nd().student_id == od().student_id
-          && (nd().get('status', '') != 'ended' || 'ended_at' in nd())
+          && (ng('status', '') != 'ended' || 'ended_at' in nd())
           && (!('ended_at' in od())
-            || (nd().get('status', '') in ['ended', 'invited'] && 'ended_at' in nd()))) ||
+            || (ng('status', '') in ['ended', 'invited'] && 'ended_at' in nd()))) ||
         (me() == od().student_id
           && chg().hasOnly(['status', 'updated_at', 'ended_at', 'ended_by'])
           && (
@@ -2964,12 +2992,12 @@ service cloud.firestore {
             // encerrar o vínculo, ou recusar o convite
             || (od().status in ['invited', 'active', 'paused']
               && nd().status == 'ended'
-              && nd().get('ended_at', null) == request.time
-              && nd().get('ended_by', '') == me())))
+              && ng('ended_at', null) == request.time
+              && ng('ended_by', '') == me())))
       );
       allow delete: if isAuthed() && (
         (me() == od().coach_id && !('ended_at' in od())
-          && od().get('status', '') != 'ended')
+          && og('status', '') != 'ended')
         // A conta do aluno foi excluída (`users/{uid}` sai por último): a ficha
         // encerrada não guarda mais a história de ninguém, e o professor a tira.
         || (me() == od().coach_id
@@ -3013,15 +3041,15 @@ service cloud.firestore {
       allow update: if isAuthed()
         && chg().hasOnly(['signup_count'])
         && (
-          (nd().signup_count == od().get('signup_count', 0) + 1
+          (nd().signup_count == og('signup_count', 0) + 1
             && nd().signup_count <= od().capacity
-            && od().get('status', 'open') == 'open'
+            && og('status', 'open') == 'open'
             && !ex('coach_clinic_signups/' + (clinicId + '_' + me()))
-            && existsAfter(/databases/$(database)/documents/coach_clinic_signups/$(clinicId + '_' + me())))
-          || (nd().signup_count == od().get('signup_count', 0) - 1
+            && exa('coach_clinic_signups', clinicId + '_' + me()))
+          || (nd().signup_count == og('signup_count', 0) - 1
             && nd().signup_count >= 0
             && ex('coach_clinic_signups/' + (clinicId + '_' + me()))
-            && !existsAfter(/databases/$(database)/documents/coach_clinic_signups/$(clinicId + '_' + me())))
+            && !exa('coach_clinic_signups', clinicId + '_' + me()))
         );
     }
     // coach_clinic_signups/{clinicId_athleteId} — inscrição do atleta.
@@ -3036,7 +3064,7 @@ service cloud.firestore {
         && signupId == nd().clinic_id + '_' + me()
         && ex('coach_clinics/' + nd().clinic_id)
         && nd().coach_id == gd('coach_clinics/' + nd().clinic_id).coach_id
-        && getAfter(/databases/$(database)/documents/coach_clinics/$(nd().clinic_id)).data.get('signup_count', 0)
+        && gac('coach_clinics', nd().clinic_id).get('signup_count', 0)
           == gd('coach_clinics/' + nd().clinic_id).get('signup_count', 0) + 1;
       allow delete: if isAuthed() && (
         me() == od().athlete_id ||
@@ -3223,8 +3251,8 @@ service cloud.firestore {
         && nd().skillTrees.size() == 5
         // Aditivo e opcional: o XP que o servidor concedeu (o prêmio de
         // temporada não pode contar como XP do mês seguinte).
-        && nd().get('grantsXp', 0) is int
-        && nd().get('grantsXp', 0) >= 0;
+        && ng('grantsXp', 0) is int
+        && ng('grantsXp', 0) >= 0;
     }
 
     // user_progression_v2/{uid} — snapshot materializado de XP/tier/level/skilltrees
@@ -3269,9 +3297,9 @@ service cloud.firestore {
           || (nd().scope == 'monthly'
             && missionId == nd().uid + '_m_' + nd().date)
         )
-        && nd().get('xpEarned', 0) is int
-        && nd().get('xpEarned', 0) >= 0
-        && nd().get('xpEarned', 0) <= (
+        && ng('xpEarned', 0) is int
+        && ng('xpEarned', 0) >= 0
+        && ng('xpEarned', 0) <= (
           nd().scope == 'daily' ? 600
           : (nd().scope == 'weekly' ? 1500 : 5000)
         );
@@ -3520,9 +3548,9 @@ service cloud.firestore {
         && nd().role in ['owner', 'captain', 'member']
         // Dono/capitão só quem criou a turma; e turma privada só o criador
         // entra por aqui (antes qualquer conta entrava como "owner" e lia).
-        && (getAfter(/databases/$(database)/documents/crews/$(nd().crewId)).data.createdBy == me()
+        && (gac('crews', nd().crewId).createdBy == me()
             || (nd().role == 'member'
-                && getAfter(/databases/$(database)/documents/crews/$(nd().crewId)).data.get('isPublic', false) == true));
+                && gac('crews', nd().crewId).get('isPublic', false) == true));
       allow update: if adm()
         || (isOwner(od().uid)
             && !chg().hasAny(['uid', 'crewId', 'role']));
@@ -3548,7 +3576,7 @@ service cloud.firestore {
         && nd().status in ['pending', 'active', 'paused', 'completed', 'cancelled']
         && (
           (nd().status == 'pending'
-            && nd().get('proposedBy', '') == me()
+            && ng('proposedBy', '') == me()
             && (me() == nd().mentorUid
               || me() == nd().apprenticeUid))
           || adm()
@@ -3558,7 +3586,7 @@ service cloud.firestore {
         && nd().mentorUid == od().mentorUid
         && nd().apprenticeUid == od().apprenticeUid
         && nd().status in ['pending', 'active', 'paused', 'completed', 'cancelled']
-        && nd().get('proposedBy', '') == od().get('proposedBy', '')
+        && ng('proposedBy', '') == og('proposedBy', '')
         && (
           me() == od().mentorUid
           || me() == od().apprenticeUid
@@ -3572,7 +3600,7 @@ service cloud.firestore {
           || (od().status == 'pending' && nd().status in ['pending', 'cancelled'])
           // ...mas só quem NÃO convidou o aceita.
           || (od().status == 'pending' && nd().status == 'active'
-              && me() != od().get('proposedBy', ''))
+              && me() != og('proposedBy', ''))
         );
       allow delete: if adm();
     }
@@ -3683,7 +3711,7 @@ service cloud.firestore {
           'uid', 'schemaVersion', 'privacy', 'social', 'notifications',
           'display', 'onboarding', 'celebrated'
         ])
-        && nd().get('uid', uid) == uid
+        && ng('uid', uid) == uid
         && nd().schemaVersion == 1
         && nd().privacy is map
         && nd().social is map
@@ -3805,13 +3833,13 @@ service cloud.firestore {
         // Anônima: nenhum rastro do autor no documento do destinatário.
         && (nd().showName == true
             ? nd().fromUid == me()
-            : (nd().fromUid == null && nd().get('fromName', null) == null))
-        && nd().get('reported', false) == false
-        && nd().get('readAt', null) == null
+            : (nd().fromUid == null && ng('fromName', null) == null))
+        && ng('reported', false) == false
+        && ng('readAt', null) == null
         && letterId.matches('^.+__' + me() + '__' + nd().toUid + '$')
         // E o autor tem de estar registrado, no MESMO lote — sem ele a
         // moderação não teria como chegar a quem escreveu.
-        && getAfter(/databases/$(database)/documents/partner_letter_authors/$(letterId)).data.fromUid == me();
+        && gac('partner_letter_authors', letterId).fromUid == me();
       allow update: if isOwner(od().toUid)
         && chg().hasOnly(['readAt', 'reported']);
       allow delete: if isOwner(od().toUid) || adm();
@@ -4162,14 +4190,14 @@ service cloud.firestore {
           && nd().author_uid == od().author_uid
           && nd().author_role == od().author_role
           && nd().created_by == od().created_by
-          && nd().get('created_at', null) == od().get('created_at', null)
-          && nd().get('derived_from', null) == od().get('derived_from', null)
+          && ng('created_at', null) == og('created_at', null)
+          && ng('derived_from', null) == og('derived_from', null)
           && nd().hidden == od().hidden
           && nd().featured == od().featured
-          && nd().get('hidden_reason', '') == od().get('hidden_reason', '')
-          && nd().get('review_note', '') == od().get('review_note', '')
-          && nd().get('reviewed_by', null) == od().get('reviewed_by', null)
-          && nd().get('reviewed_at', null) == od().get('reviewed_at', null)
+          && ng('hidden_reason', '') == og('hidden_reason', '')
+          && ng('review_note', '') == og('review_note', '')
+          && ng('reviewed_by', null) == og('reviewed_by', null)
+          && ng('reviewed_at', null) == og('reviewed_at', null)
           && (
             // Só compartilhamento: não é edição do conteúdo, a revisão fica.
             (chg().hasOnly(['shared_uids', 'updated_at'])
@@ -4214,15 +4242,15 @@ service cloud.firestore {
         && nd().to_uid != me()
         && nd().item_id is string
         && nd().note is string && nd().note.size() <= 500
-        && nd().get('read_at', null) == null
-        && nd().get('done_at', null) == null
+        && ng('read_at', null) == null
+        && ng('done_at', null) == null
         && trainingSetting('allow_sharing', true) == true
         && trainingShareItemOk(nd().item_id)
         && (
           (nd().kind == 'indicacao'
             && (nd().from_role == 'atleta'
               || (nd().from_role == 'professor' && isCoachUser(me())))
-            && nd().get('due_date', null) == null)
+            && ng('due_date', null) == null)
           || (nd().kind == 'aluno'
             && nd().from_role == 'professor'
             && isCoachUser(me())
@@ -4231,8 +4259,8 @@ service cloud.firestore {
       allow update: if isAuthed()
         && od().to_uid == me()
         && chg().hasOnly(['read_at', 'done_at', 'done_note'])
-        && nd().get('done_note', '') is string
-        && nd().get('done_note', '').size() <= 300;
+        && ng('done_note', '') is string
+        && ng('done_note', '').size() <= 300;
       allow delete: if isAuthed() && (
         od().from_uid == me()
         || od().to_uid == me()
@@ -4263,25 +4291,25 @@ service cloud.firestore {
     match /training_sessions/{sessionId} {
       allow read: if isAuthed() && (
         od().uid == me()
-        || (od().get('shared_coach_id', null) == me()
+        || (og('shared_coach_id', null) == me()
           && hasActiveStudent(me(), od().uid))
         || adm()
       );
       allow create: if isAuthed()
         && nd().uid == me()
         && trainingSessionShapeOk(nd())
-        && nd().get('coach_confirmed_at', null) == null
-        && (nd().get('shared_coach_id', null) == null
+        && ng('coach_confirmed_at', null) == null
+        && (ng('shared_coach_id', null) == null
           || hasActiveStudent(nd().shared_coach_id, me()));
       allow update: if isAuthed() && (
         (od().uid == me()
           && nd().uid == od().uid
           && trainingSessionShapeOk(nd())
-          && nd().get('coach_confirmed_at', null) == od().get('coach_confirmed_at', null)
-          && (nd().get('shared_coach_id', null) == null
-            || nd().get('shared_coach_id', null) == od().get('shared_coach_id', null)
+          && ng('coach_confirmed_at', null) == og('coach_confirmed_at', null)
+          && (ng('shared_coach_id', null) == null
+            || ng('shared_coach_id', null) == og('shared_coach_id', null)
             || hasActiveStudent(nd().shared_coach_id, me())))
-        || (od().get('shared_coach_id', null) == me()
+        || (og('shared_coach_id', null) == me()
           && hasActiveStudent(me(), od().uid)
           && chg().hasOnly(['coach_confirmed_at', 'updated_at']))
       );
@@ -4327,14 +4355,14 @@ service cloud.firestore {
       allow create, update: if isOwner(uid)
         && nd().keys().hasOnly(['favorites', 'routine', 'onboarding_done', 'mastery',
           'assessments', 'focus_hint', 'debrief', 'updated_at'])
-        && nd().get('debrief', {}) is map
-        && nd().get('debrief', {}).keys().hasOnly(['enabled', 'since'])
-        && nd().get('favorites', []) is list
-        && nd().get('favorites', []).size() <= 300
-        && nd().get('assessments', []) is list
-        && nd().get('assessments', []).size() <= 24
-        && nd().get('mastery', {}) is map
-        && nd().get('mastery', {}).size() <= 300;
+        && ng('debrief', {}) is map
+        && ng('debrief', {}).keys().hasOnly(['enabled', 'since'])
+        && ng('favorites', []) is list
+        && ng('favorites', []).size() <= 300
+        && ng('assessments', []) is list
+        && ng('assessments', []).size() <= 24
+        && ng('mastery', {}) is map
+        && ng('mastery', {}).size() <= 300;
       allow delete: if isOwner(uid) || adm();
     }
 
@@ -4425,8 +4453,8 @@ service cloud.firestore {
         && nd().status == 'aberta'
         && nd().item_id is string
         && nd().reason in ['impreciso', 'perigoso', 'ofensivo', 'spam', 'direitos', 'outro']
-        && nd().get('text', '') is string
-        && nd().get('text', '').size() <= 500
+        && ng('text', '') is string
+        && ng('text', '').size() <= 500
         && !('resolved_by' in nd());
       allow update, delete: if adm();
     }
@@ -4520,7 +4548,7 @@ service cloud.firestore {
       return isAuthed() && od().status in ['active', 'sold_out']
         && chg().hasOnly(['view_count'])
         && nd().view_count is int
-        && nd().view_count == od().get('view_count', 0) + 1;
+        && nd().view_count == og('view_count', 0) + 1;
     }
     function marketListingShapeOk(d) {
       return d.title is string && d.title.size() >= 3 && d.title.size() <= 120
@@ -4567,7 +4595,7 @@ service cloud.firestore {
         && !chg()
           .hasAny(marketListingLocked().concat(['seller_key', 'seller_type', 'created_by']))
         // Anúncio ligado ao estoque da arena: a quantidade é do servidor.
-        && (!(od().get('source', null) is map && od().source.get('tracked', false) == true)
+        && (!(og('source', null) is map && od().source.get('tracked', false) == true)
           || !chg().hasAny(['quantity']))
         && (!chg().hasAny(['seller_name'])
           || nd().seller_name == marketSeller(od().seller_key).display_name)
@@ -4575,7 +4603,7 @@ service cloud.firestore {
       // Apagar só o que nunca vendeu (o pedido guarda a foto do anúncio).
       allow delete: if adm() || (
         isMarketOperator(od().seller_key)
-        && od().get('quantity_sold', 0) == 0);
+        && og('quantity_sold', 0) == 0);
     }
 
     match /market_questions/{questionId} {
@@ -4625,16 +4653,16 @@ service cloud.firestore {
       allow create, update: if isAuthed()
         && nd().uid == me()
         && (resource == null || od().uid == me())
-        && nd().get('label', '') is string
-        && nd().get('label', '').size() <= 60;
+        && ng('label', '') is string
+        && ng('label', '').size() <= 60;
     }
 
     // Endereços de entrega guardados (`market_addresses/{uid}`): só do dono, até 5.
     match /market_addresses/{uid} {
       allow get: if isOwner(uid);
       allow create, update: if isOwner(uid)
-        && nd().get('addresses', []) is list
-        && nd().get('addresses', []).size() <= 5;
+        && ng('addresses', []) is list
+        && ng('addresses', []).size() <= 5;
       allow delete: if isOwner(uid);
     }
 
@@ -4653,10 +4681,10 @@ service cloud.firestore {
     match /market_carts/{uid} {
       allow get: if isOwner(uid);
       allow create, update: if isOwner(uid)
-        && nd().get('items', []) is list
-        && nd().get('items', []).size() <= 50
-        && nd().get('saved', []) is list
-        && nd().get('saved', []).size() <= 50;
+        && ng('items', []) is list
+        && ng('items', []).size() <= 50
+        && ng('saved', []) is list
+        && ng('saved', []).size() <= 50;
       allow delete: if isOwner(uid);
     }
 
@@ -4685,7 +4713,7 @@ service cloud.firestore {
         || adm());
       allow create: if marketOn() && isMarketOperator(nd().seller_key)
         && couponId == nd().seller_key + '_' + nd().code
-        && nd().get('uses_count', 0) == 0
+        && ng('uses_count', 0) == 0
         && nd().created_by == me()
         && marketCouponShapeOk(nd());
       allow update: if adm() || (
@@ -4791,10 +4819,10 @@ service cloud.firestore {
         && nd().seller_key is string
         && !isMarketOperator(nd().seller_key)
         && nd().reason in ['fake', 'prohibited', 'misleading', 'scam', 'offensive', 'other']
-        && nd().get('text', '') is string
-        && nd().get('text', '').size() <= 500
-        && nd().get('listing_title', '') is string
-        && nd().get('listing_title', '').size() <= 120;
+        && ng('text', '') is string
+        && ng('text', '').size() <= 500
+        && ng('listing_title', '') is string
+        && ng('listing_title', '').size() <= 120;
       allow update, delete: if adm();
     }
 
@@ -4818,17 +4846,17 @@ service cloud.firestore {
     //    pelo cliente — a verificação é uma função.
     // =====================================================================
     function fedOn() {
-      return get(/databases/$(database)/documents/platform_settings/global).data
+      return gdc('platform_settings', 'global')
         .get('feature_flags', {}).get('federations', false) == true;
     }
     function fedDoc(fedId) {
-      return get(/databases/$(database)/documents/federations/$(fedId)).data;
+      return gdc('federations', fedId);
     }
     function fedApproved(fedId) {
-      return exists(/databases/$(database)/documents/federations/$(fedId)) && fedDoc(fedId).status == 'approved';
+      return exc('federations', fedId) && fedDoc(fedId).status == 'approved';
     }
     function fedStaffPath(fedId) {
-      return /databases/$(database)/documents/federation_staff/$(fedId + '_' + me());
+      return dp('federation_staff', fedId + '_' + me());
     }
     function fedStaff(fedId) {
       return get(fedStaffPath(fedId)).data;
@@ -4864,8 +4892,8 @@ service cloud.firestore {
     // suspender) e a leitura dos pedidos seguem com `adm()`.
     function fedPlat(fedId) {
       return adm()
-        && exists(/databases/$(database)/documents/federation_admin_grants/$(fedId + '_' + me()))
-        && get(/databases/$(database)/documents/federation_admin_grants/$(fedId + '_' + me())).data.expires_ms > request.time.toMillis();
+        && exc('federation_admin_grants', fedId + '_' + me())
+        && gdc('federation_admin_grants', fedId + '_' + me()).expires_ms > request.time.toMillis();
     }
     function fedHas(fedId, perm) {
       return isAuthed() && (fedPlat(fedId) || perm in fedPerms(fedId));
@@ -4877,8 +4905,8 @@ service cloud.firestore {
     }
     function fedMemberActive(fedId) {
       return isAuthed()
-        && exists(/databases/$(database)/documents/federation_members/$(fedId + '_' + me()))
-        && get(/databases/$(database)/documents/federation_members/$(fedId + '_' + me())).data.status == 'active';
+        && exc('federation_members', fedId + '_' + me())
+        && gdc('federation_members', fedId + '_' + me()).status == 'active';
     }
     // PUBLICADA: aprovada pela plataforma E aberta ao público pelo admin da
     // federação (`published`, ausente = oculta). Antes disso a equipe estrutura
@@ -4920,8 +4948,8 @@ service cloud.firestore {
       allow create: if fedOn() && isAuthed()
         && nd().created_by == me()
         && nd().status == 'pending'
-        && nd().get('verified', false) == false
-        && nd().get('official', false) == false
+        && ng('verified', false) == false
+        && ng('official', false) == false
         && !nd().keys().hasAny(['member_counter', 'review', 'staff_roles', 'published', 'confederation', 'national_body', 'national_config', 'ambassadors_public'])
         && fedProfileOk();
       // A equipe (admin) edita página, Pix, marca e módulos — nunca o que dá confiança.
@@ -4943,9 +4971,9 @@ service cloud.firestore {
       // CNPJ completo, razão social: quem pediu (enquanto pendente), a equipe (admin) e o admin da plataforma.
       match /private/{docId} {
         allow read: if docId == 'data' && (adm() || fedHas(fedId, 'admin')
-          || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId)) && fedDoc(fedId).created_by == me()));
+          || (isAuthed() && exc('federations', fedId) && fedDoc(fedId).created_by == me()));
         allow write: if docId == 'data' && fedOn() && (fedHas(fedId, 'admin')
-          || (isAuthed() && exists(/databases/$(database)/documents/federations/$(fedId))
+          || (isAuthed() && exc('federations', fedId)
             && fedDoc(fedId).created_by == me() && fedDoc(fedId).status == 'pending'));
       }
     }
@@ -4990,7 +5018,7 @@ service cloud.firestore {
         // A regra confere o FORMATO do código; quem decide pessoa × clube × arena no pedido é o servidor.
         && nd().person_type is string
         && nd().person_type.matches('[a-z][a-z0-9_]{1,23}')
-        && nd().get('entity', 'person') in ['person', 'club', 'arena'];
+        && ng('entity', 'person') in ['person', 'club', 'arena'];
       allow update: if fedOn() && (fedAny(od().federation_id, ['admin', 'finance']))
         && !chg().hasAny(['federation_id'])
         && nd().price_cents is int
@@ -5011,12 +5039,11 @@ service cloud.firestore {
     match /federation_members/{memberId} {
       // ⭐ NUNCA pública. O próprio (ou o responsável), a equipe que atende (filiados, financeiro, admin) e o admin da plataforma.
       allow read: if fedMemberOwner(od())
-        || fedHas(od().federation_id, 'admin')
-        || fedHas(od().federation_id, 'members')
-        || fedHas(od().federation_id, 'finance')
-        || fedHas(od().federation_id, 'discipline')
+        // (`fedAny` = as quatro `fedHas` em OU, numa leitura só do cargo — em
+        // OU elas estouravam o teto de 1.000 expressões na consulta da lista.)
+        || fedAny(od().federation_id, ['admin', 'members', 'finance', 'discipline'])
         // A lista das filiações de UM clube/arena (consulta por `org_kind` + `org_id`).
-        || fedOrgManager(od().get('org_kind', ''), od().get('org_id', ''));
+        || fedOrgManager(og('org_kind', ''), og('org_id', ''));
       // 🐞 O `get` da PRÓPRIA filiação ({fed}_{uid}) antes de existir: com o
       // documento ausente `od()` é nulo e a leitura acima dá erro — era o que
       // tirava o "Filiar-se" da página para quem ainda não é filiado (a tela
@@ -5036,7 +5063,7 @@ service cloud.firestore {
       // idade e o consentimento do responsável — não é o navegador que os muda.
       // A secretaria REVELA o CPF com auditoria na tela.
       match /private/{docId} {
-        allow read: if docId == 'data' && (fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(memberId)).data)
+        allow read: if docId == 'data' && (fedMemberOwner(gdc('federation_members', memberId))
           || fedAny(memberId.split('_')[0], ['members', 'admin']));
         allow write: if false;
       }
@@ -5051,7 +5078,7 @@ service cloud.firestore {
         || fedHas(od().federation_id, 'members')
         || fedHas(od().federation_id, 'admin')
         // Documento de clube/arena filiado: todos os gestores da entidade veem (Etapa 2).
-        || fedOrgManager(od().get('org_kind', ''), od().get('org_id', ''));
+        || fedOrgManager(og('org_kind', ''), og('org_id', ''));
       allow create: if fedOn() && isAuthed()
         && nd().user_id == me()
         && nd().status == 'pending'
@@ -5061,17 +5088,17 @@ service cloud.firestore {
         && nd().storage_path is string
         && nd().storage_path.matches('federacao/' + me() + '/[A-Za-z0-9_-]+\\.[a-z]{3,4}')
         // Documento PRÓPRIO do plano ("outro documento" com nome, 2026-10-22): a chave e o nome, curtos.
-        && nd().get('doc_key', '').matches('[A-Za-z0-9_-]{0,24}')
-        && nd().get('label', '') is string && nd().get('label', '').size() <= 80
-        && fedMemberOwner(get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data)
-        && nd().federation_id == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.federation_id
-        && nd().get('org_kind', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_kind', '')
-        && nd().get('org_id', '') == get(/databases/$(database)/documents/federation_members/$(nd().member_id)).data.get('org_id', '');
+        && ng('doc_key', '').matches('[A-Za-z0-9_-]{0,24}')
+        && ng('label', '') is string && ng('label', '').size() <= 80
+        && fedMemberOwner(gdc('federation_members', nd().member_id))
+        && nd().federation_id == gdc('federation_members', nd().member_id).federation_id
+        && ng('org_kind', '') == gdc('federation_members', nd().member_id).get('org_kind', '')
+        && ng('org_id', '') == gdc('federation_members', nd().member_id).get('org_id', '');
       // A secretaria aceita ou recusa (com motivo) e diz até quando vale; nada mais muda.
       allow update: if fedOn() && (fedAny(od().federation_id, ['members', 'admin']))
         && chg().hasOnly(['status', 'review', 'valid_until', 'updated_at'])
         && nd().status in ['approved', 'rejected']
-        && nd().get('valid_until', '') is string;
+        && ng('valid_until', '') is string;
       // Quem enviou apaga enquanto está em análise (e troca o arquivo); o admin sempre.
       allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin'))
         || (fedOn() && isOwner(od().user_id) && od().status == 'pending');
@@ -5083,10 +5110,10 @@ service cloud.firestore {
     match /federation_transfers/{trId} {
       allow read: if fedMemberOwner(od())
         || fedAny(od().federation_id, ['members', 'admin'])
-        || (od().get('to_federation_id', null) is string
+        || (og('to_federation_id', null) is string
           && (fedAny(od().to_federation_id, ['members', 'admin'])))
         // Bloco 6: a confederação que homologa a troca entre duas filiadas.
-        || (od().get('homologation_by', null) is string
+        || (og('homologation_by', null) is string
           && fedAny(od().homologation_by, ['members', 'admin']));
       allow write: if false;
     }
@@ -5122,12 +5149,12 @@ service cloud.firestore {
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled']
         && nd().price_cents is int
         && nd().price_cents >= 0
-        && nd().get('enrolled_count', 0) == 0;
+        && ng('enrolled_count', 0) == 0;
       allow update: if fedOn()
         && (fedAny(od().federation_id, ['courses', 'admin']))
         && !chg().hasAny(['federation_id', 'enrolled_count'])
         && nd().status in ['draft', 'open', 'closed', 'done', 'cancelled'];
-      allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin') && od().get('enrolled_count', 0) == 0);
+      allow delete: if fedPlat(od().federation_id) || (fedOn() && fedHas(od().federation_id, 'admin') && og('enrolled_count', 0) == 0);
     }
 
     // Inscrição em curso (`{curso}_{uid}`): só o servidor (`federationCourse`) —
@@ -5175,7 +5202,7 @@ service cloud.firestore {
       allow write: if false;
     }
     match /federation_credentials/{credId} {
-      allow read: if (od().get('public', false) == true && od().status == 'active' && fedSees(od().federation_id))
+      allow read: if (og('public', false) == true && od().status == 'active' && fedSees(od().federation_id))
         || (isOwner(od().user_id))
         || fedAny(od().federation_id, ['courses', 'admin']);
       allow create, delete: if false;
@@ -5218,10 +5245,10 @@ service cloud.firestore {
         : fedAny(rep.federation_id, ['discipline', 'admin']);
     }
     match /federation_reports/{repId} {
-      allow get: if (isAuthed() && od().get('anonymous', false) == true)
-        || (isAuthed() && od().get('reporter_uid', null) == me())
+      allow get: if (isAuthed() && og('anonymous', false) == true)
+        || (isAuthed() && og('reporter_uid', null) == me())
         || fedRepStaff(od());
-      allow list: if (isAuthed() && od().get('reporter_uid', null) == me())
+      allow list: if (isAuthed() && og('reporter_uid', null) == me())
         || fedRepStaff(od());
       allow create: if fedOn() && isAuthed()
         && fedModuleOn(nd().federation_id, 'discipline')
@@ -5234,7 +5261,7 @@ service cloud.firestore {
         && nd().body.size() <= 2000
         && nd().anonymous is bool
         && (nd().anonymous
-          ? nd().get('reporter_uid', null) == null
+          ? ng('reporter_uid', null) == null
           : nd().reporter_uid == me())
         && !nd().keys().hasAny(['notes', 'handled_by']);
       allow update: if fedOn()
@@ -5337,7 +5364,7 @@ service cloud.firestore {
       return fedHas(fid, 'finance') || fedHas(fid, 'fiscal') || fedHas(fid, 'admin');
     }
     function fedAccPub() {
-      return od().get('pub', false) == true && fedModuleOn(od().federation_id, 'accounts') && fedSees(od().federation_id);
+      return og('pub', false) == true && fedModuleOn(od().federation_id, 'accounts') && fedSees(od().federation_id);
     }
     match /federation_budgets/{id} {
       allow read: if fedAcc(od().federation_id) || fedAccPub();
@@ -5511,12 +5538,12 @@ service cloud.firestore {
     // que votou, nunca em quem. A tela consulta com `federation_id` em
     // igualdade (regra provável).
     function fedElRun(eid, fid) {
-      let c = get(/databases/$(database)/documents/federation_elections/$(eid)).data.get('commission_uids', []);
+      let c = gdc('federation_elections', eid).get('commission_uids', []);
       return me() in c || (c.size() == 0 && fedHas(fid, 'admin'));
     }
     match /federation_elections/{id} {
       allow read: if (od().public == true && fedSees(od().federation_id) && fedModuleOn(od().federation_id, 'elections'))
-        || me() in od().get('commission_uids', []) || fedHas(od().federation_id, 'admin');
+        || me() in og('commission_uids', []) || fedHas(od().federation_id, 'admin');
       allow write: if false;
     }
     match /federation_candidacies/{id} {
@@ -5553,7 +5580,7 @@ service cloud.firestore {
       allow read: if (isOwner(od().payer_uid))
         || fedAny(od().federation_id, ['admin', 'finance', 'members', 'fiscal'])
         // Competições vê a taxa de chancela (aprova depois do pagamento).
-        || (od().get('origin', '') == 'sanction' && fedHas(od().federation_id, 'competitions'));
+        || (og('origin', '') == 'sanction' && fedHas(od().federation_id, 'competitions'));
       // Só o servidor cria; confirmar e cancelar também são dele.
       allow create, delete: if false;
       // "Já paguei": o pagador só DECLARA — aberta/informada → informada, com a observação
@@ -5563,8 +5590,8 @@ service cloud.firestore {
         && od().status in ['open', 'declared']
         && nd().status == 'declared'
         && chg().hasOnly(['status', 'declared_at', 'declared_note', 'declared_proof'])
-        && nd().get('declared_note', '') is string
-        && nd().get('declared_note', '').size() <= 300
+        && ng('declared_note', '') is string
+        && ng('declared_note', '').size() <= 300
         && (!chg().hasAny(['declared_proof']) || (nd().declared_proof is map
           && nd().declared_proof.keys().hasOnly(['path', 'name', 'content_type', 'size'])
           && nd().declared_proof.path is string
@@ -5604,8 +5631,8 @@ service cloud.firestore {
         && nd().org_id is string
         && nd().federation_id is string
         && affId == nd().federation_id + '_' + nd().kind + '_' + nd().org_id
-        && nd().get('message', '') is string
-        && nd().get('message', '').size() <= 500
+        && ng('message', '') is string
+        && ng('message', '').size() <= 500
         // O selo de clube certificado (`seal`) só o servidor grava.
         && !('seal' in nd())
         && fedModuleOn(nd().federation_id, 'affiliations')
@@ -5629,7 +5656,7 @@ service cloud.firestore {
 
     // O torneio tem a chancela APROVADA desta federação?
     function fedSanctionedBy(tid, fedId) {
-      let tdoc = get(/databases/$(database)/documents/tournaments/$(tid)).data;
+      let tdoc = gdc('tournaments', tid);
       return tdoc.get('federation_id', null) == fedId
         && tdoc.get('federation_sanction', {}).get('status', '') == 'approved';
     }
@@ -5662,12 +5689,12 @@ service cloud.firestore {
         && isTournamentAdmin(nd().tournament_id)
         && fedSanctionedBy(nd().tournament_id, nd().federation_id)
         // O peso (tier) é o da chancela — não o que quem envia escolher.
-        && nd().get('tier', null) == get(/databases/$(database)/documents/tournaments/$(nd().tournament_id)).data.federation_sanction.get('tier', 'regional');
+        && ng('tier', null) == gdc('tournaments', nd().tournament_id).federation_sanction.get('tier', 'regional');
       allow update: if fedOn() && isAuthed()
         && nd().federation_id == od().federation_id
         && nd().tournament_id == od().tournament_id
         && nd().modality_id == od().modality_id
-        && nd().get('season', null) == od().get('season', null)
+        && ng('season', null) == og('season', null)
         && fedSeasonOpen(od().season)
         && (
           (nd().status == 'sent'
@@ -5677,7 +5704,7 @@ service cloud.firestore {
             && isTournamentAdmin(od().tournament_id)
             && fedSanctionedBy(od().tournament_id, od().federation_id)
             // No reenvio também: a categoria é a da chancela, não a de quem envia.
-            && nd().get('tier', null) == get(/databases/$(database)/documents/tournaments/$(od().tournament_id)).data.federation_sanction.get('tier', 'regional'))
+            && ng('tier', null) == gdc('tournaments', od().tournament_id).federation_sanction.get('tier', 'regional'))
           || (fedHas(od().federation_id, 'competitions')
             && chg().hasOnly(['status', 'review', 'updated_at'])
             && nd().status in ['sent', 'rejected'])
@@ -5765,13 +5792,13 @@ service cloud.firestore {
     }
     match /club_x/{c}/{k}/{id} {
       allow get: if isAuthed() && k in ['aff', 'staff'] && id == me();
-      allow read: if (k in ['plans', 'benefits', 'news', 'sponsors', 'budgets', 'reports', 'docs', 'events', 'callups'] && (od().get('public', false) == true || od().get('pub', false) == true) && cxPub(c))
-        || (k in ['docs', 'events'] && od().get('members', false) == true && isClubMember(c))
-        || (k == 'news' && od().get('status', '') == 'published' && od().get('audience', '') == 'members' && isClubMember(c))
-        || (isAuthed() && k in ['aff', 'charges', 'cases'] && od().get('user_id', '') == me())
+      allow read: if (k in ['plans', 'benefits', 'news', 'sponsors', 'budgets', 'reports', 'docs', 'events', 'callups'] && (og('public', false) == true || og('pub', false) == true) && cxPub(c))
+        || (k in ['docs', 'events'] && og('members', false) == true && isClubMember(c))
+        || (k == 'news' && og('status', '') == 'published' && og('audience', '') == 'members' && isClubMember(c))
+        || (isAuthed() && k in ['aff', 'charges', 'cases'] && og('user_id', '') == me())
         || cxHas(c, cxReadPerms(k)) || adm();
       allow create, update: if cxOn() && cxHas(c, cxWritePerms(k))
-        && (k != 'plans' || (nd().get('club_id', '') == c && nd().price_cents is int && nd().price_cents >= 0
+        && (k != 'plans' || (ng('club_id', '') == c && nd().price_cents is int && nd().price_cents >= 0
           && nd().price_cents <= 100000000 && nd().name is string && nd().name.size() <= 80));
       allow delete: if cxOn() && cxHas(c, cxWritePerms(k)) && k != 'plans';
     }

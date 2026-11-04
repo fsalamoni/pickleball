@@ -19,6 +19,7 @@
 | Gestão do torneio → Resultados · aba Jogos do atleta · `/p/:id` (público) | **Pódio** de cada categoria ENCERRADA: os três degraus, "Cartão" por degrau, "Cartão do pódio" e **Parabenizar** |
 | Minha área → **Troféus** (`/perfil?secao=trofeus`) | A estante da pessoa: Torneios × Dias de jogo, contagem por metal, cada troféu abre o cartão |
 | Perfil público do atleta (`/atletas/:uid`) | A mesma estante, compacta, com **Parabenizar** em cada troféu |
+| Minha carreira → **Conquistas** e a própria estante, aba **Fora da plataforma** (flag `athlete_career`, só na estante da PRÓPRIA pessoa) | Os pódios dos torneios de fora que ela registrou (`careerTrophies`), com o selo **Declarado** e o cartão com o rodapé **"Resultado declarado"** (`event.declared`, também no texto de compartilhar), sem link público. Nunca contam em ranking, rating nem XP — ver `docs/54-CARREIRA-DO-ATLETA.md` |
 
 O cartão (`MedalCard`) é arte da marca: fundo ink com a quadra riscada em
 acid, o degrau em Outfit preto, as pessoas com foto (ou as iniciais num anel

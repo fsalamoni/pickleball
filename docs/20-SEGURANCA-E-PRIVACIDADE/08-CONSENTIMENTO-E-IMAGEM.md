@@ -85,16 +85,21 @@ plataforma e nunca concordou com nada. Publicadas sem login.
    levando ao encarregado, com SLA. Não pode depender de achar um e-mail.
 4. **Marcar pessoas** (futuro, Feed): quem é marcado pode remover a marcação
    e pedir a remoção da mídia.
-5. **Remoção de EXIF** em todo upload (hoje **não** é feito) — foto de
-   celular carrega GPS; publicar isso é vazar a casa da pessoa.
-   Ver `docs/FUTURO/FEED/08-MIDIA-FOTO-VIDEO.md` §4 — a implementação está
-   desenhada lá, mas o problema **já existe hoje**, sem o Feed.
+5. **Remoção de EXIF** em todo upload — ✅ **feito** (conferido no código em
+   2026-11-04). `storageService` passa toda imagem por `stripImageMetadata`
+   (`core/lib/imageMetadata.js`, que tira EXIF/XMP/IPTC sem recodificar), e
+   `prepareUpload` (`training/services/mediaUploadService.js`, usado pelo
+   Centro de Treino, pelo Mercado e pela Minha carreira) recodifica a imagem
+   em WebP/JPEG, o que descarta os metadados; quando não consegue, cai no
+   mesmo `stripImageMetadata`. Foto de celular carrega GPS, e publicá-la
+   seria vazar a casa da pessoa: todo upload NOVO de imagem passa por um dos
+   dois.
 6. **Rever `tournament_photos: allow read: if true`** — no mínimo exigir
    login; idealmente, respeitar a visibilidade do torneio.
 
-> ⚠ **Item de ação imediata, independente de tudo mais**: remover EXIF dos
-> uploads. É pequeno (uma função em `storageService`), não quebra nada, e
-> fecha um vazamento de localização que já está acontecendo.
+> ✅ O antigo "item de ação imediata" (remover EXIF dos uploads) está feito —
+> ver o item 5 acima. Este parágrafo afirmava o contrário e foi corrigido em
+> 2026-11-04.
 
 ## 3. Menores de idade
 
@@ -162,7 +167,7 @@ Ambos já apontam para cá em seus documentos de risco.
 ## 5. Ordem de implementação
 
 ```
-1. Remover EXIF nos uploads              (pequeno, imediato, sem risco)
+1. Remover EXIF nos uploads              ✅ feito (item 5 acima)
 2. Documento uso-de-imagem + toggles     (⚖️ advogado + 1 PR)
 3. Canal de remoção de foto              (1 PR pequeno)
 4. user_consents (finalidades granulares) (1 PR)

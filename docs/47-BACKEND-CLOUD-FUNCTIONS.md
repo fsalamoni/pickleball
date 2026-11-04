@@ -254,7 +254,7 @@ Código em `functions/duprClient.js` (API) e `functions/dupr.js` (regra). Doc: [
 |---|---|---|
 | `duprIntegration` | callable, quem está logado | Vale só para o público da política (`platform_settings/dupr_policy.audience`: `admins` = piloto, padrão; `all`), conferido por `liberadaPara`. Ações `pilot_*` (só admin, sem depender da flag; partidas só no UAT): `pilot_player_save|refresh|remove|invite`, `pilot_match_send|delete`, `pilot_sso_config`, `pilot_player_sso` (autoriza a conta de teste pelo login do DUPR) — `functions/duprPilot.js`, escreve só `dupr_pilot_*` e `audit_logs`. Ações `submissions_*` (só admin): `submissions_run` (passada agora), `submissions_approve|retry|remove|unblock` — `functions/duprSubmissions.js`, escreve `dupr_submissions` e `audit_logs` (timeout 300 s). `config` (flag, credenciais, endereço do login), `link` (confirma a pessoa pelo DUPR, exige `BASIC_L1`, reserva o ID, assina o rating e grava `dupr_links` + selo), `unlink`, `status` (renova assinaturas em 24 h). Audita em `audit_logs` |
 | `duprSubmitWorker` | agendada, a cada 15 min (São Paulo), 540 s, 512 MiB | Envio automático: com a flag `dupr_official_sync` ligada e a política fora de *Desligado*, lê as partidas decididas (`tournament_matches`, `club_event_games`), decide pela política e cria/atualiza/apaga no DUPR, até 60 chamadas por passada, com lease em `platform_settings/dupr_submissions`. Grava `dupr_submissions` + `audit_logs`. Testes: `duprSubmissions.test.js` |
-| `duprWebhook` | HTTP público, `/api/dupr/webhook?k=…` (`firebase.json`) | Eventos `RATING`/`RATING_SEED` do DUPR; o token da URL separa o DUPR de qualquer outro chamador; responde 200 depressa |
+| `duprWebhook` | HTTP público, `/api/dupr/webhook?k=…` (`firebase.json`) | Eventos `RATING`/`RATING_SEED` do DUPR; o token da URL separa o DUPR de qualquer outro chamador; responde 200 depressa. Grava `ratings` em `dupr_links/{uid}` e, só quando o rating muda, um ponto em `rating_points` (série ≤ 120, `proximosPontosDupr` — Minha carreira, `docs/54`) |
 
 
 **Testes**: `functions/messaging.test.js`, `messagingAdmin.test.js`,
@@ -311,8 +311,10 @@ e-mail verificado**.
 `accountDeletion.treino.test.js`; `accountMerge.test.js`;
 `accountStatus.test.js`; `supportAccess.test.js`;
 `registrationLink.test.js`. Guarda de cobertura de coleções:
-`src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado
-tem de entrar na exclusão e na exportação). Docs:
+`src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado/
+carreira tem de entrar na exclusão e na exportação). A Minha carreira
+(`docs/54`) entra por `career_events` (por `uid`) e o prefixo `carreira/` do
+Storage. Docs:
 `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`, `05-ADMIN-SUPORTE.md`.
 
 **Controle de linhas** (docs/53 §4): `coletarLinhas` apaga as câmeras

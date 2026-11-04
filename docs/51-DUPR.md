@@ -96,6 +96,11 @@ substitui os campos de ID e de rating digitados à mão.
 * `duprWebhook` (HTTP público, `/api/dupr/webhook?k=<token>`, rewrite no hosting):
   confere o `k` em tempo constante, responde 200 depressa, atualiza o rating de
   `RATING` e `RATING_SEED`. ID desconhecido ou rating nulo → 200 e ignora.
+  Quando o rating MUDA, acrescenta um ponto `{ ms, singles, doubles }` à série
+  `dupr_links/{uid}.rating_points` (no máximo 120, os mais antigos saem —
+  `proximosPontosDupr`, testado em `functions/dupr.test.js`); rating repetido
+  não grava ponto. É a base da evolução na Minha carreira
+  (`docs/54-CARREIRA-DO-ATLETA.md`, PR futuro); nada a mostra ainda.
 
 ### Para ligar (UAT)
 

@@ -15,7 +15,7 @@ import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, Building2, Dumbbell, Eye, GraduationCap, Landmark, LayoutDashboard,
-  LayoutGrid, Medal, Pencil, ShoppingBag, Swords, Trophy, User, Users,
+  LayoutGrid, Medal, Pencil, Route, ShoppingBag, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
@@ -58,7 +58,7 @@ import { SECOES } from './UserAreaSections';
 import { t } from '@/core/i18n';
 
 const ICONES = {
-  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, ShoppingBag, Landmark, Users, GraduationCap, Building2, LayoutDashboard,
+  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, Route, ShoppingBag, Landmark, Users, GraduationCap, Building2, LayoutDashboard,
 };
 
 /** `true`/`false` quando a leitura respondeu, `'erro'` quando falhou, `undefined` carregando. */
@@ -119,6 +119,8 @@ export default function UserArea() {
   // ponytail: só a ficha pessoal (`athlete_{uid}`); vendas como professor,
   // arena ou loja ficam no painel de vendas — somar aqui = 4 leituras por ficha.
   const mercadoOn = Boolean(flags?.[FEATURE_FLAG.MARKETPLACE]);
+  // Minha carreira (flag `athlete_career`): a seção só consulta quando aberta.
+  const carreiraOn = Boolean(flags?.[FEATURE_FLAG.ATHLETE_CAREER]);
   const sellerKey = mercadoOn && uid ? sellerKeyFor('athlete', uid) : null;
   const sellerQ = useSeller(sellerKey);
   const vendeKey = sellerQ.data ? sellerKey : null;
@@ -139,10 +141,11 @@ export default function UserArea() {
     clubes: temConvite ? true : papelDe(clubsQ, (clubsQ.data || []).length > 0),
     admin: !!isPlatformAdmin,
     mercado: mercadoOn,
+    carreira: carreiraOn,
     federacoes: federacoesOn ? (fedQs.some((q) => q.isError) ? 'erro' : fedMembersQ.isSuccess && fedRolesQ.isSuccess && fedInvitesQ.isSuccess && fedRostersQ.isSuccess && fedAssignmentsQ.isSuccess && fedFinalsQ.isSuccess && fedDirectedQ.isSuccess && fedCallupsQ.isSuccess && fedGrantAppsQ.isSuccess ? temFederacao : undefined) : false,
   }).map((s) => ({ ...s, icon: ICONES[s.icone] })),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn, federacoesOn, temFederacao, fedMembersQ.isSuccess, fedRolesQ.isSuccess, fedInvitesQ.isSuccess, fedRostersQ.isSuccess, fedAssignmentsQ.isSuccess, fedFinalsQ.isSuccess, fedDirectedQ.isSuccess, fedFinalsQ.isError, fedDirectedQ.isError, fedCallupsQ.isSuccess, fedGrantAppsQ.isSuccess, fedCallupsQ.isError, fedGrantAppsQ.isError, fedMembersQ.isError, fedChargesQ.isError, fedRolesQ.isError, fedInvitesQ.isError, fedRostersQ.isError, fedAssignmentsQ.isError]);
+  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn, carreiraOn, federacoesOn, temFederacao, fedMembersQ.isSuccess, fedRolesQ.isSuccess, fedInvitesQ.isSuccess, fedRostersQ.isSuccess, fedAssignmentsQ.isSuccess, fedFinalsQ.isSuccess, fedDirectedQ.isSuccess, fedFinalsQ.isError, fedDirectedQ.isError, fedCallupsQ.isSuccess, fedGrantAppsQ.isSuccess, fedCallupsQ.isError, fedGrantAppsQ.isError, fedMembersQ.isError, fedChargesQ.isError, fedRolesQ.isError, fedInvitesQ.isError, fedRostersQ.isError, fedAssignmentsQ.isError]);
 
   const ativa = resolveUserAreaSection(params.get('secao'), secoes);
   const Secao = SECOES[ativa];

@@ -131,6 +131,8 @@ torneio, `/c/:clubId`) existem para isso.
 | Arquivos em `uploads/{uid}/**` | ✔ só o próprio grava (< 25 MB); `get` por qualquer logado; `list` só o dono | — | storage.rules |
 | `uploads/{uid}/private/**` | ✔ só o dono lê/grava | ✖ | storage.rules (nem o admin) |
 | `treino/{uid}/*`, `mercado/{uid}/*` | ✔ dono grava (tipo e tamanho conferidos, sem sobrescrever); `get` por logado | ✖ | storage.rules (comprovante `comprovante-*` do Mercado: o dono não apaga) |
+| Minha carreira — `career_events` (flag `athlete_career`) | ✔ só o dono lê, cria, edita e apaga (id começa pelo uid); criar e editar exigem a flag **na regra** (`careerOn()`), ler e apagar não | ✖ pelo cliente (só a exclusão de conta, pelo servidor) | rules (`tests/rules/career.rules.test.js`) |
+| Fotos da carreira — `carreira/{uid}/*` | ✔ só o dono lê, lista, apaga e cria (arquivo novo, `image/(webp\|jpeg\|png)` < 3 MB) | ✖ | storage.rules (nem o admin; a exclusão de conta apaga o prefixo) |
 
 ### 4.3 Dia de jogo (`game_days`) — detalhe em [`15`](./15-DIA-DE-JOGO-PERMISSOES.md)
 

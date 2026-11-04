@@ -173,3 +173,37 @@ describe('mercado/ — fotos, vídeos e comprovante do Mercado', () => {
     await assertFails(deleteObject(ref(asDono(), 'mercado/dono_uid/comprovante-1_a.pdf')));
   });
 });
+
+describe('carreira/ — fotos dos torneios de fora (Minha carreira)', () => {
+  const img = { contentType: 'image/webp' };
+  const semente = () => env.withSecurityRulesDisabled((ctx) =>
+    uploadBytes(ref(ctx.storage(), 'carreira/dono_uid/1-a.webp'), bytes(), img));
+
+  it('29. o dono envia imagem pequena', async () => {
+    await assertSucceeds(uploadBytes(ref(asDono(), 'carreira/dono_uid/2-b.webp'), bytes(), img));
+    await assertSucceeds(uploadBytes(ref(asDono(), 'carreira/dono_uid/2-c.jpg'), bytes(), { contentType: 'image/jpeg' }));
+  });
+  it('30. 🔴 vídeo, PDF, SVG e imagem de 3 MB são recusados', async () => {
+    await assertFails(uploadBytes(ref(asDono(), 'carreira/dono_uid/3.mp4'), bytes(), { contentType: 'video/mp4' }));
+    await assertFails(uploadBytes(ref(asDono(), 'carreira/dono_uid/4.pdf'), bytes(), { contentType: 'application/pdf' }));
+    await assertFails(uploadBytes(ref(asDono(), 'carreira/dono_uid/5.svg'), bytes(), { contentType: 'image/svg+xml' }));
+    await assertFails(uploadBytes(ref(asDono(), 'carreira/dono_uid/6.jpg'), new Uint8Array(3 * 1024 * 1024), { contentType: 'image/jpeg' }));
+  });
+  it('31. 🔴 ninguém envia na pasta de outra pessoa', async () => {
+    await assertFails(uploadBytes(ref(asOutro(), 'carreira/dono_uid/7.webp'), bytes(), img));
+  });
+  it('32. 🔴 privada: só o dono lê e lista; outra conta e anônimo não', async () => {
+    await semente();
+    await assertSucceeds(getBytes(ref(asDono(), 'carreira/dono_uid/1-a.webp')));
+    await assertSucceeds(listAll(ref(asDono(), 'carreira/dono_uid')));
+    await assertFails(getBytes(ref(asOutro(), 'carreira/dono_uid/1-a.webp')));
+    await assertFails(getBytes(ref(asAnon(), 'carreira/dono_uid/1-a.webp')));
+    await assertFails(listAll(ref(asOutro(), 'carreira/dono_uid')));
+  });
+  it('33. 🔴 só o dono apaga; ninguém sobrescreve', async () => {
+    await semente();
+    await assertFails(deleteObject(ref(asOutro(), 'carreira/dono_uid/1-a.webp')));
+    await assertFails(uploadBytes(ref(asDono(), 'carreira/dono_uid/1-a.webp'), bytes(), img));
+    await assertSucceeds(deleteObject(ref(asDono(), 'carreira/dono_uid/1-a.webp')));
+  });
+});

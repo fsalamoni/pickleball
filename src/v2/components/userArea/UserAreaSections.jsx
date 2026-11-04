@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeftRight, Award, BadgeCheck, BarChart3, FileSignature, Flag, Plane, Bell, BookOpen, Building2, CalendarDays, ClipboardCheck, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
   HandCoins, Heart, HelpCircle, Inbox, MailPlus, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
-  Search, Settings, ShieldCheck, Landmark, IdCard, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
+  Search, Settings, ShieldCheck, Landmark, IdCard, Medal, Route, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
@@ -68,6 +68,7 @@ import MyArenaPlans from '@/v2/components/arenas/members/MyArenaPlans';
 import MyShopPurchases from '@/v2/components/arenas/shop/MyShopPurchases';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
+import CareerAreaSection from '@/v2/components/career/CareerAreaSection';
 import { MyArenaEnrollments, MyTaughtArenaClasses } from '@/v2/components/arenas/classes/MyArenaClasses';
 import { MiniStat } from './ProfileShowcase';
 import MyRefereeAssignments from '@/v2/components/federations/referees/MyRefereeAssignments';
@@ -671,6 +672,15 @@ function TrofeusSecao() {
   );
 }
 
+/** Minha carreira (flag `athlete_career`): o resumo e o atalho para registrar. */
+function CarreiraSecao() {
+  return (
+    <Bloco id="carreira" icon={Route} title={t('Minha carreira')} action={{ to: '/carreira', label: t('Ver a linha do tempo') }}>
+      <CareerAreaSection />
+    </Bloco>
+  );
+}
+
 
 /**
  * Federações (flag `federations`): as filiações da pessoa (estado, validade,
@@ -884,6 +894,7 @@ export const SECOES = Object.freeze({
   [S.JOGOS]: JogosSecao,
   [S.TORNEIOS]: TorneiosSecao,
   [S.TROFEUS]: TrofeusSecao,
+  [S.CARREIRA]: CarreiraSecao,
   [S.MERCADO]: MercadoSecao,
   [S.FEDERACOES]: FederacoesSecao,
   [S.CLUBES]: ClubesSecao,

@@ -86,12 +86,12 @@ import { isHostConfirmed } from '@/modules/arenas/domain/houseTournaments';
 
 /* ------------------------------ Tournaments ----------------------------- */
 
-export function useMyTournaments({ includeArchived = false } = {}) {
+export function useMyTournaments({ includeArchived = false, enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['my-tournaments', user?.uid, { includeArchived }],
     queryFn: () => (user?.uid ? listMyTournaments(user.uid, { includeArchived }) : Promise.resolve([])),
-    enabled: !!user?.uid,
+    enabled: !!user?.uid && enabled,
   });
 }
 

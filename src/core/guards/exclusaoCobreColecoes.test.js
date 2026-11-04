@@ -281,3 +281,41 @@ describe('a exclusão e a exportação cobrem as federações', () => {
     }));
   });
 });
+
+/* ----------------------------------------------------- Minha carreira -- */
+
+const DA_CARREIRA = [...REGRAS.matchAll(/^\s{4}match \/(career_[a-z_]+)\//gm)].map((m) => m[1]);
+const EXPORTA_CARREIRA_ARQ = 'src/modules/career/services/careerExportService.js';
+const EXPORTA_CARREIRA = readFileSync(EXPORTA_CARREIRA_ARQ, 'utf8');
+/** Como cada coleção da carreira chega à exportação (a função lida pelo serviço). */
+const CARREIRA_EXPORTADA_POR = {
+  career_events: ['listCareerEvents'],
+};
+const CARREIRA_FORA_DA_EXPORTACAO = {
+  // vazio: tudo o que é da carreira é exportado.
+};
+
+describe('a exclusão e a exportação cobrem a Minha carreira', () => {
+  it('o rules tem as coleções da carreira', () => {
+    expect(DA_CARREIRA).toEqual(expect.arrayContaining(['career_events']));
+  });
+
+  it('⭐ toda coleção `career_*` entra na exclusão de conta, e as fotos também', () => {
+    const cobre = colecoesDaExclusao();
+    expect(DA_CARREIRA.filter((c) => !cobre.has(c)), 'coleção da carreira sem tratamento na exclusão').toEqual([]);
+    expect(exclusao.STORAGE_PREFIXES.map((f) => f('u1'))).toContain('carreira/u1/');
+  });
+
+  it('⭐ toda coleção `career_*` tem caminho para a exportação (ou isenção com motivo), e a lista das fotos vai junto', () => {
+    expect(DA_CARREIRA.filter((c) => !CARREIRA_EXPORTADA_POR[c] && !CARREIRA_FORA_DA_EXPORTACAO[c])).toEqual([]);
+    const servico = readFileSync('src/modules/career/services/careerService.js', 'utf8');
+    const tela = readFileSync('src/v2/pages/V2Settings.jsx', 'utf8');
+    expect(tela, 'a exportação da conta não chama collectCareerExport').toMatch(/\bcollectCareerExport\b/);
+    expect(EXPORTA_CARREIRA).toMatch(/\blistMyCareerPhotoPaths\b/);
+    Object.entries(CARREIRA_EXPORTADA_POR).forEach(([col, fns]) => fns.forEach((fn) => {
+      expect(EXPORTA_CARREIRA, `${fn} não é usada pela exportação da carreira`).toMatch(new RegExp(`\\b${fn}\\b`));
+      expect(servico, `${fn} não está no serviço da carreira`).toMatch(new RegExp(`export async function ${fn}\\b`));
+      expect(servico + readFileSync('src/modules/career/domain/careerEvent.js', 'utf8'), `o serviço não cita '${col}'`).toContain(`'${col}'`);
+    }));
+  });
+});

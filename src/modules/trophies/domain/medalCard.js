@@ -79,7 +79,7 @@ export function buildMedalCard(input = {}) {
   const saying = degrau
     ? placeSaying(degrau.position, `${event.title}|${event.subtitle}|${degrau.position}`)
     : t('Três degraus, um dia inteiro de pickleball.');
-  const dateLabel = dataPorExtenso(event.date);
+  const dateLabel = event.dateLabel || dataPorExtenso(event.date);
   const where = [event.city, event.state].filter(Boolean).join(' · ');
   const hostLine = input.host?.name ? (input.host.kind === 'clube' ? t('Clube {nome}', { nome: input.host.name }) : t('Arena {nome}', { nome: input.host.name })) : '';
 
@@ -92,6 +92,8 @@ export function buildMedalCard(input = {}) {
     `${event.title}${event.subtitle ? ` · ${event.subtitle}` : ''}${dateLabel ? ` · ${dateLabel}` : ''}`,
     // O link vai à parte (`url`): o WhatsApp junta texto + link, e com o link
     // também no texto ele aparecia duas vezes.
+    // Torneio de fora (Minha carreira): o resultado foi DECLARADO pela pessoa.
+    event.declared === true ? t('Resultado declarado') : '',
     url ? t('Veja no PickleRush:') : t('via PickleRush'),
   ].filter(Boolean).join('\n');
 
@@ -100,7 +102,7 @@ export function buildMedalCard(input = {}) {
 
   return {
     mode, position: degrau?.position || null, headline, saying, dateLabel, where, hostLine,
-    event: { title: event.title || t('Torneio'), subtitle: event.subtitle || '', kind: event.kind || 'torneio' },
+    event: { title: event.title || t('Torneio'), subtitle: event.subtitle || '', kind: event.kind || 'torneio', declared: event.declared === true },
     host: input.host && (input.host.name || input.host.logo) ? { name: input.host.name || '', logo: input.host.logo || null, kind: input.host.kind || 'arena' } : null,
     people: pessoas, names: nomes, lines: linhas,
     url, shareText, fileName: `picklerush-${slug || 'cartao'}.png`,
