@@ -707,8 +707,9 @@ Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas li
   saem pela API direta (`scripts/firestore-rules-publicar.mjs`): mostra a
   resposta real do serviço em vez do 409 e não republica regra igual à do ar.
   Com o serviço de regras fora do ar (503 por horas em 2026-11-03/04), o
-  deploy NÃO segura site e funções: fica vermelho no fim, e a vigilância
-  `firestore-rules-catchup.yml` publica depois. Ver `docs/03-WORKFLOW.md` §4.3
+  deploy NÃO segura site e funções: deixa um aviso, e a vigilância
+  `firestore-rules-catchup.yml` publica depois (e fica vermelha só se as
+  regras do `main` seguirem fora do ar por mais de 3 h). Ver `docs/03-WORKFLOW.md` §4.3
 - **O runtime das Cloud Functions tem prazo.** `engines.node` em
   `functions/package.json` (e no lockfile) decide o `nodejs<N>` do deploy. O
   Node.js 20 é DESLIGADO em 2026-10-31 — depois disso nenhum deploy passa, nem

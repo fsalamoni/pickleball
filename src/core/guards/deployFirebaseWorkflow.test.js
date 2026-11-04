@@ -71,8 +71,18 @@ describe('workflow de deploy do Firebase', () => {
     expect(workflow).toMatch(/for TENTATIVA in 1 2 3/);
   });
 
-  it('⭐ regra pendente não passa calada: job vermelho no fim e vigilância que publica depois', () => {
+  it('⭐ regra pendente não passa calada: aviso no fim do deploy e vigilância que publica (e alarma depois de 3 h)', () => {
     expect(workflow).toMatch(/if: always\(\) && steps\.firestore_rules\.outputs\.status == 'pending'/);
+    // 🐞 Deploy do PR #393: o passo vermelho vinha antes da conferência do
+    // site no ar, e ela era pulada. Ele tem de ser o ÚLTIMO passo.
+    const passos = [...workflow.matchAll(/^ {6}- name: (.+)$/gm)].map((m) => m[1].trim());
+    expect(passos.at(-1)).toBe('Regras do Firestore pendentes');
+    // Aviso, não falha: a vigilância publica minutos depois (alarme falso no #393).
+    const passo = workflow.slice(workflow.indexOf('- name: Regras do Firestore pendentes'));
+    expect(passo).toMatch(/::warning title=Regras do Firestore pendentes/);
+    expect(passo).not.toMatch(/exit 1/);
+    // O alarme de verdade é da vigilância: regras do main fora do ar há mais de 3 h.
+    expect(CATCHUP).toMatch(/-gt 10800/);
     expect(CATCHUP).toMatch(/cron:/);
     expect(CATCHUP).toMatch(/group: firestore-rules/);
     expect(CATCHUP).toMatch(/firestore-rules-compactar\.mjs --escrever/);
