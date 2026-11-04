@@ -4,7 +4,8 @@
  *
  *  - `CareerPartnerLayer`: a camada 3 da ficha, do lado de quem registrou —
  *    pedir a confirmação, ver a resposta e a visão da dupla, decidir se ela
- *    entra no treino, denunciar, cancelar;
+ *    entra no treino, denunciar, cancelar; e, para a dupla digitada SÓ COM
+ *    O NOME (PR 6), "Convidar pelo WhatsApp" com link de uso único;
  *  - `CareerPartnerInbox`: o topo da linha do tempo, do lado da DUPLA — os
  *    pedidos que chegaram ("Confirmo" / "Não foi assim"), deixar a visão e
  *    "Pôr na minha carreira também".
@@ -14,20 +15,20 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Flag, Handshake, UserCheck } from 'lucide-react';
+import { Flag, Handshake, MessageCircle, UserCheck } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { todayLocal } from '@/modules/training/domain/dates.js';
 import {
   OWNER_DECISION, PARTNER_ASPECT_IDS, PARTNER_LIMITS, PARTNER_REPORT_LABEL, PARTNER_REPORT_REASONS,
-  PARTNER_STATUS, PARTNER_STATUS_LABEL, ageOn, awaitsOwner, awaitsPartner, declinedNeedsChange, eventPartnerUids,
-  isAdult, mirrorEventDraft, partnerDocFor,
+  PARTNER_STATUS, PARTNER_STATUS_LABEL, ageOn, awaitsOwner, awaitsPartner, careerInvitePath, declinedNeedsChange,
+  eventPartnerUids, inviteStateFor, isAdult, mirrorEventDraft, namedPartners, partnerDocFor, whatsappShareUrl,
 } from '@/modules/career/domain/careerPartner.js';
 import { CAREER_STATUS, entryLabel, placementText } from '@/modules/career/domain/careerEvent.js';
 import { aspectLabel } from '@/modules/training/domain/debrief.js';
-import { useCareerPartnerAction } from '@/modules/career/hooks/useCareer';
+import { useCareerPartnerAction, useCareerPartnerInvites } from '@/modules/career/hooks/useCareer';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { careerDateLabel } from './careerUi';
-import { t } from '@/core/i18n';
+import { fmtData, t } from '@/core/i18n';
 
 const TOM_STATUS = Object.freeze({ invited: 'neutral', reconfirm: 'neutral', confirmed: 'blue', declined: 'red' });
 
@@ -129,20 +130,119 @@ function ReportControl({ docId }) {
  */
 export function CareerPartnerLayer({ event, saved, partners, partnersError, onRetry, dirty }) {
   const { userProfile } = useAuth();
-  const acao = useCareerPartnerAction();
-  const [pedidos, setPedidos] = useState(() => new Set());
   const citados = eventPartnerUids(event);
-  const nomes = new Map((event?.entries || []).filter((e) => e?.partner?.uid).map((e) => [e.partner.uid, e.partner.name]));
-
-  if (!citados.length) {
-    return <p className="text-xs text-gray-500">{t('Escolha a dupla da lista de usuários (na categoria, acima) para pedir que ela confirme o resultado. Dupla sem conta continua valendo, só não confirma.')}</p>;
-  }
-  if (partnersError) return <V2ErrorState inline title={t('Não carregaram as confirmações das duplas')} description={t('Sem elas não dá para saber se você já pediu.')} onRetry={onRetry} />;
-  if (partners === undefined) return <V2Skeleton lines={2} />;
-
-  const jogado = event.status !== CAREER_STATUS.PLANNED && !event.cancelled;
+  const jogado = event?.status !== CAREER_STATUS.PLANNED && !event?.cancelled;
   const adulto = isAdult(userProfile?.birth_date, todayLocal());
   const semNascimento = ageOn(userProfile?.birth_date, todayLocal()) === null;
+  const semConta = namedPartners(event);
+
+  if (!citados.length && !semConta.length) {
+    return <p className="text-xs text-gray-500">{t('Escolha a dupla da lista de usuários (na categoria, acima) para pedir que ela confirme o resultado. Dupla sem conta continua valendo: dá para convidá-la pelo WhatsApp.')}</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {citados.length > 0 && (
+        <CitedPartners event={event} citados={citados} saved={saved} dirty={dirty} partners={partners} partnersError={partnersError}
+          onRetry={onRetry} jogado={jogado} adulto={adulto} semNascimento={semNascimento} />
+      )}
+      {semConta.length > 0 && (
+        <NamedPartnerInvites event={event} semConta={semConta} saved={saved} dirty={dirty} jogado={jogado} adulto={adulto} semNascimento={semNascimento} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * A dupla digitada SÓ COM O NOME (PR 6): "Convidar pelo WhatsApp" gera no
+ * servidor um link de uso único; o WhatsApp abre no aparelho, sem número
+ * guardado. Quem abrir o link e entrar na conta passa a ser a dupla do
+ * registro (só se ela ainda estiver vazia) e confirma pelo caminho de sempre.
+ */
+function NamedPartnerInvites({ event, semConta, saved, dirty, jogado, adulto, semNascimento }) {
+  const convites = useCareerPartnerInvites();
+  const acao = useCareerPartnerAction();
+  // O link recém-gerado (o token só existe nesta tela: o servidor guarda o hash).
+  const [links, setLinks] = useState({});
+  const pode = saved && !dirty && jogado && adulto;
+
+  async function convidar(p) {
+    try {
+      const r = await acao.mutateAsync({ action: 'invite_link', eventId: event.id, partnerName: p.name });
+      const url = `${window.location.origin}${careerInvitePath(r.token)}`;
+      const msg = t('Oi, {nome}! Registrei o {torneio} na minha carreira do PickleRush com você de dupla. Entra por este link para confirmar (vale até {data}): {link}', {
+        nome: p.name, torneio: event.name || t('torneio'), data: fmtData(r.expires_at_ms, { dateStyle: 'short' }), link: url,
+      });
+      const wa = whatsappShareUrl(msg);
+      setLinks((x) => ({ ...x, [p.key]: wa }));
+      window.open(wa, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+    }
+  }
+  async function cancelar(p, id) {
+    try {
+      await acao.mutateAsync({ action: 'invite_cancel', id });
+      setLinks((x) => ({ ...x, [p.key]: null }));
+      toast.success(t('Convite cancelado. O link parou de valer.'));
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+    }
+  }
+
+  if (convites.isError) {
+    return <V2ErrorState inline title={t('Não carregaram os convites às duplas sem conta')} description={t('Sem eles não dá para saber se você já convidou.')} onRetry={() => convites.refetch()} />;
+  }
+  if (!convites.isSuccess) return <V2Skeleton lines={2} />;
+
+  return (
+    <ul className="space-y-3">
+      {semConta.map((p) => {
+        const { invite, state } = inviteStateFor(convites.data, event.id, p.key);
+        const wa = links[p.key];
+        return (
+          <li key={p.key} className="space-y-2 rounded-2xl bg-paper p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-ink"><Handshake className="h-4 w-4" aria-hidden="true" /> {p.name}</p>
+              {state === 'pending' && <V2Badge tone="neutral">{t('Convite enviado · aguardando')}</V2Badge>}
+              {state === 'expired' && <V2Badge tone="neutral">{t('O convite venceu')}</V2Badge>}
+            </div>
+            {!state && <p className="text-xs text-gray-500">{t('{nome} ainda não tem conta aqui. Mande um convite: quem entrar pelo link passa a ser a dupla deste torneio e confirma o resultado.', { nome: p.name })}</p>}
+            {p.indexes.length > 1 && <p className="text-xs text-gray-500">{t('O mesmo link vale para as {n} categorias com este nome. Se são pessoas diferentes, escreva os nomes de um jeito que as distinga.', { n: p.indexes.length })}</p>}
+            {state === 'pending' && <p className="text-xs text-gray-500">{t('O link vale uma vez só, até {data}.', { data: fmtData(invite.expires_at_ms, { dateStyle: 'medium' }) })}</p>}
+            {!jogado && <p className="text-xs text-gray-500">{t('Dá para convidar a dupla depois que o torneio acontecer.')}</p>}
+            {jogado && !adulto && <p className="text-xs text-gray-500">{semNascimento ? t('Preencha a sua data de nascimento no perfil para convidar a dupla.') : t('O convite à dupla é só para maiores de 18 anos.')}</p>}
+            {dirty && <p className="text-xs text-gray-500">{t('Salve a ficha antes de convidar a dupla.')}</p>}
+            {pode && (
+              <div className="flex flex-wrap gap-2">
+                <V2Button type="button" size="sm" variant="secondary" data-dica="carreira-convidar-whatsapp" disabled={acao.isPending} onClick={() => convidar(p)}>
+                  <MessageCircle className="h-4 w-4" /> {state === 'pending' ? t('Mandar um link novo') : t('Convidar pelo WhatsApp')}
+                </V2Button>
+                {state === 'pending' && (
+                  <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => cancelar(p, invite.id)}>{t('Cancelar o convite')}</V2Button>
+                )}
+              </div>
+            )}
+            {wa && (
+              <p className="text-xs text-gray-600">
+                {t('O WhatsApp não abriu?')}{' '}
+                <a href={wa} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline">{t('Abrir o WhatsApp')}</a>
+              </p>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** As duplas com conta: pedir a confirmação, a resposta e a visão (PR 3). */
+function CitedPartners({ event, citados, saved, dirty, partners, partnersError, onRetry, jogado, adulto, semNascimento }) {
+  const acao = useCareerPartnerAction();
+  const [pedidos, setPedidos] = useState(() => new Set());
+  const nomes = new Map((event?.entries || []).filter((e) => e?.partner?.uid).map((e) => [e.partner.uid, e.partner.name]));
+
+  if (partnersError) return <V2ErrorState inline title={t('Não carregaram as confirmações das duplas')} description={t('Sem elas não dá para saber se você já pediu.')} onRetry={onRetry} />;
+  if (partners === undefined) return <V2Skeleton lines={2} />;
 
   async function rodar(payload, ok) {
     try {

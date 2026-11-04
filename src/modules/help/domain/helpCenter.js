@@ -2005,7 +2005,7 @@ const ATLETA = {
       blocks: [
         p(tk('Na ficha de um torneio de fora já jogado, escolha a dupla da lista de usuários (aparecem primeiro as pessoas com quem você já jogou). Salvo, a camada "Dupla" oferece "Pedir confirmação": a dupla recebe um aviso e responde "Confirmo" ou "Não foi assim". Confirmado, o torneio ganha o selo "Confirmado pela dupla".')),
         list(
-          tk('SÓ QUEM FOI CITADO CONFIRMA — e só maiores de 18 anos pedem ou confirmam. Dupla sem conta continua na ficha, só não confirma.'),
+          tk('SÓ QUEM FOI CITADO CONFIRMA — e só maiores de 18 anos pedem ou confirmam. Dupla sem conta continua na ficha e pode ser convidada pelo WhatsApp.'),
           tk('MUDOU A DATA OU O RESULTADO? — a confirmação fica pendente de novo e a dupla é avisada. Trocar só o nome do torneio não pede nada.'),
           tk('A VISÃO DA DUPLA — depois de confirmar, a dupla pode dizer até 3 pontos fortes e 3 a melhorar, e sugerir um treino. Só vocês dois veem. Você escolhe "Usar no meu treino" (entra no foco dos seus balanços, dizendo que veio dela) ou "Guardar".'),
           tk('PÔR NA MINHA CARREIRA TAMBÉM — quem confirmou pode copiar o torneio para a própria carreira, já preenchido; os dois registros ficam ligados.'),
@@ -2013,6 +2013,25 @@ const ATLETA = {
         ),
         link('/carreira', tk('Abrir a Minha carreira')),
         warn(tk('A confirmação e a visão da dupla nunca entram em ranking, rating nem XP. Apagar o pedido, retirar a visão ou desfazer a confirmação vale a qualquer hora.')),
+      ],
+    },
+    {
+      id: 'carreira-dupla-sem-conta',
+      flags: ['athlete_career'],
+      title: tk('Convidar a dupla que não tem conta'),
+      summary: tk('Pelo WhatsApp, com um link que vale uma vez: quem entrar por ele vira a dupla do torneio e confirma.'),
+      keywords: ['dupla', 'sem conta', 'convite', 'convidar', 'whatsapp', 'link', 'carreira', 'parceiro'],
+      guias: ['carreira-registrar'],
+      blocks: [
+        p(tk('Na ficha de um torneio de fora já jogado, a dupla digitada só com o nome ganha o botão "Convidar pelo WhatsApp". O WhatsApp abre no seu celular com a mensagem e o link; você escolhe o contato.')),
+        list(
+          tk('UM USO, 14 DIAS — o link vale uma vez só e vence em 14 dias. Gerar um novo derruba o anterior; "Cancelar o convite" faz ele parar de valer na hora.'),
+          tk('QUEM ABRE O LINK — cria a conta (ou entra) e toca em "Sou eu". A conta passa a ser a dupla do torneio e o pedido de confirmação abre em seguida, como em qualquer dupla com conta.'),
+          tk('NUNCA TROCA UMA CONTA — se a dupla já tiver uma conta no registro, o link não vale. E você não pode aceitar o próprio convite.'),
+          tk('MENORES DE 18 — não convidam nem são convidados.'),
+          tk('NENHUM TELEFONE — a plataforma não guarda o número nem o link inteiro, só uma marca que serve para conferir.'),
+        ),
+        link('/carreira', tk('Abrir a Minha carreira')),
       ],
     },
     {
@@ -2923,9 +2942,12 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'treino']] },
   { pattern: '/treino', label: tk('o treino'),
     refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
-  // Minha carreira (as abas são `?aba=`, por isso sem `/carreira/*`).
+  // Minha carreira (as abas são `?aba=`). O link de convite da dupla sem conta
+  // (`/carreira/convite/:token`) vem ANTES do genérico.
+  { pattern: '/carreira/convite/*', label: tk('o convite de dupla'),
+    refs: [[HELP_SECTION.ATHLETE, 'carreira-dupla-sem-conta'], [HELP_SECTION.ATHLETE, 'carreira-dupla']] },
   { pattern: '/carreira', label: tk('a sua carreira'),
-    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos'], [HELP_SECTION.ATHLETE, 'carreira-dupla'], [HELP_SECTION.ATHLETE, 'carreira-xp']] },
+    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos'], [HELP_SECTION.ATHLETE, 'carreira-dupla'], [HELP_SECTION.ATHLETE, 'carreira-dupla-sem-conta'], [HELP_SECTION.ATHLETE, 'carreira-xp']] },
   { pattern: '/circuits', label: tk('circuitos'),
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: tk('seus jogos'),

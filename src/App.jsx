@@ -16,6 +16,7 @@ import V2RouteBoundary from '@/v2/components/V2RouteBoundary';
 const Landing = lazy(() => import('@/v2/pages/V2Landing'));
 const Login = lazy(() => import('@/v2/pages/V2Login'));
 const ReferralLanding = lazy(() => import('@/v2/pages/V2ReferralLanding'));
+const CareerInvite = lazy(() => import('@/v2/pages/V2CareerInvite'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const Telao = lazy(() => import('@/pages/Telao'));
@@ -96,6 +97,8 @@ function MainEntry() {
   if (isLoadingAuth) return <FullScreenSpinner />;
   if (!isAuthenticated && !allowLocalPreview) {
     if (location.pathname === '/') return <Landing />;
+    // O convite da dupla sem conta (Minha carreira): explica e leva ao login voltando ao link.
+    if (location.pathname.startsWith('/carreira/convite/')) return <CareerInvite />;
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
   return <V2App />;

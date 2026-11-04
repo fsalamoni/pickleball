@@ -600,6 +600,12 @@ service cloud.firestore {
     match /career_partner_reports/{id} {
       allow read: if isOwner(od().reporter_uid);
     }
+    // O convite pelo WhatsApp da dupla SEM conta (PR 6): o id é o hash do token
+    // (o token nunca é guardado) e não há telefone. Só o servidor grava (gerar,
+    // cancelar, aceitar); lê só quem convidou (consulta `owner_uid ==`).
+    match /career_partner_invites/{id} {
+      allow read: if isOwner(od().owner_uid);
+    }
 
     // ---- Galeria de fotos do torneio -------------------------------------
     // Leitura pública (aparece na visão de espectador). Envio/remoção só por

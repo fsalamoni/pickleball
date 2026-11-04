@@ -75,4 +75,18 @@ describe('paridade: a dupla da Minha carreira', () => {
       expect({ valid: b.valid, error: b.error, value: b.value }).toEqual({ valid: a.valid, error: a.error, value: a.value });
     });
   });
+
+  it('a dupla sem conta (PR 6): a mesma validade, o mesmo token e as mesmas duplas digitadas', () => {
+    expect(s.INVITE_TTL_DAYS).toBe(c.INVITE_TTL_DAYS);
+    expect(s.INVITE_TOKEN_PATTERN).toBe(c.INVITE_TOKEN_PATTERN);
+    ['Zé  Ninguém', ' JOÃO ', '', null, 'Ana Maria'].forEach((n) => expect(s.partnerNameKey(n)).toBe(c.partnerNameKey(n)));
+    const sem = { entries: [
+      { format: 'doubles', partner: { name: 'Zé Ninguém' } },
+      { format: 'singles', partner: { name: 'Zé Ninguém' } },
+      { format: 'teams', partner: { name: 'ze ninguem' } },
+      { format: 'doubles', partner: { uid: 'bia123', name: 'Bia' } },
+      { format: 'doubles', partner: { name: '  ' } },
+    ] };
+    [...EVENTOS, sem].forEach((ev) => expect(s.namedPartners(ev)).toEqual(c.namedPartners(ev)));
+  });
 });

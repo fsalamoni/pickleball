@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   awaitsOwner, awaitsPartner, careerFingerprint, careerPartnerPending, citedEntryIndexes, eventPartnerUids,
   isAdult, mirrorEventDraft, declinedNeedsChange, normalizePartnerFeedback, partnerDocFor, partnerDocId, partnerSealFor,
-  partnerVoices, pastPartners,
+  partnerVoices, pastPartners, namedPartners, partnerNameKey, inviteStateFor, careerInvitePath, whatsappShareUrl,
+  keepServerLinkedPartners,
 } from './careerPartner.js';
 import { careerSeal, normalizeCareerEvent } from './careerEvent.js';
 import { buildCareerTimeline } from './timeline.js';
@@ -129,5 +130,58 @@ describe('o que a tela deriva', () => {
     const recusado = { ...conf, status: 'declined' };
     expect(declinedNeedsChange(EV, recusado)).toBe(true);
     expect(declinedNeedsChange(mudou, recusado)).toBe(false);
+  });
+});
+
+describe('a dupla sem conta (PR 6)', () => {
+  const SEM = {
+    id: 'eu_2', entries: [
+      { format: 'doubles', partner: { name: 'Zé Ninguém' } },
+      { format: 'teams', partner: { name: 'ze  NINGUEM ' } },
+      { format: 'singles', partner: { name: 'Zé Ninguém' } },
+      { format: 'doubles', partner: { uid: 'bia', name: 'Bia' } },
+      { format: 'doubles', partner: { name: 'Lia' } },
+    ],
+  };
+
+  it('agrupa as duplas digitadas pelo nome (sem caixa nem acento); com conta e simples ficam de fora', () => {
+    expect(partnerNameKey(' Zé   Ninguém ')).toBe('ze ninguem');
+    expect(namedPartners(SEM)).toEqual([
+      { name: 'Zé Ninguém', key: 'ze ninguem', indexes: [0, 1] },
+      { name: 'Lia', key: 'lia', indexes: [4] },
+    ]);
+    expect(namedPartners(EV)).toEqual([]);
+  });
+
+  it('o estado do convite: aguardando, vencido ou nenhum', () => {
+    const inv = [{ event_id: 'eu_2', name_key: 'lia', expires_at_ms: 2000 }];
+    expect(inviteStateFor(inv, 'eu_2', 'lia', 1000).state).toBe('pending');
+    expect(inviteStateFor(inv, 'eu_2', 'lia', 3000).state).toBe('expired');
+    expect(inviteStateFor(inv, 'eu_2', 'ze ninguem', 1000)).toEqual({ invite: null, state: null });
+    expect(inviteStateFor(undefined, 'eu_2', 'lia').state).toBeNull();
+  });
+
+  it('o link e a mensagem do WhatsApp (sem número de telefone)', () => {
+    expect(careerInvitePath('abc_-D')).toBe('/carreira/convite/abc_-D');
+    const url = whatsappShareUrl('Oi! https://x.app/carreira/convite/abc');
+    expect(url.startsWith('https://wa.me/?text=')).toBe(true);
+    expect(decodeURIComponent(url.split('text=')[1])).toBe('Oi! https://x.app/carreira/convite/abc');
+  });
+});
+
+describe('keepServerLinkedPartners (ficha aberta antes do aceite pelo link)', () => {
+  const atual = { updated_at_ms: 200, entries: [{ format: 'doubles', partner: { uid: 'ze', name: 'Zé Ninguém' } }] };
+  const ficha = { updated_at_ms: 999, partner_uids: [], entries: [{ format: 'doubles', partner: { name: 'ze ninguem' } }] };
+
+  it('🔴 gravado mais novo que o carregado: a mesma dupla recupera a conta do servidor', () => {
+    const r = keepServerLinkedPartners(ficha, atual, 100);
+    expect(r.entries[0].partner).toEqual({ uid: 'ze', name: 'ze ninguem' });
+    expect(r.partner_uids).toEqual(['ze']);
+  });
+
+  it('nada mudou desde que a ficha abriu, ou o nome é outro: grava o que a pessoa escolheu', () => {
+    expect(keepServerLinkedPartners(ficha, atual, 200)).toBe(ficha);
+    const outro = { ...ficha, entries: [{ format: 'doubles', partner: { name: 'Cau' } }] };
+    expect(keepServerLinkedPartners(outro, atual, 100)).toBe(outro);
   });
 });

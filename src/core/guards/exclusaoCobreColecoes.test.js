@@ -292,6 +292,7 @@ const CARREIRA_EXPORTADA_POR = {
   career_events: ['listCareerEvents'],
   career_partner: ['listMyCareerPartnerDocs'],
   career_partner_reports: ['listMyCareerPartnerReports'],
+  career_partner_invites: ['listMyCareerPartnerInvites'],
   career_rank: ['listCareerRanks'],
 };
 const CARREIRA_FORA_DA_EXPORTACAO = {

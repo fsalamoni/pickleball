@@ -31,6 +31,9 @@ function cenario() {
     'career_partner/bia_1__ana': { owner_uid: 'bia', partner_uid: 'ana', event_id: 'bia_1', status: 'confirmed' },
     'career_partner/ana_1__bia': { owner_uid: 'ana', partner_uid: 'bia', event_id: 'ana_1', status: 'confirmed', feedback: { improve: ['dink'] } },
     'career_partner/ana_1__cau': { owner_uid: 'ana', partner_uid: 'cau', event_id: 'ana_1', status: 'invited' },
+    // Convites pelo WhatsApp (PR 6): o de quem sai some; o dos outros fica.
+    'career_partner_invites/h1': { owner_uid: 'bia', event_id: 'bia_1', name_key: 'ze' },
+    'career_partner_invites/h2': { owner_uid: 'ana', event_id: 'ana_1', name_key: 'lia' },
   });
   const auth = createFakeAuth(['bia', 'ana'], { log: db.store.log });
   const bucket = createFakeBucket(['carreira/bia/a.webp']);
@@ -43,7 +46,7 @@ describe('exclusão de conta × Minha carreira', () => {
     const antes = new Map(db.store.docs);
     await executeAccountDeletion(ctx, 'bia', { actor: ADMIN, reason: 'pedido da titular', hojeISO: '2026-11-04', FieldValue: FakeFieldValue });
     const sumiram = [...antes.keys()].filter((p) => !db.store.docs.has(p)).sort();
-    expect(sumiram).toEqual(['career_events/bia_1', 'career_partner/ana_1__bia', 'career_partner/bia_1__ana', 'users/bia']);
+    expect(sumiram).toEqual(['career_events/bia_1', 'career_partner/ana_1__bia', 'career_partner/bia_1__ana', 'career_partner_invites/h1', 'users/bia']);
     const ana = db.store.docs.get('career_events/ana_1');
     expect(ana.entries[0].partner).toEqual({ name: 'Bia' });
     expect(ana.entries[1].partner).toEqual({ uid: 'cau', name: 'Cau' });

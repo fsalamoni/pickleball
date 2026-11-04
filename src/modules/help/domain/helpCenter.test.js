@@ -470,6 +470,24 @@ describe('helpLinkFor', () => {
     expect(helpForRoute(de)?.articles.map((a) => a.id)).toContain('loja-pdv');
   });
 
+  it('🔴 o token do convite da carreira não vai para a URL da ajuda (a pista segue valendo)', () => {
+    const link = helpLinkFor('/carreira/convite/AbCdEfGhIjKlMnOpQrStUvWxYz012345');
+    expect(link).not.toContain('AbCdEf');
+    const de = new URLSearchParams(link.split('?')[1]).get('de');
+    expect(helpForRoute(de)).toBeTruthy();
+  });
+
+  it('a validade do convite da carreira escrita na ajuda é a do código (INVITE_TTL_DAYS)', async () => {
+    const { INVITE_TTL_DAYS } = await import('../../career/domain/careerPartner.js');
+    const linhas = ['helpCenter.js', 'guias.js', 'pontosDeDica.js']
+      .flatMap((f) => readFileSync(`src/modules/help/domain/${f}`, 'utf8').split('\n'))
+      .filter((l) => /WhatsApp|UM USO/.test(l) && /\d+ (dias|DIAS)/.test(l));
+    expect(linhas.length).toBeGreaterThanOrEqual(3);
+    for (const l of linhas) {
+      for (const [, n] of l.matchAll(/(\d+) (?:dias|DIAS)/g)) expect(Number(n)).toBe(INVITE_TTL_DAYS);
+    }
+  });
+
   it('na própria ajuda não se aponta para si mesma', () => {
     expect(helpLinkFor('/ajuda')).toBe('/ajuda');
   });

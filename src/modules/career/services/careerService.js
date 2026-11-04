@@ -20,7 +20,7 @@ import {
   CAREER_EVENTS, newCareerEventId, normalizeCareerEvent, withDerivedStatus,
 } from '../domain/careerEvent.js';
 import { CAREER_DEBRIEF_COLLECTION, careerDebriefDocId } from '../domain/careerDebrief.js';
-import { CAREER_PARTNER } from '../domain/careerPartner.js';
+import { CAREER_PARTNER, CAREER_PARTNER_INVITES, keepServerLinkedPartners } from '../domain/careerPartner.js';
 
 export class CareerError extends Error {}
 
@@ -44,8 +44,18 @@ export async function saveCareerEvent(uid, input) {
   const { valid, error, value } = normalizeCareerEvent(input, { uid });
   if (!valid) throw new CareerError(error);
   const id = input.id && String(input.id).startsWith(`${uid}_`) ? input.id : newCareerEventId(uid);
-  await setDoc(doc(db, CAREER_EVENTS, id), value);
-  return { id, ...value };
+  let gravar = value;
+  if (input.id && Number(input.updated_at_ms) > 0) {
+    // A dupla pode ter aceitado o convite pelo link com a ficha aberta: não apagar a conta dela.
+    try {
+      const atual = await getDoc(doc(db, CAREER_EVENTS, id));
+      if (atual.exists()) gravar = keepServerLinkedPartners(value, atual.data(), input.updated_at_ms);
+    } catch (err) {
+      logger.warn('[career] releitura antes de salvar falhou', err);
+    }
+  }
+  await setDoc(doc(db, CAREER_EVENTS, id), gravar);
+  return { id, ...gravar };
 }
 
 /** Grava vários de uma vez (modo lista): tudo ou nada, num lote só. */
@@ -172,6 +182,17 @@ export async function listMyCareerPartnerReports(uid) {
   return snap.docs.map(toDoc);
 }
 
+/**
+ * Os convites pelo WhatsApp que a pessoa mandou à dupla SEM conta
+ * (`career_partner_invites`, `owner_uid ==`; só o servidor grava). O documento
+ * não guarda o token nem telefone — só o hash, que é o id.
+ */
+export async function listMyCareerPartnerInvites(uid) {
+  if (!db || !uid) return [];
+  const snap = await getDocs(query(collection(db, CAREER_PARTNER_INVITES), where('owner_uid', '==', uid)));
+  return snap.docs.map(toDoc);
+}
+
 function mensagemDoServidor(err) {
   const code = String(err?.code || '');
   if (code.endsWith('unauthenticated')) return t('Entre na sua conta.');
@@ -182,7 +203,8 @@ function mensagemDoServidor(err) {
 
 /**
  * Uma ação da dupla no servidor (`functions/career.js`): `invite`, `respond`,
- * `feedback`, `decide`, `remove`, `report`, `moderate`, `queue`.
+ * `feedback`, `decide`, `remove`, `report`, `moderate`, `queue` e, da dupla
+ * sem conta (PR 6), `invite_link`, `invite_cancel`, `invite_peek`, `invite_accept`.
  */
 export async function careerAction(action, payload = {}) {
   if (!functions) throw new CareerError(t('Firebase não está configurado neste ambiente.'));
