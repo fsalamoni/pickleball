@@ -2344,3 +2344,28 @@ da cozinha), pé na cozinha no voleio ou no impulso depois dele, pé no saque.
 - 🐞 De quebra, no telão do torneio: "Quadra Quadra 2" (o agendamento grava o
   nome em `court`) e as partidas em andamento fora de ordem (`Number('Quadra 2')`
   é NaN). Detalhe em `docs/53-CONTROLE-DE-LINHAS.md` §1, §4 e §10.
+- 🐞 Revisão adversarial antes do merge (cada achado conferido por verificadores
+  independentes). A exclusão de conta deixava no banco as câmeras e marcações de
+  quem filmou um dia de que não era membro e as das quadras do torneio — agora
+  acha por grupo de coleção (`line_cams`/`line_calls` por `uid`, com o índice de
+  grupo em `firestore.indexes.json` e guarda em `indicesCompostos.test.js`), e
+  falha ou mais de 400 marcações viram exclusão parcial, dita. A câmera
+  desmontava no meio do jogo quando uma releitura falhava (o React Query guarda o
+  dado com `isError`); "copiar para os próximos dias" levava o arranjo vazio da
+  quadra que usava o padrão; e o relatório contava pé no saque e dois quiques
+  como voleio na cozinha.
+- 🐞 No motor, a mesma revisão achou faltas e foras CERTOS (com som) onde a
+  regra pede revisar ou silêncio: quem saiu da cozinha e parou dentro da
+  incerteza da linha levava "reentrada" (11.A.3); o impulso seguia aberto com a
+  pessoa andando de lado e cobrava o voleio depois da devolução do adversário;
+  a câmera da rede tomava a meia-volta (quique + batida numa quina só) por
+  voleio certo; o 1º quique escondido pela rede fazia o 2º virar "fora"; a bola
+  devolvida a quem vai sacar, entre um ponto e outro, era julgada como saque
+  (agora vale a formação de saque à vista, 4.B e 7.D.4); e a margem do saque na
+  rede era medida da cozinha de lá. Na tela, a manchete virou UMA regra para
+  câmera, central, aviso e telão (o lance mais grave da janela, não o mais novo
+  pela hora — o pé no saque e a falta de impulso nunca eram "o último"); o
+  aparelho que filma anunciava o pé limpo e calava o saque fora que saía no
+  mesmo quadro; a marca do lance punha a tinta do lado errado da linha no saque
+  curto e no pé no saque; e o replay não guardava o "antes" do voleio que só sai
+  quando o impulso acaba. Detalhe em `docs/53-CONTROLE-DE-LINHAS.md` §3, §6 e §7a.

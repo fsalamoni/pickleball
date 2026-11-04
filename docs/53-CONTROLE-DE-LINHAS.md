@@ -143,9 +143,23 @@ quadras são lidas do SERVIDOR (`getDocsFromServer`): sem rede, a leitura comum
 devolveria o que sobrou no cache, às vezes nada, e "nenhuma quadra" virava
 "controle desligado" na câmera que estava filmando.
 A central (`LineCentral`) mostra o arranjo, quem está em cada posição
-(analisando / calibrada / falta calibrar / sem câmera, quadros/s), o último
-lance em letras grandes e os anteriores; quem organiza pode **Limpar
-marcações** (confirmação em dois toques).
+(analisando / calibrada / falta calibrar / sem câmera, quadros/s), a
+**manchete** em letras grandes e os lances anteriores; quem organiza pode
+**Limpar marcações** (confirmação em dois toques).
+
+**A manchete** (`pickHeadline`, `fusion.js`) é UMA regra para a câmera, a
+central, o aviso, a tela que pisca e o telão: o lance mais GRAVE entre os que
+caíram até `HEADLINE_WINDOW_MS` (o maior atraso do motor + 1 s) antes do mais
+novo — falta ou fora sem decisão > revisar sem decisão > falta decidida >
+dentro/sem falta; empate fica com o mais novo. 🐞 Antes valia só o mais novo
+pela hora do lance: o pé no saque é marcado na hora da batida e sai junto com o
+quique do saque, e a falta de impulso sai até 2 s depois do voleio — nenhum dos
+dois virava "o último", e o "Saque: dentro" verde cobria a falta. No lote do
+motor (o pé e o quique do saque saem no mesmo quadro) a manchete vai na frente
+(`headlineFirst`). O aviso toca UMA vez por lance que CHEGOU
+(`newArrivals`, pela chave das marcações — o id do lance muda quando uma
+câmera atrasada entra na junção); o que já estava na tela ao abrir não toca, e
+a tela que pisca não troca a falta pelo "dentro" que chegou depois.
 
 ## 4. O que é gravado
 
@@ -274,7 +288,7 @@ dos kits são `basico`, `celulares`, `computador`, `estudio` — nunca renomeie.
 - **Telão** (`TelaoLineTicker` + `telaoLineStatus` em `fusion.js`): no canto,
   UM aviso por quadra ligada, com o nome da quadra na frente — faixa fixa
   "Controle de linhas ativo · N câmera(s)" ou quais posições pararam; "Lance em
-  revisão" enquanto o último lance é "revisar" sem decisão (até 90 s,
+  revisão" enquanto a manchete é "revisar" sem decisão (até 90 s,
   `REVIEW_HOLD_MS`); o lance grande por 12 s. As quadras são relidas a cada
   30 s; o `game_days.line_control` antigo é ignorado.
 
@@ -296,11 +310,31 @@ linha é menor que ela, ele diz **Revisar**.
 - **Pé na cozinha no voleio — viável, com limites.** Só pé **apoiado** (parado
   por três quadros) e visível conta; pé no ar, escondido ou perto da linha
   dentro da incerteza → **Revisar o pé**. A lateral da rede é quem melhor vê.
-  O impulso é observado até a pessoa parar ou recuar (0,5 s a 3 s), mesmo com
-  a bola morta.
+  O impulso é observado até a pessoa parar de ir para a cozinha (parada ou
+  andando de lado por `balanceS`) ou recuar — de 0,5 s a 2 s —, mesmo com a bola
+  morta. Quem saiu da cozinha e está parado DENTRO da incerteza da linha não
+  leva "falta de reentrada" certa: é revisar (11.A.3).
 - **Pé no saque — viável com a câmera do fundo de quem saca.** No instante da
   batida, ao menos um pé apoiado atrás da linha de fundo, sem tocá-la, e entre
   os prolongamentos da lateral e da central. Os dois pés no ar → revisar.
+- **O 1º quique escondido pela rede.** Da câmera de fundo, o chão logo depois
+  da rede fica atrás dela. Quando há sinal de um quique ali desde o último lance
+  (a quina com cara de quique atrás da fita, ou a bola sumida mais de 0,12 s
+  nesse lado), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
+  "fora" vira **revisar**.
+- **Entre um ponto e outro não há marcação (7.D.4).** A bola devolvida a quem
+  vai sacar sai da mão de alguém atrás do fundo, como um saque. Depois de um
+  ponto, o saque só vale na hora com a **formação** à vista (4.B, `serveFormation`):
+  ninguém do lado de quem saca a menos de cozinha + 1 m da rede e quem recebe
+  no fundo de lá, em diagonal. Com as pessoas fora da formação, nada é marcado
+  até a 3ª bola; sem ver ninguém (câmera de cima, detector carregando), falta e
+  fora no saque viram **revisar** e "dentro" não se diz, até a devolução. O
+  saque de verdade logo depois (bola parada na mão de quem está atrás do fundo)
+  recomeça o ponto. Limites: a câmera de cima (`solo_topo`) não vê quem recebe,
+  então o 1º saque depois de cada ponto é sempre "revisar" quando sai; com o
+  parceiro de quem saca colado na rede (formação de quem joga só do fundo não
+  existe no pickleball, mas acontece no simples e no treino) o saque fica calado
+  até a 3ª bola; e a devolução feita por quem está na formação ainda é julgada.
 - **Dois quiques — só com a troca inteira à vista.** Se uma batida do outro
   lado passou sem ser vista, o motor deixa de julgar a regra até o próximo
   saque (sem a sequência não se sabe qual é a 2ª e qual a 3ª bola).
@@ -354,20 +388,26 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
   calibração a coloca (`nearestBoundary`, `court.js`).
 - **Bola na linha é dentro**: a margem é medida até a borda da MARCA da bola
   (`contactPatchM`, 1 cm, em `ENGINE_DEFAULTS`).
-- **Replay** (`domain/replay.js`, `LanceReplay`): anel de quadros de 2,4 s; cada
-  marcação guarda de 1,2 s antes a 0,6 s depois, com o rastro da bola e a marca
+- **Replay** (`domain/replay.js`, `LanceReplay`): fita de 3,5 s (`RING_S`: o
+  maior atraso do motor, 2 s, mais o "antes" e folga) — os últimos 2,4 s a até
+  60 quadros/s e os mais velhos a 30, no máximo 199 quadros na memória; cada
+  marcação guarda de 1,2 s antes a 0,6 s depois (o voleio que só sai quando o
+  impulso acaba ainda acha o seu "antes"), com o rastro da bola e a marca
   ampliada (`CourtMark`), câmera lenta até 0,1×, quadro a quadro (← → espaço).
   Só no aparelho, os 12 mais recentes.
 - **Palavra final** de quem organiza na central (regra acima), **voz**
   ("Falar o lance", `useAnnounce`: fala + vibração, preferência por pessoa;
-  só a falta é dita, §5a), **telão** (`TelaoLineTicker`, o último lance de cada
+  só a falta é dita, §5a), **telão** (`TelaoLineTicker`, a manchete de cada
   quadra ligada por 12 s, só com a flag), **planilha** CSV da quadra
   (`domain/report.js`, com o motivo de cada lance), **bateria** e quadros/s
   por câmera com aviso.
 - **A marca do lance** (`CourtMark`, no replay e na central): o quique de jogo
   mostra a linha mais perto; o de saque curto, de área errada e de rede mostra
   a linha do motivo; o pé no saque usa o desenho do pé, "além" ou "antes" da
-  linha de fundo, da lateral ou da central.
+  linha de fundo, da lateral ou da central. A tinta da linha fica do lado de
+  quem é dono dela: no saque curto a linha da cozinha é FORA, e no pé no saque
+  os prolongamentos da lateral e da central são legais — a margem é medida da
+  borda certa, e a marca não põe a bola na linha quando ela passou dela.
 - **Grudar na linha** (`domain/snapCorner.js`): leva os quatro cantos da QUADRA
   ao canto externo do "L" branco perto do toque (a linha é dentro, a quadra
   acaba na borda de fora). Janela de 14 px; sem branco suficiente, branco demais
