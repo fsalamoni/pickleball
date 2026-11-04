@@ -490,6 +490,46 @@ describe('entre um ponto e outro: a bola devolvida a quem vai sacar não é saqu
     // ...e o saque de verdade, longo: sem ver as pessoas, a câmera não sabe qual é qual
     expect(brief(ov([first, serve(8, [1.5, -0.35])]))).toEqual(['bounce out long 1', 'bounce review long 1']);
   });
+
+  it('a câmera da rede não vê quem recebe, só o parceiro dele na cozinha: o saque depois do ponto é revisar, não calado', () => {
+    // 🐞 O parceiro de quem recebe junto da cozinha (o lugar normal dele) contava
+    // como prova de bola devolvida, e todo saque depois do 1º ponto saía calado.
+    [[1.5, 5.2, 'short'], [4.5, 2.5, 'wrong_box']].forEach(([x, y, reason]) => FPS.forEach((fps) => {
+      const q = four({ pB: { x: 1.5, y: L + 0.3 } });
+      const ev = playParts({ cam: CAMS.rede1(), parts: [firstServe(q), shot(q.sB, 8, [x, y], 0.85)], players: all(q), fps });
+      const second = ev.filter((e) => e.type === 'bounce' && e.t > 8);
+      expect(second.map((e) => e.reason), `${reason} ${fps} q/s: ${brief(ev).join(', ')}`).toEqual([reason]);
+      expect([LINE_CALL.OUT, LINE_CALL.REVIEW]).toContain(second[0].call);
+    }));
+  });
+
+  it('o pé do parceiro de quem saca perdido pelo detector, lá no fundo: o saque segue julgado', () => {
+    // 🐞 Sem os pés à vista, o punho do lado de quem saca valia como "perto da
+    // rede" em qualquer lugar — a pessoa no fundo calava o saque.
+    const q = four({ pB: { x: 2.0, y: L + 0.5 } });
+    const lost = { ...q.pB, feet: (t) => q.pB.feet(t).map(([x, y]) => [x, y, -50]) };
+    FPS.forEach((fps) => {
+      const ev = playParts({ cam: CAMS.fundoA(), parts: [firstServe(q), shot(q.sB, 8, [4.5, 2.5], 0.85)], players: [q.sB, lost, q.rA, q.pA], fps });
+      expect(brief(ev), `${fps} q/s`).toEqual(['bounce out long 1', 'bounce out wrong_box 1']);
+    });
+  });
+});
+
+describe('a bola perdida perto de quem bateu não é quique escondido pela rede', () => {
+  it('o lob longo, com a bola sumida um instante ainda do lado de cá: "fora" certo', () => {
+    // 🐞 Qualquer buraco no rastro antes do quique virava "revisar" no fundo de
+    // lá — também o de quando a bola mal tinha saído da raquete, longe da rede.
+    const p = four();
+    const ball = [...opening(p), paddle(p.pA, 3.2, 0.9), bounce(4.6, 3.9, L + 0.6), away(4.9, 3.8, L + 1.6, 0.8)];
+    const path = ballPath(ball);
+    FPS.forEach((fps) => {
+      const cam = CAMS.fundoA();
+      const e = createLineCallEngine({ H: cam.H, options: { imageSize: cam.size } });
+      const fr = frames({ cam, ball: (t) => (t >= 3.27 && t < 3.44 ? null : path(t)), players: all(p), from: -0.65, to: 8, fps });
+      const ev = run(e, fr).filter((x) => x.type === 'bounce' && x.t > 4);
+      expect(brief(ev), `${fps} q/s`).toEqual(['bounce out long 4']);
+    });
+  });
 });
 
 describe('paralaxe: a bola tem altura, e só o toque no chão conta (8.E)', () => {

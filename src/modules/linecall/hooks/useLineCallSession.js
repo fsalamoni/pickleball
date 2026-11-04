@@ -154,9 +154,22 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const refreshCameras = useCallback(() => listCameras().then(setCameras).catch(() => setCameras([])), []);
   useEffect(() => { refreshCameras(); }, [refreshCameras]);
 
+  // Os replays guardados, para soltar a memória quando saem da lista.
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+  useEffect(() => () => eventsRef.current.forEach(releaseClip), []);
+  const clearEvents = useCallback(() => {
+    eventsRef.current.forEach(releaseClip);
+    setEvents([]);
+  }, []);
+
   const start = useCallback(async (deviceId) => {
     setCameraError(null);
     try {
+      // Outra câmera = outro relógio de vídeo (o `t` recomeça do zero) e outra
+      // imagem: os lances da anterior saem, senão um velho seguiria de manchete
+      // e o círculo dele seria pintado sobre a imagem nova.
+      if (stream) clearEvents();
       closeCamera(stream);
       const opened = await openCamera(deviceId);
       setStream(opened.stream);
@@ -165,7 +178,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     } catch (e) {
       setCameraError(e?.name || e?.message || 'error');
     }
-  }, [stream, refreshCameras]);
+  }, [stream, refreshCameras, clearEvents]);
 
   useEffect(() => {
     if (videoRef.current && stream) videoRef.current.srcObject = stream;
@@ -255,15 +268,6 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     setCalib((c) => ({ ...c, hue: Math.round(rgbToHsv(d[0], d[1], d[2]).h), hueSet: true }));
   }, []);
 
-  // Os replays guardados, para soltar a memória quando saem da lista.
-  const eventsRef = useRef(events);
-  eventsRef.current = events;
-  useEffect(() => () => eventsRef.current.forEach(releaseClip), []);
-  const clearEvents = useCallback(() => {
-    eventsRef.current.forEach(releaseClip);
-    setEvents([]);
-  }, []);
-
   // A análise, quadro a quadro.
   useEffect(() => {
     const video = videoRef.current;
@@ -326,7 +330,13 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         frames: picked.map((f, i) => ({ t: f.t, url: urls[i], ball: f.ball })),
       };
       if (cancelled) { releaseClip({ clip }); clip = false; }
-      setEvents((list) => list.map((e) => (e.id === p.id ? { ...e, clip } : e)));
+      setEvents((list) => {
+        if (!clip || list.some((e) => e.id === p.id)) return list.map((e) => (e.id === p.id ? { ...e, clip } : e));
+        // O lance já saiu da lista ("Limpar", ou empurrado além de MAX_EVENTS)
+        // enquanto as imagens eram feitas: o replay dele é solto aqui.
+        releaseClip({ clip });
+        return list;
+      });
     };
 
     const onFrame = (now, meta) => {

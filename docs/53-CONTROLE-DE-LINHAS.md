@@ -159,7 +159,9 @@ motor (o pé e o quique do saque saem no mesmo quadro) a manchete vai na frente
 (`headlineFirst`). O aviso toca UMA vez por lance que CHEGOU
 (`newArrivals`, pela chave das marcações — o id do lance muda quando uma
 câmera atrasada entra na junção); o que já estava na tela ao abrir não toca, e
-a tela que pisca não troca a falta pelo "dentro" que chegou depois.
+a tela que pisca não troca a falta pelo "dentro" que chegou depois. Trocar de
+câmera no aparelho limpa os lances da anterior: o relógio do vídeo recomeça do
+zero, e um lance velho seguiria de manchete.
 
 ## 4. O que é gravado
 
@@ -320,14 +322,17 @@ linha é menor que ela, ele diz **Revisar**.
 - **O 1º quique escondido pela rede.** Da câmera de fundo, o chão logo depois
   da rede fica atrás dela. Quando há sinal de um quique ali desde o último lance
   (a quina com cara de quique atrás da fita, ou a bola sumida mais de 0,12 s
-  nesse lado), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
+  na FAIXA DA REDE — descendo até a fita ou voltando rente a ela, `netBandM`;
+  perdê-la no ar perto de quem bateu não conta), o quique seguinte pode ser o 2º, que não se julga (10.B.1):
   "fora" vira **revisar**.
 - **Entre um ponto e outro não há marcação (7.D.4).** A bola devolvida a quem
   vai sacar sai da mão de alguém atrás do fundo, como um saque. Depois de um
   ponto, o saque só vale na hora com a **formação** à vista (4.B, `serveFormation`):
   ninguém do lado de quem saca a menos de cozinha + 1 m da rede e quem recebe
-  no fundo de lá, em diagonal. Com as pessoas fora da formação, nada é marcado
-  até a 3ª bola; sem ver ninguém (câmera de cima, detector carregando), falta e
+  no fundo de lá, em diagonal. Com alguém do lado de quem saca perto da rede
+  (pé à vista, ou só o punho caindo na sombra da rede), nada é marcado até a 3ª
+  bola; sem ver ninguém (câmera de cima, detector carregando), ou sem ver quem
+  recebe (a câmera da rede, que só pega o parceiro dele na cozinha), falta e
   fora no saque viram **revisar** e "dentro" não se diz, até a devolução. O
   saque de verdade logo depois (bola parada na mão de quem está atrás do fundo)
   recomeça o ponto. Limites: a câmera de cima (`solo_topo`) não vê quem recebe,

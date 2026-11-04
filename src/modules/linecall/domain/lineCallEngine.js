@@ -201,6 +201,11 @@ export const ENGINE_DEFAULTS = Object.freeze({
    * perto); o que acaba depois é só o próprio quique mal visto (s)
    */
   hiddenBounceS: 0.2,
+  /**
+   * a "faixa da rede": a linha de visão passa a menos disto acima da fita (m,
+   * medido na rede). A bola que some ou volta ali pode ter quicado atrás dela.
+   */
+  netBandM: 0.3,
   /** descida que vira subida mais devagar que a quina: possível quique suave (px/s) */
   softBouncePxS: 80,
   /** quanto tempo esperar o lance seguinte para saber se foi quique ou batida (s) */
@@ -548,7 +553,7 @@ export function createLineCallEngine({ H, options = {} }) {
   let lastKinkT = -Infinity;
   let kcand = null; // a quina mais forte, esperando o quadro seguinte
   let lastBallT = -Infinity;
-  let gaps = []; // desde o último lance, os buracos no rastro maiores que `continuityS`: quando a bola voltou
+  let gaps = []; // desde o último lance, os buracos no rastro maiores que `continuityS`: quando a bola voltou e se o buraco foi na faixa da rede ({ end, net })
   let hiddenSides = new Set(); // lados com uma quina que podia ser quique escondido pela rede
   let softB = null; // último possível quique suave: { t, side } (o lado em que teria sido)
   let start = null; // a bola que acabou de aparecer: talvez o saque
@@ -634,9 +639,11 @@ export function createLineCallEngine({ H, options = {} }) {
    * com um dos dois junto da cozinha.
    *
    * `yes`: a formação à vista (ou o lado de lá fora de vista, sem nada contra).
-   * `no`: as pessoas à vista e fora dela — o motor não marca nada até a 3ª bola.
-   * `unknown`: ninguém à vista (a câmera de cima, o detector ainda carregando) —
-   * no saque, falta e fora viram "revisar".
+   * `no`: alguém do lado de quem saca perto da rede — o motor não marca nada
+   * até a 3ª bola.
+   * `unknown`: ninguém à vista (a câmera de cima, o detector ainda carregando), ou
+   * quem recebe fora de vista com alguém do lado de lá fora do lugar dele — no
+   * saque, falta e fora viram "revisar".
    */
   function serveFormation(h, side, half) {
     if (!tracks.length) return FORMATION.UNKNOWN;
@@ -656,7 +663,9 @@ export function createLineCallEngine({ H, options = {} }) {
         // rede. (A câmera baixa demais esconde o lado de lá inteiro: aí não diz.)
         if (side !== farSide || blindFar || !e.wrists.length) continue;
         const w = toGround(centroid(e.wrists), o.wristGuessM).p;
-        if (inWidth(w) && courtSide(w) === side) return FORMATION.NO;
+        // Pé perdido pelo detector (luz, outro jogador na frente) não é pé atrás da
+        // rede: só vale com o punho caindo na sombra da rede ou perto dela.
+        if (inWidth(w) && courtSide(w) === side && (hidden(w) || Math.abs(w.y - N) <= K + o.formationNetM)) return FORMATION.NO;
         continue;
       }
       const c = centroid(feet);
@@ -674,7 +683,10 @@ export function createLineCallEngine({ H, options = {} }) {
       else if (inWidth(c)) seenOther = true;
     }
     if (receiver) return FORMATION.YES;
-    if (seenOther) return FORMATION.NO;
+    // Alguém do lado de lá fora do lugar de quem recebe (o parceiro dele na
+    // cozinha, o normal) sem ver quem recebe: não é prova de bola devolvida —
+    // o saque vale como "revisar", nunca calado.
+    if (seenOther) return FORMATION.UNKNOWN;
     return seen ? FORMATION.YES : FORMATION.UNKNOWN;
   }
 
@@ -962,7 +974,7 @@ export function createLineCallEngine({ H, options = {} }) {
   function sinceEvent(t) {
     // A quina ambígua só se resolve no lance seguinte: o buraco que acabou bem
     // depois dela já é do que veio depois, e fica.
-    gaps = gaps.filter((end) => end > t + o.hiddenBounceS);
+    gaps = gaps.filter((g) => g.end > t + o.hiddenBounceS);
     hiddenSides = new Set();
     if (rally) { rally.chainOk = true; rally.eventT = t; }
   }
@@ -1011,7 +1023,7 @@ export function createLineCallEngine({ H, options = {} }) {
     // Um quique deste lado que a rede escondeu pode ter vindo antes deste (uma
     // quina atrás da fita, ou a bola sumida ali por um tempo): este talvez seja
     // o 2º, que não se julga (10.B.1). Fora, então, só revisar.
-    const first = review(hiddenSides.has(bSide) || (bSide === farSide && gaps.some((end) => end <= b.t - o.hiddenBounceS)));
+    const first = review(hiddenSides.has(bSide) || (bSide === farSide && gaps.some((g) => g.net && g.end <= b.t - o.hiddenBounceS)));
     answerWatches(bSide, false);
     if (rally.phase === 'serve') {
       const s = rally.serve;
@@ -1488,7 +1500,18 @@ export function createLineCallEngine({ H, options = {} }) {
           rally = null;
         }
         if (!rally && !pending) gaps = []; // fora de jogo, buraco nenhum importa
-        if (lastBallT > -Infinity && gap > o.continuityS) gaps.push(frame.t);
+        if (lastBallT > -Infinity && gap > o.continuityS) {
+          // Só o buraco na faixa da rede pode esconder um quique atrás dela: a bola
+          // sumiu ou voltou com a linha de visão passando rente à fita (o raio até
+          // o chão cai na sombra da rede). Perdê-la no ar, perto de quem bateu,
+          // não diz nada — e a projeção de uma bola alta no chão não diria o lado.
+          // Sumir atrás da fita é descer na imagem até ela (a bola longe caindo);
+          // a que sobe na imagem ainda está no ar, indo embora.
+          const [p0, p1] = recent.slice(-2);
+          const atNet = (q) => Boolean(q) && !overhead && hidden(applyHomography(H, q), o.netBandM);
+          const sank = Boolean(p0 && p1) && p1.y > p0.y && atNet(p1);
+          gaps.push({ end: frame.t, net: atNet(frame.ball) || sank });
+        }
         if (!track.length) start = gap > o.startGapS ? { t: frame.t, x: frame.ball.x, y: frame.ball.y, quiet: gap > o.rallyGapS, n: 0 } : null;
         lastBallT = frame.t;
         track.push({ t: frame.t, x: frame.ball.x, y: frame.ball.y });
