@@ -16,7 +16,9 @@
  * ~1,7–1,8× o compactado. Por isso o compactado tem de ficar abaixo de
  * `TETO_COMPACTO` (140 KB), e as regras usam os atalhos `nd()`, `od()`,
  * `me()`, `chg()`, `isOwner()`, `arenaOd()`… em vez de escrever
- * `request.resource.data` por extenso (161 KB → 125 KB).
+ * `request.resource.data` por extenso (161 KB → 125 KB). A PR 0a da carreira
+ * (2026-11-03) somou `ng`/`og` e `exc`/`gdc`/`exa`/`gac`/`dp` para abrir folga
+ * às regras novas (139.350 → 136.830 bytes compactados).
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -46,6 +48,16 @@ describe('tamanho do firestore.rules', () => {
     expect((codigo.match(/(?<![\w.])resource\.data/g) || []).length).toBeLessThanOrEqual(2);
     expect((codigo.match(/request\.auth\.uid/g) || []).length).toBeLessThanOrEqual(1);
     expect(codigo.replace(/function isOwner[^\n]*/, "")).not.toMatch(/isAuthed\(\) && [\w().]+ == me\(\)/);  // só a própria isOwner escreve isso
+  });
+
+  it('⭐ PR 0a: `ng`/`og` no lugar de `nd().get(`/`od().get(`, e leitura de outro documento por coleção + id', () => {
+    const codigo = compactarRegras(REGRAS);
+    for (const atalho of ['function ng(k, d)', 'function og(k, d)', 'function dp(c, i)', 'function exc(c, i)', 'function gdc(c, i)', 'function exa(c, i)', 'function gac(c, i)']) expect(codigo).toContain(atalho);
+    // Por extenso, só nas próprias definições.
+    expect((codigo.match(/(?<![\w.])nd\(\)\.get\(/g) || []).length).toBe(1);
+    expect((codigo.match(/(?<![\w.])od\(\)\.get\(/g) || []).length).toBe(1);
+    // O caminho por extenso só nos cinco atalhos (dp, exc, gdc, exa, gac).
+    expect((codigo.match(/\/databases\/\$\(database\)\/documents\//g) || []).length).toBe(5);
   });
 
   it('a compactação só tira comentário, linha vazia e recuo', () => {

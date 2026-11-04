@@ -691,7 +691,11 @@ Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas li
   os atalhos `nd()` (= `request.resource.data`), `od()` (= `resource.data`),
   `me()` (= `request.auth.uid`), `chg()` (= o `affectedKeys()` do update),
   `isOwner(x)`, `arenaOd()`/`arenaNd()`, `clubOd()`, `adm()` (= `isPlatformAdmin()`,
-  desde 2026-11-03: −4,7 KB) — **nunca** escreva essas
+  desde 2026-11-03: −4,7 KB), `ng(k, d)`/`og(k, d)` (= `nd().get(k, d)`/
+  `od().get(k, d)`) e a leitura de outro documento por coleção + id —
+  `exc`/`gdc`/`exa`/`gac(c, i)` (= `exists`/`get().data`/`existsAfter`/
+  `getAfter().data`, caminho por `dp(c, i)`; PR 0a da carreira, 2026-11-03:
+  139.350 → 136.830 bytes) — **nunca** escreva essas
   expressões por extenso (161 KB → 125 KB compactados). Continue comentando as
   regras à vontade; o guarda `src/core/guards/firestoreRulesTamanho.test.js`
   reprova o compactado acima de 140 KB e a expressão por extenso, e o deploy
