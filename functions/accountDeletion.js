@@ -162,6 +162,10 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'follows', field: 'target_uid', label: 'Quem o segue' },
   { col: 'player_goals', field: 'uid', label: 'Metas pessoais' },
   { col: 'career_events', field: 'uid', label: 'Torneios de fora (Minha carreira)' },
+  { col: 'career_partner', field: 'owner_uid', label: 'Confirmações da dupla (Minha carreira)' },
+  { col: 'career_partner', field: 'partner_uid', label: 'Confirmações da dupla (Minha carreira)' },
+  { col: 'career_partner_reports', field: 'owner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
+  { col: 'career_partner_reports', field: 'partner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
   { col: 'user_missions', field: 'uid', label: 'Missões (gamificação)' },
   { col: 'user_achievements_v2', field: 'uid', label: 'Conquistas (gamificação)' },
   { col: 'season_rankings', field: 'uid', label: 'Ranking da temporada' },
@@ -1280,6 +1284,22 @@ function patchOutboxSender(d, uid) {
   return { sent_by: null, k_sender: null, k_pair: null };
 }
 
+/**
+ * Minha carreira: no registro de OUTRA pessoa em que a conta excluída foi a
+ * dupla, fica o nome digitado e sai só o vínculo com a conta (`partner.uid`).
+ */
+function patchCareerPartner(ev, uid) {
+  if (!ev || !Array.isArray(ev.entries)) return null;
+  if (!ev.entries.some((e) => e && e.partner && e.partner.uid === uid)) return null;
+  return {
+    entries: ev.entries.map((e) => (e && e.partner && e.partner.uid === uid
+      ? { ...e, partner: { name: e.partner.name || '' } }
+      : e)),
+    partner_uids: (ev.partner_uids || []).filter((u) => u !== uid),
+    ...(ev.linked_event && ev.linked_event.uid === uid ? { linked_event: null } : {}),
+  };
+}
+
 function patchSharedUids(it, uid) {
   if (!it || !Array.isArray(it.shared_uids) || !it.shared_uids.includes(uid)) return null;
   return { shared_uids: it.shared_uids.filter((u) => u !== uid) };
@@ -1541,6 +1561,7 @@ const PSEUDO_SPECS = Object.freeze([
   // guarda `exclusaoCobreColecoes` confere contra o `firestore.rules`.
   { label: 'Itens de treino que criou (ficam, com a autoria)', bucket: 'retained', collect: coletarItensDeTreino, deleteLabel: 'Itens de treino privados, não compartilhados', cols: ['training_items'] },
   { label: 'Acesso a itens de treino de outras pessoas', col: 'training_items', wheres: [['shared_uids', 'array-contains']], patch: patchSharedUids },
+  { label: 'Dupla em torneios de fora de outras pessoas (fica o nome)', col: 'career_events', wheres: [['partner_uids', 'array-contains']], patch: patchCareerPartner },
   { label: 'Diários de alunos que acompanhava (os comentários ficam)', bucket: 'retained', collect: coletarDiario, deleteLabel: 'Diário de treino e comentários', cols: ['training_sessions'] },
   { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
   { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
@@ -2066,6 +2087,7 @@ module.exports = {
   patchTrainingItemAuthor,
   patchDerivedFrom,
   patchSharedUids,
+  patchCareerPartner,
   patchCoachStudentLink,
   patchCoachCampaign,
   fica,

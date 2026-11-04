@@ -1,0 +1,482 @@
+/**
+ * MINHA CARREIRA — a DUPLA confirma e comenta (flag `athlete_career`, docs/54 §6).
+ *
+ * `career_partner/{evento}__{dupla}` é escrita de TERCEIRO (o que a dupla diz
+ * sobre o registro de outra pessoa): a regra é `allow write: if false` e tudo
+ * passa por aqui.
+ *
+ * Chamada `career` (ações):
+ *  - `invite`   o dono pede confirmação a quem citou como dupla (com conta);
+ *  - `respond`  a dupla confirma ("Confirmo") ou recusa ("Não foi assim");
+ *  - `feedback` a dupla deixa a visão dela (ponto forte, o que melhorar, um treino);
+ *  - `decide`   o dono escolhe "Usar no meu treino" ou "Guardar";
+ *  - `remove`   o dono apaga o pedido; a dupla retira a visão (ou desfaz a confirmação);
+ *  - `report`   qualquer uma das duas denuncia;
+ *  - `moderate` o admin decide a denúncia (com motivo, auditoria e aviso ao autor);
+ *  - `queue`    o admin lista as denúncias abertas (a crítica nunca é lida pelo cliente fora das duas pontas).
+ *
+ * Gatilho `eventWritten` (`careerEventWritten`, em `career_events/{id}`):
+ *  - recalcula a IMPRESSÃO do que foi confirmado: mudou data, categoria ou
+ *    colocação ⇒ "confirmar de novo" (`reconfirm`) e aviso; mudou só o nome ⇒
+ *    só o resumo é atualizado;
+ *  - a dupla que saiu do registro perde o pedido; o registro apagado leva os pedidos;
+ *  - "Pôr na minha carreira também": confere o `linked_event` e liga as duas fichas
+ *    (`partner_event_id`); vínculo que não confere é desfeito.
+ *
+ * Travas: só quem foi citado confirma; menor de 18 (ou nascimento desconhecido)
+ * não convida nem é convidado; a crítica fica entre as duas pessoas (e o admin,
+ * só na denúncia). Nada daqui pontua (guarda `carreiraNaoPontua`).
+ */
+const P = require('./careerPolicy.js');
+const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
+const { FederationError } = require('./federations.js');
+
+const EV = 'career_events';
+const COL = 'career_partner';
+/**
+ * A denúncia mora FORA do pedido (`{pedido}__{owner|partner}`): o pedido é lido
+ * pelas duas pontas, e quem foi denunciado não pode ler quem denunciou, o
+ * motivo nem a nota. Só o servidor escreve; a regra deixa ler só quem denunciou.
+ */
+const REP = 'career_partner_reports';
+const reportId = (docId, papel) => `${docId}__${papel}`;
+const ABERTOS = [P.PARTNER_STATUS.INVITED, P.PARTNER_STATUS.RECONFIRM];
+
+const falha = (code, msg) => { throw new FederationError(code, msg); };
+const texto = (v, max = 300) => String(v == null ? '' : v).trim().slice(0, max);
+const hojeBR = (now) => new Date(now - 3 * 3600000).toISOString().slice(0, 10);
+const nomeDe = (u) => texto((u && (u.platform_name || u.full_name || u.display_name)) || 'Atleta', 80);
+
+/* -------------------------------------------------------------- apoio -- */
+
+async function flagLigada(ctx) {
+  const snap = await ctx.db.collection('platform_settings').doc('global').get();
+  return Boolean(snap.exists && snap.data().feature_flags && snap.data().feature_flags.athlete_career === true);
+}
+
+async function exigeFlag(ctx) {
+  if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Minha carreira não está ligada nesta plataforma.');
+}
+
+async function usuario(ctx, uid) {
+  const snap = await ctx.db.collection('users').doc(uid).get();
+  return snap.exists ? snap.data() : null;
+}
+
+function aviso(ctx, batch, userId, { title, message, link }) {
+  if (!userId) return;
+  const i18n = i18nDoAviso({ title, message });
+  const seguro = P.linkDeAviso(link);
+  batch.set(ctx.db.collection('notifications').doc(), {
+    user_id: userId, title: textoDoAviso(title), message: textoDoAviso(message), ...(i18n ? { i18n } : {}),
+    type: 'career', ...(seguro ? { link: seguro } : {}), read: false, archived: false, origin: 'server',
+    created_at: ctx.Timestamp.fromMillis(ctx.now),
+  });
+}
+
+/** Auditoria sem o texto da visão (a crítica não sai do privado). */
+function auditoria(ctx, batch, actor, action, details) {
+  batch.set(ctx.db.collection('audit_logs').doc(), {
+    log_number: Number(`${ctx.now}${Math.floor(Math.random() * 900 + 100)}`),
+    action, action_label: action, actor_id: actor.uid, actor_name: actor.name || actor.uid, actor_email: actor.email || '',
+    tournament_id: null, user_id: details.user_id || null, details, created_at: ctx.Timestamp.fromMillis(ctx.now),
+  });
+}
+
+const linkDoPedido = (docId) => `/carreira?dupla=${encodeURIComponent(docId)}`;
+const linkDoEvento = (eventId) => `/carreira?evento=${encodeURIComponent(eventId)}`;
+
+/** O que a dupla vê do registro (ela não lê o documento do dono): datas, lugar e as categorias em que foi citada. */
+function resumo(ev, indexes) {
+  return {
+    name: texto(ev.name, 120),
+    start_date: texto(ev.start_date, 10),
+    end_date: ev.end_date ? texto(ev.end_date, 10) : null,
+    date_precision: ev.date_precision === 'year' ? 'year' : 'day',
+    city: texto(ev.city, 80),
+    state: texto(ev.state, 2),
+    entries: indexes.map((i) => {
+      const e = ev.entries[i] || {};
+      const out = {};
+      ['format', 'gender', 'age', 'age_label', 'level_bracket', 'level_label', 'placement', 'placement_n']
+        .forEach((k) => { if (e[k] !== undefined && e[k] !== null && e[k] !== '') out[k] = e[k]; });
+      return out;
+    }),
+  };
+}
+
+async function pedido(ctx, docId) {
+  const id = texto(docId, 400);
+  if (!id) falha('invalid-argument', 'Pedido não informado.');
+  const ref = ctx.db.collection(COL).doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) falha('not-found', 'Este pedido não existe mais.');
+  return { ref, id, d: snap.data() };
+}
+
+/** Solta o vínculo do registro espelhado da dupla ("Pôr na minha carreira também"). */
+async function soltarEspelho(ctx, batch, d) {
+  if (!d || !d.partner_event_id) return;
+  const esp = await ctx.db.collection(EV).doc(d.partner_event_id).get();
+  if (esp.exists && esp.data().linked_event && esp.data().linked_event.id === d.event_id) batch.update(esp.ref, { linked_event: null });
+}
+
+/** O pedido some: leva as denúncias e solta o vínculo do espelho. */
+async function apagarPedido(ctx, batch, ref, d) {
+  batch.delete(ref);
+  ['owner', 'partner'].forEach((papel) => batch.delete(ctx.db.collection(REP).doc(reportId(ref.id, papel))));
+  await soltarEspelho(ctx, batch, d);
+}
+
+async function denunciaAberta(ctx, docId, papel) {
+  const r = await ctx.db.collection(REP).doc(reportId(docId, papel)).get();
+  return r.exists && r.data().open === true;
+}
+
+async function exigeAdulto(ctx, uid, msg) {
+  const u = await usuario(ctx, uid);
+  if (!u || !P.isAdult(u.birth_date, hojeBR(ctx.now))) falha('failed-precondition', msg);
+  return u;
+}
+
+/* -------------------------------------------------------------- ações -- */
+
+async function invite(ctx, actor, data) {
+  await exigeFlag(ctx);
+  const eventId = texto(data.eventId, 200);
+  const partnerUid = texto(data.partnerUid, 128);
+  if (!eventId || !partnerUid) falha('invalid-argument', 'Escolha o torneio e a dupla.');
+  if (partnerUid === actor.uid) falha('invalid-argument', 'Você não pode pedir confirmação a si mesmo.');
+  const evSnap = await ctx.db.collection(EV).doc(eventId).get();
+  if (!evSnap.exists || evSnap.data().uid !== actor.uid) falha('permission-denied', 'Este torneio não é seu.');
+  const ev = evSnap.data();
+  if (!ev.start_date || ev.start_date > hojeBR(ctx.now) || ev.status === 'cancelled') falha('failed-precondition', 'Só dá para pedir confirmação de torneio já jogado.');
+  const idx = P.citedEntryIndexes(ev, partnerUid);
+  if (!idx.length) falha('failed-precondition', 'Esta pessoa não está como dupla neste torneio.');
+  const eu = await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não pedem confirmação de dupla.');
+  const dupla = await usuario(ctx, partnerUid);
+  const id = P.partnerDocId(eventId, partnerUid);
+  if (!dupla || !P.isAdult(dupla.birth_date, hojeBR(ctx.now))) {
+    // Menor (ou nascimento desconhecido, ou conta que não existe): a MESMA resposta
+    // do convite que saiu, sem gravar nem avisar — a resposta não pode virar uma
+    // sonda de "esta conta é de menor". Fica só a auditoria.
+    const b = ctx.db.batch();
+    auditoria(ctx, b, actor, 'career_partner_invite_held', { doc_id: id, event_id: eventId, user_id: partnerUid });
+    await b.commit();
+    return { id, status: P.PARTNER_STATUS.INVITED };
+  }
+
+  const ref = ctx.db.collection(COL).doc(id);
+  const atual = await ref.get();
+  const fp = P.careerFingerprint(ev, idx);
+  const antes = atual.exists ? atual.data() : null;
+  if (antes && ABERTOS.includes(antes.status)) return { id, status: antes.status };
+  if (antes && antes.status === P.PARTNER_STATUS.CONFIRMED && antes.fingerprint === fp) return { id, status: antes.status };
+  if (antes && antes.status === P.PARTNER_STATUS.DECLINED && antes.fingerprint === fp) {
+    falha('failed-precondition', 'A dupla já respondeu que não foi assim. Corrija o registro antes de pedir de novo.');
+  }
+  // A moderação retirou o pedido ("não jogamos juntos"): pedir de novo não desfaz a decisão.
+  const rDupla = await ctx.db.collection(REP).doc(reportId(id, 'partner')).get();
+  if (rDupla.exists && rDupla.data().moderation && rDupla.data().moderation.decision === 'remove_link') {
+    falha('failed-precondition', 'A moderação retirou este pedido. Não dá para pedir de novo a esta pessoa neste torneio.');
+  }
+  const batch = ctx.db.batch();
+  batch.set(ref, {
+    owner_uid: actor.uid,
+    partner_uid: partnerUid,
+    event_id: eventId,
+    owner_name: nomeDe(eu),
+    partner_name: nomeDe(dupla),
+    entry_indexes: idx,
+    summary: resumo(ev, idx),
+    status: P.PARTNER_STATUS.INVITED,
+    fingerprint: fp,
+    feedback: (antes && antes.feedback) || null,
+    owner_decision: (antes && antes.owner_decision) || null,
+    partner_event_id: (antes && antes.partner_event_id) || null,
+    invited_at_ms: ctx.now,
+    answered_at_ms: null,
+  });
+  aviso(ctx, batch, partnerUid, {
+    title: tx('{nome} pediu sua confirmação', { nome: nomeDe(eu) }),
+    message: tx('Confirme que vocês jogaram juntos: {torneio}.', { torneio: texto(ev.name, 120) }),
+    link: linkDoPedido(id),
+  });
+  auditoria(ctx, batch, actor, 'career_partner_invited', { doc_id: id, event_id: eventId, user_id: partnerUid });
+  await batch.commit();
+  return { id, status: P.PARTNER_STATUS.INVITED };
+}
+
+async function respond(ctx, actor, data) {
+  await exigeFlag(ctx);
+  const { ref, id, d } = await pedido(ctx, data.docId);
+  if (d.partner_uid !== actor.uid) falha('permission-denied', 'Só quem foi citado como dupla responde.');
+  if (!ABERTOS.includes(d.status)) falha('failed-precondition', 'Este pedido já foi respondido.');
+  const answer = data.answer === 'confirm' ? 'confirm' : data.answer === 'decline' ? 'decline' : '';
+  if (!answer) falha('invalid-argument', 'Resposta inválida.');
+  const evSnap = await ctx.db.collection(EV).doc(d.event_id).get();
+  const ev = evSnap.exists ? evSnap.data() : null;
+  const idx = ev ? P.citedEntryIndexes(ev, actor.uid) : [];
+  const batch = ctx.db.batch();
+  if (!ev || !idx.length) {
+    // O registro mudou e a pessoa não está mais nele: o pedido não tem mais sentido.
+    await apagarPedido(ctx, batch, ref, d);
+    await batch.commit();
+    falha('failed-precondition', 'O registro mudou e você não está mais como dupla nele.');
+  }
+  if (answer === 'confirm') await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não confirmam dupla.');
+  const status = answer === 'confirm' ? P.PARTNER_STATUS.CONFIRMED : P.PARTNER_STATUS.DECLINED;
+  batch.update(ref, {
+    status, fingerprint: P.careerFingerprint(ev, idx), entry_indexes: idx, summary: resumo(ev, idx), answered_at_ms: ctx.now,
+  });
+  aviso(ctx, batch, d.owner_uid, {
+    title: answer === 'confirm'
+      ? tx('{nome} confirmou o torneio', { nome: d.partner_name || 'Sua dupla' })
+      : tx('{nome} não confirmou o torneio', { nome: d.partner_name || 'Sua dupla' }),
+    message: texto(ev.name, 120),
+    link: linkDoEvento(d.event_id),
+  });
+  auditoria(ctx, batch, actor, answer === 'confirm' ? 'career_partner_confirmed' : 'career_partner_declined', { doc_id: id, event_id: d.event_id, user_id: d.owner_uid });
+  await batch.commit();
+  return { id, status };
+}
+
+async function feedback(ctx, actor, data) {
+  await exigeFlag(ctx);
+  const { ref, id, d } = await pedido(ctx, data.docId);
+  if (d.partner_uid !== actor.uid) falha('permission-denied', 'Só a dupla deixa a visão dela.');
+  if (d.status !== P.PARTNER_STATUS.CONFIRMED) falha('failed-precondition', 'Confirme o torneio antes de deixar a sua visão.');
+  if (d.feedback && d.owner_decision && d.owner_decision !== P.OWNER_DECISION.PENDING) {
+    falha('failed-precondition', 'A sua dupla já decidiu sobre esta visão. Você pode retirá-la.');
+  }
+  // Denúncia em análise: editar não pode tirar a visão da fila da moderação.
+  if (await denunciaAberta(ctx, id, 'owner')) falha('failed-precondition', 'Esta visão está em análise pela moderação. Você pode retirá-la.');
+  await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não deixam visão de dupla.');
+  const { valid, error, value } = P.normalizePartnerFeedback(data.feedback || {});
+  if (!valid) falha('invalid-argument', error);
+  const batch = ctx.db.batch();
+  batch.update(ref, { feedback: { ...value, edited_at_ms: ctx.now }, owner_decision: P.OWNER_DECISION.PENDING });
+  if (!d.feedback) {
+    aviso(ctx, batch, d.owner_uid, {
+      title: tx('A visão da sua dupla chegou'),
+      message: tx('{nome} comentou o {torneio}.', { nome: d.partner_name || 'Sua dupla', torneio: texto(d.summary && d.summary.name, 120) }),
+      link: linkDoEvento(d.event_id),
+    });
+  }
+  auditoria(ctx, batch, actor, 'career_partner_feedback', { doc_id: id, event_id: d.event_id, user_id: d.owner_uid, edited: Boolean(d.feedback) });
+  await batch.commit();
+  return { id };
+}
+
+async function decide(ctx, actor, data) {
+  await exigeFlag(ctx);
+  const { ref, id, d } = await pedido(ctx, data.docId);
+  if (d.owner_uid !== actor.uid) falha('permission-denied', 'Só quem registrou o torneio decide.');
+  if (!d.feedback) falha('failed-precondition', 'Não há visão da dupla para decidir.');
+  const decision = [P.OWNER_DECISION.USE, P.OWNER_DECISION.KEEP].includes(data.decision) ? data.decision : '';
+  if (!decision) falha('invalid-argument', 'Escolha "Usar no meu treino" ou "Guardar".');
+  const batch = ctx.db.batch();
+  batch.update(ref, { owner_decision: decision, decided_at_ms: ctx.now });
+  auditoria(ctx, batch, actor, 'career_partner_decided', { doc_id: id, event_id: d.event_id, decision });
+  await batch.commit();
+  return { id, decision };
+}
+
+/** O dono apaga o pedido inteiro; a dupla retira a visão — ou, sem visão, desfaz a confirmação. */
+async function remove(ctx, actor, data) {
+  const { ref, id, d } = await pedido(ctx, data.docId);
+  const batch = ctx.db.batch();
+  if (d.owner_uid === actor.uid) {
+    await apagarPedido(ctx, batch, ref, d);
+    auditoria(ctx, batch, actor, 'career_partner_removed', { doc_id: id, event_id: d.event_id, by: 'owner' });
+  } else if (d.partner_uid === actor.uid) {
+    if (d.feedback) {
+      batch.update(ref, { feedback: null, owner_decision: null });
+      auditoria(ctx, batch, actor, 'career_partner_feedback_withdrawn', { doc_id: id, event_id: d.event_id });
+    } else {
+      // Desfazer NÃO é "não foi assim": o pedido some e quem registrou é avisado.
+      await apagarPedido(ctx, batch, ref, d);
+      aviso(ctx, batch, d.owner_uid, {
+        title: tx('{nome} desfez a confirmação', { nome: d.partner_name || 'Sua dupla' }),
+        message: texto(d.summary && d.summary.name, 120),
+        link: linkDoEvento(d.event_id),
+      });
+      auditoria(ctx, batch, actor, 'career_partner_undone', { doc_id: id, event_id: d.event_id, user_id: d.owner_uid });
+    }
+  } else {
+    falha('permission-denied', 'Este pedido não é seu.');
+  }
+  await batch.commit();
+  return { id };
+}
+
+async function report(ctx, actor, data) {
+  const { id, d } = await pedido(ctx, data.docId);
+  const papel = d.owner_uid === actor.uid ? 'owner' : d.partner_uid === actor.uid ? 'partner' : '';
+  if (!papel) falha('permission-denied', 'Este pedido não é seu.');
+  if (!P.PARTNER_REPORT_REASONS.includes(data.reason)) falha('invalid-argument', 'Escolha o motivo da denúncia.');
+  const versao = (d.feedback && d.feedback.edited_at_ms) || 0;
+  const repRef = ctx.db.collection(REP).doc(reportId(id, papel));
+  const antes = await repRef.get();
+  // Uma denúncia por lado: aberta, ou já decidida sobre ESTA mesma versão da visão, não abre outra.
+  if (antes.exists && (antes.data().open === true || antes.data().feedback_edited_at_ms === versao)) return { id, reported: true };
+  const batch = ctx.db.batch();
+  batch.set(repRef, {
+    doc_id: id, event_id: d.event_id, owner_uid: d.owner_uid, partner_uid: d.partner_uid, reporter_uid: actor.uid, role: papel,
+    reason: data.reason, note: texto(data.note, P.PARTNER_LIMITS.reason), feedback_edited_at_ms: versao,
+    open: true, created_at_ms: ctx.now, moderation: null,
+  });
+  auditoria(ctx, batch, actor, 'career_partner_reported', { doc_id: id, event_id: d.event_id, reason: data.reason, by: papel });
+  await batch.commit();
+  return { id, reported: true };
+}
+
+const DECISOES = ['dismiss', 'remove_feedback', 'remove_link'];
+
+async function moderate(ctx, actor, data) {
+  if (!actor.isPlatformAdmin) falha('permission-denied', 'Só a administração da plataforma decide denúncias.');
+  const { ref, id, d } = await pedido(ctx, data.docId);
+  const decision = DECISOES.includes(data.decision) ? data.decision : '';
+  if (!decision) falha('invalid-argument', 'Decisão inválida.');
+  const motivo = texto(data.reason, P.PARTNER_LIMITS.reason);
+  if (motivo.length < 5) falha('invalid-argument', 'Escreva o motivo da decisão (pelo menos 5 letras).');
+  if (decision === 'remove_feedback' && !d.feedback) falha('failed-precondition', 'Não há visão para retirar.');
+  const torneio = texto(d.summary && d.summary.name, 120);
+  // A decisão fica nas DENÚNCIAS (só o servidor e quem denunciou leem), nunca no
+  // pedido que as duas pontas leem; o uid do admin vai só para a auditoria.
+  const moderation = { decision, reason: motivo, at_ms: ctx.now };
+  const reps = (await Promise.all(['owner', 'partner'].map((papel) => ctx.db.collection(REP).doc(reportId(id, papel)).get())))
+    .filter((r) => r.exists && r.data().open === true);
+  const reportReason = reps.length ? reps[0].data().reason : null;
+  const batch = ctx.db.batch();
+  reps.forEach((r) => batch.update(r.ref, { open: false, moderation }));
+  if (decision === 'remove_feedback') {
+    batch.update(ref, { feedback: null, owner_decision: null });
+    aviso(ctx, batch, d.partner_uid, {
+      title: tx('Sua visão foi retirada pela moderação'),
+      message: tx('{torneio}. Motivo: {motivo}', { torneio, motivo }),
+      link: '/carreira',
+    });
+  } else if (decision === 'remove_link') {
+    // O pedido some, mas a denúncia decidida fica: é ela que impede pedir de novo.
+    batch.delete(ref);
+    await soltarEspelho(ctx, batch, d);
+    if (!reps.some((r) => r.id === reportId(id, 'partner'))) {
+      batch.set(ctx.db.collection(REP).doc(reportId(id, 'partner')), {
+        doc_id: id, event_id: d.event_id, owner_uid: d.owner_uid, partner_uid: d.partner_uid, reporter_uid: null, role: 'partner',
+        reason: null, note: '', feedback_edited_at_ms: 0, open: false, created_at_ms: ctx.now, moderation,
+      });
+    }
+    aviso(ctx, batch, d.owner_uid, {
+      title: tx('O pedido de confirmação foi retirado pela moderação'),
+      message: tx('{torneio}. Motivo: {motivo}', { torneio, motivo }),
+      link: linkDoEvento(d.event_id),
+    });
+  }
+  auditoria(ctx, batch, actor, 'career_partner_moderated', {
+    doc_id: id, event_id: d.event_id, decision, reason: motivo, report_reason: reportReason,
+    user_id: decision === 'remove_link' ? d.owner_uid : d.partner_uid,
+  });
+  await batch.commit();
+  return { id, decision };
+}
+
+/** As denúncias abertas, para a fila do admin (só o necessário para decidir). */
+async function queue(ctx, actor) {
+  if (!actor.isPlatformAdmin) falha('permission-denied', 'Só a administração da plataforma vê as denúncias.');
+  const snap = await ctx.db.collection(REP).where('open', '==', true).limit(100).get();
+  const porPedido = new Map();
+  snap.docs.forEach((r) => { const x = r.data(); if (!porPedido.has(x.doc_id)) porPedido.set(x.doc_id, x); });
+  const itens = await Promise.all([...porPedido.values()].map(async (r) => {
+    const p = await ctx.db.collection(COL).doc(r.doc_id).get();
+    if (!p.exists) return null; // o pedido sumiu: nada a decidir
+    const d = p.data();
+    return {
+      id: r.doc_id,
+      owner_name: d.owner_name || '',
+      partner_name: d.partner_name || '',
+      summary: d.summary || null,
+      status: d.status,
+      feedback: d.feedback || null,
+      report_reason: r.reason || '',
+      report_note: r.note || '',
+      reported_by: r.role || '',
+      reported_at_ms: r.created_at_ms || 0,
+    };
+  }));
+  return { items: itens.filter(Boolean).sort((a, b) => a.reported_at_ms - b.reported_at_ms) };
+}
+
+const ACOES = { invite, respond, feedback, decide, remove, report, moderate, queue };
+
+async function career(ctx, actor, data = {}) {
+  const fn = ACOES[data.action];
+  if (!fn) falha('invalid-argument', 'Ação desconhecida.');
+  return fn(ctx, actor, data);
+}
+
+/* ------------------------------------------------------------ gatilho -- */
+
+const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const linkDe = (ev) => (ev && ev.linked_event && ev.linked_event.uid && ev.linked_event.id ? ev.linked_event : null);
+
+/**
+ * `career_events/{id}` mudou. Idempotente: só escreve o que mudou (a escrita
+ * que desfaz um `linked_event` forjado dispara o gatilho de novo e termina aí).
+ */
+async function eventWritten(ctx, eventId, before, after) {
+  const { db } = ctx;
+  const batch = db.batch();
+  let escritas = 0;
+  const pedidos = await db.collection(COL).where('event_id', '==', eventId).get();
+
+  if (!after) {
+    pedidos.docs.forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
+    const reps = await db.collection(REP).where('event_id', '==', eventId).get();
+    reps.docs.forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
+    // Quem tinha posto este torneio na carreira dele também: o vínculo some dos dois lados.
+    const espelhos = await db.collection(EV).where('linked_event.id', '==', eventId).get();
+    espelhos.docs.forEach((doc) => { batch.update(doc.ref, { linked_event: null }); escritas += 1; });
+  } else {
+    for (const doc of pedidos.docs) {
+      const d = doc.data();
+      const idx = d.owner_uid === after.uid ? P.citedEntryIndexes(after, d.partner_uid) : [];
+      if (!idx.length) { await apagarPedido(ctx, batch, doc.ref, d); escritas += 1; continue; }
+      const patch = {};
+      const sm = resumo(after, idx);
+      if (!igual(sm, d.summary)) patch.summary = sm;
+      if (!igual(idx, d.entry_indexes)) patch.entry_indexes = idx;
+      if (d.status === P.PARTNER_STATUS.CONFIRMED && P.careerFingerprint(after, idx) !== d.fingerprint) {
+        patch.status = P.PARTNER_STATUS.RECONFIRM;
+        aviso(ctx, batch, d.partner_uid, {
+          title: tx('Confirme de novo: {torneio}', { torneio: sm.name }),
+          message: tx('{nome} mudou a data, a categoria ou a colocação. Confira e confirme.', { nome: d.owner_name || 'Sua dupla' }),
+          link: linkDoPedido(doc.id),
+        });
+        escritas += 1;
+      }
+      if (Object.keys(patch).length) { batch.update(doc.ref, patch); escritas += 1; }
+    }
+  }
+
+  // "Pôr na minha carreira também": confere o vínculo e liga as duas fichas.
+  const antesLink = linkDe(before);
+  const depoisLink = linkDe(after);
+  if (antesLink && (!depoisLink || antesLink.id !== depoisLink.id)) {
+    const velho = await db.collection(COL).doc(P.partnerDocId(antesLink.id, before.uid)).get();
+    if (velho.exists && velho.data().partner_event_id === eventId) { batch.update(velho.ref, { partner_event_id: null }); escritas += 1; }
+  }
+  if (depoisLink && (!antesLink || antesLink.id !== depoisLink.id)) {
+    const alvo = await db.collection(COL).doc(P.partnerDocId(depoisLink.id, after.uid)).get();
+    const ok = alvo.exists && alvo.data().owner_uid === depoisLink.uid && alvo.data().partner_uid === after.uid
+      && alvo.data().status === P.PARTNER_STATUS.CONFIRMED;
+    if (ok) batch.update(alvo.ref, { partner_event_id: eventId });
+    else batch.update(db.collection(EV).doc(eventId), { linked_event: null });
+    escritas += 1;
+  }
+
+  if (escritas) await batch.commit();
+  return { escritas };
+}
+
+module.exports = { career, eventWritten, ACOES };

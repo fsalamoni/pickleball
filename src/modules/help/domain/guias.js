@@ -1297,6 +1297,13 @@ const GUIAS_BASE = [
         title: tk('O balanço do torneio'),
         body: tk('Na ficha de um torneio já jogado, "Fazer o balanço" pergunta como foi e sugere a semana de drills. Ela só entra nos seus treinos se você tocar em "Adicionar".'),
       },
+      {
+        id: 'dupla',
+        route: '/carreira',
+        target: ['carreira-dupla', 'carreira-abas'],
+        title: tk('A dupla confirma'),
+        body: tk('Escolhida a dupla da lista de usuários, a camada "Dupla" da ficha pede que ela confirme o resultado. Confirmado, o torneio ganha o selo "Confirmado pela dupla".'),
+      },
     ],
   },
   {

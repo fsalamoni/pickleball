@@ -57,9 +57,16 @@ export function careerDateLabel(iso, precision = 'day') {
   return ms ? fmtData(new Date(ms), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 }
 
-/** O selo derivado: oficial (da plataforma) ou declarado (digitado pela pessoa). */
-export function SealBadge({ seal }) {
+/**
+ * O selo derivado: oficial (da plataforma), confirmado pela dupla ou declarado.
+ * `awaiting` acrescenta "Aguardando a dupla" (pedido de confirmação em aberto).
+ */
+export function SealBadge({ seal, awaiting = false }) {
+  const tom = seal === SEAL.OFFICIAL ? 'green' : seal === SEAL.CONFIRMED ? 'blue' : 'neutral';
   return (
-    <V2Badge tone={seal === SEAL.OFFICIAL ? 'green' : 'neutral'}>{t(SEAL_LABEL[seal] || SEAL_LABEL.declared)}</V2Badge>
+    <>
+      <V2Badge tone={tom}>{t(SEAL_LABEL[seal] || SEAL_LABEL.declared)}</V2Badge>
+      {awaiting && <V2Badge tone="neutral">{t('Aguardando a dupla')}</V2Badge>}
+    </>
   );
 }

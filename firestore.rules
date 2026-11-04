@@ -571,6 +571,18 @@ service cloud.firestore {
       allow read, delete: if isOwner(od().uid);
       allow create, update: if isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
     }
+    // A DUPLA confirma e comenta (`{evento}__{dupla}`): escrita de TERCEIRO, só
+    // o servidor grava (`functions/career.js`). Lê quem registrou e quem foi
+    // citado — as consultas usam `owner_uid ==` ou `partner_uid ==` (uma igualdade).
+    match /career_partner/{id} {
+      allow read: if isOwner(od().owner_uid) || isOwner(od().partner_uid);
+    }
+    // A DENÚNCIA de um pedido (`{pedido}__{owner|partner}`) fica fora dele: quem
+    // foi denunciado não lê quem denunciou, o motivo nem a nota. Só o servidor
+    // grava; lê só quem denunciou (consulta `reporter_uid ==`, para a exportação).
+    match /career_partner_reports/{id} {
+      allow read: if isOwner(od().reporter_uid);
+    }
 
     // ---- Galeria de fotos do torneio -------------------------------------
     // Leitura pública (aparece na visão de espectador). Envio/remoção só por

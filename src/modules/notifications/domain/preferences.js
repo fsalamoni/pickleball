@@ -40,7 +40,7 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
     id: 'partners',
     label: tk('Parcerias de dupla'),
     description: tk('Convites de dupla e respostas dos parceiros.'),
-    types: ['partner_invite', 'partner_response'],
+    types: ['partner_invite', 'partner_response', 'career'],
   },
   {
     id: 'training',

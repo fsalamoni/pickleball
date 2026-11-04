@@ -1,7 +1,7 @@
 # 54 — Minha carreira (carreira do atleta)
 
 > Estado: **PR 1 — núcleo, foto e passado** + **PR 2 — balanço, treino e
-> retrospectiva** (2026-11-04). Flag
+> retrospectiva** + **PR 3 — a dupla confirma** (2026-11-04). Flag
 > `athlete_career` (`FEATURE_FLAG.ATHLETE_CAREER`, padrão **desligada**, só o
 > admin liga; grupo "Carreira do atleta" no painel). O plano completo, com os
 > PRs seguintes, está fora do repositório
@@ -18,7 +18,8 @@ em ranking, rating nem XP (guarda `src/core/guards/carreiraNaoPontua.test.js`).
 
 | Peça | Onde |
 |---|---|
-| Domínio (puro, com teste) | `src/modules/career/domain/careerEvent.js`, `timeline.js`, `draftQueue.js`, `careerDebrief.js` (a origem do balanço), `seasonRecap.js` (a retrospectiva) |
+| Domínio (puro, com teste) | `src/modules/career/domain/careerEvent.js`, `timeline.js`, `draftQueue.js`, `careerDebrief.js` (a origem do balanço), `seasonRecap.js` (a retrospectiva), `careerPartner.js` (a dupla: citação, impressão, maioridade, visão, selo, pendências) |
+| Servidor (PR 3) | `functions/career.js` (callable `career` + gatilho `careerEventWritten`), régua copiada em `functions/careerPolicy.js` (paridade `careerPolicy.parity.test.js`) |
 | Serviço (I/O) | `src/modules/career/services/careerService.js`, `careerExportService.js` |
 | Hooks (React Query) | `src/modules/career/hooks/useCareer.js` |
 | Página | `src/v2/pages/V2Career.jsx` (lazy, em `<Isolada nome="carreira">`, `V2Page`) |
@@ -73,6 +74,39 @@ webhook do DUPR acrescenta **só quando o rating muda**
 (`proximosPontosDupr`, `functions/dupr.js`). É a base do gráfico de evolução
 de um PR futuro; neste PR nada a mostra. Ver `docs/51-DUPR.md`.
 
+### 2.4 `career_partner/{eventoId}__{uidDaDupla}` (PR 3)
+
+O pedido para a DUPLA confirmar um torneio de fora. **Só o servidor grava**
+(`functions/career.js`); o dono e a dupla citada leem o próprio lado.
+
+| Campo | O quê |
+|---|---|
+| `owner_uid`, `owner_name` | quem registrou o torneio |
+| `partner_uid`, `partner_name` | a dupla citada (a conta escolhida da lista) |
+| `event_id`, `entry_indexes[]` | o registro e as categorias de DUPLA em que ela aparece (simples não conta) |
+| `summary` | nome, datas, cidade/UF e as categorias citadas (sem anotações nem foto) — o que a dupla lê sem abrir o registro |
+| `status` | `invited` · `confirmed` · `declined` · `reconfirm` (gravados; nunca renomeie) |
+| `fingerprint` | a impressão do que se confirma: datas, precisão e, de cada categoria citada, formato, gênero, idade, faixa e colocação — **o nome NÃO entra**, nem a POSIÇÃO da categoria na ficha (apagar ou reordenar outra categoria não pede nova confirmação) (`careerFingerprint`) |
+| `feedback` | a visão da dupla: `strengths[]`/`improve[]` (até 3, ids de `GAME_ASPECTS`), `text_strength`/`text_improve`/`text_drill` (até 280) |
+| `owner_decision` | `pending` · `use` ("Usar no meu treino") · `keep` ("Guardar") |
+| `partner_event_id` | o registro espelhado da dupla ("Pôr na minha carreira também"), conferido pelo gatilho |
+
+A **denúncia não mora no pedido** (que as duas pontas leem): fica em
+`career_partner_reports/{pedido}__{owner|partner}` — `doc_id`, `event_id`,
+`owner_uid`, `partner_uid`, `reporter_uid`, `role`, `reason` (`offensive` ·
+`false_claim` · `personal_data` · `other`), `note`, `feedback_edited_at_ms`
+(a versão da visão denunciada), `open`, `created_at_ms` e `moderation`
+(`{ decision, reason, at_ms }`; o uid do admin vai só para a auditoria). Só o
+servidor grava; lê só quem denunciou. Uma denúncia por lado: aberta, ou já
+decidida sobre a mesma versão da visão, não abre outra. Com denúncia aberta a
+dupla não EDITA a visão (só retira). "Retirar o pedido" (`remove_link`) apaga
+o pedido mas a denúncia decidida fica — é ela que recusa pedir de novo.
+
+`career_events` ganhou dois campos opcionais: `partner_uids[]` (as contas
+citadas — é por ele que a exclusão de conta acha os registros dos outros) e
+`linked_event` (`{ uid, id }` do registro de quem convidou, no espelho).
+Zero índice composto (consultas de uma igualdade).
+
 ## 3. Quem pode o quê
 
 ```
@@ -80,14 +114,25 @@ match /career_events/{id} {
   allow read, delete: if isOwner(od().uid);
   allow create, update: if isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
 }
+match /career_partner/{id} {
+  allow read: if isOwner(od().owner_uid) || isOwner(od().partner_uid);
+}
+match /career_partner_reports/{id} {
+  allow read: if isOwner(od().reporter_uid);
+}
 ```
 
 - **Só o dono** lê e escreve. Nem o admin lê pelo cliente.
 - `careerOn()` lê `platform_settings/global.feature_flags.athlete_career`:
   com a flag desligada, criar e editar são recusados; **ler e apagar
   continuam valendo** (a pessoa nunca fica presa ao próprio dado).
-- Prova no emulador: `tests/rules/career.rules.test.js` e os casos de
-  `carreira/` em `tests/rules/storage.rules.test.js`.
+- `career_partner` **ninguém grava pelo cliente** (nem o dono, nem a dupla,
+  nem o admin): tudo passa pela função `career`. Terceiro não lê — a visão
+  da dupla fica entre os dois. A fila de moderação o admin lê pelo servidor
+  (ação `queue`), sem uid.
+- Prova no emulador: `tests/rules/career.rules.test.js` (dono, dupla citada,
+  terceiro, menor — nenhuma conta admin) e os casos de `carreira/` em
+  `tests/rules/storage.rules.test.js`.
 
 ## 4. A tela
 
@@ -160,6 +205,17 @@ completo). O torneio de fora **não vira pendência de balanço** — o convite
 best-effort: o balanço não seguiria pesando no foco das semanas). No
 histórico do Centro de Treino, o balanço de torneio só com o ano mostra o
 ano, não "1 jan".
+
+**Camada 3 — Dupla** (PR 3, âncora `carreira-dupla`, `CareerPartnerLayer`
+em `CareerPartnerUi.jsx`): a dupla de cada categoria é escolhida pelo
+seletor ÚNICO de parceiro (`v2/components/people/PartnerPicker.jsx`, o
+mesmo da inscrição de torneio), que mostra antes da busca "Com quem você
+já jogou" (`pastPartners`: torneios de fora + pódios da plataforma). Com o
+registro SALVO, JOGADO e a pessoa maior de 18, "Pedir confirmação a
+{nome}" chama `career` → `invite`. A camada mostra o estado, a visão da
+dupla com "Usar no meu treino" / "Guardar", "Denunciar" e "Apagar o
+pedido". Lista dos pedidos que falhou é dita (`V2ErrorState`), nunca "sem
+pedido".
 
 "É este torneio do PickleRush?": `matchPlatformTournament` compara o nome
 normalizado e a data com os torneios em que a pessoa jogou; confirmando,
@@ -245,6 +301,52 @@ da linha do tempo já montada (`buildSeasonRecap`, `seasonRecap.js`).
 - **E2E**: `tests/e2e/logado.spec.js`, teste "Minha carreira" (liga a flag,
   abre as duas abas e `/meu-desempenho?declarados=1`).
 
+### 4.8 A dupla confirma (PR 3)
+
+- **Pedir** (`invite`): só o dono, com a flag, registro jogado (nem futuro
+  nem cancelado), a dupla citada numa categoria de dupla e **os dois maiores
+  de 18** (nascimento desconhecido conta como menor; a recusa por idade da
+  dupla não revela a idade). Pedido em aberto ou confirmado com a mesma
+  impressão não duplica; recusado com a mesma impressão é recusado de novo
+  (corrija a ficha e peça). Avisa a dupla.
+- **Responder** (`respond`): só a dupla citada, "Confirmo" / "Não foi
+  assim". O servidor relê o registro: se ela não está mais nele, o pedido
+  some. Avisa o dono.
+- **Mudou a data ou o resultado** → o gatilho `careerEventWritten` compara a
+  impressão: confirmado vira `reconfirm` e a dupla é avisada. **Trocar o
+  nome não pede nada.** A dupla tirada do registro perde o pedido. Registro
+  apagado leva os pedidos e solta os `linked_event` que apontavam para ele.
+- **A visão** (`feedback`): só a dupla, depois de confirmar e enquanto o
+  dono não decidiu; 3+3 aspectos e três textos curtos. O dono decide
+  (`decide`): `use` põe a visão no foco dos balanços (`partnerVoices` →
+  `debriefFocus(…, { partnerVoices })`, +1 por aspecto, o motivo diz que
+  veio da dupla e o diálogo do balanço mostra "Também da sua dupla"), `keep`
+  guarda só na ficha. **A crítica nunca sai do par**: nem página pública,
+  nem ranking, nem XP, nem a fila do admin sem denúncia.
+- **"Pôr na minha carreira também"**: a dupla grava um registro dela já
+  preenchido (`mirrorEventDraft`, com `linked_event`); o gatilho confere
+  (pedido confirmado, os dois uids certos) e liga os dois
+  (`partner_event_id`) — vínculo forjado é desfeito.
+- **Retirar** (`remove`): o dono apaga o pedido; a dupla retira a visão ou,
+  sem visão, desfaz a confirmação.
+- **Denunciar** (`report`, qualquer dos dois) → **Painel admin → Carreira →
+  Denúncias de dupla** (`AdminCareerModeration`, aba `carreira-moderacao`,
+  também em "Precisa de você" do admin): `dismiss`, `remove_feedback` (avisa
+  a dupla) ou `remove_link` (avisa o dono), sempre com motivo (≥ 5 letras).
+- **Auditoria** em toda ação (`audit_logs`, sem o texto da visão).
+- **Avisos** do servidor: `type: 'career'`, `origin: 'server'`, link
+  `/carreira?dupla=<pedido>` ou `/carreira?evento=<id>` passado por
+  `linkDeAviso` (a regra de `notifications` recusa `#`).
+- **Onde a dupla responde**: no topo da linha do tempo
+  (`CareerPartnerInbox`, âncora `carreira-duplas`; `?dupla=` destaca o
+  pedido do aviso). **Precisa de você** (Minha área): "torneios para
+  confirmar como dupla" e "visões da dupla para decidir"
+  (`careerPartnerPending`; lista que falhou vai para "ficou de fora").
+- **Selo**: `careerSeal(ev, myTournaments, partnerSeal)` — `official` >
+  `confirmed` ("Confirmado pela dupla", azul) > `declared`; pedido em aberto
+  acrescenta "Aguardando a dupla". Confirmado continua **declarado** para
+  pontuação: não entra em ranking, rating, federação nem XP.
+
 ## 6. O que não pode regredir
 
 1. **Declarado nunca pontua**: nenhum motor de ranking, rating, federação ou
@@ -261,12 +363,18 @@ da linha do tempo já montada (`buildSeasonRecap`, `seasonRecap.js`).
    desempenho os seis cartões ficam como estão e a soma só aparece com o
    interruptor, dizendo de onde vem cada parte.
 8. A retrospectiva é **zero banco** e não aparece com fonte faltando.
+9. **`career_partner` só o servidor grava**; só quem foi citado confirma;
+   data ou resultado mudou ⇒ nova confirmação, nome mudou ⇒ não; menor de
+   18 nunca é convidado nem convida; a visão nunca sai do par; toda ação
+   grava auditoria. A régua tem cópia no servidor (`careerPolicy.js`, com
+   paridade) — mexer num lado só quebra o teste.
+10. O seletor de dupla é UM (`PartnerPicker`): nunca bifurque.
 
 ## 7. Fora destes PRs
 
-Confirmação da dupla, abas "Próximos" e "Metas", ranking da carreira, visão
-do professor, avisos pelo servidor, card no início, XP da ficha, vitrine
-pública e importação do DUPR.
+Abas "Próximos" e "Metas", ranking da carreira, visão do professor, card
+no início, XP da ficha, vitrine pública, dupla sem conta (convite por link)
+e importação do DUPR.
 
 **Pendências registradas na revisão do PR 1:**
 
@@ -274,8 +382,20 @@ pública e importação do DUPR.
   JOGOU o torneio da plataforma; a colocação continua a declarada. Antes de
   qualquer cartão público, a colocação do vínculo oficial tem de vir do pódio
   (`modalityPodium`), ou o selo diz só "torneio da plataforma".
-- **PR 3 (dupla)**: a exclusão de conta apaga os `career_events` da pessoa,
-  mas não limpa `entries[].partner.uid` nos documentos de quem a escolheu
-  como dupla (hoje um uid solto num documento privado). Quando a dupla
-  passar a confirmar pelo uid, a exclusão (ou a unificação de contas) zera o
-  `partner.uid` e mantém o nome digitado.
+- ✅ **PR 3 (dupla)**: a exclusão de conta apaga os `career_events` e os
+  `career_partner` da pessoa (os dois lados) e, nos registros de quem a
+  escolheu como dupla, tira `partner.uid`/`partner_uids`/`linked_event` e
+  mantém o nome digitado (`patchCareerPartner`, consulta por
+  `partner_uids array-contains`; `functions/accountDeletion.carreira.test.js`).
+  Registros salvos ANTES do PR 3 não têm `partner_uids` e não são achados —
+  ficam com o uid solto até a próxima gravação (nada é migrado sozinho). A
+  unificação de contas não move a carreira (não é histórico esportivo).
+- **Convite a menor (ou conta sem nascimento)**: o servidor devolve a MESMA
+  resposta do convite que saiu, sem gravar nem avisar (fica só a auditoria
+  `career_partner_invite_held`), para a resposta não virar sonda de idade. O
+  limite: quem convida não vê o pedido "aguardando" depois de recarregar —
+  quem lê o banco ainda nota a ausência do documento.
+- **"Com quem você já jogou"** soma os torneios de fora e os PÓDIOS da
+  estante; as duplas de torneio e de dia de jogo da plataforma sem pódio
+  ainda não entram (o plano §5.1 pede; fica para quando a linha do tempo
+  carregar as inscrições com o parceiro).

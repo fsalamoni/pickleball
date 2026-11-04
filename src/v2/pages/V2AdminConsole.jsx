@@ -65,7 +65,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, FileDown, TicketPercent, BadgeCheck, FlaskConical, Send } from 'lucide-react';
+import { UserCog, Wrench, FileDown, TicketPercent, BadgeCheck, FlaskConical, Send, Route } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
 import {
   FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
@@ -127,6 +127,7 @@ const AdminMarketPanel = lazy(() => import('@/v2/components/admin/market/AdminMa
 const AdminMessagingPanel = lazy(() => import('@/v2/components/admin/messaging/AdminMessagingPanel'));
 const AdminFederationsPanel = lazy(() => import('@/v2/components/admin/federations/AdminFederationsPanel'));
 const AdminFederationsConfig = lazy(() => import('@/v2/components/admin/federations/AdminFederationsConfig'));
+const AdminCareerModeration = lazy(() => import('@/v2/components/admin/career/AdminCareerModeration'));
 
 const SECTIONS = Object.freeze([
   { id: 'today', label: tk('Hoje'), icon: LayoutDashboard, tabs: [
@@ -179,6 +180,9 @@ const SECTIONS = Object.freeze([
     { id: 'mercado-config', label: tk('Configurações'), icon: SlidersHorizontal, keywords: ['marketplace', 'termos proibidos', 'categorias', 'prazos'] },
   ] },
   // A voz da plataforma e dos parceiros falando com todos.
+  { id: 'careerSection', label: tk('Carreira'), icon: Route, flag: 'athlete_career', dica: 'admin-secao-carreira', tabs: [
+    { id: 'carreira-moderacao', label: tk('Denúncias de dupla'), icon: Flag, keywords: ['carreira', 'dupla', 'confirmação', 'visão', 'denúncia', 'moderação'] },
+  ] },
   { id: 'outreach', label: tk('Divulgação'), icon: Megaphone, tabs: [
     { id: 'promo', label: tk('Cupons e campanhas'), icon: Megaphone, keywords: ['divulgação', 'banner'] },
     { id: 'broadcast', label: tk('Aviso em massa'), icon: Bell, keywords: ['notificação', 'sino', 'comunicado', 'todos'] },
@@ -287,6 +291,11 @@ export default function V2AdminConsole() {
         {tab === 'federacoes' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminFederationsPanel />
+          </Suspense>
+        )}
+        {tab === 'carreira-moderacao' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminCareerModeration />
           </Suspense>
         )}
         {tab === 'federacoes-config' && (

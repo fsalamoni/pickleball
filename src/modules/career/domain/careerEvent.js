@@ -101,6 +101,13 @@ function normalizePartner(p) {
   return uid ? { uid, name } : { name };
 }
 
+/** `{ uid, id }` do registro da dupla (o id começa pelo uid dela), ou `null`. */
+function normalizeLinkedEvent(v) {
+  const uid = typeof v?.uid === 'string' && /^[\w-]{6,128}$/.test(v.uid) ? v.uid : null;
+  const id = typeof v?.id === 'string' && v.id.length <= 200 ? v.id : '';
+  return uid && id.startsWith(`${uid}_`) ? { uid, id } : null;
+}
+
 /** Uma participação (uma categoria jogada). */
 export function normalizeEntry(raw = {}) {
   const format = umDe(raw.format, Object.values(CAREER_FORMAT), CAREER_FORMAT.DOUBLES);
@@ -191,6 +198,10 @@ export function normalizeCareerEvent(raw = {}, { uid = null, today = todayLocal(
     photos: (Array.isArray(raw.photos) ? raw.photos : []).map((p) => normalizePhoto(p, uid || raw.uid)).filter(Boolean).slice(0, CAREER_LIMITS.photos),
     notes: String(raw.notes ?? '').slice(0, CAREER_LIMITS.notes),
     platform_tournament_id: typeof raw.platform_tournament_id === 'string' && raw.platform_tournament_id ? raw.platform_tournament_id.slice(0, 128) : null,
+    // As contas citadas como dupla (consulta `array-contains` da exclusão de conta, que tira o uid de quem saiu).
+    partner_uids: [...new Set(entries.map((e) => e.partner?.uid).filter(Boolean))],
+    // "Pôr na minha carreira também": o registro de quem convidou. O servidor confere e liga os dois.
+    linked_event: normalizeLinkedEvent(raw.linked_event),
     created_at_ms: Number(raw.created_at_ms) || nowMs,
     updated_at_ms: nowMs,
   };
@@ -328,9 +339,14 @@ export function isOfficialLink(event, myTournaments) {
   return myTournaments.some((tt) => tt?.id === event.platform_tournament_id && isCareerPlatformTournament(tt));
 }
 
-/** Selo derivado (nunca gravado): `official` ou `declared`. O da dupla é do PR 3. */
-export function careerSeal(event, myTournaments) {
-  return isOfficialLink(event, myTournaments) ? 'official' : 'declared';
+/**
+ * Selo derivado (nunca gravado): `official` (ligado ao torneio da plataforma),
+ * `confirmed` (a dupla confirmou — `partnerSeal` vem de `partnerSealFor`, sobre
+ * os documentos que só o servidor grava) ou `declared`.
+ */
+export function careerSeal(event, myTournaments, partnerSeal = null) {
+  if (isOfficialLink(event, myTournaments)) return 'official';
+  return partnerSeal === 'confirmed' ? 'confirmed' : 'declared';
 }
 
 /* ------------------------------------------------------- modo lista -- */

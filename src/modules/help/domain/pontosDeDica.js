@@ -535,6 +535,16 @@ export const PONTOS_DE_DICA = Object.freeze([
     body: tk('As federações em que você é filiado ou da equipe. A carteirinha fica na Minha área; "Gerir" abre a Central.'),
     flags: ['federations'],
   },
+  /* ---------------------------------------------------- minha carreira -- */
+  {
+    id: 'carreira:duplas',
+    route: '/carreira',
+    target: 'carreira-duplas',
+    title: tk('Pedidos das suas duplas'),
+    body: tk('Alguém registrou um torneio com você. "Confirmo" dá o selo "Confirmado pela dupla" na carreira dela; depois você pode deixar a sua visão ou pôr o torneio na sua carreira também.'),
+    guide: 'carreira-registrar',
+    flags: ['athlete_career'],
+  },
   {
     id: 'federacao:filiar',
     route: '/federacoes/*',

@@ -195,11 +195,17 @@ export function answeredDebriefs(debriefs = []) {
  * balanços pesa 1 cada (repetido = padrão, não acaso); o que funcionou hoje
  * sai do foco. Até 2 focos e 1 ponto forte para manter.
  *
+ * A VOZ DA DUPLA (Minha carreira, docs/54 §6): cada visão que a pessoa marcou
+ * "Usar no meu treino" soma +1 por aspecto apontado — o mesmo peso de um
+ * balanço anterior —, e o motivo diz que foi a dupla. `partnerVoices` vem de
+ * `career/domain/careerPartner.js` (`partnerVoices`): `[{ name, aspects }]`.
+ *
  * @returns {{ focus: Array<{ id, label, reason }>, maintain: { id, label }|null }}
  */
-export function debriefFocus(debrief, history = []) {
+export function debriefFocus(debrief, history = [], { partnerVoices = [] } = {}) {
   const score = new Map();
   const why = new Map();
+  const dupla = new Map(); // aspecto → nomes de quem apontou
   const hoje = new Set(debrief?.weaknesses || []);
   hoje.forEach((a) => { score.set(a, 3); why.set(a, 0); });
   const anteriores = history
@@ -210,6 +216,12 @@ export function debriefFocus(debrief, history = []) {
     score.set(a, (score.get(a) || 0) + 1);
     why.set(a, (why.get(a) || 0) + 1);
   }));
+  (partnerVoices || []).slice(0, DEBRIEF_LIMITS.history).forEach((v) => (v?.aspects || []).forEach((a) => {
+    if (!ASPECT_BY_ID[a]) return;
+    score.set(a, (score.get(a) || 0) + 1);
+    if (!dupla.has(a)) dupla.set(a, []);
+    if (v.name && !dupla.get(a).includes(v.name)) dupla.get(a).push(v.name);
+  }));
   (debrief?.strengths || []).forEach((a) => score.delete(a));
   const focus = [...score.entries()]
     .sort((a, b) => b[1] - a[1]) // empate: a ordem em que a pessoa marcou (o sort é estável)
@@ -217,10 +229,13 @@ export function debriefFocus(debrief, history = []) {
     .map(([id]) => {
       const vezes = why.get(id) || 0;
       let reason;
+      const nomes = dupla.get(id) || [];
       if (hoje.has(id) && vezes > 0) reason = tn(vezes, 'Você marcou hoje e em mais {n} balanço recente.', 'Você marcou hoje e em mais {n} balanços recentes.');
       else if (hoje.has(id)) reason = t('Você marcou como ponto a melhorar neste jogo.');
-      else reason = t('Apareceu em {n} dos seus balanços recentes.', { n: vezes });
-      return { id, label: aspectLabel(id), reason };
+      else if (vezes > 0 && nomes.length) reason = t('Apareceu em {n} dos seus balanços recentes, e sua dupla também apontou.', { n: vezes });
+      else if (vezes > 0) reason = t('Apareceu em {n} dos seus balanços recentes.', { n: vezes });
+      else reason = t('Sua dupla apontou: {nomes}.', { nomes: nomes.join(', ') });
+      return { id, label: aspectLabel(id), reason, ...(nomes.length ? { partner: nomes } : {}) };
     });
   const forte = (debrief?.strengths || [])[0];
   return { focus, maintain: forte ? { id: forte, label: aspectLabel(forte) } : null };
@@ -252,8 +267,8 @@ function suggestionDates(today, routineDays, light) {
  * @param {{ debrief: object, history?: object[], items?: object[], level?: number|null,
  *   routine?: object|null, today?: string }} p
  */
-export function suggestWeek({ debrief, history = [], items = [], level = null, routine = null, today = todayLocal() }) {
-  const { focus, maintain } = debriefFocus(debrief, history);
+export function suggestWeek({ debrief, history = [], items = [], level = null, routine = null, today = todayLocal(), partnerVoices = [] }) {
+  const { focus, maintain } = debriefFocus(debrief, history, { partnerVoices });
   const light = needsLightWeek(debrief);
   const baseMinutes = Number.isFinite(routine?.minutes) ? routine.minutes : 45;
   const minutes = light ? Math.max(20, Math.round(baseMinutes * 0.7)) : baseMinutes;

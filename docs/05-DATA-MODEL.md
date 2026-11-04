@@ -1556,11 +1556,38 @@ da data), `entries[]` (≤ 6: `format`, `gender`, `age`, `level_bracket`,
 `federated`, `federation_id`, `federation_name`, `federation_acronym`,
 `stage_tier`, `link` (só `https://`), `photos[]` (≤ 6: `path`, `url`, `kind`
 `medal|podium|draw|other`, `alt`), `notes`, `platform_tournament_id`,
+`partner_uids[]` (PR 3, opcional: as contas citadas como dupla — a exclusão
+de conta acha por aqui), `linked_event { uid, id }` (PR 3, opcional: o
+registro de quem convidou, no "Pôr na minha carreira também"),
 `created_at_ms`, `updated_at_ms`. **Só o dono** lê e escreve (o id começa
 pelo uid); criar e editar exigem a flag na regra (`careerOn()`), ler e apagar
 não. Resultado DECLARADO: nada de ranking, rating nem XP lê esta coleção.
 Zero índice (`uid ==`). Entra na exclusão e na exportação. Ver
 `docs/54-CARREIRA-DO-ATLETA.md`.
+
+### `career_partner/{eventoId}__{uidDaDupla}` (NOVO, PR 3, flag `athlete_career`)
+O pedido para a dupla confirmar um torneio de fora: `owner_uid`,
+`owner_name`, `partner_uid`, `partner_name`, `event_id`, `entry_indexes[]`,
+`summary` (nome, datas, cidade/UF, categorias citadas), `status`
+(`invited|confirmed|declined|reconfirm`), `fingerprint` (datas + categorias
+citadas; o nome não entra), `feedback` (`strengths[]`, `improve[]`, até 3
+ids de `GAME_ASPECTS`; `text_strength`, `text_improve`, `text_drill` ≤ 280),
+`owner_decision` (`pending|use|keep`), `decided_at_ms`, `partner_event_id`,
+`invited_at_ms`, `answered_at_ms`. **Só o servidor grava** (`functions/career.js`);
+o dono e a dupla citada leem. Zero índice (`owner_uid ==`, `partner_uid ==`; o
+servidor usa `event_id ==`). Entra na exclusão (os dois lados) e na
+exportação. Ver `docs/54-CARREIRA-DO-ATLETA.md` §2.4 e §4.8.
+
+### `career_partner_reports/{pedido}__{owner|partner}` (NOVO, PR 3)
+A denúncia de um pedido, FORA dele (o denunciado lê o pedido): `doc_id`,
+`event_id`, `owner_uid`, `partner_uid`, `reporter_uid`, `role`, `reason`
+(`offensive|false_claim|personal_data|other`), `note`, `feedback_edited_at_ms`,
+`open`, `created_at_ms`, `moderation` (`{ decision, reason, at_ms }`). Só o
+servidor grava; lê só quem denunciou (`reporter_uid ==`, para a exportação).
+O servidor usa `open ==` (fila) e `event_id ==`. Entra na exclusão
+(`owner_uid`/`partner_uid`) e na exportação. Registros de `career_events`
+salvos antes do PR 3 não têm `partner_uids`: a exclusão de conta não os acha
+até a próxima gravação (nada migrado).
 
 ### Storage: `carreira/{uid}/{arquivo}` (NOVO, flag `athlete_career`)
 As fotos da Minha carreira. Só o dono lê, lista e apaga; cria só arquivo novo

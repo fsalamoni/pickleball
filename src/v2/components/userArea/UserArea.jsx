@@ -33,6 +33,8 @@ import { useTrainingInbox } from '@/modules/training/hooks/useTrainingShares';
 import { useCoachTrainingQuestions, useMyTrainingQuestions } from '@/modules/training/hooks/useTrainingQuestions';
 import { unreadCount } from '@/modules/training/domain/share';
 import { usePendingDebriefs } from '@/modules/training/hooks/useDebriefs';
+import { useCareerPartners } from '@/modules/career/hooks/useCareer';
+import { careerPartnerPending } from '@/modules/career/domain/careerPartner.js';
 import { esperaPorMim } from '@/v2/components/training/questions/questionsView';
 import {
   useMyOffers, useMyOrders, useSeller, useSellerOffers, useSellerOrders, useSellerQuestions,
@@ -121,6 +123,8 @@ export default function UserArea() {
   const mercadoOn = Boolean(flags?.[FEATURE_FLAG.MARKETPLACE]);
   // Minha carreira (flag `athlete_career`): a seção só consulta quando aberta.
   const carreiraOn = Boolean(flags?.[FEATURE_FLAG.ATHLETE_CAREER]);
+  // Os pedidos da dupla (Minha carreira): só com a flag; falha vai para "ficou de fora".
+  const duplasQ = useCareerPartners({ enabled: carreiraOn });
   const sellerKey = mercadoOn && uid ? sellerKeyFor('athlete', uid) : null;
   const sellerQ = useSeller(sellerKey);
   const vendeKey = sellerQ.data ? sellerKey : null;
@@ -172,6 +176,7 @@ export default function UserArea() {
     duvidasEsperando,
     treinosNaoLidos: trainingOn && inboxQ.isSuccess ? unreadCount(inboxQ.data || []) : undefined,
     balancosPendentes: balancos.isSuccess ? balancos.pending.length : undefined,
+    carreira: carreiraOn ? careerPartnerPending(duplasQ.isSuccess ? duplasQ.data : undefined, uid) : undefined,
     clubesAssociados: clubAssocOn && clubAssocQ.isSuccess ? myClubPending(clubAssocQ.data?.clubs) : undefined,
     mercado: mercadoOn ? marketPendingCounts({
       sellerOrders: sellerOrdersQ.isSuccess ? sellerOrdersQ.data : undefined,
@@ -190,6 +195,7 @@ export default function UserArea() {
     trainingOn && (myQuestionsQ.isError || coachQuestionsQ.isError) && t('as dúvidas de treino'),
     trainingOn && inboxQ.isError && t('os treinos recebidos'),
     balancos.isError && t('os jogos para o balanço'),
+    carreiraOn && duplasQ.isError && t('as confirmações das duplas'),
     mercadoOn && mercadoQs.some((q) => q.isError) && t('as suas compras e vendas no Mercado'),
     federacoesOn && fedQs.some((q) => q.isError) && t('as suas federações'),
     // Um clube que não pôde ser lido (`incomplete`) também fica de fora dos números: dizer, não calar.
@@ -201,6 +207,7 @@ export default function UserArea() {
     if (clubAssocQ.isError || clubAssocQ.data?.incomplete) clubAssocQ.refetch();
     if (arenaSummary.pendingError) arenaSummary.refetch?.();
     if (balancos.isError) balancos.refetch();
+    if (duplasQ.isError) duplasQ.refetch();
   };
 
   const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubAssocQ: clubAssocOn ? clubAssocQ : null, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ }, federacoes: { membersQ: fedMembersQ, chargesQ: fedChargesQ, rolesQ: fedRolesQ, invitesQ: fedInvitesQ, dependentsQ: fedDependentsQ, credentialsQ: fedCredentialsQ, transfersQ: fedTransfersQ, rostersQ: fedRostersQ, assignmentsQ: fedAssignmentsQ, finalsQ: fedFinalsQ, directedQ: fedDirectedQ, callupsQ: fedCallupsQ, grantAppsQ: fedGrantAppsQ, coachLicQ: fedCoachLicQ } };

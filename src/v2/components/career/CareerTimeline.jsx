@@ -49,7 +49,7 @@ function Item({ item, onOpenEvent }) {
         </span>
         <span className="mt-1 flex flex-wrap gap-1.5">
           <V2Badge tone="neutral">{t(FONTE_ROTULO[item.source])}</V2Badge>
-          <SealBadge seal={item.seal} />
+          <SealBadge seal={item.seal} awaiting={item.partnerState === 'awaiting'} />
           {item.federated && <V2Badge tone="blue">{item.federation || t('Federado')}</V2Badge>}
           {item.cancelled && <V2Badge tone="red">{t('Cancelado')}</V2Badge>}
         </span>

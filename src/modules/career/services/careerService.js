@@ -10,7 +10,8 @@ import {
   collection, deleteDoc, doc, getDocs, query, setDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage';
-import { db, storage } from '@/core/config/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions, storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { storageFileName } from '@/modules/training/domain/media.js';
 import { t } from '@/core/i18n';
@@ -18,6 +19,7 @@ import {
   CAREER_EVENTS, newCareerEventId, normalizeCareerEvent, withDerivedStatus,
 } from '../domain/careerEvent.js';
 import { CAREER_DEBRIEF_COLLECTION, careerDebriefDocId } from '../domain/careerDebrief.js';
+import { CAREER_PARTNER } from '../domain/careerPartner.js';
 
 export class CareerError extends Error {}
 
@@ -76,6 +78,55 @@ export async function deleteCareerEvent(event) {
     // Balanço que não existe: a regra de delete olha `resource` (nulo) e recusa — ignorado.
     deleteDoc(doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id))).catch(() => {}),
   ]);
+}
+
+/* ------------------------------------------------------------- a dupla -- */
+
+/**
+ * Os pedidos da DUPLA em que a pessoa está, dos dois lados: os que ela fez
+ * (`owner_uid ==`) e os que recebeu (`partner_uid ==`) — uma igualdade cada,
+ * a que a regra prova. Só o servidor grava `career_partner`.
+ */
+export async function listMyCareerPartnerDocs(uid) {
+  if (!db || !uid) return [];
+  const [fiz, recebi] = await Promise.all([
+    getDocs(query(collection(db, CAREER_PARTNER), where('owner_uid', '==', uid))),
+    getDocs(query(collection(db, CAREER_PARTNER), where('partner_uid', '==', uid))),
+  ]);
+  const vistos = new Map();
+  [...fiz.docs, ...recebi.docs].forEach((d) => vistos.set(d.id, toDoc(d)));
+  return [...vistos.values()].sort((a, b) => (Number(b.invited_at_ms) || 0) - (Number(a.invited_at_ms) || 0));
+}
+
+/** As denúncias que a PESSOA fez (`career_partner_reports`, lê só quem denunciou) — para a exportação. */
+export async function listMyCareerPartnerReports(uid) {
+  if (!db || !uid) return [];
+  const snap = await getDocs(query(collection(db, 'career_partner_reports'), where('reporter_uid', '==', uid)));
+  return snap.docs.map(toDoc);
+}
+
+function mensagemDoServidor(err) {
+  const code = String(err?.code || '');
+  if (code.endsWith('unauthenticated')) return t('Entre na sua conta.');
+  if (code.endsWith('unavailable') || code.endsWith('deadline-exceeded')) return t('Sem conexão com o servidor. Tente de novo.');
+  if (code.endsWith('internal')) return t('Não foi possível concluir. Tente de novo.');
+  return err?.message || t('Não foi possível concluir. Tente de novo.');
+}
+
+/**
+ * Uma ação da dupla no servidor (`functions/career.js`): `invite`, `respond`,
+ * `feedback`, `decide`, `remove`, `report`, `moderate`, `queue`.
+ */
+export async function careerAction(action, payload = {}) {
+  if (!functions) throw new CareerError(t('Firebase não está configurado neste ambiente.'));
+  try {
+    const { data } = await httpsCallable(functions, 'career', { timeout: 60_000 })({ action, ...payload });
+    return data;
+  } catch (err) {
+    const e = new CareerError(mensagemDoServidor(err));
+    e.code = err?.code;
+    throw e;
+  }
 }
 
 /* -------------------------------------------------------------- fotos -- */

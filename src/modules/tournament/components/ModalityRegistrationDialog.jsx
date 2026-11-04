@@ -32,10 +32,10 @@ import { PixPaymentContent } from '@/modules/tournament/components/PixPaymentDia
 import { useQuery } from '@tanstack/react-query';
 import { listAthletes } from '@/modules/athletes/services/athleteService';
 import {
-  filterPartnerCandidates,
   publicProfileToPartnerFields,
 } from '@/modules/tournament/domain/partnerInvite';
 import TeamRegistrationDialog from '@/v2/components/tournament/TeamRegistrationDialog';
+import PartnerPicker from '@/v2/components/people/PartnerPicker';
 
 const GENDER_OPTIONS = [
   { value: COMPETITION_GENDER.MALE, label: tk('Masculino') },
@@ -68,6 +68,10 @@ export default function ModalityRegistrationDialog({
   // recém-criada para exibir as instruções PIX sem fechar o dialog.
   const [paymentRegId, setPaymentRegId] = useState(null);
   const { data: existingRegs = [] } = useRegistrations(modality?.id);
+  const excludedPartnerUids = useMemo(
+    () => existingRegs.flatMap((r) => [r.player_a_user_id, r.player_b_user_id]).filter(Boolean),
+    [existingRegs],
+  );
   // Torneio chancelado "só para filiados": a regra do banco recusa a
   // inscrição de quem não está em dia; aqui a tela diz antes e não oferece o
   // botão. O organizador inscreve qualquer pessoa (a regra também deixa).
@@ -461,7 +465,7 @@ export default function ModalityRegistrationDialog({
                   falhou={falhouDiretorio}
                   athletes={eligibleDirectoryAthletes}
                   selfUid={user?.uid}
-                  existingRegs={existingRegs}
+                  excludedUids={excludedPartnerUids}
                   selectedUserId={form.player_b_user_id}
                   selectedName={form.player_b_name}
                   selectedPhoto={form.player_b_photo}
@@ -609,100 +613,6 @@ function AthletePicker({ label, users, selectedUserId, onSelect, onClear, falhou
               })
             )}
           </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * Seletor de parceiro para inscrições de dupla (flag partner_invites):
- * busca no diretório público de atletas, exclui o próprio usuário e quem já
- * está inscrito na modalidade. Ao escolher, a inscrição fica vinculada à
- * conta real do parceiro e ele recebe um convite para confirmar.
- */
-function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, selectedUserId, selectedName, selectedPhoto, onSelect, onClear }) {
-  const [term, setTerm] = useState('');
-  const excludedUids = useMemo(
-    () => existingRegs.flatMap((r) => [r.player_a_user_id, r.player_b_user_id]).filter(Boolean),
-    [existingRegs],
-  );
-  const results = useMemo(
-    () => filterPartnerCandidates(athletes, { term, selfUid, excludedUids }).slice(0, 30),
-    [athletes, term, selfUid, excludedUids],
-  );
-
-  return (
-    <div className="rounded-md border border-input bg-paper/40 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <Label className="text-xs uppercase tracking-wide text-gray-500">{t('Convidar parceiro(a) da plataforma')}</Label>
-        {selectedUserId && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-ink"
-          >
-            <X className="w-3 h-3" /> {t('limpar seleção')}
-          </button>
-        )}
-      </div>
-      {selectedUserId ? (
-        <div className="flex items-center gap-2 rounded-md border border-acid/40 bg-acid/10 p-2">
-          <UserAvatar name={selectedName} photoUrl={selectedPhoto} size="sm" />
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate">{selectedName}</div>
-            <div className="text-xs text-gray-500 truncate">{t('Receberá um convite para confirmar a dupla')}</div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              className="pl-8"
-              placeholder={t('Buscar por nome ou cidade…')}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-          </div>
-          {term.trim() && (
-            <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 divide-y">
-              {falhou ? (
-                /* ⚠️ "Nenhum atleta encontrado → preencha manualmente" numa
-                   falha cria inscrição provisória para quem JÁ tem conta. */
-                <div className="p-3 text-xs text-amber-700 text-center">
-                  {t('A lista de atletas não carregou — não dá para saber se essa pessoa já tem conta. Tente de novo antes de preencher à mão.')}
-                </div>
-              ) : results.length === 0 ? (
-                <div className="p-3 text-xs text-gray-500 text-center">
-                  {t('Nenhum atleta encontrado. Você pode preencher os dados manualmente abaixo.')}
-                </div>
-              ) : (
-                results.map((profile) => {
-                  const uid = profile.uid || profile.id;
-                  return (
-                    <button
-                      key={uid}
-                      type="button"
-                      onClick={() => onSelect(profile)}
-                      className="flex w-full items-center gap-2 p-2 text-left hover:bg-paper"
-                    >
-                      <UserAvatar name={profile.platform_name} photoUrl={profile.photo_url} size="sm" />
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{profile.platform_name}</div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {[profile.city, profile.state].filter(Boolean).join(' · ') || '—'}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          )}
-          <p className="text-[11px] leading-4 text-gray-400">
-            {t('Sem conta na plataforma? Preencha os dados manualmente abaixo.')}
-          </p>
         </>
       )}
     </div>

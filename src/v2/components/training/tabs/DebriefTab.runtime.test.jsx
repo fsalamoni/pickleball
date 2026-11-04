@@ -37,6 +37,7 @@ vi.mock('@/modules/training/hooks/useTrainingPlans', () => ({
   usePlanActions: () => est.planAcoes,
 }));
 vi.mock('@/modules/training/hooks/useTrainingMeta', () => ({ useTrainingMeta: () => ok(null) }));
+vi.mock('@/modules/career/hooks/useCareer', () => ({ useCareerPartnerVoices: () => [] }));
 vi.mock('@/modules/rating/hooks/useMyUnifiedLevel', () => ({ useMyUnifiedLevel: () => ({ level: 3.5 }) }));
 
 const { default: DebriefTab } = await import('./DebriefTab.jsx');
