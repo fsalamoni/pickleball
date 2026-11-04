@@ -144,6 +144,9 @@ export const CALL_REASON = Object.freeze({
   RETURN: 'return', THIRD: 'third',
 });
 
+/** A formação do saque à vista no instante da batida (ver `serveFormation`). */
+const FORMATION = Object.freeze({ YES: 'yes', NO: 'no', UNKNOWN: 'unknown' });
+
 /** Ajustes do motor — botões de calibração do mundo real, não constantes. */
 export const ENGINE_DEFAULTS = Object.freeze({
   /** erro típico do detector de bola, em pixels */
@@ -248,6 +251,18 @@ export const ENGINE_DEFAULTS = Object.freeze({
   restM: 0.3,
   /** depois de um ponto, nada é saque antes disto (s): é a bola devolvida a quem vai sacar */
   serveAfterS: 1.5,
+  /**
+   * A formação do saque, que separa o saque da bola devolvida a quem vai sacar
+   * depois de um ponto: quem recebe espera de até `receiveInsideM` dentro do
+   * fundo de lá até `serveDeepM` atrás dele, na metade em diagonal (com
+   * `centerSlackM` de folga além da linha central), e ninguém do lado de quem
+   * saca fica a menos de cozinha + `formationNetM` da rede (m).
+   */
+  receiveInsideM: 1.5,
+  centerSlackM: 0.5,
+  formationNetM: 1,
+  /** altura presumida do punho, para achar no chão quem tem os pés escondidos pela rede (m) */
+  wristGuessM: 1,
   /** quique a até isto de quem bateu: quicada de propósito, ou a bola bateu no corpo (m) */
   dropZoneM: 1.5,
   /**
@@ -365,6 +380,8 @@ export function createLineCallEngine({ H, options = {} }) {
   // fita): a bola que some por um tempo pode ter quicado ali sem ser vista.
   const farY = cam && cam.y < COURT.NET_Y ? COURT.NET_Y + 0.3 : COURT.NET_Y - 0.3;
   const farSide = cam && hidden({ x: cam.x, y: farY }) ? courtSide({ y: farY }) : null;
+  // Câmera baixa demais: a rede esconde o chão do lado de lá até perto do fundo.
+  const blindFar = Boolean(farSide) && hidden({ x: cam.x, y: farSide === 'B' ? COURT.LENGTH - 1 : 1 });
   /** Metros por pixel na horizontal da imagem (a escala de quem está de pé ali). */
   const mppX = (img) => {
     const a = applyHomography(H, img);
@@ -608,13 +625,80 @@ export function createLineCallEngine({ H, options = {} }) {
     };
   }
 
+  /**
+   * Depois de um ponto, a bola devolvida a quem vai sacar parece um saque: sai
+   * da mão de alguém atrás do fundo. Fora de jogo não há marcação (7.D.4), e o
+   * que separa um do outro é a gente em volta (4.B): no saque, ninguém do lado
+   * de quem saca está perto da rede e quem recebe espera no fundo de lá, em
+   * diagonal; quem devolve a bola é quase sempre da dupla que vai RECEBER, já
+   * com um dos dois junto da cozinha.
+   *
+   * `yes`: a formação à vista (ou o lado de lá fora de vista, sem nada contra).
+   * `no`: as pessoas à vista e fora dela — o motor não marca nada até a 3ª bola.
+   * `unknown`: ninguém à vista (a câmera de cima, o detector ainda carregando) —
+   * no saque, falta e fora viram "revisar".
+   */
+  function serveFormation(h, side, half) {
+    if (!tracks.length) return FORMATION.UNKNOWN;
+    const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
+    const inWidth = (p) => p.x >= 0 && p.x <= W;
+    let seen = false;
+    let seenOther = false;
+    let receiver = false;
+    for (const tr of tracks) {
+      if (tr === h.track) continue;
+      const e = entryAt(tr, h.t);
+      if (!e) continue;
+      const feet = e.feet.filter((f) => f.seen).map((f) => f.p);
+      if (!feet.length) {
+        // Pés escondidos pela rede, do lado dela que esta câmera não vê: a pessoa
+        // está entre a rede e o fim da sombra — do lado de quem saca, perto da
+        // rede. (A câmera baixa demais esconde o lado de lá inteiro: aí não diz.)
+        if (side !== farSide || blindFar || !e.wrists.length) continue;
+        const w = toGround(centroid(e.wrists), o.wristGuessM).p;
+        if (inWidth(w) && courtSide(w) === side) return FORMATION.NO;
+        continue;
+      }
+      const c = centroid(feet);
+      if (c.x < -o.serveZoneM || c.x > W + o.serveZoneM) continue; // fora da quadra: árbitro, quem assiste
+      if (courtSide(c) === side) {
+        seen = true;
+        if (inWidth(c) && Math.abs(c.y - N) <= K + o.formationNetM) return FORMATION.NO;
+        continue;
+      }
+      const back = side === 'A' ? c.y - L : -c.y; // atrás do fundo de lá (m)
+      if (back > o.serveDeepM) continue; // longe atrás do fundo: não está jogando
+      seen = true;
+      const diagonal = !half || (half === 'low' ? c.x >= W / 2 - o.centerSlackM : c.x <= W / 2 + o.centerSlackM);
+      if (back >= -o.receiveInsideM && diagonal) receiver = true;
+      else if (inWidth(c)) seenOther = true;
+    }
+    if (receiver) return FORMATION.YES;
+    if (seenOther) return FORMATION.NO;
+    return seen ? FORMATION.YES : FORMATION.UNKNOWN;
+  }
+
+  /**
+   * A marcação no saque que pode ser só a bola devolvida a quem vai sacar
+   * (`serveFormation`): com as pessoas fora da formação, nada; sem ver ninguém,
+   * falta e fora viram "revisar" — e "dentro" não se diz.
+   */
+  function provisional(ev) {
+    const p = rally?.provisional;
+    if (!p || !ev) return ev;
+    if (p === FORMATION.NO) return null;
+    if (ev.call === LINE_CALL.OUT || ev.call === VOLLEY_CALL.FAULT) return { ...ev, call: LINE_CALL.REVIEW };
+    return ev.call === LINE_CALL.REVIEW ? ev : null;
+  }
+
   /** O saque foi de verdade (a bola seguiu): sai a marcação do pé; falta encerra o ponto. */
   function confirmServe() {
     const s = rally?.serve;
     if (!s || s.confirmed) return;
     s.confirmed = true;
     if (s.footEvent) {
-      emit(s.footEvent);
+      const ev = provisional(s.footEvent);
+      if (ev) emit(ev);
       if (s.footEvent.call === VOLLEY_CALL.FAULT) endPoint();
     }
   }
@@ -771,9 +855,13 @@ export function createLineCallEngine({ H, options = {} }) {
   function startServe(h, sc) {
     const v = serveFootVerdict(h, sc.side, sc.at);
     const feetImg = h.entry ? seenFeetImg(h.entry) : [];
-    over = false;
+    // Depois de um ponto, só a formação de saque à vista faz o saque valer na
+    // hora; sem ela o ponto ainda não começou de certo (`provisional`).
+    const formation = over ? serveFormation(h, sc.side, v.half) : FORMATION.YES;
+    if (formation === FORMATION.YES) over = false;
     rally = {
       phase: 'serve', lastHit: h, bounces: 0, bounceSide: null, established: true, chainOk: true, allSeen: true, shot: 1, eventT: h.t,
+      provisional: formation === FORMATION.YES ? null : formation,
       serve: {
         side: sc.side, at: sc.at, half: v.half, footEvent: v.event, confirmed: false, t: h.t,
         img: h.img, ground: h.ground || null, scale: mppX(feetImg.length ? centroid(feetImg) : h.img),
@@ -792,6 +880,9 @@ export function createLineCallEngine({ H, options = {} }) {
     const side = h.track?.side || h.groundSide || h.side || null;
     h.side = side;
     answerWatches(side, true);
+    // O "saque" sem a formação à vista era a bola devolvida a quem vai sacar, e
+    // este é o saque (a bola parada na mão de quem está atrás do fundo).
+    if (rally?.provisional && serveCandidate(h)) rally = null;
     // Fora de jogo (antes do saque, ou ponto encerrado): só um saque começa. A
     // câmera que não vê o saque começa a acompanhar um tempo depois do ponto.
     if (!rally) {
@@ -840,15 +931,20 @@ export function createLineCallEngine({ H, options = {} }) {
     if (!rally.established && seenPrev?.side && side && side !== seenPrev.side) rally.established = true;
     // Devolver o saque ou a 3ª bola sem quicar (10.A) só com todas as batidas à vista.
     if (o.twoBounceRule && isVolley && certain && rally.allSeen && (rally.shot === 2 || rally.shot === 3)) {
-      emit({
+      const ev = provisional({
         type: CALL_KIND.TWO_BOUNCE, t: h.t, imagePoint: h.img, point: h.track ? centroidOf(h) : null,
         call: VOLLEY_CALL.FAULT, reason: rally.shot === 2 ? CALL_REASON.RETURN : CALL_REASON.THIRD, shot: rally.shot,
       });
+      if (ev) emit(ev);
       endPoint();
       sinceEvent(h.t);
       return;
     }
-    if (isVolley && rally.established) startWatch(h, certain);
+    // A devolução do saque provou o ponto para quem não via ninguém; com as
+    // pessoas fora da formação, só a 3ª bola prova (uma bola devolvida de volta
+    // não é um ponto).
+    if (rally.provisional && (rally.provisional === FORMATION.UNKNOWN || rally.shot >= 3)) rally.provisional = null;
+    if (isVolley && rally.established && !rally.provisional) startWatch(h, certain);
     rally.lastHit = h;
     rally.bounces = 0;
     sinceEvent(h.t);
@@ -880,11 +976,6 @@ export function createLineCallEngine({ H, options = {} }) {
     };
   }
 
-  /**
-   * @param {object} b o quique
-   * @param {{ soft?: boolean }} [opts] `soft`: a quina pode ter sido a bola no
-   *   corpo de alguém — "fora" vira "revisar"
-   */
   /**
    * A bola caiu do lado de quem bateu: não passou da rede (ou saiu mal batida)
    * se foi logo — ou um pouco depois, perto da rede. Mais tarde que isso, alguém
@@ -936,7 +1027,8 @@ export function createLineCallEngine({ H, options = {} }) {
           // "revisar": o saque que mal passa a rede cai na cozinha de lá, que no
           // saque também é fora (curta, 7.E).
           const ev = bounceEvent(b, otherSide(s.side), null, { shot: 1, serve: true });
-          emit(careful({ ...ev, call: LINE_CALL.OUT, reason: CALL_REASON.NET }));
+          const net = provisional(careful({ ...ev, call: LINE_CALL.OUT, reason: CALL_REASON.NET }));
+          if (net) emit(net);
           endPoint();
           return;
         }
@@ -946,7 +1038,8 @@ export function createLineCallEngine({ H, options = {} }) {
         confirmServe();
         if (!rally) return;
         const ev = first(careful(bounceEvent(b, bSide, boxHalf, { shot: 1 }, true)));
-        emit(ev);
+        const said = provisional(ev);
+        if (said) emit(said);
         if (ev.call === LINE_CALL.OUT) { endPoint(); return; }
         rally.phase = 'play';
         rally.bounces = 1;
@@ -986,7 +1079,8 @@ export function createLineCallEngine({ H, options = {} }) {
         // revisar. A do lado de cá é o voleio no ar, que só se projeta lá longe.
         const guess = hitter.guessed && hitter.side === farSide;
         const ev = review(guess)(careful(bounceEvent(b, rally.chainOk ? target : null, null, { shot: rally.shot })));
-        emit(ev);
+        const said = provisional(ev);
+        if (said) emit(said);
         rally.bounces = 1;
         rally.bounceSide = bSide;
         sinceEvent(b.t);
@@ -998,7 +1092,8 @@ export function createLineCallEngine({ H, options = {} }) {
       target = otherSide(hitter.side);
     }
     const ev = first(careful(bounceEvent(b, target, null, { shot: rally.shot })));
-    emit(ev);
+    const said = provisional(ev);
+    if (said) emit(said);
     rally.bounces = 1;
     rally.bounceSide = bSide;
     sinceEvent(b.t);
@@ -1010,7 +1105,7 @@ export function createLineCallEngine({ H, options = {} }) {
     pending = kk;
     kk.provisional = true;
     // O pé de quem talvez voleou: observar desde já (o instante da batida passa).
-    if (rally && rally.bounces === 0 && rally.established && kk.track) {
+    if (rally && rally.bounces === 0 && rally.established && !rally.provisional && kk.track) {
       const before = watches.length;
       startWatch({ ...kk, provisional: true }, false);
       kk.watch = watches.length > before ? watches[watches.length - 1] : null;
@@ -1313,7 +1408,7 @@ export function createLineCallEngine({ H, options = {} }) {
    * movimento: o saque cuja batida a câmera não pegou.
    */
   function serveFromStart(s) {
-    if (rally || !o.serveRule) return;
+    if ((rally && !rally.provisional) || !o.serveRule) return;
     const k = { t: s.t, x: s.x, y: s.y };
     if (overhead) {
       const at = applyHomography(H, k);
@@ -1386,8 +1481,11 @@ export function createLineCallEngine({ H, options = {} }) {
           commitKink();
           if (pending) resolvePending(null);
           track = [];
+          // A bola sumiu no meio do ponto: ele acabou, sem a câmera ver como. A
+          // pausa longa entre pontos (o vestiário, a água) não faz o próximo saque
+          // valer sem a formação: quem devolve a bola também a segura antes.
+          if (rally) { over = true; pointEndT = lastBallT; }
           rally = null;
-          over = false;
         }
         if (!rally && !pending) gaps = []; // fora de jogo, buraco nenhum importa
         if (lastBallT > -Infinity && gap > o.continuityS) gaps.push(frame.t);
@@ -1410,7 +1508,9 @@ export function createLineCallEngine({ H, options = {} }) {
         start = null;
       }
       if (pending && frame.t - pending.t > o.resolveS) resolvePending(null);
-      if (rally?.phase === 'serve' && !rally.serve.confirmed && frame.ball && serveTravelled(frame.ball)) confirmServe();
+      // A quina ambígua logo depois do "saque" pode ser a batida de verdade (a bola
+      // só tinha sido solta da mão): a marcação do pé espera ela se resolver.
+      if (rally?.phase === 'serve' && !rally.serve.confirmed && !pending && frame.ball && serveTravelled(frame.ball)) confirmServe();
       followWatches(frame.t);
       return events;
     },

@@ -17,6 +17,15 @@ function play({ cam, ball, players, tail = 3.5, options = {}, seed = 3, lift = t
   const fr = frames({ cam, ball: ballPath(ball), players, from: ball[0].t - 0.3, to: ball[ball.length - 1].t + tail, seed, fps });
   return run(e, fr);
 }
+/** Como `play`, com a bola em pedaços: entre um pedaço e o outro ela some (na mão, no bolso). */
+function playParts({ cam, parts, players, tail = 3.5, options = {}, seed = 3, lift = true, fps = 60 }) {
+  const e = createLineCallEngine({ H: cam.H, options: { ...(lift ? { imageSize: cam.size } : {}), ...options } });
+  const paths = parts.map(ballPath);
+  const ball = (t) => paths.reduce((b, path) => b || path(t), null);
+  const last = parts[parts.length - 1];
+  const fr = frames({ cam, ball, players, from: parts[0][0].t - 0.3, to: last[last.length - 1].t + tail, seed, fps });
+  return run(e, fr);
+}
 /** Cada marcação numa linha: tipo, decisão, o motivo (quando não é "dentro" nem "sem falta") e a jogada. */
 const brief = (ev) => ev.map((e) => {
   const ok = e.call === LINE_CALL.IN || e.call === VOLLEY_CALL.CLEAN;
@@ -371,6 +380,115 @@ describe('antes e depois do ponto', () => {
     const q = four();
     const ball = [...serveFromB(q, [1.5, -0.4], 0.85), paddle(q.rA, 1.4, 0.5), bounce(2.4, 4.6, 12.0), away(2.7, 4.6, 13.2, 0.6)];
     expect(brief(play({ cam: CAMS.fundoA(), ball, players: all(q) }))).toEqual(['bounce out long 1']);
+  });
+});
+
+describe('entre um ponto e outro: a bola devolvida a quem vai sacar não é saque julgado (7.D.4)', () => {
+  // O saque longo de B acaba o ponto aos 0,85 s. Segundos depois, quem recebeu
+  // — atrás do fundo, com a bola vinda da mão — manda a bola de volta para B
+  // sacar de novo: parece saque. 🐞 Era julgada como um: "Saque: fora" (área
+  // errada, longo, curto) e "Falta no saque" (pé dentro da quadra), ditos em voz
+  // alta, gravados e mostrados no telão sem ponto nenhum sendo jogado. O que
+  // separa um do outro é a gente em volta: no saque, a dupla de quem saca fica
+  // no fundo e quem recebe espera parado no fundo de lá, em diagonal; quem
+  // devolve a bola costuma ter o parceiro na cozinha (o time que recebe).
+  const firstServe = (q) => {
+    const c = paddle(q.sB, 0);
+    const b = bounce(0.85, 1.5, -0.4);
+    return [dropBefore(c), c, b, rebound(c, b, 0.3)];
+  };
+  const shot = (pl, T, land, flight = 1.4) => {
+    const c = paddle(pl, T);
+    const b = bounce(T + flight, land[0], land[1]);
+    return [dropBefore(c), c, b, rebound(c, b, 0.3)];
+  };
+  /** As marcações certas de falta ou fora depois do 1º ponto. */
+  const certain = (ev) => ev.filter((e) => e.t > 1.5 && (e.call === LINE_CALL.OUT || e.call === VOLLEY_CALL.FAULT));
+
+  [2, 3, 5].forEach((T) => {
+    // na área errada, além do fundo e na cozinha de lá
+    [[1.5, L - 2.0], [4.5, L + 0.8], [4.5, N + 1.2]].forEach((land) => {
+      it(`${T} s depois, a bola que cai em (${land.join(', ')}): nunca falta nem fora certos`, () => {
+        ['fundoA', 'fundoB'].forEach((cam) => {
+          const q = four();
+          const ev = playParts({ cam: CAMS[cam](), parts: [firstServe(q), shot(q.rA, T, land)], players: all(q) });
+          expect(certain(ev), `${cam}: ${brief(ev).join(', ')}`).toEqual([]);
+        });
+      });
+    });
+  });
+
+  it('quem devolve a bola com o pé dentro da quadra não comete "falta no saque"', () => {
+    FPS.forEach((fps) => ['fundoA', 'fundoB'].forEach((cam) => {
+      const q = four({ rA: { x: 1.3, y: 0.3 } });
+      const ev = playParts({ cam: CAMS[cam](), parts: [firstServe(q), shot(q.rA, 3, [4.5, L - 2.0])], players: all(q), fps });
+      expect(certain(ev), `${cam} ${fps} q/s: ${brief(ev).join(', ')}`).toEqual([]);
+    }));
+  });
+
+  it('a bola passada para a dupla do mesmo lado não é "saque na rede"', () => {
+    const q = four();
+    const ev = playParts({ cam: CAMS.fundoA(), parts: [firstServe(q), shot(q.rA, 3, [4.2, N - K - 1.0], 0.9)], players: all(q) });
+    expect(certain(ev), brief(ev).join(', ')).toEqual([]);
+  });
+
+  it('quem vai sacar amortece a bola no ar com a raquete: não é devolução de voleio', () => {
+    const q = four();
+    const c = paddle(q.rA, 3);
+    const touch = paddle(q.sB, 4.4, 1.0);
+    const popUp = { t: 4.8, p: [touch.p[0], touch.p[1] + 0.1, 1.1] };
+    const ev = playParts({ cam: CAMS.fundoA(), parts: [firstServe(q), [dropBefore(c), c, touch, popUp]], players: all(q) });
+    expect(certain(ev), brief(ev).join(', ')).toEqual([]);
+  });
+
+  it('o saque de verdade depois do ponto, com a formação de saque à vista, segue julgado na hora', () => {
+    // B saca de novo com a dupla no fundo; quem recebe espera parado no fundo de lá, em diagonal.
+    const q = four({ pB: { x: 1.5, y: L + 0.3 } });
+    const ev = playParts({ cam: CAMS.fundoA(), parts: [firstServe(q), shot(q.sB, 8, [1.5, -0.4], 0.85)], players: all(q) });
+    expect(brief(ev)).toEqual(['bounce out long 1', 'bounce out long 1']);
+    // ...e o pé de quem saca, visto de perto pela câmera do fundo dele
+    const r = four({ pB: { x: 1.5, y: L + 0.3 }, sB: { moves: [{ from: 4, to: 6, dy: -0.6 }] } });
+    const fb = playParts({ cam: CAMS.fundoB(), parts: [firstServe(r), shot(r.sB, 8, [1.5, 2.5], 0.9)], players: all(r) });
+    expect(brief(fb)).toContain('serve_foot fault baseline');
+  });
+
+  it('a bola pega no ar por quem vai sacar e sacada logo em seguida: o saque é este', () => {
+    // A bola devolvida some na mão de B; 1,6 s depois B saca na área errada.
+    const q = four({ pB: { x: 1.5, y: L + 0.3 } });
+    const c = paddle(q.rA, 3);
+    const w = q.sB.wrist(4.4);
+    const caught = { t: 4.4, p: [w[0], w[1] - 0.2, 1.0] };
+    const parts = [firstServe(q), [dropBefore(c), c, caught], shot(q.sB, 6, [4.5, 2.5], 0.85)];
+    expect(brief(playParts({ cam: CAMS.fundoA(), parts, players: all(q) }))).toEqual(['bounce out long 1', 'bounce out wrong_box 1']);
+  });
+
+  it('a bola passada pela dupla de quem saca, do mesmo lado, e o saque logo depois: o saque é julgado', () => {
+    // Depois do ponto a bola chega à dupla de B, junto da cozinha, que a passa
+    // com a raquete para quem saca e volta para o fundo. 🐞 Essa batida abria
+    // uma jogada "sem saque" do lado de B, e o saque de verdade, do mesmo lado,
+    // era tomado por um toque repetido: o saque na área errada passava calado.
+    const q = four({ pB: { moves: [{ from: 3.3, to: 4.6, dy: L + 0.3 - (N + K + 0.26) }] } });
+    const pass = paddle(q.pB, 3);
+    const w = q.sB.wrist(4.2);
+    const handed = [dropBefore(pass), pass, { t: 4.2, p: [w[0], w[1] + 0.2, 1.0] }];
+    FPS.forEach((fps) => ['fundoA', 'fundoB'].forEach((cam) => {
+      const ev = playParts({ cam: CAMS[cam](), parts: [firstServe(q), handed, shot(q.sB, 6.2, [4.5, 1.5], 0.85)], players: all(q), fps });
+      expect(brief(ev).filter((x) => !x.startsWith('serve_foot clean')), `${cam} ${fps} q/s`).toEqual(['bounce out long 1', 'bounce out wrong_box 1']);
+    }));
+  });
+
+  it('a câmera de cima não vê quem recebe: depois do ponto, o saque é revisar, nunca fora certo', () => {
+    const ov = (parts) => playParts({ cam: CAMS.topo(), parts, players: [], options: { mode: 'overhead' }, lift: false });
+    const serve = (T, land, from = [4.95, 13.4]) => {
+      const c = { t: T, p: [from[0], from[1], 0.6] };
+      const b = bounce(T + 0.85, land[0], land[1]);
+      return [{ t: T - 0.35, p: [from[0], from[1], 1.1] }, c, b, rebound(c, b, 0.3)];
+    };
+    const first = serve(0, [1.5, -0.35]);
+    // a bola devolvida de trás do fundo de A, que cai na área errada de B...
+    expect(brief(ov([first, serve(3, [1.5, L - 2.0], [1.3, -0.4])]))).toEqual(['bounce out long 1', 'bounce review wrong_box 1']);
+    // ...e o saque de verdade, longo: sem ver as pessoas, a câmera não sabe qual é qual
+    expect(brief(ov([first, serve(8, [1.5, -0.35])]))).toEqual(['bounce out long 1', 'bounce review long 1']);
   });
 });
 
