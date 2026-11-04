@@ -22,8 +22,8 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 10 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 13 |
-| Arquivos de teste (`*.test.js(x)`) | 944 |
-| Workflows do GitHub Actions | 8 |
+| Arquivos de teste (`*.test.js(x)`) | 945 |
+| Workflows do GitHub Actions | 9 |
 | Documentos/pastas em `docs/` | 60 |
 
 ## 2. Stack (de `package.json`)
@@ -461,6 +461,7 @@ Workflows:
 - `deploy-pages.yml`
 - `dupr-uat.yml`
 - `firestore-manual-export.yml`
+- `firestore-rules-catchup.yml`
 - `firestore-rules-diagnostico.yml`
 - `functions-watchdog.yml`
 - `privacy-legacy-email-cleanup.yml`

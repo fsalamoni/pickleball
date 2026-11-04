@@ -703,8 +703,12 @@ Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas li
   139.350 → 136.830 bytes) — **nunca** escreva essas
   expressões por extenso (161 KB → 125 KB compactados). Continue comentando as
   regras à vontade; o guarda `src/core/guards/firestoreRulesTamanho.test.js`
-  reprova o compactado acima de 140 KB e a expressão por extenso, e o deploy
-  repete com `--debug` ao receber 409. Ver `docs/03-WORKFLOW.md` §4.3
+  reprova o compactado acima de 140 KB e a expressão por extenso. As regras
+  saem pela API direta (`scripts/firestore-rules-publicar.mjs`): mostra a
+  resposta real do serviço em vez do 409 e não republica regra igual à do ar.
+  Com o serviço de regras fora do ar (503 por horas em 2026-11-03/04), o
+  deploy NÃO segura site e funções: fica vermelho no fim, e a vigilância
+  `firestore-rules-catchup.yml` publica depois. Ver `docs/03-WORKFLOW.md` §4.3
 - **O runtime das Cloud Functions tem prazo.** `engines.node` em
   `functions/package.json` (e no lockfile) decide o `nodejs<N>` do deploy. O
   Node.js 20 é DESLIGADO em 2026-10-31 — depois disso nenhum deploy passa, nem

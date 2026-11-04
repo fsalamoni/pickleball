@@ -1,0 +1,67 @@
+name: Vigilância das regras do Firestore
+
+# O deploy (deploy-firebase.yml) não segura site, funções e Storage quando o
+# serviço de regras do Firebase está fora do ar: ele marca as regras como
+# PENDENTES e o job fica vermelho no fim. Esta vigilância publica as regras
+# que estão no `main` assim que o serviço volta a responder.
+# 🐞 Em 2026-11-03/04 o endpoint `:test` da API respondeu 503 por horas.
+# Quando a regra no ar já é igual à do código, a vigilância só faz duas
+# leituras e não grava nada. Ver docs/03-WORKFLOW.md §4.3.
+
+on:
+  schedule:
+    - cron: '22,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Grupo próprio, separado do deploy: no mesmo grupo, uma vigilância na fila
+# CANCELARIA o deploy que estivesse esperando.
+concurrency:
+  group: firestore-rules
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      FIRESTORE_DATABASE_ID: pickleball
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Credenciais da service account
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          jq -e . "$SA_FILE" >/dev/null || { echo "::error::FIREBASE_SERVICE_ACCOUNT não é JSON válido."; exit 1; }
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$SA_FILE" >> "$GITHUB_ENV"
+
+      - name: Compactar as regras
+        run: node scripts/firestore-rules-compactar.mjs --escrever
+
+      - name: Publicar as regras (se mudaram)
+        id: firestore_rules
+        run: |
+          set +e
+          node scripts/firestore-rules-publicar.mjs firestore.rules
+          RC=$?
+          if [ $RC -eq 75 ]; then
+            echo "Serviço de regras ainda indisponível; a próxima passada tenta de novo."
+            exit 0
+          fi
+          exit $RC
