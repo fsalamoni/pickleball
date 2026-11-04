@@ -26,7 +26,7 @@
  * Lógica pura, sem React nem I/O.
  */
 import { t, tk, fmtNumero } from '@/core/i18n';
-import { ACHIEVEMENT_RARITY_META } from '@/modules/achievements/domain/achievementsV2.js';
+import { ACHIEVEMENT_RARITY_META, CAREER_ACHIEVEMENTS } from '@/modules/achievements/domain/achievementsV2.js';
 import {
   DEFAULT_GAMIFICATION_CONFIG, GAMIFICATION_MODULES, normalizeGamificationConfig,
 } from './gamificationConfig.js';
@@ -108,11 +108,13 @@ export function streakRuleBullets() {
 
 /**
  * Monta o guia inteiro. `config` é a configuração do admin (ou `null`: padrões)
- * — por isso os textos acompanham o que o admin ajustou.
+ * — por isso os textos acompanham o que o admin ajustou. `career` (a flag
+ * `athlete_career`) acrescenta o termo "Ficha completa" e a pergunta dela.
  *
  * @param {object|null} [config]
+ * @param {{ career?: boolean }} [opts]
  */
-export function buildGamificationGuide(config = null) {
+export function buildGamificationGuide(config = null, { career = false } = {}) {
   const cfg = normalizeGamificationConfig(config || DEFAULT_GAMIFICATION_CONFIG);
   const W = XP_WEIGHTS_V2;
   const trilhas = SKILL_TREE_KEYS.map((k) => t(SKILL_TREE_META[k].name)).join(', ');
@@ -204,6 +206,19 @@ export function buildGamificationGuide(config = null) {
       ],
       where: { label: t('Ver as minhas conquistas'), to: '/conquistas' },
     },
+    ...(career ? [{
+      id: 'ficha-completa', group: G.JOURNEY, audiences: [A.ATHLETE], module: 'career_xp',
+      title: t('Ficha completa'),
+      short: t('O torneio de fora com resultado, foto e balanço rende um pouco de XP, uma vez por torneio e com teto por mês. O resultado em si não rende nada.'),
+      body: [
+        t('Na Minha carreira, a ficha de um torneio já jogado fica completa quando tem a colocação de cada categoria, ao menos uma foto e o balanço respondido.'),
+        t('Completa, ela rende {xp} XP, concedidos pelo servidor. Campeão ou fase de grupos rendem o mesmo: a plataforma premia registrar e refletir, nunca o resultado que você digitou.', { xp: num(cfg.career.xpPerRecord) }),
+        t('Até {teto} fichas por mês rendem XP; as outras continuam valendo, mas não rendem XP (nem depois). Cada ficha rende uma vez: apagar o registro ou tirar a foto ou o balanço zera o XP dela, e refazer não paga de novo.', { teto: cfg.career.monthlyCap }),
+        t('O XP da ficha não entra no placar da temporada (como os outros prêmios do servidor), e o torneio ligado ao do PickleRush não rende: o oficial já conta.'),
+        t('Há também conquistas da família “Minha carreira” ({n}), todas de hábito: registrar, completar, fazer o balanço, cumprir uma meta de processo.', { n: CAREER_ACHIEVEMENTS.length }),
+      ],
+      where: { label: t('Abrir a Minha carreira'), to: '/carreira' },
+    }] : []),
     {
       id: 'missoes', group: G.JOURNEY, audiences: [A.ATHLETE], module: 'missions_weekly',
       title: t('Missões'),
@@ -537,6 +552,7 @@ export function buildGamificationGuide(config = null) {
     { audience: A.ATHLETE, q: t('Por que a minha sequência zerou?'), a: t('A sequência conta semanas seguidas jogando, de segunda a domingo. Ela quebra quando passa uma semana inteira sem jogo, depois de usada a folga automática do mês, e não está de férias. O seu recorde continua guardado — e as conquistas de sequência usam o recorde.') },
     { audience: A.ATHLETE, q: t('Posso ficar fora do placar público?'), a: t('Pode. Em Preferências, desligue “Aparecer no placar público”. Você continua ranqueando e recebendo os prêmios da temporada, mas ninguém vê o seu nome e a sua foto.') },
     { audience: A.ATHLETE, q: t('Alguém vê a nota que eu dei?'), a: t('Não. Quem recebe vê só a média e os elogios mais citados, nunca quem deu qual nota. A avaliação individual só pode ser lida por quem a escreveu e pela administração.') },
+    ...(career && cfg.modules.career_xp ? [{ audience: A.ATHLETE, q: t('Ser campeão num torneio de fora rende XP?'), a: t('Não. O resultado da Minha carreira é declarado por você e não rende XP, ranking nem rating. O que rende é completar a ficha (resultado, foto e balanço): {xp} XP, até {teto} por mês.', { xp: num(cfg.career.xpPerRecord), teto: cfg.career.monthlyCap }) }] : []),
     { audience: A.ATHLETE, q: t('O XP compra alguma coisa?'), a: t('Não. O XP mede a sua trajetória e não é moeda. As recompensas são portas que se abrem quando você cruza um marco (tier, conquista, posição, sequência ou jogos).') },
     { audience: A.ATHLETE, q: t('E se o sistema achar que eu trapaceei?'), a: t('O servidor só marca sinais para a equipe revisar; ninguém é punido automaticamente. Enquanto um sinal grave está aberto, a conta fica fora do placar público, mas mantém posição, XP e prêmios.') },
     { audience: A.ATHLETE, q: t('Dá para desligar tudo isso?'), a: t('Dá. Em Preferências você controla a privacidade, as interações (duelos, avaliações e cartas), os avisos e as comemorações. As Dicas da plataforma também têm o seu próprio interruptor.') },

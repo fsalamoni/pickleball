@@ -18,6 +18,9 @@ career/
 │   ├── careerUpcoming.js # PR 4: descoberta, plano, contagem, prazo, ICS, foco sugerido, pendências
 │   ├── careerGoals.js  # PR 4: métricas das metas da temporada e de onde cada uma conta
 │   ├── careerRank.js   # PR 4: posição no ranking (digitada × oficial), séries e tendência
+│   ├── careerHabits.js # PR 5: a ÚNICA porta para a gamificação — ficha completa
+│   │                   # (isCompleteCareerRecord, cópia em functions/careerXp.js) e
+│   │                   # contagens de hábito; nunca lê o valor da colocação
 │   └── seasonRecap.js  # retrospectiva da temporada (zero banco): quando oferecer, parceria do ano
 ├── services/
 │   ├── careerService.js        # career_events + career_rank + Storage carreira/{uid}/ + career_partner (ler) + callable `career` + "mandar ao professor"
@@ -42,12 +45,18 @@ ficha e os pedidos que chegaram, no topo da linha do tempo), o seletor único
 `CareerGoalsTab` (`?aba=metas`), `CareerPlanFields` (plano, "Como foi?" e
 "Mandar ao meu professor" na ficha), `CareerRankPanel` (linha do tempo),
 `CoachStudentCareer` (Centro de Treino → Alunos) e `HomeCareerCard` (card
-Carreira do início).
+Carreira do início). PR 5: o XP da ficha completa é do servidor
+(`functions/careerXp.js`, gatilhos `careerEventWritten` e
+`careerDebriefWritten`, `user_xp_grants` com `kind: 'career'`, módulo de
+gamificação `career_xp`) e as conquistas da família `my_career` vêm das
+fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
 
 ## O que não pode regredir
 
-1. **Declarado nunca pontua**: nenhum motor de ranking, rating, federação ou
-   XP lê `career_*` (`src/core/guards/carreiraNaoPontua.test.js`).
+1. **Declarado nunca pontua**: nenhum motor de ranking, rating ou federação
+   lê `career_*`; o XP conta só hábitos (ficha completa, registros, balanços,
+   meta de processo) por `careerHabits.js`, e a colocação declarada não muda
+   conquista, XP nem temporada (`src/core/guards/carreiraNaoPontua.test.js`).
 2. **Só o dono** lê e escreve `career_events` (o id começa pelo uid); a flag
    vale na regra (`careerOn()`) só para criar e editar — ler e apagar seguem.
 3. **Fonte que falhou é dita**, nunca vira vazio (`timeline.faltou`).

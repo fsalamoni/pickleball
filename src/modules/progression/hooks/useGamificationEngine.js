@@ -30,7 +30,7 @@ import { useMissionXpTotal } from './useMissionXpTotal';
 import { useUserProgressionV2 } from './useUserProgressionV2';
 import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
 import { useSyncAchievementsV2 } from '@/modules/achievements/hooks/useSyncAchievementsV2';
-import { computeAchievementsV2 } from '@/modules/achievements/domain/achievementsV2';
+import { computeAchievementsV2, ACHIEVEMENT_FAMILY } from '@/modules/achievements/domain/achievementsV2';
 import { setUserProgressionV2 } from '@/modules/progression/services/progressionV2Service';
 import { computeWeekStreak, vacationPeriodsOf } from '@/modules/progression/domain/weekStreak';
 import { useStreakMetaV2 } from './useStreakMetaV2';
@@ -107,7 +107,8 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
     return { uid, rating, stats: base.stats, streak: { weeks: streak.best }, level: base.level, position, unique_opponents: opponents };
   }, [uid, rating, stats, streak.best, userProfile, progression?.xpTotal, matchDates, dates, opponents, position, factsQ.facts]);
 
-  const achievementsRaw = useMemo(() => computeAchievementsV2(achievementUser), [achievementUser]);
+  // A família "Minha carreira" só existe com a flag (`factsQ.career`).
+  const achievementsRaw = useMemo(() => computeAchievementsV2(achievementUser, { career: factsQ.career }), [achievementUser, factsQ.career]);
   const achievements = useMemo(() => splitAchievements(achievementsRaw), [achievementsRaw]);
 
   // ===== XP =====
@@ -154,7 +155,14 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
     && factsQ.facts !== null;
 
   // ===== escritas (só com sync) =====
-  useSyncAchievementsV2(uid, achievements.unlocked, persistedIds, on && sync && ready);
+  // A família "Minha carreira" NÃO é gravada: `user_achievements_v2` é legível
+  // por qualquer conta logada e a carreira é privada (vitrine só no PR 7). Ela
+  // é calculada para o dono a cada visita; `xpBonus` 0, o XP não muda.
+  const persistiveis = useMemo(
+    () => achievements.unlocked.filter((a) => a.family !== ACHIEVEMENT_FAMILY.MY_CAREER),
+    [achievements.unlocked],
+  );
+  useSyncAchievementsV2(uid, persistiveis, persistedIds, on && sync && ready);
 
   const onboardingSig = useRef('');
   useEffect(() => {

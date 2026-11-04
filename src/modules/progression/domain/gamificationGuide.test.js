@@ -208,3 +208,21 @@ describe('searchTerms — achar o termo sem saber o nome dele', () => {
     expect(searchTerms(atleta, 'placar publico').map((t) => t.id)).toContain('privacidade');
   });
 });
+
+describe('Ficha completa (Minha carreira): os números saem da configuração', () => {
+  it('só existe com a flag', () => {
+    expect(guide.byId['ficha-completa']).toBeUndefined();
+    expect(buildGamificationGuide(null, { career: true }).byId['ficha-completa'].module).toBe('career_xp');
+  });
+
+  it('XP por ficha e teto do mês acompanham o admin; a frase curta não traz número', () => {
+    const termo = buildGamificationGuide({ career: { xpPerRecord: 17, monthlyCap: 3 } }, { career: true }).byId['ficha-completa'];
+    expect(termo.body.join(' ')).toContain('17 XP');
+    expect(termo.body.join(' ')).toContain('Até 3 fichas');
+    expect(termo.short).not.toMatch(/\d/);
+    const padrao = buildGamificationGuide(null, { career: true }).byId['ficha-completa'].body.join(' ');
+    const d = normalizeGamificationConfig(null).career;
+    expect(padrao).toContain(`${d.xpPerRecord} XP`);
+    expect(padrao).toContain(`Até ${d.monthlyCap} fichas`);
+  });
+});

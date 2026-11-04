@@ -59,8 +59,8 @@ describe('achievementsV2 · constantes', () => {
 });
 
 describe('achievementsV2 · famílias e raridades', () => {
-  it('FAMILY_META tem 5 famílias', () => {
-    expect(Object.keys(ACHIEVEMENT_FAMILY_META)).toHaveLength(5);
+  it('FAMILY_META tem 6 famílias (a sexta, Minha carreira, só com a flag)', () => {
+    expect(Object.keys(ACHIEVEMENT_FAMILY_META)).toHaveLength(6);
   });
 
   it('RARITY_META tem 5 raridades em ordem', () => {

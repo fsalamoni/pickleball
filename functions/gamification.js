@@ -40,6 +40,7 @@ const CFG_PADRAO = Object.freeze({
   reviews: { minForPublicScore: 5, windowDays: 14 },
   antiFarm: { xpJumpPerDay: 5000, kudosRingMin: 5, unverifiedXpFactor: 3 },
   notifications: { weeklyReview: true, duels: true, challengeResults: true },
+  career: { xpPerRecord: 25, monthlyCap: 4 },
 });
 
 /** Os tiers, na ordem (cópia de `TIER_NAMES` do cliente; paridade em `serverParity.test.js`). */
@@ -84,6 +85,11 @@ function normalizarConfig(bruto) {
       weeklyReview: bool(s.notifications && s.notifications.weeklyReview, true),
       duels: bool(s.notifications && s.notifications.duels, true),
       challengeResults: bool(s.notifications && s.notifications.challengeResults, true),
+    },
+    // Minha carreira: XP da ficha completa e o teto do mês (`careerXp.js`).
+    career: {
+      xpPerRecord: Math.round(num(s.career && s.career.xpPerRecord, d.career.xpPerRecord, 0, 100)),
+      monthlyCap: Math.round(num(s.career && s.career.monthlyCap, d.career.monthlyCap, 0, 20)),
     },
   };
 }
@@ -162,7 +168,7 @@ async function avisar(db, id, { userId, title, message, link, type = 'gamificati
  * desconhecido nem acima do teto: gravá-la seria um prêmio que a pessoa vê
  * anunciado e nunca entra no XP.
  */
-const XP_GRANT_KINDS = Object.freeze(['season', 'duel', 'challenge', 'event', 'admin']);
+const XP_GRANT_KINDS = Object.freeze(['season', 'duel', 'challenge', 'event', 'admin', 'career']);
 const MAX_GRANT_XP = 5000;
 
 /** Concede XP. `create`: a mesma concessão nunca vale duas vezes. */

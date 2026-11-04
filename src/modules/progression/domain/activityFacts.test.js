@@ -169,3 +169,38 @@ describe('datas', () => {
     expect([...distinctDays([d])]).toEqual(['2026-10-02']);
   });
 });
+
+describe('Minha carreira nos fatos (flag athlete_career)', () => {
+  const ev = (i, extra = {}) => ({ id: `u_e${i}`, uid: 'u', status: 'played', start_date: '2026-09-01', entries: [{ placement: 'groups' }], photos: [{ path: 'carreira/u/p.jpg' }], ...extra });
+  const bal = (i) => ({ uid: 'u', status: 'respondido', source: { type: 'externo', ref_id: `u_e${i}` } });
+
+  it('flag desligada: a família não existe e a fonte não vira "não deu para medir"', () => {
+    const facts = buildActivityFacts(completo({ careerEvents: undefined, careerGoals: undefined }), { now: NOW });
+    expect(facts.unknown).not.toContain('careerEvents');
+    const u = achievementUserFromFacts(facts, { uid: 'u' });
+    expect(u.career_records).toBeUndefined();
+    const r = computeAchievementsV2(u);
+    expect([...r.unlocked, ...r.locked].some((a) => a.family === 'my_career')).toBe(false);
+    expect(r.total).toBe(ACHIEVEMENTS_V2.length);
+  });
+
+  it('flag ligada: conta registros, fichas completas, balanços e metas de processo', () => {
+    const facts = buildActivityFacts(completo({
+      careerEvents: [ev(1), ev(2, { photos: [] }), ev(3, { status: 'planned' })],
+      debriefs: [bal(1)], careerGoals: [{ kind: 'process', status: 'done' }],
+    }), { now: NOW, career: true });
+    const u = achievementUserFromFacts(facts, { uid: 'u' });
+    expect(u).toMatchObject({ career_records: 2, career_complete_records: 1, career_debriefs: 1, career_process_goals_done: 1 });
+    const ids = computeAchievementsV2(u, { career: true }).unlocked.map((a) => a.id);
+    expect(ids).toEqual(expect.arrayContaining(['mycareer_first_record', 'mycareer_complete_record', 'mycareer_process_goal']));
+  });
+
+  it('fonte que falhou: "não deu para medir", nunca zero', () => {
+    const facts = buildActivityFacts(completo({ careerEvents: undefined }), { now: NOW, career: true });
+    expect(facts.unknown).toContain('careerEvents');
+    const u = achievementUserFromFacts(facts, { uid: 'u' });
+    expect(u.career_records).toBeUndefined();
+    const primeiro = computeAchievementsV2(u, { career: true }).locked.find((a) => a.id === 'mycareer_first_record');
+    expect(primeiro.reason).toBe('sem-dado');
+  });
+});

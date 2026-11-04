@@ -103,6 +103,14 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
    `domain/serverParity.test.js` (tipos, teto, tiers e a configuração do
    admin inteira). Ver `docs/38-GAMIFICACAO-V2.md` §4.1.
 
+12. **Minha carreira entra por uma porta só.** `kind: 'career'` (XP da ficha
+   completa) é do servidor (`functions/careerXp.js`, teto e números em
+   `config.career`, módulo `career_xp`); a família de conquistas `my_career`
+   (`CAREER_ACHIEVEMENTS`) só existe com `computeAchievementsV2(user, { career })`
+   e as fontes `careerEvents`/`careerGoals` só são buscadas com a flag
+   `athlete_career`. O motor só lê a carreira por `career/domain/careerHabits.js`
+   (guarda `carreiraNaoPontua.test.js`). Ver `docs/38-GAMIFICACAO-V2.md` §4.2.
+
 ## De onde vem o XP
 
 `xpTotal` = **atividade** + **bônus das conquistas registradas** + **XP das

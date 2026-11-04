@@ -171,6 +171,9 @@ describe('configuração do admin: os dois lados leem o mesmo documento do mesmo
     { notifications: { weeklyReview: false, duels: 'nao', challengeResults: false } },
     { modules: { duels: false, challenges: true, match_reviews: 'false', hall_of_fame: false } },
     { modules: 'lixo' },
+    { career: { xpPerRecord: 999, monthlyCap: -3 } },
+    { career: { xpPerRecord: '12.6', monthlyCap: 'abc' } },
+    { modules: { career_xp: false } },
   ];
   // eslint-disable-next-line no-unused-vars
   const semModulos = ({ schemaVersion, modules, ...resto }) => resto;
