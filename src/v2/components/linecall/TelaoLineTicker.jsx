@@ -45,7 +45,7 @@ function TickerBody({ host, label }) {
   if (live.isError || live.isLoading) return null;
   const layout = layoutById(host.line_control_layout);
   const st = telaoLineStatus({ positions: layout.positions, cams: live.cams, lances: live.lances, nowMs: now });
-  const l = live.lances[0];
+  const l = st.headline;
   const mostrarLance = l && !st.inReview && now - l.t_ms <= SHOW_MS && now >= l.t_ms - 5000;
   const pre = label ? `${label} · ` : '';
 

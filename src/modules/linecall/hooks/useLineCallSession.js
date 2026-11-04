@@ -23,6 +23,7 @@ import { findBallCandidates, pickBall, rgbToHsv, BALL_DEFAULTS } from '../domain
 import { assessCamera, worstCmPerPixel } from '../domain/cameraCheck.js';
 import { checkPointFor, calibrationCheck } from '../domain/calibrationCheck.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
+import { headlineFirst } from '../domain/fusion.js';
 import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
 import { snapToOuterCorner, centroid } from '../domain/snapCorner.js';
 import { listCameras, openCamera, closeCamera } from '../services/cameraService.js';
@@ -314,16 +315,17 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     };
 
     // Recorta o replay do lance (o canvas é copiado no `toBlob`, então a fita
-    // pode seguir girando enquanto as imagens são feitas).
+    // pode seguir girando enquanto as imagens são feitas). Sem nenhum quadro na
+    // janela, o lance fica SEM replay (`clip: false`) — não um replay vazio.
     const finalize = async (p, w, h) => {
       const { from, to } = clipWindow(p.t);
       const picked = ring.between(from, to);
       const urls = await Promise.all(picked.map((f) => toBlobUrl(f.cv)));
-      const clip = {
+      let clip = picked.length > 0 && {
         eventT: p.t, scale: REPLAY_W / w, vw: w, vh: h,
         frames: picked.map((f, i) => ({ t: f.t, url: urls[i], ball: f.ball })),
       };
-      if (cancelled) { releaseClip({ clip }); return; }
+      if (cancelled) { releaseClip({ clip }); clip = false; }
       setEvents((list) => list.map((e) => (e.id === p.id ? { ...e, clip } : e)));
     };
 
@@ -371,12 +373,14 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
                 .catch((e) => { logger.warn('linhas: marcação não foi enviada', e); setShareError(true); });
             });
           }
-          const fresh = found.map((e) => {
+          // O lote na ordem da tela: o mais grave primeiro (o motor solta o pé
+          // de quem saca, limpo, antes do quique do saque, fora).
+          const fresh = headlineFirst(found.map((e) => {
             seq += 1;
             const id = `${at}-${seq}`;
             pending.push({ id, t: e.t, until: e.t + REPLAY.AFTER_S });
             return { ...e, id, image, at, vw: w, vh: h };
-          });
+          }));
           setEvents((list) => {
             const next = [...fresh, ...list];
             next.slice(MAX_EVENTS).forEach(releaseClip);
@@ -388,7 +392,11 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
             });
           });
         }
-        while (pending.length && pending[0].until <= t) finalize(pending.shift(), w, h);
+        // Todo lance com o "depois" já filmado, em qualquer ordem: o voleio que o
+        // motor soltou atrasado (impulso, 11.A.2) não espera o quique mais novo.
+        for (let i = pending.length - 1; i >= 0; i -= 1) {
+          if (pending[i].until <= t) finalize(pending.splice(i, 1)[0], w, h);
+        }
         frames += 1;
         if (now - since >= 1000) { setFps(Math.round((frames * 1000) / (now - since))); frames = 0; since = now; }
       }
@@ -397,6 +405,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     handle = schedule(onFrame);
     return () => {
       cancelled = true;
+      // O lance que ainda esperava o "depois" fica sem replay — não "sendo recortado" para sempre.
+      const semReplay = new Set(pending.splice(0).map((p) => p.id));
+      if (semReplay.size) setEvents((list) => list.map((e) => (semReplay.has(e.id) ? { ...e, clip: false } : e)));
       if (handle != null && video.cancelVideoFrameCallback) video.cancelVideoFrameCallback(handle);
       pose?.close();
       ring.clear();

@@ -5,12 +5,18 @@
  *
  * Duas escolhas por pessoa, no navegador (`viewPreference`), separadas para a
  * câmera e para a central: o toque (padrão LIGADO) e a voz (padrão desligada).
- * Nada toca na primeira renderização: só o que chega DEPOIS de a tela abrir.
+ * Nada toca na primeira olhada da lista: só o que chega DEPOIS de a tela abrir.
+ *
+ * Cada lance que chega é avisado UMA vez (`newArrivals`, pelas marcações que o
+ * formam). Chegando vários juntos — o motor solta no mesmo quadro o pé de quem
+ * saca e o quique do saque —, o toque, a vibração e a tela que pisca são do
+ * mais grave (`pickHeadline`), e a voz diz todos, o mais grave primeiro, numa
+ * frase só (cada fala corta a anterior).
  *
  * Só a FALTA grita. "Revisar" é a câmera dizendo que não tem certeza — e bola
- * que não se vê claramente fora segue em jogo —, então no aparelho que filma,
- * ao lado da quadra, ele fica calado (`quietReview`): um toque no meio do
- * ponto faria os jogadores pararem. Na central, quem decide ouve.
+ * que não se vê claramente fora segue em jogo (8.D) —, então no aparelho que
+ * filma, ao lado da quadra, ele fica calado (`quietReview`): um toque no meio
+ * do ponto faria os jogadores pararem. Na central, quem decide ouve.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -18,6 +24,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { localeAtivo } from '@/core/i18n';
 import { tonesFor } from '../domain/alertTones';
+import { pickHeadline, headlineFirst, newArrivals } from '../domain/fusion';
 import { playTones, unlockAlertSound } from '../services/alertSound';
 
 export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -39,20 +46,23 @@ const vibrate = (pattern) => {
 };
 
 /**
- * @param {{ id: string, call: string }|null} latest  o lance mais recente
+ * @param {Array<{ id: string, call: string }>|null} items  a lista da tela (os
+ *   eventos do motor ou os lances da central); `null` enquanto ela carrega
  * @param {(l) => string} toText  o que falar
  * @param {string} prefKey  onde guardar a escolha
  * @param {{ quietReview?: boolean }} [opts]  `quietReview`: "revisar" sem som, sem voz e sem vibrar
- * @returns {[boolean, (on: boolean) => void, boolean, (on: boolean) => void]}
- *   voz ligada, liga/desliga a voz, toque ligado, liga/desliga o toque
+ * @returns {[boolean, (on: boolean) => void, boolean, (on: boolean) => void, object|null]}
+ *   voz ligada, liga/desliga a voz, toque ligado, liga/desliga o toque, e o
+ *   lance do último aviso (o que a tela pisca, `CallFlash`)
  */
-export function useAnnounce(latest, toText, prefKey, { quietReview = false } = {}) {
+export function useAnnounce(items, toText, prefKey, { quietReview = false } = {}) {
   const { user } = useAuth();
   const uid = user?.uid || null;
   const somKey = `${prefKey}:som`;
   const [on, setOnState] = useState(() => readViewPreference(uid, prefKey) === '1');
   const [som, setSomState] = useState(() => readViewPreference(uid, somKey) !== '0');
-  const seen = useRef(latest?.id ?? null);
+  const [flash, setFlash] = useState(null);
+  const seen = useRef(null); // as marcações já vistas; `null` antes da primeira olhada
 
   const setOn = (v) => {
     setOnState(v);
@@ -67,14 +77,20 @@ export function useAnnounce(latest, toText, prefKey, { quietReview = false } = {
   };
 
   useEffect(() => {
-    if (!latest?.id || latest.id === seen.current) return;
-    seen.current = latest.id;
-    if (quietReview && latest.call === 'review') return;
-    if (som) playTones(tonesFor(latest.call));
-    if (['out', 'fault'].includes(latest.call)) vibrate([120, 60, 120]);
-    else if (latest.call === 'review') vibrate(60);
-    if (on) speak(toText(latest));
-  }, [latest, on, som, toText, quietReview]);
+    // Carregando (de novo): a próxima olhada é base — o que chegou no meio não toca.
+    if (!items) { seen.current = null; return; }
+    const { fresh, seen: next } = newArrivals(items, seen.current);
+    seen.current = next;
+    if (!fresh.length) return;
+    setFlash(pickHeadline(fresh));
+    const audible = quietReview ? fresh.filter((l) => l.call !== 'review') : fresh;
+    const top = pickHeadline(audible);
+    if (!top) return;
+    if (som) playTones(tonesFor(top.call));
+    if (['out', 'fault'].includes(top.call)) vibrate([120, 60, 120]);
+    else if (top.call === 'review') vibrate(60);
+    if (on) speak(headlineFirst(audible).map(toText).filter(Boolean).join('. '));
+  }, [items, on, som, toText, quietReview]);
 
-  return [on, setOn, som, setSom];
+  return [on, setOn, som, setSom, flash];
 }

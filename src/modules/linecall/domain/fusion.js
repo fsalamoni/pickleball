@@ -34,6 +34,7 @@
 
 import { CAMERA_POSITIONS } from './cameraLayouts.js';
 import { courtSide } from './court.js';
+import { ENGINE_DEFAULTS } from './lineCallEngine.js';
 
 export const FUSION_DEFAULTS = Object.freeze({
   windowMs: 700,
@@ -170,24 +171,103 @@ export function positionOccupancy(positions, cams, nowMs) {
   return out;
 }
 
+/**
+ * A janela da MANCHETE (ms): o lance mais grave até aqui antes do mais novo
+ * ainda é o que a tela anuncia. O pé do saque é marcado na hora da batida e só
+ * sai no quique do saque (~1 s depois); a falta de impulso na cozinha sai até
+ * `momentumMaxS` depois do voleio (11.A.2) e a quina em dúvida espera até
+ * `resolveS` — pela hora, nenhum deles seria "o último". O segundo a mais
+ * cobre o voo do saque e a diferença entre os relógios dos aparelhos.
+ */
+export const HEADLINE_WINDOW_MS = (Math.max(ENGINE_DEFAULTS.momentumMaxS, ENGINE_DEFAULTS.resolveS) + 1) * 1000;
+
+/**
+ * Gravidade de um lance: falta ou fora sem decisão (0) > revisar sem decisão
+ * (1) > falta ou fora decidida por quem organiza (2) > dentro ou sem falta (3).
+ * O "revisar" pendente passa na frente do decidido: é ele que espera a palavra
+ * de alguém. A falta decidida segue na frente do "Saque: dentro" que veio
+ * depois dela: decidida a falta do pé no saque (7.A), o ponto acabou ali.
+ */
+const RANK = { out: 0, fault: 0, review: 1 };
+function severity(l) {
+  if (!l.decided) return RANK[l.call] ?? 3;
+  return RANK[l.call] === 0 ? 2 : 3;
+}
+/** A hora do lance em ms: a da central (`t_ms`) ou a do motor (`t`, segundos do vídeo). */
+const timeOf = (l) => (Number.isFinite(l.t_ms) ? l.t_ms : (l.t ?? 0) * 1000);
+
+/**
+ * O lance que a tela ANUNCIA — o mesmo na câmera, na central, no aviso e no
+ * telão: o mais grave (`severity`) entre os que caíram até `windowMs` antes do
+ * mais novo; sem nenhum mais grave que ele, o mais novo. Empate fica com o
+ * mais novo. Aceita os lances da central (`t_ms`) e os eventos do motor (`t`).
+ */
+export function pickHeadline(list, { windowMs = HEADLINE_WINDOW_MS } = {}) {
+  const items = (list || []).filter(Boolean);
+  if (!items.length) return null;
+  const newest = items.reduce((a, b) => (timeOf(b) > timeOf(a) ? b : a));
+  let best = newest;
+  items.forEach((l) => {
+    if (timeOf(newest) - timeOf(l) > windowMs) return;
+    const s = severity(l);
+    const sb = severity(best);
+    if (s < sb || (s === sb && timeOf(l) > timeOf(best))) best = l;
+  });
+  return best;
+}
+
+/**
+ * O lote na ordem da tela: a manchete primeiro, o resto como veio. O motor
+ * solta num mesmo quadro o pé de quem saca (limpo, calado) e o quique do
+ * saque (fora): na ordem dele, o "fora" ficava atrás do pé.
+ */
+export function headlineFirst(batch) {
+  const top = pickHeadline(batch);
+  return top ? [top, ...batch.filter((e) => e !== top)] : [];
+}
+
+/** As chaves de um lance: as marcações que o formam (o evento do motor, o próprio id). */
+export const lanceKeys = (l) => (l.calls?.length ? l.calls.map((c) => c.id) : [l.id]);
+
+/**
+ * O que CHEGOU desde a última olhada: os lances sem nenhuma marcação já vista.
+ * A chave é a da MARCAÇÃO, não a do lance: o id do lance é o da 1ª marcação da
+ * junção e muda quando uma câmera atrasada entra antes dela — pela chave do
+ * lance, ele "chegaria" de novo e tocaria duas vezes. `seen` nulo é a primeira
+ * olhada: tudo vira base e nada é novo (o que já estava na tela não toca).
+ * @returns {{ fresh: object[], seen: Set<string> }} `seen`: a base da próxima olhada
+ */
+export function newArrivals(items, seen, keyOf = lanceKeys) {
+  const next = new Set();
+  const fresh = [];
+  (items || []).forEach((l) => {
+    const keys = keyOf(l);
+    keys.forEach((k) => next.add(k));
+    if (seen && !keys.some((k) => seen.has(k))) fresh.push(l);
+  });
+  return { fresh, seen: next };
+}
+
 /** Por quanto tempo um "revisar" sem decisão segue como "em revisão" no telão (ms). */
 export const REVIEW_HOLD_MS = 90000;
 
 /**
  * O que o TELÃO diz sobre o controle de linhas: quantas câmeras estão
- * ANALISANDO, quais posições estão sem câmera ou paradas, e se o último lance
- * está esperando a palavra de quem organiza.
+ * ANALISANDO, quais posições estão sem câmera ou paradas, o lance que ele
+ * mostra (`headline`, a mesma manchete da central) e se esse lance está
+ * esperando a palavra de quem organiza.
  */
 export function telaoLineStatus({ positions = [], cams = [], lances = [], nowMs }) {
   const occ = positionOccupancy(positions, cams, nowMs);
   const down = positions.filter((p) => !occ[p]?.analyzing);
-  const last = lances[0];
-  const inReview = Boolean(last && last.call === 'review' && !last.decided && nowMs - last.t_ms <= REVIEW_HOLD_MS);
+  const headline = pickHeadline(lances);
+  const inReview = Boolean(headline && headline.call === 'review' && !headline.decided && nowMs - headline.t_ms <= REVIEW_HOLD_MS);
   return {
     total: positions.length,
     analyzing: positions.length - down.length,
     down,
     ready: positions.length > 0 && down.length === 0,
-    inReview: inReview ? last : null,
+    headline,
+    inReview: inReview ? headline : null,
   };
 }

@@ -47,9 +47,11 @@ const REASON_WHERE = {
   reentry: tk('pé antes do voleio'),
   unseen: tk('pé fora de vista'),
   airborne: tk('pé no ar'),
-  baseline: tk('linha de fundo'),
-  sideline: tk('extensão da lateral'),
-  centerline: tk('extensão da central'),
+  // Só o pé no saque tem estes motivos (7.A): o "revisar" diz que é o PÉ, senão
+  // o da linha de fundo parece o quique longo (8.B).
+  baseline: tk('pé na linha de fundo'),
+  sideline: tk('pé na extensão da lateral'),
+  centerline: tk('pé na extensão da central'),
 };
 
 const kindOf = (e) => e.type || e.kind;

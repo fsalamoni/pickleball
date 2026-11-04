@@ -13,18 +13,23 @@ const BG = {
 };
 const SHOW_MS = { out: 1600, fault: 1600, review: 1400, in: 700, clean: 700 };
 
-/** @param {{ latest: object|null }} props  o lance mais recente (motor ou central) */
+/** @param {{ latest: object|null }} props  o lance do último aviso (`useAnnounce`) */
 export default function CallFlash({ latest }) {
   const seen = useRef(latest?.id ?? null);
   const [shown, setShown] = useState(null);
 
   useEffect(() => {
-    if (!latest?.id || latest.id === seen.current) return undefined;
+    if (!latest?.id || latest.id === seen.current) return;
     seen.current = latest.id;
     setShown(latest);
-    const tm = setTimeout(() => setShown(null), SHOW_MS[latest.call] || 1200);
-    return () => clearTimeout(tm);
   }, [latest]);
+  // O relógio é do lance MOSTRADO: pausar a câmera no meio do aviso (`latest`
+  // vira `null`) não o prende na tela.
+  useEffect(() => {
+    if (!shown) return undefined;
+    const tm = setTimeout(() => setShown(null), SHOW_MS[shown.call] || 1200);
+    return () => clearTimeout(tm);
+  }, [shown]);
 
   if (!shown) return null;
   const strong = !['in', 'clean'].includes(shown.call);

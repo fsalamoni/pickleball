@@ -1,8 +1,8 @@
 /**
  * LineCentral — a CENTRAL das câmeras de um jogo: quem está no ar em cada
- * posição do arranjo (com bateria e conferência da calibração), o último lance
- * em letras grandes, a marca ampliada, e os lances anteriores, do mais
- * recente para trás. Serve para a mesa da organização, um tablet na beira da
+ * posição do arranjo (com bateria e conferência da calibração), o lance do
+ * momento em letras grandes (`pickHeadline`: o mais grave dos últimos
+ * segundos), a marca ampliada, e os outros lances, do mais recente para trás. Serve para a mesa da organização, um tablet na beira da
  * quadra ou uma TV.
  *
  * Quem organiza dá a PALAVRA FINAL num lance (sobretudo nos "revisar"): a
@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { CAMERA_POSITIONS, layoutById } from '@/modules/linecall/domain/cameraLayouts';
-import { positionOccupancy, decisionsFor } from '@/modules/linecall/domain/fusion';
+import { positionOccupancy, decisionsFor, pickHeadline } from '@/modules/linecall/domain/fusion';
 import { nearestBoundary } from '@/modules/linecall/domain/court';
 import { lanceSummary, lancesCsv } from '@/modules/linecall/domain/report';
 import { readinessCheck, READINESS_TEXT } from '@/modules/linecall/domain/readiness';
@@ -126,9 +126,13 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
   const [confirmar, setConfirmar] = useState(false);
   const [limpando, setLimpando] = useState(false);
   const [aberto, setAberto] = useState(null);
-  const [ultimo, ...anteriores] = live.lances;
+  // O lance grande é a MANCHETE (a mesma do telão): o mais grave dos últimos
+  // segundos. O pé do saque é marcado na batida e chega com o quique do saque:
+  // pela hora, a falta dele sumia atrás de um "Saque: dentro".
+  const ultimo = pickHeadline(live.lances);
+  const anteriores = live.lances.filter((l) => l !== ultimo);
   const spoken = useCallback((l) => callSpoken(l), []);
-  const [falar, setFalar, som, setSom] = useAnnounce(ultimo || null, spoken, 'linhas:voz:central');
+  const [falar, setFalar, som, setSom, aviso] = useAnnounce(live.isLoading ? null : live.lances, spoken, 'linhas:voz:central');
 
   if (live.isError) return <V2ErrorState onRetry={live.retry} description={t('Não deu para ouvir as câmeras deste jogo.')} />;
   if (live.isLoading) return <V2Skeleton lines={4} />;
@@ -152,7 +156,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
 
   return (
     <div className="space-y-4">
-      <CallFlash latest={ultimo || null} />
+      <CallFlash latest={aviso} />
       <V2Surface className="p-4" data-dica="linhas-central-cameras">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,140px)_1fr]">
           <CourtDiagram

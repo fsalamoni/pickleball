@@ -11,6 +11,7 @@ const courts = { data: [] };
 const dayCourts = { data: [] };
 const dayHook = vi.fn();
 const live = vi.fn();
+const liveData = { lances: [] };
 
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => flag.on }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }));
@@ -19,7 +20,7 @@ vi.mock('@/modules/linecall/hooks/useGameDayLineCourts', () => ({
   useGameDayLineCourts: (id, opts) => { dayHook(id, opts); return dayCourts; },
 }));
 vi.mock('@/modules/linecall/hooks/useLineControlLive', () => ({
-  useLineControlLive: (id) => { live(id); return { isLoading: false, isError: false, cams: [], lances: [] }; },
+  useLineControlLive: (id) => { live(id); return { isLoading: false, isError: false, cams: [], lances: liveData.lances }; },
   useNow: () => 1_000_000,
 }));
 
@@ -34,6 +35,7 @@ beforeEach(() => {
   live.mockClear();
   dayHook.mockClear();
   flag.on = true;
+  liveData.lances = [];
 });
 afterEach(() => { root.unmount(); container.remove(); });
 
@@ -91,5 +93,33 @@ describe('TelaoLineTicker (dia de jogo)', () => {
     await render(<TelaoLineTicker gameDay={{ id: 'G1' }} />);
     expect(container.innerHTML).toBe('');
     expect(dayHook).toHaveBeenCalledWith('G1', expect.objectContaining({ enabled: false }));
+  });
+});
+
+describe('o lance no telão', () => {
+  const NOW = 1_000_000;
+  const quique = {
+    id: 'q', kind: 'bounce', call: 'in', serve: true, decided: false, t_ms: NOW - 2000,
+    best: { margin_m: 0.4, uncertainty_m: 0.02 }, calls: [{ id: 'q' }], positions: ['fundo_a'],
+  };
+  const pe = (call) => ({
+    id: 'p', kind: 'serve_foot', call, reason: 'baseline', decided: false, t_ms: NOW - 2900,
+    best: { depth_m: 0.03, uncertainty_m: 0.02 }, calls: [{ id: 'p' }], positions: ['fundo_b'],
+  });
+
+  it('⭐ o pé do saque em revisão é "Lance em revisão", mesmo com o quique do saque, mais novo, na lista', async () => {
+    dayCourts.data = [{ id: 'court-1', line_control: true }];
+    liveData.lances = [quique, pe('review')];
+    await render(<TelaoLineTicker gameDay={{ id: 'G1' }} />);
+    expect(container.textContent).toMatch(/Lance em revisão/);
+    expect(container.textContent).not.toMatch(/Saque: dentro/);
+  });
+
+  it('a falta do pé no saque é o lance grande, não o "Saque: dentro" que veio depois', async () => {
+    dayCourts.data = [{ id: 'court-1', line_control: true }];
+    liveData.lances = [quique, pe('fault')];
+    await render(<TelaoLineTicker gameDay={{ id: 'G1' }} />);
+    expect(container.textContent).toMatch(/Falta no saque: pé na linha de fundo/);
+    expect(container.textContent).not.toMatch(/Saque: dentro/);
   });
 });

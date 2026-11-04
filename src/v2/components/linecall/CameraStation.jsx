@@ -26,6 +26,8 @@ import { courtSegments, insideMargin, kitchenDepth } from '@/modules/linecall/do
 import { CAMERA_LEVEL } from '@/modules/linecall/domain/cameraCheck';
 import { cameraSource, CAMERA_SOURCE_TIP } from '@/modules/linecall/domain/setupKits';
 import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
+import { pickHeadline } from '@/modules/linecall/domain/fusion';
+import { hasReplay } from '@/modules/linecall/domain/replay';
 import CourtDiagram from './CourtDiagram';
 import PlacementGuide, { DeviceTips } from './PlacementGuide';
 import LanceReplay from './LanceReplay';
@@ -124,7 +126,7 @@ function CameraView({ s, mode, onTap }) {
       ctx.lineWidth = lw;
       ctx.beginPath(); ctx.arc(s.ball.x, s.ball.y, lw * 6, 0, Math.PI * 2); ctx.stroke();
     }
-    const last = s.events[0];
+    const last = pickHeadline(s.events);
     if (last?.imagePoint) {
       ctx.strokeStyle = CALL_COLOR[last.call] || '#fff';
       ctx.lineWidth = lw * 2;
@@ -267,9 +269,10 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const [inspected, setInspected] = useState(null);
   const [replay, setReplay] = useState(null);
   useWakeLock(Boolean(s.stream));
-  const last = s.events[0];
+  // O lance grande é o mais grave dos últimos segundos (a mesma regra da central e do telão).
+  const last = pickHeadline(s.events);
   // Ao lado da quadra, só a falta grita: "revisar" não interrompe o ponto.
-  const [falar, setFalar, som, setSom] = useAnnounce(last || null, callSpoken, 'linhas:voz:camera', { quietReview: true });
+  const [falar, setFalar, som, setSom, aviso] = useAnnounce(s.events, callSpoken, 'linhas:voz:camera', { quietReview: true });
 
   const onTap = useCallback((pt) => {
     if (mode === 'color') { s.learnBallColor(pt); setMode(null); return; }
@@ -309,7 +312,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
   return (
     <div className="space-y-4">
-      <CallFlash latest={s.running ? last || null : null} />
+      <CallFlash latest={s.running ? aviso : null} />
       <V2Surface
         collapsible
         collapseId="linhas-posicionar"
@@ -517,7 +520,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
             <p className="text-sm text-gray-600">{callDetail(last)}</p>
           </div>
           <V2Button variant="secondary" onClick={() => setReplay(last)}>
-            <Film className="mr-1.5 h-4 w-4" /> {t('Ver replay')}
+            {hasReplay(last)
+              ? <><Film className="mr-1.5 h-4 w-4" /> {t('Ver replay')}</>
+              : <><Camera className="mr-1.5 h-4 w-4" /> {t('Ver foto')}</>}
           </V2Button>
         </V2Surface>
       )}
@@ -542,12 +547,12 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                         style={{ left: `${(e.imagePoint.x * 100) / e.vw}%`, top: `${(e.imagePoint.y * 100) / e.vh}%`, borderColor: CALL_COLOR[e.call] }}
                       />
                     )}
-                    {e.clip && <Film className="absolute bottom-1 right-1 h-4 w-4 text-white drop-shadow" aria-hidden="true" />}
+                    {hasReplay(e) && <Film className="absolute bottom-1 right-1 h-4 w-4 text-white drop-shadow" aria-hidden="true" />}
                   </span>
                   <span className="min-w-0">
                     <V2Badge tone={CALL_TONE[e.call]}>{callLabel(e)}</V2Badge>
                     <span className="mt-1 block text-xs text-gray-500">{callDetail(e)}</span>
-                    <span className="mt-1 block text-xs font-semibold text-ink">{e.clip ? t('Ver replay') : t('Ver foto')}</span>
+                    <span className="mt-1 block text-xs font-semibold text-ink">{hasReplay(e) ? t('Ver replay') : t('Ver foto')}</span>
                   </span>
                 </button>
               </li>

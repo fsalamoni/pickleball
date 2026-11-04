@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { COURT, nearestBoundary, serviceBoxMargin } from './court.js';
 import { fuseLineCalls } from './fusion.js';
-import { createFrameRing, clipWindow, frameIndexAt } from './replay.js';
+import { createFrameRing, clipWindow, frameIndexAt, hasReplay, REPLAY } from './replay.js';
+import { ENGINE_DEFAULTS } from './lineCallEngine.js';
 import { lanceSummary, lancesCsv } from './report.js';
 import { checkPointFor, calibrationCheck, CHECK_LEVEL } from './calibrationCheck.js';
 import { calibrationPoints } from './cameraLayouts.js';
@@ -65,6 +66,60 @@ describe('replay: a fita', () => {
     const ring = createFrameRing({ seconds: 10, max: 5 });
     for (let i = 0; i < 9; i += 1) ring.push({ t: i / 100 });
     expect(ring.size).toBe(5);
+  });
+
+  it('o teto vale também abaixo da taxa cheia', () => {
+    const ring = createFrameRing({ seconds: 10, max: 5 });
+    for (let i = 0; i < 9; i += 1) ring.push({ t: i / 50 });
+    expect(ring.size).toBe(5);
+    expect(ring.between(0, 1).map((f) => f.t)).toEqual([0.08, 0.1, 0.12, 0.14, 0.16]);
+  });
+
+  it('⭐ a fita cobre o lance mais atrasado do motor: o voleio sai até momentumMaxS depois da batida (11.A.2)', () => {
+    expect(REPLAY.RING_S).toBeGreaterThanOrEqual(ENGINE_DEFAULTS.momentumMaxS + REPLAY.BEFORE_S);
+    expect(REPLAY.RING_S).toBeGreaterThanOrEqual(ENGINE_DEFAULTS.resolveS + REPLAY.BEFORE_S);
+  });
+
+  it.each([30, 60, 120])('%i quadros/s: o voleio que só sai quando o impulso acaba tem o replay inteiro, com memória limitada', (fps) => {
+    const ring = createFrameRing();
+    const t0 = 10; // a batida
+    const sai = t0 + ENGINE_DEFAULTS.momentumMaxS + 1 / fps; // o motor solta o lance
+    let maior = 0;
+    let empurrados = 0;
+    let devolvidos = 0;
+    for (let i = 0; i / fps <= sai; i += 1) {
+      devolvidos += ring.push({ t: i / fps }).length;
+      empurrados += 1;
+      maior = Math.max(maior, ring.size);
+    }
+    const { from, to } = clipWindow(t0);
+    const clip = ring.between(from, to);
+    expect(clip[0].t).toBeLessThanOrEqual(from + 0.05);
+    expect(clip[clip.length - 1].t).toBeGreaterThanOrEqual(to - 0.05);
+    expect(maior).toBeLessThanOrEqual(REPLAY.RING_MAX);
+    // o que sai volta para quem chamou (o canvas é reaproveitado)
+    expect(devolvidos + ring.size).toBe(empurrados);
+  });
+
+  it('60 quadros/s: os últimos segundos com todos os quadros, os mais velhos com a metade', () => {
+    const ring = createFrameRing();
+    for (let i = 0; i <= 600; i += 1) ring.push({ t: i / 60 });
+    const agora = 10;
+    const cheios = ring.between(agora - REPLAY.FULL_S + 0.02, agora);
+    expect(cheios.length).toBeGreaterThanOrEqual(Math.floor((REPLAY.FULL_S - 0.02) * 60));
+    const span = REPLAY.RING_S - REPLAY.FULL_S - 0.2;
+    const velhos = ring.between(agora - REPLAY.RING_S + 0.1, agora - REPLAY.FULL_S - 0.1);
+    expect(velhos.length / span).toBeGreaterThan(25);
+    expect(velhos.length / span).toBeLessThan(35);
+  });
+
+  it('lance com replay é só o que tem quadros', () => {
+    expect(hasReplay({ clip: { frames: [{ t: 1 }] } })).toBe(true);
+    expect(hasReplay({ clip: { frames: [] } })).toBe(false);
+    expect(hasReplay({ clip: false })).toBe(false);
+    expect(hasReplay({ clip: null })).toBe(false);
+    expect(hasReplay({})).toBe(false);
+    expect(hasReplay(null)).toBe(false);
   });
 });
 
