@@ -1538,6 +1538,30 @@ light }`, `applied { plan_id, mode, dates[], at }`. Só o dono (o admin lê e
 apaga); a regra confere o prefixo do id e a forma. Zero índice. Ver
 `docs/42-BALANCO-DO-JOGO.md`.
 
+### `career_events/{uid}_{sufixo}` (NOVO, flag `athlete_career`)
+Torneio de FORA da plataforma registrado pelo atleta (Minha carreira):
+`uid`, `name`, `organizer`, `city`, `state`, `start_date`, `end_date`,
+`date_precision` (`day|year`), `status` (`played|planned|cancelled`, derivado
+da data), `entries[]` (≤ 6: `format`, `gender`, `age`, `level_bracket`,
+`placement`, `placement_n`, `points_declared`, `partner { name, uid }`),
+`federated`, `federation_id`, `federation_name`, `federation_acronym`,
+`stage_tier`, `link` (só `https://`), `photos[]` (≤ 6: `path`, `url`, `kind`
+`medal|podium|draw|other`, `alt`), `notes`, `platform_tournament_id`,
+`created_at_ms`, `updated_at_ms`. **Só o dono** lê e escreve (o id começa
+pelo uid); criar e editar exigem a flag na regra (`careerOn()`), ler e apagar
+não. Resultado DECLARADO: nada de ranking, rating nem XP lê esta coleção.
+Zero índice (`uid ==`). Entra na exclusão e na exportação. Ver
+`docs/54-CARREIRA-DO-ATLETA.md`.
+
+### Storage: `carreira/{uid}/{arquivo}` (NOVO, flag `athlete_career`)
+As fotos da Minha carreira. Só o dono lê, lista e apaga; cria só arquivo novo
+`image/(webp|jpeg|png)` < 3 MB. Enviadas por `prepareUpload` (sem EXIF).
+Apagadas na exclusão de conta.
+
+### `dupr_links.rating_points` (campo novo, opcional)
+Série `{ ms, singles, doubles }` (≤ 120) do rating DUPR, acrescentada pelo
+webhook só quando o rating muda. Só o servidor grava. Ver `docs/51-DUPR.md`.
+
 ### `training_questions/{id}` + `messages/{mid}` (NOVO)
 Dúvida privada aluno ↔ professor: `asker_uid`, `asker_name`, `coach_uid`,
 `coach_name`, `subject`, `item_id`, `item_title`, `status`

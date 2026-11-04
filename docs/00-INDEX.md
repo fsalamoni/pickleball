@@ -73,7 +73,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 
 **Arena:** [`08` roadmap](./08-ARENA-ROADMAP.md) · [`23` calendário e reserva](./23-ARENA-CALENDARIO-E-RESERVA.md) · [`24-MODULOS-DE-ARENA/`](./24-MODULOS-DE-ARENA/00-INDEX.md) (matchmaking, membros, marketing, operações, aulas, PDV, chegada/totem, integração) · [`10-ARENA-V3/`](./10-ARENA-V3/00-INDEX.md) (histórico e referência do V3).
 
-**Atleta e comunidade:** [`29` início e divulgação](./29-INICIO-PERSONALIZADO-E-DIVULGACAO.md) · [`31` início sob medida](./31-INICIO-SOB-MEDIDA.md) · [`34` minha região](./34-MINHA-REGIAO.md) · [`33` cadastro essencial](./33-CADASTRO-ESSENCIAL.md) · [`36` notificações](./36-NOTIFICACOES.md) · [`49` avisos por e-mail, WhatsApp, SMS e push](./49-AVISOS-POR-EMAIL-E-CELULAR.md) · [`50` federações](./50-FEDERACAO.md) · [`52` clube como associação](./52-CLUBE-ASSOCIACAO.md) · [`51` DUPR](./51-DUPR.md) · [`38` gamificação V2](./38-GAMIFICACAO-V2.md) · [`41` Minha área](./41-MINHA-AREA.md).
+**Atleta e comunidade:** [`29` início e divulgação](./29-INICIO-PERSONALIZADO-E-DIVULGACAO.md) · [`31` início sob medida](./31-INICIO-SOB-MEDIDA.md) · [`34` minha região](./34-MINHA-REGIAO.md) · [`33` cadastro essencial](./33-CADASTRO-ESSENCIAL.md) · [`36` notificações](./36-NOTIFICACOES.md) · [`49` avisos por e-mail, WhatsApp, SMS e push](./49-AVISOS-POR-EMAIL-E-CELULAR.md) · [`50` federações](./50-FEDERACAO.md) · [`52` clube como associação](./52-CLUBE-ASSOCIACAO.md) · [`51` DUPR](./51-DUPR.md) · [`38` gamificação V2](./38-GAMIFICACAO-V2.md) · [`41` Minha área](./41-MINHA-AREA.md) · [`54` Minha carreira](./54-CARREIRA-DO-ATLETA.md).
 
 **Treino:** [`40` Centro de Treino](./40-CENTRO-DE-TREINO.md) · [`40a` avaliação dos 100 drills](./40a-AVALIACAO-100-DRILLS.md) · [`42` balanço do jogo](./42-BALANCO-DO-JOGO.md).
 
@@ -111,6 +111,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Ícone, manifesto ou instalação do app (PWA) | `04-ARCHITECTURE.md` §7 (+ `python3 scripts/gerar-icones-app.py`, sufixo `-vN` dos ícones e `VERSION` do `sw.js`) |
 | Aviso novo, canal de envio (e-mail/WhatsApp/SMS/push), provedor | `49-AVISOS-POR-EMAIL-E-CELULAR.md` (+ paridade `messagingPolicy`, `npm run i18n:avisos`) |
 | Regra de ranking/rating | `18-RANKINGS.md` (+ paridade cliente × servidor) |
+| Minha carreira (torneios de fora, linha do tempo, fotos da carreira) | `54-CARREIRA-DO-ATLETA.md` + `src/modules/career/README.md`; coleção `career_*` nova também na exclusão e na exportação (`exclusaoCobreColecoes`), e nada de ranking/XP lê `career_*` (`carreiraNaoPontua`) |
 | Padrão de código, fluxo de trabalho, deploy | `02-STANDARDS.md` / `03-WORKFLOW.md` e `CLAUDE.md` |
 | Fronteira entre camadas ou módulos (imports) | `04-ARCHITECTURE.md` §1.1a; o guarda `fronteirasDeModulos` reprova o que cruzar |
 | Entrega que vale registrar como história | uma entrada em `HISTORICO-POR-ONDA.md` |

@@ -122,3 +122,12 @@ describe('exportação: e-mails e mensagens enviados', () => {
     expect(out.messages).toEqual([{ id: 'n1_email', channel: 'email', to: 'a***@b.com' }]);
   });
 });
+
+describe('exportação: Minha carreira', () => {
+  it('entra só quando coletada, com os torneios de fora e as fotos', () => {
+    expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('career');
+    const out = buildDataExport({ uid: 'u1', career: { events: [{ id: 'u1_a', name: 'Open' }], photos: ['carreira/u1/a.webp'] } });
+    expect(out.career).toEqual({ events: [{ id: 'u1_a', name: 'Open' }], photos: ['carreira/u1/a.webp'], counts: { events: 1, photos: 1 } });
+    expect(buildDataExport({ uid: 'u1', career: {} }).career.counts).toEqual({ events: 0, photos: 0 });
+  });
+});

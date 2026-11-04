@@ -272,6 +272,25 @@ const igual = (a, b) => {
   return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
 };
 
+/** Quantos pontos a série do rating DUPR guarda (os mais novos). */
+const RATING_POINTS_MAX = 120;
+
+/**
+ * Série do rating DUPR (`dupr_links.rating_points`, Minha carreira, docs/54):
+ * no desenho de `proximoHistoricoElo` (`platformRankings.js`) — só ganha ponto
+ * quando o rating MUDA, e a lista é limitada. `null` = não grava nada.
+ * @returns {Array<{ ms: number, singles: number|null, doubles: number|null }>|null}
+ */
+function proximosPontosDupr(anteriores, ratings, agoraMs) {
+  const pontos = Array.isArray(anteriores) ? anteriores : [];
+  const singles = ratings && ratings.singles != null ? ratings.singles : null;
+  const doubles = ratings && ratings.doubles != null ? ratings.doubles : null;
+  if (singles == null && doubles == null) return null;
+  const ultimo = pontos[pontos.length - 1];
+  if (ultimo && ultimo.singles === singles && ultimo.doubles === doubles) return null;
+  return [...pontos.slice(-(RATING_POINTS_MAX - 1)), { ms: agoraMs, singles, doubles }];
+}
+
 /**
  * Recebe os eventos do DUPR. Responde 200 depressa até para o que não usa
  * (o DUPR exige); só o token da URL (`?k=`) separa o DUPR de qualquer outro.
@@ -298,11 +317,12 @@ async function webhook(ctx, req) {
 
   const ratings = { singles: parseRating(rating.singles), doubles: parseRating(rating.doubles) };
   const l = snap.data();
-  await linkRef.update({ ratings, rating_updated_ms: ctx.now, webhook_ok: true });
+  const pontos = proximosPontosDupr(l.rating_points, ratings, ctx.now);
+  await linkRef.update({ ratings, rating_updated_ms: ctx.now, webhook_ok: true, ...(pontos ? { rating_points: pontos } : {}) });
   await espelhar(ctx, uid, mirrorFields({ ...l, ratings }, ctx.now));
   return { status: 200, body: { ok: true } };
 }
 
 module.exports = {
-  FLAG, DuprServiceError, parseRating, tournamentEntitlements, clienteDuprDe, config, link, unlink, status, webhook,
+  FLAG, DuprServiceError, parseRating, proximosPontosDupr, RATING_POINTS_MAX, tournamentEntitlements, clienteDuprDe, config, link, unlink, status, webhook,
 };

@@ -44,6 +44,7 @@ import {
   ShoppingBag,
   Heart,
   Tag,
+  Milestone,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -117,6 +118,7 @@ const PAGE_TITLES = [
   ['/chat', tk('Mensagens')],
   ['/meu-desempenho', tk('Meu desempenho')],
   ['/treino', tk('Treino')],
+  ['/carreira', tk('Minha carreira')],
   ['/perfil', tk('Meu perfil')],
   ['/regras', tk('Regras')],
   ['/nivelamento', tk('Nivelamento')],
@@ -159,6 +161,8 @@ function useV2Nav() {
   const { isPlatformAdmin, user } = useAuth();
   const marketplaceOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const federationsOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
+  // Minha carreira: subpágina da Minha área (nenhum hub novo na barra lateral).
+  const careerOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const performanceOn = true;
   const ratingOn = true;
   const matchmakingOn = true;
@@ -335,6 +339,7 @@ function useV2Nav() {
         children: [
           { to: '/perfil', label: userHubOn ? t('Minha área') : t('Meu perfil'), icon: User },
           trainingOn && { to: '/treino', label: t('Treino'), icon: Dumbbell },
+          careerOn && { to: '/carreira', label: t('Minha carreira'), icon: Milestone },
           performanceOn && { to: '/meu-desempenho', label: t('Meu desempenho'), icon: BarChart3 },
           gamificationOn && { to: '/conquistas', label: t('Conquistas'), icon: Award },
           tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },
@@ -368,7 +373,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: t('Painel admin'), icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos, marketplaceOn, federationsOn]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos, marketplaceOn, federationsOn, careerOn]);
 
   // A barra lateral e a gaveta mostram só os hubs que a pessoa escolheu
   // (core/domain/sidebarNav.js — padrão por papel, editável em Configurações

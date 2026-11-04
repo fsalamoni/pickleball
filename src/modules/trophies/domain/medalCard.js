@@ -92,6 +92,8 @@ export function buildMedalCard(input = {}) {
     `${event.title}${event.subtitle ? ` · ${event.subtitle}` : ''}${dateLabel ? ` · ${dateLabel}` : ''}`,
     // O link vai à parte (`url`): o WhatsApp junta texto + link, e com o link
     // também no texto ele aparecia duas vezes.
+    // Torneio de fora (Minha carreira): o resultado foi DECLARADO pela pessoa.
+    event.declared === true ? t('Resultado declarado') : '',
     url ? t('Veja no PickleRush:') : t('via PickleRush'),
   ].filter(Boolean).join('\n');
 
@@ -100,7 +102,7 @@ export function buildMedalCard(input = {}) {
 
   return {
     mode, position: degrau?.position || null, headline, saying, dateLabel, where, hostLine,
-    event: { title: event.title || t('Torneio'), subtitle: event.subtitle || '', kind: event.kind || 'torneio' },
+    event: { title: event.title || t('Torneio'), subtitle: event.subtitle || '', kind: event.kind || 'torneio', declared: event.declared === true },
     host: input.host && (input.host.name || input.host.logo) ? { name: input.host.name || '', logo: input.host.logo || null, kind: input.host.kind || 'arena' } : null,
     people: pessoas, names: nomes, lines: linhas,
     url, shareText, fileName: `picklerush-${slug || 'cartao'}.png`,

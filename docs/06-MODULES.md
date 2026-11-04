@@ -246,6 +246,16 @@ diário, evolução, dúvidas ao professor, alunos, balanço do jogo
   `training_meta`, `training_questions`, `training_reports`, `training_shares`,
   `training_debriefs` (+ `coach_content`). Storage `treino/{uid}/`.
 
+### career/ — Minha carreira (flag `athlete_career`)
+A linha do tempo do atleta: os torneios e dias de jogo da plataforma e os
+torneios de FORA que ele registra (resultado declarado, foto, dupla), modo
+lista para o passado e a aba "Fora da plataforma" da estante. Doc `54`.
+- **Arquivos**: `domain/careerEvent.js`, `domain/timeline.js`,
+  `domain/draftQueue.js`, `services/careerService.js`, `hooks/useCareer.js`.
+- **Telas**: `/carreira` (`?aba=linha-do-tempo|conquistas`); componentes em
+  `src/v2/components/career/`; seção `carreira` da Minha área.
+- **Coleções**: `career_events`. Storage `carreira/{uid}/`.
+
 ---
 
 ## Plataforma, conteúdo e comércio

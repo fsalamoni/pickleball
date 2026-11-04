@@ -536,6 +536,20 @@ service cloud.firestore {
       allow update, delete: if isOwner(od().uid);
     }
 
+    // ---- Minha carreira (flag `athlete_career`, docs/54) -----------------
+    // Torneio de FORA da plataforma (`{uid}_{id}`): só o dono lê e escreve.
+    // A flag vale só em create/update — apagar o próprio dado segue valendo
+    // com a flag desligada (LGPD). Forma rasa: os limites ficam no domínio e
+    // no serviço (`career/domain/careerEvent.js`), como em `player_goals`.
+    // O `uid` não muda: o update exige `uid` = quem grava e o id com o prefixo.
+    function careerOn() {
+      return gd('platform_settings/global').get('feature_flags', {}).get('athlete_career', false) == true;
+    }
+    match /career_events/{id} {
+      allow read, delete: if isOwner(od().uid);
+      allow create, update: if isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
+    }
+
     // ---- Galeria de fotos do torneio -------------------------------------
     // Leitura pública (aparece na visão de espectador). Envio/remoção só por
     // admin do torneio (ou admin master).

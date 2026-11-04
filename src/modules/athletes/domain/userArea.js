@@ -26,6 +26,8 @@ export const USER_AREA_SECTION = Object.freeze({
   JOGOS: 'jogos',
   TORNEIOS: 'torneios',
   TROFEUS: 'trofeus',
+  /** Minha carreira (flag `athlete_career`): resumo e atalho para /carreira. */
+  CARREIRA: 'carreira',
   /** Mercado (flag `marketplace`): comprando e vendendo. */
   MERCADO: 'mercado',
   FEDERACOES: 'federacoes',
@@ -57,6 +59,7 @@ const META = Object.freeze([
   { id: S.JOGOS, label: tk('Meus jogos'), icone: 'Swords', grupo: 'voce', quem: 'todos' },
   { id: S.TORNEIOS, label: tk('Torneios'), icone: 'Trophy', grupo: 'voce', quem: 'todos' },
   { id: S.TROFEUS, label: tk('Troféus'), icone: 'Medal', grupo: 'voce', quem: 'todos' },
+  { id: S.CARREIRA, label: tk('Carreira'), icone: 'Route', grupo: 'voce', quem: 'carreira' },
   { id: S.MERCADO, label: tk('Mercado'), icone: 'ShoppingBag', grupo: 'voce', quem: 'mercado' },
   { id: S.FEDERACOES, label: tk('Federações'), icone: 'Landmark', grupo: 'voce', quem: 'federacoes' },
   { id: S.CLUBES, label: tk('Clubes'), icone: 'Users', grupo: 'voce', quem: 'clubes' },
@@ -69,7 +72,7 @@ const temPapel = (v) => v === true || v === 'erro';
 
 /**
  * @param {{ professor?: boolean|'erro', arenas?: boolean|'erro', clubes?: boolean|'erro', admin?: boolean, mercado?: boolean, federacoes?: boolean|'erro' }} papeis
- *   `mercado` = a flag `marketplace` ligada; `federacoes` = a flag `federations` ligada E a pessoa tem filiação ou papel
+ *   `carreira` = a flag `athlete_career` ligada; `mercado` = a flag `marketplace` ligada; `federacoes` = a flag `federations` ligada E a pessoa tem filiação ou papel
  * @returns {Array<{ id: string, label: string, icone: string, grupo: string, dica: string }>}
  */
 export function userAreaSections(papeis = {}) {

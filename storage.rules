@@ -78,6 +78,18 @@ service firebase.storage {
       allow delete: if isAuthed() && request.auth.uid == uid;
     }
 
+    // Minha carreira (flag `athlete_career`, docs/54): fotos dos torneios de
+    // fora (medalha, pódio, chave). PRIVADAS: só o dono lê, lista, envia e
+    // apaga — a tela mostra pelo link com token (`getDownloadURL`), que só o
+    // dono gera e só fica no documento dele. Imagem WebP/JPEG/PNG < 3 MB (a
+    // tela comprime e tira o EXIF antes), sem sobrescrever. ADITIVO.
+    match /carreira/{uid}/{fileName} {
+      allow get, list, delete: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid && resource == null
+        && request.resource.contentType.matches('image/(webp|jpeg|png)')
+        && request.resource.size < 3 * 1024 * 1024;
+    }
+
     // Mercado (flag `marketplace`): fotos e vídeos dos anúncios e o
     // comprovante do Pix. Mesmo desenho do `treino/`: `get` para conta logada
     // (o anúncio é público; o comprovante tem nome aleatório e só o pedido

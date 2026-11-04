@@ -10,12 +10,13 @@ describe('userAreaSections', () => {
     expect(ids(userAreaSections({}))).toEqual([S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS]);
   });
 
-  it('cada papel traz a sua seção — doze no total, nunca mais', () => {
-    const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true, mercado: true, federacoes: true });
+  it('cada papel traz a sua seção — treze no total, nunca mais', () => {
+    const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true, mercado: true, federacoes: true, carreira: true });
     expect(ids(tudo)).toEqual([
-      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS, S.MERCADO, S.FEDERACOES, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
+      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS, S.CARREIRA, S.MERCADO, S.FEDERACOES, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
     ]);
-    expect(tudo).toHaveLength(12);
+    expect(tudo).toHaveLength(13);
+    expect(tudo.find((s) => s.id === S.CARREIRA)).toMatchObject({ grupo: 'voce', dica: 'minha-area-carreira' });
     expect(tudo.find((s) => s.id === S.FEDERACOES)).toMatchObject({ grupo: 'voce', icone: 'Landmark' });
     expect(tudo.find((s) => s.id === S.MERCADO)).toMatchObject({ grupo: 'voce', icone: 'ShoppingBag' });
     expect(tudo.find((s) => s.id === S.ARENAS)).toMatchObject({ grupo: 'gestao', dica: 'minha-area-arenas' });
