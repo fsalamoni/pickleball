@@ -4,6 +4,9 @@ import { categorizeBoardMatches } from './tournamentBoard.js';
 const matches = [
   { id: 'm1', status: 'in_progress', court: 2 },
   { id: 'm2', status: 'in_progress', court: 1 },
+  // como o agendamento grava: o nome em `court`, o número em `court_index`
+  { id: 'm9', status: 'in_progress', court: 'Quadra 10', court_index: 10 },
+  { id: 'm8', status: 'in_progress', court: 'Quadra 3', court_index: 3 },
   { id: 'm3', status: 'scheduled', scheduled_at: '2026-08-01T18:00:00Z' },
   { id: 'm4', status: 'scheduled', scheduled_at: '2026-08-01T17:00:00Z' },
   { id: 'm5', status: 'finished', result_recorded_at: '2026-08-01T16:00:00Z' },
@@ -14,7 +17,8 @@ const matches = [
 describe('categorizeBoardMatches', () => {
   it('em andamento ordenado por quadra', () => {
     const { inProgress } = categorizeBoardMatches(matches);
-    expect(inProgress.map((m) => m.id)).toEqual(['m2', 'm1']);
+    // 🐞 com `Number('Quadra 10')` = NaN a quadra 10 ia para antes da 3 só pela ordem de chegada
+    expect(inProgress.map((m) => m.id)).toEqual(['m2', 'm1', 'm8', 'm9']);
   });
 
   it('próximos ordenados por horário ascendente', () => {

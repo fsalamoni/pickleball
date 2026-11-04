@@ -184,6 +184,19 @@ describe('⭐ a cascata com as especificações REAIS', () => {
     'game_days/d1/participants/px': { user_id: X, name: 'Ana Teste', photo_url: 'f' },
     'game_days/d1/participants/py': { user_id: 'y', name: 'Bia Real' },
     'game_days/d1/games/j1': { side_a: [{ id: 'px', name: 'Ana Teste' }], side_b: [{ id: 'py', name: 'Bia Real', user_id: 'y' }] },
+    // controle de linhas: a câmera e as marcações da pessoa, na quadra e no dia (antigo)
+    'game_days/d1/line_courts/court-2': { line_control: true, updated_by: 'y' },
+    'game_days/d1/line_courts/court-2/line_cams/x_fundo_a': { uid: X, name: 'Ana Teste', position: 'fundo_a' },
+    'game_days/d1/line_courts/court-2/line_cams/y_rede_1': { uid: 'y', name: 'Bia Real', position: 'rede_1' },
+    'game_days/d1/line_courts/court-2/line_calls/k1': { uid: X, position: 'fundo_a', kind: 'bounce', call: 'out' },
+    'game_days/d1/line_courts/court-2/line_calls/k2': { uid: 'y', position: 'rede_1', kind: 'volley', call: 'fault' },
+    'game_days/d1/line_calls/k0': { uid: X, position: 'fundo_a', kind: 'bounce', call: 'in' },
+    // ⭐ filmou sem estar nas listas: o dia da arena que ela gere (não é
+    // membro) e a quadra de um torneio de que ela não é da equipe
+    'game_days/d9': { created_by: 'y', arena_id: 'a1', member_uids: ['y'], status: 'active' },
+    'game_days/d9/line_courts/court-1/line_cams/x_topo': { uid: X, name: 'Ana Teste', position: 'topo' },
+    'game_days/d9/line_courts/court-1/line_calls/k9': { uid: X, position: 'topo', kind: 'bounce', call: 'out' },
+    'tournament_line_courts/t9_c1/line_cams/x_fundo_b': { uid: X, name: 'Ana Teste', position: 'fundo_b' },
     // conversa
     'conversations/c1': { member_ids: [X, 'y'], members: [{ uid: X, name: 'Ana Teste' }, { uid: 'y', name: 'Bia Real' }] },
     'conversations/c1/messages/m1': { sender_id: X, sender_name: 'Ana Teste', text: 'segredo', attachments: [] },
@@ -236,6 +249,46 @@ describe('⭐ a cascata com as especificações REAIS', () => {
     expect(jogo.side_b[0].name).toBe('Bia Real');
   });
 
+  it('⭐ controle de linhas: a câmera e as marcações da pessoa saem, em toda quadra; as dos outros ficam', async () => {
+    const { get } = await rodar();
+    expect(get('game_days/d1/line_courts/court-2/line_cams/x_fundo_a')).toBeUndefined();
+    expect(get('game_days/d1/line_courts/court-2/line_calls/k1')).toBeUndefined();
+    expect(get('game_days/d1/line_calls/k0')).toBeUndefined();
+    expect(get('game_days/d1/line_courts/court-2/line_cams/y_rede_1').name).toBe('Bia Real');
+    expect(get('game_days/d1/line_courts/court-2/line_calls/k2').call).toBe('fault');
+    expect(get('game_days/d1/line_courts/court-2').line_control).toBe(true);
+  });
+
+  it('⭐ controle de linhas: acha a câmera de quem filmou SEM estar nas listas (gestor da arena, fora da equipe)', async () => {
+    const { get } = await rodar();
+    expect(get('game_days/d9/line_courts/court-1/line_cams/x_topo')).toBeUndefined();
+    expect(get('game_days/d9/line_courts/court-1/line_calls/k9')).toBeUndefined();
+    expect(get('tournament_line_courts/t9_c1/line_cams/x_fundo_b')).toBeUndefined();
+  });
+
+  it('⭐ controle de linhas: mais marcações que o teto ⇒ exclusão PARCIAL (a próxima rodada apaga o resto)', async () => {
+    const db = createFakeDb({
+      ...seed(),
+      ...Object.fromEntries(Array.from({ length: 401 }, (_, i) => [`game_days/d1/line_courts/court-2/line_calls/m${i}`, { uid: X, kind: 'bounce', call: 'in' }])),
+    });
+    const ctx = { db, auth: createFakeAuth([X], { log: db.store.log }), bucket: createFakeBucket([]) };
+    const r = await executeAccountDeletion(ctx, X, {
+      actor: { uid: 'admin', email: 'dono@x.com' }, reason: 'teste', hojeISO: '2026-09-24', FieldValue: FakeFieldValue,
+    });
+    expect(r.status).toBe('partial');
+  });
+
+  it('⭐ controle de linhas: a busca que FALHA (sem o índice de grupo) deixa a exclusão parcial, não "nada a apagar"', async () => {
+    const db = createFakeDb(seed());
+    db.collectionGroup = () => { throw Object.assign(new Error('FAILED_PRECONDITION: requires an index'), { code: 9 }); };
+    const ctx = { db, auth: createFakeAuth([X], { log: db.store.log }), bucket: createFakeBucket([]) };
+    const r = await executeAccountDeletion(ctx, X, {
+      actor: { uid: 'admin', email: 'dono@x.com' }, reason: 'teste', hojeISO: '2026-09-24', FieldValue: FakeFieldValue,
+    });
+    expect(r.status).toBe('partial');
+    expect(db.store.docs.get('users/x')).toBeUndefined();
+  });
+
   it('⭐ conversa: a mensagem da pessoa perde o conteúdo; a da outra fica', async () => {
     const { get } = await rodar();
     expect(get('conversations/c1/messages/m1').text).toBe(REMOVED_MESSAGE);
@@ -273,6 +326,13 @@ describe('⭐ a cascata com as especificações REAIS', () => {
       'club_forum_threads/f1/poll_votes/x',
       // O selo público de professor credenciado é da própria pessoa (id = uid).
       'federation_coach_badges/x',
+      // A câmera e as marcações do controle de linhas são da própria pessoa (uid).
+      'game_days/d1/line_calls/k0',
+      'game_days/d1/line_courts/court-2/line_calls/k1',
+      'game_days/d1/line_courts/court-2/line_cams/x_fundo_a',
+      'game_days/d9/line_courts/court-1/line_calls/k9',
+      'game_days/d9/line_courts/court-1/line_cams/x_topo',
+      'tournament_line_courts/t9_c1/line_cams/x_fundo_b',
       'users/x',
     ].sort());
   });

@@ -15,7 +15,7 @@ import {
 import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import { applyHomography } from '@/modules/linecall/domain/homography';
 import { courtSegments, nearestBoundary } from '@/modules/linecall/domain/court';
-import { frameIndexAt } from '@/modules/linecall/domain/replay';
+import { frameIndexAt, hasReplay } from '@/modules/linecall/domain/replay';
 import CourtMark from './CourtMark';
 import { CALL_COLOR, CALL_TONE, callLabel, callDetail } from './callLabels';
 import { cn } from '@/core/lib/utils';
@@ -62,7 +62,8 @@ function useOverlay(canvasRef, { clip, index, Hinv, event }) {
  * @param {{ event: object|null, Hinv: number[]|null, onClose: () => void }} props
  */
 export default function LanceReplay({ event, Hinv, onClose }) {
-  const clip = event?.clip || null;
+  // Replay sem nenhum quadro não é replay: a foto, sem barra de posição vazia.
+  const clip = hasReplay(event) ? event.clip : null;
   const hit = useMemo(() => (clip ? frameIndexAt(clip.frames, clip.eventT) : 0), [clip]);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -93,9 +94,17 @@ export default function LanceReplay({ event, Hinv, onClose }) {
     if (e.key === ' ') { e.preventDefault(); setPlaying((p) => !p); }
   };
 
-  const bounce = (event?.type || event?.kind) === 'bounce';
-  const line = bounce && event?.point && !event.serve ? nearestBoundary(event.point).line : null;
+  const kind = event?.type || event?.kind;
+  const bounce = kind === 'bounce';
+  const rally = bounce && event?.point && !event.serve && ['long', 'wide', undefined, null].includes(event.reason);
+  const line = rally ? nearestBoundary(event.point).line : null;
   const f = clip?.frames[index];
+  // Por que não há replay: ainda sendo recortado, guardado nunca, ou já fora da memória.
+  const semReplay = event?.clip === undefined
+    ? t('O replay deste lance ainda está sendo recortado. Esta é a foto do momento.')
+    : event?.clip === null
+      ? t('O replay deste lance não está mais guardado (o aparelho guarda só os mais recentes). Esta é a foto do momento.')
+      : t('Este lance ficou sem replay: o aparelho não tinha quadros guardados desse momento. Esta é a foto do momento.');
 
   return (
     <Dialog open={Boolean(event)} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -120,7 +129,7 @@ export default function LanceReplay({ event, Hinv, onClose }) {
               ) : (
                 <div className="space-y-2">
                   <img src={event.image} alt={callLabel(event)} className="w-full rounded-2xl" />
-                  <p className="text-sm text-gray-500">{t('O replay deste lance não está mais guardado (o aparelho guarda só os mais recentes). Esta é a foto do momento.')}</p>
+                  <p className="text-sm text-gray-500">{semReplay}</p>
                 </div>
               )}
               {clip && (
@@ -170,11 +179,12 @@ export default function LanceReplay({ event, Hinv, onClose }) {
               <V2Badge tone={CALL_TONE[event.call]}>{callLabel(event)}</V2Badge>
               <p className="text-sm text-gray-600">{callDetail(event)}</p>
               <CourtMark
-                kind={bounce ? 'bounce' : 'volley'}
+                kind={kind}
                 call={event.call}
                 marginM={bounce ? event.marginM : event.depthM}
                 uncertaintyM={event.uncertaintyM}
                 lineName={line}
+                reason={event.reason}
               />
             </div>
           </div>

@@ -1,8 +1,8 @@
 /**
  * LineCentral — a CENTRAL das câmeras de um jogo: quem está no ar em cada
- * posição do arranjo (com bateria e conferência da calibração), o último lance
- * em letras grandes, a marca ampliada, e os lances anteriores, do mais
- * recente para trás. Serve para a mesa da organização, um tablet na beira da
+ * posição do arranjo (com bateria e conferência da calibração), o lance do
+ * momento em letras grandes (`pickHeadline`: o mais grave dos últimos
+ * segundos), a marca ampliada, e os outros lances, do mais recente para trás. Serve para a mesa da organização, um tablet na beira da
  * quadra ou uma TV.
  *
  * Quem organiza dá a PALAVRA FINAL num lance (sobretudo nos "revisar"): a
@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { CAMERA_POSITIONS, layoutById } from '@/modules/linecall/domain/cameraLayouts';
-import { positionOccupancy, DECISIONS } from '@/modules/linecall/domain/fusion';
+import { positionOccupancy, decisionsFor, pickHeadline } from '@/modules/linecall/domain/fusion';
 import { nearestBoundary } from '@/modules/linecall/domain/court';
 import { lanceSummary, lancesCsv } from '@/modules/linecall/domain/report';
 import { readinessCheck, READINESS_TEXT } from '@/modules/linecall/domain/readiness';
@@ -42,8 +42,10 @@ function LanceMark({ l }) {
   const bounce = l.kind === 'bounce';
   const margin = bounce ? b.margin_m : b.depth_m;
   if (!Number.isFinite(margin)) return null;
-  const line = bounce && !l.serve && Number.isFinite(b.x) ? nearestBoundary({ x: b.x, y: b.y }).line : null;
-  return <CourtMark kind={l.kind} call={l.call} marginM={margin} uncertaintyM={b.uncertainty_m} lineName={line} className="max-w-xs" />;
+  // Lance de rally longo ou lateral: a linha mais perto diz de que lado. Saque e rede: o motivo.
+  const rally = bounce && !l.serve && Number.isFinite(b.x) && ['long', 'wide', undefined, null].includes(b.reason);
+  const line = rally ? nearestBoundary({ x: b.x, y: b.y }).line : null;
+  return <CourtMark kind={l.kind} call={l.call} marginM={margin} uncertaintyM={b.uncertainty_m} lineName={line} reason={b.reason} className="max-w-xs" />;
 }
 
 function Lance({ l, big = false }) {
@@ -76,7 +78,7 @@ function Decide({ l, gameDayId, uid }) {
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('Palavra final de quem organiza')}>
       <Gavel className="h-4 w-4 text-gray-500" aria-hidden="true" />
-      {DECISIONS[l.kind].map((d) => (
+      {decisionsFor(l.kind).map((d) => (
         <V2Button key={d} size="sm" disabled={saving} variant={l.decided && l.call === d ? 'primary' : 'secondary'} onClick={() => decidir(d)}>
           {t(CALL_LABEL[l.kind][d])}
         </V2Button>
@@ -124,9 +126,13 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
   const [confirmar, setConfirmar] = useState(false);
   const [limpando, setLimpando] = useState(false);
   const [aberto, setAberto] = useState(null);
-  const [ultimo, ...anteriores] = live.lances;
+  // O lance grande é a MANCHETE (a mesma do telão): o mais grave dos últimos
+  // segundos. O pé do saque é marcado na batida e chega com o quique do saque:
+  // pela hora, a falta dele sumia atrás de um "Saque: dentro".
+  const ultimo = pickHeadline(live.lances);
+  const anteriores = live.lances.filter((l) => l !== ultimo);
   const spoken = useCallback((l) => callSpoken(l), []);
-  const [falar, setFalar, som, setSom] = useAnnounce(ultimo || null, spoken, 'linhas:voz:central');
+  const [falar, setFalar, som, setSom, aviso] = useAnnounce(live.isLoading ? null : live.lances, spoken, 'linhas:voz:central');
 
   if (live.isError) return <V2ErrorState onRetry={live.retry} description={t('Não deu para ouvir as câmeras deste jogo.')} />;
   if (live.isLoading) return <V2Skeleton lines={4} />;
@@ -139,7 +145,9 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
     setLimpando(true);
     try { await clearLineCalls(gameDay.id); } finally { setLimpando(false); setConfirmar(false); }
   };
-  const exportar = () => baixar(`linhas-${String(gameDay.id).split('/').pop()}.csv`, lancesCsv(live.lances, {
+  // O nome do arquivo leva os ids do caminho (dia e quadra), não só o último.
+  const tag = String(gameDay.id).split('/').filter((_, i) => i % 2 === 1).join('-') || String(gameDay.id);
+  const exportar = () => baixar(`linhas-${tag}.csv`, lancesCsv(live.lances, {
     header: [t('Hora'), t('Lance'), t('Decidido'), t('Câmeras discordaram'), t('Margem (cm)'), t('Incerteza (cm)'), t('Câmeras')],
     time: hora,
     label: callLabel,
@@ -148,7 +156,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
 
   return (
     <div className="space-y-4">
-      <CallFlash latest={ultimo || null} />
+      <CallFlash latest={aviso} />
       <V2Surface className="p-4" data-dica="linhas-central-cameras">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,140px)_1fr]">
           <CourtDiagram
@@ -269,7 +277,9 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
           <V2Badge tone="neutral">{t('{n} lances', { n: resumo.total })}</V2Badge>
           {resumo.in > 0 && <V2Badge tone="green">{t('{n} dentro', { n: resumo.in })}</V2Badge>}
           {resumo.out > 0 && <V2Badge tone="red">{t('{n} fora', { n: resumo.out })}</V2Badge>}
-          {resumo.fault > 0 && <V2Badge tone="red">{t('{n} faltas na cozinha', { n: resumo.fault })}</V2Badge>}
+          {resumo.faults.volley > 0 && <V2Badge tone="red">{t('{n} faltas na cozinha', { n: resumo.faults.volley })}</V2Badge>}
+          {resumo.faults.serve_foot > 0 && <V2Badge tone="red">{t('{n} faltas de pé no saque', { n: resumo.faults.serve_foot })}</V2Badge>}
+          {resumo.faults.two_bounce > 0 && <V2Badge tone="red">{t('{n} faltas de dois quiques', { n: resumo.faults.two_bounce })}</V2Badge>}
           {resumo.review > 0 && <V2Badge tone="amber">{t('{n} para revisar', { n: resumo.review })}</V2Badge>}
           {resumo.decided > 0 && <V2Badge tone="neutral">{t('{n} decididos por quem organiza', { n: resumo.decided })}</V2Badge>}
         </div>

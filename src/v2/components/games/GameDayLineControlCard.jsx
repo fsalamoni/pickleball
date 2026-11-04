@@ -1,28 +1,34 @@
 /**
- * GameDayLineControlCard — liga o CONTROLE DE LINHAS por câmera neste jogo
- * (ou em todos os meus) e leva à tela da câmera. Montado dentro do
- * `GameDayModule`, então vale igual no atleta, na arena e no clube.
+ * GameDayLineControlCard — o CONTROLE DE LINHAS por câmera deste dia de jogo,
+ * QUADRA POR QUADRA: cada quadra liga o seu e escolhe quantas câmeras e onde.
+ * Montado dentro do `GameDayModule`, então vale igual no atleta, na arena e no
+ * clube.
  *
  * Só existe com a flag `line_control` ligada pelo admin da plataforma. Quem
- * pode ligar é quem organiza o dia ou é administrador nomeado do jogo (`podeConfigurarLinhas`); para os demais o
- * cartão só aparece se o controle estiver ligado, como aviso.
+ * liga e configura é quem organiza o dia ou o administrador nomeado
+ * (`podeConfigurarLinhas`; a regra de `line_courts` confere igual); para os
+ * demais o cartão só aparece se alguma quadra estiver ligada, como aviso.
  *
  * Ligar vale para jogo em andamento: não depende de status nem de partida.
  */
 
 import React from 'react';
 import { toast } from 'sonner';
-import { ScanLine, Camera, MonitorPlay } from 'lucide-react';
+import { ScanLine, CopyCheck } from 'lucide-react';
 
-import { V2Surface, V2Button, V2Toggle } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState } from '@/v2/ui/primitives';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
-import { useMyGameDays, useUpdateGameDay, useSetGameDaysLineControl } from '@/modules/games/hooks/useGameDays';
-import { lineControlTargets } from '@/modules/linecall/domain/lineControlTargets';
+import { useMyGameDays, useGameDayGames } from '@/modules/games/hooks/useGameDays';
+import { useGameDayLineCourts, useSaveGameDayLineCourts } from '@/modules/linecall/hooks/useGameDayLineCourts';
+import { canBeLineCamera, gameDayLineCourts, gameDayLinePage, lineCourtCopyPlan } from '@/modules/linecall/domain/gameDayLine';
 import { layoutById } from '@/modules/linecall/domain/cameraLayouts';
 import { todayISO } from '@/modules/arenas/domain/calendar';
+import LineCourtsBoard from '@/v2/components/linecall/LineCourtsBoard';
 import { t } from '@/core/i18n';
 
 export default function GameDayLineControlCard({ gameDay }) {
@@ -35,79 +41,81 @@ export default function GameDayLineControlCard({ gameDay }) {
 function LineControlCard({ gameDay }) {
   const { user } = useAuth();
   const { podeConfigurarLinhas: podeConfigurar } = useGameDayRoles(gameDay);
-  const update = useUpdateGameDay();
-  const setMany = useSetGameDaysLineControl();
-  // Só quem pode ligar precisa da lista dos próprios dias (para "todos").
+  const quadras = useGameDayLineCourts(gameDay.id);
+  const jogos = useGameDayGames(gameDay.id);
+  const salvar = useSaveGameDayLineCourts();
+  // Só quem configura precisa da lista dos próprios dias (para copiar).
   const meus = useMyGameDays({ enabled: podeConfigurar });
-  const on = gameDay.line_control === true;
+  const docs = Object.fromEntries((quadras.data || []).map((d) => [d.id, d]));
+  const courts = gameDayLineCourts(gameDay, { games: jogos.data || [], docs: quadras.data || [] });
+  const ligadas = courts.filter((c) => docs[c.id]?.line_control === true);
+  const algumaLigada = ligadas.length > 0;
 
-  if (!podeConfigurar && !on) return null;
+  if (!podeConfigurar && !algumaLigada) return null;
 
-  const abrir = (modo) => window.open(`/dia-de-jogo/${gameDay.id}/linhas?modo=${modo}`, '_blank', 'noopener,noreferrer');
-  const arranjo = layoutById(gameDay.line_control_layout);
+  // O resumo diz como está, quadra por quadra: abrir o cartão é para mudar.
+  const resumo = !quadras.isSuccess ? null
+    : !algumaLigada ? t('Desligado nas {total} quadra(s)', { total: courts.length })
+      : ligadas.map((c) => t('Quadra {n}: {cams} câmera(s)', {
+        n: c.index, cams: layoutById(docs[c.id]?.line_control_layout).positions.length,
+      })).join(' · ');
 
-  const alternar = (valor) => update.mutate(
-    { id: gameDay.id, patch: { line_control: valor } },
-    { onError: (e) => toast.error(e?.message || t('Não foi possível salvar.')) },
+  const gravar = (items, ok) => salvar.mutate(
+    items.map((i) => ({ ...i, gameDayId: i.gameDayId || gameDay.id })),
+    {
+      onSuccess: (r) => {
+        if (r.failed) toast.error(t('{n} quadra(s) não foram salvas. Tente de novo.', { n: r.failed }));
+        else if (ok) ok(r);
+      },
+      onError: (e) => toast.error(e?.message || t('Não foi possível salvar.')),
+    },
   );
 
-  const todos = (valor) => {
-    const ids = lineControlTargets(meus.data, user?.uid, valor, todayISO());
-    if (!ids.length) {
-      toast.info(t('Seus próximos dias de jogo já estão assim.'));
+  const copiar = () => {
+    const plano = lineCourtCopyPlan(gameDay, quadras.data || [], meus.data, user?.uid, todayISO());
+    const items = plano.flatMap((p) => p.courts.map((c) => ({ gameDayId: p.gameDayId, courtId: c.id, patch: c.patch })));
+    if (!items.length) {
+      toast.info(t('Você não tem outros dias de jogo de hoje em diante.'));
       return;
     }
-    setMany.mutate({ ids, on: valor }, {
-      onSuccess: (n) => toast.success(t('Controle de linhas atualizado em {n} dia(s) de jogo.', { n })),
-      onError: (e) => toast.error(e?.message || t('Não foi possível salvar.')),
-    });
+    gravar(items, () => toast.success(t('Controle de linhas copiado para {n} dia(s) de jogo.', { n: plano.length })));
   };
 
   return (
-    <V2Surface className="space-y-3 p-4">
-      <div className="flex items-start gap-3">
-        <ScanLine className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
-        <div className="min-w-0 flex-1">
-          {podeConfigurar ? (
-            <V2Toggle
-              id={`linhas-${gameDay.id}`}
-              checked={on}
-              disabled={update.isPending}
-              onChange={alternar}
-              label={t('Controle de linhas por câmera')}
-              hint={t('A câmera marca se a bola quicou dentro ou fora e se houve pé na cozinha no voleio. Pode ligar com o jogo em andamento.')}
-            />
-          ) : (
-            <>
-              <p className="text-sm font-semibold text-ink">{t('Controle de linhas ligado')}</p>
-              <p className="text-xs leading-5 text-gray-500">{t('As câmeras acompanham as linhas deste jogo. Quem participa pode usar o próprio celular como uma delas. Na dúvida, a câmera diz "revisar" e a decisão volta para a quadra.')}</p>
-            </>
-          )}
-        </div>
+    <V2CollapsibleCard
+      icon={ScanLine}
+      title={t('Controle de linhas por câmera')}
+      summary={resumo}
+      dica="dia-linhas"
+      sectionId={GAME_DAY_SECTION.LINE_CONTROL}
+      defaultCollapsed={podeConfigurar}
+    >
+      <div className="space-y-3">
+      <p className="text-xs leading-5 text-gray-500">
+        {podeConfigurar
+          ? t('Ligue em cada quadra que vai ter câmera e escolha quantas câmeras ela usa — cada quadra pode ter um número diferente. As câmeras marcam bola fora, saque fora da área ou na cozinha, pé na cozinha no voleio, pé no saque e dois quiques. Pode ligar com o jogo em andamento.')
+          : t('As câmeras acompanham as linhas das quadras ligadas. Quem participa pode usar o próprio celular como uma delas. Na dúvida, a câmera diz "revisar" e a decisão volta para a quadra.')}
+      </p>
+      {quadras.isError ? (
+        <V2ErrorState inline onRetry={quadras.refetch} />
+      ) : quadras.isLoading ? null : (
+        <LineCourtsBoard
+          courts={courts}
+          docs={docs}
+          staff={podeConfigurar}
+          camera={canBeLineCamera(gameDay, user?.uid, podeConfigurar)}
+          pageFor={(id) => gameDayLinePage(gameDay.id, id)}
+          onSave={(items) => gravar(items)}
+          saving={salvar.isPending}
+          newTab
+        />
+      )}
+      {podeConfigurar && quadras.isSuccess && (
+        <V2Button size="sm" variant="ghost" disabled={salvar.isPending || !meus.isSuccess} onClick={copiar}>
+          <CopyCheck className="mr-1.5 h-4 w-4" /> {t('Copiar para os meus próximos dias de jogo')}
+        </V2Button>
+      )}
       </div>
-      {on && <p className="text-xs text-gray-500">{t('Arranjo: {l}', { l: t(arranjo.label) })}</p>}
-      <div className="flex flex-wrap gap-2">
-        {on && (
-          <>
-            <V2Button size="sm" onClick={() => abrir('camera')}>
-              <Camera className="mr-1.5 h-4 w-4" /> {t('Abrir câmera')}
-            </V2Button>
-            <V2Button size="sm" variant="secondary" onClick={() => abrir('central')}>
-              <MonitorPlay className="mr-1.5 h-4 w-4" /> {t('Abrir central')}
-            </V2Button>
-          </>
-        )}
-        {podeConfigurar && (
-          <>
-            <V2Button size="sm" variant="secondary" disabled={setMany.isPending || !meus.isSuccess} onClick={() => todos(true)}>
-              {t('Ligar em todos os meus jogos')}
-            </V2Button>
-            <V2Button size="sm" variant="ghost" disabled={setMany.isPending || !meus.isSuccess} onClick={() => todos(false)}>
-              {t('Desligar em todos')}
-            </V2Button>
-          </>
-        )}
-      </div>
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }

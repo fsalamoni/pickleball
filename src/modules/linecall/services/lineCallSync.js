@@ -1,17 +1,18 @@
 /**
- * O que as câmeras de um jogo dividem entre si — duas subcoleções do dia de
- * jogo, SEM vídeo nem foto:
+ * O que as câmeras de uma QUADRA dividem entre si — duas subcoleções embaixo
+ * da quadra (do dia de jogo ou do torneio), SEM vídeo nem foto:
  *
- * · `game_days/{id}/line_cams/{uid}_{posição}` — a câmera "no ar": quem é,
- *   em que posição, se está calibrada e analisando. Sinal de vida a cada
+ * · `…/line_cams/{uid}_{posição}` — a câmera "no ar": quem é, em que
+ *   posição, se está calibrada e analisando. Sinal de vida a cada
  *   `HEARTBEAT_MS`; ao sair, o aparelho apaga o próprio documento.
- * · `game_days/{id}/line_calls/{auto}` — cada marcação de cada câmera (tipo,
- *   veredito, margem, incerteza, ponto no chão, hora). A central junta
+ * · `…/line_calls/{auto}` — cada marcação de cada câmera (tipo, veredito,
+ *   motivo, margem, incerteza, ponto no chão, hora). A central junta
  *   (`domain/fusion.js`).
  *
- * A regra deixa gravar só quem organiza o dia ou participa dele, só com o
- * controle de linhas ligado no jogo, e só em nome próprio. Marcação não se
- * edita; quem organiza limpa.
+ * A regra deixa gravar só quem pode ser câmera (no dia de jogo, quem organiza
+ * ou participa; no torneio, a equipe), só com o controle ligado NAQUELA
+ * quadra, e só em nome próprio. Marcação não se edita; quem organiza decide e
+ * limpa.
  */
 
 import {
@@ -22,9 +23,10 @@ import { db } from '@/core/config/firebase';
 export const HEARTBEAT_MS = 15000;
 
 /**
- * Onde moram as câmeras e as marcações. O "anfitrião" é o id de um dia de jogo
- * (`game_days/{id}`) ou o caminho de uma quadra de torneio
- * (`tournament_line_courts/{torneio}_{quadra}`, ver `domain/tournamentLine.js`).
+ * Onde moram as câmeras e as marcações: o caminho da quadra —
+ * `game_days/{id}/line_courts/court-N` (`domain/gameDayLine.js`) ou
+ * `tournament_line_courts/{torneio}_{quadra}` (`domain/tournamentLine.js`).
+ * Um id sem barra é o dia de jogo antigo, de antes do controle por quadra.
  */
 export const hostPath = (host) => (String(host).includes('/') ? String(host) : `game_days/${host}`);
 const camsCol = (host) => collection(db, hostPath(host), 'line_cams');
@@ -72,6 +74,7 @@ export function postLineCall(gameDayId, { uid, position, event, tMs }) {
     position,
     kind: event.type,
     call: event.call,
+    reason: typeof event.reason === 'string' ? event.reason.slice(0, 12) : null,
     t_ms: Math.round(tMs),
     margin_m: num(event.marginM),
     uncertainty_m: num(event.uncertaintyM),

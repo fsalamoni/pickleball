@@ -1610,15 +1610,22 @@ const ATLETA = {
       id: 'controle-de-linhas',
       flags: ['line_control'],
       title: tk('Controle de linhas por câmera'),
-      summary: tk('Uma ou várias câmeras (celular, webcam, câmera de ação) marcam se a bola quicou dentro ou fora e se houve pé na cozinha no voleio.'),
+      summary: tk('Uma ou várias câmeras por quadra (celular, webcam, câmera de ação) marcam bola fora, saque curto ou na área errada, pé na cozinha no voleio, pé no saque e os dois quiques.'),
       keywords: [
         'câmera', 'linha', 'fora', 'dentro', 'cozinha', 'pé na cozinha', 'voleio', 'arbitragem',
         'celular', 'webcam', 'gopro', 'tripé', 'calibrar', 'central', 'revisar',
-        'replay', 'saque', 'telão', 'planilha',
+        'replay', 'saque', 'telão', 'planilha', 'quadra', 'pé no saque', 'dois quiques', 'saque curto', 'torneio',
       ],
-      guias: ['controle-de-linhas-camera', 'controle-de-linhas-central'],
+      guias: ['controle-de-linhas-quadras', 'controle-de-linhas-camera', 'controle-de-linhas-central'],
       blocks: [
-        p(tk('Quem organiza o dia de jogo liga o "Controle de linhas por câmera" no cartão do dia (num jogo, ou em todos os seus, até com o jogo em andamento). Depois, cada aparelho que vai filmar abre o dia, toca em "Abrir câmera" e escolhe a posição. A central junta o que todas as câmeras viram e mostra cada lance.')),
+        p(tk('Quem organiza o dia de jogo (ou o torneio) liga o "Controle de linhas por câmera" QUADRA POR QUADRA, no cartão do dia — até com o jogo em andamento. Cada quadra escolhe quantas câmeras usa: uma pode ter uma câmera e a do lado, cinco. Depois, cada aparelho que vai filmar toca em "Abrir câmera" na quadra dele e escolhe a posição. A central de cada quadra junta o que as câmeras dela viram e mostra cada lance.')),
+        list(
+          tk('FORA — longa (passou da linha de fundo) ou lateral. Bola que toca a linha é dentro: a câmera mede a borda da marca que a bola deixa no chão.'),
+          tk('SAQUE — tem de passar a rede e cair na área em diagonal, além da cozinha. Na linha da cozinha é CURTO (fora); na linha de fundo, na lateral ou na central da área, é dentro.'),
+          tk('PÉ NA COZINHA — no voleio, pé na cozinha ou na linha dela, no golpe ou no impulso logo depois (mesmo com a bola já morta). E quem estava na cozinha precisa firmar os dois pés fora dela antes de volear.'),
+          tk('PÉ NO SAQUE — no instante do saque, ao menos um pé no chão atrás da linha de fundo, sem tocar nela, e entre as extensões da lateral e da linha central.'),
+          tk('DOIS QUIQUES — a devolução do saque e a 3ª bola têm de quicar antes de serem batidas. A câmera só marca quando viu todas as batidas do ponto.'),
+        ),
         list(
           tk('QUANTAS CÂMERAS — de 1 a 5. Para começar, uma câmera no FUNDO, atrás da linha de fundo, no alto. Com duas, a melhor dupla é fundo + LATERAL DA REDE (a lateral é a que melhor vê o pé na cozinha). Com quatro, os dois fundos + as duas laterais da rede.'),
           tk('CÂMERA DE CIMA (no centro, apontando para baixo) — ótima para ONDE a bola caiu, mas precisa de 7 a 9 m de altura (ou 4 a 5 m com lente grande-angular linear), não vê bem o momento do quique e não julga o pé na cozinha. Use como complemento.'),
@@ -1639,7 +1646,7 @@ const ATLETA = {
           tk('SAQUE — com o detector de pés ligado, o primeiro quique depois do saque é julgado pela área de saque em diagonal: bola na linha da cozinha, no saque, é fora.'),
           tk('BOLA NA LINHA É DENTRO — a câmera mede a marca que a bola deixa no chão; se ela toca a linha, é dentro.'),
           tk('PALAVRA FINAL — na central, quem organiza decide os lances "Revisar" (ou corrige qualquer um). O que as câmeras marcaram não muda; a decisão fica ao lado.'),
-          tk('VOZ E TELÃO — "Falar o lance" anuncia "Fora!" em voz alta e vibra o aparelho; o telão do dia de jogo mostra o último lance no canto. A central baixa a planilha do jogo.'),
+          tk('VOZ E TELÃO — "Falar o lance" anuncia só a falta ("Fora!", "Curta!", "Pé no saque!") e vibra o aparelho. No aparelho que filma, "revisar" fica calado, para não parar o ponto. O telão mostra o último lance de cada quadra ligada, e a central baixa a planilha da quadra.'),
         ),
         tip(tk('"Revisar" quer dizer que a distância até a linha é menor que a precisão da câmera, ou que as câmeras discordaram. Aí a decisão volta para a quadra, como sem câmera.')),
         warn(tk('A câmera ajuda; não substitui a regra do jogo. Câmera Wi-Fi não abre direto no navegador (use o OBS Studio com a "Câmera virtual" num computador) e Bluetooth não transmite vídeo.')),
@@ -2786,6 +2793,8 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   // --- torneio (do mais específico ao mais genérico) -----------------------
   { pattern: '/torneios/criar', label: tk('criar um torneio'),
     refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.START, 'nivelamento']] },
+  { pattern: '/torneios/*/linhas', label: tk('o controle de linhas'),
+    refs: [[HELP_SECTION.ATHLETE, 'controle-de-linhas'], [HELP_SECTION.ATHLETE, 'controle-de-linhas-montagem']] },
   { pattern: '/torneios/*/gerenciar', label: tk('gerenciar o torneio'),
     refs: [
       [HELP_SECTION.ATHLETE, 'organizar-torneio'],

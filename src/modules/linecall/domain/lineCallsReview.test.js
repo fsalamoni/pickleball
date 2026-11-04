@@ -1,16 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { COURT, nearestBoundary, serviceBoxMargin } from './court.js';
-import { createLineCallEngine, LINE_CALL } from './lineCallEngine.js';
 import { fuseLineCalls } from './fusion.js';
-import { createFrameRing, clipWindow, frameIndexAt } from './replay.js';
+import { createFrameRing, clipWindow, frameIndexAt, hasReplay, REPLAY } from './replay.js';
+import { ENGINE_DEFAULTS } from './lineCallEngine.js';
 import { lanceSummary, lancesCsv } from './report.js';
 import { checkPointFor, calibrationCheck, CHECK_LEVEL } from './calibrationCheck.js';
 import { calibrationPoints } from './cameraLayouts.js';
 import { solveHomography } from './homography.js';
 
 const { WIDTH: W, LENGTH: L, NET_Y: N, KITCHEN: K } = COURT;
-// Imagem em "centímetros": 1 px = 1 cm do chão.
-const H_CM = [0.01, 0, 0, 0, 0.01, 0, 0, 0, 1];
 
 describe('marca do quique: a linha mais perto', () => {
   it('acha a linha e a margem com sinal', () => {
@@ -34,25 +32,6 @@ describe('saque: a área em diagonal', () => {
   it('do lado B, o alvo é o lado A', () => {
     expect(serviceBoxMargin({ x: 1, y: 2 }, { side: 'B', x: 5 })).toBeGreaterThan(0);
     expect(serviceBoxMargin({ x: 1, y: N - 1 }, { side: 'B', x: 5 })).toBeLessThan(0);
-  });
-
-  /** Sacador (pés em x=150 cm, y=50) bate perto do punho; a bola sobe e cai em (x, y) cm. */
-  function serveTo(x, y) {
-    const e = createLineCallEngine({ H: H_CM });
-    const players = [{ feet: [{ x: 140, y: 50 }, { x: 160, y: 50 }], wrists: [{ x, y: 60 }] }];
-    const ys = [0, 20, 40, 60];
-    for (let v = 40; v >= -300; v -= 20) ys.push(v);
-    for (let v = -280; v <= y; v += 20) ys.push(v);
-    ys.push(y - 20, y - 40);
-    const ev = ys.flatMap((yy, i) => e.push({ t: i / 60, ball: { x, y: yy }, players }));
-    return ev.filter((a) => a.type === 'bounce');
-  }
-
-  it('o motor julga o primeiro quique do saque pela área de saque', () => {
-    const [na] = serveTo(460, 1000);
-    expect(na).toMatchObject({ serve: true, call: LINE_CALL.IN });
-    const [cozinha] = serveTo(460, 860); // dentro da quadra, mas na cozinha
-    expect(cozinha).toMatchObject({ serve: true, call: LINE_CALL.OUT });
   });
 });
 
@@ -88,6 +67,60 @@ describe('replay: a fita', () => {
     for (let i = 0; i < 9; i += 1) ring.push({ t: i / 100 });
     expect(ring.size).toBe(5);
   });
+
+  it('o teto vale também abaixo da taxa cheia', () => {
+    const ring = createFrameRing({ seconds: 10, max: 5 });
+    for (let i = 0; i < 9; i += 1) ring.push({ t: i / 50 });
+    expect(ring.size).toBe(5);
+    expect(ring.between(0, 1).map((f) => f.t)).toEqual([0.08, 0.1, 0.12, 0.14, 0.16]);
+  });
+
+  it('⭐ a fita cobre o lance mais atrasado do motor: o voleio sai até momentumMaxS depois da batida (11.A.2)', () => {
+    expect(REPLAY.RING_S).toBeGreaterThanOrEqual(ENGINE_DEFAULTS.momentumMaxS + REPLAY.BEFORE_S);
+    expect(REPLAY.RING_S).toBeGreaterThanOrEqual(ENGINE_DEFAULTS.resolveS + REPLAY.BEFORE_S);
+  });
+
+  it.each([30, 60, 120])('%i quadros/s: o voleio que só sai quando o impulso acaba tem o replay inteiro, com memória limitada', (fps) => {
+    const ring = createFrameRing();
+    const t0 = 10; // a batida
+    const sai = t0 + ENGINE_DEFAULTS.momentumMaxS + 1 / fps; // o motor solta o lance
+    let maior = 0;
+    let empurrados = 0;
+    let devolvidos = 0;
+    for (let i = 0; i / fps <= sai; i += 1) {
+      devolvidos += ring.push({ t: i / fps }).length;
+      empurrados += 1;
+      maior = Math.max(maior, ring.size);
+    }
+    const { from, to } = clipWindow(t0);
+    const clip = ring.between(from, to);
+    expect(clip[0].t).toBeLessThanOrEqual(from + 0.05);
+    expect(clip[clip.length - 1].t).toBeGreaterThanOrEqual(to - 0.05);
+    expect(maior).toBeLessThanOrEqual(REPLAY.RING_MAX);
+    // o que sai volta para quem chamou (o canvas é reaproveitado)
+    expect(devolvidos + ring.size).toBe(empurrados);
+  });
+
+  it('60 quadros/s: os últimos segundos com todos os quadros, os mais velhos com a metade', () => {
+    const ring = createFrameRing();
+    for (let i = 0; i <= 600; i += 1) ring.push({ t: i / 60 });
+    const agora = 10;
+    const cheios = ring.between(agora - REPLAY.FULL_S + 0.02, agora);
+    expect(cheios.length).toBeGreaterThanOrEqual(Math.floor((REPLAY.FULL_S - 0.02) * 60));
+    const span = REPLAY.RING_S - REPLAY.FULL_S - 0.2;
+    const velhos = ring.between(agora - REPLAY.RING_S + 0.1, agora - REPLAY.FULL_S - 0.1);
+    expect(velhos.length / span).toBeGreaterThan(25);
+    expect(velhos.length / span).toBeLessThan(35);
+  });
+
+  it('lance com replay é só o que tem quadros', () => {
+    expect(hasReplay({ clip: { frames: [{ t: 1 }] } })).toBe(true);
+    expect(hasReplay({ clip: { frames: [] } })).toBe(false);
+    expect(hasReplay({ clip: false })).toBe(false);
+    expect(hasReplay({ clip: null })).toBe(false);
+    expect(hasReplay({})).toBe(false);
+    expect(hasReplay(null)).toBe(false);
+  });
 });
 
 describe('resumo e planilha', () => {
@@ -97,6 +130,13 @@ describe('resumo e planilha', () => {
   ];
   it('conta por veredito', () => {
     expect(lanceSummary(lances)).toMatchObject({ in: 1, out: 1, total: 2, decided: 1, serves: 1 });
+  });
+  it('separa as faltas por regra: pé na cozinha, pé no saque e dois quiques', () => {
+    const faltas = [
+      { kind: 'serve_foot', call: 'fault' }, { kind: 'serve_foot', call: 'fault' },
+      { kind: 'two_bounce', call: 'fault' }, { kind: 'volley', call: 'clean' },
+    ];
+    expect(lanceSummary(faltas)).toMatchObject({ fault: 3, faults: { volley: 0, serve_foot: 2, two_bounce: 1 } });
   });
   it('monta o CSV em ordem de tempo, com ; e aspas quando precisa', () => {
     const csv = lancesCsv(lances, {

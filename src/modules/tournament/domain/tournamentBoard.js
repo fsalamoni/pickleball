@@ -27,9 +27,11 @@ export function categorizeBoardMatches(matches = [], opts = {}) {
   const recentLimit = Number.isFinite(opts.recentLimit) ? opts.recentLimit : 8;
   const list = Array.isArray(matches) ? matches : [];
 
+  // O agendamento grava `court` como NOME ("Quadra 2") e o número em `court_index`.
+  const courtNo = (m) => Number(m.court_index) || Number(m.court) || 999;
   const inProgress = list
     .filter((m) => m.status === MATCH_STATUS.IN_PROGRESS)
-    .sort((a, b) => (Number(a.court) || 999) - (Number(b.court) || 999));
+    .sort((a, b) => courtNo(a) - courtNo(b));
 
   const upcoming = list
     .filter((m) => m.status === MATCH_STATUS.SCHEDULED)

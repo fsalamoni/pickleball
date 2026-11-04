@@ -998,13 +998,6 @@ async function coletarDiasDeJogo(db, uid) {
       const p = patchGameSides(d.data(), uid, participantIds);
       if (p) itens.push({ ref: refDe(d), patch: p });
     });
-    // Controle de linhas (docs/53): a câmera e as marcações da pessoa são
-    // dados técnicos do jogo, sem valor de histórico — saem com a conta.
-    for (const sub of ['line_cams', 'line_calls']) {
-      // eslint-disable-next-line no-await-in-loop
-      const r = await pai.ref.collection(sub).where('uid', '==', uid).limit(QUERY_LIMIT).get();
-      r.docs.forEach((d) => deletes.push(d.ref));
-    }
   }
   return { itens, deletes, truncated: false };
 }
@@ -1151,26 +1144,35 @@ async function coletarForum(db, uid) {
 
 /** Ladder: não é consultável por uid; chega-se a ele pelas arenas dos torneios internos. */
 /**
- * Controle de linhas nas quadras de torneio (docs/53 §9): a câmera e as
- * marcações da pessoa saem com a conta. Só a equipe do torneio é câmera, então
- * basta olhar os torneios em que ela é admin.
+ * Controle de linhas (docs/53): a câmera e as marcações da pessoa são dados
+ * técnicos do jogo, sem valor de histórico — saem com a conta, em TODA quadra
+ * (do dia de jogo, `game_days/{id}/line_courts/…`; do torneio,
+ * `tournament_line_courts/…`; e o dia antigo, `game_days/{id}/…`). A busca é
+ * por grupo de coleção, pela uid: achar o pai pelas listas do dia ou da
+ * equipe deixava de fora quem filmou sem estar nelas (o gestor da arena, quem
+ * saiu do dia) — e a câmera guarda o nome. Precisa do índice de grupo de
+ * `uid` (`firestore.indexes.json` → `fieldOverrides`); sem ele a consulta
+ * falha e a parte sai INCOMPLETA, nunca "nada a apagar". Mais de
+ * `QUERY_LIMIT` por coleção também: a próxima rodada apaga o resto.
  */
-async function coletarLinhasDeTorneio(db, uid) {
-  const adm = await consultar(db, 'tournament_admins', 'user_id', '==', uid);
-  const tids = [...new Set(adm.docs.map((d) => d.data().tournament_id).filter(Boolean))];
+async function coletarLinhas(db, uid) {
   const deletes = [];
-  for (const tid of tids) {
-    // eslint-disable-next-line no-await-in-loop
-    const quadras = await db.collection('tournament_line_courts').where('tournament_id', '==', tid).limit(QUERY_LIMIT).get();
-    for (const q of quadras.docs) {
-      for (const sub of ['line_cams', 'line_calls']) {
-        // eslint-disable-next-line no-await-in-loop
-        const r = await q.ref.collection(sub).where('uid', '==', uid).limit(QUERY_LIMIT).get();
-        r.docs.forEach((d) => deletes.push(d.ref));
-      }
+  let truncated = false;
+  const consultas = [
+    () => db.collectionGroup('line_cams').where('uid', '==', uid),
+    () => db.collectionGroup('line_calls').where('uid', '==', uid),
+  ];
+  for (const consulta of consultas) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const snap = await consulta().limit(QUERY_LIMIT + 1).get();
+      snap.docs.slice(0, QUERY_LIMIT).forEach((d) => deletes.push(d.ref));
+      if (snap.size > QUERY_LIMIT) truncated = true;
+    } catch {
+      truncated = true;
     }
   }
-  return { itens: [], deletes, truncated: adm.truncated };
+  return { itens: [], deletes, truncated };
 }
 
 async function coletarLadders(db, uid) {
@@ -1515,7 +1517,7 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Eventos de clube e partidas', collect: coletarEventosDeClube, deleteLabel: 'Presenças em data de evento' },
   { label: 'Torneios internos de arena', col: 'arena_internal_tournaments', wheres: [['participants', 'array-contains']], patch: patchInternalTournament },
   { label: 'Ladder de arena', collect: coletarLadders },
-  { label: 'Câmeras do controle de linhas em torneio', collect: coletarLinhasDeTorneio, deleteLabel: 'Câmeras e marcações de linha em torneio' },
+  { label: 'Câmeras do controle de linhas', collect: coletarLinhas, deleteLabel: 'Câmeras e marcações do controle de linhas' },
   { label: 'Ranking de duplas', col: 'doubles_rankings', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },
   { label: 'Rating de dupla de clube', col: 'club_internal_doubles_ratings', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },
   { label: 'Rating de dupla de clube (detalhe)', col: 'club_internal_doubles_ratings_ext', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },

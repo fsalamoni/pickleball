@@ -67,6 +67,77 @@ export function invertHomography(H) {
   ];
 }
 
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+/**
+ * Onde a câmera ESTÁ — o ponto no chão embaixo dela e a ALTURA, em metros —,
+ * tirado da própria calibração (os quatro pontos), supondo uma câmera comum:
+ * pixel quadrado e centro óptico no meio da imagem (celular, webcam, câmera de
+ * ação em modo linear). A distância focal sai das duas condições de uma
+ * rotação (os eixos do chão são perpendiculares e do mesmo tamanho na
+ * câmera), por mínimos quadrados.
+ *
+ * Serve para corrigir o que NÃO está no chão: no quique o centro da bola está
+ * 3,7 cm acima do piso, e projetá-lo como se estivesse no chão joga o ponto
+ * para LONGE da câmera — 15 cm no fundo mais distante, com a câmera a 4 m de
+ * altura atrás do outro fundo. Ver `liftToGround`.
+ *
+ * Câmera quase de cima para baixo não tem perspectiva para isso: devolve
+ * `null`, e quem usa soma a dúvida na incerteza.
+ *
+ * @param {number[]} H imagem → quadra
+ * @param {{ w: number, h: number }} size a imagem, em pixels
+ * @returns {{ x: number, y: number, z: number, f: number }|null}
+ */
+export function estimateCamera(H, size) {
+  if (!H || !(size?.w > 0) || !(size?.h > 0)) return null;
+  const G = invertHomography(H); // quadra → imagem
+  if (!G) return null;
+  const cx = size.w / 2;
+  const cy = size.h / 2;
+  // Colunas de T·G, com T levando o centro da imagem à origem.
+  const col = (j) => [G[j] - cx * G[6 + j], G[3 + j] - cy * G[6 + j], G[6 + j]];
+  const g1 = col(0);
+  const g2 = col(1);
+  const g3 = col(2);
+  // r1 ⟂ r2 e |r1| = |r2|: duas equações lineares em w = 1/f².
+  const A1 = g1[0] * g2[0] + g1[1] * g2[1];
+  const B1 = g1[2] * g2[2];
+  const A2 = g1[0] ** 2 + g1[1] ** 2 - g2[0] ** 2 - g2[1] ** 2;
+  const B2 = g1[2] ** 2 - g2[2] ** 2;
+  const den = A1 * A1 + A2 * A2;
+  if (!(den > 0)) return null;
+  const w = -(A1 * B1 + A2 * B2) / den;
+  if (!(w > 0)) return null;
+  const f = 1 / Math.sqrt(w);
+  // Lente de 10° a 120° na horizontal; fora disso a conta não é de câmera.
+  if (f < 0.29 * size.w || f > 5.7 * size.w) return null;
+  const r1 = [g1[0] / f, g1[1] / f, g1[2]];
+  const r2 = [g2[0] / f, g2[1] / f, g2[2]];
+  const tv = [g3[0] / f, g3[1] / f, g3[2]];
+  const k = 2 / (Math.hypot(...r1) + Math.hypot(...r2));
+  const R1 = r1.map((v) => v * k);
+  const R2 = r2.map((v) => v * k);
+  const R3 = cross(R1, R2);
+  const t = tv.map((v) => v * k);
+  // C = −Rᵀt. Trocar o sinal da escala só troca o lado do chão (z).
+  const z = Math.abs(dot(R3, t));
+  if (!(z > 0.3 && z < 40)) return null;
+  return { x: -dot(R1, t), y: -dot(R2, t), z, f };
+}
+
+/**
+ * O ponto do CHÃO embaixo de algo que está a `heightM` do piso, a partir da
+ * projeção dele como se estivesse no chão (a reta da câmera até ele continua
+ * até o piso, além dele). Sem câmera conhecida, devolve o ponto como veio.
+ */
+export function liftToGround(p, cam, heightM) {
+  if (!cam || !(heightM > 0) || !(cam.z > heightM)) return p;
+  const k = 1 - heightM / cam.z;
+  return { x: cam.x + (p.x - cam.x) * k, y: cam.y + (p.y - cam.y) * k };
+}
+
 /**
  * Quantos METROS de chão cabem num pixel da imagem, naquele ponto. É o que
  * diz se a câmera enxerga a linha do fundo com detalhe suficiente: longe da
