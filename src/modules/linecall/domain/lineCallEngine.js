@@ -107,8 +107,11 @@
  * de avançar para a cozinha por `balanceS` (parada ou andando de lado) ou
  * recuar (`retreatM`), no mínimo `momentumS` e no máximo `momentumMaxS`, e
  * segue observando mesmo com a bola já morta (9.B.1). O pé que só chega à
- * cozinha depois de o outro lado bater de novo é REVISAR: pode ser o embalo,
- * pode ser a pessoa indo jogar a bola que vai quicar ali (o que vale).
+ * cozinha depois de o outro lado bater de novo espera a bola: se ela VOLTOU
+ * para o lado de quem voleou (quique ou batida de lá), é REVISAR — pode ser o
+ * embalo, pode ser a pessoa indo jogar a bola (o que vale); se não voltou (o
+ * ponto acabou lá, ou a "batida" era um quique atrás da rede que esta câmera
+ * leu como batida), segue falta.
  *
  * ## O que ele não julga
  *
@@ -610,8 +613,9 @@ export function createLineCallEngine({ H, options = {} }) {
     if (!h.track) return;
     const e = h.entry;
     const w = {
-      t0: h.t, hit: h, track: h.track, certain, img: h.img, point: null, closest: null,
+      t0: h.t, side: h.side || h.track.side || null, track: h.track, certain, img: h.img, point: null, closest: null,
       fault: null, near: null, seenS: 0, lastSeenT: null, progressRef: null, progressT: null, judged: false, provisional: h.provisional,
+      answered: false, late: false, back: false,
     };
     if (e) {
       const use = e.feet.filter((f) => f.seen && !f.hidden);
@@ -628,6 +632,19 @@ export function createLineCallEngine({ H, options = {} }) {
       else if (!w.fault && e.before.maybe && !w.near) w.near = { depth: null, u: null, reason: CALL_REASON.REENTRY };
     }
     watches.push(w);
+  }
+
+  /**
+   * Uma batida (ou um quique) do lado `side` com voleios em observação: a batida
+   * do outro lado é a devolução (`answered`); depois dela, o lance do lado de quem
+   * voleou diz que a bola VOLTOU para lá (`back`).
+   */
+  function answerWatches(side, isHit) {
+    if (!side) return;
+    watches.forEach((w) => {
+      if (side !== w.side) w.answered = w.answered || isHit;
+      else if (w.answered) w.back = true;
+    });
   }
 
   function watchEvent(w, call, extra = {}) {
@@ -665,10 +682,10 @@ export function createLineCallEngine({ H, options = {} }) {
             if (d >= u && (!w.fault || (w.fault.depth != null && d > w.fault.depth))) {
               if (!w.fault) {
                 w.fault = { depth: d, u, reason: CALL_REASON.MOMENTUM };
-                // O outro lado já bateu de novo: ainda é o embalo do voleio, ou a
-                // pessoa foi buscar a bola (entrar na cozinha para a bola que quica
-                // vale)? Revisar. Com a bola morta, sem batida nova, segue falta (9.B.1).
-                if (rally && rally.lastHit !== w.hit) w.certain = false;
+                // Só depois de o outro lado bater de novo: ainda é o embalo, ou a
+                // pessoa foi buscar a bola (entrar na cozinha para a bola que vai
+                // quicar vale)? Espera a bola dizer (abaixo).
+                w.late = w.answered;
               }
             } else if (d > -u && (!w.near || (w.near.depth != null && d > w.near.depth + (w.near.reason === CALL_REASON.CONTACT ? u / 2 : 0)))) {
               // o pé parado na linha oscila no detector: só é "embalo" se foi mais fundo de verdade
@@ -686,13 +703,25 @@ export function createLineCallEngine({ H, options = {} }) {
           w.retreated = w.retreated || out - w.closest >= o.retreatM;
         }
       }
+      const elapsed = t - w.t0;
+      if (w.late && !w.provisional) {
+        // A bola voltou para o lado de quem voleou (quique ou batida de lá): a
+        // pessoa pode ter ido buscá-la — REVISAR. Não voltou (o ponto acabou, ou
+        // nada em `momentumMaxS`): a "devolução" pode ter sido um quique atrás da
+        // rede lido como batida, e o embalo vale mesmo com a bola morta (11.A.2, 9.B.1).
+        if (w.back) { emit(finishWatch(w, true)); return; }
+        if (rally && elapsed < o.momentumMaxS) { keep.push(w); return; }
+        const ev = finishWatch(w);
+        emit(ev);
+        if (ev.call === VOLLEY_CALL.FAULT) endPoint();
+        return;
+      }
       // Falta certa sai na hora (se o voleio não está em dúvida).
       if (w.fault && w.certain && !w.provisional) {
         emit(finishWatch(w));
         endPoint();
         return;
       }
-      const elapsed = t - w.t0;
       // Sem avançar por `balanceS` — medido até o último quadro em que o pé foi
       // visto: o pé escondido não fecha o voleio sozinho.
       const settled = (w.progressT != null && w.lastSeenT - w.progressT >= o.balanceS) || w.retreated;
@@ -751,6 +780,7 @@ export function createLineCallEngine({ H, options = {} }) {
   function applyHit(h) {
     const side = h.track?.side || h.groundSide || h.side || null;
     h.side = side;
+    answerWatches(side, true);
     // Fora de jogo (antes do saque, ou ponto encerrado): só um saque começa. A
     // câmera que não vê o saque começa a acompanhar um tempo depois do ponto.
     if (!rally) {
@@ -851,6 +881,7 @@ export function createLineCallEngine({ H, options = {} }) {
 
   /** Alguém do lado `side` bateu sem esta câmera ver: o ponto segue, sem a certeza da sequência. */
   function missedHit(side) {
+    answerWatches(side, true);
     rally.phase = 'play';
     rally.lastHit = { side, t: null, inferred: true };
     if (rally.shot != null) rally.shot += 1;
@@ -867,6 +898,7 @@ export function createLineCallEngine({ H, options = {} }) {
     if (!rally) return; // fora de jogo: antes do saque não há marcação (7.D.4)
     const careful = (ev) => (soft && ev.call === LINE_CALL.OUT ? { ...ev, call: LINE_CALL.REVIEW } : ev);
     const bSide = courtSide(b.p);
+    answerWatches(bSide, false);
     if (rally.phase === 'serve') {
       const s = rally.serve;
       const boxHalf = s.half ? (s.half === 'low' ? 'high' : 'low') : null;
