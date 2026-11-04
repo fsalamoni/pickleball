@@ -1947,7 +1947,7 @@ const ATLETA = {
         p(tk('Os pódios de fora aparecem na estante de troféus, na aba "Fora da plataforma", com o cartão para compartilhar (com o rodapé "resultado declarado").')),
         link('/carreira', tk('Abrir a Minha carreira')),
         tip(tk('Só você vê a sua carreira: os torneios, as fotos e as anotações. Ninguém mais lê.')),
-        warn(tk('O resultado que você digita é declarado: ele nunca entra em ranking, rating nem XP. Evite fotos com o rosto de outras crianças.')),
+        warn(tk('O resultado que você digita é declarado: ele nunca entra em ranking, rating nem XP. Evite fotos com o rosto de crianças.')),
       ],
     },
     {

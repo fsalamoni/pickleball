@@ -13,6 +13,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCareerEvents } from '@/modules/career/hooks/useCareer';
+import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { careerTrophies, careerTrophyCounts } from '@/modules/career/domain/timeline.js';
 import { useTrophies } from '@/modules/trophies/hooks/useTrophies';
 import { groupTrophies, trophyContextId, TROPHY_KIND } from '@/modules/trophies/domain/trophies.js';
@@ -70,7 +71,7 @@ function TrofeuCard({ t: trofeu, onOpen, children }) {
           </span>
         </span>
         <span className="text-sm text-gray-500">
-          {trofeu.subtitle}{trofeu.date ? ` · ${dataPorExtenso(trofeu.date)}` : ''}
+          {trofeu.subtitle}{trofeu.dateLabel || trofeu.date ? ` · ${trofeu.dateLabel || dataPorExtenso(trofeu.date)}` : ''}
           {trofeu.record ? ` · ${t('{v} de {n} jogos', { v: trofeu.record.won, n: trofeu.record.played })}` : ''}
         </span>
         <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-ink"><Share2 className="h-3.5 w-3.5" /> {t('Ver o cartão')}</span>
@@ -91,7 +92,16 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
   // da própria pessoa. Contagens próprias; o `destaque` segue só o verificado.
   const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER) && mine;
   const foraQ = useCareerEvents({ enabled: carreiraOn });
-  const fora = useMemo(() => (carreiraOn && foraQ.isSuccess ? careerTrophies(foraQ.data, { me: { uid, name: nome || t('Você') } }) : []), [carreiraOn, foraQ.isSuccess, foraQ.data, uid, nome]);
+  // Os torneios em que joguei dão o selo "oficial" ao ligado pelo "É este" (o mesmo da linha do tempo).
+  const meusQ = useMyTournaments({ enabled: carreiraOn });
+  const meus = meusQ.isSuccess ? meusQ.data : undefined;
+  const fora = useMemo(() => {
+    if (!carreiraOn || !foraQ.isSuccess) return [];
+    // Ligado a um torneio cujo pódio já está na aba Torneios: não repete em "Fora".
+    const noPodio = new Set((q.data?.torneios || []).map((x) => x.tournamentId));
+    return careerTrophies(foraQ.data, { myTournaments: meus, me: { uid, name: nome || t('Você') } })
+      .filter((x) => !(x.seal === 'official' && noPodio.has(x.platformTournamentId)));
+  }, [carreiraOn, foraQ.isSuccess, foraQ.data, meus, q.data, uid, nome]);
   const foraConta = careerTrophyCounts(fora);
   const [aba, setAba] = useState(abaInicial);
   const [aberto, setAberto] = useState(null);
@@ -181,7 +191,7 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
             open
             onOpenChange={(v) => { if (!v) setAberto(null); }}
             places={[{ position: aberto.position, label: aberto.placeLabel, entries: [{ label: aberto.people.map((p) => p.name).join(' / '), people: aberto.people }] }]}
-            event={{ title: aberto.title, subtitle: aberto.subtitle, date: aberto.date, city: aberto.city, state: aberto.state, kind: aberto.kind, declared: aberto.declared === true }}
+            event={{ title: aberto.title, subtitle: aberto.subtitle, date: aberto.date, dateLabel: aberto.dateLabel || null, city: aberto.city, state: aberto.state, kind: aberto.kind, declared: aberto.declared === true }}
             // O de fora não tem página pública: o cartão sai sem link nem QR.
             link={aberto.kind === ABA_FORA ? null : aberto.publicLink || aberto.link}
             initialPosition={aberto.position}

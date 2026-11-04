@@ -23,7 +23,7 @@ import { usePublicFederations } from '@/modules/federations/hooks/useFederations
 import { prepareUpload } from '@/modules/training/services/mediaUploadService';
 import {
   CAREER_AGES, CAREER_FORMAT, CAREER_LIMITS, CAREER_STATUS, LEVEL_BRACKETS, PHOTO_KIND, PHOTO_KIND_LABEL, PLACEMENT, PLACEMENT_LABEL,
-  bestPosition, careerCompleteness, careerSeal, entryLabel, matchPlatformTournament,
+  bestPosition, careerCompleteness, careerSeal, entryLabel, matchPlatformTournament, withDerivedStatus,
 } from '@/modules/career/domain/careerEvent.js';
 import { careerTrophies } from '@/modules/career/domain/timeline.js';
 import { deleteCareerPhoto, uploadCareerPhoto } from '@/modules/career/services/careerService';
@@ -141,7 +141,7 @@ function Participacao({ entry, idx, onChange, onRemove }) {
 export default function CareerEventSheet({ event, open, onOpenChange, save, myTournaments, onRepeat }) {
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
-  const [f, setF] = useState(event);
+  const [f, setF] = useState(() => withDerivedStatus(event));
   const [busy, setBusy] = useState('');
   const [erro, setErro] = useState('');
   const [apagar, setApagar] = useState(false);
@@ -152,11 +152,11 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
   const fedOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const fedQ = usePublicFederations({ enabled: open && fedOn && Boolean(f?.federated) });
 
-  useEffect(() => { if (open) { setF(event); setErro(''); setApagar(false); } }, [open, event]);
+  useEffect(() => { if (open) { setF(withDerivedStatus(event)); setErro(''); setApagar(false); } }, [open, event]);
 
   const match = useMemo(() => (f && !naoE.split(',').includes(f.id) ? matchPlatformTournament(f, myTournaments) : null), [f, myTournaments, naoE]);
   const completude = f ? careerCompleteness(f) : null;
-  const trofeus = useMemo(() => (f ? careerTrophies([f], { me: { uid, name: userProfile?.platform_name || user?.displayName || t('Você'), photo_url: userProfile?.photo_url || null } }) : []), [f, uid, userProfile, user]);
+  const trofeus = useMemo(() => (f ? careerTrophies([f], { myTournaments, me: { uid, name: userProfile?.platform_name || user?.displayName || t('Você'), photo_url: userProfile?.photo_url || null } }) : []), [f, myTournaments, uid, userProfile, user]);
   if (!f) return null;
 
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
@@ -180,7 +180,7 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
   }
 
   async function porFoto(file) {
-    if (!file) return;
+    if (!file || (f.photos || []).length >= CAREER_LIMITS.photos) return;
     setBusy('foto');
     try {
       const pronto = await prepareUpload(file, LIMITES_FOTO);
@@ -188,7 +188,8 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
       const { path, url } = await uploadCareerPhoto(uid, pronto.file);
       const kind = bestPosition(f) ? 'medal' : 'podium';
       const foto = { path, url, kind, alt: `${t(PHOTO_KIND_LABEL[kind])} — ${f.name}` };
-      await gravar({ ...f, photos: [...(f.photos || []), foto] }, t('Foto guardada.'));
+      // Sem o documento que aponta para ela, a foto ficaria órfã no Storage.
+      if (!(await gravar({ ...f, photos: [...(f.photos || []), foto] }, t('Foto guardada.')))) deleteCareerPhoto(path);
     } catch (err) {
       toast.error(err?.message || t('Não foi possível enviar a foto. Confira a conexão e tente de novo.'));
     } finally {
@@ -341,7 +342,7 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
         </Camada>
 
         <Camada n={2} titulo={t('Foto')} dica="carreira-foto">
-          <p className="text-xs text-gray-500">{t('A medalha, o pódio ou a chave. Até 6 fotos, só você vê. Evite fotos com o rosto de outras crianças.')}</p>
+          <p className="text-xs text-gray-500">{t('A medalha, o pódio ou a chave. Até 6 fotos, só você vê. Evite fotos com o rosto de crianças.')}</p>
           {fotos.length > 0 && (
             <ul className="grid gap-3 sm:grid-cols-2">
               {fotos.map((p) => (
@@ -399,7 +400,7 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
             onOpenChange={(v) => { if (!v) setCartao(false); }}
             places={[1, 2, 3].map((p) => trofeus.find((tr) => tr.position === p)).filter(Boolean)
               .map((tr) => ({ position: tr.position, label: tr.placeLabel, entries: [{ label: tr.people.map((x) => x.name).join(' / '), people: tr.people }] }))}
-            event={{ title: f.name, subtitle: trofeus[0].subtitle, date: trofeus[0].date, city: f.city, state: f.state, kind: 'fora', declared: true }}
+            event={{ title: f.name, subtitle: trofeus[0].subtitle, date: trofeus[0].date, dateLabel: trofeus[0].dateLabel, city: f.city, state: f.state, kind: 'fora', declared: trofeus[0].declared }}
             link={null}
             initialPosition={trofeus[0].position}
           />

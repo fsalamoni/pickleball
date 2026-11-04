@@ -106,4 +106,31 @@ describe('troféus de fora', () => {
     expect(tr[0].people.map((p) => p.name)).toEqual(['Eu', 'Ana']);
     expect(careerTrophyCounts(tr)).toEqual({ ouro: 1, prata: 0, bronze: 0, total: 1 });
   });
+  it('só o ano conhecido (modo lista): o rótulo é o ano, nunca "1º de janeiro"', () => {
+    const [tr] = careerTrophies([fora({ start_date: '2019-01-01', date_precision: 'year' })]);
+    expect(tr.dateLabel).toBe('2019');
+    expect(careerTrophies([fora()])[0].dateLabel).toBeNull();
+  });
+});
+
+describe('torneio ligado pelo "É este" e torneio de teste', () => {
+  it('⭐ o chancelado ligado aparece UMA vez (os pontos não viram item de federação)', () => {
+    const tl = buildCareerTimeline({
+      today: HOJE,
+      career: [fora({ platform_tournament_id: 't1' })],
+      tournaments: [{ id: 't1', name: 'Open Sul', starts_at: '2025-05-10', is_player: true, status: 'finished', visibility: 'public' }],
+      trophies: { torneios: [], diasDeJogo: [] },
+      gameDayGames: [],
+      federationPoints: [{ id: 'p1', tournament_id: 't1', date: '2025-05-10', points: 100, position: 1 }],
+    });
+    expect(tl.total).toBe(1);
+    expect(tl.seasons[0].items[0]).toMatchObject({ source: TIMELINE_SOURCE.CAREER, seal: 'official' });
+  });
+  it('torneio rascunho em que me inscrevi não entra como oficial', () => {
+    const tl = buildCareerTimeline({
+      today: HOJE, career: [], trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: [], federationPoints: [],
+      tournaments: [{ id: 't2', name: 'Teste', starts_at: '2026-01-10', is_player: true, status: 'draft' }],
+    });
+    expect(tl.total).toBe(0);
+  });
 });

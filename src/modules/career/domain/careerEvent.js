@@ -20,7 +20,9 @@ import { normalizeLocality } from '@/core/domain/locality.js';
 import { isBrazilUF } from '@/core/domain/ufs.js';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { addDays, isISODate, toISODate, todayLocal } from '@/modules/training/domain/dates.js';
-import { AGE_CATEGORY, AGE_CATEGORY_LABELS, GENDER_CATEGORY } from '@/modules/tournament/domain/constants.js';
+import {
+  AGE_CATEGORY, AGE_CATEGORY_LABELS, GENDER_CATEGORY, TOURNAMENT_STATUS, TOURNAMENT_VISIBILITY,
+} from '@/modules/tournament/domain/constants.js';
 
 export const CAREER_EVENTS = 'career_events';
 
@@ -141,6 +143,16 @@ export function normalizePhoto(raw = {}, uid = null) {
 export function deriveCareerStatus(startDate, { current = null, today = todayLocal() } = {}) {
   if (current === CAREER_STATUS.CANCELLED) return CAREER_STATUS.CANCELLED;
   return isISODate(startDate) && startDate > today ? CAREER_STATUS.PLANNED : CAREER_STATUS.PLAYED;
+}
+
+/**
+ * O evento com o status de HOJE: o gravado é o do dia em que se salvou, e o
+ * planejado cuja data passou é jogado. Aplicado na leitura (`listCareerEvents`).
+ */
+export function withDerivedStatus(ev, today = todayLocal()) {
+  if (!ev) return ev;
+  const status = deriveCareerStatus(ev.start_date, { current: ev.status, today });
+  return status === ev.status ? ev : { ...ev, status };
 }
 
 /**
@@ -287,7 +299,7 @@ const distanciaDias = (a, b) => Math.round(Math.abs(instanteDoDiaEmMs(a) - insta
 export function matchPlatformTournament(event, myTournaments) {
   if (!event || !Array.isArray(myTournaments) || event.date_precision === 'year') return null;
   if (event.platform_tournament_id) return null;
-  const candidatos = myTournaments.filter((tt) => tt && tt.is_player).map((tt) => {
+  const candidatos = myTournaments.filter(isCareerPlatformTournament).map((tt) => {
     const dia = diaLocal(tt.starts_at) || diaLocal(tt.start_date);
     if (!dia || !isISODate(event.start_date)) return null;
     const dist = distanciaDias(dia, event.start_date);
@@ -300,10 +312,18 @@ export function matchPlatformTournament(event, myTournaments) {
   return candidatos[0]?.tournament || null;
 }
 
+/**
+ * Torneio da plataforma que conta como JOGADO na carreira: a pessoa jogou e
+ * ele não é rascunho (ambiente de teste) nem privado. Cancelado fica (aparece riscado).
+ */
+export function isCareerPlatformTournament(tt) {
+  return Boolean(tt && tt.is_player && tt.status !== TOURNAMENT_STATUS.DRAFT && tt.visibility !== TOURNAMENT_VISIBILITY.PRIVATE);
+}
+
 /** O selo "oficial" só vale com o torneio na lista de quem JOGOU. */
 export function isOfficialLink(event, myTournaments) {
   if (!event?.platform_tournament_id || !Array.isArray(myTournaments)) return false;
-  return myTournaments.some((tt) => tt?.id === event.platform_tournament_id && tt.is_player);
+  return myTournaments.some((tt) => tt?.id === event.platform_tournament_id && isCareerPlatformTournament(tt));
 }
 
 /** Selo derivado (nunca gravado): `official` ou `declared`. O da dupla é do PR 3. */
@@ -350,8 +370,9 @@ export function listRowsToEvents(rows, { uid, today = todayLocal(), nowMs = Date
 /** "7 de ~20 registrados": `null` sem a estimativa da pessoa. */
 export function registeredProgress(events, estimate) {
   const total = Math.round(Number(estimate));
-  if (!Number.isFinite(total) || total <= 0) return null;
-  const feitos = (events || []).filter((e) => e.status === CAREER_STATUS.PLAYED).length;
+  // Lista que não carregou não vira "0 de ~N".
+  if (!Array.isArray(events) || !Number.isFinite(total) || total <= 0) return null;
+  const feitos = events.filter((e) => e.status === CAREER_STATUS.PLAYED).length;
   return { done: feitos, estimate: total, complete: feitos >= total };
 }
 

@@ -14,7 +14,9 @@ import { db, storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { storageFileName } from '@/modules/training/domain/media.js';
 import { t } from '@/core/i18n';
-import { CAREER_EVENTS, newCareerEventId, normalizeCareerEvent } from '../domain/careerEvent.js';
+import {
+  CAREER_EVENTS, newCareerEventId, normalizeCareerEvent, withDerivedStatus,
+} from '../domain/careerEvent.js';
 
 export class CareerError extends Error {}
 
@@ -25,7 +27,8 @@ const porData = (a, b) => String(b.start_date).localeCompare(String(a.start_date
 export async function listCareerEvents(uid) {
   if (!db || !uid) return [];
   const snap = await getDocs(query(collection(db, CAREER_EVENTS), where('uid', '==', uid)));
-  return snap.docs.map(toDoc).sort(porData);
+  // O status gravado é o do dia em que se salvou: o planejado que passou vira jogado.
+  return snap.docs.map((d) => withDerivedStatus(toDoc(d))).sort(porData);
 }
 
 /**

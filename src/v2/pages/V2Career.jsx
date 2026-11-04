@@ -19,7 +19,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CAREER_TAB, careerTabFromParam } from '@/modules/career/domain/timeline.js';
 import { repeatEvent } from '@/modules/career/domain/careerEvent.js';
 import { useCareerSaveWithDraft, useCareerTimeline } from '@/modules/career/hooks/useCareer';
-import { V2Button, V2Page, V2PageIntro, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Page, V2PageIntro, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import CareerTimeline from '@/v2/components/career/CareerTimeline';
 import TrophyShelf, { ABA_FORA } from '@/v2/components/trophies/TrophyShelf';
@@ -111,14 +111,24 @@ function Carreira() {
           <CareerEventSheet
             open
             event={evento}
-            onOpenChange={(v) => { if (!v) fechar('evento'); }}
+            // A exclusão pode ter tirado um rascunho da fila: a faixa relê.
+            onOpenChange={(v) => { if (!v) { rascunho.refresh(); fechar('evento'); } }}
             save={rascunho.save}
             myTournaments={linhaDoTempo.myTournaments}
             onRepeat={(ev) => { setRepetir(repeatEvent(ev)); fechar('evento'); }}
           />
         )}
-        {lista && <CareerListMode open onOpenChange={(v) => { if (!v) fechar('lista'); }} events={linhaDoTempo.events} />}
+        {lista && <CareerListMode open onOpenChange={(v) => { if (!v) fechar('lista'); }} />}
       </Suspense>
+      {/* Link para a ficha com a lista falhando: dizer por que ela não abriu. */}
+      {eventoId && !evento && aba === CAREER_TAB.TIMELINE && !linhaDoTempo.isPending && linhaDoTempo.events === undefined && (
+        <V2ErrorState
+          inline
+          title={t('Não deu para abrir a ficha deste torneio')}
+          description={t('Os torneios de fora não carregaram. A ficha continua lá — a conexão é que falhou.')}
+          onRetry={linhaDoTempo.retry}
+        />
+      )}
     </V2Page>
   );
 }

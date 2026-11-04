@@ -18,14 +18,29 @@ import {
   CAREER_PENDING_PREF, addPending, parsePending, removePending, serializePending,
 } from '../domain/draftQueue.js';
 import {
-  deleteCareerEvent, listCareerEvents, saveCareerEvent, saveCareerEventsBatch,
+  CareerError, deleteCareerEvent, listCareerEvents, saveCareerEvent, saveCareerEventsBatch,
 } from '../services/careerService.js';
 
 export const careerKeys = Object.freeze({
   all: ['career'],
   events: (uid) => ['career', 'events', uid],
-  officialPoints: (uid) => ['career', 'official-points', uid],
+  // A MESMA chave de `fedKeys.myPoints` (useFederations): um cache só para os
+  // pontos. Não importamos aquele arquivo para não puxar a federação inteira
+  // para a estante de troféus.
+  officialPoints: (uid) => ['federacoes', 'meus-pontos', uid],
 });
+
+/** Prazo para o servidor confirmar a gravação; passou, vale o rascunho no aparelho. */
+const PRAZO_GRAVACAO_MS = 8000;
+const PRAZO = Symbol('prazo');
+/** O `setDoc` com sinal ruim (mas `navigator.onLine`) não falha: fica esperando. */
+function comPrazo(promessa, ms = PRAZO_GRAVACAO_MS) {
+  let timer;
+  const prazo = new Promise((resolve) => { timer = setTimeout(() => resolve(PRAZO), ms); });
+  return Promise.race([promessa, prazo]).finally(() => clearTimeout(timer));
+}
+/** Erro que não melhora com o tempo (regra recusou, dado inválido): o rascunho sai da fila. */
+const erroDefinitivo = (err) => err?.code === 'permission-denied' || err instanceof CareerError;
 
 /** Os torneios de fora da pessoa logada. */
 export function useCareerEvents({ enabled = true } = {}) {
@@ -58,7 +73,7 @@ export function useCareerTimeline({ enabled = true } = {}) {
   const uid = user?.uid;
   const careerQ = useCareerEvents({ enabled });
   // A mesma chave do início e da Minha área (cache compartilhado).
-  const tournamentsQ = useMyTournaments();
+  const tournamentsQ = useMyTournaments({ enabled });
   const trophiesQ = useTrophies(uid, { enabled });
   const gamesQ = usePublishedGameDayGames(uid, enabled);
   const pointsQ = useOfficialPoints(uid, enabled);
@@ -110,17 +125,36 @@ export function useSaveCareerBatch() {
   });
 }
 
-/** Apaga um torneio de fora (e as fotos dele). */
+/**
+ * Apaga um torneio de fora (e as fotos dele). Também o tira da fila do
+ * rascunho sem sinal — senão o próximo envio o recriaria. O que só existia na
+ * fila não tem documento: a regra recusa apagar o inexistente, e isso não é erro.
+ */
 export function useDeleteCareerEvent() {
+  const { user } = useAuth();
+  const uid = user?.uid || null;
   const invalidar = useInvalidar();
-  return useMutation({ mutationFn: (event) => deleteCareerEvent(event), onSuccess: invalidar });
+  return useMutation({
+    mutationFn: async (event) => {
+      const fila = parsePending(readViewPreference(uid, CAREER_PENDING_PREF));
+      const naFila = fila.some((x) => x.id === event?.id);
+      if (naFila) writeViewPreference(uid, CAREER_PENDING_PREF, serializePending(removePending(fila, [event.id])));
+      try {
+        await deleteCareerEvent(event);
+      } catch (err) {
+        if (!(naFila && err?.code === 'permission-denied')) throw err;
+      }
+    },
+    onSuccess: invalidar,
+  });
 }
 
 /**
  * Salvar com o rascunho sem sinal: o evento ganha o id definitivo, vai para a
- * fila do navegador e é gravado; deu certo, sai da fila. Sem conexão (ou se a
- * gravação falhar), fica guardado e é reenviado quando a conexão volta.
- * @returns {{ save: (input) => Promise<{ saved: boolean, event: object }>, pending: object[], flush: () => Promise<void> }}
+ * fila do navegador e é gravado; deu certo, sai da fila. Sem conexão (ou se o
+ * servidor não confirmar em 8 s), fica guardado e é reenviado quando a
+ * conexão volta. Erro definitivo (regra, dado inválido) tira da fila.
+ * @returns {{ save: (input) => Promise<{ saved: boolean, event: object }>, pending: object[], flush: () => Promise<void>, refresh: () => void }}
  */
 export function useCareerSaveWithDraft() {
   const { user } = useAuth();
@@ -130,37 +164,42 @@ export function useCareerSaveWithDraft() {
   const [pending, setPending] = useState(() => parsePending(readViewPreference(uid, CAREER_PENDING_PREF)));
   const enviando = useRef(false);
 
+  const ler = useCallback(() => parsePending(readViewPreference(uid, CAREER_PENDING_PREF)), [uid]);
   const guardar = useCallback((fila) => {
     writeViewPreference(uid, CAREER_PENDING_PREF, serializePending(fila));
     setPending(fila);
   }, [uid]);
+  /** Relê a fila (outra parte da tela — a exclusão — pode tê-la mudado). */
+  const refresh = useCallback(() => setPending(ler()), [ler]);
 
-  useEffect(() => { setPending(parsePending(readViewPreference(uid, CAREER_PENDING_PREF))); }, [uid]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const flush = useCallback(async () => {
     if (!uid || enviando.current) return;
-    const fila = parsePending(readViewPreference(uid, CAREER_PENDING_PREF));
+    const fila = ler();
     if (!fila.length) return;
     enviando.current = true;
-    const feitos = [];
+    const sair = [];
     try {
       for (const ev of fila) {
         try {
-          await saveCareerEvent(uid, ev);
-          feitos.push(ev.id);
-        } catch {
+          if (await comPrazo(saveCareerEvent(uid, ev)) === PRAZO) break;
+          sair.push(ev.id);
+        } catch (err) {
+          // Definitivo: não adianta reenviar, e travaria a fila inteira atrás dele.
+          if (erroDefinitivo(err)) { sair.push(ev.id); continue; }
           break;
         }
       }
     } finally {
       enviando.current = false;
     }
-    if (feitos.length) {
-      guardar(removePending(parsePending(readViewPreference(uid, CAREER_PENDING_PREF)), feitos));
+    if (sair.length) {
+      guardar(removePending(ler(), sair));
       invalidar();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid, guardar]);
+  }, [uid, ler, guardar]);
 
   useEffect(() => { if (online) flush(); }, [online, flush]);
 
@@ -168,23 +207,25 @@ export function useCareerSaveWithDraft() {
     const { valid, error } = normalizeCareerEvent(input, { uid });
     if (!valid) throw new Error(error);
     const event = { ...input, id: input.id || newCareerEventId(uid) };
-    guardar(addPending(parsePending(readViewPreference(uid, CAREER_PENDING_PREF)), event));
+    guardar(addPending(ler(), event));
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return { saved: false, event };
     try {
-      const gravado = await saveCareerEvent(uid, event);
-      guardar(removePending(parsePending(readViewPreference(uid, CAREER_PENDING_PREF)), [event.id]));
+      const gravado = await comPrazo(saveCareerEvent(uid, event));
+      // Sinal ruim com `onLine`: o servidor não confirmou a tempo — fica na fila.
+      if (gravado === PRAZO) return { saved: false, event };
+      guardar(removePending(ler(), [event.id]));
       invalidar();
       return { saved: true, event: gravado };
     } catch (err) {
       // Erro de conexão: fica na fila. Erro de regra (flag desligada) não melhora com o tempo.
-      if (err?.code === 'permission-denied') {
-        guardar(removePending(parsePending(readViewPreference(uid, CAREER_PENDING_PREF)), [event.id]));
+      if (erroDefinitivo(err)) {
+        guardar(removePending(ler(), [event.id]));
         throw err;
       }
       return { saved: false, event };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid, guardar]);
+  }, [uid, ler, guardar]);
 
-  return { save, pending, flush };
+  return { save, pending, flush, refresh };
 }

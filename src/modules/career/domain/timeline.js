@@ -16,7 +16,7 @@ import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { toISODate, todayLocal } from '@/modules/training/domain/dates.js';
 import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
 import {
-  CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, placementText,
+  CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, placementText,
 } from './careerEvent.js';
 
 /** Origem de um item. `fora` = declarado pela pessoa. Valor de `?origem=` (contrato). */
@@ -103,10 +103,12 @@ export function buildCareerTimeline(fontes = {}) {
 
   // Torneio de fora ligado ao da plataforma ("É este") com o selo oficial: aparece UMA vez.
   const ligados = new Set((fontes.career || []).filter((e) => careerSeal(e, myTournaments) === SEAL.OFFICIAL).map((e) => e.platform_tournament_id));
+  // Os pontos do torneio ligado também não viram um item "Federação" à parte.
+  ligados.forEach((id) => pontosPorTorneio.delete(id));
 
   (fontes.career || []).forEach((ev) => itens.push(itemDeFora(ev, myTournaments)));
 
-  (myTournaments || []).filter((tt) => tt && tt.is_player && !ligados.has(tt.id)).forEach((tt) => {
+  (myTournaments || []).filter((tt) => isCareerPlatformTournament(tt) && !ligados.has(tt.id)).forEach((tt) => {
     const data = dia(tt.starts_at) || dia(tt.start_date);
     if (!data) return;
     const podio = podioTorneio.get(tt.id);
@@ -274,6 +276,9 @@ export function careerTrophies(events, { myTournaments, me = null } = {}) {
         subtitle: entryLabel(en),
         date: instanteDoDiaEmMs(ev.start_date) || 0,
         datePrecision: ev.date_precision === 'year' ? 'year' : 'day',
+        // Só o ano é conhecido (modo lista): estante e cartão mostram o ano, nunca "1º de janeiro".
+        dateLabel: ev.date_precision === 'year' ? String(ev.start_date).slice(0, 4) : null,
+        platformTournamentId: ev.platform_tournament_id || null,
         city: ev.city || '', state: ev.state || '',
         people,
         declared: careerSeal(ev, myTournaments) !== SEAL.OFFICIAL,

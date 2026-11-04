@@ -14,7 +14,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { CAREER_FORMAT, CAREER_FORMAT_LABEL, CAREER_GENDER_LABEL, emptyListRow, listRowsToEvents, registeredProgress } from '@/modules/career/domain/careerEvent.js';
 import { CAREER_ESTIMATE_PREF } from '@/modules/career/domain/draftQueue.js';
-import { useSaveCareerBatch } from '@/modules/career/hooks/useCareer';
+import { useCareerEvents, useSaveCareerBatch } from '@/modules/career/hooks/useCareer';
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { MEDAL_CHOICES } from './careerUi';
 import { t } from '@/core/i18n';
@@ -32,10 +32,13 @@ export function useCareerEstimate() {
 const linhasIniciais = () => [emptyListRow(), emptyListRow()];
 
 /**
- * @param {{ open: boolean, onOpenChange: Function, events?: object[] }} props
+ * @param {{ open: boolean, onOpenChange: Function }} props
  */
-export default function CareerListMode({ open, onOpenChange, events }) {
+export default function CareerListMode({ open, onOpenChange }) {
   const { user } = useAuth();
+  // Consulta própria: aberto pela aba Conquistas, a linha do tempo não consulta.
+  const eventsQ = useCareerEvents({ enabled: open });
+  const events = eventsQ.isSuccess ? eventsQ.data : undefined;
   const estimativa = useCareerEstimate();
   const [quantos, setQuantos] = useState('');
   const [linhas, setLinhas] = useState(linhasIniciais);

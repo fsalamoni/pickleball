@@ -38,7 +38,7 @@ gravar (limites em `CAREER_LIMITS`).
 | `name` | string ≤ 120 | obrigatório |
 | `organizer`, `city`, `state` | string | `state` só UF válida |
 | `start_date`, `end_date` | `AAAA-MM-DD` | `date_precision`: `day` ou `year` (modo lista) |
-| `status` | `played` / `planned` / `cancelled` | derivado da data (`deriveCareerStatus`): futura ⇒ planejado |
+| `status` | `played` / `planned` / `cancelled` | derivado da data (`deriveCareerStatus`): futura ⇒ planejado. O gravado é o do dia em que se salvou; a LEITURA recalcula (`withDerivedStatus` em `listCareerEvents` e na ficha), então o planejado cuja data passou é jogado |
 | `entries[]` (≤ 6) | objeto | `format` (`singles`/`doubles`/`teams`), `gender` (`male`/`female`/`mixed`/`open`), `age`, `level_bracket`, `placement` (`champion`/`runner_up`/`third`/`semis`/`quarters`/`round_of_16`/`groups`/`other`), `placement_n`, `points_declared`, `partner { name, uid }` |
 | `federated`, `federation_id`, `federation_name`, `federation_acronym`, `stage_tier` | | federação do diretório (com a flag `federations`) ou texto livre |
 | `link` | `https://…` ≤ 300 | guardado, nunca aberto pela plataforma |
@@ -58,6 +58,12 @@ Só o dono lê, lista e apaga; cria só o dono, arquivo novo (`resource == null`
 (`{ imageMb: 3, videoEnabled: false }`), que reduz e recodifica a imagem — o
 que descarta EXIF/GPS (`docs/20-SEGURANCA-E-PRIVACIDADE/08` item 5). Até 6
 fotos por torneio; cada foto tem descrição (texto alternativo).
+
+⚠️ A regra do Storage **não lê o banco**, então a flag `athlete_career` não
+vale ali, e o teto de 6 fotos é do cliente — o mesmo limite do `treino/`. Com
+a flag desligada uma conta ainda consegue subir imagens < 3 MB na PRÓPRIA
+pasta (ninguém mais as lê; a exclusão de conta as apaga). A ficha apaga a
+foto enviada quando a gravação do documento falha (sem foto órfã).
 
 ### 2.3 `dupr_links.rating_points`
 
@@ -101,13 +107,18 @@ chave do início), os pódios (`useTrophies`), os dias de jogo publicados
 (`usePublishedGameDayGames`) e os pontos lançados pelas federações
 (`federation_points` por `uid`, leitura pública). Fonte que falhou é **dita**
 ("Não deu para carregar …", com Tentar de novo só nelas) e o vazio "Sua
-carreira começa aqui" só aparece quando nada falhou (`docs/27`).
+carreira começa aqui" só aparece quando nada falhou (`docs/27`). Só a aba
+aberta consulta: as cinco leituras levam `enabled` (por isso
+`useMyTournaments` aceita `{ enabled }`, padrão `true`).
 
 - Filtros na URL (`podios=1`, `federados=1`, `origem=fora|plataforma`).
 - "O que vem" (planejados), a divisória "Hoje" e uma seção por temporada —
   as temporadas fechadas nascem recolhidas.
 - Selo por item (`careerSeal`): **Oficial** (veio da plataforma, ou o torneio
   de fora ligado por "É este") ou **Declarado**. Ninguém digita o selo.
+- Torneio da plataforma conta só se a pessoa jogou e ele não é rascunho nem
+  privado (`isCareerPlatformTournament`); o ligado por "É este" aparece uma
+  vez só, sem repetir os pontos da federação num item à parte.
 
 ### 4.3 Registrar (`CareerQuickRegister`)
 
@@ -120,6 +131,10 @@ preenche nome, organizador, cidade e federação.
 **Sem sinal**: `useCareerSaveWithDraft` guarda o registro no aparelho
 (`v2:view:<uid>:carreira:pendentes`, até 20) e envia quando a conexão volta;
 a linha do tempo mostra quantos estão esperando, com "Enviar agora".
+O servidor tem 8 s para confirmar (`setDoc` com sinal ruim e `navigator.onLine`
+não falha — fica esperando); passou, vale "Guardado neste aparelho". Erro
+definitivo (regra recusou, dado inválido) tira o rascunho da fila em vez de
+travá-la, e excluir o torneio também o tira da fila.
 
 ### 4.4 A ficha (`CareerEventSheet`)
 
@@ -133,21 +148,26 @@ do jogo existir para a carreira (PR futuro).
 normalizado e a data com os torneios em que a pessoa jogou; confirmando,
 grava `platform_tournament_id` e o item aparece uma vez só, com selo
 oficial. "Não é" fica no aparelho (`carreira:nao-e`). Excluir pede dois
-toques e apaga as fotos junto.
+toques e apaga as fotos junto. Link `?evento=` com a lista falhando diz
+que a ficha não abriu (`V2ErrorState`), em vez de não fazer nada.
 
 ### 4.5 Vários de uma vez (`CareerListMode`)
 
 Para o passado: uma linha por torneio (ano, nome, formato, categoria,
 medalha), até 30, gravadas num lote (`writeBatch`). Pergunta antes "Quantos
 torneios você já jogou fora do PickleRush?" (estimativa no aparelho,
-`carreira:estimativa`, com "Agora não") e mostra "N de ~M registrados".
+`carreira:estimativa`, com "Agora não") e mostra "N de ~M registrados" —
+só com a lista carregada (consulta própria, também aberto da aba Conquistas).
 
 ### 4.6 Conquistas
 
 A aba abre a `TrophyShelf` na aba **"Fora da plataforma"** (`ABA_FORA`):
 os pódios declarados (`careerTrophies`), com selo "Declarado" e o cartão de
 compartilhar com o rodapé **"Resultado declarado"** (`MedalCard`,
-`event.declared`). Ver `docs/43-TROFEUS-E-CARTOES.md`.
+`event.declared`). O ligado por "É este" sai com selo Oficial e, se o pódio
+da plataforma já está na aba Torneios, não se repete aqui. Torneio do modo
+lista mostra só o ano (`dateLabel`), na estante e no cartão. Ver
+`docs/43-TROFEUS-E-CARTOES.md`.
 
 ## 5. Outros lugares
 
@@ -181,3 +201,15 @@ compartilhar com o rodapé **"Resultado declarado"** (`MedalCard`,
 Confirmação da dupla, balanço do torneio, desempenho, abas "Próximos" e
 "Metas", ranking da carreira, visão do professor, avisos pelo servidor, card
 no início, XP, vitrine pública e importação do DUPR.
+
+**Pendências registradas na revisão do PR 1:**
+
+- **Vitrine pública (antes dela)**: o selo Oficial confere só que a pessoa
+  JOGOU o torneio da plataforma; a colocação continua a declarada. Antes de
+  qualquer cartão público, a colocação do vínculo oficial tem de vir do pódio
+  (`modalityPodium`), ou o selo diz só "torneio da plataforma".
+- **PR 3 (dupla)**: a exclusão de conta apaga os `career_events` da pessoa,
+  mas não limpa `entries[].partner.uid` nos documentos de quem a escolheu
+  como dupla (hoje um uid solto num documento privado). Quando a dupla
+  passar a confirmar pelo uid, a exclusão (ou a unificação de contas) zera o
+  `partner.uid` e mantém o nome digitado.

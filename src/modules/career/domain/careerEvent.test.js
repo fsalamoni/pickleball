@@ -3,6 +3,7 @@ import {
   CAREER_LIMITS, CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, deriveCareerStatus, entryLabel,
   listRowsToEvents, matchPlatformTournament, newCareerEventId, normalizeCareerEvent, normalizeCareerLink,
   normalizeEntry, normalizePhoto, normalizeTournamentName, registeredProgress, repeatEvent, repeatableEvents,
+  withDerivedStatus,
 } from './careerEvent.js';
 
 const HOJE = '2026-11-04';
@@ -17,6 +18,14 @@ describe('status derivado da data local', () => {
   });
   it('cancelado fica cancelado', () => {
     expect(deriveCareerStatus('2027-01-01', { current: 'cancelled', today: HOJE })).toBe('cancelled');
+  });
+  it('⭐ na leitura: o gravado "planejado" cuja data passou é jogado (completa, entra na estante)', () => {
+    const ev = { id: 'x', status: 'planned', start_date: '2026-11-01', entries: [{ format: 'singles', placement: 'champion' }] };
+    const lido = withDerivedStatus(ev, HOJE);
+    expect(lido.status).toBe(CAREER_STATUS.PLAYED);
+    expect(careerCompleteness(lido)).not.toBeNull();
+    expect(withDerivedStatus({ ...ev, status: 'cancelled' }, HOJE).status).toBe('cancelled');
+    expect(withDerivedStatus({ ...ev, start_date: '2027-01-01' }, HOJE).status).toBe('planned');
   });
 });
 
@@ -151,6 +160,14 @@ describe('modo lista', () => {
   it('"7 de ~20": só com a estimativa', () => {
     expect(registeredProgress([{ status: 'played' }, { status: 'planned' }], 20)).toEqual({ done: 1, estimate: 20, complete: false });
     expect(registeredProgress([], null)).toBeNull();
+    // A lista que não carregou não vira "0 de ~20".
+    expect(registeredProgress(undefined, 20)).toBeNull();
+  });
+  it('torneio rascunho ou privado não dá selo oficial', () => {
+    const ev = { platform_tournament_id: 't1' };
+    expect(careerSeal(ev, [{ id: 't1', is_player: true, status: 'finished', visibility: 'public' }])).toBe('official');
+    expect(careerSeal(ev, [{ id: 't1', is_player: true, status: 'draft' }])).toBe('declared');
+    expect(careerSeal(ev, [{ id: 't1', is_player: true, status: 'finished', visibility: 'private' }])).toBe('declared');
   });
   it('id novo leva o prefixo do dono', () => {
     expect(newCareerEventId(UID, 1000, 0.1).startsWith(`${UID}_`)).toBe(true);

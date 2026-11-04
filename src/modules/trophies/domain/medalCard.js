@@ -79,7 +79,7 @@ export function buildMedalCard(input = {}) {
   const saying = degrau
     ? placeSaying(degrau.position, `${event.title}|${event.subtitle}|${degrau.position}`)
     : t('Três degraus, um dia inteiro de pickleball.');
-  const dateLabel = dataPorExtenso(event.date);
+  const dateLabel = event.dateLabel || dataPorExtenso(event.date);
   const where = [event.city, event.state].filter(Boolean).join(' · ');
   const hostLine = input.host?.name ? (input.host.kind === 'clube' ? t('Clube {nome}', { nome: input.host.name }) : t('Arena {nome}', { nome: input.host.name })) : '';
 
