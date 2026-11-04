@@ -1538,7 +1538,8 @@ aprendendo|consistente|dominado }`, ≤ 300), `assessments[]` (≤ 24),
 pela pessoa, flag `game_debrief`), `updated_at`. Só o dono.
 
 ### `training_debriefs/{uid}_{tipo}_{ref}` (NOVO, flag `game_debrief`)
-Balanço depois de um jogo: `uid`, `source { type: dia_de_jogo|torneio|reserva|avulso,
+Balanço depois de um jogo: `uid`, `source { type: dia_de_jogo|torneio|reserva|avulso|externo
+(`externo` = torneio de fora da Minha carreira, `ref_id` = id do `career_events`),
 ref_id, title, date, games, wins }`, `status` (`respondido|dispensado`),
 `rating` (1–5), `strengths[]`, `weaknesses[]` (≤ 3, ids de `GAME_ASPECTS`),
 `evolution`, `body`, `mind`, `note` (≤ 500), `suggestion { focus[], item_ids[],

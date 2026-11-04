@@ -106,7 +106,14 @@ describe('completude em camadas', () => {
     const c = careerCompleteness(ev());
     expect([c.done, c.total]).toEqual([0, 3]);
     expect(c.next.id).toBe('resultado');
-    expect(careerCompleteness(ev(), { debrief: true }).total).toBe(4);
+    expect(careerCompleteness(ev(), { debriefDone: false }).total).toBe(4);
+  });
+  it('⭐ "N de 4": o balanço conta e é o próximo passo quando é o que falta', () => {
+    const completo = { entries: [{ format: 'singles', placement: 'champion' }], photos: [{ path: `carreira/${UID}/a.webp` }] };
+    const sem = careerCompleteness(ev(completo), { debriefDone: false });
+    expect([sem.done, sem.total, sem.next.id]).toEqual([3, 4, 'balanco']);
+    const com = careerCompleteness(ev(completo), { debriefDone: true });
+    expect([com.done, com.total, com.next]).toEqual([4, 4, null]);
   });
   it('resultado + foto ⇒ falta a dupla; simples não precisa de dupla', () => {
     const c = careerCompleteness(ev({ entries: [{ format: 'doubles', placement: 'champion' }], photos: [{ path: `carreira/${UID}/a.webp` }] }));

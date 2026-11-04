@@ -11,7 +11,9 @@ career/
 │   │                   # "É este?" (matchPlatformTournament), selo, modo lista, "repetir"
 │   ├── timeline.js     # buildCareerTimeline (5 fontes, cada uma falha sozinha), temporadas,
 │   │                   # filtros da URL, troféus de fora, abas (CAREER_TAB), resumo da Minha área
-│   └── draftQueue.js   # a fila do aparelho para quando não há sinal
+│   ├── draftQueue.js   # a fila do aparelho para quando não há sinal
+│   ├── careerDebrief.js # torneio de fora → origem `externo` do balanço (sem importar debrief.js)
+│   └── seasonRecap.js  # retrospectiva da temporada (zero banco): quando oferecer, parceria do ano
 ├── services/
 │   ├── careerService.js        # career_events + Storage carreira/{uid}/
 │   └── careerExportService.js  # o bloco `career` da exportação de dados
@@ -20,7 +22,9 @@ career/
 ```
 
 Telas: `src/v2/pages/V2Career.jsx` + `src/v2/components/career/`. A seção da
-Minha área é `CareerAreaSection`; a aba "Fora da plataforma" da estante é a
+Minha área é `CareerAreaSection`; o bloco de Meu desempenho é
+`CareerPerformanceBlock`; o balanço da ficha abre `CareerDebriefDialog` (lazy);
+a retrospectiva é o `MedalCardDialog` com `season`; a aba "Fora da plataforma" da estante é a
 `TrophyShelf` (`ABA_FORA`).
 
 ## O que não pode regredir
@@ -35,3 +39,8 @@ Minha área é `CareerAreaSection`; a aba "Fora da plataforma" da estante é a
 6. Os valores de enum (formato, gênero, colocação, tipo de foto) e os
    `?aba=`/`?origem=` são gravados/contrato — nunca renomeie.
 7. Zero índice composto: só `where('uid', '==', uid)`.
+8. O balanço do torneio é o do jogo (`DebriefDialog`, origem `externo`): nada
+   entra nos treinos sem "Adicionar", e o torneio de fora nunca vira pendência.
+9. Em Meu desempenho o declarado só soma com "Incluir declarados"
+   (`?declarados=1`), dizendo de onde vem cada parte; a retrospectiva não sai
+   com fonte faltando.

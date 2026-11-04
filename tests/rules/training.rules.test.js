@@ -554,6 +554,17 @@ describe('balanço do jogo', () => {
     await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ source: { ...fonte, type: 'avulso', ref_id: '2026-10-08_1' } })));
   });
 
+  it('⭐ torneio de fora (`externo`): a dona grava o balanço dele; outra conta não', async () => {
+    const id = `${ANA}_externo_${ANA}_mabc123`;
+    const fora = { ...fonte, type: 'externo', ref_id: `${ANA}_mabc123`, title: 'Open de Floripa', games: null, wins: null };
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ source: fora })));
+    await assertSucceeds(getDoc(doc(como(ANA), 'training_debriefs', id)));
+    await assertFails(getDoc(doc(como(DUDA), 'training_debriefs', id)));
+    await assertFails(setDoc(doc(como(DUDA), 'training_debriefs', id), balanco({ uid: DUDA, source: fora })));
+    // Nenhuma chave nova em `source`: categoria e dupla moram no evento.
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ source: { ...fora, partner: 'Bia' } })));
+  });
+
   it('dispensar fica gravado sem nota', async () => {
     await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', `${ANA}_torneio_t1`), {
       uid: ANA, source: { ...fonte, type: 'torneio', ref_id: 't1', games: null, wins: null }, status: 'dispensado',

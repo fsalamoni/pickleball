@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { Award, BarChart3, CalendarClock, Info, ListChecks, Medal, Percent, Swords, Trophy } from 'lucide-react';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
@@ -26,13 +28,25 @@ import {
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
+// "Fora da plataforma" (Minha carreira, flag `athlete_career`): só baixa com a flag ligada.
+const CareerPerformanceBlock = lazy(() => import('@/v2/components/career/CareerPerformanceBlock'));
+
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
 }
 
+/** As abas (`?aba=`): contrato de link. Sem `aba`, a estatística. */
+const ABA = Object.freeze({ STATS: 'estatistica', GAMES: 'jogos' });
+
 export default function V2Performance() {
   const athleteAgendaOn = true;
-  const [tab, setTab] = useState('estatistica');
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('aba') === ABA.GAMES ? ABA.GAMES : ABA.STATS;
+  const setTab = (v) => {
+    const p = new URLSearchParams(params);
+    if (v === ABA.STATS) p.delete('aba'); else p.set('aba', v);
+    setParams(p, { replace: true });
+  };
 
   return (
     <V2Page>
@@ -65,6 +79,7 @@ function StatsPanel() {
   const { ownRatingOff } = useDuprMode();
   const ratingHistoryOn = !ownRatingOff;
   const progressionOn = true;
+  const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const {
     stats, coverage, isLoading, isError, refetch,
   } = usePlayerStats();
@@ -102,6 +117,12 @@ function StatsPanel() {
           </div>
 
           {!isError && <RankingCoverageCard coverage={coverage} played={stats.played} />}
+
+          {carreiraOn && (
+            <Suspense fallback={null}>
+              <CareerPerformanceBlock verified={isError ? null : { tournaments: stats.tournaments, podiums: stats.podiums, titles: stats.titles }} />
+            </Suspense>
+          )}
 
           {formats.length > 0 && (
             <V2Surface className="mt-8">

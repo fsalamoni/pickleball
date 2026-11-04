@@ -1945,7 +1945,7 @@ const ATLETA = {
       blocks: [
         p(tk('Em Minha carreira, "Registrar torneio" pede só o nome, a data, o formato (Simples, Duplas ou Equipe), a categoria (Masc, Fem ou Mista) e, se quiser, a medalha. Data passada entra como jogado; data futura, como planejado. Depois de salvar, "Outra categoria" acrescenta mais uma.')),
         list(
-          tk('A FICHA — toque no torneio para completar em camadas: o resultado (colocação, faixa, pontos que a federação deu, a federação e o link) e a foto da medalha, do pódio ou da chave. O cartão diz "2 de 3" e o próximo passo.'),
+          tk('A FICHA — toque no torneio para completar em camadas: o resultado (colocação, faixa, pontos que a federação deu, a federação e o link), a foto da medalha, do pódio ou da chave, a dupla e o balanço. O cartão diz "3 de 4" e o próximo passo.'),
           tk('VÁRIOS DE UMA VEZ — para o passado: uma linha por torneio (ano, nome, categoria, medalha), tudo salvo junto.'),
           tk('REPETIR — o torneio do ano passado volta com o nome, o organizador, a cidade e a federação preenchidos.'),
           tk('SEM SINAL — o que você salvou fica guardado no aparelho e é enviado quando a conexão volta.'),
@@ -1955,6 +1955,28 @@ const ATLETA = {
         link('/carreira', tk('Abrir a Minha carreira')),
         tip(tk('Só você vê a sua carreira: os torneios, as fotos e as anotações. Ninguém mais lê.')),
         warn(tk('O resultado que você digita é declarado: ele nunca entra em ranking, rating nem XP. Evite fotos com o rosto de crianças.')),
+      ],
+    },
+    {
+      id: 'carreira-balanco',
+      flags: ['athlete_career'],
+      title: tk('O balanço do torneio de fora e a retrospectiva'),
+      summary: tk('Depois do torneio, o balanço vira a semana de treino sugerida; no fim do ano, a temporada vira um cartão.'),
+      keywords: [
+        'balanço', 'torneio de fora', 'semana de treino', 'drills', 'retrospectiva', 'temporada', 'cartão',
+        'parceria', 'meu desempenho', 'declarados',
+      ],
+      guias: ['carreira-registrar'],
+      blocks: [
+        p(tk('Na ficha do torneio de fora, a camada "Balanço" abre o mesmo balanço do jogo do Centro de Treino, já com o torneio: como foi, o que funcionou e o que faltou (até 3 de cada). Só aparece para torneio já jogado, e é um balanço por torneio — refazer substitui o anterior.')),
+        list(
+          tk('A SEMANA SUGERIDA — salvo o balanço, a plataforma junta o que faltou com os seus balanços recentes e sugere os dias e os drills. Nada entra nos seus treinos sem você tocar em "Adicionar".'),
+          tk('SEM COBRANÇA — o torneio de fora não vira pendência de balanço. O convite é o botão na ficha.'),
+          tk('MEU DESEMPENHO — o bloco "Fora da plataforma" mostra os torneios, pódios e títulos declarados, à parte. "Incluir declarados" mostra a soma com os números daqui, com o selo e dizendo de onde vem cada parte; o aproveitamento continua só com os jogos daqui.'),
+          tk('RETROSPECTIVA — na temporada que acabou (e, na do ano, a partir de dezembro), a linha do tempo oferece o cartão com os torneios, as medalhas e a parceria do ano, para baixar ou compartilhar. Se houver torneio de fora na conta, o cartão diz "Inclui resultado declarado".'),
+        ),
+        link('/carreira', tk('Abrir a Minha carreira')),
+        warn(tk('O resultado declarado nunca entra em ranking, rating nem XP, nem pelo cartão. O balanço conta nas missões de balanço como o de qualquer jogo — é a reflexão que vale, não a colocação.')),
       ],
     },
     {
@@ -2840,7 +2862,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
   // Minha carreira (as abas são `?aba=`, por isso sem `/carreira/*`).
   { pattern: '/carreira', label: tk('a sua carreira'),
-    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-selos']] },
+    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos']] },
   { pattern: '/circuits', label: tk('circuitos'),
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: tk('seus jogos'),
@@ -2885,7 +2907,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/ranking', label: tk('o ranking'),
     refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.START, 'nivelamento']] },
   { pattern: '/meu-desempenho', label: tk('seu desempenho'),
-    refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao']] },
+    refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.ATHLETE, 'carreira-balanco']] },
   { pattern: '/nivelamento', label: tk('o nivelamento'),
     refs: [[HELP_SECTION.START, 'nivelamento']] },
 

@@ -44,6 +44,8 @@ própria aba **Treino → Balanço** (`/treino?aba=balanco`).
    **"Como foi o seu jogo?"** no início (clássico e personalizado) e a faixa
    "Precisa de você" da Minha área. "Agora não" dispensa (grava `dispensado`).
    "Balanço de outro jogo" serve ao jogo fora da plataforma (`avulso`).
+   O **torneio de fora** registrado na Minha carreira (`externo`, flag
+   `athlete_career`) tem o balanço pela FICHA do torneio — ver §2a.
 3. **As perguntas** (`DebriefDialog`, menos de um minuto): como foi (1–5), o
    que funcionou e o que faltou (até 3 cada, em palavras de quadra —
    `GAME_ASPECTS`; um aspecto não pode estar nos dois), se sentiu evolução,
@@ -63,11 +65,43 @@ própria aba **Treino → Balanço** (`/treino?aba=balanco`).
 6. **Tendências**: depois de alguns balanços, a aba mostra o que mais vem
    faltando e funcionando e a média das notas (`debriefTrends`).
 
+## 2a. A origem `externo` — o torneio de fora (Minha carreira)
+
+Desde o PR 2 da carreira (2026-11-04), `DEBRIEF_SOURCE.EXTERNO = 'externo'`:
+o torneio que a pessoa jogou FORA da plataforma e registrou em
+`career_events` (`docs/54-CARREIRA-DO-ATLETA.md` §4.4) vira uma origem de
+balanço.
+
+- **Mesmo id**: `training_debriefs/{uid}_externo_{eventoId}` (`debriefId`),
+  um balanço por torneio. `ref_id` = id do evento; `title` = nome do torneio;
+  `date` = fim (ou início) do torneio; `games`/`wins` em branco (o torneio de
+  fora não os tem). **Nenhuma chave nova em `source`**: categoria e dupla
+  moram no evento.
+- **Quem pergunta é a ficha**, não a lista de pendências: a camada 4
+  ("Balanço") da `CareerEventSheet` abre o MESMO `DebriefDialog` com a origem
+  já preenchida (`careerDebriefSource`, `career/domain/careerDebrief.js`),
+  só para torneio JOGADO. O torneio de fora **não entra** em
+  `pendingDebriefs` (`listRecentPlay` não lê `career_events`) — ele é quase
+  sempre retroativo. Quem não ligou o balanço para si vê só o botão na ficha.
+- A semana sugerida sai igual (`suggestWeek`), e **nada entra nos treinos sem
+  "Adicionar"**. `debriefFocus` já pesa os 6 últimos balanços, então o do
+  torneio entra no foco das semanas seguintes sem código novo.
+- Conta em `debrief_done` (as missões opcionais) como qualquer balanço — o
+  plano da carreira (§7.1) decidiu não criar missão nova. O resultado
+  declarado do torneio, esse, continua valendo zero.
+- Regra: `'externo'` na lista de `source.type` de `trainingDebriefShapeOk`
+  (~10 bytes). Os balanços antigos seguem válidos (teste de domínio e de
+  regra, com conta não admin). A regra não amarra `externo` à flag
+  `athlete_career` (custaria ~40 bytes): sem a flag, o balanço gravado à mão
+  é privado da própria pessoa e não pontua.
+- Apagar o torneio da carreira apaga o balanço dele (`deleteCareerEvent`).
+
 ## 3. Dados
 
 ### `training_debriefs/{uid}_{tipo}_{ref}` (NOVO)
 
-`uid`, `source { type, ref_id, title, date, games, wins }`, `status`
+`uid`, `source { type, ref_id, title, date, games, wins }` (`type`:
+`dia_de_jogo|torneio|reserva|avulso|externo` — gravado, nunca renomeie), `status`
 (`respondido|dispensado`), `rating` (1–5), `strengths[]`, `weaknesses[]`
 (≤ 3, ids de `GAME_ASPECTS` — **nunca renomeie um id**), `evolution`
 (`melhorou|igual|piorou|nao_sei`), `body`, `mind` (1–5 ou nulo), `note`
@@ -112,7 +146,7 @@ Artigo `balanco-do-jogo` (parte Atleta) e guia `treino-balanco`, ambos com
 | Domínio | `training/domain/debrief.js` (perguntas, pendências, focos, semana, plano, tendências) · `debriefEvents.js` (dia de jogo/torneio/reserva → evento) |
 | Serviço | `training/services/debriefService.js` · `recentPlayService.js` · `metaService.js` (`debrief`) |
 | Hooks | `training/hooks/useDebriefs.js` (`useGameDebriefAvailable`, `useDebriefSettings`, `usePendingDebriefs`, `useDebriefActions`) |
-| Telas | `v2/components/training/tabs/DebriefTab.jsx` · `training/debrief/DebriefDialog.jsx` · `HomeDebriefPrompt.jsx` (lazy) · `DebriefSettingsCard.jsx` |
+| Telas | `v2/components/training/tabs/DebriefTab.jsx` · `training/debrief/DebriefDialog.jsx` · `HomeDebriefPrompt.jsx` (lazy) · `DebriefSettingsCard.jsx` · `career/CareerDebriefDialog.jsx` (a ficha do torneio de fora, lazy) |
 
 ## 7. O que não pode regredir
 

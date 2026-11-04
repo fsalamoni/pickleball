@@ -27,6 +27,13 @@ import { fmtNumero, t, tn } from '@/core/i18n';
 
 const HISTORICO = 12;
 
+// O torneio de fora no modo lista sabe só o ANO e é gravado em 1º de janeiro:
+// mostrar "1 jan" seria inventar a data.
+// ponytail: um torneio de fora jogado de fato em 1º/jan aparece só com o ano; gravar a precisão na origem se incomodar.
+const dataDoBalanco = (s, hoje) => (s?.type === 'externo' && /-01-01$/.test(String(s?.date || ''))
+  ? String(s.date).slice(0, 4)
+  : formatDayLabel(s?.date, hoje));
+
 function Ligar({ uid }) {
   const { setEnabled } = useDebriefActions(uid);
   return (
@@ -157,7 +164,7 @@ export default function DebriefTab({ identity }) {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">{d.source?.title}</p>
-                    <p className="text-xs text-gray-500">{t(DEBRIEF_SOURCE_LABELS[d.source?.type]) || t('Jogo')} · {formatDayLabel(d.source?.date, hoje)}</p>
+                    <p className="text-xs text-gray-500">{t(DEBRIEF_SOURCE_LABELS[d.source?.type]) || t('Jogo')} · {dataDoBalanco(d.source, hoje)}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <V2Badge tone="ink">{d.rating} · {t(DEBRIEF_RATING_LABELS[d.rating])}</V2Badge>

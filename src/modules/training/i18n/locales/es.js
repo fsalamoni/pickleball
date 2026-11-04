@@ -775,6 +775,7 @@ export default {
   "Jogar sob pressão": "Jugar bajo presión",
   "Jogo": "Juego",
   "Jogo avulso": "Partido suelto",
+  "Torneio de fora": "Torneo de fuera",
   "Jogo curto e dinks": "Juego corto y dinks",
   "Jogo e competição": "Juego y competencia",
   "Jogo inválido.": "Partido inválido.",

@@ -228,7 +228,7 @@ export function placementText(entry) {
 
 /* ------------------------------------------------------- completude -- */
 
-/** As camadas da ficha, em ordem. `available: false` = ainda não existe (o balanço é do PR 2). */
+/** As camadas da ficha, em ordem. `available: false` = não dá para saber (o balanço não carregou). */
 export const CAREER_LAYER = Object.freeze({ RESULT: 'resultado', PHOTO: 'foto', PARTNER: 'dupla', DEBRIEF: 'balanco' });
 const LAYER_STEP = Object.freeze({
   resultado: tk('Diga a colocação'),
@@ -239,10 +239,12 @@ const LAYER_STEP = Object.freeze({
 
 /**
  * Completude em camadas de um torneio JOGADO: `{ done, total, layers, next }`.
- * Só conta o que existe (`debrief: false` tira o balanço da conta e do
- * próximo passo). Planejado ou cancelado: `null` — não há o que completar.
+ * `debriefDone` (booleano) diz se o balanço do torneio foi feito
+ * (`careerDebriefFor`); sem ele — os balanços não carregaram — a camada sai da
+ * conta e do próximo passo, em vez de afirmar que falta. Planejado ou
+ * cancelado: `null` — não há o que completar.
  */
-export function careerCompleteness(event, { debrief = false } = {}) {
+export function careerCompleteness(event, { debriefDone } = {}) {
   if (!event || event.status !== CAREER_STATUS.PLAYED) return null;
   const entries = event.entries || [];
   const precisaDupla = entries.filter((e) => e.format !== CAREER_FORMAT.SINGLES);
@@ -250,7 +252,7 @@ export function careerCompleteness(event, { debrief = false } = {}) {
     { id: CAREER_LAYER.RESULT, done: entries.length > 0 && entries.every((e) => Boolean(e.placement)), available: true },
     { id: CAREER_LAYER.PHOTO, done: (event.photos || []).length > 0, available: true },
     { id: CAREER_LAYER.PARTNER, done: precisaDupla.every((e) => Boolean(e.partner?.name)), available: true },
-    { id: CAREER_LAYER.DEBRIEF, done: false, available: debrief === true },
+    { id: CAREER_LAYER.DEBRIEF, done: debriefDone === true, available: typeof debriefDone === 'boolean' },
   ];
   const valendo = layers.filter((l) => l.available);
   const falta = valendo.find((l) => !l.done) || null;

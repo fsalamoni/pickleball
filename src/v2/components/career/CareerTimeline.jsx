@@ -7,18 +7,23 @@
  *
  * Filtros na URL: `?podios=1`, `?federados=1`, `?origem=fora|plataforma`.
  */
-import React, { useMemo } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarClock, ChevronRight, CloudOff, Medal, Route } from 'lucide-react';
+import { CalendarClock, ChevronRight, CloudOff, Medal, Route, Sparkles } from 'lucide-react';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   ORIGIN_FILTER, TIMELINE_SOURCE, filterTimeline, timelineFiltersFromParams,
 } from '@/modules/career/domain/timeline.js';
 import { registeredProgress } from '@/modules/career/domain/careerEvent.js';
+import { buildSeasonRecap } from '@/modules/career/domain/seasonRecap.js';
+import { todayLocal } from '@/modules/training/domain/dates.js';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton } from '@/v2/ui/primitives';
 import { METAL } from '@/v2/components/trophies/MedalCard';
 import { SealBadge, careerDateLabel } from './careerUi';
 import { useCareerEstimate } from './CareerListMode';
 import { fmtLista, t, tk } from '@/core/i18n';
+
+const MedalCardDialog = lazy(() => import('@/v2/components/trophies/MedalCardDialog'));
 
 const FONTE_ROTULO = Object.freeze({
   [TIMELINE_SOURCE.CAREER]: tk('De fora'),
@@ -72,10 +77,25 @@ function Resumo({ s }) {
  *   pending?: object[], onFlush?: Function, onOpenEvent: Function, onRegister: Function }} props
  */
 export default function CareerTimeline({ data, pending = [], onFlush, onOpenEvent, onRegister }) {
+  const { user, userProfile } = useAuth();
   const [params, setParams] = useSearchParams();
   const filtros = timelineFiltersFromParams(params);
   const estimativa = useCareerEstimate();
   const vista = useMemo(() => filterTimeline(data.timeline, filtros), [data.timeline, filtros.podios, filtros.federados, filtros.origem]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A retrospectiva sai da linha do tempo SEM filtro (o filtro é da tela, não da temporada). Zero banco.
+  const retros = useMemo(() => {
+    const m = new Map();
+    const me = { uid: user?.uid || null, name: userProfile?.platform_name || user?.displayName || '' };
+    (data.timeline?.seasons || []).forEach((s) => {
+      const r = buildSeasonRecap({
+        season: s, faltou: data.timeline.faltou, career: data.events, trophies: data.trophies?.torneios, me, today: todayLocal(),
+      });
+      if (r) m.set(s.year, { ...r, name: me.name });
+    });
+    return m;
+  }, [data.timeline, data.events, data.trophies, user, userProfile]);
+  const [retro, setRetro] = useState(null);
+  const ultimaRetro = retros.size ? retros.get(Math.max(...retros.keys())) : null;
 
   const alternar = (k, v) => {
     const p = new URLSearchParams(params);
@@ -136,16 +156,36 @@ export default function CareerTimeline({ data, pending = [], onFlush, onOpenEven
             <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold uppercase tracking-widest text-acid">{t('Hoje')}</span>
             <span className="h-px flex-1 bg-ink/20" />
           </div>
+          {ultimaRetro && ultimaRetro.year >= Number(todayLocal().slice(0, 4)) - 1 && (
+            <div data-dica="carreira-retrospectiva" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-acid/40 bg-acid/10 p-4">
+              <span className="min-w-0">
+                <span className="block font-display text-base font-bold text-ink">{t('Sua temporada {ano} num cartão', { ano: ultimaRetro.year })}</span>
+                <span className="block text-sm text-gray-600">{t('Torneios, medalhas e a parceria do ano, para compartilhar.')}</span>
+              </span>
+              <V2Button type="button" variant="primary" size="sm" onClick={() => setRetro(ultimaRetro)}><Sparkles className="h-4 w-4" /> {t('Ver a retrospectiva')}</V2Button>
+            </div>
+          )}
           {vista.seasons.map((s) => (
             <details key={s.year} open={!s.closed} className="group rounded-2xl border border-gray-100 bg-paper p-4">
               <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="font-display text-xl font-bold text-ink">{t('Temporada {ano}', { ano: s.year })}</span>
                 <Resumo s={s.summary} />
               </summary>
+              {retros.has(s.year) && (
+                <V2Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setRetro(retros.get(s.year))}>
+                  <Sparkles className="h-4 w-4" /> {t('Retrospectiva {ano}', { ano: s.year })}
+                </V2Button>
+              )}
               <ul className="mt-3 space-y-2">{s.items.map((i) => <li key={i.id}><Item item={i} onOpenEvent={onOpenEvent} /></li>)}</ul>
             </details>
           ))}
         </>
+      )}
+
+      {retro && (
+        <Suspense fallback={null}>
+          <MedalCardDialog open onOpenChange={(v) => { if (!v) setRetro(null); }} season={retro} />
+        </Suspense>
       )}
     </div>
   );

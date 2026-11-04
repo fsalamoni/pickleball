@@ -1289,6 +1289,13 @@ const GUIAS_BASE = [
         title: tk('A foto e o resultado'),
         body: tk('Toque num torneio da linha do tempo para abrir a ficha: lá ficam a colocação, a federação e a foto da medalha ou do pódio. Só você vê.'),
       },
+      {
+        id: 'balanco',
+        route: '/carreira',
+        target: ['carreira-balanco', 'carreira-abas'],
+        title: tk('O balanço do torneio'),
+        body: tk('Na ficha de um torneio já jogado, "Fazer o balanço" pergunta como foi e sugere a semana de drills. Ela só entra nos seus treinos se você tocar em "Adicionar".'),
+      },
     ],
   },
   {

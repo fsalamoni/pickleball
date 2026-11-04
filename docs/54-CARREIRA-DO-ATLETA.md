@@ -1,6 +1,7 @@
 # 54 — Minha carreira (carreira do atleta)
 
-> Estado: **PR 1 — núcleo, foto e passado** (2026-11-04). Flag
+> Estado: **PR 1 — núcleo, foto e passado** + **PR 2 — balanço, treino e
+> retrospectiva** (2026-11-04). Flag
 > `athlete_career` (`FEATURE_FLAG.ATHLETE_CAREER`, padrão **desligada**, só o
 > admin liga; grupo "Carreira do atleta" no painel). O plano completo, com os
 > PRs seguintes, está fora do repositório
@@ -17,7 +18,7 @@ em ranking, rating nem XP (guarda `src/core/guards/carreiraNaoPontua.test.js`).
 
 | Peça | Onde |
 |---|---|
-| Domínio (puro, com teste) | `src/modules/career/domain/careerEvent.js`, `timeline.js`, `draftQueue.js` |
+| Domínio (puro, com teste) | `src/modules/career/domain/careerEvent.js`, `timeline.js`, `draftQueue.js`, `careerDebrief.js` (a origem do balanço), `seasonRecap.js` (a retrospectiva) |
 | Serviço (I/O) | `src/modules/career/services/careerService.js`, `careerExportService.js` |
 | Hooks (React Query) | `src/modules/career/hooks/useCareer.js` |
 | Página | `src/v2/pages/V2Career.jsx` (lazy, em `<Isolada nome="carreira">`, `V2Page`) |
@@ -139,10 +140,26 @@ travá-la, e excluir o torneio também o tira da fila.
 ### 4.4 A ficha (`CareerEventSheet`)
 
 Completa-se em camadas (`careerCompleteness`): **resultado** (colocação,
-faixa, idade, pontos declarados, federação, etapa, link), **foto** e
-**dupla** (nome livre ou a conta escolhida da lista de usuários). O cartão
-diz "2 de 3" e o próximo passo. A camada "balanço" só conta quando o balanço
-do jogo existir para a carreira (PR futuro).
+faixa, idade, pontos declarados, federação, etapa, link), **foto**,
+**dupla** (nome livre ou a conta escolhida da lista de usuários) e
+**balanço**. O cartão diz "3 de 4" e o ÚNICO próximo passo; quando o que
+falta é o balanço, o próprio próximo passo o abre.
+
+**Camada 4 — Balanço** (PR 2, âncora `carreira-balanco`): só para torneio
+JOGADO (`careerDebriefSource`, `career/domain/careerDebrief.js`). "Fazer o
+balanço" abre o MESMO `DebriefDialog` do Centro de Treino
+(`CareerDebriefDialog`, lazy) com a origem `externo` já preenchida — id
+`training_debriefs/{uid}_externo_{eventoId}`, um por torneio (docs/42 §2a).
+Salvo, o diálogo mostra a semana de drills sugerida (`suggestWeek`); **nada
+entra nos treinos sem "Adicionar"**. Feito, a camada diz o foco sugerido e
+se a semana entrou nos treinos, com "Refazer o balanço". Os balanços são
+lidos só com a ficha aberta (`useMyDebriefs`); falhou, a camada diz que não
+carregou e o "N de 4" some (sem saber do balanço, "3 de 3" diria que está
+completo). O torneio de fora **não vira pendência de balanço** — o convite
+é o botão. **Apagar o torneio apaga o balanço dele** (`deleteCareerEvent`,
+best-effort: o balanço não seguiria pesando no foco das semanas). No
+histórico do Centro de Treino, o balanço de torneio só com o ano mostra o
+ano, não "1 jan".
 
 "É este torneio do PickleRush?": `matchPlatformTournament` compara o nome
 normalizado e a data com os torneios em que a pessoa jogou; confirmando,
@@ -169,22 +186,64 @@ da plataforma já está na aba Torneios, não se repete aqui. Torneio do modo
 lista mostra só o ano (`dateLabel`), na estante e no cartão. Ver
 `docs/43-TROFEUS-E-CARTOES.md`.
 
+### 4.7 Retrospectiva da temporada (PR 2)
+
+Na linha do tempo, cada temporada que já pode tê-la ganha o botão
+"Retrospectiva {ano}", e a mais recente (o ano passado, ou o corrente) ganha
+a faixa "Sua temporada {ano} num cartão" (âncora `carreira-retrospectiva`).
+O cartão é o `MedalCard`/`MedalCardDialog` no modo `temporada`
+(`buildSeasonCard`, `trophies/domain/medalCard.js`): torneios, dias de jogo,
+ouro/prata/bronze e a **parceria da temporada** (`bestPartnership`: quem mais
+jogou junto, depois mais medalhas juntos — das duplas dos torneios de fora e
+dos pódios da plataforma; o "É este" conta uma vez só; a mesma pessoa com
+conta e só com o nome digitado é uma). Limite conhecido: da plataforma só
+entram os torneios com PÓDIO (a única fonte daqui que diz a dupla) — torneio
+jogado aqui sem medalha não soma em "torneios juntos". PNG, compartilhar,
+imprimir/PDF e copiar o texto, como os outros cartões. **Zero banco**: sai
+da linha do tempo já montada (`buildSeasonRecap`, `seasonRecap.js`).
+
+- **Quando**: temporada fechada sempre; a corrente só a partir de 1º de
+  dezembro (`seasonRecapOffered`). Antes, a tela não promete nada.
+- Com **fonte faltando** na linha do tempo, não há cartão (número parcial num
+  cartão para compartilhar é número errado). Os pódios vêm de duas leituras
+  (`listMyTrophies`, `allSettled`): a metade que falhou também conta como
+  fonte faltando, na linha do tempo e no cartão.
+- A conta usa a linha do tempo **sem filtro** (o filtro é da tela).
+- Com torneio de fora DECLARADO na temporada, o rodapé diz **"Inclui
+  resultado declarado"** (e o texto compartilhado também).
+
 ## 5. Outros lugares
 
 - **Minha área**: seção `carreira` (grupo "Você", `userAreaSections` com
   `carreira: flag`), `CareerAreaSection` — contagens, o último registro com o
-  que falta e os atalhos. Ver `docs/41-MINHA-AREA.md`.
+  que falta ("N de 4", com os balanços lidos; sem eles a conta não aparece) e
+  os atalhos. Ver `docs/41-MINHA-AREA.md`.
+- **Meu desempenho** (`/meu-desempenho`, PR 2): o bloco "Fora da plataforma"
+  (`CareerPerformanceBlock`, lazy, só com a flag; âncora `desempenho-fora`) —
+  torneios, pódios e títulos DECLARADOS (`careerPerformanceSummary`; o ligado
+  por "É este" fica fora da conta porque já está no verificado), à parte dos
+  seis cartões verificados, que não mudam. O interruptor **"Incluir
+  declarados"** (`?declarados=1`, padrão desligado) mostra a soma verificado +
+  declarado em outra cor, com o selo e dizendo "N daqui + M declarados"; o
+  aproveitamento continua só com os jogos daqui — **desvio consciente do
+  plano**, que dizia "soma os declarados ao aproveitamento": o torneio de fora
+  não guarda jogos nem vitórias, então qualquer aproveitamento com ele seria
+  inventado. Lista que falhou é dita. A
+  aba da tela também foi para a URL (`?aba=jogos`; sem `aba`, a estatística)
+  e a rota entrou em `<Isolada nome="meu-desempenho">`.
 - **Exportação de dados** (Configurações): bloco `career` em
   `dataExport.js`, com as fontes que falharam ditas (`careerExportService`).
 - **Exclusão de conta**: `career_events` por `uid` e o prefixo `carreira/`
   do Storage (`functions/accountDeletion.js`); a guarda
   `exclusaoCobreColecoes` cobre o prefixo `career_`.
-- **Ajuda**: artigos `carreira-registrar` e `carreira-selos` (parte Atleta),
-  pista de rota `/carreira` e o guia `carreira-registrar` (âncoras
-  `carreira-registrar`, `carreira-registrar-formato`, `carreira-lista`,
-  `carreira-foto`, `carreira-abas`) — todos com `flags: ['athlete_career']`.
-- **E2E**: `tests/e2e/logado.spec.js`, teste "Minha carreira" (liga a flag e
-  abre as duas abas).
+- **Ajuda**: artigos `carreira-registrar`, `carreira-balanco` (o balanço, o
+  bloco de Meu desempenho e a retrospectiva) e `carreira-selos` (parte
+  Atleta), pistas de rota `/carreira` e `/meu-desempenho` e o guia
+  `carreira-registrar` (âncoras `carreira-registrar`,
+  `carreira-registrar-formato`, `carreira-lista`, `carreira-foto`,
+  `carreira-balanco`, `carreira-abas`) — todos com `flags: ['athlete_career']`.
+- **E2E**: `tests/e2e/logado.spec.js`, teste "Minha carreira" (liga a flag,
+  abre as duas abas e `/meu-desempenho?declarados=1`).
 
 ## 6. O que não pode regredir
 
@@ -195,12 +254,19 @@ lista mostra só o ano (`dateLabel`), na estante e no cartão. Ver
 3. **Fonte que falhou é dita**, nunca vira "você ainda não jogou".
 4. Toda coleção `career_*` nova entra na exclusão **e** na exportação.
 5. Foto só pelo `prepareUpload` (sem EXIF), com descrição, até 6.
+6. **O balanço do torneio é o balanço do jogo**: um `DebriefDialog`, um
+   `suggestWeek`, uma coleção — origem `externo` (gravada; nunca renomeie);
+   nada entra nos treinos sem "Adicionar"; nunca vira pendência.
+7. **O declarado nunca se mistura calado com o verificado**: em Meu
+   desempenho os seis cartões ficam como estão e a soma só aparece com o
+   interruptor, dizendo de onde vem cada parte.
+8. A retrospectiva é **zero banco** e não aparece com fonte faltando.
 
-## 7. Fora deste PR
+## 7. Fora destes PRs
 
-Confirmação da dupla, balanço do torneio, desempenho, abas "Próximos" e
-"Metas", ranking da carreira, visão do professor, avisos pelo servidor, card
-no início, XP, vitrine pública e importação do DUPR.
+Confirmação da dupla, abas "Próximos" e "Metas", ranking da carreira, visão
+do professor, avisos pelo servidor, card no início, XP da ficha, vitrine
+pública e importação do DUPR.
 
 **Pendências registradas na revisão do PR 1:**
 
