@@ -57,15 +57,16 @@ function aplicarUpdate(store, ref, data) {
 }
 
 class FakeQuery {
-  constructor(store, colPath, filters = [], lim = Infinity) {
-    this.store = store; this.colPath = colPath; this.filters = filters; this.lim = lim;
+  /** `group`: `colPath` é o NOME da coleção, em qualquer altura (`collectionGroup`). */
+  constructor(store, colPath, filters = [], lim = Infinity, group = false) {
+    this.store = store; this.colPath = colPath; this.filters = filters; this.lim = lim; this.group = group;
   }
   doc(id) {
     const novo = id || `auto${(this.store.seq = (this.store.seq || 0) + 1)}`;
     return new FakeDocRef(this.store, `${this.colPath}/${novo}`);
   }
-  where(field, op, value) { return new FakeQuery(this.store, this.colPath, [...this.filters, [field, op, value]], this.lim); }
-  limit(n) { return new FakeQuery(this.store, this.colPath, this.filters, n); }
+  where(field, op, value) { return new FakeQuery(this.store, this.colPath, [...this.filters, [field, op, value]], this.lim, this.group); }
+  limit(n) { return new FakeQuery(this.store, this.colPath, this.filters, n, this.group); }
   async add(data) {
     const id = `auto${this.store.docs.size}`;
     this.store.docs.set(`${this.colPath}/${id}`, data);
@@ -74,8 +75,11 @@ class FakeQuery {
   }
   async get() {
     const prefix = `${this.colPath}/`;
+    const naColecao = this.group
+      ? (path) => { const p = path.split('/'); return p.length % 2 === 0 && p[p.length - 2] === this.colPath; }
+      : (path) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/');
     const docs = [...this.store.docs.entries()]
-      .filter(([path]) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/'))
+      .filter(([path]) => naColecao(path))
       .filter(([, data]) => this.filters.every(([f, op, v]) => {
         // `a.b` lê o campo `b` do mapa `a`, como no Firestore.
         const valor = String(f).split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), data);
@@ -107,6 +111,7 @@ function createFakeDb(seed = {}) {
   const db = {
     store,
     collection: (name) => new FakeQuery(store, name),
+    collectionGroup: (name) => new FakeQuery(store, name, [], Infinity, true),
     getAll: (...refs) => Promise.all(refs.map((r) => r.get())),
     /**
      * Transação falsa: lê e escreve direto (sem isolamento) — basta para

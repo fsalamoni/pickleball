@@ -4,7 +4,9 @@
  * faltou ou sobrou. No voleio, o pé e a linha da cozinha.
  *
  * Desenha só o que o motor mediu (a margem com sinal e a incerteza); a linha
- * mais perto sai de `nearestBoundary`. Escala fixa: 1 unidade = 1 cm.
+ * mais perto sai de `nearestBoundary` ou do motivo gravado (`reason`). No pé
+ * do saque, a linha de fundo (ou a extensão da lateral ou da central).
+ * Escala fixa: 1 unidade = 1 cm.
  */
 
 import React from 'react';
@@ -18,6 +20,19 @@ const LINE_NAME = {
   fundo_b: tk('linha de fundo do lado B'),
   lateral_1: tk('lateral do lado 1'),
   lateral_2: tk('lateral do lado 2'),
+  // pelo motivo do lance (saque e rede)
+  long: tk('linha de fundo'),
+  wide: tk('linha lateral'),
+  short: tk('linha da cozinha'),
+  wrong_box: tk('linha central'),
+  net: tk('rede'),
+};
+
+/** O pé no saque: o que fica de cada lado da linha que ele não pode pisar (7.A). */
+const SERVE_SIDE = {
+  baseline: { inside: tk('dentro da quadra'), outside: tk('atrás da linha'), line: tk('linha de fundo') },
+  sideline: { inside: tk('além da lateral'), outside: tk('dentro da lateral'), line: tk('extensão da lateral') },
+  centerline: { inside: tk('além da central'), outside: tk('do lado certo'), line: tk('extensão da linha central') },
 };
 
 /** Janela do desenho, em cm: 70 de largura, 44 de altura. */
@@ -27,36 +42,52 @@ const LINE_CM = COURT.LINE * 100;
 const PATCH_CM = 1;
 
 /**
- * @param {{ kind: 'bounce'|'volley', call: string, marginM?: number|null,
- *   uncertaintyM?: number|null, lineName?: string|null, className?: string }} props
+ * @param {{ kind: 'bounce'|'volley'|'serve_foot', call: string, marginM?: number|null,
+ *   uncertaintyM?: number|null, lineName?: string|null, reason?: string|null, className?: string }} props
  *   `marginM`: positiva DENTRO (no voleio, a profundidade do pé na cozinha,
- *   positiva dentro dela).
+ *   positiva dentro dela; no saque, o quanto o pé passou da linha).
  */
-export default function CourtMark({ kind, call, marginM, uncertaintyM, lineName = null, className }) {
+export default function CourtMark({ kind, call, marginM, uncertaintyM, lineName = null, reason = null, className }) {
   if (!Number.isFinite(marginM)) return null;
-  const volley = kind === 'volley';
+  const serve = kind === 'serve_foot' ? SERVE_SIDE[reason] || SERVE_SIDE.baseline : null;
+  // O pé (voleio e saque) se desenha igual: a ponta que avança sobre a linha.
+  const volley = kind === 'volley' || Boolean(serve);
   // A linha fica no meio, horizontal: acima dela é "fora" (no voleio, fora da
-  // cozinha); abaixo, "dentro". y cresce para baixo.
+  // cozinha; no pé do saque, o lado que vale); abaixo, "dentro". y cresce
+  // para baixo. A tinta é de quem a linha limita (8.B): o fundo, a lateral e a
+  // central são da quadra (ou da área), e a linha da cozinha é da cozinha (no
+  // voleio, falta — 11.A). Fogem disso o saque CURTO, em que a linha da
+  // cozinha fica do lado de fora da área de saque (7.E, 8.C), e o pé no saque
+  // nos prolongamentos da lateral e da central, que são da área de saque
+  // (pisar neles vale — 7.A, 3.A.4.g).
+  const lineOutside = (kind === 'bounce' && reason === 'short')
+    || (Boolean(serve) && ['sideline', 'centerline'].includes(reason));
   const lineTop = VH / 2 - LINE_CM / 2;
-  // A borda externa da linha (o limite) é a de CIMA.
-  const edge = lineTop;
+  // A divisa (de onde se mede a margem) separa a tinta da área que NÃO é dela:
+  // a borda de cima da tinta ou, quando a tinta é de fora, a de baixo.
+  const edge = lineOutside ? lineTop + LINE_CM : lineTop;
   const m = Math.max(-VH / 2 + 4, Math.min(VH / 2 - 4, marginM * 100));
   const u = Math.max(0.5, (uncertaintyM || 0) * 100);
   const color = CALL_COLOR[call] || '#ca8a04';
-  // No quique a margem é a da borda da marca: o centro fica `PATCH_CM` além.
-  // No voleio, o ponto medido é a ponta do pé que avança para a cozinha.
-  const cy = volley ? edge + m : edge + m + PATCH_CM;
-  const tip = volley ? cy : cy - PATCH_CM;
+  // O ponto medido: no pé, a ponta que avança; no quique, a borda da marca do
+  // lado da tinta (a margem é a dela), com o centro `PATCH_CM` para o outro lado.
+  const tip = edge + m;
+  const cy = volley ? tip : tip + (lineOutside ? PATCH_CM : -PATCH_CM);
   const cx = VW / 2;
-  const insideLabel = volley ? t('cozinha') : t('dentro');
-  const outsideLabel = volley ? t('fora da cozinha') : t('fora');
-  const desc = volley
+  const insideLabel = serve ? t(serve.inside) : volley ? t('cozinha') : t('dentro');
+  const outsideLabel = serve ? t(serve.outside) : volley ? t('fora da cozinha') : t('fora');
+  const lineLabel = lineName ? LINE_NAME[lineName] : LINE_NAME[reason];
+  const desc = serve
+    ? t('No saque, o pé ficou {d} cm {w} da {l}, com incerteza de {u} cm.', {
+      d: Math.round(Math.abs(marginM) * 100), w: marginM >= 0 ? t('além') : t('antes'), l: t(serve.line), u: Math.round(u),
+    })
+    : volley
     ? t('O pé ficou {d} cm {w} da linha da cozinha, com incerteza de {u} cm.', {
       d: Math.round(Math.abs(marginM) * 100), w: marginM >= 0 ? t('para dentro') : t('antes'), u: Math.round(u),
     })
     : t('A marca da bola ficou {d} cm {w} da {l}, com incerteza de {u} cm.', {
       d: Math.round(Math.abs(marginM) * 100), w: marginM >= 0 ? t('para dentro') : t('para fora'),
-      l: lineName ? t(LINE_NAME[lineName] || lineName) : t('linha'), u: Math.round(u),
+      l: lineLabel ? t(lineLabel) : t('linha'), u: Math.round(u),
     });
 
   return (

@@ -1,5 +1,6 @@
 /**
- * TelaoLineTicker — o controle de linhas no TELÃO do dia de jogo:
+ * TelaoLineTicker — o controle de linhas no TELÃO do dia de jogo, um aviso por
+ * QUADRA com o controle ligado:
  *
  * · uma faixa pequena e fixa com quantas câmeras estão analisando (e quais
  *   pararam), para quem joga saber se o controle está valendo;
@@ -7,8 +8,8 @@
  *   organiza;
  * · o último lance, grande, por alguns segundos, e some.
  *
- * Só com a flag `line_control` e o controle ligado naquele jogo; sem isso não
- * monta a escuta (nenhuma consulta). Falha da escuta não vira "nenhuma câmera":
+ * Só com a flag `line_control` e o controle ligado na quadra; sem isso não
+ * monta a escuta. Falha da escuta não vira "nenhuma câmera":
  * o telão só não mostra nada do controle — ele é um extra, e o painel do dia
  * segue funcionando.
  */
@@ -24,6 +25,8 @@ import { CALL_COLOR, callLabel, callDetail } from './callLabels';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useTournamentLineCourts } from '@/modules/linecall/hooks/useTournamentLineCourts';
 import { tournamentLineHost } from '@/modules/linecall/domain/tournamentLine';
+import { useGameDayLineCourts } from '@/modules/linecall/hooks/useGameDayLineCourts';
+import { gameDayLineHost, lineCourtNumber } from '@/modules/linecall/domain/gameDayLine';
 import { t } from '@/core/i18n';
 
 /** Por quanto tempo o lance fica na tela (ms). */
@@ -42,7 +45,7 @@ function TickerBody({ host, label }) {
   if (live.isError || live.isLoading) return null;
   const layout = layoutById(host.line_control_layout);
   const st = telaoLineStatus({ positions: layout.positions, cams: live.cams, lances: live.lances, nowMs: now });
-  const l = live.lances[0];
+  const l = st.headline;
   const mostrarLance = l && !st.inReview && now - l.t_ms <= SHOW_MS && now >= l.t_ms - 5000;
   const pre = label ? `${label} · ` : '';
 
@@ -85,10 +88,32 @@ function TickerBody({ host, label }) {
   );
 }
 
+/** O nome da quadra no aviso ("Quadra 2"), pelo número do id. */
+const courtLabel = (courtId) => t('Quadra {n}', { n: lineCourtNumber(courtId) || courtId });
+
+/** As quadras ligadas, cada uma com o seu aviso (`hostFor` dá o caminho). */
+function CourtTickers({ docs, hostFor }) {
+  const ligadas = (docs || []).filter((d) => d.line_control === true);
+  if (!ligadas.length) return null;
+  return (
+    <div className={CANTO}>
+      {ligadas.map((d) => (
+        <TickerBody key={hostFor(d)} host={{ id: hostFor(d), line_control_layout: d.line_control_layout || null }} label={courtLabel(d.court_id || d.id)} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * O telão do DIA DE JOGO (`/dia-de-jogo/:id/telao`). Relê as quadras a cada
+ * 30 s para notar quadra ligada ou desligada; leitura falhando ⇒ nada do
+ * controle aparece, e o painel do dia segue igual.
+ */
 export default function TelaoLineTicker({ gameDay }) {
   const on = useFeatureFlag(FEATURE_FLAG.LINE_CONTROL);
-  if (!on || gameDay?.line_control !== true) return null;
-  return <div className={CANTO}><TickerBody host={gameDay} /></div>;
+  const q = useGameDayLineCourts(gameDay?.id, { enabled: on, refetchInterval: 30_000 });
+  if (!on || !gameDay?.id) return null;
+  return <CourtTickers docs={q.data} hostFor={(d) => gameDayLineHost(gameDay.id, d.id)} />;
 }
 
 /**
@@ -101,17 +126,6 @@ export function TournamentTelaoLines({ tournamentId }) {
   const on = useFeatureFlag(FEATURE_FLAG.LINE_CONTROL);
   const { user } = useAuth();
   const q = useTournamentLineCourts(tournamentId, { enabled: on && Boolean(user?.uid), refetchInterval: 30_000 });
-  const ligadas = (q.data || []).filter((d) => d.line_control === true);
-  if (!on || !ligadas.length) return null;
-  return (
-    <div className={CANTO}>
-      {ligadas.map((d) => (
-        <TickerBody
-          key={d.court_id}
-          host={{ id: tournamentLineHost(tournamentId, d.court_id), line_control_layout: d.line_control_layout || null }}
-          label={d.court_name || d.court_id}
-        />
-      ))}
-    </div>
-  );
+  if (!on) return null;
+  return <CourtTickers docs={q.data} hostFor={(d) => tournamentLineHost(tournamentId, d.court_id)} />;
 }

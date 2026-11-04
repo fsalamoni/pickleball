@@ -20,4 +20,18 @@ describe('telaoLineStatus', () => {
     expect(telaoLineStatus({ positions: [], lances: [{ ...l, decided: true }], nowMs: now }).inReview).toBeNull();
     expect(telaoLineStatus({ positions: [], lances: [{ ...l, t_ms: now - 200000 }], nowMs: now }).inReview).toBeNull();
   });
+
+  it('o pé do saque em revisão segue "em revisão" com o quique do saque, mais novo, já na lista', () => {
+    const pe = { kind: 'serve_foot', call: 'review', decided: false, t_ms: now - 5000 };
+    const quique = { kind: 'bounce', call: 'in', decided: false, serve: true, t_ms: now - 4100 };
+    const s = telaoLineStatus({ positions: [], lances: [quique, pe], nowMs: now });
+    expect(s.inReview).toBe(pe);
+    expect(s.headline).toBe(pe);
+  });
+
+  it('o lance grande é a falta do pé, não o "Saque: dentro" que chegou depois', () => {
+    const falta = { kind: 'serve_foot', call: 'fault', decided: false, t_ms: now - 5000 };
+    const dentro = { kind: 'bounce', call: 'in', decided: false, serve: true, t_ms: now - 4100 };
+    expect(telaoLineStatus({ positions: [], lances: [dentro, falta], nowMs: now }).headline).toBe(falta);
+  });
 });

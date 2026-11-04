@@ -317,6 +317,15 @@ carreira tem de entrar na exclusão e na exportação). A Minha carreira
 Storage. Docs:
 `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`, `05-ADMIN-SUPORTE.md`.
 
+**Controle de linhas** (docs/53 §4): `coletarLinhas` apaga as câmeras
+(`line_cams`) e as marcações (`line_calls`) DELA em toda quadra — dia de jogo
+(`line_courts/*`), formato antigo (direto no dia) e torneio
+(`tournament_line_courts/*`) — por grupo de coleção, pela `uid`, o que acha
+também quem filmou sem estar nas listas (gestor da arena, quem saiu do dia);
+as dos outros ficam (`accountDeletion.pseudo.test.js`). Usa o índice de grupo
+de `uid` (`firestore.indexes.json` → `fieldOverrides`); consulta que falha ou
+passa do teto de 400 deixa a exclusão **parcial**.
+
 ### 7.1 Erros do navegador → Error Reporting (`clientErrorReport`)
 
 A única função **HTTP** (`onRequest`, `invoker: 'public'`, `maxInstances: 2`,

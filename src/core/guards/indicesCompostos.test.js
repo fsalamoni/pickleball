@@ -269,3 +269,38 @@ describe('🛡️ nenhuma consulta pede índice composto que não existe', () =>
     expect(naoResolvidas).toEqual([]);
   });
 });
+
+/**
+ * Consulta por GRUPO de coleção (`collectionGroup('x').where('f', …)`) não usa
+ * o índice simples automático: pede um índice de grupo no campo
+ * (`fieldOverrides` com `COLLECTION_GROUP`). Sem ele ela falha — foi o caso
+ * da exclusão de conta achando as câmeras do controle de linhas.
+ */
+describe('🛡️ consulta por grupo de coleção tem o índice de grupo', () => {
+  const grupos = (indices.fieldOverrides || [])
+    .filter((o) => (o.indexes || []).some((i) => i.queryScope === 'COLLECTION_GROUP'))
+    .map((o) => `${o.collectionGroup}.${o.fieldPath}`);
+  const arquivos = [
+    ...readdirSync('functions').filter((n) => n.endsWith('.js') && !n.includes('.test.')).map((n) => join('functions', n)),
+    ...arquivosDeServico('src'),
+  ];
+  const usos = arquivos.flatMap((arquivo) => (
+    [...semComentarios(readFileSync(arquivo, 'utf8')).matchAll(/collectionGroup\(\s*(?:db\s*,\s*)?['"]([a-z_]+)['"]\s*\)\s*\.where\(\s*['"]([a-z_.]+)['"]/g)]
+      .map((m) => ({ arquivo, chave: `${m[1]}.${m[2]}` }))
+  ));
+
+  it('a exclusão de conta acha as câmeras e as marcações por grupo (o varredor não está cego)', () => {
+    expect(usos.map((u) => u.chave)).toEqual(expect.arrayContaining(['line_cams.uid', 'line_calls.uid']));
+  });
+
+  it('⭐ todo campo consultado por grupo tem o índice de grupo', () => {
+    expect(usos.filter((u) => !grupos.includes(u.chave)).map((u) => `${u.arquivo} · ${u.chave}`)).toEqual([]);
+  });
+
+  it('o índice de grupo mantém os índices simples de sempre da coleção', () => {
+    (indices.fieldOverrides || []).forEach((o) => {
+      const escopos = (o.indexes || []).filter((i) => i.queryScope === 'COLLECTION').map((i) => i.order || i.arrayConfig);
+      expect(escopos.sort(), `${o.collectionGroup}.${o.fieldPath}`).toEqual(['ASCENDING', 'CONTAINS', 'DESCENDING']);
+    });
+  });
+});

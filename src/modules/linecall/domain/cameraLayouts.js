@@ -27,7 +27,9 @@
  *
  * Com várias câmeras, cada aparelho decide sozinho e a CENTRAL junta (ver
  * `fusion.js`): para o quique vale a de menor incerteza naquele ponto; para o
- * pé, a que vê os pés melhor (`footWeight`). Discordância vira "revisar".
+ * pé na cozinha, a que vê os pés melhor (`footWeight`); para o pé de quem
+ * saca, a do fundo de quem saca (`serveFootWeight`, `end`). Discordância vira
+ * "revisar".
  *
  * O `id` das posições e dos arranjos é contrato (fica no banco e na
  * calibração guardada no aparelho): nunca renomeie.
@@ -47,12 +49,15 @@ const { WIDTH: W, LENGTH: L, NET_Y: N } = COURT;
  * @property {string} aim         para onde aponta e o que precisa aparecer (tk)
  * @property {'court'|'kitchens'} corners  os pontos da calibração
  * @property {'image'|'overhead'} mode      como o motor acha o quique
- * @property {number} footWeight  quanto ela vale para julgar o pé (0 = não julga)
+ * @property {number} footWeight  quanto ela vale para julgar o pé na cozinha (0 = não julga)
+ * @property {number} serveFootWeight  quanto ela vale para julgar o pé de quem saca
+ * @property {'A'|'B'|null} end  o fundo em que fica (o pé de quem saca do outro fundo vale menos)
  * @property {boolean} usesPose   roda o detector de pés e punhos
  * @property {{x:number,y:number}} spot  onde fica no desenho (metros da quadra)
  */
 
 const fundo = (lado) => ({
+  end: lado,
   label: lado === 'A' ? tk('Fundo — lado A') : tk('Fundo — lado B'),
   where: tk('Atrás da linha de fundo, no meio, 2 a 4 m para trás.'),
   height: tk('3 a 6 m (o mais alto que der: escada, mastro, arquibancada, grade).'),
@@ -60,10 +65,12 @@ const fundo = (lado) => ({
   corners: 'court',
   mode: 'image',
   footWeight: 0.6,
+  serveFootWeight: 1,
   usesPose: true,
 });
 
 const rede = (lado) => ({
+  end: null,
   label: lado === 1 ? tk('Lateral da rede — lado 1') : tk('Lateral da rede — lado 2'),
   where: tk('Fora da quadra, no prolongamento da rede, 3 a 5 m da lateral.'),
   height: tk('1,5 a 2,5 m (tripé alto).'),
@@ -71,10 +78,13 @@ const rede = (lado) => ({
   corners: 'kitchens',
   mode: 'image',
   footWeight: 1,
+  // Da rede a linha de fundo fica longe e de lado: o pé no saque é dos fundos.
+  serveFootWeight: 0.2,
   usesPose: true,
 });
 
-const canto = (label) => ({
+const canto = (label, end) => ({
+  end,
   label,
   where: tk('Fora da quadra, 1 a 2 m para trás e para o lado do canto.'),
   height: tk('2,5 a 4 m.'),
@@ -82,6 +92,7 @@ const canto = (label) => ({
   corners: 'court',
   mode: 'image',
   footWeight: 0.5,
+  serveFootWeight: 0.8,
   usesPose: true,
 });
 
@@ -98,15 +109,17 @@ export const CAMERA_POSITIONS = Object.freeze({
     corners: 'court',
     mode: 'overhead',
     footWeight: 0,
+    serveFootWeight: 0,
+    end: null,
     usesPose: false,
     spot: { x: W / 2, y: N },
   }),
   rede_1: Object.freeze({ id: 'rede_1', ...rede(1), spot: { x: -2.6, y: N } }),
   rede_2: Object.freeze({ id: 'rede_2', ...rede(2), spot: { x: W + 2.6, y: N } }),
-  canto_a1: Object.freeze({ id: 'canto_a1', ...canto(tk('Canto A1')), spot: { x: -1.6, y: -1.6 } }),
-  canto_a2: Object.freeze({ id: 'canto_a2', ...canto(tk('Canto A2')), spot: { x: W + 1.6, y: -1.6 } }),
-  canto_b1: Object.freeze({ id: 'canto_b1', ...canto(tk('Canto B1')), spot: { x: -1.6, y: L + 1.6 } }),
-  canto_b2: Object.freeze({ id: 'canto_b2', ...canto(tk('Canto B2')), spot: { x: W + 1.6, y: L + 1.6 } }),
+  canto_a1: Object.freeze({ id: 'canto_a1', ...canto(tk('Canto A1'), 'A'), spot: { x: -1.6, y: -1.6 } }),
+  canto_a2: Object.freeze({ id: 'canto_a2', ...canto(tk('Canto A2'), 'A'), spot: { x: W + 1.6, y: -1.6 } }),
+  canto_b1: Object.freeze({ id: 'canto_b1', ...canto(tk('Canto B1'), 'B'), spot: { x: -1.6, y: L + 1.6 } }),
+  canto_b2: Object.freeze({ id: 'canto_b2', ...canto(tk('Canto B2'), 'B'), spot: { x: W + 1.6, y: L + 1.6 } }),
 });
 
 /**

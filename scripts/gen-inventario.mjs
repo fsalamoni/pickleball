@@ -19,7 +19,9 @@ const isDir = (p) => existsSync(join(ROOT, p)) && statSync(join(ROOT, p)).isDire
 
 function walk(dir, acc = []) {
   for (const n of ls(dir)) {
-    if (n === 'node_modules' || n === 'dist') continue;
+    // `.claude/` guarda cópias locais do repositório (worktrees de agentes):
+    // contá-las triplicava os testes no inventário gerado na máquina.
+    if (n === 'node_modules' || n === 'dist' || n === '.claude' || n === '.git') continue;
     const p = `${dir}/${n}`;
     if (isDir(p)) walk(p, acc);
     else acc.push(p);

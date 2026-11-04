@@ -36,7 +36,8 @@ export async function createPoseDetector() {
       const h = video.videoHeight;
       const res = landmarker.detectForVideo(video, tMs);
       return (res?.landmarks || []).map((lm) => ({
-        feet: FEET.map((i) => ({ x: lm[i].x * w, y: lm[i].y * h })),
+        // `v`: o quanto o detector VÊ o ponto (pé escondido atrás de alguém é palpite).
+        feet: FEET.map((i) => ({ x: lm[i].x * w, y: lm[i].y * h, v: lm[i].visibility ?? 1 })),
         wrists: WRISTS.map((i) => ({ x: lm[i].x * w, y: lm[i].y * h })),
       }));
     },

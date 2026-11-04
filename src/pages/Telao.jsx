@@ -73,6 +73,14 @@ function scoreText(m) {
   return `${a} × ${b}`;
 }
 
+// O agendamento grava `court` como NOME ("Quadra 2") e o número em `court_index`:
+// montar "Quadra {court}" com o nome dava "Quadra Quadra 2".
+function courtLabel(m) {
+  if (m.court_index) return t('Quadra {court}', { court: m.court_index });
+  const n = Number(m.court);
+  return Number.isFinite(n) && n > 0 ? t('Quadra {court}', { court: n }) : String(m.court);
+}
+
 function timeText(value) {
   if (!value) return '';
   const d = typeof value === 'object' && value.toDate ? value.toDate() : new Date(value);
@@ -199,7 +207,7 @@ export default function Telao() {
                           {m.modality_name}
                           {m.group && <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-acid">{m.group}</span>}
                         </span>
-                        {m.court && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {t('Quadra {court}', { court: m.court })}</span>}
+                        {m.court && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {courtLabel(m)}</span>}
                       </div>
                       <div className="space-y-1 text-2xl font-bold">
                         <div className="truncate">{m.side_a_label}</div>
@@ -228,7 +236,7 @@ export default function Telao() {
                           {m.modality_name}
                           {m.group && <span className="rounded-full bg-white/10 px-1.5 py-0.5 font-semibold text-acid">{m.group}</span>}
                         </span>
-                        <span>{m.court ? t('Quadra {court}', { court: m.court }) : ''} {timeText(m.scheduled_at)}</span>
+                        <span>{m.court ? courtLabel(m) : ''} {timeText(m.scheduled_at)}</span>
                       </div>
                       <div className="mt-1 truncate text-lg font-semibold">{m.side_a_label}</div>
                       <div className="truncate text-lg text-gray-300">{m.side_b_label}</div>

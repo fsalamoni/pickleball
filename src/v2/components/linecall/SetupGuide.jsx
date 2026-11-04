@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { V2Surface, V2Badge, V2Button } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
-import { useUpdateGameDay } from '@/modules/games/hooks/useGameDays';
 import { layoutById } from '@/modules/linecall/domain/cameraLayouts';
 import {
   SETUP_KITS, KIT_ORDER, CONNECTION_LABEL, deviceProfile, kitWarnings, KIT_WARNING_TEXT,
@@ -54,13 +53,17 @@ export function DeviceCard({ profile }) {
   );
 }
 
-export default function SetupGuide({ gameDay, podeConfigurar, save = null }) {
+/**
+ * @param {{ gameDay: object, podeConfigurar: boolean,
+ *   save: { mutate: (patch: object, opts?: object) => void, isPending: boolean } }} props
+ *   `gameDay`: o anfitrião das câmeras (a quadra do dia ou do torneio); `save` grava o arranjo nele
+ */
+export default function SetupGuide({ gameDay, podeConfigurar, save }) {
   const { user } = useAuth();
   const uid = user?.uid;
   const profile = useDeviceProfile();
-  const updateGameDay = useUpdateGameDay();
-  // `save` grava o arranjo onde ele mora (dia de jogo por padrão; quadra de torneio).
-  const update = save || { mutate: (patch, opts) => updateGameDay.mutate({ id: gameDay.id, patch }, opts), isPending: updateGameDay.isPending };
+  // O arranjo mora na QUADRA (do dia de jogo ou do torneio): quem grava é `save`.
+  const update = save;
   const sugerido = profile.kind === 'computer' ? 'computador' : 'basico';
   const [kitId, setKitId] = useState(() => {
     const salvo = readViewPreference(uid, PREF);
