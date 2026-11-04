@@ -4369,14 +4369,17 @@ service cloud.firestore {
 
     // Balanço do jogo (flag `game_debrief`): só da pessoa. O id começa pelo
     // uid de quem escreve (`{uid}_{jogo}`), então ninguém grava no balanço de
-    // outra pessoa nem cria um em nome dela.
+    // outra pessoa nem cria um em nome dela. `externo` (PR 2 da carreira) é o
+    // torneio de FORA da Minha carreira: `ref_id` = id do `career_events`, um
+    // balanço por torneio. Nada de chave nova em `source` — categoria e dupla
+    // moram no evento.
     function trainingDebriefShapeOk(d) {
       return d.keys().hasOnly(['uid', 'source', 'status', 'rating', 'strengths', 'weaknesses', 'evolution',
           'body', 'mind', 'note', 'suggestion', 'applied', 'created_at', 'updated_at'])
         && d.status in ['respondido', 'dispensado']
         && d.source is map
         && d.source.keys().hasOnly(['type', 'ref_id', 'title', 'date', 'games', 'wins'])
-        && d.source.type in ['dia_de_jogo', 'torneio', 'reserva', 'avulso']
+        && d.source.type in ['dia_de_jogo', 'torneio', 'reserva', 'avulso', 'externo']
         && d.source.ref_id is string && d.source.ref_id.size() <= 80
         && d.source.get('title', '') is string && d.source.get('title', '').size() <= 120
         && d.source.date is string && d.source.date.size() == 10

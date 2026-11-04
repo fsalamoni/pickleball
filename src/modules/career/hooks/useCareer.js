@@ -97,6 +97,8 @@ export function useCareerTimeline({ enabled = true } = {}) {
     retry,
     events: careerQ.data,
     myTournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined,
+    // Os pódios da plataforma (com a dupla): a retrospectiva da temporada acha a melhor parceria.
+    trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
   };
 }
 

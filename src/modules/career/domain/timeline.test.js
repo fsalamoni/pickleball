@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildCareerTimeline, careerAreaSummary, careerTabFromParam, careerTrophies, careerTrophyCounts, CAREER_TAB, filterTimeline,
+  buildCareerTimeline, careerAreaSummary, careerPerformanceSummary, careerTabFromParam, careerTrophies, careerTrophyCounts, CAREER_TAB, filterTimeline,
   timelineFiltersFromParams, TIMELINE_SOURCE,
 } from './timeline.js';
 
@@ -22,6 +22,31 @@ describe('abas e resumo da Minha área', () => {
     expect(r.last.id).toBe('b');
     expect(r.lastCompleteness).toMatchObject({ done: 0, total: 3, next: { id: 'resultado' } });
     expect(careerAreaSummary([])).toMatchObject({ total: 0, last: null, lastCompleteness: null });
+  });
+
+  it('⭐ com os balanços carregados, a conta é "N de 4" e o balanço feito conta', () => {
+    const evs = [{ id: 'b', status: 'played', start_date: '2025-03-01', entries: [{ format: 'singles', placement: 'champion' }], photos: [{ path: 'x' }] }];
+    expect(careerAreaSummary(evs, { debriefs: [] }).lastCompleteness).toMatchObject({ done: 3, total: 4, next: { id: 'balanco' } });
+    const feito = { status: 'respondido', source: { type: 'externo', ref_id: 'b', date: '2025-03-01' } };
+    expect(careerAreaSummary(evs, { debriefs: [feito] }).lastCompleteness).toMatchObject({ done: 4, total: 4, next: null });
+    // Balanços que não carregaram: a camada sai da conta (não afirma que falta).
+    expect(careerAreaSummary(evs).lastCompleteness.total).toBe(3);
+  });
+});
+
+describe('Meu desempenho: o bloco "Fora da plataforma"', () => {
+  it('⭐ conta só os declarados jogados; o ligado ("É este") já está no verificado', () => {
+    const r = careerPerformanceSummary([
+      { id: 'a', status: 'played', entries: [{ placement: 'champion' }, { placement: 'third' }] },
+      { id: 'b', status: 'played', entries: [{ placement: 'quarters' }] },
+      { id: 'c', status: 'played', platform_tournament_id: 't1', entries: [{ placement: 'champion' }] },
+      { id: 'd', status: 'planned', entries: [{ placement: null }] },
+    ]);
+    expect(r).toEqual({ tournaments: 2, podiums: 2, titles: 1, linked: 1 });
+  });
+  it('lista que não carregou é null, nunca zero', () => {
+    expect(careerPerformanceSummary(undefined)).toBeNull();
+    expect(careerPerformanceSummary([])).toEqual({ tournaments: 0, podiums: 0, titles: 0, linked: 0 });
   });
 });
 
@@ -52,14 +77,20 @@ describe('buildCareerTimeline', () => {
   });
 
   it('🔴 fonte que falhou é DITA, nunca vira "você ainda não jogou"', () => {
-    const tl = buildCareerTimeline({ today: HOJE, career: [], tournaments: undefined, trophies: {}, gameDayGames: undefined, federationPoints: [] });
+    const tl = buildCareerTimeline({ today: HOJE, career: [], tournaments: undefined, trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: undefined, federationPoints: [] });
     expect(tl.faltou).toEqual(['os torneios da plataforma', 'os dias de jogo publicados']);
     expect(tl.total).toBe(0);
   });
 
+  it('🔴 metade dos pódios que falhou (allSettled) também é dita', () => {
+    const base = { today: HOJE, career: [], tournaments: [], gameDayGames: [], federationPoints: [] };
+    expect(buildCareerTimeline({ ...base, trophies: { torneios: undefined, diasDeJogo: [] } }).faltou).toEqual(['os pódios da plataforma']);
+    expect(buildCareerTimeline({ ...base, trophies: { torneios: [], diasDeJogo: undefined } }).faltou).toEqual(['os pódios da plataforma']);
+  });
+
   it('torneio de fora ligado ao oficial ("É este") aparece uma vez só, com o selo oficial', () => {
     const tl = buildCareerTimeline({
-      today: HOJE, trophies: {}, gameDayGames: [], federationPoints: [],
+      today: HOJE, trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: [], federationPoints: [],
       career: [fora({ platform_tournament_id: 't1' })],
       tournaments: [{ id: 't1', name: 'Open Sul', starts_at: '2025-05-10', is_player: true }],
     });
@@ -70,7 +101,7 @@ describe('buildCareerTimeline', () => {
 
   it('pontos de federação de torneio da plataforma somam no item do torneio', () => {
     const tl = buildCareerTimeline({
-      today: HOJE, career: [], trophies: {}, gameDayGames: [],
+      today: HOJE, career: [], trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: [],
       tournaments: [{ id: 't1', name: 'Chancelado', starts_at: '2026-02-01', is_player: true }],
       federationPoints: [{ tournament_id: 't1', points: 80, position: 1, federation_acronym: 'FGP', date: '2026-02-01' }],
     });
@@ -82,7 +113,7 @@ describe('buildCareerTimeline', () => {
 
 describe('filtros na URL', () => {
   const tl = buildCareerTimeline({
-    today: HOJE, trophies: {}, gameDayGames: [], federationPoints: [],
+    today: HOJE, trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: [], federationPoints: [],
     career: [fora(), fora({ id: 'u_c', entries: [{ format: 'singles', placement: 'groups' }], federated: true })],
     tournaments: [{ id: 't1', name: 'Arena', starts_at: '2025-02-01', is_player: true }],
   });

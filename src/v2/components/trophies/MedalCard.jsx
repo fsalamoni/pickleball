@@ -13,7 +13,7 @@
 import React, { forwardRef } from 'react';
 import { initialsFor } from '@/components/ui/user-avatar';
 import { cn } from '@/core/lib/utils';
-import { t } from '@/core/i18n';
+import { t, tn } from '@/core/i18n';
 
 /** As cores dos metais sobre ink. Ouro é o acid da marca: o título é a casa. */
 export const METAL = Object.freeze({
@@ -66,14 +66,58 @@ function Pessoa({ pessoa, cor, size = 'lg', comFoto }) {
   );
 }
 
+/** O miolo da retrospectiva: torneios, as três medalhas e a parceria do ano. */
+function Temporada({ s }) {
+  if (!s) return null;
+  const numero = { fontSize: 'clamp(26px, 12cqw, 70px)' };
+  return (
+    <div className="flex flex-col" style={{ gap: '4cqw' }}>
+      <div className="flex items-end" style={{ gap: '5cqw' }}>
+        <div>
+          <p className="font-display font-black leading-none tabular-nums text-white" style={numero}>{s.tournaments}</p>
+          <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{tn(s.tournaments, 'torneio', 'torneios')}</p>
+        </div>
+        {s.gameDays > 0 && (
+          <div>
+            <p className="font-display font-black leading-none tabular-nums text-white/80" style={{ fontSize: 'clamp(18px, 8cqw, 46px)' }}>{s.gameDays}</p>
+            <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{tn(s.gameDays, 'dia de jogo', 'dias de jogo')}</p>
+          </div>
+        )}
+      </div>
+      <ul className="flex" style={{ gap: '4cqw' }} aria-label={t('Medalhas')}>
+        {[[1, s.gold], [2, s.silver], [3, s.bronze]].map(([p, n]) => (
+          <li key={p} className="flex items-center" style={{ gap: '1.6cqw' }}>
+            <span className="inline-block rounded-full" style={{ width: '5cqw', height: '5cqw', background: METAL[p].cor }} aria-hidden="true" />
+            <span className="font-display font-black tabular-nums text-white" style={{ fontSize: F.nome }}>{n}</span>
+            <span className="sr-only">{METAL[p].nome}</span>
+          </li>
+        ))}
+      </ul>
+      {s.partner && (
+        <div>
+          <p className="font-bold uppercase tracking-[0.22em]" style={{ fontSize: F.micro, color: METAL[1].cor }}>{t('Parceria da temporada')}</p>
+          <div style={{ marginTop: '2cqw' }}>
+            <Pessoa pessoa={{ name: s.partner.name }} cor={METAL[1].cor} size="sm" comFoto={false} />
+          </div>
+          <p className="text-white/70" style={{ fontSize: F.micro, marginTop: '1.4cqw' }}>
+            {[tn(s.partner.together, '{n} torneio juntos', '{n} torneios juntos'), s.partner.medals ? tn(s.partner.medals, '{n} medalha', '{n} medalhas') : ''].filter(Boolean).join('  ·  ')}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * @param {{ card: ReturnType<import('@/modules/trophies/domain/medalCard.js').buildMedalCard>, qrDataUrl?: string, className?: string }} props
  */
 const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', className }, ref) {
   if (!card) return null;
   const podio = card.mode === 'podio';
+  // Retrospectiva da temporada (Minha carreira): números do ano, não um degrau.
+  const temporada = card.mode === 'temporada';
   const cor = METAL[card.position || 1].cor;
-  const kicker = card.event.kind === 'dia_de_jogo' ? t('Dia de jogo') : t('Torneio');
+  const kicker = temporada ? t('Retrospectiva') : card.event.kind === 'dia_de_jogo' ? t('Dia de jogo') : t('Torneio');
 
   return (
     <div
@@ -113,9 +157,9 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
         {/* O degrau */}
         <div style={{ marginTop: '6cqw' }}>
           <p className="font-bold uppercase tracking-[0.22em]" style={{ fontSize: F.kicker, color: cor }}>
-            {podio ? t('Pódio') : METAL[card.position].nome}
+            {temporada ? t('Retrospectiva') : podio ? t('Pódio') : METAL[card.position].nome}
           </p>
-          <h2 className="cartao-titulo font-display font-black leading-[0.95] tracking-tight text-white" style={{ fontSize: podio ? 'clamp(22px, 10cqw, 60px)' : F.degrau, marginTop: '0.1em' }}>
+          <h2 className="cartao-titulo font-display font-black leading-[0.95] tracking-tight text-white" style={{ fontSize: podio || temporada ? 'clamp(22px, 10cqw, 60px)' : F.degrau, marginTop: '0.1em' }}>
             {podio ? card.event.subtitle || card.event.title : card.headline}
           </h2>
           <div className="cartao-brilho" style={{ height: '3px', width: '22cqw', marginTop: '3cqw', background: `linear-gradient(90deg, ${cor}, transparent)` }} />
@@ -123,7 +167,9 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
 
         {/* As pessoas */}
         <div className="flex-1" style={{ marginTop: '5cqw' }}>
-          {podio ? (
+          {temporada ? (
+            <Temporada s={card.season} />
+          ) : podio ? (
             <ol className="flex flex-col" style={{ gap: '3cqw' }}>
               {card.lines.map((l) => (
                 <li key={l.position} className="flex items-start" style={{ gap: '3cqw' }}>
@@ -144,20 +190,24 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
         </div>
 
         {/* O evento */}
-        <div style={{ marginTop: '5cqw' }}>
-          <p className="font-display font-bold leading-tight text-white" style={{ fontSize: F.evento }}>{card.event.title}</p>
-          {!podio && card.event.subtitle && <p className="font-semibold" style={{ fontSize: F.sub, color: cor, marginTop: '0.2em' }}>{card.event.subtitle}</p>}
-          <p className="text-white/70" style={{ fontSize: F.micro, marginTop: '0.5em' }}>
-            {[card.dateLabel, card.where, card.hostLine].filter(Boolean).join('  ·  ')}
-          </p>
-        </div>
+        {temporada ? (
+          card.event.title && <p className="font-display font-bold leading-tight text-white" style={{ fontSize: F.evento, marginTop: '5cqw' }}>{card.event.title}</p>
+        ) : (
+          <div style={{ marginTop: '5cqw' }}>
+            <p className="font-display font-bold leading-tight text-white" style={{ fontSize: F.evento }}>{card.event.title}</p>
+            {!podio && card.event.subtitle && <p className="font-semibold" style={{ fontSize: F.sub, color: cor, marginTop: '0.2em' }}>{card.event.subtitle}</p>}
+            <p className="text-white/70" style={{ fontSize: F.micro, marginTop: '0.5em' }}>
+              {[card.dateLabel, card.where, card.hostLine].filter(Boolean).join('  ·  ')}
+            </p>
+          </div>
+        )}
 
         {/* Rodapé: a frase e o QR */}
         <footer className="flex items-end justify-between border-t border-white/15" style={{ marginTop: '5cqw', paddingTop: '4cqw', gap: '4cqw' }}>
           <div style={{ maxWidth: qrDataUrl ? '68%' : '100%' }}>
             <p className="italic leading-snug text-white/85" style={{ fontSize: F.frase }}>“{card.saying}”</p>
             {/* Torneio de fora (Minha carreira): quem vê o cartão sabe que o resultado foi declarado. */}
-            {card.event.declared && <p className="font-bold uppercase tracking-widest text-white/60" style={{ fontSize: F.micro, marginTop: '0.8em' }}>{t('Resultado declarado')}</p>}
+            {card.event.declared && <p className="font-bold uppercase tracking-widest text-white/60" style={{ fontSize: F.micro, marginTop: '0.8em' }}>{temporada ? t('Inclui resultado declarado') : t('Resultado declarado')}</p>}
           </div>
           {qrDataUrl && (
             <div className="flex shrink-0 flex-col items-center" style={{ gap: '0.4em', fontSize: F.micro }}>

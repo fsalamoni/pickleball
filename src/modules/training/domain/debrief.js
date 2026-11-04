@@ -57,11 +57,19 @@ export const EVOLUTION_LABELS = Object.freeze({
   melhorou: tk('Evoluí'), igual: tk('Fiquei igual'), piorou: tk('Caí de rendimento'), nao_sei: tk('Não sei dizer'),
 });
 
+/**
+ * De onde vem o jogo. O valor é gravado (`source.type`) e a regra o confere:
+ * nunca renomeie. `externo` = o torneio de FORA registrado na Minha carreira
+ * (`career_events`, flag `athlete_career`); o `ref_id` é o id do evento — um
+ * balanço por torneio. Ele não vira pendência (`pendingDebriefs` só recebe os
+ * jogos daqui): a pessoa o faz pela ficha do torneio.
+ */
 export const DEBRIEF_SOURCE = Object.freeze({
-  DIA_DE_JOGO: 'dia_de_jogo', TORNEIO: 'torneio', RESERVA: 'reserva', AVULSO: 'avulso',
+  DIA_DE_JOGO: 'dia_de_jogo', TORNEIO: 'torneio', RESERVA: 'reserva', AVULSO: 'avulso', EXTERNO: 'externo',
 });
 export const DEBRIEF_SOURCE_LABELS = Object.freeze({
   dia_de_jogo: tk('Dia de jogo'), torneio: tk('Torneio'), reserva: tk('Jogo na arena'), avulso: tk('Jogo avulso'),
+  externo: tk('Torneio de fora'),
 });
 
 export const DEBRIEF_STATUS = Object.freeze({ RESPONDIDO: 'respondido', DISPENSADO: 'dispensado' });

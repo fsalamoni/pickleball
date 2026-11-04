@@ -7,7 +7,7 @@
  */
 import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
-import { t, tk, fmtData, fmtLista } from '@/core/i18n';
+import { t, tk, tn, fmtData, fmtLista } from '@/core/i18n';
 
 /** "12 de outubro de 2026" — a partir de qualquer instante do banco. */
 export function dataPorExtenso(valor) {
@@ -107,5 +107,62 @@ export function buildMedalCard(input = {}) {
     people: pessoas, names: nomes, lines: linhas,
     url, shareText, fileName: `picklerush-${slug || 'cartao'}.png`,
     showPhotos: showPhotos && pessoas.some((p) => p.photo_url),
+  };
+}
+
+/* ------------------------------------------- retrospectiva da temporada -- */
+
+/** O cartão da temporada (Minha carreira, docs/54 §4.7): números do ano, não um degrau. */
+export const SEASON_MODE = 'temporada';
+
+export const SEASON_SAYINGS = Object.freeze([
+  tk('Uma temporada se escreve torneio a torneio.'),
+  tk('O ano acabou. A quadra continua esperando.'),
+  tk('Cada medalha tem uma semana de treino atrás.'),
+]);
+
+/**
+ * O modelo do cartão da temporada. A tela só desenha (`MedalCard` com
+ * `card.mode === 'temporada'`). Zero banco: tudo vem do resumo já calculado.
+ *
+ * @param {{ year: number, tournaments: number, gameDays?: number, gold: number, silver: number, bronze: number,
+ *   partner?: { name: string, together: number, medals: number }|null, declared?: boolean, name?: string }} input
+ */
+export function buildSeasonCard(input = {}) {
+  const year = Number(input.year) || new Date().getFullYear();
+  const n = (v) => Math.max(0, Number(v) || 0);
+  const stats = {
+    tournaments: n(input.tournaments), gameDays: n(input.gameDays), gold: n(input.gold), silver: n(input.silver), bronze: n(input.bronze),
+  };
+  const partner = input.partner?.name
+    ? { name: String(input.partner.name).trim(), together: n(input.partner.together), medals: n(input.partner.medals) }
+    : null;
+  const declared = input.declared === true;
+  const shareText = [
+    `🏆 ${t('Minha temporada {ano} no pickleball', { ano: year })}`,
+    `${tn(stats.tournaments, '{n} torneio', '{n} torneios')} ·🥇${stats.gold} 🥈${stats.silver} 🥉${stats.bronze}`,
+    partner ? t('Parceria da temporada: {nome}', { nome: partner.name }) : '',
+    // Há torneio de fora na conta: quem recebe sabe que parte foi declarada.
+    declared ? t('Inclui resultado declarado') : '',
+    t('via PickleRush'),
+  ].filter(Boolean).join('\n');
+  return {
+    mode: SEASON_MODE,
+    position: null,
+    headline: t('Temporada {ano}', { ano: year }),
+    saying: t(SEASON_SAYINGS[year % SEASON_SAYINGS.length]),
+    dateLabel: String(year),
+    where: '',
+    hostLine: '',
+    event: { title: String(input.name || '').trim(), subtitle: '', kind: SEASON_MODE, declared },
+    host: null,
+    people: [],
+    names: [],
+    lines: [],
+    season: { year, ...stats, partner },
+    url: '',
+    shareText,
+    fileName: `picklerush-temporada-${year}.png`,
+    showPhotos: false,
   };
 }

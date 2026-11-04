@@ -6,18 +6,26 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Plus, Route } from 'lucide-react';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCareerEvents } from '@/modules/career/hooks/useCareer';
+import { useMyDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { careerAreaSummary } from '@/modules/career/domain/timeline.js';
+import { CAREER_STATUS } from '@/modules/career/domain/careerEvent.js';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { careerDateLabel } from './careerUi';
 import { t, tn } from '@/core/i18n';
 
 export default function CareerAreaSection() {
+  const { user } = useAuth();
   const q = useCareerEvents();
+  // O balanço entra na conta da ficha ("N de 4"); sem os balanços, a conta não aparece.
+  // Só consulta quando há um torneio JOGADO para conferir.
+  const temJogado = Boolean(q.data?.some((e) => e.status === CAREER_STATUS.PLAYED));
+  const balancos = useMyDebriefs(user?.uid, { enabled: temJogado });
   if (q.isPending) return <V2Skeleton lines={3} />;
   if (q.isError) return <V2ErrorState inline title={t('Não carregaram os seus torneios de fora')} onRetry={() => q.refetch()} />;
-  const r = careerAreaSummary(q.data);
-  const c = r.lastCompleteness;
+  const r = careerAreaSummary(q.data, { debriefs: balancos.isSuccess ? balancos.data : undefined });
+  const c = balancos.isSuccess ? r.lastCompleteness : null;
 
   return (
     <div className="space-y-4">
@@ -40,6 +48,9 @@ export default function CareerAreaSection() {
           </span>
           <ArrowRight className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
         </Link>
+      )}
+      {r.last && balancos.isError && (
+        <V2ErrorState inline title={t('Não carregaram os seus balanços')} description={t('Sem eles não dá para saber o que falta na ficha.')} onRetry={() => balancos.refetch()} />
       )}
       <div className="flex flex-wrap gap-2">
         <V2Button asChild variant="primary" size="sm"><Link to="/carreira?registrar=1"><Plus className="h-4 w-4" /> {t('Registrar torneio')}</Link></V2Button>

@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { buildMedalCard, dataPorExtenso, placeSaying } from './medalCard.js';
+import { buildMedalCard, buildSeasonCard, dataPorExtenso, placeSaying, SEASON_MODE } from './medalCard.js';
+
+describe('buildSeasonCard (retrospectiva da temporada)', () => {
+  it('⭐ números do ano, a parceria e o aviso de resultado declarado', () => {
+    const c = buildSeasonCard({ year: 2025, tournaments: 6, gold: 2, silver: 1, bronze: 0, partner: { name: ' Ana ', together: 4, medals: 2 }, declared: true, name: 'Eu' });
+    expect(c.mode).toBe(SEASON_MODE);
+    expect(c.season).toMatchObject({ year: 2025, tournaments: 6, gold: 2, silver: 1, bronze: 0, partner: { name: 'Ana', together: 4, medals: 2 } });
+    expect(c.event).toMatchObject({ kind: 'temporada', declared: true, title: 'Eu' });
+    expect(c.shareText).toMatch(/2025/);
+    expect(c.shareText).toMatch(/Ana/);
+    expect(c.shareText).toMatch(/declarado/);
+    expect(c.fileName).toBe('picklerush-temporada-2025.png');
+    expect(c.url).toBe('');
+  });
+  it('sem parceria e sem declarado, o texto não os menciona; frase estável pelo ano', () => {
+    const c = buildSeasonCard({ year: 2026, tournaments: 1, gold: 0, silver: 0, bronze: 1 });
+    expect(c.season.partner).toBeNull();
+    expect(c.shareText).not.toMatch(/declarado|Parceria/);
+    expect(buildSeasonCard({ year: 2026 }).saying).toBe(c.saying);
+  });
+});
 
 const places = [
   { position: 1, label: 'Campeões', entries: [{ label: 'Ana / Bia', people: [{ user_id: 'a', name: 'Ana', photo_url: 'https://x/a.png' }, { user_id: 'b', name: 'Bia', photo_url: null }] }] },

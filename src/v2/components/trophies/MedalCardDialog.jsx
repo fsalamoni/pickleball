@@ -17,7 +17,7 @@ import { Check, Copy, Download, Printer, Share2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { logger } from '@/core/lib/logger';
-import { buildMedalCard, CARD_MODE } from '@/modules/trophies/domain/medalCard.js';
+import { buildMedalCard, buildSeasonCard, CARD_MODE } from '@/modules/trophies/domain/medalCard.js';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks.js';
 import { V2Button, V2FilterChip, V2Toggle } from '@/v2/ui/primitives';
 import MedalCard, { METAL } from './MedalCard';
@@ -30,9 +30,12 @@ const PIXEL_TRANSPARENTE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BA
  *   open: boolean, onOpenChange: (v: boolean) => void,
  *   places: Array<object>, event: object, host?: object|null, link?: string|null,
  *   initialPosition?: 1|2|3, initialMode?: 'degrau'|'podio',
+ *   season?: object|null,
  * }} props
+ *   `season` (Minha carreira): a retrospectiva da temporada (`buildSeasonCard`)
+ *   no lugar do degrau — sem degraus para escolher, sem fotos, sem link.
  */
-export default function MedalCardDialog({ open, onOpenChange, places = [], event, host = null, link = null, initialPosition = 1, initialMode = CARD_MODE.PLACE }) {
+export default function MedalCardDialog({ open, onOpenChange, places = [], event, host = null, link = null, initialPosition = 1, initialMode = CARD_MODE.PLACE, season = null }) {
   const cardRef = useRef(null);
   const printRef = useRef(null);
   const { copy, copied } = useClipboard();
@@ -45,7 +48,10 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
   useEffect(() => { if (open) { setMode(initialMode); setPosition(initialPosition); } }, [open, initialMode, initialPosition]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const card = useMemo(() => buildMedalCard({ mode, position, places, event, host, showPhotos, origin, link }), [mode, position, places, event, host, showPhotos, origin, link]);
+  const card = useMemo(
+    () => (season ? buildSeasonCard(season) : buildMedalCard({ mode, position, places, event, host, showPhotos, origin, link })),
+    [season, mode, position, places, event, host, showPhotos, origin, link],
+  );
   const temFotos = useMemo(() => places.some((p) => (p.entries || []).some((e) => (e.people || []).some((x) => x.photo_url))), [places]);
   const degraus = places.map((p) => p.position);
 
@@ -123,7 +129,7 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" sheet>
         <DialogHeader>
-          <DialogTitle>{mode === CARD_MODE.PODIUM ? t('Cartão de pódio') : t('Cartão de campeões')}</DialogTitle>
+          <DialogTitle>{season ? t('Retrospectiva da temporada') : mode === CARD_MODE.PODIUM ? t('Cartão de pódio') : t('Cartão de campeões')}</DialogTitle>
           <DialogDescription>{t('Para os stories, o grupo, a parede da arena ou o PDF.')}</DialogDescription>
         </DialogHeader>
 
@@ -157,8 +163,8 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
             <V2Button variant="secondary" onClick={imprimir}>
               <Printer className="h-4 w-4" /> {t('Imprimir / PDF')}
             </V2Button>
-            <V2Button variant="secondary" onClick={() => copy(card.url || card.shareText, t('Link copiado!'))}>
-              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />} Link
+            <V2Button variant="secondary" onClick={() => copy(card.url || card.shareText, card.url ? t('Link copiado!') : t('Texto copiado!'))}>
+              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />} {card.url ? 'Link' : t('Texto')}
             </V2Button>
           </div>
           <p className="text-center text-xs text-gray-500">{t('Para o PDF, escolha “Salvar como PDF” na impressão.')}</p>

@@ -53,7 +53,11 @@ ganhou.
   (`Promise.allSettled`), hooks em `useTrophies.js`.
 - **Cartão** — `modules/trophies/domain/medalCard.js` (`buildMedalCard`):
   degrau ou pódio inteiro, frase por colocação (estável pelo evento), texto de
-  compartilhamento, nome do arquivo.
+  compartilhamento, nome do arquivo. Modo `temporada` (`buildSeasonCard`,
+  `MedalCardDialog` com `season`): a retrospectiva da Minha carreira —
+  torneios, dias de jogo, medalhas e a parceria do ano, sem link; com torneio
+  de fora na conta, o rodapé diz "Inclui resultado declarado"
+  (`docs/54-CARREIRA-DO-ATLETA.md` §4.7). Zero banco, como os outros.
 
 ## 3. Parabenizar = kudo
 
