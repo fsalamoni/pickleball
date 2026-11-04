@@ -82,3 +82,80 @@ describe('career_events', () => {
     await assertFails(setDoc(doc(como(DONO), 'career_events', `${DONO}_b`), evento(DONO)));
   });
 });
+
+/* ------------------------------------------------- career_partner -- */
+
+const DUPLA = 'dupla_uid';
+const MENOR = 'menor_uid';
+const PEDIDO = `${DONO}_a__${DUPLA}`;
+const pedido = (extra = {}) => ({
+  owner_uid: DONO, partner_uid: DUPLA, event_id: `${DONO}_a`, status: 'confirmed',
+  feedback: { strengths: ['dink'], improve: ['devolucao'], text_improve: 'Devolver mais fundo.' }, ...extra,
+});
+
+describe('career_partner (só o servidor grava)', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'career_partner', PEDIDO), pedido());
+      await setDoc(doc(ctx.firestore(), 'career_partner', `${DONO}_a__${MENOR}`), pedido({ partner_uid: MENOR, status: 'invited', feedback: null }));
+    });
+  });
+
+  it('⭐ o dono e a dupla citada leem e consultam pelo próprio lado', async () => {
+    await assertSucceeds(getDoc(doc(como(DONO), 'career_partner', PEDIDO)));
+    await assertSucceeds(getDoc(doc(como(DUPLA), 'career_partner', PEDIDO)));
+    await assertSucceeds(getDocs(query(collection(como(DONO), 'career_partner'), where('owner_uid', '==', DONO))));
+    await assertSucceeds(getDocs(query(collection(como(DUPLA), 'career_partner'), where('partner_uid', '==', DUPLA))));
+  });
+
+  it('🔴 terceiro não lê nem consulta (a crítica fica entre os dois); sem conta também não', async () => {
+    await assertFails(getDoc(doc(como(OUTRO), 'career_partner', PEDIDO)));
+    await assertFails(getDocs(query(collection(como(OUTRO), 'career_partner'), where('owner_uid', '==', DONO))));
+    await assertFails(getDocs(query(collection(como(DUPLA), 'career_partner'), where('owner_uid', '==', DONO))));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'career_partner', PEDIDO)));
+  });
+
+  it('🔴 ninguém grava pelo cliente: nem o dono, nem a dupla, nem o menor, nem um terceiro', async () => {
+    await assertFails(updateDoc(doc(como(DUPLA), 'career_partner', PEDIDO), { status: 'declined', feedback: null }));
+    await assertFails(updateDoc(doc(como(DONO), 'career_partner', PEDIDO), { owner_decision: 'use' }));
+    await assertFails(deleteDoc(doc(como(DONO), 'career_partner', PEDIDO)));
+    await assertFails(setDoc(doc(como(DONO), 'career_partner', `${DONO}_a__${OUTRO}`), pedido({ partner_uid: OUTRO })));
+    await assertFails(setDoc(doc(como(OUTRO), 'career_partner', `${DONO}_a__${OUTRO}`), pedido({ partner_uid: OUTRO })));
+    await assertFails(updateDoc(doc(como(MENOR), 'career_partner', `${DONO}_a__${MENOR}`), { status: 'confirmed' }));
+  });
+
+  it('o menor citado só lê o próprio pedido; o dos outros, não', async () => {
+    await assertSucceeds(getDoc(doc(como(MENOR), 'career_partner', `${DONO}_a__${MENOR}`)));
+    await assertFails(getDoc(doc(como(MENOR), 'career_partner', PEDIDO)));
+  });
+
+  it('⭐ o registro da dupla com `linked_event` é dela (a regra do evento vale igual); o do dono ela não lê', async () => {
+    await assertSucceeds(setDoc(doc(como(DUPLA), 'career_events', `${DUPLA}_m`), evento(DUPLA, { linked_event: { uid: DONO, id: `${DONO}_a` } })));
+    await assertFails(getDoc(doc(como(DUPLA), 'career_events', `${DONO}_a`)));
+  });
+});
+
+/* ----------------------------------------- career_partner_reports -- */
+
+describe('career_partner_reports (a denúncia fica fora do pedido)', () => {
+  const REP = `${PEDIDO}__owner`;
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'career_partner_reports', REP), {
+      doc_id: PEDIDO, owner_uid: DONO, partner_uid: DUPLA, reporter_uid: DONO, role: 'owner', reason: 'offensive', note: 'nota', open: true,
+    }));
+  });
+
+  it('⭐ quem denunciou lê e consulta as próprias denúncias', async () => {
+    await assertSucceeds(getDoc(doc(como(DONO), 'career_partner_reports', REP)));
+    await assertSucceeds(getDocs(query(collection(como(DONO), 'career_partner_reports'), where('reporter_uid', '==', DONO))));
+  });
+
+  it('🔴 o denunciado e um terceiro não leem; ninguém grava pelo cliente', async () => {
+    await assertFails(getDoc(doc(como(DUPLA), 'career_partner_reports', REP)));
+    await assertFails(getDocs(query(collection(como(DUPLA), 'career_partner_reports'), where('partner_uid', '==', DUPLA))));
+    await assertFails(getDoc(doc(como(OUTRO), 'career_partner_reports', REP)));
+    await assertFails(updateDoc(doc(como(DONO), 'career_partner_reports', REP), { open: false }));
+    await assertFails(deleteDoc(doc(como(DONO), 'career_partner_reports', REP)));
+    await assertFails(setDoc(doc(como(DUPLA), 'career_partner_reports', `${PEDIDO}__partner`), { reporter_uid: DUPLA, open: true }));
+  });
+});

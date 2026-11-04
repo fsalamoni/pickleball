@@ -1,0 +1,334 @@
+/**
+ * Peças da DUPLA na Minha carreira (docs/54 §PR 3) — as duas pontas do mesmo
+ * pedido `career_partner`, que só o servidor grava:
+ *
+ *  - `CareerPartnerLayer`: a camada 3 da ficha, do lado de quem registrou —
+ *    pedir a confirmação, ver a resposta e a visão da dupla, decidir se ela
+ *    entra no treino, denunciar, cancelar;
+ *  - `CareerPartnerInbox`: o topo da linha do tempo, do lado da DUPLA — os
+ *    pedidos que chegaram ("Confirmo" / "Não foi assim"), deixar a visão e
+ *    "Pôr na minha carreira também".
+ *
+ * A visão da dupla é PRIVADA entre os dois: nada daqui vai para página
+ * pública, ranking, rating ou XP.
+ */
+import React, { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Flag, Handshake, UserCheck } from 'lucide-react';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { todayLocal } from '@/modules/training/domain/dates.js';
+import {
+  OWNER_DECISION, PARTNER_ASPECT_IDS, PARTNER_LIMITS, PARTNER_REPORT_LABEL, PARTNER_REPORT_REASONS,
+  PARTNER_STATUS, PARTNER_STATUS_LABEL, ageOn, awaitsOwner, awaitsPartner, declinedNeedsChange, eventPartnerUids,
+  isAdult, mirrorEventDraft, partnerDocFor,
+} from '@/modules/career/domain/careerPartner.js';
+import { CAREER_STATUS, entryLabel, placementText } from '@/modules/career/domain/careerEvent.js';
+import { aspectLabel } from '@/modules/training/domain/debrief.js';
+import { useCareerPartnerAction } from '@/modules/career/hooks/useCareer';
+import { V2Badge, V2Button, V2ErrorState, V2Field, V2Select, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { careerDateLabel } from './careerUi';
+import { t } from '@/core/i18n';
+
+const TOM_STATUS = Object.freeze({ invited: 'neutral', reconfirm: 'neutral', confirmed: 'blue', declined: 'red' });
+
+function StatusBadge({ status }) {
+  return <V2Badge tone={TOM_STATUS[status] || 'neutral'}>{t(PARTNER_STATUS_LABEL[status] || PARTNER_STATUS_LABEL.invited)}</V2Badge>;
+}
+
+/** Até 3 aspectos, botões que ligam e desligam (os mesmos do balanço). */
+function AspectChoice({ legenda, value, onChange, dica }) {
+  const marcar = (id) => {
+    if (value.includes(id)) onChange(value.filter((x) => x !== id));
+    else if (value.length < PARTNER_LIMITS.aspects) onChange([...value, id]);
+  };
+  return (
+    <fieldset className="space-y-2" data-dica={dica}>
+      <legend className="text-sm font-semibold text-ink">{legenda}</legend>
+      <div className="flex flex-wrap gap-2">
+        {PARTNER_ASPECT_IDS.map((id) => {
+          const ativo = value.includes(id);
+          return (
+            <button type="button"
+              key={id}
+              aria-pressed={ativo}
+              onClick={() => marcar(id)}
+              className={`min-h-11 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${ativo ? 'border-ink bg-ink text-acid' : 'border-gray-200 bg-paper-pure text-ink hover:border-ink/40'}`}
+            >
+              {aspectLabel(id)}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+/** A visão da dupla, lida (dos dois lados). */
+function FeedbackView({ feedback }) {
+  if (!feedback) return null;
+  const lista = (ids) => (ids || []).map(aspectLabel).join(', ');
+  return (
+    <dl className="space-y-1 rounded-2xl bg-paper p-3 text-sm">
+      {(feedback.strengths || []).length > 0 && (<div><dt className="inline font-semibold text-ink">{t('Pontos fortes:')} </dt><dd className="inline text-gray-600">{lista(feedback.strengths)}</dd></div>)}
+      {(feedback.improve || []).length > 0 && (<div><dt className="inline font-semibold text-ink">{t('O que melhorar:')} </dt><dd className="inline text-gray-600">{lista(feedback.improve)}</dd></div>)}
+      {feedback.text_strength && <div><dt className="inline font-semibold text-ink">{t('O que funcionou:')} </dt><dd className="inline text-gray-600">{feedback.text_strength}</dd></div>}
+      {feedback.text_improve && <div><dt className="inline font-semibold text-ink">{t('O que faltou:')} </dt><dd className="inline text-gray-600">{feedback.text_improve}</dd></div>}
+      {feedback.text_drill && <div><dt className="inline font-semibold text-ink">{t('Um treino para você:')} </dt><dd className="inline text-gray-600">{feedback.text_drill}</dd></div>}
+    </dl>
+  );
+}
+
+/**
+ * Denunciar o pedido (o outro lado escreveu algo ofensivo, falso ou com dado pessoal).
+ * A denúncia não fica no pedido (a outra ponta o lê): o "enviada" é desta tela,
+ * e denunciar de novo o mesmo não abre outra (o servidor confere).
+ */
+function ReportControl({ docId }) {
+  const acao = useCareerPartnerAction();
+  const [reported, setReported] = useState(false);
+  const [aberto, setAberto] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [nota, setNota] = useState('');
+  if (reported) return <p className="text-xs text-gray-500">{t('Denúncia enviada. A moderação da plataforma vai olhar.')}</p>;
+  if (!aberto) {
+    return <V2Button type="button" size="sm" variant="ghost" onClick={() => setAberto(true)}><Flag className="h-4 w-4" /> {t('Denunciar')}</V2Button>;
+  }
+  async function enviar() {
+    try {
+      await acao.mutateAsync({ action: 'report', docId, reason: motivo, note: nota });
+      toast.success(t('Denúncia enviada.'));
+      setAberto(false);
+      setReported(true);
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+    }
+  }
+  const id = `denuncia-${docId}`;
+  return (
+    <div className="space-y-2 rounded-2xl border border-gray-100 p-3">
+      <V2Field label={t('Motivo da denúncia')} htmlFor={`${id}-motivo`} required>
+        <V2Select id={`${id}-motivo`} value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+          <option value="">{t('— Escolha —')}</option>
+          {PARTNER_REPORT_REASONS.map((r) => <option key={r} value={r}>{t(PARTNER_REPORT_LABEL[r])}</option>)}
+        </V2Select>
+      </V2Field>
+      <V2Field label={t('Conte o que aconteceu (opcional)')} htmlFor={`${id}-nota`}>
+        <V2Textarea id={`${id}-nota`} rows={2} maxLength={PARTNER_LIMITS.reason} value={nota} onChange={(e) => setNota(e.target.value)} />
+      </V2Field>
+      <div className="flex flex-wrap gap-2">
+        <V2Button type="button" size="sm" variant="danger" disabled={!motivo || acao.isPending} onClick={enviar}>{t('Enviar denúncia')}</V2Button>
+        <V2Button type="button" size="sm" variant="ghost" onClick={() => setAberto(false)}>{t('Cancelar')}</V2Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Camada 3 da ficha: a dupla de cada categoria com conta.
+ * @param {{ event: object, saved: boolean, partners: object[]|undefined, partnersError: boolean, onRetry: Function, dirty: boolean }} props
+ */
+export function CareerPartnerLayer({ event, saved, partners, partnersError, onRetry, dirty }) {
+  const { userProfile } = useAuth();
+  const acao = useCareerPartnerAction();
+  const [pedidos, setPedidos] = useState(() => new Set());
+  const citados = eventPartnerUids(event);
+  const nomes = new Map((event?.entries || []).filter((e) => e?.partner?.uid).map((e) => [e.partner.uid, e.partner.name]));
+
+  if (!citados.length) {
+    return <p className="text-xs text-gray-500">{t('Escolha a dupla da lista de usuários (na categoria, acima) para pedir que ela confirme o resultado. Dupla sem conta continua valendo, só não confirma.')}</p>;
+  }
+  if (partnersError) return <V2ErrorState inline title={t('Não carregaram as confirmações das duplas')} description={t('Sem elas não dá para saber se você já pediu.')} onRetry={onRetry} />;
+  if (partners === undefined) return <V2Skeleton lines={2} />;
+
+  const jogado = event.status !== CAREER_STATUS.PLANNED && !event.cancelled;
+  const adulto = isAdult(userProfile?.birth_date, todayLocal());
+  const semNascimento = ageOn(userProfile?.birth_date, todayLocal()) === null;
+
+  async function rodar(payload, ok) {
+    try {
+      await acao.mutateAsync(payload);
+      if (ok) toast.success(ok);
+      return true;
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+      return false;
+    }
+  }
+
+  return (
+    <ul className="space-y-3">
+      {citados.map((uid) => {
+        const d = partnerDocFor(partners, event.id, uid);
+        const nome = d?.partner_name || nomes.get(uid) || t('Sua dupla');
+        const corrigir = declinedNeedsChange(event, d);
+        const enviado = !d && pedidos.has(uid);
+        const podePedir = saved && !dirty && jogado && adulto && !enviado && (!d || (d.status === PARTNER_STATUS.DECLINED && !corrigir));
+        return (
+          <li key={uid} className="space-y-2 rounded-2xl bg-paper p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-ink"><Handshake className="h-4 w-4" aria-hidden="true" /> {nome}</p>
+              {d && <StatusBadge status={d.status} />}
+            </div>
+            {d?.status === PARTNER_STATUS.DECLINED && <p className="text-xs text-gray-600">{t('{nome} disse que não foi assim. Corrija a ficha (data, categoria ou colocação) e peça de novo.', { nome })}</p>}
+            {d?.status === PARTNER_STATUS.RECONFIRM && <p className="text-xs text-gray-600">{t('Você mudou a data ou o resultado: {nome} precisa confirmar de novo.', { nome })}</p>}
+            {!d && !jogado && <p className="text-xs text-gray-500">{t('Dá para pedir a confirmação depois que o torneio acontecer.')}</p>}
+            {!d && jogado && !adulto && <p className="text-xs text-gray-500">{semNascimento ? t('Preencha a sua data de nascimento no perfil para pedir a confirmação da dupla.') : t('A confirmação pela dupla é só para maiores de 18 anos.')}</p>}
+            {enviado && <p className="text-xs text-gray-500">{t('Pedido enviado.')}</p>}
+            {dirty && !d && <p className="text-xs text-gray-500">{t('Salve a ficha antes de pedir a confirmação.')}</p>}
+            {podePedir && (
+              <V2Button type="button" size="sm" variant="secondary" data-dica="carreira-pedir-confirmacao" disabled={acao.isPending}
+                onClick={async () => { if (await rodar({ action: 'invite', eventId: event.id, partnerUid: uid }, t('Pedido enviado para {nome}.', { nome }))) setPedidos((x) => new Set(x).add(uid)); }}>
+                <UserCheck className="h-4 w-4" /> {t('Pedir confirmação a {nome}', { nome })}
+              </V2Button>
+            )}
+            {d?.feedback && (
+              <>
+                <p className="text-xs font-semibold text-gray-600">{t('A visão de {nome} (só vocês dois veem)', { nome })}</p>
+                <FeedbackView feedback={d.feedback} />
+                {awaitsOwner(d) ? (
+                  <div className="flex flex-wrap gap-2">
+                    <V2Button type="button" size="sm" variant="primary" disabled={acao.isPending} onClick={() => rodar({ action: 'decide', docId: d.id, decision: OWNER_DECISION.USE }, t('A visão entra no foco dos seus balanços.'))}>{t('Usar no meu treino')}</V2Button>
+                    <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'decide', docId: d.id, decision: OWNER_DECISION.KEEP }, t('Guardada só na ficha.'))}>{t('Guardar')}</V2Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">{d.owner_decision === OWNER_DECISION.USE ? t('Entra no foco dos seus balanços.') : t('Guardada só na ficha.')}</p>
+                )}
+              </>
+            )}
+            {d && (
+              <div className="flex flex-wrap gap-2">
+                <ReportControl docId={d.id} />
+                <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'remove', docId: d.id }, t('Pedido apagado.'))}>{t('Apagar o pedido')}</V2Button>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Formulário da visão da dupla (pontos fortes, o que melhorar, um treino). */
+function FeedbackForm({ doc, onDone }) {
+  const acao = useCareerPartnerAction();
+  const fb = doc.feedback || {};
+  const [strengths, setStrengths] = useState(fb.strengths || []);
+  const [improve, setImprove] = useState(fb.improve || []);
+  const [textStrength, setTextStrength] = useState(fb.text_strength || '');
+  const [textImprove, setTextImprove] = useState(fb.text_improve || '');
+  const [textDrill, setTextDrill] = useState(fb.text_drill || '');
+  const id = `visao-${doc.id}`;
+  async function enviar() {
+    try {
+      await acao.mutateAsync({ action: 'feedback', docId: doc.id, feedback: { strengths, improve, text_strength: textStrength, text_improve: textImprove, text_drill: textDrill } });
+      toast.success(t('Visão enviada. Só vocês dois veem.'));
+      onDone();
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+    }
+  }
+  return (
+    <div className="space-y-3 rounded-2xl border border-gray-100 p-3" data-dica="carreira-visao-dupla">
+      <p className="text-xs text-gray-500">{t('Até 3 de cada. Só {nome} vê, e decide se entra no treino dela(e).', { nome: doc.owner_name || t('quem registrou') })}</p>
+      <AspectChoice legenda={t('Pontos fortes')} value={strengths} onChange={setStrengths} />
+      <AspectChoice legenda={t('O que melhorar')} value={improve} onChange={setImprove} />
+      <V2Field label={t('O que funcionou (opcional)')} htmlFor={`${id}-forte`}>
+        <V2Textarea id={`${id}-forte`} rows={2} maxLength={PARTNER_LIMITS.text} value={textStrength} onChange={(e) => setTextStrength(e.target.value)} />
+      </V2Field>
+      <V2Field label={t('O que faltou (opcional)')} htmlFor={`${id}-faltou`}>
+        <V2Textarea id={`${id}-faltou`} rows={2} maxLength={PARTNER_LIMITS.text} value={textImprove} onChange={(e) => setTextImprove(e.target.value)} />
+      </V2Field>
+      <V2Field label={t('Um treino que você sugere (opcional)')} htmlFor={`${id}-treino`}>
+        <V2Textarea id={`${id}-treino`} rows={2} maxLength={PARTNER_LIMITS.text} value={textDrill} onChange={(e) => setTextDrill(e.target.value)} />
+      </V2Field>
+      <div className="flex flex-wrap gap-2">
+        <V2Button type="button" size="sm" variant="primary" disabled={acao.isPending} onClick={enviar}>{t('Enviar a visão')}</V2Button>
+        <V2Button type="button" size="sm" variant="ghost" onClick={onDone}>{t('Cancelar')}</V2Button>
+      </div>
+    </div>
+  );
+}
+
+/** Um pedido recebido, do lado da dupla. */
+function InboxItem({ doc, focado, onMirror }) {
+  const acao = useCareerPartnerAction();
+  const [visao, setVisao] = useState(false);
+  // "Pôr na minha carreira também": um toque só (o vínculo chega pelo servidor depois).
+  const [espelho, setEspelho] = useState('');
+  const ref = useRef(null);
+  useEffect(() => { if (focado) ref.current?.focus?.(); }, [focado]);
+  const sm = doc.summary || {};
+  const quem = doc.owner_name || t('Alguém');
+  async function rodar(payload, ok) {
+    try {
+      await acao.mutateAsync(payload);
+      if (ok) toast.success(ok);
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+    }
+  }
+  const categorias = (sm.entries || []).map((e) => [entryLabel(e), placementText(e)].filter(Boolean).join(' · ')).filter(Boolean);
+  const podeVisao = doc.status === PARTNER_STATUS.CONFIRMED && (!doc.feedback || awaitsOwner(doc));
+  return (
+    <li ref={ref} tabIndex={-1} className={`space-y-2 rounded-2xl border p-3 focus:outline-none ${focado ? 'border-ink' : 'border-gray-100'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-ink">{sm.name || t('Torneio')}</p>
+        <StatusBadge status={doc.status} />
+      </div>
+      <p className="text-xs text-gray-600">
+        {[t('{quem} registrou com você', { quem }), careerDateLabel(sm.start_date, sm.date_precision), [sm.city, sm.state].filter(Boolean).join('/')].filter(Boolean).join(' · ')}
+      </p>
+      {categorias.length > 0 && <p className="text-xs text-gray-600">{categorias.join(' — ')}</p>}
+      {awaitsPartner(doc) && (
+        <div className="flex flex-wrap gap-2">
+          <V2Button type="button" size="sm" variant="primary" disabled={acao.isPending} onClick={() => rodar({ action: 'respond', docId: doc.id, answer: 'confirm' }, t('Confirmado.'))}>{t('Confirmo')}</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'respond', docId: doc.id, answer: 'decline' }, t('Resposta enviada.'))}>{t('Não foi assim')}</V2Button>
+        </div>
+      )}
+      {doc.status === PARTNER_STATUS.CONFIRMED && (
+        <>
+          {doc.feedback && !visao && <FeedbackView feedback={doc.feedback} />}
+          {visao ? <FeedbackForm doc={doc} onDone={() => setVisao(false)} /> : (
+            <div className="flex flex-wrap gap-2">
+              {podeVisao && <V2Button type="button" size="sm" variant="secondary" onClick={() => setVisao(true)}>{doc.feedback ? t('Editar a sua visão') : t('Deixar a sua visão')}</V2Button>}
+              {!doc.partner_event_id && espelho !== 'feito' && (
+                <V2Button type="button" size="sm" variant="secondary" data-dica="carreira-por-tambem" disabled={espelho === 'enviando'}
+                  onClick={async () => { setEspelho('enviando'); setEspelho((await onMirror(mirrorEventDraft(doc))) ? 'feito' : ''); }}>
+                  {t('Pôr na minha carreira também')}
+                </V2Button>
+              )}
+              {(doc.partner_event_id || espelho === 'feito') && <V2Badge tone="neutral">{t('Também na sua carreira')}</V2Badge>}
+              <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'remove', docId: doc.id }, doc.feedback ? t('Visão retirada.') : t('Confirmação desfeita.'))}>
+                {doc.feedback ? t('Retirar a visão') : t('Desfazer a confirmação')}
+              </V2Button>
+              <ReportControl docId={doc.id} />
+            </div>
+          )}
+        </>
+      )}
+    </li>
+  );
+}
+
+/**
+ * O topo da linha do tempo, do lado da dupla. Some quando não há nada; com a
+ * lista falhando, diz — nunca "nenhum pedido".
+ * @param {{ partners: object[]|undefined, error: boolean, onRetry: Function, focus?: string|null, onMirror: Function }} props
+ */
+export function CareerPartnerInbox({ partners, error, onRetry, focus = null, onMirror }) {
+  const { user } = useAuth();
+  const uid = user?.uid;
+  if (error) return <V2ErrorState inline title={t('Não carregaram os pedidos das duplas')} description={t('Se alguém pediu para você confirmar um torneio, o pedido aparece aqui quando a conexão voltar.')} onRetry={onRetry} />;
+  const recebidos = (partners || []).filter((d) => d.partner_uid === uid && d.status !== PARTNER_STATUS.DECLINED);
+  if (!recebidos.length) return null;
+  const abertos = recebidos.filter(awaitsPartner);
+  return (
+    <V2Surface as="section" variant="compacto" aria-labelledby="carreira-duplas-titulo" data-dica="carreira-duplas" className="space-y-3">
+      <h2 id="carreira-duplas-titulo" className="font-display text-base font-bold text-ink">{t('Torneios em que você foi a dupla')}</h2>
+      {abertos.length > 0 && <p className="text-xs text-gray-600">{t('Confirme só o que aconteceu de verdade. A confirmação vira o selo "Confirmado pela dupla" na carreira de quem registrou.')}</p>}
+      <ul className="space-y-3">
+        {recebidos.map((d) => <InboxItem key={d.id} doc={d} focado={focus === d.id} onMirror={onMirror} />)}
+      </ul>
+    </V2Surface>
+  );
+}

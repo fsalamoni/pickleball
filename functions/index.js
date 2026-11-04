@@ -2079,3 +2079,22 @@ exports.clubAssociationSweep = onSchedule(
     resultados.filter((r) => r.status === 'rejected').forEach((r) => logger.error('clubAssociationSweep: uma varredura falhou', r.reason));
   },
 );
+
+// =====================================================================
+// MINHA CARREIRA (flag `athlete_career`): a DUPLA confirma e comenta — ver
+// `functions/career.js`. `career_partner` é escrita de terceiro: só o servidor.
+// =====================================================================
+const career = require('./career');
+exports.career = federationCallable('career', career.career);
+
+/** O torneio de fora mudou: impressão ("confirmar de novo"), pedidos órfãos e o vínculo das duas fichas. */
+exports.careerEventWritten = onDocumentWritten(
+  { document: 'career_events/{id}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    try {
+      await career.eventWritten(fedCtx(), event.params.id, antes(event), depois(event));
+    } catch (err) {
+      logger.error('careerEventWritten: erro.', err);
+    }
+  },
+);

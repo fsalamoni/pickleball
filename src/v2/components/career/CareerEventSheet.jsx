@@ -29,12 +29,16 @@ import {
   bestPosition, careerCompleteness, careerSeal, entryLabel, matchPlatformTournament, withDerivedStatus,
 } from '@/modules/career/domain/careerEvent.js';
 import { careerTrophies } from '@/modules/career/domain/timeline.js';
+import { partnerSealFor } from '@/modules/career/domain/careerPartner.js';
 import { careerDebriefFor, careerDebriefSource } from '@/modules/career/domain/careerDebrief.js';
 import { aspectLabel } from '@/modules/training/domain/debrief.js';
 import { useMyDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { deleteCareerPhoto, uploadCareerPhoto } from '@/modules/career/services/careerService';
 import { useDeleteCareerEvent } from '@/modules/career/hooks/useCareer';
-import FedPersonPicker from '@/v2/components/federations/manage/FedPersonPicker';
+import { useQuery } from '@tanstack/react-query';
+import { listAthletes } from '@/modules/athletes/services/athleteService';
+import PartnerPicker from '@/v2/components/people/PartnerPicker';
+import { CareerPartnerLayer } from './CareerPartnerUi';
 import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { ChoiceGroup, FORMAT_CHOICES, GENDER_CHOICES_ALL, SealBadge, careerDateLabel } from './careerUi';
 import { t } from '@/core/i18n';
@@ -59,8 +63,10 @@ function Camada({ n, titulo, dica, children }) {
   );
 }
 
-function Participacao({ entry, idx, onChange, onRemove }) {
+function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
   const [escolher, setEscolher] = useState(false);
+  // O MESMO diretório (e cache) do convite de parceiro da inscrição de torneio.
+  const diretorio = useQuery({ queryKey: ['athletes'], queryFn: listAthletes, enabled: escolher });
   const set = (k, v) => onChange({ ...entry, [k]: v });
   const id = `carreira-cat-${idx}`;
   return (
@@ -125,12 +131,19 @@ function Participacao({ entry, idx, onChange, onRemove }) {
             <UserRound className="h-4 w-4" /> {escolher ? t('Fechar a lista') : t('Escolher da lista de usuários')}
           </V2Button>
           {escolher && (
-            <FedPersonPicker
+            <PartnerPicker
               id={`${id}-pessoa`}
-              selecionados={[]}
-              onChange={([a]) => {
-                if (!a) return;
-                set('partner', { uid: a.user_id || a.uid || a.id, name: a.platform_name || a.full_name || a.display_name || '' });
+              athletes={diretorio.data || []}
+              falhou={diretorio.isError}
+              carregando={diretorio.isPending}
+              selfUid={selfUid}
+              past={past}
+              label={t('Escolher a dupla da lista de usuários')}
+              selectedHint={t('Ela pode confirmar o resultado depois.')}
+              footHint={null}
+              onClear={() => set('partner', null)}
+              onSelect={(a) => {
+                set('partner', { uid: a.uid || a.id, name: a.platform_name || '' });
                 setEscolher(false);
               }}
             />
@@ -143,9 +156,13 @@ function Participacao({ entry, idx, onChange, onRemove }) {
 
 /**
  * @param {{ event: object|null, open: boolean, onOpenChange: Function, save: Function,
- *   myTournaments?: object[], onRepeat?: (ev: object) => void }} props
+ *   myTournaments?: object[], onRepeat?: (ev: object) => void, saved?: boolean,
+ *   partners?: object[], partnersError?: boolean, onRetryPartners?: Function, past?: object[] }} props
  */
-export default function CareerEventSheet({ event, open, onOpenChange, save, myTournaments, onRepeat }) {
+export default function CareerEventSheet({
+  event, open, onOpenChange, save, myTournaments, onRepeat,
+  saved = false, partners, partnersError = false, onRetryPartners, past = [],
+}) {
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const [f, setF] = useState(() => withDerivedStatus(event));
@@ -256,7 +273,7 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
         </DialogHeader>
 
         <div className="flex flex-wrap items-center gap-2">
-          <SealBadge seal={careerSeal(f, myTournaments)} />
+          <SealBadge seal={careerSeal(f, myTournaments, partnerSealFor(f, partners))} awaiting={partnerSealFor(f, partners) === 'awaiting'} />
           {completude && contaConhecida && (
             <span className="text-sm font-semibold text-ink">
               {t('{feito} de {total}', { feito: completude.done, total: completude.total })}
@@ -319,6 +336,8 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
               entry={e}
               idx={i}
               onChange={(novo) => setEntry(i, novo)}
+              selfUid={uid}
+              past={past}
               onRemove={f.entries.length > 1 ? () => setF((x) => ({ ...x, entries: x.entries.filter((_, j) => j !== i) })) : null}
             />
           ))}
@@ -392,6 +411,17 @@ export default function CareerEventSheet({ event, open, onOpenChange, save, myTo
               </V2Button>
             </>
           )}
+        </Camada>
+
+        <Camada n={3} titulo={t('Dupla')} dica="carreira-dupla">
+          <CareerPartnerLayer
+            event={gravado}
+            saved={saved}
+            dirty={JSON.stringify(f) !== JSON.stringify(gravado)}
+            partners={partners}
+            partnersError={partnersError}
+            onRetry={onRetryPartners}
+          />
         </Camada>
 
         {fonteBalanco && (

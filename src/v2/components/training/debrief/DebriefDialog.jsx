@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { useDebriefActions } from '@/modules/training/hooks/useDebriefs';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useCareerPartnerVoices } from '@/modules/career/hooks/useCareer';
 import { useMyTrainingPlans, usePlanActions } from '@/modules/training/hooks/useTrainingPlans';
 import { useVisibleTrainingItems } from '@/modules/training/hooks/useTrainingItems';
 import { useTrainingMeta } from '@/modules/training/hooks/useTrainingMeta';
@@ -107,6 +110,9 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
   const visiveis = useVisibleTrainingItems(identity);
   const meta = useTrainingMeta(uid);
   const { level } = useMyUnifiedLevel();
+  // A voz da dupla (Minha carreira): só as visões que a pessoa marcou "Usar no meu treino".
+  const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
+  const partnerVoices = useCareerPartnerVoices(uid, { enabled: open && carreiraOn });
 
   const [avulso, setAvulso] = useState(() => ({ date: hoje, title: '', ref: `${hoje}_${Date.now()}` }));
   const [f, setF] = useState(() => (initial ? {
@@ -127,7 +133,8 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
   const fonte = source || {
     type: DEBRIEF_SOURCE.AVULSO, ref_id: avulso.ref, date: avulso.date, title: avulso.title.trim() || DEBRIEF_SOURCE_LABELS.avulso,
   };
-  const carregando = visiveis.isLoading || meta.isPending;
+  // A voz da dupla ainda chegando (`null`): segura o salvar, senão a sugestão sairia sem ela, calada.
+  const carregando = visiveis.isLoading || meta.isPending || partnerVoices === null;
 
   const enviar = (e) => {
     e.preventDefault();
@@ -139,7 +146,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     const chave = debriefSourceKey(value.source);
     const anteriores = answeredDebriefs(history).filter((d) => debriefSourceKey(d.source) !== chave);
     const sugestao = suggestWeek({
-      debrief: value, history: anteriores, items: visiveis.items, level, routine: meta.data?.routine || null, today: hoje,
+      debrief: value, history: anteriores, items: visiveis.items, level, routine: meta.data?.routine || null, today: hoje, partnerVoices: partnerVoices || [],
     });
     acoes.save.mutate({ input, suggestion: sugestao }, {
       onSuccess: (id) => { setSalvo({ id, sugestao }); setFora([]); },
@@ -269,6 +276,11 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
         ) : (
           <div className="space-y-4" data-dica="treino-balanco-sugestao">
             <p className="text-sm text-gray-600">{salvo.sugestao.message}</p>
+            {salvo.sugestao.focus.some((x) => x.partner?.length) && (
+              <p className="text-xs text-gray-500" data-dica="balanco-voz-da-dupla">
+                {salvo.sugestao.focus.filter((x) => x.partner?.length).map((x) => t('Também da sua dupla ({nomes}): {aspecto}.', { nomes: x.partner.join(', '), aspecto: x.label.toLowerCase() })).join(' ')}
+              </p>
+            )}
             {salvo.sugestao.maintain && (
               <p className="text-xs text-gray-500">{t('Para manter: {aspecto}.', { aspecto: salvo.sugestao.maintain.label.toLowerCase() })}</p>
             )}

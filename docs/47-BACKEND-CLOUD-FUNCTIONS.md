@@ -310,11 +310,13 @@ e-mail verificado**.
 `accountDeletion.pseudo.test.js`, `accountDeletion.mercado.test.js`,
 `accountDeletion.treino.test.js`, `accountDeletion.gamificacao.test.js`; `accountMerge.test.js`;
 `accountStatus.test.js`; `supportAccess.test.js`;
-`registrationLink.test.js`. Guarda de cobertura de coleções:
+`registrationLink.test.js`; `accountDeletion.carreira.test.js`. Guarda de cobertura de coleções:
 `src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado/
 carreira tem de entrar na exclusão e na exportação). A Minha carreira
-(`docs/54`) entra por `career_events` (por `uid`) e o prefixo `carreira/` do
-Storage. A gamificação (PR 0b da carreira, 2026-11-04) entra inteira:
+(`docs/54`) entra por `career_events` (por `uid`), `career_partner` (por
+`owner_uid` e por `partner_uid`), o registro dos OUTROS em que a pessoa foi a
+dupla (fica o nome, sai o uid — `patchCareerPartner`, por `partner_uids`) e o
+prefixo `carreira/` do Storage. A gamificação (PR 0b da carreira, 2026-11-04) entra inteira:
 concessões, preferências, reputação, Hall da Fama, integridade, moderação,
 sinais, avaliações recebidas, cartas (as escritas também, pelo registro de
 autoria — `coletarCartas`), entradas de atleta em desafio
@@ -351,6 +353,18 @@ Reporting** agrupa, conta e avisa por e-mail quando aparece um erro novo
 **Testes**: `functions/clientErrors.test.js` (formato, e-mail, pilhas, corpo
 hostil, teto); cliente em `src/core/domain/errorReport.test.js`. O deploy
 confere `POST /api/erro` → 204 depois de publicar (aviso, não falha).
+
+## 7a. Minha carreira — a dupla confirma (flag `athlete_career`, `functions/career.js`)
+
+| Função | Gatilho | O que faz | Escreve |
+|---|---|---|---|
+| `career` | callable (`federationCallable`) — ações `invite`, `respond`, `feedback`, `decide`, `remove`, `report`, `moderate`, `queue` | Pedir à dupla que confirme um torneio de fora, responder, deixar a visão, decidir se ela entra no treino, retirar, denunciar e (admin) moderar. Confere: flag ligada, só o dono pede, só a dupla citada responde, os dois maiores de 18, registro jogado; moderação só do admin, com motivo ≥ 5; convite a menor devolve a mesma resposta sem gravar; a denúncia fica fora do pedido e editar a visão denunciada é recusado | `career_partner`, `career_partner_reports`, `notifications` (`type: 'career'`, `origin: 'server'`, link por `linkDeAviso`), `audit_logs` (sem o texto da visão) |
+| `careerEventWritten` | `onDocumentWritten` em `career_events/{id}` | Data ou resultado mudou ⇒ o pedido confirmado vira `reconfirm` e a dupla é avisada (o nome não conta); dupla tirada do registro ⇒ pedido apagado; registro apagado ⇒ pedidos apagados e `linked_event` soltos; confere o `linked_event` do espelho (pedido confirmado, os dois uids) e liga `partner_event_id` — o forjado é desfeito | `career_partner`, `career_events` (só `linked_event`), `notifications` |
+
+Régua copiada do cliente em `functions/careerPolicy.js` (citação, impressão,
+maioridade, visão, link do aviso) — paridade em
+`functions/careerPolicy.parity.test.js`. Testes: `functions/career.test.js`.
+Nenhum motor de ranking, rating ou XP lê `career_*`.
 
 ## 8. Mercado (flag `marketplace`)
 

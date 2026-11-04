@@ -136,6 +136,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   mercado?: ReturnType<typeof marketPendingCounts>,
  *   clubesAssociados?: { pagar?: number, vencendo?: number, vencida?: number, convocacoes?: number, eleicoes?: number, sancoes?: number },
  *   federacoes?: { pagar?: number, vencendo?: number, vencida?: number, convites?: number, escalas?: number, finais?: number, diretor?: number, convocacoes?: number, licenca?: number },
+ *   carreira?: { convites?: number, visoes?: number },
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
  */
@@ -199,6 +200,25 @@ export function userAreaPending(fontes = {}) {
     itens.push({
       id: 'balancos', count: balancos, to: '/treino?aba=balanco',
       label: tn(balancos, '{n} jogo esperando o seu balanço', '{n} jogos esperando o seu balanço'),
+    });
+  }
+
+  // Minha carreira (flag `athlete_career`): pedidos de confirmação que chegaram
+  // e visões da dupla esperando a decisão. `careerPartnerPending` (undefined = não carregou).
+  const pedidosDupla = numero(fontes.carreira?.convites);
+  if (pedidosDupla) {
+    itens.push({
+      id: 'carreira:convites', count: pedidosDupla,
+      to: fontes.carreira?.convite ? `/carreira?dupla=${encodeURIComponent(fontes.carreira.convite)}` : '/carreira',
+      label: tn(pedidosDupla, '{n} torneio para confirmar como dupla', '{n} torneios para confirmar como dupla'),
+    });
+  }
+  const visoesDupla = numero(fontes.carreira?.visoes);
+  if (visoesDupla) {
+    itens.push({
+      id: 'carreira:visoes', count: visoesDupla,
+      to: fontes.carreira?.visaoEvento ? `/carreira?evento=${encodeURIComponent(fontes.carreira.visaoEvento)}` : '/carreira',
+      label: tn(visoesDupla, '{n} visão da dupla para decidir', '{n} visões da dupla para decidir'),
     });
   }
 

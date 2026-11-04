@@ -1989,9 +1989,30 @@ const ATLETA = {
         p(tk('Cada item da linha do tempo leva um selo, que a plataforma calcula — ninguém o digita.')),
         list(
           tk('OFICIAL — veio da plataforma: um torneio do PickleRush em que você jogou, um dia de jogo publicado ou os pontos lançados por uma federação. Também o torneio de fora em que você respondeu "É este" a um torneio daqui.'),
+          tk('CONFIRMADO PELA DUPLA — você registrou e a dupla (com conta, maior de 18) confirmou que foi assim. Mudar a data, a categoria ou a colocação pede a confirmação de novo; trocar o nome do torneio, não.'),
           tk('DECLARADO — você registrou. Fica na sua carreira e na estante "Fora da plataforma", mas nunca soma em ranking, rating nem XP.'),
         ),
         link('/carreira', tk('Abrir a Minha carreira')),
+      ],
+    },
+    {
+      id: 'carreira-dupla',
+      flags: ['athlete_career'],
+      title: tk('A dupla confirma o torneio de fora'),
+      summary: tk('Peça para quem jogou com você confirmar o resultado — e, se quiser, deixar a visão dela sobre o seu jogo.'),
+      keywords: ['dupla', 'parceiro', 'parceira', 'confirmar', 'confirmação', 'visão da dupla', 'carreira', 'denunciar', 'selo'],
+      guias: ['carreira-registrar'],
+      blocks: [
+        p(tk('Na ficha de um torneio de fora já jogado, escolha a dupla da lista de usuários (aparecem primeiro as pessoas com quem você já jogou). Salvo, a camada "Dupla" oferece "Pedir confirmação": a dupla recebe um aviso e responde "Confirmo" ou "Não foi assim". Confirmado, o torneio ganha o selo "Confirmado pela dupla".')),
+        list(
+          tk('SÓ QUEM FOI CITADO CONFIRMA — e só maiores de 18 anos pedem ou confirmam. Dupla sem conta continua na ficha, só não confirma.'),
+          tk('MUDOU A DATA OU O RESULTADO? — a confirmação fica pendente de novo e a dupla é avisada. Trocar só o nome do torneio não pede nada.'),
+          tk('A VISÃO DA DUPLA — depois de confirmar, a dupla pode dizer até 3 pontos fortes e 3 a melhorar, e sugerir um treino. Só vocês dois veem. Você escolhe "Usar no meu treino" (entra no foco dos seus balanços, dizendo que veio dela) ou "Guardar".'),
+          tk('PÔR NA MINHA CARREIRA TAMBÉM — quem confirmou pode copiar o torneio para a própria carreira, já preenchido; os dois registros ficam ligados.'),
+          tk('DENUNCIAR — algo ofensivo, falso ou com dado pessoal: "Denunciar" leva à moderação da plataforma, que decide com motivo e avisa quem perdeu algo.'),
+        ),
+        link('/carreira', tk('Abrir a Minha carreira')),
+        warn(tk('A confirmação e a visão da dupla nunca entram em ranking, rating nem XP. Apagar o pedido, retirar a visão ou desfazer a confirmação vale a qualquer hora.')),
       ],
     },
     {
@@ -2862,7 +2883,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
   // Minha carreira (as abas são `?aba=`, por isso sem `/carreira/*`).
   { pattern: '/carreira', label: tk('a sua carreira'),
-    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos']] },
+    refs: [[HELP_SECTION.ATHLETE, 'carreira-registrar'], [HELP_SECTION.ATHLETE, 'carreira-balanco'], [HELP_SECTION.ATHLETE, 'carreira-selos'], [HELP_SECTION.ATHLETE, 'carreira-dupla']] },
   { pattern: '/circuits', label: tk('circuitos'),
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: tk('seus jogos'),

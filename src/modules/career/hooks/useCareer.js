@@ -18,12 +18,16 @@ import {
   CAREER_PENDING_PREF, addPending, parsePending, removePending, serializePending,
 } from '../domain/draftQueue.js';
 import {
-  CareerError, deleteCareerEvent, listCareerEvents, saveCareerEvent, saveCareerEventsBatch,
+  CareerError, careerAction, deleteCareerEvent, listCareerEvents, listMyCareerPartnerDocs,
+  saveCareerEvent, saveCareerEventsBatch,
 } from '../services/careerService.js';
+import { partnerVoices } from '../domain/careerPartner.js';
 
 export const careerKeys = Object.freeze({
   all: ['career'],
   events: (uid) => ['career', 'events', uid],
+  partners: (uid) => ['career', 'partners', uid],
+  moderation: ['career', 'moderation'],
   // A MESMA chave de `fedKeys.myPoints` (useFederations): um cache só para os
   // pontos. Não importamos aquele arquivo para não puxar a federação inteira
   // para a estante de troféus.
@@ -54,6 +58,55 @@ export function useCareerEvents({ enabled = true } = {}) {
   });
 }
 
+/** Os pedidos da dupla em que a pessoa está, dos dois lados (`career_partner`). */
+function usePartnersOf(uid, enabled) {
+  return useQuery({
+    queryKey: careerKeys.partners(uid),
+    queryFn: () => listMyCareerPartnerDocs(uid),
+    enabled: Boolean(uid) && enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useCareerPartners({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return usePartnersOf(user?.uid, enabled);
+}
+
+/**
+ * A voz da dupla para o foco do balanço (de `uid`): `[]` com a flag desligada
+ * ou sem visões usadas; falha também vira `[]` — a voz SOMA ao foco, nunca o
+ * afirma vazio (o balanço segue com o histórico da própria pessoa). `null`
+ * enquanto a consulta ligada ainda não respondeu (a tela segura o salvar).
+ */
+export function useCareerPartnerVoices(uid, { enabled = true } = {}) {
+  const q = usePartnersOf(uid, enabled);
+  const ligada = Boolean(uid) && enabled;
+  return useMemo(() => {
+    if (q.isSuccess) return partnerVoices(q.data, uid);
+    return ligada && !q.isError ? null : [];
+  }, [q.isSuccess, q.isError, q.data, uid, ligada]);
+}
+
+/** Uma ação da dupla no servidor; invalida tudo da carreira. */
+export function useCareerPartnerAction() {
+  const invalidar = useInvalidar();
+  return useMutation({
+    mutationFn: ({ action, ...payload }) => careerAction(action, payload),
+    onSuccess: invalidar,
+  });
+}
+
+/** A fila de moderação (só o admin; o servidor confere). */
+export function useCareerModerationQueue({ enabled = true } = {}) {
+  return useQuery({
+    queryKey: careerKeys.moderation,
+    queryFn: async () => (await careerAction('queue')).items || [],
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 /** Os pontos lançados no ranking oficial das federações (leitura pública, `uid ==`). */
 function useOfficialPoints(uid, enabled) {
   return useQuery({
@@ -77,7 +130,8 @@ export function useCareerTimeline({ enabled = true } = {}) {
   const trophiesQ = useTrophies(uid, { enabled });
   const gamesQ = usePublishedGameDayGames(uid, enabled);
   const pointsQ = useOfficialPoints(uid, enabled);
-  const qs = [careerQ, tournamentsQ, trophiesQ, gamesQ, pointsQ];
+  const partnersQ = useCareerPartners({ enabled });
+  const qs = [careerQ, tournamentsQ, trophiesQ, gamesQ, pointsQ, partnersQ];
   const pending = qs.some((q) => q.isPending);
   const ok = (q) => (q.isSuccess ? q.data : undefined);
   const timeline = useMemo(() => (pending ? null : buildCareerTimeline({
@@ -86,8 +140,9 @@ export function useCareerTimeline({ enabled = true } = {}) {
     trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
     gameDayGames: ok(gamesQ),
     federationPoints: ok(pointsQ),
+    partners: ok(partnersQ),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [pending, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess]);
+  })), [pending, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess, partnersQ.data, partnersQ.isSuccess]);
   const retry = () => qs.filter((q) => q.isError).forEach((q) => q.refetch());
   return {
     timeline,
@@ -99,6 +154,9 @@ export function useCareerTimeline({ enabled = true } = {}) {
     myTournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined,
     // Os pódios da plataforma (com a dupla): a retrospectiva da temporada acha a melhor parceria.
     trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
+    partners: partnersQ.isSuccess ? partnersQ.data : undefined,
+    partnersError: partnersQ.isError,
+    retryPartners: () => partnersQ.refetch(),
   };
 }
 

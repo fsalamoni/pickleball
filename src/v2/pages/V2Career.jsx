@@ -6,22 +6,26 @@
  * não há aba vazia. Só a aba aberta consulta.
  *
  * Outros parâmetros: `?evento=<id>` abre a ficha de um torneio de fora,
- * `?registrar=1` abre o registro rápido e `?lista=1` o modo lista.
+ * `?registrar=1` abre o registro rápido, `?lista=1` o modo lista e
+ * `?dupla=<id do pedido>` destaca um pedido de confirmação que chegou (aviso).
  *
  * O resultado declarado aqui nunca entra em ranking, rating nem XP.
  */
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { ListPlus, Medal, Plus, Route } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CAREER_TAB, careerTabFromParam } from '@/modules/career/domain/timeline.js';
 import { repeatEvent } from '@/modules/career/domain/careerEvent.js';
+import { pastPartners } from '@/modules/career/domain/careerPartner.js';
 import { useCareerSaveWithDraft, useCareerTimeline } from '@/modules/career/hooks/useCareer';
 import { V2Button, V2ErrorState, V2Page, V2PageIntro, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import CareerTimeline from '@/v2/components/career/CareerTimeline';
+import { CareerPartnerInbox } from '@/v2/components/career/CareerPartnerUi';
 import TrophyShelf, { ABA_FORA } from '@/v2/components/trophies/TrophyShelf';
 import { t, tk } from '@/core/i18n';
 
@@ -57,6 +61,26 @@ function Carreira() {
     || (fichaLocal?.id === eventoId ? fichaLocal : null), [linhaDoTempo.events, eventoId, fichaLocal]);
   const registrar = params.get('registrar') === '1';
   const lista = params.get('lista') === '1';
+  const past = useMemo(() => pastPartners({ career: linhaDoTempo.events, trophies: linhaDoTempo.trophies, me: user?.uid }),
+    [linhaDoTempo.events, linhaDoTempo.trophies, user?.uid]);
+
+  /** "Pôr na minha carreira também": grava o registro espelhado e abre a ficha para ajustar. */
+  async function porTambem(rascunhoDaDupla) {
+    if (!rascunhoDaDupla) return false;
+    // Já está na carreira (o vínculo do servidor ainda não chegou): abre o que existe, não grava outro.
+    const ja = (linhaDoTempo.events || []).find((e) => e.linked_event?.id && e.linked_event.id === rascunhoDaDupla.linked_event?.id);
+    if (ja) { abrirFicha(ja.id); return true; }
+    try {
+      const { saved, event: ev } = await rascunho.save(rascunhoDaDupla);
+      toast.success(saved ? t('Está na sua carreira também.') : t('Guardado neste aparelho. Enviamos quando a conexão voltar.'));
+      setFichaLocal(ev);
+      abrirFicha(ev.id);
+      return true;
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível salvar. Tente de novo.'));
+      return false;
+    }
+  }
 
   return (
     <V2Page className="space-y-6">
@@ -83,6 +107,15 @@ function Carreira() {
         dica="carreira-abas"
       />
 
+      {aba === CAREER_TAB.TIMELINE && !linhaDoTempo.isPending && (
+        <CareerPartnerInbox
+          partners={linhaDoTempo.partners}
+          error={linhaDoTempo.partnersError}
+          onRetry={linhaDoTempo.retryPartners}
+          focus={params.get('dupla')}
+          onMirror={porTambem}
+        />
+      )}
       {aba === CAREER_TAB.TIMELINE && (
         <CareerTimeline
           data={linhaDoTempo}
@@ -116,6 +149,11 @@ function Carreira() {
             save={rascunho.save}
             myTournaments={linhaDoTempo.myTournaments}
             onRepeat={(ev) => { setRepetir(repeatEvent(ev)); fechar('evento'); }}
+            saved={(linhaDoTempo.events || []).some((e) => e.id === evento.id)}
+            partners={linhaDoTempo.partners}
+            partnersError={linhaDoTempo.partnersError}
+            onRetryPartners={linhaDoTempo.retryPartners}
+            past={past}
           />
         )}
         {lista && <CareerListMode open onOpenChange={(v) => { if (!v) fechar('lista'); }} />}

@@ -11,6 +11,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAdminStores, useOpenDisputes, useOpenReports } from '@/modules/marketplace/hooks/useMarket';
 import { useAdminFederations } from '@/modules/federations/hooks/useFederations';
+import { useCareerModerationQueue } from '@/modules/career/hooks/useCareer';
 
 /** Uma fonte só vale quando a consulta respondeu; carregando ou falha = desconhecida. */
 const fonte = (ok, count) => (ok ? { ok: true, count } : { ok: false });
@@ -33,6 +34,8 @@ export function useAdminInbox(enabled = true) {
   const denunciasMercado = useOpenReports({ enabled: enabled && mercadoOn });
   const federacoesOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const federacoes = useAdminFederations({ enabled: enabled && federacoesOn });
+  const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
+  const carreira = useCareerModerationQueue({ enabled: enabled && carreiraOn });
 
   const lista = useMemo(() => buildInbox({
     revisao: fonte(itens.isSuccess, (itens.data || []).filter(isPendingReview).length),
@@ -47,9 +50,11 @@ export function useAdminInbox(enabled = true) {
       denunciasMercado: fonte(denunciasMercado.isSuccess, new Set((denunciasMercado.data || []).map((r) => r.listing_id)).size),
     } : {}),
     ...(federacoesOn ? { federacoes: fonte(federacoes.isSuccess, (federacoes.data || []).filter((f) => f.status === 'pending').length) } : {}),
+    ...(carreiraOn ? { carreira: fonte(carreira.isSuccess, (carreira.data || []).length) } : {}),
   }), [usuarios.isSuccess, usuarios.data, itens.isSuccess, itens.data, denuncias.isSuccess, denuncias.data, sinais.isLoading, sinais.isError, sinais.flags,
     cartas.isLoading, cartas.isError, cartas.letters, ranking.isSuccess, ranking.data, mercadoOn, lojas.isSuccess, lojas.data,
-    disputas.isSuccess, disputas.data, denunciasMercado.isSuccess, denunciasMercado.data, federacoesOn, federacoes.isSuccess, federacoes.data]);
+    disputas.isSuccess, disputas.data, denunciasMercado.isSuccess, denunciasMercado.data, federacoesOn, federacoes.isSuccess, federacoes.data,
+    carreiraOn, carreira.isSuccess, carreira.data]);
 
   return { itens: lista, badges: inboxBadges(lista), ...inboxTotals(lista) };
 }

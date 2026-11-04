@@ -19,6 +19,7 @@ import {
   CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, placementText,
 } from './careerEvent.js';
 import { careerDebriefFor } from './careerDebrief.js';
+import { partnerSealFor } from './careerPartner.js';
 
 /** Origem de um item. `fora` = declarado pela pessoa. Valor de `?origem=` (contrato). */
 export const TIMELINE_SOURCE = Object.freeze({
@@ -28,8 +29,8 @@ export const TIMELINE_SOURCE = Object.freeze({
 export const ORIGIN_FILTER = Object.freeze({ PLATFORM: 'plataforma', OUTSIDE: 'fora' });
 
 /** Selo derivado. Neste PR: declarado (digitado) e oficial (da plataforma ou da federação). */
-export const SEAL = Object.freeze({ DECLARED: 'declared', OFFICIAL: 'official' });
-export const SEAL_LABEL = Object.freeze({ declared: tk('Declarado'), official: tk('Oficial') });
+export const SEAL = Object.freeze({ DECLARED: 'declared', CONFIRMED: 'confirmed', OFFICIAL: 'official' });
+export const SEAL_LABEL = Object.freeze({ declared: tk('Declarado'), confirmed: tk('Confirmado pela dupla'), official: tk('Oficial') });
 
 const FONTE_ROTULO = Object.freeze({
   career: tk('os torneios de fora'),
@@ -45,7 +46,9 @@ const dia = (v) => {
 };
 const ano = (iso) => Number(String(iso).slice(0, 4));
 
-function itemDeFora(ev, myTournaments) {
+function itemDeFora(ev, myTournaments, partners) {
+  // O selo da dupla sai dos documentos que só o servidor grava (`career_partner`).
+  const partnerState = partners ? partnerSealFor(ev, partners) : null;
   const pos = bestPosition(ev);
   const cats = (ev.entries || []).map((e) => [entryLabel(e), placementText(e)].filter(Boolean).join(' — '));
   return {
@@ -61,7 +64,8 @@ function itemDeFora(ev, myTournaments) {
     position: pos,
     federated: ev.federated === true,
     federation: ev.federation_acronym || ev.federation_name || '',
-    seal: careerSeal(ev, myTournaments),
+    seal: careerSeal(ev, myTournaments, partnerState),
+    partnerState,
     eventId: ev.id,
     platformTournamentId: ev.platform_tournament_id || null,
     link: null,
@@ -84,6 +88,9 @@ export function buildCareerTimeline(fontes = {}) {
   const ausente = (k) => fontes[k] === undefined
     || (k === 'trophies' && (fontes.trophies.torneios === undefined || fontes.trophies.diasDeJogo === undefined));
   const faltou = Object.entries(FONTE_ROTULO).filter(([k]) => ausente(k)).map(([, v]) => t(v));
+  // As confirmações das duplas são opcionais (só quem as lê passa a chave): pedidas e
+  // sem resposta, o selo "Confirmado pela dupla" não pode virar "Declarado" calado.
+  if ('partners' in fontes && fontes.partners === undefined) faltou.push(t('as confirmações das duplas'));
   const myTournaments = fontes.tournaments;
   const itens = [];
 
@@ -112,7 +119,7 @@ export function buildCareerTimeline(fontes = {}) {
   // Os pontos do torneio ligado também não viram um item "Federação" à parte.
   ligados.forEach((id) => pontosPorTorneio.delete(id));
 
-  (fontes.career || []).forEach((ev) => itens.push(itemDeFora(ev, myTournaments)));
+  (fontes.career || []).forEach((ev) => itens.push(itemDeFora(ev, myTournaments, fontes.partners)));
 
   (myTournaments || []).filter((tt) => isCareerPlatformTournament(tt) && !ligados.has(tt.id)).forEach((tt) => {
     const data = dia(tt.starts_at) || dia(tt.start_date);

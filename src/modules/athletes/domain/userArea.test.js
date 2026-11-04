@@ -111,3 +111,12 @@ describe('userAreaPending', () => {
     expect(userAreaPending({ mercado: marketPendingCounts({}) })).toEqual([]);
   });
 });
+
+describe('userAreaPending — Minha carreira (a dupla)', () => {
+  it('pedidos para confirmar e visões para decidir levam à carreira; desconhecido não vira item', () => {
+    const itens = userAreaPending({ carreira: { convites: 2, visoes: 1 } });
+    expect(itens.map((i) => [i.id, i.count, i.to])).toEqual([['carreira:convites', 2, '/carreira'], ['carreira:visoes', 1, '/carreira']]);
+    expect(userAreaPending({ carreira: undefined })).toEqual([]);
+    expect(userAreaPending({ carreira: { convites: 0, visoes: 0 } })).toEqual([]);
+  });
+});

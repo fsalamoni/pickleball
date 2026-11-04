@@ -13,11 +13,14 @@ career/
 │   │                   # filtros da URL, troféus de fora, abas (CAREER_TAB), resumo da Minha área
 │   ├── draftQueue.js   # a fila do aparelho para quando não há sinal
 │   ├── careerDebrief.js # torneio de fora → origem `externo` do balanço (sem importar debrief.js)
+│   ├── careerPartner.js # a DUPLA (PR 3): citação, impressão, maioridade, visão, selo,
+│   │                    # pendências, voz no balanço, espelho, "com quem já jogou"
 │   └── seasonRecap.js  # retrospectiva da temporada (zero banco): quando oferecer, parceria do ano
 ├── services/
-│   ├── careerService.js        # career_events + Storage carreira/{uid}/
+│   ├── careerService.js        # career_events + Storage carreira/{uid}/ + career_partner (ler) + callable `career`
 │   └── careerExportService.js  # o bloco `career` da exportação de dados
-├── hooks/useCareer.js  # useCareerEvents, useCareerTimeline, mutações, useCareerSaveWithDraft
+├── hooks/useCareer.js  # useCareerEvents, useCareerTimeline, mutações, useCareerSaveWithDraft,
+│                       # useCareerPartners, useCareerPartnerVoices, useCareerPartnerAction, useCareerModerationQueue
 └── i18n/locales/       # en.js, es.js
 ```
 
@@ -25,7 +28,11 @@ Telas: `src/v2/pages/V2Career.jsx` + `src/v2/components/career/`. A seção da
 Minha área é `CareerAreaSection`; o bloco de Meu desempenho é
 `CareerPerformanceBlock`; o balanço da ficha abre `CareerDebriefDialog` (lazy);
 a retrospectiva é o `MedalCardDialog` com `season`; a aba "Fora da plataforma" da estante é a
-`TrophyShelf` (`ABA_FORA`).
+`TrophyShelf` (`ABA_FORA`). A dupla (PR 3): `CareerPartnerUi.jsx` (camada 3 da
+ficha e os pedidos que chegaram, no topo da linha do tempo), o seletor único
+`v2/components/people/PartnerPicker.jsx` e a fila do admin
+`v2/components/admin/career/AdminCareerModeration.jsx`. Servidor:
+`functions/career.js` (+ `careerPolicy.js`, com paridade).
 
 ## O que não pode regredir
 
@@ -44,3 +51,10 @@ a retrospectiva é o `MedalCardDialog` com `season`; a aba "Fora da plataforma" 
 9. Em Meu desempenho o declarado só soma com "Incluir declarados"
    (`?declarados=1`), dizendo de onde vem cada parte; a retrospectiva não sai
    com fonte faltando.
+10. `career_partner` só o servidor grava; só a dupla citada confirma; data ou
+    resultado mudou ⇒ nova confirmação (o nome não); menor de 18 nunca
+    convida nem é convidado; a visão nunca sai do par; tudo auditado. A régua
+    tem cópia em `functions/careerPolicy.js` com paridade. A denúncia mora
+    em `career_partner_reports` (fora do pedido: o denunciado não a lê) e
+    editar a visão denunciada é recusado.
+11. O seletor de dupla é UM (`PartnerPicker`, o da inscrição de torneio).
