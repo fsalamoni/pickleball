@@ -18,12 +18,12 @@
 | Coleções raiz no `firestore.rules` | 247 |
 | Blocos `match` (raiz + subcoleções) | 272 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 125 |
+| Cloud Functions exportadas | 124 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 10 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
 | Arquivos de teste (`*.test.js(x)`) | 950 |
-| Workflows do GitHub Actions | 9 |
+| Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 60 |
 
 ## 2. Stack (de `package.json`)
@@ -323,7 +323,6 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `recomputeRankingOnTournamentRegistration` | gatilho Firestore | `tournament_registrations/{registrationId}` |
 | `recomputeRankingOnClubEventGame` | gatilho Firestore | `club_event_games/{gameId}` |
 | `catchUpPlatformRankings` | agendada | `every 30 minutes` |
-| `expireStaleNotifications` | agendada | `0 3 1 1 *` |
 | `advanceOpenSlotWaitlist` | agendada | `every 10 minutes` |
 | `promoteOpenSlotWaitlistOnSlot` | gatilho Firestore | `arena_open_slots/{slotId}` |
 | `promoteOpenSlotWaitlistOnEntry` | gatilho Firestore | `arena_waitlist/{entryId}` |
@@ -459,7 +458,6 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 Workflows:
 - `ci.yml`
 - `deploy-firebase.yml`
-- `deploy-pages.yml`
 - `dupr-uat.yml`
 - `firestore-manual-export.yml`
 - `firestore-rules-catchup.yml`

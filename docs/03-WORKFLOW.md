@@ -400,7 +400,6 @@ que já não existe: a tela mostra "Uma versão nova foi publicada — Recarrega
 | `functions-watchdog.yml` | a cada 30 min (`7,37 * * * *`) + manual | Confere se todas as funções exportadas existem em `southamerica-east1` com o rótulo `picklerush`; recria o que sumiu pelo mesmo script e **falha o job de propósito** para avisar por e-mail (§9.1) |
 | `firestore-manual-export.yml` | manual (`confirm = EXPORTAR`) | Exporta o Firestore para o GCS, conferindo banco e privacidade do bucket; aceita prefixo e instante de snapshot |
 | `privacy-legacy-email-cleanup.yml` | manual | Limpeza de e-mails legados em etapas (`report` por padrão = dry-run; `apply` exige texto de confirmação) |
-| `deploy-pages.yml` | mudança no próprio arquivo + manual | **Legado**: desde 2026-11-05 publica no GitHub Pages só um redirecionamento para `picklerush.web.app` (antes era uma cópia completa do app, sem os cabeçalhos de segurança, a cada push) |
 
 Guardas de fonte dos workflows: `deployFirebaseWorkflow.test.js`,
 `deployFunctions.test.js`, `firestoreBackupWorkflow.test.js`,

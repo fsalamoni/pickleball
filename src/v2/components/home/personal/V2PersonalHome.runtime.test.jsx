@@ -279,7 +279,9 @@ describe('⭐ falha não é vazio', () => {
     estado.perfil.interests = ['play_tournaments'];
     estado.publicos = falha();
     await render();
-    expect(texto()).toContain('Não carregou os torneios abertos');
+    // A seção espera o mapa de cidades da região (import dinâmico); no CI
+    // carregado ele pode chegar depois do primeiro `act`.
+    await vi.waitFor(() => expect(texto()).toContain('Não carregou os torneios abertos'));
     expect(texto()).not.toContain('Nenhum torneio com inscrição aberta');
     expect(container.querySelector('[role="alert"] button')).toBeTruthy();
   });
