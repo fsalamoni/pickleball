@@ -189,7 +189,6 @@ pessoa fica na lista até pedir aula ou sair. Textos por `tx` (catálogo
 | `refreshLadderWeekly` | `0 23 * * 0` (domingo 23h), 540 s | para cada arena com `leagues_ladder` ligado, agrega vitórias/derrotas das últimas 500 `arena_matches` e grava o top 50 | lê `arena_module_states` (`module_id == 'leagues_ladder'`, `enabled == true`), `arena_matches`; escreve `arena_ladders/{arenaId}_current` (`source: 'cloud_function_refreshLadderWeekly'`) |
 | `aggregateNpsDaily` | `0 4 * * *` | consolida o NPS das últimas 24 h por arena (promotores ≥ 9, detratores ≤ 6) | lê `arena_nps_responses`; escreve `arena_nps_daily/{arenaId}_{AAAA-MM-DD}` |
 | `autoCloseChecklists` | `0 1 * * *` | fecha checklists com `auto_close == true` e `closed == false` que estão 100% concluídos ou têm > 24 h (até 200) | lê/escreve `arena_checklists` (`closed`, `closed_at`, `auto_closed`) |
-| `expireStaleNotifications` | `0 3 1 1 *` (uma vez por ano) | **aposentada (no-op)** em 2026-10-10: falhava todo dia por falta de índice e ninguém lia `archived`. Fica exportada porque o deploy é por nome e não apaga função; para remover: `firebase functions:delete expireStaleNotifications --region southamerica-east1` e apagar o bloco | nada |
 
 Sem testes unitários dedicados em `functions/` (verificação em
 `scripts/health-check-arena-v3.mjs`). `aggregateNpsDaily` e `autoCloseChecklists`
@@ -611,7 +610,10 @@ local; em 2026-09 isso apagou funções nos dois sentidos. Duas camadas:
 Consequência prática: **toda função nova precisa ser `exports.nome = …` no
 início da linha de `functions/index.js`** (é o que o script e a vigilância
 leem). Para aposentar uma função, não basta tirar a exportação (a versão antiga
-continua rodando): veja o roteiro de `expireStaleNotifications` em §4.2.
+continua rodando): apague a tarefa `firebase-schedule-<nome>-<região>` no
+Cloud Scheduler (ou a função no Cloud Run) e só então tire a exportação — foi
+o caminho de `expireStaleNotifications` (aposentada em 2026-10-10, tarefa
+apagada e exportação removida em 2026-11-05).
 
 Guarda: `src/core/guards/deployFunctions.test.js` (codebase próprio; nenhum
 workflow faz deploy amplo; deploy e vigilância usam o mesmo script) e

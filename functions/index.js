@@ -12,7 +12,7 @@
  * default), por isso o gatilho e o cliente admin apontam para ela.
  *
  * Arena V3 (2026-07-21): automações adicionadas para sprints 1, 5, 6, 7.
- *  - expireStaleNotifications (sprint 1): aposentada em 2026-10-10 (no-op).
+ *  - expireStaleNotifications (sprint 1): aposentada em 2026-10-10; saiu do código em 2026-11-05.
  *  - refreshLadderWeekly (sprint 5): agrega ladder de arenas ativas.
  *  - aggregateNpsDaily (sprint 6): consolida NPS por arena.
  *  - autoCloseChecklists (sprint 7): fecha checklists opening/closing do dia.
@@ -166,26 +166,6 @@ exports.catchUpPlatformRankings = onSchedule(
       return { ran: false, reason: 'error' };
     }
   },
-);
-
-// =====================================================================
-// expireStaleNotifications — APOSENTADA (2026-10-10)
-// =====================================================================
-// Marcava `archived: true` nos avisos não lidos com mais de 7 dias. Falhava
-// TODO dia (`created_at <` + `read ==` pede índice composto que não existe) e,
-// mesmo funcionando, não servia: ninguém lê `archived`, e a central de
-// notificações guarda os avisos antigos de propósito (docs/36). Fica como
-// no-op só porque o deploy é por nome e não apaga função: tirar a exportação
-// deixaria a versão antiga rodando (e falhando) no projeto. Para removê-la de
-// vez: `firebase functions:delete expireStaleNotifications --region
-// southamerica-east1` e então apagar este bloco.
-exports.expireStaleNotifications = onSchedule(
-  {
-    schedule: '0 3 1 1 *', // uma vez por ano: não há o que fazer
-    timeZone: 'America/Sao_Paulo',
-    region: REGION,
-  },
-  async () => ({ archived: 0 }),
 );
 
 // =====================================================================

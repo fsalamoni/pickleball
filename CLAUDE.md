@@ -224,8 +224,7 @@ pickleball/ (raiz do repositório)
 ├── public/                         # assets, PWA
 └── .github/workflows/
     ├── deploy-firebase.yml         # ⭐ push em main → deploy
-    ├── ci.yml                      # lint + test em PR
-    └── deploy-pages.yml            # legado: só redireciona o GitHub Pages ao site oficial
+    └── ci.yml                      # lint + test em PR
 ```
 
 **Ordem de leitura sugerida (se você tem 1 hora):**
