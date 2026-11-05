@@ -400,7 +400,7 @@ que já não existe: a tela mostra "Uma versão nova foi publicada — Recarrega
 | `functions-watchdog.yml` | a cada 30 min (`7,37 * * * *`) + manual | Confere se todas as funções exportadas existem em `southamerica-east1` com o rótulo `picklerush`; recria o que sumiu pelo mesmo script e **falha o job de propósito** para avisar por e-mail (§9.1) |
 | `firestore-manual-export.yml` | manual (`confirm = EXPORTAR`) | Exporta o Firestore para o GCS, conferindo banco e privacidade do bucket; aceita prefixo e instante de snapshot |
 | `privacy-legacy-email-cleanup.yml` | manual | Limpeza de e-mails legados em etapas (`report` por padrão = dry-run; `apply` exige texto de confirmação) |
-| `deploy-pages.yml` | push em `main` + manual | **Legado**: publica o build no GitHub Pages (não é a produção) |
+| `deploy-pages.yml` | mudança no próprio arquivo + manual | **Legado**: desde 2026-11-05 publica no GitHub Pages só um redirecionamento para `picklerush.web.app` (antes era uma cópia completa do app, sem os cabeçalhos de segurança, a cada push) |
 
 Guardas de fonte dos workflows: `deployFirebaseWorkflow.test.js`,
 `deployFunctions.test.js`, `firestoreBackupWorkflow.test.js`,
@@ -594,7 +594,7 @@ grep -c "novoCodigo" dist/assets/*.js    # o código novo está no bundle?
 ```
 
 `build:budget` (`scripts/check-bundle-size.mjs`) soma o JS/CSS que o
-`index.html` carrega e reprova acima de 440 kB gzip (`BUNDLE_BUDGET_KB`). O teto
+`index.html` carrega e reprova acima de 400 kB gzip (`BUNDLE_BUDGET_KB`). O teto
 só desce; estourou? divida o que acrescentou com `lazy` ou tire do caminho crítico.
 
 ### 8.2 Code splitting

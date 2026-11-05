@@ -249,12 +249,25 @@ diário, evolução, dúvidas ao professor, alunos, balanço do jogo
 ### career/ — Minha carreira (flag `athlete_career`)
 A linha do tempo do atleta: os torneios e dias de jogo da plataforma e os
 torneios de FORA que ele registra (resultado declarado, foto, dupla), modo
-lista para o passado e a aba "Fora da plataforma" da estante. Doc `54`.
-- **Arquivos**: `domain/careerEvent.js`, `domain/timeline.js`,
-  `domain/draftQueue.js`, `services/careerService.js`, `hooks/useCareer.js`.
-- **Telas**: `/carreira` (`?aba=linha-do-tempo|conquistas`); componentes em
-  `src/v2/components/career/`; seção `carreira` da Minha área.
-- **Coleções**: `career_events`. Storage `carreira/{uid}/`.
+lista para o passado e a aba "Fora da plataforma" da estante. Também a dupla
+que confirma (PR 3), próximos torneios, metas e o professor (PR 4), o XP da
+ficha completa (PR 5), o convite à dupla sem conta (PR 6) e a vitrine pública
+(PR 7). Doc `54`; o README do módulo detalha cada arquivo.
+- **Arquivos**: `domain/careerEvent.js`, `timeline.js`, `draftQueue.js`,
+  `careerDebrief.js`, `careerPartner.js`, `careerUpcoming.js`,
+  `careerGoals.js`, `careerRank.js`, `careerHabits.js`, `careerPublic.js`,
+  `seasonRecap.js`; `services/careerService.js`, `careerExportService.js`;
+  `hooks/useCareer.js`. Servidor: `functions/career.js` (+ `careerPolicy.js`),
+  `careerXp.js`, `careerPublic.js` (+ `careerPublicPolicy.js`), callable
+  `career` e os gatilhos `careerEventWritten`, `careerPartnerWritten`,
+  `careerDebriefWritten` e a varredura `careerReminders`.
+- **Telas**: `/carreira` (`?aba=linha-do-tempo|proximos|metas|conquistas`) e
+  `/carreira/convite/:token`; componentes em `src/v2/components/career/`;
+  seção `carreira` da Minha área, card `CARREIRA` do início e bloco "Carreira"
+  no perfil público.
+- **Coleções**: `career_events`, `career_rank` (só o dono), `career_partner`,
+  `career_partner_reports`, `career_partner_invites`, `career_public` (só o
+  servidor grava). Storage `carreira/{uid}/` e `carreira-publica/{uid}/`.
 
 ---
 

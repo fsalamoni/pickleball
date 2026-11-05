@@ -2373,3 +2373,7 @@ da cozinha), pé na cozinha no voleio ou no impulso depois dele, pé no saque.
 ## Cartão do controle de linhas colapsável (2026-11-04)
 
 No dia de jogo, o cartão do controle de linhas era uma superfície sempre aberta, diferente dos outros cartões. Virou `V2CollapsibleCard` (`gameday:line-control`): recolhido para quem organiza, com o resumo das quadras ligadas e quantas câmeras cada uma tem; o guia pede para abrir o cartão antes de apontar as quadras.
+
+## Varredura geral (2026-11-05)
+
+Depois dos PRs 3–7 da Minha carreira. O pacote inicial caiu de 438,6 para 389,4 kB gzip: o login importava de forma estática o serviço de inscrições de torneio e, com ele, o domínio inteiro do torneio (agora `import()`; teto do `build:budget` em 400 kB e guarda `pacoteInicial.test.js`). A regra de `circuits` passou a exigir `created_by` = quem cria. O GitHub Pages deixou de publicar uma cópia completa do app (sem os cabeçalhos de segurança) e passou a só redirecionar para `picklerush.web.app`. Dependências sem quebra atualizadas; o que fica, por prioridade, está em `docs/20-SEGURANCA-E-PRIVACIDADE/22-VARREDURA-2026-11-05.md`.

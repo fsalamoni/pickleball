@@ -2787,7 +2787,10 @@ service cloud.firestore {
     }
     match /circuits/{circuitId} {
       allow read: if true;
-      allow create: if isAuthed();
+      // Varredura 2026-11-05: o criador é quem grava. Antes bastava estar
+      // logado, e a leitura pública mostrava o circuito "criado por" qualquer
+      // pessoa que o invasor escolhesse (e o `circuit_admins` confia nele).
+      allow create: if isOwner(nd().created_by);
       allow update, delete: if isCircuitAdmin(circuitId) || adm();
     }
     match /circuit_admins/{adminId} {
