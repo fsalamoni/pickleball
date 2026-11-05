@@ -1,8 +1,9 @@
 /**
  * A LINHA DO TEMPO da carreira (aba `linha-do-tempo`, docs/54 §4.5): o que
  * vem acima do "Hoje", o histórico abaixo, por temporada (o ano civil), com
- * as temporadas fechadas recolhidas. Fontes: torneios e dias de jogo da
- * plataforma, pontos de federação e os torneios de fora — cada uma falhando
+ * as temporadas fechadas recolhidas. Fontes: os torneios da plataforma,
+ * pontos de federação e os torneios de fora (dia de jogo só com "Incluir dias
+ * de jogo", e sem medalha — dia de jogo não é torneio) — cada uma falhando
  * sozinha, e a que falhou é DITA (nunca "você ainda não jogou").
  *
  * Filtros na URL: `?podios=1`, `?federados=1`, `?origem=fora|plataforma`.
@@ -66,7 +67,8 @@ function Item({ item, onOpenEvent }) {
 function Resumo({ s }) {
   return (
     <span className="text-xs font-normal text-gray-500">
-      {t('{n} eventos · {p} pódios', { n: s.events, p: s.podiums })}
+      {t('{n} torneios · {p} pódios', { n: s.tournaments, p: s.podiums })}
+      {s.gameDays > 0 && ` · ${t('{n} dias de jogo', { n: s.gameDays })}`}
       {s.gold + s.silver + s.bronze > 0 && ` · 🥇${s.gold} 🥈${s.silver} 🥉${s.bronze}`}
     </span>
   );
@@ -129,6 +131,11 @@ export default function CareerTimeline({ data, pending = [], onFlush, onOpenEven
         <V2FilterChip active={filtros.federados} onClick={() => alternar('federados', filtros.federados ? null : '1')}>{t('Só federados')}</V2FilterChip>
         <V2FilterChip active={filtros.origem === ORIGIN_FILTER.PLATFORM} onClick={() => alternar('origem', filtros.origem === ORIGIN_FILTER.PLATFORM ? null : ORIGIN_FILTER.PLATFORM)}>{t('Da plataforma')}</V2FilterChip>
         <V2FilterChip active={filtros.origem === ORIGIN_FILTER.OUTSIDE} onClick={() => alternar('origem', filtros.origem === ORIGIN_FILTER.OUTSIDE ? null : ORIGIN_FILTER.OUTSIDE)}>{t('De fora')}</V2FilterChip>
+        {data.setIncludeGameDays && (
+          <V2FilterChip active={data.includeGameDays} onClick={() => data.setIncludeGameDays(!data.includeGameDays)} title={t('Dia de jogo não é torneio: entra sem medalha e sem pódio.')}>
+            {t('Incluir dias de jogo')}
+          </V2FilterChip>
+        )}
         {progresso && <span className="ml-auto text-sm font-semibold text-ink">{t('{feitos} de ~{total} registrados', { feitos: progresso.done, total: progresso.estimate })}</span>}
       </div>
 
@@ -139,7 +146,7 @@ export default function CareerTimeline({ data, pending = [], onFlush, onOpenEven
           <V2EmptyState
             icon={Route}
             title={t('Sua carreira começa aqui')}
-            description={t('Registre os torneios que você jogou fora do PickleRush. Os torneios e dias de jogo daqui aparecem sozinhos.')}
+            description={t('Registre os torneios que você jogou fora do PickleRush. Os torneios daqui aparecem sozinhos.')}
             action={<V2Button type="button" variant="primary" onClick={onRegister}>{t('Registrar torneio')}</V2Button>}
           />
         ) : null

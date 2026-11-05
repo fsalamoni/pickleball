@@ -39,6 +39,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { toast } from 'sonner';
 import {
   Settings2, Building2, UserPlus, X, Crown, ShieldCheck, Users, Check,
@@ -612,9 +613,6 @@ export default function GameDaySettingsCard({ gameDay }) {
 }
 
 function NomearDialog({ open, onClose, candidatos, onEscolher, falhou = false }) {
-  const [busca, setBusca] = useState('');
-  const q = busca.trim().toLowerCase();
-  const lista = candidatos.filter((p) => !q || p.name.toLowerCase().includes(q));
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -625,28 +623,7 @@ function NomearDialog({ open, onClose, candidatos, onEscolher, falhou = false })
             {t('Quem você escolher passa a conduzir as partidas e a lista de participantes deste dia de jogo — e entra nele como membro, para poder acompanhar.')}
           </DialogDescription>
         </DialogHeader>
-        <V2Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar por nome…')} />
-        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-          {lista.length === 0 ? (
-            falhou ? (
-              <p className="py-6 text-center text-sm text-amber-700">
-                {t('A lista de atletas não carregou. Tente de novo.')}
-              </p>
-            ) : (
-              <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum atleta encontrado.')}</p>
-            )
-          ) : lista.map((p) => (
-            <div key={p.uid} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
-                <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-              </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onEscolher(p)}>
-                <ShieldCheck className="mr-1 h-3.5 w-3.5" /> {t('Nomear')}
-              </V2Button>
-            </div>
-          ))}
-        </div>
+        <PersonPicker pessoas={candidatos} falhou={falhou} onEscolher={onEscolher} rotuloAcao={t('Nomear')} vazio={t('Nenhum atleta encontrado.')} />
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>

@@ -1,22 +1,18 @@
 /**
  * trophyService — busca o que a coleção de troféus precisa. Nada é gravado.
  *
- * Duas fontes INDEPENDENTES (`Promise.allSettled`): a que falhar chega como
- * `undefined` e a estante diz o que ficou de fora — nunca "nenhum troféu"
- * por uma queda de rede (docs/27-FALHA-NAO-E-VAZIO.md).
+ * Só torneio tem troféu (dia de jogo não tem medalha — docs/43 §1). A lista
+ * que falhar chega como `undefined` e a estante diz o que ficou de fora —
+ * nunca "nenhum troféu" por uma queda de rede (docs/27-FALHA-NAO-E-VAZIO.md).
  */
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/core/config/firebase';
 import { getAthlete } from '@/modules/athletes/services/athleteService.js';
 import { listMyRegistrations, listRegistrations } from '@/modules/tournament/services/registrationService.js';
 import { getTournament } from '@/modules/tournament/services/tournamentService.js';
 import { getModality } from '@/modules/tournament/services/modalityService.js';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService.js';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants.js';
-import { gameDayTrophies, tournamentTrophies } from '../domain/trophies.js';
-import { t } from '@/core/i18n';
+import { tournamentTrophies } from '../domain/trophies.js';
 
-const COL_RANKING = 'club_event_games';
 const uniq = (xs) => Array.from(new Set(xs.filter(Boolean)));
 
 /** Os troféus de TORNEIO (lança se a leitura falhar). */
@@ -42,36 +38,15 @@ export async function listTournamentTrophies(uid) {
   });
 }
 
-/** Os troféus de DIA DE JOGO: os dias publicados em que jogou, com TODOS os jogos de cada dia. */
-export async function listGameDayTrophies(uid, nome = t('Atleta')) {
-  if (!db) return [];
-  const [a, b] = await Promise.all([
-    getDocs(query(collection(db, COL_RANKING), where('side_a_ids', 'array-contains', uid))),
-    getDocs(query(collection(db, COL_RANKING), where('side_b_ids', 'array-contains', uid))),
-  ]);
-  const eventIds = uniq([...a.docs, ...b.docs].map((d) => d.data().event_id));
-  if (eventIds.length === 0) return [];
-  const porEvento = new Map();
-  await Promise.all(eventIds.map(async (eventId) => {
-    const snap = await getDocs(query(collection(db, COL_RANKING), where('event_id', '==', eventId)));
-    porEvento.set(eventId, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  }));
-  return gameDayTrophies(uid, porEvento, new Map([[uid, nome]]));
-}
-
 /**
- * A coleção inteira. Cada fonte falha sozinha.
- * @returns {Promise<{ torneios?: object[], diasDeJogo?: object[], perfil: object|null }>}
+ * A coleção inteira. A lista que falhou chega `undefined` (a estante diz).
+ * @returns {Promise<{ torneios?: object[], perfil: object|null }>}
  */
 export async function listMyTrophies(uid) {
-  if (!uid) return { torneios: [], diasDeJogo: [], perfil: null };
-  const perfil = await getAthlete(uid).catch(() => null);
-  const nome = perfil?.platform_name || perfil?.full_name || t('Atleta');
-  const [tr, g] = await Promise.allSettled([listTournamentTrophies(uid), listGameDayTrophies(uid, nome)]);
-  if (tr.status === 'rejected' && g.status === 'rejected') throw tr.reason;
-  const foto = perfil?.photo_url || null;
-  const diasDeJogo = g.status === 'fulfilled'
-    ? g.value.map((x) => ({ ...x, people: x.people.map((p) => (p.user_id === uid ? { ...p, photo_url: foto } : p)) }))
-    : undefined;
-  return { torneios: tr.status === 'fulfilled' ? tr.value : undefined, diasDeJogo, perfil };
+  if (!uid) return { torneios: [], perfil: null };
+  const [perfil, tr] = await Promise.allSettled([getAthlete(uid), listTournamentTrophies(uid)]);
+  return {
+    torneios: tr.status === 'fulfilled' ? tr.value : undefined,
+    perfil: perfil.status === 'fulfilled' ? perfil.value : null,
+  };
 }

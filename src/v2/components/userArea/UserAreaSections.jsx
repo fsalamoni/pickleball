@@ -662,7 +662,7 @@ function MercadoSecao({ ctx }) {
   );
 }
 
-/** A estante de troféus: pódios de torneio e de dia de jogo, com o cartão. */
+/** A estante de troféus: pódios de torneio (dia de jogo não tem medalha), com o cartão. */
 function TrofeusSecao() {
   const { user } = useAuth();
   return (

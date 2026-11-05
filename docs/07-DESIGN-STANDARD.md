@@ -95,7 +95,62 @@ os da marca.
   altura dos diálogos (o `Input` de 40 px); `rotulo` nomeia os botões para o
   leitor de tela. Preço, placar e nota seguem como campo simples.
 
-### 3.2 Demais peças de `src/v2/ui/`
+### 3.2 Seletor de pessoas — `PersonPicker` (padrão fixo)
+
+⭐ **Toda** funcionalidade que escolhe usuário (dupla, convidado, organizador,
+membro, aluno, professor, equipe, comissão, filiado…) usa
+`src/v2/components/people/PersonPicker.jsx` — decisão do dono, 2026-11-05.
+Antes cada tela tinha o seu: a dupla da Carreira era uma busca cega (a lista
+só aparecia depois de digitar), o dia de jogo abria a lista com "Inserir", o
+chat tinha caixas de seleção, o circuito um `<select>` com a plataforma toda.
+
+O que o padrão garante, e que nenhuma tela reescreve:
+
+- **lista já aberta**, em ordem alfabética, com foto, nome e cidade; a busca
+  (nome ou cidade, sem acento) só **estreita**; até 50 por vez, com o aviso
+  "filtre para achar as outras";
+- quem não pode ser escolhido aparece **com o motivo** (`excluir`: Map id →
+  motivo) e sem botão — sumir calado faz achar que a pessoa não tem conta;
+  quem não deve nem aparecer (a própria pessoa) sai por `ocultar`;
+- `sugestoes` vêm antes da lista ("Com quem você já jogou"); `primeiro`
+  sobe um grupo (ex.: quem confirmou presença);
+- lista que **falhou** é dita, com "Tentar de novo" — nunca "ninguém
+  encontrado" (docs/27);
+- três modos: **um** (`selecionados` com 0–1; escolhido vira cartão com
+  "Trocar"), **vários** (`multiple`, fichas com ×, `max`) e **ação**
+  (`onEscolher` + `rotuloAcao`, ex. "Inserir", "Convidar", "Nomear").
+
+Fonte: `pessoas` (lista própria — membros do clube, participantes do dia) ou,
+sem ela, o diretório de atletas (`diretorio="listados"`, padrão) ou todos os
+perfis (`diretorio="todos"`, gestão). O item volta como veio. Wrappers que
+só adaptam o formato do valor podem existir (`PartnerPicker`,
+`AthleteMultiPicker`, `FedPersonPicker`, o `AthletePicker` da recepção), mas
+**renderizam o `PersonPicker`**. Guarda: `src/core/guards/seletorDePessoas.test.js`
+(reprova componente `…Picker` de pessoas que não o use e a volta de um
+seletor próprio nas telas convertidas).
+
+### 3.3 Campos padrão — use sempre estes
+
+Campo novo de um destes tipos usa a peça da tabela; escrever outro é
+divergência (e a maioria tem guarda).
+
+| Campo | Peça | Guarda / doc |
+|---|---|---|
+| Escolher pessoa(s) | `PersonPicker` (§3.2) | `seletorDePessoas.test.js` |
+| Número digitado | `V2Input`/`Input`/`NumberInput` com `type="number"` (`useNumberDraft`) | `campoNumerico.test.js` |
+| Contagem pequena com limite | `V2NumberInput` (− e +) | §3.1 |
+| Lista de opções | `V2Select` (altura padrão) | §3.1 |
+| Filtrar uma lista | `V2SearchInput` | — |
+| Rótulo, dica e erro | `V2Field` | — |
+| Rating e ID do DUPR digitados | `DuprRatingInput` / `DuprIdInput` (`v2/components/rating/DuprFields.jsx`) | docs/33 |
+| UF | lista de `BR_UFS` (`core/domain/ufs.js`) | docs/33 |
+| Código (cupom, indicação) | `CopyCodeButton` | docs/24/03 §13 |
+| Seção recolhível | `V2CollapsibleCard` / `SettingsSection` | docs/14 §1 |
+| Falha de carregamento | `V2ErrorState` (`inline` numa seção) | `falhaNaoEVazio.test.js` |
+| Confirmar ação destrutiva | `ConfirmDialog` | — |
+| Data na tela | `formatSlotLabel` / `formatDateShortBR` / `fmtData` | docs/23 §13, docs/44 |
+
+### 3.4 Demais peças de `src/v2/ui/`
 
 `V2CollapsibleCard` (seção colapsável que lembra por pessoa; `sectionId`
 estável, ações em `actions`), `V2SectionNav` + `V2SubTabs` (barras de seções

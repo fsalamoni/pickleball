@@ -1,6 +1,7 @@
 /**
- * A ESTANTE de troféus de uma pessoa: torneios e dias de jogo, separados, com
- * as contagens por metal. Cada troféu abre o cartão (compartilhar, baixar,
+ * A ESTANTE de troféus de uma pessoa: os pódios de TORNEIO (e, na própria
+ * estante, os de fora, declarados), com as contagens por metal. Dia de jogo
+ * não é torneio e não tem medalha (docs/43 §1). Cada troféu abre o cartão (compartilhar, baixar,
  * imprimir). Na Minha área é a própria estante; no perfil público, a de quem
  * se visita — e ali os outros parabenizam.
  *
@@ -8,7 +9,7 @@
  */
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Medal, Trophy, Swords, Share2, Route } from 'lucide-react';
+import { Medal, Trophy, Share2, Route } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -72,7 +73,6 @@ function TrofeuCard({ t: trofeu, onOpen, children }) {
         </span>
         <span className="text-sm text-gray-500">
           {trofeu.subtitle}{trofeu.dateLabel || trofeu.date ? ` · ${trofeu.dateLabel || dataPorExtenso(trofeu.date)}` : ''}
-          {trofeu.record ? ` · ${t('{v} de {n} jogos', { v: trofeu.record.won, n: trofeu.record.played })}` : ''}
         </span>
         <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-ink"><Share2 className="h-3.5 w-3.5" /> {t('Ver o cartão')}</span>
       </button>
@@ -112,7 +112,7 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
   }
 
   const ehFora = aba === ABA_FORA && carreiraOn;
-  const lista = ehFora ? fora : (aba === TROPHY_KIND.GAME_DAY ? grupo.diasDeJogo : grupo.torneios);
+  const lista = ehFora ? fora : grupo.torneios;
   const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0 && fora.length === 0 && !foraQ.isError;
   const quem = mine ? t('Você') : (nome || t('Esta pessoa'));
 
@@ -127,18 +127,15 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
           actions={mine ? <HomeAction to="/torneios">{t('Ver torneios abertos')}</HomeAction> : null}
         >
           {mine
-            ? t('Sua estante ainda está vazia. O primeiro pódio num torneio ou num dia de jogo publicado aparece aqui, com o cartão pronto para compartilhar.')
-            : t('{quem} ainda não subiu ao pódio num torneio ou dia de jogo publicado.', { quem })}
+            ? t('Sua estante ainda está vazia. O primeiro pódio num torneio aparece aqui, com o cartão pronto para compartilhar.')
+            : t('{quem} ainda não subiu ao pódio num torneio.', { quem })}
         </HomeEmpty>
       ) : (
         <>
           <Contagem contagem={ehFora ? foraConta : grupo.contagem} />
           <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('Tipo de conquista')}>
-            <V2FilterChip role="tab" aria-selected={!ehFora && aba !== TROPHY_KIND.GAME_DAY} active={!ehFora && aba !== TROPHY_KIND.GAME_DAY} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
-              <Trophy className="mr-1.5 h-3.5 w-3.5" /> {t('Torneios')} ({grupo.contagem.torneios.total})
-            </V2FilterChip>
-            <V2FilterChip role="tab" aria-selected={!ehFora && aba === TROPHY_KIND.GAME_DAY} active={!ehFora && aba === TROPHY_KIND.GAME_DAY} onClick={() => setAba(TROPHY_KIND.GAME_DAY)}>
-              <Swords className="mr-1.5 h-3.5 w-3.5" /> {t('Dias de jogo')} ({grupo.contagem.diasDeJogo.total})
+            <V2FilterChip role="tab" aria-selected={!ehFora} active={!ehFora} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
+              <Trophy className="mr-1.5 h-3.5 w-3.5" /> {t('Torneios')} ({grupo.contagem.total})
             </V2FilterChip>
             {carreiraOn && (
               <V2FilterChip role="tab" aria-selected={ehFora} active={ehFora} onClick={() => setAba(ABA_FORA)}>
@@ -155,7 +152,7 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
             <p className="text-sm text-gray-500">
               {ehFora
                 ? t('Nenhum pódio de fora registrado ainda. Registre um torneio na Carreira.')
-                : aba === TROPHY_KIND.GAME_DAY ? t('Nenhum pódio de dia de jogo publicado ainda.') : t('Nenhum pódio de torneio ainda.')}
+                : t('Nenhum pódio de torneio ainda.')}
             </p>
           ) : (
             <ul className={cn('grid gap-3', compacto ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
@@ -167,13 +164,13 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
                       className="w-full"
                       contextId={trophyContextId(tr)}
                       toUids={[uid]}
-                      scope={tr.kind === TROPHY_KIND.TOURNAMENT ? 'tournament' : 'universal'}
+                      scope="tournament"
                       eventTitle={`${tr.title} · ${tr.subtitle}`}
                       placeLabel={tr.placeLabel}
                     />
                   )}
                   {tr.link && (
-                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === ABA_FORA ? t('Abrir a ficha') : tr.kind === TROPHY_KIND.TOURNAMENT ? t('Ver o torneio') : t('Ver o dia de jogo')}</Link></V2Button>
+                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === ABA_FORA ? t('Abrir a ficha') : t('Ver o torneio')}</Link></V2Button>
                   )}
                 </TrofeuCard>
               ))}

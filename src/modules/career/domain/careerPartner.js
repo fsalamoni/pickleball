@@ -307,9 +307,9 @@ export function pastPartners({ career = [], trophies = [], me = null } = {}) {
   (career || []).forEach((ev) => (ev?.entries || []).forEach((e) => {
     if (e?.partner?.uid) somar(e.partner.uid, e.partner.name, null, `c:${ev.id}`);
   }));
-  // A estante chega como `{ torneios, diasDeJogo }`; uma lista solta também vale.
-  const pods = Array.isArray(trophies) ? trophies : [...(trophies?.torneios || []), ...(trophies?.diasDeJogo || [])];
-  pods.forEach((tr) => (tr?.people || []).forEach((p) => somar(p.user_id, p.name, p.photo_url, `t:${tr.tournamentId || tr.gameDayId || tr.id}`)));
+  // A estante chega como `{ torneios }`; uma lista solta também vale.
+  const pods = Array.isArray(trophies) ? trophies : trophies?.torneios || [];
+  pods.forEach((tr) => (tr?.people || []).forEach((p) => somar(p.user_id, p.name, p.photo_url, `t:${tr.tournamentId || tr.id}`)));
   return [...m.values()]
     .filter((p) => p.name)
     .map((p) => ({ uid: p.uid, name: p.name, photo_url: p.photo_url, together: p.eventos.size }))

@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 10 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 950 |
+| Arquivos de teste (`*.test.js(x)`) | 951 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 60 |
 
@@ -82,7 +82,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `achievements` | 1 | `progression` | `progression` |
 | `admin` | 2 | `messaging`, `tournament` | `athletes`, `leveling`, `rating`, `tournament` |
 | `analytics` | 2 | `games`, `tournament` | — |
-| `arenas` | 9 | `clubs`, `coaches`, `federations`, `games`, `home`, `marketplace`, `promo`, `tournament`, `trophies` | `athletes`, `clubs`, `games`, `rating`, `sharing`, `tournament` |
+| `arenas` | 8 | `clubs`, `coaches`, `federations`, `games`, `home`, `marketplace`, `promo`, `tournament` | `athletes`, `clubs`, `games`, `rating`, `sharing`, `tournament` |
 | `athletes` | 12 | `admin`, `arenas`, `chat`, `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `search`, `tournament`, `trophies` | `games`, `performance`, `rating`, `tournament` |
 | `career` | 1 | `progression` | `federations`, `games`, `progression`, `tournament`, `training`, `trophies` |
 | `chat` | 0 | — | `athletes` |
@@ -111,7 +111,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `social` | 0 | — | `games`, `tournament` |
 | `tournament` | 14 | `admin`, `arenas`, `athletes`, `career`, `clubs`, `federations`, `games`, `home`, `linecall`, `performance`, `rating`, `social`, `training`, `trophies` | `admin`, `analytics`, `arenas`, `athletes`, `federations`, `home`, `leveling`, `rating` |
 | `training` | 3 | `career`, `coaches`, `marketplace` | `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `tournament` |
-| `trophies` | 1 | `career` | `arenas`, `athletes`, `tournament` |
+| `trophies` | 1 | `career` | `athletes`, `tournament` |
 
 Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`, `dicas`, `federations`, `feed`, `games`, `gamification`, `home`, `i18n`, `idioma`, `legal`, `leveling`, `linecall`, `marketplace`, `notifications`, `onboarding`, `people`, `performance`, `profile`, `promo`, `rating`, `region`, `search`, `settings`, `theme`, `tournament`, `training`, `trophies`, `tutorial`, `userArea`.
 

@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { AlertTriangle, Check, Search, UserPlus, X } from 'lucide-react';
 import { V2Badge, V2Button, V2Field, V2Input } from '@/v2/ui/primitives';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { listAthletes } from '@/modules/athletes/services/athleteService';
@@ -50,7 +51,7 @@ function fitsSlot(profile, slot) {
 
 /** Uma vaga do elenco: vazia (busca/convidado) ou preenchida. */
 function RosterSlot({
-  slot, value, candidates, isOpen, term, onTerm, onOpen, onClose, onPick, onGuest, onGuestName, onClear,
+  slot, value, candidates, isOpen, onOpen, onClose, onPick, onGuest, onGuestName, onClear,
   falhouDiretorio = false,
 }) {
   const filled = Boolean(value);
@@ -114,47 +115,17 @@ function RosterSlot({
       </div>
 
       {!filled && isOpen && (
-        <div className="mt-3 space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              autoFocus
-              value={term}
-              onChange={(e) => onTerm(e.target.value)}
-              placeholder={t('Buscar atleta por nome ou cidade…')}
-              aria-label={t('Buscar atleta para {label}', { label: slot.label })}
-              className="w-full rounded-2xl border border-gray-200 bg-paper-pure py-2.5 pl-9 pr-3 text-sm text-ink outline-none focus:ring-4 focus:ring-gray-100"
-            />
-          </div>
-          <div className="max-h-52 divide-y divide-gray-100 overflow-y-auto rounded-2xl border border-gray-100 bg-paper-pure">
-            {falhouDiretorio ? (
-              /* ⚠️ Sugerir “Convidado” numa falha cria um convidado para quem
-                 JÁ tem conta — e a equipe nasce sem o vínculo com o perfil. */
-              <p className="p-3 text-center text-xs text-amber-700">
-                {t('A lista de atletas não carregou — não dá para saber se essa pessoa já tem conta. Tente de novo antes de incluir como convidado.')}
-              </p>
-            ) : candidates.length === 0 ? (
-              <p className="p-3 text-center text-xs text-gray-500">
-                {term.trim()
-                  ? t('Nenhum atleta disponível com esse nome. Use “Convidado” para incluir quem não tem conta.')
-                  : t('Digite para buscar entre os atletas cadastrados.')}
-              </p>
-            ) : candidates.map((profile) => {
-              const uid = profile.uid || profile.id;
-              return (
-                <button
-                  key={uid}
-                  type="button"
-                  onClick={() => onPick(profile)}
-                  className="flex w-full items-center gap-2 p-2 text-left hover:bg-paper"
-                >
-                  <UserAvatar name={profile.platform_name} photoUrl={profile.photo_url} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{profile.platform_name}</span>
-                  <span className="shrink-0 text-xs text-gray-500">{profile.city || ''}</span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="mt-3">
+          {/* ⚠️ Sugerir “Convidado” numa falha cria um convidado para quem
+              JÁ tem conta — e a equipe nasce sem o vínculo com o perfil. */}
+          <PersonPicker
+            pessoas={candidates}
+            falhou={falhouDiretorio}
+            onEscolher={onPick}
+            rotuloAcao={t('Escolher')}
+            vazio={t('Nenhum atleta disponível com esse nome. Use “Convidado” para incluir quem não tem conta.')}
+            rotulo={t('Buscar atleta para {label}', { label: slot.label })}
+          />
         </div>
       )}
     </div>
@@ -175,7 +146,6 @@ export default function TeamRegistrationForm({
   const [teamName, setTeamName] = useState(editingTeam?.team_name || '');
   const [values, setValues] = useState(initial.filled);
   const [openSlot, setOpenSlot] = useState(null);
-  const [term, setTerm] = useState('');
 
   const registerMutation = useRegisterTeam();
   const updateMutation = useUpdateTeamRoster();
@@ -197,13 +167,11 @@ export default function TeamRegistrationForm({
     const slot = slots[openSlot];
     if (!slot) return [];
     return filterPartnerCandidates(directory, {
-      term,
       selfUid: null,
       excludedUids: [...pickedUids, ...blockedUids],
     })
-      .filter((profile) => profile.hidden !== true && fitsSlot(profile, slot))
-      .slice(0, 20);
-  }, [openSlot, slots, directory, term, pickedUids, blockedUids]);
+      .filter((profile) => profile.hidden !== true && fitsSlot(profile, slot));
+  }, [openSlot, slots, directory, pickedUids, blockedUids]);
 
   const progress = useMemo(() => rosterProgress(values, config), [values, config]);
   const members = useMemo(() => membersFromSlots(values, config), [values, config]);
@@ -229,13 +197,11 @@ export default function TeamRegistrationForm({
       user_id: p.user_id, name: p.name, photo_url: p.photo_url, level: p.level || null,
     });
     setOpenSlot(null);
-    setTerm('');
   }
 
   function addGuest(index) {
     setSlot(index, { user_id: null, name: '', photo_url: null, level: null });
     setOpenSlot(null);
-    setTerm('');
   }
 
   /** "Sou eu": ocupa a primeira vaga livre compatível com o meu gênero. */
@@ -355,9 +321,7 @@ export default function TeamRegistrationForm({
               candidates={openSlot === i ? candidates : []}
               falhouDiretorio={falhouDiretorio}
               isOpen={openSlot === i}
-              term={term}
-              onTerm={setTerm}
-              onOpen={() => { setOpenSlot(i); setTerm(''); }}
+              onOpen={() => setOpenSlot(i)}
               onClose={() => setOpenSlot(null)}
               onPick={(profile) => pickAthlete(i, profile)}
               onGuest={() => addGuest(i)}

@@ -22,6 +22,7 @@ import {
 } from '@/modules/circuits/hooks/useCircuits';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2BackLink, V2Page } from '@/v2/ui/primitives';
 import { t, tn, fmtData } from '@/core/i18n';
 
@@ -239,12 +240,14 @@ function CircuitResultsEntry({ circuit, circuitId }) {
         </V2Field>
 
         {rows.map((r, i) => (
-          <div key={i} className="flex items-end gap-2">
+          <div key={i} className="flex items-start gap-2">
             <V2Field label={i === 0 ? t('Atleta') : ''} className="min-w-0 flex-1">
-              <V2Select value={r.user_id} onChange={(e) => setRow(i, { user_id: e.target.value })}>
-                <option value="">{t('— Atleta —')}</option>
-                {sortedAthletes.map((a) => <option key={a.id} value={a.id}>{athleteLabel(a)}</option>)}
-              </V2Select>
+              <PersonPicker
+                pessoas={sortedAthletes}
+                excluir={new Map(rows.filter((x, j) => j !== i && x.user_id).map((x) => [x.user_id, t('já na lista')]))}
+                selecionados={r.user_id ? sortedAthletes.filter((a) => a.id === r.user_id) : []}
+                onChange={(lista) => setRow(i, { user_id: lista[0]?.id || '' })}
+              />
             </V2Field>
             <V2Field label={i === 0 ? t('Colocação') : ''} className="w-28">
               <V2Input type="number" min="1" value={r.position} onChange={(e) => setRow(i, { position: e.target.value })} placeholder="1" />

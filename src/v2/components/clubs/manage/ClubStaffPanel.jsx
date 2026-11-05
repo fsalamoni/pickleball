@@ -10,6 +10,7 @@
  * ADMINISTRA o clube aparece no topo, sem cargo: é o papel de `club_members`.
  */
 import React, { useMemo, useState } from 'react';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { toast } from 'sonner';
 import { CalendarClock, Crown, LogOut, Pencil, Plus, Save, Trash2, UserCog, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -28,7 +29,6 @@ import { t, tn } from '@/core/i18n';
 const ok = (msg, depois) => ({ onSuccess: () => { toast.success(msg); depois?.(); }, onError: (e) => toast.error(e.message) });
 const fimPadrao = (role, inicio) => (role?.term_months ? addMonthsISO(inicio, role.term_months) : '');
 const cargoNome = (s, roles) => roleLabel(roles.find((r) => r.id === (s.role_id || s.role))) || s.role_name || s.role || '';
-const normaliza = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /** A situação do mandato, em palavras. */
 function MandatoChip({ s }) {
@@ -58,40 +58,19 @@ function CamposMandato({ prefixo, inicio, fim, onInicio, onFim }) {
 }
 
 /** Escolher um membro do clube (a lista já aberta; a busca só estreita). Quem já tem cargo aparece com o motivo. */
+/** Um membro do clube — o seletor padrão da plataforma (`PersonPicker`). */
 function MembroPicker({ id, membros, excluir, escolhido, onEscolher }) {
-  const [busca, setBusca] = useState('');
-  const termo = normaliza(busca.trim());
-  const achados = useMemo(() => membros.filter((m) => !termo || normaliza(m.user_name).includes(termo)), [membros, termo]);
-  if (escolhido) {
-    return (
-      <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper px-3 py-2">
-        <V2Avatar name={escolhido.user_name} photoUrl={escolhido.photo_url} size="sm" />
-        <span className="min-w-0 flex-1 text-sm font-semibold text-ink">{escolhido.user_name}</span>
-        <V2Button type="button" size="sm" variant="ghost" onClick={() => onEscolher(null)}>{t('Trocar')}</V2Button>
-      </div>
-    );
-  }
   return (
-    <div className="space-y-2">
-      <V2Input id={id} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Filtrar por nome')} aria-label={t('Filtrar os membros do clube')} />
-      {achados.length === 0 ? <p className="text-sm text-gray-500">{t('Ninguém com esse nome. A pessoa precisa ser membro do clube.')}</p> : (
-        <ul className="max-h-72 divide-y divide-gray-100 overflow-y-auto rounded-2xl border border-gray-100" aria-label={t('Membros do clube')}>
-          {achados.slice(0, 50).map((m) => {
-            const motivo = excluir.get(m.user_id);
-            return (
-              <li key={m.user_id}>
-                <button type="button" disabled={Boolean(motivo)} onClick={() => onEscolher(m)}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink disabled:cursor-not-allowed disabled:hover:bg-transparent coarse:min-h-11">
-                  <V2Avatar name={m.user_name} photoUrl={m.photo_url} size="sm" />
-                  <span className={`min-w-0 flex-1 truncate text-sm ${motivo ? 'text-gray-500' : 'text-ink'}`}>{m.user_name}</span>
-                  {motivo && <V2Badge tone="neutral">{motivo}</V2Badge>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+    <PersonPicker
+      id={id}
+      pessoas={membros}
+      excluir={excluir}
+      selecionados={escolhido ? [escolhido] : []}
+      onChange={(lista) => onEscolher(lista[0] || null)}
+      detalhe={() => ''}
+      vazio={t('Ninguém com esse nome. A pessoa precisa ser membro do clube.')}
+      rotulo={t('Membros do clube')}
+    />
   );
 }
 

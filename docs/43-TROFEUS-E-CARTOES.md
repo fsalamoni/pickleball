@@ -46,16 +46,17 @@ ganhou.
   um campeão que ainda está jogando.
 - **Troféus** — `modules/trophies/domain/trophies.js`: de torneio
   (inscrições da pessoa × torneios ENCERRADOS e não arquivados, conferindo a
-  CONTA na inscrição) e de dia de jogo (o espelho público `club_event_games`
-  por `event_id`, colocação no ranking do dia por tipo de jogo, só 1º–3º).
-  `groupTrophies` separa, conta por metal e diz o que **ficou de fora** quando
+  CONTA na inscrição). **Só torneio dá troféu**: dia de jogo não é torneio —
+  mesmo com ranking do dia, não tem medalha, pódio nem cartão de campeão
+  (pedido do dono, 2026-11-05; `TROPHY_KIND` tem só `torneio`).
+  `groupTrophies` conta por metal e diz o que **ficou de fora** quando
   uma fonte falhou (nunca zero). Serviço em `trophyService.js`
   (`Promise.allSettled`), hooks em `useTrophies.js`.
 - **Cartão** — `modules/trophies/domain/medalCard.js` (`buildMedalCard`):
   degrau ou pódio inteiro, frase por colocação (estável pelo evento), texto de
   compartilhamento, nome do arquivo. Modo `temporada` (`buildSeasonCard`,
   `MedalCardDialog` com `season`): a retrospectiva da Carreira —
-  torneios, dias de jogo, medalhas e a parceria do ano, sem link; com torneio
+  torneios, medalhas (só de torneio) e a parceria do ano, sem link; com torneio
   de fora na conta, o rodapé diz "Inclui resultado declarado"
   (`docs/54-CARREIRA-DO-ATLETA.md` §4.7). Zero banco, como os outros.
 

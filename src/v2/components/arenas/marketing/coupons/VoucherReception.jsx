@@ -14,66 +14,29 @@
  *  - **O registro é numa transação** (no serviço): duas pessoas da equipe
  *    registrando o último uso ao mesmo tempo não passam do limite.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Check, ScanLine, X } from 'lucide-react';
-import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
+import { Check, ScanLine } from 'lucide-react';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useFindArenaCoupon, useRedeemVoucher } from '@/modules/arenas/hooks/useArenaV3';
 import {
   COUPON_FAMILY, couponBenefitText, couponError, couponFamily, couponKind,
 } from '@/modules/arenas/domain/marketing';
-import { V2Avatar, V2Button, V2Input } from '@/v2/ui/primitives';
+import { V2Button, V2Input } from '@/v2/ui/primitives';
 import { COUPON_KIND_ICON } from './couponKindUi';
 import { t } from '@/core/i18n';
 
 const nomeDe = (a) => a?.platform_name || a?.full_name || t('Atleta');
 
-/** Busca de atleta pelo nome, no diretório. Escolher é opcional. */
-export function AthletePicker({ value, onChange, inputId, placeholder = t('Buscar atleta pelo nome…') }) {
-  const { data: atletas, isError, refetch } = useAthletes();
-  const [q, setQ] = useState('');
-  const resultados = useMemo(() => {
-    const termo = q.trim().toLowerCase();
-    if (!termo || !Array.isArray(atletas)) return [];
-    return atletas.filter((a) => nomeDe(a).toLowerCase().includes(termo) || String(a.full_name || '').toLowerCase().includes(termo)).slice(0, 6);
-  }, [atletas, q]);
-
-  if (value) {
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-paper p-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <V2Avatar photoUrl={value.photo_url} name={nomeDe(value)} size="sm" />
-          <span className="truncate text-sm font-bold text-ink">{nomeDe(value)}</span>
-        </div>
-        <button type="button" onClick={() => onChange(null)} aria-label={t('Trocar atleta')}
-          className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    );
-  }
-
+/** Um atleta do diretório — o seletor padrão da plataforma (`PersonPicker`). Escolher é opcional. */
+export function AthletePicker({ value, onChange, inputId, placeholder }) {
   return (
-    <div>
-      <V2Input id={inputId} value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} />
-      {isError && (
-        <p className="mt-1 text-xs text-amber-800">
-          {t('Não foi possível carregar a lista de atletas.')}{' '}
-          <button type="button" onClick={() => refetch()} className="font-bold underline">{t('Tentar de novo')}</button>
-        </p>
-      )}
-      {resultados.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {resultados.map((a) => (
-            <button key={a.id} type="button" onClick={() => { onChange(a); setQ(''); }}
-              className="flex w-full items-center gap-2 rounded-2xl border border-gray-100 bg-paper p-2.5 text-left hover:border-gray-300">
-              <V2Avatar photoUrl={a.photo_url} name={nomeDe(a)} size="sm" />
-              <span className="text-sm text-ink">{nomeDe(a)}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <PersonPicker
+      id={inputId}
+      placeholder={placeholder}
+      selecionados={value ? [value] : []}
+      onChange={(lista) => onChange(lista[0] || null)}
+    />
   );
 }
 
@@ -86,19 +49,19 @@ export default function VoucherReception({ arenaId, cupom: cupomDado = null, onD
   const registrar = useRedeemVoucher();
   const [codigo, setCodigo] = useState('');
   const [achado, setAchado] = useState(cupomDado);
-  const [erroBusca, setErroBusca] = useState('');
+  const [erroDaBusca, setError] = useState('');
   const [quem, setQuem] = useState(null);
 
   const conferir = async (e) => {
     e?.preventDefault?.();
-    setErroBusca('');
+    setError('');
     setAchado(null);
     try {
       const c = await buscar.mutateAsync({ arenaId, code: codigo });
-      if (!c) setErroBusca(t('Nenhum cupom com este código nesta arena.'));
+      if (!c) setError(t('Nenhum cupom com este código nesta arena.'));
       else setAchado(c);
     } catch {
-      setErroBusca(t('Não foi possível conferir agora. Tente de novo.'));
+      setError(t('Não foi possível conferir agora. Tente de novo.'));
     }
   };
 
@@ -141,13 +104,13 @@ export default function VoucherReception({ arenaId, cupom: cupomDado = null, onD
         <form onSubmit={conferir} className="flex flex-wrap gap-2">
           <label htmlFor="vale-codigo" className="sr-only">{t('Código do vale')}</label>
           <V2Input id="vale-codigo" className="min-w-0 flex-1" maxLength={30} placeholder={t('Código que o cliente mostrou')}
-            value={codigo} onChange={(e) => { setCodigo(e.target.value.toUpperCase().replace(/\s+/g, '')); setAchado(null); setErroBusca(''); }} />
+            value={codigo} onChange={(e) => { setCodigo(e.target.value.toUpperCase().replace(/\s+/g, '')); setAchado(null); setError(''); }} />
           <V2Button type="submit" variant="secondary" disabled={!codigo.trim() || buscar.isPending}>
             {buscar.isPending ? t('Conferindo…') : t('Conferir')}
           </V2Button>
         </form>
       )}
-      {erroBusca && <p className="mt-2 text-xs text-red-700">{erroBusca}</p>}
+      {erroDaBusca && <p className="mt-2 text-xs text-red-700">{erroDaBusca}</p>}
 
       {achado && (
         <div className="mt-3 space-y-3">

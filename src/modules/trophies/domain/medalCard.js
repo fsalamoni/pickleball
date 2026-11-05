@@ -42,7 +42,7 @@ const nomeCurto = (p) => String(p?.name || t('Atleta')).trim();
  *   mode?: 'degrau'|'podio',
  *   position?: 1|2|3,
  *   places: Array<{ position: number, label: string, entries: Array<{ label: string, people: Array<{ user_id, name, photo_url }> }> }>,
- *   event: { title: string, subtitle?: string, date?: *, city?: string, state?: string, kind: 'torneio'|'dia_de_jogo' },
+ *   event: { title: string, subtitle?: string, date?: *, city?: string, state?: string, kind: 'torneio'|'fora' },
  *   host?: { name?: string, logo?: string|null, kind?: 'arena'|'clube' }|null,
  *   showPhotos?: boolean,
  *   origin?: string,
@@ -125,14 +125,14 @@ export const SEASON_SAYINGS = Object.freeze([
  * O modelo do cartão da temporada. A tela só desenha (`MedalCard` com
  * `card.mode === 'temporada'`). Zero banco: tudo vem do resumo já calculado.
  *
- * @param {{ year: number, tournaments: number, gameDays?: number, gold: number, silver: number, bronze: number,
+ * @param {{ year: number, tournaments: number, gold: number, silver: number, bronze: number,
  *   partner?: { name: string, together: number, medals: number }|null, declared?: boolean, name?: string }} input
  */
 export function buildSeasonCard(input = {}) {
   const year = Number(input.year) || new Date().getFullYear();
   const n = (v) => Math.max(0, Number(v) || 0);
   const stats = {
-    tournaments: n(input.tournaments), gameDays: n(input.gameDays), gold: n(input.gold), silver: n(input.silver), bronze: n(input.bronze),
+    tournaments: n(input.tournaments), gold: n(input.gold), silver: n(input.silver), bronze: n(input.bronze),
   };
   const partner = input.partner?.name
     ? { name: String(input.partner.name).trim(), together: n(input.partner.together), medals: n(input.partner.medals) }

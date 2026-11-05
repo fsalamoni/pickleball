@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { AlertTriangle, Info, Search, X } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateRegistration, useRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { Link } from 'react-router-dom';
@@ -20,12 +20,9 @@ import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
 import { MODALITY_FORMAT, COMPETITION_GENDER } from '@/modules/tournament/domain/constants';
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '@/modules/tournament/domain/capacity';
 import {
-  filterPlatformAthletes,
   platformUserDisplayName,
   platformUserToPlayerFields,
 } from '@/modules/tournament/domain/adminAthleteRegistration';
-import { UserAvatar } from '@/components/ui/user-avatar';
-import { cn } from '@/core/lib/utils';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 import { formatBrlCents, tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 import { PixPaymentContent } from '@/modules/tournament/components/PixPaymentDialog';
@@ -36,6 +33,7 @@ import {
 } from '@/modules/tournament/domain/partnerInvite';
 import TeamRegistrationDialog from '@/v2/components/tournament/TeamRegistrationDialog';
 import PartnerPicker from '@/v2/components/people/PartnerPicker';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 
 const GENDER_OPTIONS = [
   { value: COMPETITION_GENDER.MALE, label: tk('Masculino') },
@@ -545,76 +543,21 @@ export default function ModalityRegistrationDialog({
  * dados do jogador são preenchidos e a inscrição é vinculada à conta real.
  */
 function AthletePicker({ label, users, selectedUserId, onSelect, onClear, falhou = false }) {
-  const [term, setTerm] = useState('');
-  const results = useMemo(() => filterPlatformAthletes(users, term), [users, term]);
+  // O seletor padrão da plataforma (`PersonPicker`), com a lista que o admin já tem.
   const selected = selectedUserId ? users.find((u) => u.uid === selectedUserId) : null;
-
+  const comNome = useMemo(() => users.map((u) => ({ ...u, name: platformUserDisplayName(u) })), [users]);
   return (
-    <div className="rounded-md border border-input bg-paper/40 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <Label className="text-xs uppercase tracking-wide text-gray-500">{label}</Label>
-        {selected && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-ink"
-          >
-            <X className="w-3 h-3" /> {t('limpar seleção')}
-          </button>
-        )}
-      </div>
-      {selected ? (
-        <div className="flex items-center gap-2 rounded-md border border-acid/40 bg-acid/10 p-2">
-          <UserAvatar name={platformUserDisplayName(selected)} photoUrl={selected.photo_url} size="sm" />
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate">{platformUserDisplayName(selected)}</div>
-            <div className="text-xs text-gray-500 truncate">{selected.email || '—'}</div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              className="pl-8"
-              placeholder={t('Filtrar atletas por nome…')}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 divide-y">
-            {falhou ? (
-              <div className="p-3 text-xs text-amber-700 text-center">
-                {t('A lista de atletas não carregou. Não dá para saber quem já tem conta.')}
-              </div>
-            ) : users.length === 0 ? (
-              <div className="p-3 text-xs text-gray-500 text-center">{t('Carregando atletas…')}</div>
-            ) : results.length === 0 ? (
-              <div className="p-3 text-xs text-gray-500 text-center">{t('Nenhum atleta encontrado.')}</div>
-            ) : (
-              results.map((u) => {
-                const name = platformUserDisplayName(u);
-                return (
-                  <button
-                    key={u.uid}
-                    type="button"
-                    onClick={() => onSelect(u)}
-                    className={cn('flex w-full items-center gap-2 p-2 text-left hover:bg-paper')}
-                  >
-                    <UserAvatar name={name} photoUrl={u.photo_url} size="sm" />
-                    <div className="min-w-0">
-                      <div className="text-sm truncate">{name}</div>
-                      <div className="text-xs text-gray-500 truncate">
-                        {[u.city, u.state].filter(Boolean).join(' · ') || u.email || '—'}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </>
-      )}
+    <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper/40 p-3">
+      <Label className="text-xs uppercase tracking-wide text-gray-500">{label}</Label>
+      <PersonPicker
+        pessoas={comNome}
+        carregando={users.length === 0 && !falhou}
+        falhou={falhou}
+        selecionados={selected ? [{ ...selected, name: platformUserDisplayName(selected) }] : []}
+        onChange={(lista) => (lista[0] ? onSelect(users.find((u) => u.uid === lista[0].uid) || lista[0]) : onClear())}
+        detalhe={(u) => [u.city, u.state].filter(Boolean).join(' · ') || u.email || ''}
+        rotulo={label}
+      />
     </div>
   );
 }

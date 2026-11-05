@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Send, UserPlus } from 'lucide-react';
-import { V2Avatar, V2Button, V2SearchInput, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Button, V2Surface } from '@/v2/ui/primitives';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
@@ -23,22 +24,12 @@ const ROLES = [
  */
 export default function MentorshipInvite({ uid, candidates = [], busy = false, onInvite, className }) {
   const [role, setRole] = useState('mentor');
-  const [busca, setBusca] = useState('');
   const [escolhido, setEscolhido] = useState(null);
-
-  const achados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return candidates
-      .filter((c) => (c.uid || c.id) !== uid && String(c.platform_name || '').toLowerCase().includes(q))
-      .slice(0, 6);
-  }, [busca, candidates, uid]);
 
   const enviar = () => {
     if (!escolhido) return;
     onInvite({ role, otherUid: escolhido.uid || escolhido.id });
     setEscolhido(null);
-    setBusca('');
   };
 
   return (
@@ -62,24 +53,14 @@ export default function MentorshipInvite({ uid, candidates = [], busy = false, o
           </span>
         </div>
       ) : (
-        <>
-          <V2SearchInput aria-label={t('Buscar atleta pelo nome')} placeholder={t('Buscar atleta pelo nome…')} value={busca} onChange={(e) => setBusca(e.target.value)} />
-          {busca.trim().length >= 2 && (
-            achados.length === 0 ? <p className="mt-2 text-xs text-gray-500">{t('Ninguém com esse nome no diretório.')}</p> : (
-              <ul className="mt-2 space-y-1" data-testid="mentorship-candidates">
-                {achados.map((c) => (
-                  <li key={c.uid || c.id}>
-                    <button type="button" onClick={() => setEscolhido(c)} className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-paper">
-                      <V2Avatar name={c.platform_name} photoUrl={c.photo_url} size="sm" />
-                      <span className="font-semibold text-ink">{c.platform_name}</span>
-                      <span className="text-xs text-gray-500">{[c.city, c.state].filter(Boolean).join('/')}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )
-          )}
-        </>
+        <PersonPicker
+          pessoas={candidates}
+          ocultar={[uid]}
+          onEscolher={setEscolhido}
+          rotuloAcao={t('Escolher')}
+          vazio={t('Ninguém com esse nome no diretório.')}
+          rotulo={t('Buscar atleta pelo nome')}
+        />
       )}
     </V2Surface>
   );

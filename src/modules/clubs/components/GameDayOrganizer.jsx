@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog,
@@ -307,11 +308,8 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading,
 }
 
 function AddAthletesDialog({ open, onClose, confirmedPool, platformPool, onAdd }) {
-  const [search, setSearch] = useState('');
-  const q = search.trim().toLowerCase();
-  const filterFn = (p) => !q || p.name.toLowerCase().includes(q);
-  const confirmed = confirmedPool.filter(filterFn);
-  const platform = platformPool.filter(filterFn);
+  const confirmados = useMemo(() => new Set(confirmedPool.map((p) => p.user_id)), [confirmedPool]);
+  const pessoas = useMemo(() => [...confirmedPool, ...platformPool], [confirmedPool, platformPool]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -322,41 +320,19 @@ function AddAthletesDialog({ open, onClose, confirmedPool, platformPool, onAdd }
             {t('Primeiro os atletas que confirmaram presença neste dia de jogo; depois os participantes do evento e demais atletas da plataforma.')}
           </DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
-        <div className="max-h-[50vh] space-y-4 overflow-y-auto">
-          <PoolList title={t('Confirmaram presença neste dia')} people={confirmed} onAdd={onAdd} emptyText={t('Ninguém confirmou presença ainda.')} />
-          <PoolList title={t('Participantes do evento e plataforma')} people={platform} onAdd={onAdd} emptyText={t('Nenhum atleta disponível.')} />
-        </div>
+        <PersonPicker
+          pessoas={pessoas}
+          primeiro={(p) => confirmados.has(p.user_id)}
+          detalhe={(p) => (confirmados.has(p.user_id) ? t('Confirmou presença neste dia') : '')}
+          onEscolher={onAdd}
+          rotuloAcao={t('Inserir')}
+          vazio={t('Nenhum atleta disponível.')}
+        />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>{t('Fechar')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PoolList({ title, people, onAdd, emptyText }) {
-  return (
-    <div>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title} ({people.length})</h4>
-      {people.length === 0 ? (
-        <p className="text-sm text-gray-400">{emptyText}</p>
-      ) : (
-        <div className="space-y-1.5">
-          {people.map((p) => (
-            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
-                <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => onAdd(p)}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> {t('Inserir')}
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 

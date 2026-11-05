@@ -195,7 +195,7 @@ describe('V2SocialBonds · convite de mentoria (ninguém entra sem aceitar)', ()
       setter.call(campo, 'zeca');
       campo.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    const candidatos = container.querySelectorAll('[data-testid="mentorship-candidates"] button');
+    const candidatos = container.querySelectorAll('ul[aria-label="Buscar atleta pelo nome"] button');
     expect(candidatos.length).toBe(1); // eu mesmo não aparece
     await act(async () => { candidatos[0].click(); });
     await act(async () => { container.querySelector('[role="radio"][aria-checked="false"]').click(); }); // "Quero um mentor"
