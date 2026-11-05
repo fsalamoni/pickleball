@@ -1,11 +1,12 @@
 // Orçamento do pacote inicial (gzip): o que o navegador baixa até a primeira
-// tela. Medido em 2026-10-10: ≈428 kB. O teto só desce; quem passar dele
+// tela. Medido em 2026-11-05: ≈389 kB (era 438,6 com o domínio do torneio
+// carregado no login). O teto só desce; quem passar dele
 // precisa dividir o que acrescentou (lazy) ou tirar algo do caminho crítico.
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 
-const TETO_KB = Number(process.env.BUNDLE_BUDGET_KB || 440);
+const TETO_KB = Number(process.env.BUNDLE_BUDGET_KB || 400);
 const dist = path.resolve('dist');
 const html = readFileSync(path.join(dist, 'index.html'), 'utf8');
 const iniciais = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+\.(?:js|css))"/g)].map((m) => m[1]);

@@ -139,7 +139,7 @@ paridade cliente × servidor e os guardas de fonte (§6).
   dividido em firestore/auth/functions/core).
 - **Orçamento do pacote inicial**: `npm run build:budget`
   (`scripts/check-bundle-size.mjs`) soma, em gzip, o JS/CSS referenciado pelo
-  `index.html` e reprova acima do teto (`BUNDLE_BUDGET_KB`, padrão 440 kB). O
+  `index.html` e reprova acima do teto (`BUNDLE_BUDGET_KB`, padrão 400 kB). O
   CI roda depois do build. O teto só desce: acrescentou peso, divida com `lazy`.
   Alvo de build: `es2019/chrome64/safari12` (WebViews antigos).
 - **Um erro numa tela não derruba o app**: o `ErrorBoundary` global

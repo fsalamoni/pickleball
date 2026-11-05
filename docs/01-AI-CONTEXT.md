@@ -13,7 +13,10 @@
 **dias de jogo** (Play, Americano e variantes), **arenas** (reserva, jogo
 aberto, aulas, loja, membros), **professores**, **clubes**, **ranking e rating**
 (ELO, 2.0–8.0 estilo DUPR, duplas), **Centro de Treino**, **gamificação**,
-**Mercado** (marketplace) e comunidade (chat, follows). Produção:
+**Mercado** (marketplace), **federações** e **clube como associação**
+(filiação, carteirinha, cobrança, governança), **Minha carreira** (torneios de
+fora da plataforma), **controle de linhas por câmera** e **DUPR oficial**, além
+da comunidade (chat, follows). Produção:
 `https://picklerush.web.app` (site Firebase `picklerush`; `pickletour` só
 redireciona). UI e textos em **pt-BR**, com inglês e espanhol atrás da flag
 `multi_language` (`docs/44-IDIOMAS.md`).
@@ -133,6 +136,10 @@ Lista de coleções, subcoleções, regras e índices: `docs/46-INVENTARIO.md` �
   `rating_history`, `player_skill_ratings`, `skill_rating_history`,
   `doubles_rankings`, `club_internal_*`.
 - **Treino**: `training_*`. **Mercado**: `market_*`. **Promo**: `promo_*`.
+- **Federação**: `federation_*` (quase tudo só o servidor grava). **Clube como
+  associação**: a árvore `club_x/{clube}/…` + `club_card_index`, `club_ballots`.
+  **Carreira**: `career_*`. **Controle de linhas**: `game_days/{id}/line_*` e
+  `tournament_line_*`. **DUPR**: `dupr_*` (vínculo, envios, piloto).
   **Gamificação**: `user_*`, `gamification_*`, `season_rankings`, `hall_of_fame`.
 - **Transversal**: `notifications`, `audit_logs`, `admin_access_logs`,
   `legal_consents`, `push_tokens`, `platform_settings`, `follows`,
@@ -181,13 +188,17 @@ Cada item tem README no módulo e doc próprio; abra-os antes do código.
 | Treino e balanço do jogo | `training/` | 40, 42 |
 | Mercado | `marketplace/` + `functions/marketplace.js` | `modules/marketplace/README.md` |
 | Troféus e cartões | `trophies/` | 43 |
+| Federação (filiação, ranking oficial, acervo, agenda, eleições…) | `federations/` + `functions/federation*.js` | 50 |
+| Clube como associação | `clubs/` + `functions/club*.js` | 52 |
+| Minha carreira (torneios de fora, dupla, vitrine) | `career/` + `functions/career*.js` | 54 |
+| Controle de linhas por câmera | `linecall/` | 53 |
+| DUPR oficial (vínculo, envio de partidas) | `rating/` + `functions/dupr*.js` | 51 |
 
 ## 9. Feature flags
 
 `src/core/featureFlags.js` tem dois grupos: **`FEATURE_FLAG`** — o que o admin
 liga/desliga (lidas de `platform_settings/global.feature_flags`, default OFF;
-hoje `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`,
-`marketplace`, `multi_language`) — e **`PERMANENT_FEATURE`** — funcionalidades
+a lista atual está em `docs/46-INVENTARIO.md` §8) — e **`PERMANENT_FEATURE`** — funcionalidades
 incorporadas ao código em 2026-10-10, sempre `true`, fora do painel admin. As
 constantes antigas permanecem enquanto houver `if` consultando-as; remover
 esses `if` tela a tela é dívida declarada. Guarda: `flagsIncorporadas.test.js`.
@@ -215,7 +226,10 @@ npm run e2e            # Playwright
   vão para o Google Cloud Error Reporting (`/api/erro`, `docs/03-WORKFLOW.md` §7.4);
   `/api/mensagens/**` recebe os retornos dos provedores de e-mail/WhatsApp/SMS.
   O Hosting tenta de novo uma vez no "An unexpected error has occurred" do
-  Firebase. Detalhes e armadilhas:
+  Firebase. As regras do Firestore saem pela API direta
+  (`scripts/firestore-rules-publicar.mjs`); com o serviço de regras fora do
+  ar, site e funções saem assim mesmo e `firestore-rules-catchup.yml` publica
+  as regras depois. O pacote inicial tem orçamento (`npm run build:budget`). Detalhes e armadilhas:
   `docs/03-WORKFLOW.md`.
 - **Env**: `VITE_FIREBASE_*`, `VITE_FIRESTORE_DATABASE_ID` (padrão
   `pickleball`), `VITE_PWA_ENABLED`.

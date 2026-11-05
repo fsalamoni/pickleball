@@ -13,7 +13,7 @@ export default {
   // só na tela (impresso é claro) e nunca dentro de um `.tema-claro` (telão,
   // totem, cards exportados).
   darkMode: ['variant', '@media screen { &:is(.dark *):not(.tema-claro *) }'],
-  content: ['./index.html', './src/**/*.{ts,tsx,js,jsx}'],
+  content: ['./index.html', './src/**/*.{ts,tsx,js,jsx}', '!./src/**/*.test.{js,jsx}'],
   // Escopos do modo escuro (ver palette.js): emitidos sempre, mesmo que a
   // classe só apareça montada em tempo de execução.
   safelist: ['tema-claro', 'v2-root'],

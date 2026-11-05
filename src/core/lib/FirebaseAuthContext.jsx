@@ -12,7 +12,11 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, appleProvider, db, firebaseDisabledReason } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
-import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
+// O serviço de inscrições (e o domínio inteiro do torneio que ele importa) só
+// baixa na hora de usar: no pacote inicial ele pesava dezenas de kB.
+const claimProvisionalRegistrationsForUser = async (...args) => (
+  await import('@/modules/tournament/services/registrationService')
+).claimProvisionalRegistrationsForUser(...args);
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
 import { isOwnerEmail } from '@/core/config/owners';
 import { t, fmtData, idiomaAtivo } from '@/core/i18n';
