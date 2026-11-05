@@ -1,6 +1,6 @@
 /**
  * `/carreira/convite/:token` — o link que a dupla SEM conta recebe pelo
- * WhatsApp (Minha carreira, PR 6, flag `athlete_career`, docs/54 §4.13).
+ * WhatsApp (Carreira, PR 6, flag `athlete_career`, docs/54 §4.13).
  *
  * Duas portas, um arquivo (carregado só nesta rota):
  *  - sem conta: explica e leva a criar a conta ou entrar, com `?next=` de
@@ -114,7 +114,7 @@ function ComConta({ token }) {
       <div className="flex flex-col items-center gap-4 text-center">
         <Icone />
         <p className="text-sm text-gray-600">{peek.data?.own ? t('Este convite é seu: mande o link para a sua dupla.') : NEUTRO()}</p>
-        <V2Button asChild variant="secondary"><Link to="/carreira">{t('Abrir a Minha carreira')}</Link></V2Button>
+        <V2Button asChild variant="secondary"><Link to="/carreira">{t('Abrir a Carreira')}</Link></V2Button>
       </div>
     );
   } else {
@@ -139,7 +139,7 @@ function ComConta({ token }) {
 
   return (
     <V2Page className="space-y-6">
-      <V2PageIntro title={t('Convite de dupla')} subtitle={t('Minha carreira')} />
+      <V2PageIntro title={t('Convite de dupla')} subtitle={t('Carreira')} />
       <V2Surface>{corpo}</V2Surface>
     </V2Page>
   );

@@ -61,7 +61,7 @@ async function flagLigada(ctx) {
 }
 
 async function exigeFlag(ctx) {
-  if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Minha carreira não está ligada nesta plataforma.');
+  if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Carreira não está ligada nesta plataforma.');
 }
 
 async function usuario(ctx, uid) {

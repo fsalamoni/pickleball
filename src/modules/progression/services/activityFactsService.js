@@ -63,7 +63,7 @@ async function minhasInscricoes(uid) {
 
 /**
  * @param {string} uid
- * @param {{ career?: boolean }} [opts] `career`: a flag da Minha carreira — desligada, NADA da carreira é lido
+ * @param {{ career?: boolean }} [opts] `career`: a flag da Carreira — desligada, NADA da carreira é lido
  * @returns {Promise<Record<string, any>>} fontes; `undefined` = não carregou
  */
 export async function fetchActivitySources(uid, { career = false } = {}) {
@@ -90,7 +90,7 @@ export async function fetchActivitySources(uid, { career = false } = {}) {
     registrations: () => minhasInscricoes(uid),
     // Só da pessoa (a regra confere `uid`); vazio para quem nunca ligou o balanço.
     debriefs: () => lista('training_debriefs', 'uid', uid, 300),
-    // Minha carreira (só com a flag): os registros e as metas, ambos só do dono
+    // Carreira (só com a flag): os registros e as metas, ambos só do dono
     // (a regra confere `uid`). Daqui saem só contagens de hábito.
     ...(career ? {
       careerEvents: () => lista('career_events', 'uid', uid, 500),

@@ -1,5 +1,5 @@
 /**
- * O PLANO do torneio na ficha (Minha carreira, docs/54 §4.9) e o "Mandar ao
+ * O PLANO do torneio na ficha (Carreira, docs/54 §4.9) e o "Mandar ao
  * meu professor":
  *  - planejado: prioridade, prazo de inscrição, "Já me inscrevi", a meta e o
  *    foco (sugerido pelo que mais aparece a melhorar nos balanços — um toque

@@ -1,5 +1,5 @@
 /**
- * A FICHA do torneio de fora (Minha carreira, docs/54 §4.2), em camadas:
+ * A FICHA do torneio de fora (Carreira, docs/54 §4.2), em camadas:
  *  1. Resultado — colocação, faixa, pontuação declarada, federação, link;
  *  2. Foto — medalha, pódio, chave (destrava o cartão para compartilhar);
  *  3. Dupla — o nome (e a conta, quando escolhida da lista de usuários). O

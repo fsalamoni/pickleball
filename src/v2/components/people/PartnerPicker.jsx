@@ -1,6 +1,6 @@
 /**
  * Seletor de DUPLA — o MESMO na inscrição de torneio (convite de parceiro) e na
- * Minha carreira. Busca no diretório público de atletas, tira a própria pessoa
+ * Carreira. Busca no diretório público de atletas, tira a própria pessoa
  * e quem estiver em `excludedUids`. Com `past`, mostra antes da busca as
  * pessoas "Com quem você já jogou" — um toque escolhe.
  *

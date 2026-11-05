@@ -27,7 +27,7 @@ import { t, fmtLista } from '@/core/i18n';
 
 const MedalCardDialog = lazy(() => import('./MedalCardDialog'));
 
-/** A aba dos torneios de fora (Minha carreira) — o mesmo valor do `kind` dos troféus declarados. */
+/** A aba dos torneios de fora (Carreira) — o mesmo valor do `kind` dos troféus declarados. */
 export const ABA_FORA = 'fora';
 
 function Contagem({ contagem }) {
@@ -88,7 +88,7 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
   const { user } = useAuth();
   const q = useTrophies(uid);
   const grupo = useMemo(() => groupTrophies(q.data || {}), [q.data]);
-  // Minha carreira: os pódios DECLARADOS (torneios de fora), só na estante
+  // Carreira: os pódios DECLARADOS (torneios de fora), só na estante
   // da própria pessoa. Contagens próprias; o `destaque` segue só o verificado.
   const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER) && mine;
   const foraQ = useCareerEvents({ enabled: carreiraOn });
@@ -147,14 +147,14 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
             )}
           </div>
           {ehFora && (
-            <p className="text-xs text-gray-500">{t('Declarados por você na Minha carreira. Não entram em ranking, rating nem XP.')}</p>
+            <p className="text-xs text-gray-500">{t('Declarados por você na Carreira. Não entram em ranking, rating nem XP.')}</p>
           )}
           {ehFora && foraQ.isError ? (
             <V2ErrorState inline title={t('Não carregaram os torneios de fora')} onRetry={() => foraQ.refetch()} />
           ) : lista.length === 0 ? (
             <p className="text-sm text-gray-500">
               {ehFora
-                ? t('Nenhum pódio de fora registrado ainda. Registre um torneio na Minha carreira.')
+                ? t('Nenhum pódio de fora registrado ainda. Registre um torneio na Carreira.')
                 : aba === TROPHY_KIND.GAME_DAY ? t('Nenhum pódio de dia de jogo publicado ainda.') : t('Nenhum pódio de torneio ainda.')}
             </p>
           ) : (

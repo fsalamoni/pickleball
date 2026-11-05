@@ -1,5 +1,5 @@
 /**
- * O XP da FICHA COMPLETA da Minha carreira, contra um Firestore falso: o
+ * O XP da FICHA COMPLETA da Carreira, contra um Firestore falso: o
  * resultado declarado rende 0 (campeão e fase de grupos pagam o mesmo), a
  * mesma ficha não paga duas vezes, apagar ou descompletar zera, o teto do mês
  * vale (os zerados contam), flag e módulo desligados não pagam, e os outros

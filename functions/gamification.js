@@ -86,7 +86,7 @@ function normalizarConfig(bruto) {
       duels: bool(s.notifications && s.notifications.duels, true),
       challengeResults: bool(s.notifications && s.notifications.challengeResults, true),
     },
-    // Minha carreira: XP da ficha completa e o teto do mês (`careerXp.js`).
+    // Carreira: XP da ficha completa e o teto do mês (`careerXp.js`).
     career: {
       xpPerRecord: Math.round(num(s.career && s.career.xpPerRecord, d.career.xpPerRecord, 0, 100)),
       monthlyCap: Math.round(num(s.career && s.career.monthlyCap, d.career.monthlyCap, 0, 20)),

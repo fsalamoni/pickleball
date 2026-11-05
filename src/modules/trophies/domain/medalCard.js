@@ -92,7 +92,7 @@ export function buildMedalCard(input = {}) {
     `${event.title}${event.subtitle ? ` · ${event.subtitle}` : ''}${dateLabel ? ` · ${dateLabel}` : ''}`,
     // O link vai à parte (`url`): o WhatsApp junta texto + link, e com o link
     // também no texto ele aparecia duas vezes.
-    // Torneio de fora (Minha carreira): o resultado foi DECLARADO pela pessoa.
+    // Torneio de fora (Carreira): o resultado foi DECLARADO pela pessoa.
     event.declared === true ? t('Resultado declarado') : '',
     url ? t('Veja no PickleRush:') : t('via PickleRush'),
   ].filter(Boolean).join('\n');
@@ -112,7 +112,7 @@ export function buildMedalCard(input = {}) {
 
 /* ------------------------------------------- retrospectiva da temporada -- */
 
-/** O cartão da temporada (Minha carreira, docs/54 §4.7): números do ano, não um degrau. */
+/** O cartão da temporada (Carreira, docs/54 §4.7): números do ano, não um degrau. */
 export const SEASON_MODE = 'temporada';
 
 export const SEASON_SAYINGS = Object.freeze([

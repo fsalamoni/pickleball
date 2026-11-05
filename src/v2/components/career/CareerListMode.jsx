@@ -1,5 +1,5 @@
 /**
- * MODO LISTA para o passado (Minha carreira, docs/54 §4.2): linhas de ano ·
+ * MODO LISTA para o passado (Carreira, docs/54 §4.2): linhas de ano ·
  * nome · categoria · medalha, "+ linha", tudo salvo de uma vez (um lote).
  * É o jeito realista de recuperar anos de torneio — amador não tem planilha.
  *

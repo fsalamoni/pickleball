@@ -89,8 +89,8 @@ export const GAMIFICATION_MODULES = Object.freeze({
     grupo: 'oferta',
   },
   career_xp: {
-    label: tk('XP da Minha carreira'),
-    description: tk('A ficha completa de um torneio de fora (resultado, foto e balanço) rende um XP pequeno, com teto por mês. O resultado declarado não rende nada. Só vale com a Minha carreira ligada.'),
+    label: tk('XP da Carreira'),
+    description: tk('A ficha completa de um torneio de fora (resultado, foto e balanço) rende um XP pequeno, com teto por mês. O resultado declarado não rende nada. Só vale com a Carreira ligada.'),
     grupo: 'jornada',
   },
 });
@@ -141,7 +141,7 @@ export const DEFAULT_GAMIFICATION_CONFIG = Object.freeze({
     duels: true,
     challengeResults: true,
   }),
-  /** Minha carreira: XP da ficha completa e o teto de fichas pagas por mês (servidor, `careerXp.js`). */
+  /** Carreira: XP da ficha completa e o teto de fichas pagas por mês (servidor, `careerXp.js`). */
   career: Object.freeze({
     xpPerRecord: 25,
     monthlyCap: 4,

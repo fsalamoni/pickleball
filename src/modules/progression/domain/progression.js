@@ -76,7 +76,7 @@ export const GOAL_METRIC_LABELS = Object.freeze({
 });
 
 /**
- * META DA TEMPORADA (Minha carreira, docs/54 §4.10): a meta com `kind`.
+ * META DA TEMPORADA (Carreira, docs/54 §4.10): a meta com `kind`.
  * As antigas (sem `kind`) seguem idênticas — `{ metric, target }`, contadores
  * de toda a vida. Valores GRAVADOS: nunca renomeie.
  */

@@ -1,4 +1,4 @@
-# 54 — Minha carreira (carreira do atleta)
+# 54 — Carreira (carreira do atleta)
 
 > Estado: **PR 1 — núcleo, foto e passado** + **PR 2 — balanço, treino e
 > retrospectiva** + **PR 3 — a dupla confirma** + **PR 4 — próximos, metas,
@@ -261,7 +261,7 @@ match /carreira-publica/{uid}/{fileName} { allow get: if isAuthed(); }
 "em breve". Outros parâmetros: `?evento=<id>` abre a ficha, `?registrar=1`
 abre o registro rápido, `?lista=1` o modo lista. Com a flag desligada,
 `/carreira` redireciona para `/perfil`. O título vem do `V2Layout`
-(`PAGE_TITLES`) e o item "Minha carreira" fica dentro do hub do perfil (não
+(`PAGE_TITLES`) e o item "Carreira" fica dentro do hub do perfil (não
 há hub novo na barra lateral).
 
 ### 4.2 Linha do tempo (`CareerTimeline`, `buildCareerTimeline`)
@@ -400,7 +400,7 @@ Premia **registrar, refletir e completar**; o resultado declarado rende
     flag/o módulo desligados, ou já completa antes do deploy só é conferida
     de novo quando o registro ou o balanço mudam. Acima do teto ela não rende
     XP, nem no mês seguinte (a ajuda diz isso).
-- **Conquistas da família "Minha carreira"** (`CAREER_ACHIEVEMENTS`,
+- **Conquistas da família "Carreira"** (`CAREER_ACHIEVEMENTS`,
   família `my_career`, `xpBonus` 0): Primeiro registro, Historiador (20),
   Ficha completa, Arquivo em dia (10 fichas), Olhar para trás (5 balanços),
   Meta de processo cumprida. Fora de `ACHIEVEMENTS_V2` de propósito: só
@@ -595,7 +595,7 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
   PR 4: artigo e guia `carreira-planejar` (âncoras `carreira-aba-proximos`,
   `carreira-aba-metas`, `carreira-descoberta`, `carreira-plano-lista`) e o
   ponto de dica `carreira:descoberta`.
-- **E2E**: `tests/e2e/logado.spec.js`, teste "Minha carreira" (liga a flag,
+- **E2E**: `tests/e2e/logado.spec.js`, teste "Carreira" (liga a flag,
   abre as quatro abas e `/meu-desempenho?declarados=1`).
 
 ### 4.8 A dupla confirma (PR 3)

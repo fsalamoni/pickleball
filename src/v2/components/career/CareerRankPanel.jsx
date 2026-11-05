@@ -1,5 +1,5 @@
 /**
- * A POSIÇÃO NO RANKING ao longo do tempo (Minha carreira, docs/54 §4.11): um
+ * A POSIÇÃO NO RANKING ao longo do tempo (Carreira, docs/54 §4.11): um
  * gráfico pequeno por ranking (uma série cada, sem legenda — o título nomeia),
  * eixo invertido (1º no alto). Duas origens que NUNCA se misturam na mesma
  * linha: a OFICIAL (derivada do ranking que o servidor grava para as

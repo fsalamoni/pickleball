@@ -1,5 +1,5 @@
 /**
- * A DUPLA da Minha carreira no SERVIDOR, contra um Firestore falso: só quem
+ * A DUPLA da Carreira no SERVIDOR, contra um Firestore falso: só quem
  * foi citado confirma; menor de 18 (ou nascimento desconhecido) não convida
  * nem é convidado; mudar a data pede nova confirmação e mudar o nome não; a
  * visão da dupla, a decisão do dono, a denúncia e a moderação com motivo,

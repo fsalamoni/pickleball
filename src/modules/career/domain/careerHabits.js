@@ -52,7 +52,7 @@ export function isCompleteCareerRecord(ev, debrief, hoje) {
 
 /**
  * As contagens de hábito da carreira, para as conquistas da família
- * "Minha carreira". `events`/`goals` são as listas da própria pessoa;
+ * "Carreira". `events`/`goals` são as listas da própria pessoa;
  * `debriefs` os balanços dela (os de torneio de fora são filtrados aqui).
  *
  * @returns {{ records: number, completeRecords: number, debriefs: number, processGoalsDone: number }}

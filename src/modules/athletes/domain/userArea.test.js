@@ -112,7 +112,7 @@ describe('userAreaPending', () => {
   });
 });
 
-describe('userAreaPending — Minha carreira (a dupla)', () => {
+describe('userAreaPending — Carreira (a dupla)', () => {
   it('pedidos para confirmar e visões para decidir levam à carreira; desconhecido não vira item', () => {
     const itens = userAreaPending({ carreira: { convites: 2, visoes: 1 } });
     expect(itens.map((i) => [i.id, i.count, i.to])).toEqual([['carreira:convites', 2, '/carreira'], ['carreira:visoes', 1, '/carreira']]);

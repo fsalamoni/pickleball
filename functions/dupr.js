@@ -276,7 +276,7 @@ const igual = (a, b) => {
 const RATING_POINTS_MAX = 120;
 
 /**
- * Série do rating DUPR (`dupr_links.rating_points`, Minha carreira, docs/54):
+ * Série do rating DUPR (`dupr_links.rating_points`, Carreira, docs/54):
  * no desenho de `proximoHistoricoElo` (`platformRankings.js`) — só ganha ponto
  * quando o rating MUDA, e a lista é limitada. `null` = não grava nada.
  * @returns {Array<{ ms: number, singles: number|null, doubles: number|null }>|null}

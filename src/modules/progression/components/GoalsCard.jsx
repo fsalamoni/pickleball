@@ -21,7 +21,7 @@ export default function GoalsCard({ uid, values, semRating = false }) {
   // meta de rating, que mede ele, some junto (volta se o DUPR for desligado).
   // Falha não é vazio (docs/27): sem a lista na mão, não se afirma "não definiu metas".
   const consulta = useGoals(uid);
-  // A meta da TEMPORADA (com `kind`) mora na Minha carreira (aba Metas), que sabe contar a janela dela.
+  // A meta da TEMPORADA (com `kind`) mora na Carreira (aba Metas), que sabe contar a janela dela.
   const todas = (consulta.data || []).filter((g) => !g.kind);
   const goals = semRating ? todas.filter((g) => g.metric !== GOAL_METRIC.RATING) : todas;
   const metricas = Object.entries(GOAL_METRIC_LABELS).filter(([m]) => !semRating || m !== GOAL_METRIC.RATING);

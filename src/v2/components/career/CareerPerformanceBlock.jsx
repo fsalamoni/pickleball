@@ -51,9 +51,9 @@ export default function CareerPerformanceBlock({ verified }) {
           <h2 className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-ink">
             {t('Fora da plataforma')} <SealBadge seal={SEAL.DECLARED} />
           </h2>
-          <p className="mt-1 text-sm text-gray-600">{t('Declarado por você, na Minha carreira. Não entra em ranking, rating nem XP.')}</p>
+          <p className="mt-1 text-sm text-gray-600">{t('Declarado por você, na Carreira. Não entra em ranking, rating nem XP.')}</p>
         </div>
-        <V2Button asChild size="sm" variant="secondary"><Link to="/carreira"><Route className="h-4 w-4" /> {t('Abrir a Minha carreira')}</Link></V2Button>
+        <V2Button asChild size="sm" variant="secondary"><Link to="/carreira"><Route className="h-4 w-4" /> {t('Abrir a Carreira')}</Link></V2Button>
       </div>
 
       {q.isPending ? (

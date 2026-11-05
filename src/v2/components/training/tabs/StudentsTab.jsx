@@ -31,7 +31,7 @@ import { t, tn } from '@/core/i18n';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
-// Minha carreira (flag `athlete_career`): os torneios que o aluno mandou. Só carrega com o aluno aberto.
+// Carreira (flag `athlete_career`): os torneios que o aluno mandou. Só carrega com o aluno aberto.
 const CoachStudentCareer = lazy(() => import('@/v2/components/career/CoachStudentCareer'));
 
 const SESSOES_POR_ALUNO = 10;

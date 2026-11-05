@@ -110,7 +110,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
   const visiveis = useVisibleTrainingItems(identity);
   const meta = useTrainingMeta(uid);
   const { level } = useMyUnifiedLevel();
-  // A voz da dupla (Minha carreira): só as visões que a pessoa marcou "Usar no meu treino".
+  // A voz da dupla (Carreira): só as visões que a pessoa marcou "Usar no meu treino".
   const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const partnerVoices = useCareerPartnerVoices(uid, { enabled: open && carreiraOn });
 

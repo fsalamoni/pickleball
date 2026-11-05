@@ -232,7 +232,7 @@ async function perguntarDuplas(ctx, ev, pedidoDocs) {
 /* ------------------------------------------------------------- ações -- */
 
 async function publish(ctx, actor, data) {
-  if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Minha carreira não está ligada nesta plataforma.');
+  if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Carreira não está ligada nesta plataforma.');
   const eventId = texto(data.eventId, 200);
   if (!eventId) falha('invalid-argument', 'Escolha o torneio.');
   const evSnap = await ctx.db.collection(EV).doc(eventId).get();
@@ -289,7 +289,7 @@ async function publicConsent(ctx, actor, data) {
   if (d.partner_uid !== actor.uid) falha('permission-denied', 'Só a dupla decide sobre o próprio nome.');
   const ok = data.ok === true;
   if (ok) {
-    if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Minha carreira não está ligada nesta plataforma.');
+    if (!(await flagLigada(ctx))) falha('failed-precondition', 'A Carreira não está ligada nesta plataforma.');
     if (d.status !== P.PARTNER_STATUS.CONFIRMED) falha('failed-precondition', 'Confirme o torneio antes de permitir o seu nome.');
     if (!adulto(await usuario(ctx, actor.uid), ctx)) falha('failed-precondition', 'Menores de 18 anos não aparecem na vitrine de outra pessoa.');
   }

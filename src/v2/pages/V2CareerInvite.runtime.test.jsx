@@ -1,5 +1,5 @@
 /**
- * Teste de RUNTIME de /carreira/convite/:token (Minha carreira, PR 6).
+ * Teste de RUNTIME de /carreira/convite/:token (Carreira, PR 6).
  *
  * 🔴 A dupla sem conta cria a conta pelo link e volta SEM nascimento (o
  * assistente de cadastro abre por cima): a tela não pode perguntar ao servidor

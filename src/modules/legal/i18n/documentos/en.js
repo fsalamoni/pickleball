@@ -66,7 +66,7 @@ export default {
   },
 
   privacidade: {
-    fonte: '2e57d012',
+    fonte: '264a47b3',
     title: 'Privacy Policy',
     eyebrow: 'Essential document · LGPD',
     description: 'How we process, protect and share your personal data, in accordance with the LGPD (Brazil\'s General Data Protection Law, Law 13,709/2018).',
@@ -91,7 +91,7 @@ export default {
         paragraphs: [
           'Your name, registrations, results and rankings are visible to other participants in the same context (tournament, club, game day). Contact details (phone, email) are not displayed publicly.',
           'We share data only with processors required to provide the service (for example, cloud infrastructure — Google Firebase) and when required by law. We do not sell personal data.',
-          "Outside tournaments recorded in My career are yours alone. Only the tournament you choose to show goes to your public profile (name, date, city, category, placement, seal and the chosen photos, without metadata); notes, debriefs and reviews never go. Your partner's name only appears with their consent, people under 18 have no public showcase, and removing it from the profile, deleting the tournament or the account removes it right away.",
+          "Outside tournaments recorded in Career are yours alone. Only the tournament you choose to show goes to your public profile (name, date, city, category, placement, seal and the chosen photos, without metadata); notes, debriefs and reviews never go. Your partner's name only appears with their consent, people under 18 have no public showcase, and removing it from the profile, deleting the tournament or the account removes it right away.",
         ],
       },
       {

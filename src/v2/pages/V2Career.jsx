@@ -91,7 +91,7 @@ function Carreira() {
   return (
     <V2Page className="space-y-6">
       <V2PageIntro
-        title={t('Minha carreira')}
+        title={t('Carreira')}
         subtitle={t('Os torneios que você jogou, aqui e fora do PickleRush, numa linha do tempo só sua.')}
         action={(
           <>
@@ -109,7 +109,7 @@ function Carreira() {
         tabs={ABAS.map((a) => ({ ...a, label: t(a.label) }))}
         activeValue={aba}
         onSelect={(a) => muda((p) => { if (a.value === CAREER_TAB.TIMELINE) p.delete('aba'); else p.set('aba', a.value); })}
-        ariaLabel={t('Abas da Minha carreira')}
+        ariaLabel={t('Abas da Carreira')}
         dica="carreira-abas"
       />
 

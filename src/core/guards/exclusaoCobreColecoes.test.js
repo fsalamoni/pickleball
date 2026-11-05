@@ -282,7 +282,7 @@ describe('a exclusão e a exportação cobrem as federações', () => {
   });
 });
 
-/* ----------------------------------------------------- Minha carreira -- */
+/* ----------------------------------------------------- Carreira -- */
 
 const DA_CARREIRA = [...REGRAS.matchAll(/^\s{4}match \/(career_[a-z_]+)\//gm)].map((m) => m[1]);
 const EXPORTA_CARREIRA_ARQ = 'src/modules/career/services/careerExportService.js';
@@ -300,7 +300,7 @@ const CARREIRA_FORA_DA_EXPORTACAO = {
   // vazio: tudo o que é da carreira é exportado.
 };
 
-describe('a exclusão e a exportação cobrem a Minha carreira', () => {
+describe('a exclusão e a exportação cobrem a Carreira', () => {
   it('o rules tem as coleções da carreira', () => {
     expect(DA_CARREIRA).toEqual(expect.arrayContaining(['career_events', 'career_partner']));
   });

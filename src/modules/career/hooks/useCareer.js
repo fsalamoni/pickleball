@@ -1,5 +1,5 @@
 /**
- * Minha carreira — os hooks (React Query). Só a aba aberta consulta: cada
+ * Carreira — os hooks (React Query). Só a aba aberta consulta: cada
  * hook recebe `enabled`, e a linha do tempo junta as fontes sem esperar que
  * todas deem certo — a que falhou chega `undefined` e a tela diz o quê.
  */

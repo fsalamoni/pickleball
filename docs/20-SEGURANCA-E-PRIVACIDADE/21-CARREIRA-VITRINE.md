@@ -1,7 +1,7 @@
 # 21 — A vitrine pública da carreira (revisão de privacidade)
 
 > **O que é este documento**: a revisão INTERNA de privacidade da vitrine
-> pública da Minha carreira (PR 7, `docs/54-CARREIRA-DO-ATLETA.md` §2.8 e
+> pública da Carreira (PR 7, `docs/54-CARREIRA-DO-ATLETA.md` §2.8 e
 > §4.13), escrita por quem construiu a funcionalidade, conferida contra o
 > código. **Não é parecer jurídico** nem substitui a avaliação de um advogado
 > ou do encarregado (DPO) de fora. Onde a defesa é fraca, ela diz.
@@ -10,7 +10,7 @@
 
 ## 1. O que muda
 
-Até o PR 6, tudo da Minha carreira era **só do dono** (e do professor ativo a
+Até o PR 6, tudo da Carreira era **só do dono** (e do professor ativo a
 quem ele mandasse). O PR 7 deixa a pessoa **escolher, torneio a torneio**,
 mostrar um torneio de fora no perfil público (`/atleta/:uid`, bloco
 "Carreira"). É a primeira vez que dado da carreira sai do círculo privado.
@@ -120,7 +120,7 @@ MPF de algumas câmeras), a foto é recusada — nunca publicada como veio.
 
 ## 8. Exportação
 
-A exportação da conta inclui a vitrine ("Vitrine pública (Minha carreira)",
+A exportação da conta inclui a vitrine ("Vitrine pública (Carreira)",
 `careerExportService.js` → `listCareerPublic`).
 
 ## 9. Riscos e mitigação

@@ -1,5 +1,5 @@
 /**
- * PARIDADE cliente × servidor da DUPLA da Minha carreira: em quais
+ * PARIDADE cliente × servidor da DUPLA da Carreira: em quais
  * participações a pessoa foi citada, a impressão do que se confirma, a
  * maioridade, a visão normalizada e o link do aviso — a tela e o servidor
  * aplicam a mesma régua.
@@ -24,7 +24,7 @@ const EVENTOS = [
   ] },
 ];
 
-describe('paridade: a dupla da Minha carreira', () => {
+describe('paridade: a dupla da Carreira', () => {
   it('os mesmos valores gravados e limites', () => {
     expect(s.PARTNER_STATUS).toEqual({ ...c.PARTNER_STATUS });
     expect(s.OWNER_DECISION).toEqual({ ...c.OWNER_DECISION });

@@ -152,9 +152,9 @@ test.describe('@emuladores com conta', () => {
     expect(errosDaPagina).toEqual([]);
   });
 
-  // Minha carreira (flag `athlete_career`, docs/54): `/carreira` só existe com
+  // Carreira (flag `athlete_career`, docs/54): `/carreira` só existe com
   // a flag ligada (desligada, redireciona para a Minha área).
-  test('⭐ Minha carreira: /carreira abre com a flag ligada, em todas as abas', async ({ page }) => {
+  test('⭐ Carreira: /carreira abre com a flag ligada, em todas as abas', async ({ page }) => {
     const errosDaPagina = [];
     page.on('pageerror', (e) => errosDaPagina.push(`${page.url()}: ${e.message}`));
     await ligarFlag('athlete_career');
@@ -163,7 +163,7 @@ test.describe('@emuladores com conta', () => {
 
     for (const tela of ['/carreira', '/carreira?aba=proximos', '/carreira?aba=metas', '/carreira?aba=conquistas']) {
       await page.goto(tela);
-      await expect(page.locator('main h1').first(), `título de ${tela}`).toHaveText('Minha carreira');
+      await expect(page.locator('main h1').first(), `título de ${tela}`).toHaveText('Carreira');
       await expect(page.locator('[role="alert"]').filter({ hasText: /Tentar de novo|Recarregar/ })).toHaveCount(0);
       await expect(page.getByText(/Algo deu errado|Não conseguimos abrir/i)).toHaveCount(0);
     }

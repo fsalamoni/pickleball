@@ -1,5 +1,5 @@
 /**
- * A aba PRÓXIMOS da Minha carreira (`?aba=proximos`, docs/54 §4.9):
+ * A aba PRÓXIMOS da Carreira (`?aba=proximos`, docs/54 §4.9):
  *  - a contagem regressiva do torneio PRINCIPAL;
  *  - o PLANO: os planejados (prioridade, prazo, "Já me inscrevi", .ics) e os
  *    torneios da plataforma em que a pessoa está inscrita;

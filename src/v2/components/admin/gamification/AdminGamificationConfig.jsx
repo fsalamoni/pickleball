@@ -52,7 +52,7 @@ const GRUPOS_NUM = [
     ],
   },
   {
-    id: 'career', titulo: tk('Minha carreira'), modulo: 'career_xp',
+    id: 'career', titulo: tk('Carreira'), modulo: 'career_xp',
     campos: [
       { path: 'career.xpPerRecord', label: tk('XP por ficha completa'), hint: tk('Resultado, foto e balanço de um torneio de fora já jogado. O resultado em si não rende nada.') },
       { path: 'career.monthlyCap', label: tk('Fichas que rendem XP por mês'), hint: tk('Acima disso a ficha continua valendo, mas não rende XP (nem no mês seguinte).') },

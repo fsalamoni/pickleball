@@ -23,7 +23,7 @@ export const XP_GRANT_KIND = Object.freeze({
   CHALLENGE: 'challenge',
   EVENT: 'event',
   ADMIN: 'admin',
-  /** Minha carreira: a ficha completa do torneio de fora (`functions/careerXp.js`). */
+  /** Carreira: a ficha completa do torneio de fora (`functions/careerXp.js`). */
   CAREER: 'career',
 });
 

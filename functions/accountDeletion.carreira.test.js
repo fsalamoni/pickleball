@@ -40,7 +40,7 @@ function cenario() {
   return { db, ctx: { db, auth, bucket } };
 }
 
-describe('exclusão de conta × Minha carreira', () => {
+describe('exclusão de conta × Carreira', () => {
   it('⭐ some o que é da pessoa; no registro dos outros fica só o nome', async () => {
     const { db, ctx } = cenario();
     const antes = new Map(db.store.docs);

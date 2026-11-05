@@ -42,7 +42,7 @@ export const FACT_SOURCES = Object.freeze([
 ]);
 
 /**
- * As fontes da Minha carreira (flag `athlete_career`). Com a flag desligada
+ * As fontes da Carreira (flag `athlete_career`). Com a flag desligada
  * elas nem são buscadas e saem de `unknown`: não há o que medir, e a família
  * de conquistas não existe para a pessoa (`computeAchievementsV2` com `career`).
  */
@@ -83,7 +83,7 @@ function dataDaReserva(r) {
 
 /**
  * @param {Record<string, any>} src fontes (ver `FACT_SOURCES`); `undefined` = não carregou
- * @param {{ profile?: object|null, now?: Date, career?: boolean }} [ctx] `career`: a flag da Minha carreira
+ * @param {{ profile?: object|null, now?: Date, career?: boolean }} [ctx] `career`: a flag da Carreira
  */
 export function buildActivityFacts(src = {}, { profile = null, now = new Date(), career = false } = {}) {
   const unknown = FACT_SOURCES
@@ -128,7 +128,7 @@ export function buildActivityFacts(src = {}, { profile = null, now = new Date(),
   const kudos = src.kudosIndex || null;
   const referral = src.referral || null;
 
-  // Minha carreira: só CONTAGENS de hábito (registrar, completar, refletir) —
+  // Carreira: só CONTAGENS de hábito (registrar, completar, refletir) —
   // a colocação declarada não entra em nada (guarda `carreiraNaoPontua`).
   const carreira = career ? careerHabitCounts({
     events: lista(src.careerEvents) || [], goals: lista(src.careerGoals) || [],

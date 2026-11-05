@@ -99,7 +99,7 @@ substitui os campos de ID e de rating digitados à mão.
   Quando o rating MUDA, acrescenta um ponto `{ ms, singles, doubles }` à série
   `dupr_links/{uid}.rating_points` (no máximo 120, os mais antigos saem —
   `proximosPontosDupr`, testado em `functions/dupr.test.js`); rating repetido
-  não grava ponto. É a base da evolução na Minha carreira
+  não grava ponto. É a base da evolução na Carreira
   (`docs/54-CARREIRA-DO-ATLETA.md`, PR futuro); nada a mostra ainda.
 
 ### Para ligar (UAT)

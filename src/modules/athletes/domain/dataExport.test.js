@@ -123,7 +123,7 @@ describe('exportação: e-mails e mensagens enviados', () => {
   });
 });
 
-describe('exportação: Minha carreira', () => {
+describe('exportação: Carreira', () => {
   it('entra só quando coletada, com os torneios de fora e as fotos', () => {
     expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('career');
     const out = buildDataExport({ uid: 'u1', career: { events: [{ id: 'u1_a', name: 'Open' }], photos: ['carreira/u1/a.webp'] } });

@@ -54,7 +54,7 @@ export default function CareerAreaSection() {
       )}
       <div className="flex flex-wrap gap-2">
         <V2Button asChild variant="primary" size="sm"><Link to="/carreira?registrar=1"><Plus className="h-4 w-4" /> {t('Registrar torneio')}</Link></V2Button>
-        <V2Button asChild variant="secondary" size="sm"><Link to="/carreira">{t('Abrir a Minha carreira')}</Link></V2Button>
+        <V2Button asChild variant="secondary" size="sm"><Link to="/carreira">{t('Abrir a Carreira')}</Link></V2Button>
       </div>
     </div>
   );

@@ -114,7 +114,7 @@ function Temporada({ s }) {
 const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', className }, ref) {
   if (!card) return null;
   const podio = card.mode === 'podio';
-  // Retrospectiva da temporada (Minha carreira): números do ano, não um degrau.
+  // Retrospectiva da temporada (Carreira): números do ano, não um degrau.
   const temporada = card.mode === 'temporada';
   const cor = METAL[card.position || 1].cor;
   const kicker = temporada ? t('Retrospectiva') : card.event.kind === 'dia_de_jogo' ? t('Dia de jogo') : t('Torneio');
@@ -206,7 +206,7 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
         <footer className="flex items-end justify-between border-t border-white/15" style={{ marginTop: '5cqw', paddingTop: '4cqw', gap: '4cqw' }}>
           <div style={{ maxWidth: qrDataUrl ? '68%' : '100%' }}>
             <p className="italic leading-snug text-white/85" style={{ fontSize: F.frase }}>“{card.saying}”</p>
-            {/* Torneio de fora (Minha carreira): quem vê o cartão sabe que o resultado foi declarado. */}
+            {/* Torneio de fora (Carreira): quem vê o cartão sabe que o resultado foi declarado. */}
             {card.event.declared && <p className="font-bold uppercase tracking-widest text-white/60" style={{ fontSize: F.micro, marginTop: '0.8em' }}>{temporada ? t('Inclui resultado declarado') : t('Resultado declarado')}</p>}
           </div>
           {qrDataUrl && (

@@ -18,7 +18,7 @@ training/
 │   ├── session.js · plan.js · today.js · treinar.js · evolution.js · question.js
 │   ├── debrief.js       # BALANÇO DO JOGO (flag `game_debrief`): perguntas, focos, semana sugerida
 │   ├── debriefEvents.js # dia de jogo / torneio / reserva → "jogo que pede balanço"
-│   │                    # (origem `externo`: torneio de fora da Minha carreira, pela ficha — docs/42 §2a)
+│   │                    # (origem `externo`: torneio de fora da Carreira, pela ficha — docs/42 §2a)
 │   ├── settings.js      # padrões de `platform_settings/training` (os MESMOS da regra)
 │   ├── aiTemplate.js    # pedido para IA + validação local do JSON
 │   └── dates.js         # todayLocal (nunca `toISOString().slice(0, 10)`)

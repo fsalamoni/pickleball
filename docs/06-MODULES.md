@@ -246,7 +246,7 @@ diário, evolução, dúvidas ao professor, alunos, balanço do jogo
   `training_meta`, `training_questions`, `training_reports`, `training_shares`,
   `training_debriefs` (+ `coach_content`). Storage `treino/{uid}/`.
 
-### career/ — Minha carreira (flag `athlete_career`)
+### career/ — Carreira (flag `athlete_career`)
 A linha do tempo do atleta: os torneios e dias de jogo da plataforma e os
 torneios de FORA que ele registra (resultado declarado, foto, dupla), modo
 lista para o passado e a aba "Fora da plataforma" da estante. Também a dupla

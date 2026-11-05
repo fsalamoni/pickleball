@@ -240,7 +240,7 @@ ar**. Excluir o ALUNO encerra o vínculo com o professor. Denúncias **ficam**
 `docs/40-CENTRO-DE-TREINO.md` §9; o guarda `exclusaoCobreColecoes.test.js`
 reprova coleção `training_*` nova que fique fora da exclusão.
 
-**Gamificação** (2026-11-04, PR 0b da Minha carreira): onze coleções não
+**Gamificação** (2026-11-04, PR 0b da Carreira): onze coleções não
 estavam na exclusão e nenhuma coleção da gamificação ia na exportação.
 Agora:
 
