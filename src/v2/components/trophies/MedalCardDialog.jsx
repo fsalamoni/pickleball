@@ -32,7 +32,7 @@ const PIXEL_TRANSPARENTE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BA
  *   initialPosition?: 1|2|3, initialMode?: 'degrau'|'podio',
  *   season?: object|null,
  * }} props
- *   `season` (Minha carreira): a retrospectiva da temporada (`buildSeasonCard`)
+ *   `season` (Carreira): a retrospectiva da temporada (`buildSeasonCard`)
  *   no lugar do degrau — sem degraus para escolher, sem fotos, sem link.
  */
 export default function MedalCardDialog({ open, onOpenChange, places = [], event, host = null, link = null, initialPosition = 1, initialMode = CARD_MODE.PLACE, season = null }) {

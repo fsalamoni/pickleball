@@ -31,8 +31,8 @@ const FAMILY_TABS = [
   { key: ACHIEVEMENT_FAMILY.COMMUNITY, get label() { return t('Comunidade'); } },
 ];
 
-/** Só aparece com a flag da Minha carreira (a família vem do motor). */
-const MY_CAREER_TAB = { key: ACHIEVEMENT_FAMILY.MY_CAREER, get label() { return t('Minha carreira'); } };
+/** Só aparece com a flag da Carreira (a família vem do motor). */
+const MY_CAREER_TAB = { key: ACHIEVEMENT_FAMILY.MY_CAREER, get label() { return t('Carreira'); } };
 
 const RARITY_FILTERS = [
   { key: 'all', get label() { return t('Todas raridades'); } },

@@ -174,7 +174,7 @@ describe('mercado/ — fotos, vídeos e comprovante do Mercado', () => {
   });
 });
 
-describe('carreira/ — fotos dos torneios de fora (Minha carreira)', () => {
+describe('carreira/ — fotos dos torneios de fora (Carreira)', () => {
   const img = { contentType: 'image/webp' };
   const semente = () => env.withSecurityRulesDisabled((ctx) =>
     uploadBytes(ref(ctx.storage(), 'carreira/dono_uid/1-a.webp'), bytes(), img));

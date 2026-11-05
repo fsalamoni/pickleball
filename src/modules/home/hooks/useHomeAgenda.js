@@ -64,7 +64,7 @@ export function useHomeAgenda({
   const matriculas = useMyClassEnrollments({ enabled: arenaModulesOn });
   const vagas = useMyOpenSlots({ enabled: arenaModulesOn });
   const eventos = useAvailableEvents({ enabled: comClubes });
-  // Os torneios de fora planejados (Minha carreira). Mesma chave de `careerKeys.events`;
+  // Os torneios de fora planejados (Carreira). Mesma chave de `careerKeys.events`;
   // o serviço entra por import dinâmico (fora do pacote inicial).
   const comCarreira = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const carreira = useQuery({

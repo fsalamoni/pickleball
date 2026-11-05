@@ -571,7 +571,7 @@ export const FEATURE_FLAG_META = Object.freeze({
     description: tk('Deixa quem organiza um dia de jogo ligar o controle de linhas naquele jogo ou em todos os seus, inclusive no jogo em andamento: uma câmera (do celular, USB ou de captura) filma a quadra e o navegador marca se a bola quicou dentro ou fora e se houve pé na cozinha no voleio, dizendo "revisar" quando a distância é menor que a precisão. O vídeo fica no aparelho. Desligada, nada aparece.'),
   },
   [FEATURE_FLAG.ATHLETE_CAREER]: {
-    label: tk('Minha carreira (torneios de fora)'),
+    label: tk('Carreira (torneios de fora)'),
     description: tk('Abre /carreira: a linha do tempo da pessoa com os torneios e dias de jogo da plataforma e os torneios de fora que ela registra (resultado declarado, foto, dupla), a estante "Fora da plataforma" e a seção Carreira na Minha área. O resultado declarado nunca entra em ranking, rating nem XP. Desligada, tudo some e a regra recusa criar e editar; apagar continua valendo.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {

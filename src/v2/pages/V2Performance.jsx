@@ -28,7 +28,7 @@ import {
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
-// "Fora da plataforma" (Minha carreira, flag `athlete_career`): só baixa com a flag ligada.
+// "Fora da plataforma" (Carreira, flag `athlete_career`): só baixa com a flag ligada.
 const CareerPerformanceBlock = lazy(() => import('@/v2/components/career/CareerPerformanceBlock'));
 
 function formatPercent(rate) {

@@ -1,5 +1,5 @@
 /**
- * "Registrar torneio" em 30 segundos (Minha carreira, docs/54 §4): uma tela,
+ * "Registrar torneio" em 30 segundos (Carreira, docs/54 §4): uma tela,
  * nome + data, dois grupos de botões (Simples / Duplas / Equipe e Masc / Fem
  * / Mista) e a medalha opcional. Data passada vira jogado; futura, planejado.
  * "+ outra categoria" só aparece depois de salvar a primeira.

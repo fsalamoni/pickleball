@@ -1,5 +1,5 @@
 /**
- * A aba METAS da Minha carreira (`?aba=metas`, docs/54 §4.10): as metas da
+ * A aba METAS da Carreira (`?aba=metas`, docs/54 §4.10): as metas da
  * TEMPORADA em `player_goals` (com `kind`). Resultado (uma métrica da
  * carreira com alvo, ou marcada à mão) ou processo (progresso de 0 a 100).
  * Cada métrica diz de onde conta; a do DUPR só com o DUPR oficial valendo.

@@ -672,10 +672,10 @@ function TrofeusSecao() {
   );
 }
 
-/** Minha carreira (flag `athlete_career`): o resumo e o atalho para registrar. */
+/** Carreira (flag `athlete_career`): o resumo e o atalho para registrar. */
 function CarreiraSecao() {
   return (
-    <Bloco id="carreira" icon={Route} title={t('Minha carreira')} action={{ to: '/carreira', label: t('Ver a linha do tempo') }}>
+    <Bloco id="carreira" icon={Route} title={t('Carreira')} action={{ to: '/carreira', label: t('Ver a linha do tempo') }}>
       <CareerAreaSection />
     </Bloco>
   );

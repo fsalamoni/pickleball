@@ -1,4 +1,4 @@
-# career/ — Minha carreira (flag `athlete_career`)
+# career/ — Carreira (flag `athlete_career`)
 
 A linha do tempo do atleta (`/carreira`): os torneios e dias de jogo da
 plataforma, mais os torneios de FORA que a pessoa registra (resultado

@@ -170,7 +170,7 @@ describe('datas', () => {
   });
 });
 
-describe('Minha carreira nos fatos (flag athlete_career)', () => {
+describe('Carreira nos fatos (flag athlete_career)', () => {
   const ev = (i, extra = {}) => ({ id: `u_e${i}`, uid: 'u', status: 'played', start_date: '2026-09-01', entries: [{ placement: 'groups' }], photos: [{ path: 'carreira/u/p.jpg' }], ...extra });
   const bal = (i) => ({ uid: 'u', status: 'respondido', source: { type: 'externo', ref_id: `u_e${i}` } });
 

@@ -40,7 +40,7 @@ export const AGENDA_KIND = Object.freeze({
   AULA_ARENA: 'aula_arena',         // aula de arena em que estou matriculado
   JOGO_ABERTO: 'jogo_aberto',
   EVENTO_CLUBE: 'evento_clube',
-  CARREIRA: 'carreira',             // torneio de fora planejado (Minha carreira)
+  CARREIRA: 'carreira',             // torneio de fora planejado (Carreira)
 });
 
 /** Rótulo curto do tipo, para o selo do item. */
@@ -306,7 +306,7 @@ export function agendaFromClubEvents(events = [], { agora = Date.now(), meusClub
 }
 
 /**
- * Os torneios de FORA planejados (Minha carreira, `career_events`): o dia
+ * Os torneios de FORA planejados (Carreira, `career_events`): o dia
  * inteiro, sem hora. Inscrição fechando em até 3 dias sem "Já me inscrevi"
  * pede ação. O ligado a um torneio do PickleRush não entra (já vem pelos jogos).
  */

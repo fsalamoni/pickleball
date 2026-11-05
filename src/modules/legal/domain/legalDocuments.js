@@ -153,7 +153,7 @@ export const LEGAL_DOCUMENTS = [
         paragraphs: [
           'Nome, inscrições, resultados e ranking são visíveis a outros participantes do mesmo contexto (torneio, clube, dia de jogo). Dados de contato (telefone, e-mail) não são exibidos publicamente.',
           'Compartilhamos dados apenas com operadores necessários à prestação do serviço (por exemplo, infraestrutura de nuvem — Google Firebase) e quando exigido por lei. Não vendemos dados pessoais.',
-          'Torneios de fora da plataforma registrados em Minha carreira são só seus. Só vai ao seu perfil público o torneio que você escolher mostrar (nome, data, cidade, categoria, colocação, selo e as fotos escolhidas, sem os metadados); anotações, balanço e avaliações nunca vão. O nome da sua dupla só aparece com o consentimento dela, menores de 18 anos não têm vitrine pública e tirar do perfil, apagar o torneio ou a conta remove na hora.',
+          'Torneios de fora da plataforma registrados em Carreira são só seus. Só vai ao seu perfil público o torneio que você escolher mostrar (nome, data, cidade, categoria, colocação, selo e as fotos escolhidas, sem os metadados); anotações, balanço e avaliações nunca vão. O nome da sua dupla só aparece com o consentimento dela, menores de 18 anos não têm vitrine pública e tirar do perfil, apagar o torneio ou a conta remove na hora.',
         ],
       },
       {

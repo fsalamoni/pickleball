@@ -81,7 +81,7 @@ export default function AdminCareerModeration() {
   return (
     <div className="space-y-4" data-dica="admin-carreira-denuncias">
       <p className="text-sm text-gray-600">
-        {t('Denúncias sobre a confirmação ou a visão da dupla na Minha carreira. A visão é privada entre as duas pessoas e nunca entra em ranking, rating nem XP.')}
+        {t('Denúncias sobre a confirmação ou a visão da dupla na Carreira. A visão é privada entre as duas pessoas e nunca entra em ranking, rating nem XP.')}
       </p>
       {itens.length === 0 ? (
         <V2EmptyState icon={Flag} title={t('Nenhuma denúncia de dupla aberta')} />

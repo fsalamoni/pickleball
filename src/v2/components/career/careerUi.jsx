@@ -1,5 +1,5 @@
 /**
- * Peças pequenas da Minha carreira: o grupo de botões (Simples / Duplas /
+ * Peças pequenas da Carreira: o grupo de botões (Simples / Duplas /
  * Equipe; Masc / Fem / Mista; a medalha), a data do torneio de fora e o selo.
  */
 import React from 'react';

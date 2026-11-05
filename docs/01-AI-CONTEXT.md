@@ -14,7 +14,7 @@
 aberto, aulas, loja, membros), **professores**, **clubes**, **ranking e rating**
 (ELO, 2.0–8.0 estilo DUPR, duplas), **Centro de Treino**, **gamificação**,
 **Mercado** (marketplace), **federações** e **clube como associação**
-(filiação, carteirinha, cobrança, governança), **Minha carreira** (torneios de
+(filiação, carteirinha, cobrança, governança), **Carreira** (torneios de
 fora da plataforma), **controle de linhas por câmera** e **DUPR oficial**, além
 da comunidade (chat, follows). Produção:
 `https://picklerush.web.app` (site Firebase `picklerush`; `pickletour` só
@@ -190,7 +190,7 @@ Cada item tem README no módulo e doc próprio; abra-os antes do código.
 | Troféus e cartões | `trophies/` | 43 |
 | Federação (filiação, ranking oficial, acervo, agenda, eleições…) | `federations/` + `functions/federation*.js` | 50 |
 | Clube como associação | `clubs/` + `functions/club*.js` | 52 |
-| Minha carreira (torneios de fora, dupla, vitrine) | `career/` + `functions/career*.js` | 54 |
+| Carreira (torneios de fora, dupla, vitrine) | `career/` + `functions/career*.js` | 54 |
 | Controle de linhas por câmera | `linecall/` | 53 |
 | DUPR oficial (vínculo, envio de partidas) | `rating/` + `functions/dupr*.js` | 51 |
 

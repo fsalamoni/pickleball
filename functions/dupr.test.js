@@ -218,7 +218,7 @@ describe('dupr — webhook de rating', () => {
     expect(dados(db, 'dupr_links/ana').ratings.doubles).toBe(3.875);
   });
 
-  it('⭐ a série do rating (Minha carreira) só ganha ponto quando o rating MUDA', async () => {
+  it('⭐ a série do rating (Carreira) só ganha ponto quando o rating MUDA', async () => {
     const { ctx, db } = await vinculado();
     await dupr.webhook({ ...ctx, now: NOW + 1 }, post(evento()));
     await dupr.webhook({ ...ctx, now: NOW + 2 }, post(evento()));

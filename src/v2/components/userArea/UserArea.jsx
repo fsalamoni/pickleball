@@ -125,9 +125,9 @@ export default function UserArea() {
   // ponytail: só a ficha pessoal (`athlete_{uid}`); vendas como professor,
   // arena ou loja ficam no painel de vendas — somar aqui = 4 leituras por ficha.
   const mercadoOn = Boolean(flags?.[FEATURE_FLAG.MARKETPLACE]);
-  // Minha carreira (flag `athlete_career`): a seção só consulta quando aberta.
+  // Carreira (flag `athlete_career`): a seção só consulta quando aberta.
   const carreiraOn = Boolean(flags?.[FEATURE_FLAG.ATHLETE_CAREER]);
-  // Os pedidos da dupla (Minha carreira): só com a flag; falha vai para "ficou de fora".
+  // Os pedidos da dupla (Carreira): só com a flag; falha vai para "ficou de fora".
   const duplasQ = useCareerPartners({ enabled: carreiraOn });
   // O plano ("Como foi?" e prazo de inscrição perto): a mesma chave da página da carreira.
   const carreiraEvQ = useCareerEvents({ enabled: carreiraOn });

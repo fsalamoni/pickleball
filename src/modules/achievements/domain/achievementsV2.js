@@ -41,7 +41,7 @@ export const ACHIEVEMENT_FAMILY = Object.freeze({
   DISCOVERY: 'discovery',
   SEASONAL: 'seasonal',
   COMMUNITY: 'community',
-  /** Minha carreira (flag `athlete_career`): hábito de registrar e refletir os torneios de fora. */
+  /** Carreira (flag `athlete_career`): hábito de registrar e refletir os torneios de fora. */
   MY_CAREER: 'my_career',
 });
 
@@ -77,7 +77,7 @@ export const ACHIEVEMENT_FAMILY_META = Object.freeze({
     description: tk('Clubes, ajudar novatos, mentorear.'),
   },
   [ACHIEVEMENT_FAMILY.MY_CAREER]: {
-    name: tk('Minha carreira'),
+    name: tk('Carreira'),
     color: 'teal',
     icon: '📒',
     description: tk('Registrar, completar e refletir os torneios de fora. O resultado declarado não conta.'),
@@ -649,7 +649,7 @@ export const ACHIEVEMENTS_V2 = Object.freeze([
 ]);
 
 /**
- * Família "Minha carreira" (flag `athlete_career`, docs/54 §9). Só HÁBITO:
+ * Família "Carreira" (flag `athlete_career`, docs/54 §9). Só HÁBITO:
  * registrar, completar a ficha, fazer o balanço, cumprir a meta de processo.
  * Nenhuma lê a colocação declarada — "fui campeão" digitado não desbloqueia
  * nada (guarda `carreiraNaoPontua`). `xpBonus` 0: o XP da carreira é o da
@@ -668,7 +668,7 @@ const contagem = (campo, alvo) => (u) => {
 
 export const CAREER_ACHIEVEMENTS = Object.freeze([
   def('mycareer_first_record', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.COMMON,
-    tk('Primeiro registro'), tk('Registrou o primeiro torneio de fora na Minha carreira.'),
+    tk('Primeiro registro'), tk('Registrou o primeiro torneio de fora na Carreira.'),
     contagem('career_records', 1), { icon: '📝' }),
   def('mycareer_historian', ACHIEVEMENT_FAMILY.MY_CAREER, ACHIEVEMENT_RARITY.RARE,
     tk('Historiador'), tk('Registrou 20 torneios de fora.'),
@@ -732,7 +732,7 @@ export function evaluateAchievement(def, user, context = {}) {
  * Computa todas as conquistas V2 (unlocked + locked) a partir do user.
  *
  * @param {object} user
- * @param {{ career?: boolean }} [context] `career`: a flag da Minha carreira (inclui a família)
+ * @param {{ career?: boolean }} [context] `career`: a flag da Carreira (inclui a família)
  * @param {{ family?: string, rarity?: string }} [filters]
  * @returns {{
  *   unlocked: Array<{ id, name, description, family, rarity, icon, lore, xpBonus, shareable, progress, reason }>,

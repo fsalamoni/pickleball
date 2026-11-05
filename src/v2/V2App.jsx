@@ -113,7 +113,7 @@ const V2MarketListingEditor = lazy(() => import('@/v2/pages/V2MarketListingEdito
 const V2MarketStoreApply = lazy(() => import('@/v2/pages/V2MarketStoreApply'));
 // Centro de Treino (flag `training_center`): cada tela se fecha sozinha com a flag desligada.
 const V2Training = lazy(() => import('@/v2/pages/V2Training'));
-// Minha carreira (flag `athlete_career`): a tela se fecha sozinha com a flag desligada.
+// Carreira (flag `athlete_career`): a tela se fecha sozinha com a flag desligada.
 const V2Career = lazy(() => import('@/v2/pages/V2Career'));
 // O link de convite da dupla sem conta (PR 6); sem login, o App.jsx mostra a explicação.
 const V2CareerInvite = lazy(() => import('@/v2/pages/V2CareerInvite'));

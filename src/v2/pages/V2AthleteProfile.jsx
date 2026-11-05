@@ -257,7 +257,7 @@ export default function V2AthleteProfile() {
         <TrophyShelf uid={uid} nome={athlete?.name || ''} compacto />
       </V2Surface>
 
-      {/* Minha carreira (PR 7): os torneios de fora que a pessoa escolheu mostrar. */}
+      {/* Carreira (PR 7): os torneios de fora que a pessoa escolheu mostrar. */}
       {carreiraOn && (
         <Suspense fallback={null}><CareerPublicBlock uid={uid} nome={athlete?.name || ''} /></Suspense>
       )}

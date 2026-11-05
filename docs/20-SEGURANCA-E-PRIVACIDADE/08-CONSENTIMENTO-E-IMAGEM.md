@@ -89,7 +89,7 @@ plataforma e nunca concordou com nada. Publicadas sem login.
    2026-11-04). `storageService` passa toda imagem por `stripImageMetadata`
    (`core/lib/imageMetadata.js`, que tira EXIF/XMP/IPTC sem recodificar), e
    `prepareUpload` (`training/services/mediaUploadService.js`, usado pelo
-   Centro de Treino, pelo Mercado e pela Minha carreira) recodifica a imagem
+   Centro de Treino, pelo Mercado e pela Carreira) recodifica a imagem
    em WebP/JPEG, o que descarta os metadados; quando não consegue, cai no
    mesmo `stripImageMetadata`. Foto de celular carrega GPS, e publicá-la
    seria vazar a casa da pessoa: todo upload NOVO de imagem passa por um dos

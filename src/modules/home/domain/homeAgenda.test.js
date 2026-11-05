@@ -190,7 +190,7 @@ describe('mergeAgenda / groupAgendaByDay', () => {
   });
 });
 
-describe('agendaFromCareerEvents (Minha carreira)', () => {
+describe('agendaFromCareerEvents (Carreira)', () => {
   it('o planejado de fora entra; prazo perto sem inscrição pede ação; ligado ao PickleRush, jogado e passado não', () => {
     const r = agendaFromCareerEvents([
       { id: 'u_a', status: 'planned', name: 'Open Sul', start_date: '2026-10-10', city: 'Curitiba', state: 'PR', registration_deadline: '2026-09-28' },

@@ -1,5 +1,5 @@
 /**
- * PARIDADE cliente × servidor da VITRINE pública da Minha carreira: a lista
+ * PARIDADE cliente × servidor da VITRINE pública da Carreira: a lista
  * fechada de campos (o que pode ser público), os limites, o caminho da foto
  * pública, o selo (a mesma conta de `careerSeal` + `partnerSealFor`) e a
  * retirada do EXIF do JPEG (a mesma de `stripJpegMetadataBytes`).

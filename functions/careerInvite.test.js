@@ -1,5 +1,5 @@
 /**
- * A DUPLA SEM CONTA da Minha carreira (PR 6), contra um Firestore falso:
+ * A DUPLA SEM CONTA da Carreira (PR 6), contra um Firestore falso:
  * "Convidar pelo WhatsApp" gera um link de UM uso, com validade, guardando só
  * o hash do token (nenhum telefone); quem abre o link e aceita preenche a
  * dupla VAZIA — nunca troca uma conta que já está lá; o dono não se liga a si

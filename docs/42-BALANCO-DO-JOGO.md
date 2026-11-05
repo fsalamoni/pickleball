@@ -44,7 +44,7 @@ própria aba **Treino → Balanço** (`/treino?aba=balanco`).
    **"Como foi o seu jogo?"** no início (clássico e personalizado) e a faixa
    "Precisa de você" da Minha área. "Agora não" dispensa (grava `dispensado`).
    "Balanço de outro jogo" serve ao jogo fora da plataforma (`avulso`).
-   O **torneio de fora** registrado na Minha carreira (`externo`, flag
+   O **torneio de fora** registrado na Carreira (`externo`, flag
    `athlete_career`) tem o balanço pela FICHA do torneio — ver §2a.
 3. **As perguntas** (`DebriefDialog`, menos de um minuto): como foi (1–5), o
    que funcionou e o que faltou (até 3 cada, em palavras de quadra —
@@ -65,7 +65,7 @@ própria aba **Treino → Balanço** (`/treino?aba=balanco`).
 6. **Tendências**: depois de alguns balanços, a aba mostra o que mais vem
    faltando e funcionando e a média das notas (`debriefTrends`).
 
-## 2a. A origem `externo` — o torneio de fora (Minha carreira)
+## 2a. A origem `externo` — o torneio de fora (Carreira)
 
 Desde o PR 2 da carreira (2026-11-04), `DEBRIEF_SOURCE.EXTERNO = 'externo'`:
 o torneio que a pessoa jogou FORA da plataforma e registrou em
@@ -164,7 +164,7 @@ Artigo `balanco-do-jogo` (parte Atleta) e guia `treino-balanco`, ambos com
 ## 8. Fica para depois
 
 - O professor sugerir a semana. (Enviar o balanço do TORNEIO DE FORA ao
-  professor já existe: "Mandar ao meu professor" da Minha carreira grava
+  professor já existe: "Mandar ao meu professor" da Carreira grava
   `shared_coach_id` no balanço e o professor com vínculo ativo o lê —
   `docs/54-CARREIRA-DO-ATLETA.md` §4.12. O balanço do jogo da plataforma
   ainda não tem o botão.)

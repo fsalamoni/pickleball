@@ -209,7 +209,7 @@ describe('searchTerms — achar o termo sem saber o nome dele', () => {
   });
 });
 
-describe('Ficha completa (Minha carreira): os números saem da configuração', () => {
+describe('Ficha completa (Carreira): os números saem da configuração', () => {
   it('só existe com a flag', () => {
     expect(guide.byId['ficha-completa']).toBeUndefined();
     expect(buildGamificationGuide(null, { career: true }).byId['ficha-completa'].module).toBe('career_xp');

@@ -1936,14 +1936,14 @@ const ATLETA = {
       id: 'carreira-registrar',
       flags: ['athlete_career'],
       title: tk('Registrar um torneio de fora'),
-      summary: tk('A Minha carreira junta os torneios daqui e os que você jogou fora do PickleRush, numa linha do tempo só sua.'),
+      summary: tk('A Carreira junta os torneios daqui e os que você jogou fora do PickleRush, numa linha do tempo só sua.'),
       keywords: [
         'carreira', 'minha carreira', 'torneio de fora', 'registrar torneio', 'histórico', 'linha do tempo',
         'medalha', 'pódio', 'foto', 'federação', 'modo lista', 'vários de uma vez', 'repetir',
       ],
       guias: ['carreira-registrar'],
       blocks: [
-        p(tk('Em Minha carreira, "Registrar torneio" pede só o nome, a data, o formato (Simples, Duplas ou Equipe), a categoria (Masc, Fem ou Mista) e, se quiser, a medalha. Data passada entra como jogado; data futura, como planejado. Depois de salvar, "Outra categoria" acrescenta mais uma.')),
+        p(tk('Na Carreira, "Registrar torneio" pede só o nome, a data, o formato (Simples, Duplas ou Equipe), a categoria (Masc, Fem ou Mista) e, se quiser, a medalha. Data passada entra como jogado; data futura, como planejado. Depois de salvar, "Outra categoria" acrescenta mais uma.')),
         list(
           tk('A FICHA — toque no torneio para completar em camadas: o resultado (colocação, faixa, pontos que a federação deu, a federação e o link), a foto da medalha, do pódio ou da chave, a dupla e o balanço. O cartão diz "3 de 4" e o próximo passo.'),
           tk('VÁRIOS DE UMA VEZ — para o passado: uma linha por torneio (ano, nome, categoria, medalha), tudo salvo junto.'),
@@ -1952,7 +1952,7 @@ const ATLETA = {
           tk('É ESTE? — se o torneio parece um do PickleRush em que você jogou, a ficha pergunta. Confirmando, ele aparece uma vez só, com o selo oficial.'),
         ),
         p(tk('Os pódios de fora aparecem na estante de troféus, na aba "Fora da plataforma", com o cartão para compartilhar (com o rodapé "resultado declarado").')),
-        link('/carreira', tk('Abrir a Minha carreira')),
+        link('/carreira', tk('Abrir a Carreira')),
         tip(tk('Só você vê a sua carreira: os torneios, as fotos e as anotações. Ninguém mais lê.')),
         warn(tk('O resultado que você digita é declarado: ele nunca entra em ranking, rating nem XP. Evite fotos com o rosto de crianças.')),
       ],
@@ -1975,7 +1975,7 @@ const ATLETA = {
           tk('MEU DESEMPENHO — o bloco "Fora da plataforma" mostra os torneios, pódios e títulos declarados, à parte. "Incluir declarados" mostra a soma com os números daqui, com o selo e dizendo de onde vem cada parte; o aproveitamento continua só com os jogos daqui.'),
           tk('RETROSPECTIVA — na temporada que acabou (e, na do ano, a partir de dezembro), a linha do tempo oferece o cartão com os torneios, as medalhas e a parceria do ano, para baixar ou compartilhar. Se houver torneio de fora na conta, o cartão diz "Inclui resultado declarado".'),
         ),
-        link('/carreira', tk('Abrir a Minha carreira')),
+        link('/carreira', tk('Abrir a Carreira')),
         warn(tk('O resultado declarado nunca entra em ranking, rating nem XP, nem pelo cartão. O balanço conta nas missões de balanço como o de qualquer jogo — é a reflexão que vale, não a colocação.')),
       ],
     },
@@ -1992,7 +1992,7 @@ const ATLETA = {
           tk('CONFIRMADO PELA DUPLA — você registrou e a dupla (com conta, maior de 18) confirmou que foi assim. Mudar a data, a categoria ou a colocação pede a confirmação de novo; trocar o nome do torneio, não.'),
           tk('DECLARADO — você registrou. Fica na sua carreira e na estante "Fora da plataforma", mas nunca soma em ranking, rating nem XP.'),
         ),
-        link('/carreira', tk('Abrir a Minha carreira')),
+        link('/carreira', tk('Abrir a Carreira')),
       ],
     },
     {
@@ -2011,7 +2011,7 @@ const ATLETA = {
           tk('PÔR NA MINHA CARREIRA TAMBÉM — quem confirmou pode copiar o torneio para a própria carreira, já preenchido; os dois registros ficam ligados.'),
           tk('DENUNCIAR — algo ofensivo, falso ou com dado pessoal: "Denunciar" leva à moderação da plataforma, que decide com motivo e avisa quem perdeu algo.'),
         ),
-        link('/carreira', tk('Abrir a Minha carreira')),
+        link('/carreira', tk('Abrir a Carreira')),
         warn(tk('A confirmação e a visão da dupla nunca entram em ranking, rating nem XP. Apagar o pedido, retirar a visão ou desfazer a confirmação vale a qualquer hora.')),
       ],
     },
@@ -2031,7 +2031,7 @@ const ATLETA = {
           tk('MENORES DE 18 — não convidam nem são convidados.'),
           tk('NENHUM TELEFONE — a plataforma não guarda o número nem o link inteiro, só uma marca que serve para conferir.'),
         ),
-        link('/carreira', tk('Abrir a Minha carreira')),
+        link('/carreira', tk('Abrir a Carreira')),
       ],
     },
     {
@@ -2050,7 +2050,7 @@ const ATLETA = {
           tk('MENORES DE 18 — não têm vitrine pública: a carreira continua só deles.'),
           tk('TIRAR — "Tirar do perfil" apaga o item e as fotos públicas na hora. Apagar o torneio ou a conta também tira.'),
         ),
-        link('/carreira', tk('Abrir a Minha carreira')),
+        link('/carreira', tk('Abrir a Carreira')),
         warn(tk('No perfil, "Declarado" quer dizer que ninguém conferiu. O resultado declarado nunca entra em ranking, rating nem XP.')),
       ],
     },
@@ -2065,7 +2065,7 @@ const ATLETA = {
       ],
       guias: ['carreira-planejar'],
       blocks: [
-        p(tk('A aba "Próximos" da Minha carreira junta o seu plano e os torneios que vêm por aí: os da agenda das federações em que você é filiado, os chancelados e os públicos do PickleRush, na sua região. "Pôr no meu plano" cria o torneio planejado já preenchido; nada entra sem o seu toque.')),
+        p(tk('A aba "Próximos" da Carreira junta o seu plano e os torneios que vêm por aí: os da agenda das federações em que você é filiado, os chancelados e os públicos do PickleRush, na sua região. "Pôr no meu plano" cria o torneio planejado já preenchido; nada entra sem o seu toque.')),
         list(
           tk('PRIORIDADE — Principal, Importante ou Só para jogar. O principal mais próximo ganha a contagem regressiva, aqui e no card "Carreira" do início.'),
           tk('PRAZO DE INSCRIÇÃO — com o prazo na ficha, chega um aviso 3 dias antes, enquanto você não marcar "Já me inscrevi". Um dia depois do torneio chega o "Como foi?".'),
@@ -2082,7 +2082,7 @@ const ATLETA = {
       id: 'carreira-xp',
       flags: ['athlete_career'],
       title: tk('A carreira na gamificação: ficha completa e conquistas'),
-      summary: tk('O que a Minha carreira rende de XP e de conquistas — e por que o resultado declarado não rende nada.'),
+      summary: tk('O que a Carreira rende de XP e de conquistas — e por que o resultado declarado não rende nada.'),
       keywords: ['xp', 'ficha completa', 'gamificação', 'conquista', 'historiador', 'teto', 'carreira', 'pontos', 'nível'],
       blocks: [
         p(tk('A plataforma premia registrar e refletir sobre os torneios de fora, nunca o resultado que você digitou: campeão e fase de grupos rendem o mesmo.')),
@@ -2090,7 +2090,7 @@ const ATLETA = {
           tk('FICHA COMPLETA — a ficha de um torneio já jogado com a colocação de cada categoria, ao menos uma foto e o balanço respondido rende um pouco de XP, concedido pelo servidor, uma vez por torneio e com teto por mês. Os valores de hoje estão no guia da gamificação.'),
           tk('DESFAZER — apagar o registro, tirar a foto ou apagar o balanço zera o XP daquela ficha. Refazer a mesma ficha não rende de novo.'),
           tk('FORA DA TEMPORADA — o XP da ficha não entra no placar da temporada, como os outros prêmios do servidor. O torneio ligado a um do PickleRush ("É este") não rende: o oficial já conta.'),
-          tk('CONQUISTAS — a família "Minha carreira" tem conquistas de hábito: o primeiro registro, a coleção de registros, as fichas completas, balanços e a meta de processo cumprida.'),
+          tk('CONQUISTAS — a família "Carreira" tem conquistas de hábito: o primeiro registro, a coleção de registros, as fichas completas, balanços e a meta de processo cumprida.'),
         ),
         link('/gamification/como-funciona?termo=ficha-completa', tk('Os valores exatos, no guia')),
         warn(tk('O resultado declarado nunca entra em ranking, rating, placar da temporada nem conquista.')),
@@ -2962,7 +2962,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'treino']] },
   { pattern: '/treino', label: tk('o treino'),
     refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
-  // Minha carreira (as abas são `?aba=`). O link de convite da dupla sem conta
+  // Carreira (as abas são `?aba=`). O link de convite da dupla sem conta
   // (`/carreira/convite/:token`) vem ANTES do genérico.
   { pattern: '/carreira/convite/*', label: tk('o convite de dupla'),
     refs: [[HELP_SECTION.ATHLETE, 'carreira-dupla-sem-conta'], [HELP_SECTION.ATHLETE, 'carreira-dupla']] },

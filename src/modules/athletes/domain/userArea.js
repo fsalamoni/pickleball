@@ -26,7 +26,7 @@ export const USER_AREA_SECTION = Object.freeze({
   JOGOS: 'jogos',
   TORNEIOS: 'torneios',
   TROFEUS: 'trofeus',
-  /** Minha carreira (flag `athlete_career`): resumo e atalho para /carreira. */
+  /** Carreira (flag `athlete_career`): resumo e atalho para /carreira. */
   CARREIRA: 'carreira',
   /** Mercado (flag `marketplace`): comprando e vendendo. */
   MERCADO: 'mercado',
@@ -203,7 +203,7 @@ export function userAreaPending(fontes = {}) {
     });
   }
 
-  // Minha carreira (flag `athlete_career`): pedidos de confirmação que chegaram
+  // Carreira (flag `athlete_career`): pedidos de confirmação que chegaram
   // e visões da dupla esperando a decisão. `careerPartnerPending` (undefined = não carregou).
   const pedidosDupla = numero(fontes.carreira?.convites);
   if (pedidosDupla) {

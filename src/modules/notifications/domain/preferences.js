@@ -45,7 +45,7 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
   {
     id: 'career',
     label: tk('Carreira'),
-    description: tk('Minha carreira: a dupla que confirma, o prazo de inscrição que vai fechar e o "como foi?" depois do torneio.'),
+    description: tk('Carreira: a dupla que confirma, o prazo de inscrição que vai fechar e o "como foi?" depois do torneio.'),
     types: ['career'],
   },
   {

@@ -118,7 +118,7 @@ const PAGE_TITLES = [
   ['/chat', tk('Mensagens')],
   ['/meu-desempenho', tk('Meu desempenho')],
   ['/treino', tk('Treino')],
-  ['/carreira', tk('Minha carreira')],
+  ['/carreira', tk('Carreira')],
   ['/perfil', tk('Meu perfil')],
   ['/regras', tk('Regras')],
   ['/nivelamento', tk('Nivelamento')],
@@ -161,7 +161,7 @@ function useV2Nav() {
   const { isPlatformAdmin, user } = useAuth();
   const marketplaceOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const federationsOn = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
-  // Minha carreira: subpágina da Minha área (nenhum hub novo na barra lateral).
+  // Carreira: subpágina da Minha área (nenhum hub novo na barra lateral).
   const careerOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
   const performanceOn = true;
   const ratingOn = true;
@@ -339,7 +339,7 @@ function useV2Nav() {
         children: [
           { to: '/perfil', label: userHubOn ? t('Minha área') : t('Meu perfil'), icon: User },
           trainingOn && { to: '/treino', label: t('Treino'), icon: Dumbbell },
-          careerOn && { to: '/carreira', label: t('Minha carreira'), icon: Milestone },
+          careerOn && { to: '/carreira', label: t('Carreira'), icon: Milestone },
           performanceOn && { to: '/meu-desempenho', label: t('Meu desempenho'), icon: BarChart3 },
           gamificationOn && { to: '/conquistas', label: t('Conquistas'), icon: Award },
           tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },

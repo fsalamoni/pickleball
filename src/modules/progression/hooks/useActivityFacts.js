@@ -5,7 +5,7 @@
  * fatos com o perfil. Separado de propósito: mudar o perfil (foto, cidade)
  * remonta os fatos na hora, sem buscar tudo de novo.
  *
- * As fontes da Minha carreira só são buscadas com a flag `athlete_career`
+ * As fontes da Carreira só são buscadas com a flag `athlete_career`
  * (a chave da consulta muda com ela).
  */
 import { useMemo } from 'react';

@@ -130,14 +130,14 @@ export default function V2Settings() {
           clubes = { clubs: undefined, incomplete: [t('Associações em clubes')] };
         }
       }
-      // Minha carreira: os torneios de fora e as fotos. Entra sempre (com a flag
+      // Carreira: os torneios de fora e as fotos. Entra sempre (com a flag
       // desligada, o que a pessoa registrou continua sendo dela).
       let carreira = { career: undefined, incomplete: [] };
       try {
         const { collectCareerExport } = await import('@/modules/career/services/careerExportService');
         carreira = await collectCareerExport(user?.uid);
       } catch (_) {
-        carreira = { career: undefined, incomplete: [t('Minha carreira')] };
+        carreira = { career: undefined, incomplete: [t('Carreira')] };
       }
       // Gamificação: XP, missões, conquistas, kudos, cartas, avaliações, desafios
       // e duelos (sempre ligada). Cada parte falha sozinha e vai para o aviso.

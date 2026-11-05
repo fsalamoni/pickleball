@@ -1,5 +1,5 @@
 /**
- * Minha carreira — I/O de `career_events/{uid}_{id}` e da pasta `carreira/{uid}/`
+ * Carreira — I/O de `career_events/{uid}_{id}` e da pasta `carreira/{uid}/`
  * do Storage. Só o dono lê e escreve (a regra confere `uid`, o prefixo do id
  * e a flag `athlete_career` em create/update — apagar vale sempre).
  *

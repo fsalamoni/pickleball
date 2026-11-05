@@ -171,7 +171,7 @@ export function buildDataExport({
       ],
     };
   }
-  // Minha carreira: os torneios de fora e a lista das fotos (`carreira/{uid}/`).
+  // Carreira: os torneios de fora e a lista das fotos (`carreira/{uid}/`).
   if (career !== undefined) {
     const events = lista(career?.events);
     const photos = (Array.isArray(career?.photos) ? career.photos : []).map(String);

@@ -97,7 +97,7 @@ function MainEntry() {
   if (isLoadingAuth) return <FullScreenSpinner />;
   if (!isAuthenticated && !allowLocalPreview) {
     if (location.pathname === '/') return <Landing />;
-    // O convite da dupla sem conta (Minha carreira): explica e leva ao login voltando ao link.
+    // O convite da dupla sem conta (Carreira): explica e leva ao login voltando ao link.
     if (location.pathname.startsWith('/carreira/convite/')) return <CareerInvite />;
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }

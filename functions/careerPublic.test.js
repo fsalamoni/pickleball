@@ -1,5 +1,5 @@
 /**
- * A VITRINE pública da Minha carreira no SERVIDOR, contra um Firestore e um
+ * A VITRINE pública da Carreira no SERVIDOR, contra um Firestore e um
  * Storage falsos: menor não publica (a mesma resposta, nada gravado); caminho de
  * foto de outra pessoa é recusado; a foto sai sem EXIF para `carreira-publica/`;
  * a crítica, a anotação e o link nunca aparecem; o nome da dupla só com o "sim"

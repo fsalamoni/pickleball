@@ -60,7 +60,7 @@ describe('buildMedalCard', () => {
     expect(c.shareText).toContain('Bronze: Eva e Fê');
   });
 
-  it('⭐ torneio de fora (Minha carreira): o cartão e o texto dizem "resultado declarado"', () => {
+  it('⭐ torneio de fora (Carreira): o cartão e o texto dizem "resultado declarado"', () => {
     const c = buildMedalCard({ places, event: { ...event, declared: true }, position: 1 });
     expect(c.event.declared).toBe(true);
     expect(c.shareText).toContain('Resultado declarado');

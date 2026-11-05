@@ -1539,7 +1539,7 @@ pela pessoa, flag `game_debrief`), `updated_at`. Só o dono.
 
 ### `training_debriefs/{uid}_{tipo}_{ref}` (NOVO, flag `game_debrief`)
 Balanço depois de um jogo: `uid`, `source { type: dia_de_jogo|torneio|reserva|avulso|externo
-(`externo` = torneio de fora da Minha carreira, `ref_id` = id do `career_events`),
+(`externo` = torneio de fora da Carreira, `ref_id` = id do `career_events`),
 ref_id, title, date, games, wins }`, `status` (`respondido|dispensado`),
 `rating` (1–5), `strengths[]`, `weaknesses[]` (≤ 3, ids de `GAME_ASPECTS`),
 `evolution`, `body`, `mind`, `note` (≤ 500), `suggestion { focus[], item_ids[],
@@ -1552,7 +1552,7 @@ ativo). A regra confere o prefixo do id e a forma. Zero índice. Ver
 `docs/42-BALANCO-DO-JOGO.md`.
 
 ### `career_events/{uid}_{sufixo}` (NOVO, flag `athlete_career`)
-Torneio de FORA da plataforma registrado pelo atleta (Minha carreira):
+Torneio de FORA da plataforma registrado pelo atleta (Carreira):
 `uid`, `name`, `organizer`, `city`, `state`, `start_date`, `end_date`,
 `date_precision` (`day|year`), `status` (`played|planned|cancelled`, derivado
 da data), `entries[]` (≤ 6: `format`, `gender`, `age`, `level_bracket`,
@@ -1652,7 +1652,7 @@ A cópia pública (sem metadados) da foto escolhida para a vitrine. `get`
 de quem tem conta, sem listagem; só o servidor grava e apaga. Entra na exclusão.
 
 ### Storage: `carreira/{uid}/{arquivo}` (NOVO, flag `athlete_career`)
-As fotos da Minha carreira. Só o dono lê, lista e apaga; cria só arquivo novo
+As fotos da Carreira. Só o dono lê, lista e apaga; cria só arquivo novo
 `image/(webp|jpeg|png)` < 3 MB. Enviadas por `prepareUpload` (sem EXIF).
 Apagadas na exclusão de conta.
 
@@ -2890,7 +2890,7 @@ O servidor a lê para respeitar as escolhas.
 Crédito de XP. `uid`, `kind`, `xp`, `label`, `refId`, `at`, `serverAt`,
 `schemaVersion`. Só o servidor escreve (com `create`, para nunca creditar duas
 vezes). Lê o dono ou o admin. `kind`: `season`, `duel`, `challenge`, `event`,
-`admin`, `career`. O de `career` (ficha completa da Minha carreira,
+`admin`, `career`. O de `career` (ficha completa da Carreira,
 `functions/careerXp.js`) leva também `month` (AAAA-MM de Brasília, para o teto
 mensal) e, quando a ficha é desfeita, `xp: 0` + `revoked_at` — o documento
 fica, para a mesma ficha não pagar de novo (docs/54 §4.6a).

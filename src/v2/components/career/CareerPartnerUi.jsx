@@ -1,5 +1,5 @@
 /**
- * Peças da DUPLA na Minha carreira (docs/54 §PR 3) — as duas pontas do mesmo
+ * Peças da DUPLA na Carreira (docs/54 §PR 3) — as duas pontas do mesmo
  * pedido `career_partner`, que só o servidor grava:
  *
  *  - `CareerPartnerLayer`: a camada 3 da ficha, do lado de quem registrou —

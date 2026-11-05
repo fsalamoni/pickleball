@@ -161,13 +161,13 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'follows', field: 'follower_uid', label: 'Quem segue' },
   { col: 'follows', field: 'target_uid', label: 'Quem o segue' },
   { col: 'player_goals', field: 'uid', label: 'Metas pessoais' },
-  { col: 'career_events', field: 'uid', label: 'Torneios de fora (Minha carreira)' },
-  { col: 'career_rank', field: 'uid', label: 'Posições anotadas no ranking (Minha carreira)' },
-  { col: 'career_partner', field: 'owner_uid', label: 'Confirmações da dupla (Minha carreira)' },
-  { col: 'career_partner', field: 'partner_uid', label: 'Confirmações da dupla (Minha carreira)' },
-  { col: 'career_partner_reports', field: 'owner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
-  { col: 'career_partner_reports', field: 'partner_uid', label: 'Denúncias de confirmações da dupla (Minha carreira)' },
-  { col: 'career_partner_invites', field: 'owner_uid', label: 'Convites à dupla sem conta (Minha carreira)' },
+  { col: 'career_events', field: 'uid', label: 'Torneios de fora (Carreira)' },
+  { col: 'career_rank', field: 'uid', label: 'Posições anotadas no ranking (Carreira)' },
+  { col: 'career_partner', field: 'owner_uid', label: 'Confirmações da dupla (Carreira)' },
+  { col: 'career_partner', field: 'partner_uid', label: 'Confirmações da dupla (Carreira)' },
+  { col: 'career_partner_reports', field: 'owner_uid', label: 'Denúncias de confirmações da dupla (Carreira)' },
+  { col: 'career_partner_reports', field: 'partner_uid', label: 'Denúncias de confirmações da dupla (Carreira)' },
+  { col: 'career_partner_invites', field: 'owner_uid', label: 'Convites à dupla sem conta (Carreira)' },
   // A vitrine pública (PR 7) sai inteira; o NOME de quem sai na vitrine de OUTRA
   // pessoa sai aqui mesmo (`patchCareerPublicPartner`, por `named_uids`) —
   // o gatilho `careerPartnerWritten` refaz depois, mas não é a única defesa.
@@ -1291,7 +1291,7 @@ function patchOutboxSender(d, uid) {
 }
 
 /**
- * Minha carreira: no registro de OUTRA pessoa em que a conta excluída foi a
+ * Carreira: no registro de OUTRA pessoa em que a conta excluída foi a
  * dupla, fica o nome digitado e sai só o vínculo com a conta (`partner.uid`).
  */
 function patchCareerPartner(ev, uid) {
@@ -1701,7 +1701,7 @@ async function contaDeLoginExiste(auth, uid) {
  * As pastas da pessoa no Storage: as fotos e anexos (`uploads/`) e as fotos e
  * vídeos do treino (`treino/`, fora de `uploads/` porque tem regra própria de
  * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
- * (`federacao/`), e as fotos dos torneios de fora da Minha carreira (`carreira/`).
+ * (`federacao/`), e as fotos dos torneios de fora da Carreira (`carreira/`).
  */
 const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `carreira/${uid}/`, (uid) => `carreira-publica/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
 

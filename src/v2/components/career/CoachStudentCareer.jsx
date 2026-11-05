@@ -1,5 +1,5 @@
 /**
- * O que o ALUNO mandou ao professor da Minha carreira (docs/54 §4.12): os
+ * O que o ALUNO mandou ao professor da Carreira (docs/54 §4.12): os
  * torneios de fora e o balanço de cada um. Só aparece com a flag
  * `athlete_career` e o aluno aberto (a consulta fixa `uid ==` o aluno — é o
  * que a regra `hasActiveStudent` prova). Vínculo encerrado ⇒ a regra recusa:

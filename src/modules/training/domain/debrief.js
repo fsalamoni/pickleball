@@ -59,7 +59,7 @@ export const EVOLUTION_LABELS = Object.freeze({
 
 /**
  * De onde vem o jogo. O valor é gravado (`source.type`) e a regra o confere:
- * nunca renomeie. `externo` = o torneio de FORA registrado na Minha carreira
+ * nunca renomeie. `externo` = o torneio de FORA registrado na Carreira
  * (`career_events`, flag `athlete_career`); o `ref_id` é o id do evento — um
  * balanço por torneio. Ele não vira pendência (`pendingDebriefs` só recebe os
  * jogos daqui): a pessoa o faz pela ficha do torneio.
@@ -195,7 +195,7 @@ export function answeredDebriefs(debriefs = []) {
  * balanços pesa 1 cada (repetido = padrão, não acaso); o que funcionou hoje
  * sai do foco. Até 2 focos e 1 ponto forte para manter.
  *
- * A VOZ DA DUPLA (Minha carreira, docs/54 §6): cada visão que a pessoa marcou
+ * A VOZ DA DUPLA (Carreira, docs/54 §6): cada visão que a pessoa marcou
  * "Usar no meu treino" soma +1 por aspecto apontado — o mesmo peso de um
  * balanço anterior —, e o motivo diz que foi a dupla. `partnerVoices` vem de
  * `career/domain/careerPartner.js` (`partnerVoices`): `[{ name, aspects }]`.
