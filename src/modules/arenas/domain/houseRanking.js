@@ -403,6 +403,10 @@ export function buildHouseRanking(events = [], { season = HOUSE_ALL, format = HO
       };
       const ehLegado = ev.kind === HOUSE_EVENT_KIND.LEGACY;
       const pos = Number(en.position) || null;
+      // Título, pódio e melhor colocação são de TORNEIO: o dia de jogo pontua
+      // pela colocação no ranking do dia, mas não é torneio e não dá medalha
+      // (decisão do dono, 2026-11-05 — docs/43 §1).
+      const posTorneio = ev.kind === HOUSE_EVENT_KIND.TOURNAMENT ? pos : null;
       porUid.set(en.user_id, {
         ...atual,
         name: en.name || atual.name,
@@ -410,9 +414,9 @@ export function buildHouseRanking(events = [], { season = HOUSE_ALL, format = HO
         points: atual.points + pontos,
         events: atual.events + (ehLegado ? Number(en.played) || 0 : 1),
         wins: atual.wins + (Number(en.won) || 0),
-        titles: atual.titles + (ehLegado ? Number(en.titles) || 0 : (pos === 1 ? 1 : 0)),
-        podiums: atual.podiums + (!ehLegado && pos && pos <= 3 ? 1 : 0),
-        best: pos && (atual.best == null || pos < atual.best) ? pos : atual.best,
+        titles: atual.titles + (ehLegado ? Number(en.titles) || 0 : (posTorneio === 1 ? 1 : 0)),
+        podiums: atual.podiums + (posTorneio && posTorneio <= 3 ? 1 : 0),
+        best: posTorneio && (atual.best == null || posTorneio < atual.best) ? posTorneio : atual.best,
         breakdown: [...atual.breakdown, { key: ev.key, title: ev.title, date: ev.date, position: pos, points: pontos }],
       });
     });

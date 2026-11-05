@@ -250,7 +250,7 @@ export default function V2AthleteProfile() {
         <div className="mt-8"><HeadToHeadCard records={h2hData.h2h} /></div>
       )}
 
-      {/* A estante de troféus: pódios de torneio e de dia de jogo, com o cartão
+      {/* A estante de troféus: pódios de torneio (dia de jogo não tem medalha), com o cartão
           e o "Parabenizar" (um kudo, com XP para quem torce). */}
       <V2Surface className="mt-8">
         <h2 className="mb-4 inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Medal className="h-5 w-5" aria-hidden="true" /> {t('Troféus')}</h2>

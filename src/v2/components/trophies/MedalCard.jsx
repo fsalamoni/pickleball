@@ -72,17 +72,10 @@ function Temporada({ s }) {
   const numero = { fontSize: 'clamp(26px, 12cqw, 70px)' };
   return (
     <div className="flex flex-col" style={{ gap: '4cqw' }}>
-      <div className="flex items-end" style={{ gap: '5cqw' }}>
-        <div>
-          <p className="font-display font-black leading-none tabular-nums text-white" style={numero}>{s.tournaments}</p>
-          <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{tn(s.tournaments, 'torneio', 'torneios')}</p>
-        </div>
-        {s.gameDays > 0 && (
-          <div>
-            <p className="font-display font-black leading-none tabular-nums text-white/80" style={{ fontSize: 'clamp(18px, 8cqw, 46px)' }}>{s.gameDays}</p>
-            <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{tn(s.gameDays, 'dia de jogo', 'dias de jogo')}</p>
-          </div>
-        )}
+      {/* Só torneios: dia de jogo não é torneio e não entra na retrospectiva. */}
+      <div>
+        <p className="font-display font-black leading-none tabular-nums text-white" style={numero}>{s.tournaments}</p>
+        <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{tn(s.tournaments, 'torneio', 'torneios')}</p>
       </div>
       <ul className="flex" style={{ gap: '4cqw' }} aria-label={t('Medalhas')}>
         {[[1, s.gold], [2, s.silver], [3, s.bronze]].map(([p, n]) => (
@@ -117,7 +110,7 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
   // Retrospectiva da temporada (Carreira): números do ano, não um degrau.
   const temporada = card.mode === 'temporada';
   const cor = METAL[card.position || 1].cor;
-  const kicker = temporada ? t('Retrospectiva') : card.event.kind === 'dia_de_jogo' ? t('Dia de jogo') : t('Torneio');
+  const kicker = temporada ? t('Retrospectiva') : t('Torneio');
 
   return (
     <div

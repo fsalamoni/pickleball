@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { gameDayTrophies, groupTrophies, tournamentTrophies, trophyContextId } from './trophies.js';
+import * as trofeus from './trophies.js';
+import { groupTrophies, tournamentTrophies, trophyContextId, TROPHY_KIND } from './trophies.js';
 
 const jogo = (id, round, a, b, winner, position = 1, extra = {}) => ({
   id, round, position, stage_index: 0, stage_type: 'knockout', status: 'finished', modality_id: 'm1',
@@ -37,27 +38,21 @@ describe('tournamentTrophies', () => {
   });
 });
 
-describe('gameDayTrophies', () => {
-  const m = (id, a, b, winner, extra = {}) => ({
-    id, source: 'athlete_game_day', event_id: 'gd1', event_title: 'Play de terça', kind: 'doubles',
-    side_a_ids: a, side_b_ids: b, winner_side: winner, score_a: winner === 'a' ? 11 : 7, score_b: winner === 'b' ? 11 : 7,
-    result_recorded_at: '2026-10-11T22:00:00Z', ...extra,
-  });
-  it('a colocação no ranking do dia, só para quem jogou e ficou até 3º', () => {
-    const docs = [m('g1', ['u1', 'u2'], ['u3', 'u4'], 'a'), m('g2', ['u1', 'u3'], ['u2', 'u4'], 'a'), m('g3', ['u1', 'u4'], ['u2', 'u3'], 'b')];
-    const t = gameDayTrophies('u1', new Map([['gd1', docs]]), new Map([['u1', 'Ana']]));
-    expect(t).toHaveLength(1);
-    expect(t[0]).toMatchObject({ kind: 'dia_de_jogo', position: 1, title: 'Play de terça', link: '/dia-de-jogo/gd1', record: { played: 3, won: 2 } });
-    expect(gameDayTrophies('u9', new Map([['gd1', docs]]))).toEqual([]);
-    expect(trophyContextId(t[0])).toBe('trofeu:gd:gd1:1');
+describe('dia de jogo não é torneio', () => {
+  it('⭐ não tem troféu nem medalha (decisão do dono, 2026-11-05)', () => {
+    expect(Object.values(TROPHY_KIND)).toEqual(['torneio']);
+    expect(trofeus.gameDayTrophies).toBeUndefined();
   });
 });
 
 describe('groupTrophies', () => {
   it('conta por metal e marca a fonte que faltou sem virar zero', () => {
-    const g = groupTrophies({ torneios: [{ position: 1, date: 2 }, { position: 3, date: 1 }], diasDeJogo: undefined });
-    expect(g.contagem).toMatchObject({ ouro: 1, bronze: 1, total: 2, diasDeJogo: { total: 0 } });
-    expect(g.faltou).toEqual(['os dias de jogo']);
+    const g = groupTrophies({ torneios: [{ position: 1, date: 2 }, { position: 3, date: 1 }] });
+    expect(g.contagem).toMatchObject({ ouro: 1, prata: 0, bronze: 1, total: 2 });
+    expect(g.faltou).toEqual([]);
     expect(g.destaque.position).toBe(1);
+    const falhou = groupTrophies({ torneios: undefined });
+    expect(falhou.faltou).toEqual(['os torneios']);
+    expect(falhou.contagem.total).toBe(0);
   });
 });

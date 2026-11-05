@@ -1,7 +1,8 @@
 # career/ — Carreira (flag `athlete_career`)
 
-A linha do tempo do atleta (`/carreira`): os torneios e dias de jogo da
-plataforma, mais os torneios de FORA que a pessoa registra (resultado
+A linha do tempo do atleta (`/carreira`): em regra só TORNEIOS — os da
+plataforma (federados ou não) e os de FORA; dias de jogo só com "Incluir dias
+de jogo" (escolha da pessoa, sem medalha). Os de fora a pessoa registra (resultado
 declarado, foto, dupla). Documento completo: `docs/54-CARREIRA-DO-ATLETA.md`.
 
 ```

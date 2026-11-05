@@ -2,10 +2,15 @@
  * A LINHA DO TEMPO da carreira — DERIVADA, sem documento próprio.
  *
  * Junta o que já existe: os torneios da plataforma em que a pessoa jogou
- * (`listMyTournaments` com `is_player`), os pódios desses torneios e dos dias
- * de jogo (a estante, `listMyTrophies`), os jogos de dia de jogo publicados,
- * os pontos lançados no ranking oficial das federações e os torneios de fora
- * (`career_events`). Cada fonte falha SOZINHA: a que chegou `undefined` vai
+ * (`listMyTournaments` com `is_player`), os pódios desses torneios (a estante,
+ * `listMyTrophies`), os pontos lançados no ranking oficial das federações e os
+ * torneios de fora (`career_events`).
+ *
+ * ⭐ A linha do tempo é de TORNEIOS (daqui ou de fora, federados ou não). Dia
+ * de jogo não é torneio, ainda que tenha ranking do dia: só entra quando a
+ * PESSOA pede (`includeGameDays`, a escolha "Incluir dias de jogo" da tela), e
+ * mesmo assim sem medalha nem pódio e fora das contas da temporada, das metas
+ * e da retrospectiva — só "N vitórias em M jogos". Cada fonte falha SOZINHA: a que chegou `undefined` vai
  * para `faltou` e a tela diz o que não carregou — nunca "você ainda não jogou".
  *
  * Organizada por temporada (o ano civil), com o divisor "Hoje": acima o que
@@ -36,9 +41,9 @@ const FONTE_ROTULO = Object.freeze({
   career: tk('os torneios de fora'),
   tournaments: tk('os torneios da plataforma'),
   trophies: tk('os pódios da plataforma'),
-  gameDayGames: tk('os dias de jogo publicados'),
   federationPoints: tk('os pontos das federações'),
 });
+const ROTULO_DIAS = tk('os dias de jogo publicados');
 
 const dia = (v) => {
   const ms = instanteDoDiaEmMs(v);
@@ -75,35 +80,32 @@ function itemDeFora(ev, myTournaments, partners) {
 /**
  * Monta a linha do tempo.
  * @param {{
- *   career?: object[], tournaments?: object[], trophies?: { torneios?: object[], diasDeJogo?: object[] },
- *   gameDayGames?: object[], federationPoints?: object[], today?: string,
- * }} fontes cada uma `undefined` quando a leitura falhou (ou ainda não chegou)
+ *   career?: object[], tournaments?: object[], trophies?: { torneios?: object[] },
+ *   gameDayGames?: object[], federationPoints?: object[], today?: string, includeGameDays?: boolean,
+ * }} fontes cada uma `undefined` quando a leitura falhou (ou ainda não chegou).
+ *   `gameDayGames` só conta com `includeGameDays` (a escolha da pessoa).
  * @returns {{ upcoming: object[], seasons: Array<{ year: number, items: object[], summary: object, closed: boolean }>, faltou: string[], total: number }}
  */
 export function buildCareerTimeline(fontes = {}) {
   const today = fontes.today || todayLocal();
-  // Os pódios vêm de DUAS leituras (`listMyTrophies`, allSettled): a metade que
-  // falhou também é "faltou", senão a linha do tempo e a retrospectiva saem
-  // com menos medalhas sem dizer.
-  const ausente = (k) => fontes[k] === undefined
-    || (k === 'trophies' && (fontes.trophies.torneios === undefined || fontes.trophies.diasDeJogo === undefined));
+  // Os pódios chegam como `{ torneios }` (`listMyTrophies`): a lista que falhou
+  // também é "faltou", senão a linha do tempo e a retrospectiva saem com menos
+  // medalhas sem dizer.
+  const ausente = (k) => fontes[k] === undefined || (k === 'trophies' && fontes.trophies.torneios === undefined);
   const faltou = Object.entries(FONTE_ROTULO).filter(([k]) => ausente(k)).map(([, v]) => t(v));
+  const comDias = fontes.includeGameDays === true;
+  if (comDias && fontes.gameDayGames === undefined) faltou.push(t(ROTULO_DIAS));
   // As confirmações das duplas são opcionais (só quem as lê passa a chave): pedidas e
   // sem resposta, o selo "Confirmado pela dupla" não pode virar "Declarado" calado.
   if ('partners' in fontes && fontes.partners === undefined) faltou.push(t('as confirmações das duplas'));
   const myTournaments = fontes.tournaments;
   const itens = [];
 
-  // Pódios da plataforma, pelo torneio e pelo dia de jogo.
+  // Pódios da plataforma: só de torneio (dia de jogo não tem medalha).
   const podioTorneio = new Map();
   (fontes.trophies?.torneios || []).forEach((tr) => {
     const atual = podioTorneio.get(tr.tournamentId);
     if (!atual || tr.position < atual.position) podioTorneio.set(tr.tournamentId, tr);
-  });
-  const podioDia = new Map();
-  (fontes.trophies?.diasDeJogo || []).forEach((tr) => {
-    const atual = podioDia.get(tr.gameDayId);
-    if (!atual || tr.position < atual.position) podioDia.set(tr.gameDayId, tr);
   });
 
   // Pontos oficiais por torneio (o torneio chancelado também está na lista da plataforma).
@@ -176,9 +178,10 @@ export function buildCareerTimeline(fontes = {}) {
     });
   });
 
-  // Dias de jogo publicados: um item por dia (os jogos daquele dia juntos).
+  // Dias de jogo publicados — SÓ quando a pessoa pediu. Um item por dia (os
+  // jogos daquele dia juntos), sem medalha nem pódio: dia de jogo não é torneio.
   const porDia = new Map();
-  (fontes.gameDayGames || []).forEach((g) => {
+  (comDias ? fontes.gameDayGames || [] : []).forEach((g) => {
     const data = g.at ? toISODate(new Date(g.at)) : null;
     if (!data) return;
     const k = g.gameDayId || `${g.label}|${data}`;
@@ -189,7 +192,6 @@ export function buildCareerTimeline(fontes = {}) {
     if (data > d.data) d.data = data;
   });
   porDia.forEach((d, k) => {
-    const podio = d.gameDayId ? podioDia.get(d.gameDayId) : null;
     itens.push({
       id: `dia:${k}`,
       source: TIMELINE_SOURCE.GAME_DAY,
@@ -198,9 +200,9 @@ export function buildCareerTimeline(fontes = {}) {
       upcoming: false,
       cancelled: false,
       title: d.label || t('Dia de jogo'),
-      subtitle: [t('{v} vitórias em {n} jogos', { v: d.vitorias, n: d.jogos }), podio ? t(PODIUM_PLACE[podio.position].um) : ''].filter(Boolean).join(' · '),
+      subtitle: t('{v} vitórias em {n} jogos', { v: d.vitorias, n: d.jogos }),
       where: '',
-      position: podio?.position || null,
+      position: null,
       federated: false,
       federation: '',
       seal: SEAL.OFFICIAL,
@@ -223,14 +225,20 @@ export function buildCareerTimeline(fontes = {}) {
   return { upcoming, seasons, faltou, total: itens.length };
 }
 
-/** O resumo da temporada: quantos eventos, pódios e medalhas. Cancelado não conta. */
+/**
+ * O resumo da temporada: quantos torneios, pódios e medalhas. Cancelado não
+ * conta, e o dia de jogo (quando a pessoa o incluiu) também não: ele aparece
+ * na lista, mas não é torneio — `gameDays` só diz quantos estão à vista.
+ */
 export function seasonSummary(items) {
   const valendo = (items || []).filter((i) => !i.cancelled);
-  const conta = (p) => valendo.filter((i) => i.position === p).length;
+  const torneios = valendo.filter((i) => i.source !== TIMELINE_SOURCE.GAME_DAY);
+  const conta = (p) => torneios.filter((i) => i.position === p).length;
   return {
-    events: valendo.length,
-    tournaments: valendo.filter((i) => i.source !== TIMELINE_SOURCE.GAME_DAY).length,
-    podiums: valendo.filter((i) => i.position).length,
+    events: torneios.length,
+    tournaments: torneios.length,
+    gameDays: valendo.length - torneios.length,
+    podiums: torneios.filter((i) => i.position).length,
     gold: conta(1), silver: conta(2), bronze: conta(3),
   };
 }

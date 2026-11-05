@@ -867,7 +867,9 @@ torneio sediado — sem nenhum dos dois, a Central é a de antes (teste travando
   (`buildRanking`, com o desempate da plataforma). Os dois da dupla (ou o
   elenco da equipe) levam os pontos, cada um.
 - **Ladder antigo**: os pontos já somados, na temporada do último resultado.
-- Ordem: pontos → títulos → vitórias → menos eventos → nome.
+- Ordem: pontos → títulos → vitórias → menos eventos → nome. **Título, pódio e
+  melhor colocação contam só TORNEIO** (dia de jogo pontua, mas não é torneio:
+  não dá título nem medalha — pedido do dono, 2026-11-05).
 - Filtros: **temporada** (ano; o seletor sai das listas-base, sem ler placar)
   e **modalidade** (Americano, Mexicano, Rei da Quadra, Americano aprimorado,
   Torneios) — é o "ranking próprio conforme a modalidade" do pedido.

@@ -11,8 +11,8 @@
 
 ## 1. O que é
 
-`/carreira` é a linha do tempo da pessoa: os torneios e dias de jogo da
-plataforma aparecem sozinhos, e ela **registra os torneios que jogou fora do
+`/carreira` é a linha do tempo da pessoa: os torneios da plataforma
+(federados ou não) aparecem sozinhos, e ela **registra os torneios que jogou fora do
 PickleRush** (o passado e os que vai jogar). O resultado registrado é
 **declarado**: fica na carreira e na estante de troféus, mas **nunca** entra
 em ranking, rating nem XP (guarda `src/core/guards/carreiraNaoPontua.test.js`).
@@ -266,10 +266,17 @@ há hub novo na barra lateral).
 
 ### 4.2 Linha do tempo (`CareerTimeline`, `buildCareerTimeline`)
 
+**Em regra só TORNEIOS** (da plataforma ou de fora, federados ou não). Dia
+de jogo não é torneio: só entra quando a pessoa liga **"Incluir dias de
+jogo"** (escolha por pessoa no navegador, `v2:view:<uid>:carreira:linha:dias-de-jogo`,
+zero banco), e mesmo assim sem medalha, sem pódio e fora da contagem de
+pódios do resumo (pedido do dono, 2026-11-05). Desligado, a consulta dos
+dias de jogo nem sai.
+
 Cinco fontes, cada uma falha sozinha: os torneios de fora (`career_events`),
 os torneios da plataforma em que a pessoa jogou (`useMyTournaments`, mesma
 chave do início), os pódios (`useTrophies`), os dias de jogo publicados
-(`usePublishedGameDayGames`) e os pontos lançados pelas federações
+(`usePublishedGameDayGames`, só com "Incluir dias de jogo") e os pontos lançados pelas federações
 (`federation_points` por `uid`, leitura pública). Fonte que falhou é **dita**
 ("Não deu para carregar …", com Tentar de novo só nelas) e o vazio "Sua
 carreira começa aqui" só aparece quando nada falhou (`docs/27`). Só a aba
@@ -328,7 +335,8 @@ ano, não "1 jan".
 **Camada 3 — Dupla** (PR 3, âncora `carreira-dupla`, `CareerPartnerLayer`
 em `CareerPartnerUi.jsx`): a dupla de cada categoria é escolhida pelo
 seletor ÚNICO de parceiro (`v2/components/people/PartnerPicker.jsx`, o
-mesmo da inscrição de torneio), que mostra antes da busca "Com quem você
+mesmo da inscrição de torneio, que embrulha o seletor padrão de pessoas
+`PersonPicker` — `docs/07-DESIGN-STANDARD.md` §3.2), que mostra antes da busca "Com quem você
 já jogou" (`pastPartners`: torneios de fora + pódios da plataforma). Com o
 registro SALVO, JOGADO e a pessoa maior de 18, "Pedir confirmação a
 {nome}" chama `career` → `invite`. A camada mostra o estado, a visão da
@@ -425,8 +433,8 @@ Na linha do tempo, cada temporada que já pode tê-la ganha o botão
 "Retrospectiva {ano}", e a mais recente (o ano passado, ou o corrente) ganha
 a faixa "Sua temporada {ano} num cartão" (âncora `carreira-retrospectiva`).
 O cartão é o `MedalCard`/`MedalCardDialog` no modo `temporada`
-(`buildSeasonCard`, `trophies/domain/medalCard.js`): torneios, dias de jogo,
-ouro/prata/bronze e a **parceria da temporada** (`bestPartnership`: quem mais
+(`buildSeasonCard`, `trophies/domain/medalCard.js`): torneios,
+ouro/prata/bronze (só de torneio) e a **parceria da temporada** (`bestPartnership`: quem mais
 jogou junto, depois mais medalhas juntos — das duplas dos torneios de fora e
 dos pódios da plataforma; o "É este" conta uma vez só; a mesma pessoa com
 conta e só com o nome digitado é uma). Limite conhecido: da plataforma só

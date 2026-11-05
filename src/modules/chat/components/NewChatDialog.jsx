@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Check, Search, Users, X } from 'lucide-react';
+import { Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { UserAvatar } from '@/components/ui/user-avatar';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { toMember } from '@/modules/chat/domain/conversations';
@@ -33,38 +32,15 @@ import { t } from '@/core/i18n';
 export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeIds = [], mode = 'new', busy = false }) {
   const { user } = useAuth();
   const { data: athletes = [], isLoading, isError, refetch } = useAthletes();
-  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState({});
   const [title, setTitle] = useState('');
 
   const exclude = useMemo(() => new Set([user?.uid, ...excludeIds].filter(Boolean)), [user?.uid, excludeIds]);
 
-  const candidates = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return athletes
-      .filter((a) => a.id && !exclude.has(a.id))
-      .filter((a) => {
-        if (!q) return true;
-        const haystack = [a.platform_name, a.city, a.state, a.level].filter(Boolean).join(' ').toLowerCase();
-        return haystack.includes(q);
-      })
-      .sort((a, b) => String(a.platform_name || '').localeCompare(String(b.platform_name || ''), 'pt-BR'));
-  }, [athletes, search, exclude]);
-
   const selectedList = useMemo(() => Object.values(selected), [selected]);
   const isGroup = selectedList.length > 1 || (mode === 'add' && selectedList.length >= 1);
 
-  const toggle = (athlete) => {
-    setSelected((prev) => {
-      const next = { ...prev };
-      if (next[athlete.id]) delete next[athlete.id];
-      else next[athlete.id] = toMember(athlete);
-      return next;
-    });
-  };
-
   const reset = () => {
-    setSearch('');
     setSelected({});
     setTitle('');
   };
@@ -103,79 +79,22 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('Buscar atleta por nome, cidade ou nível')}
-              className="pl-9"
-            />
-          </div>
-
-          {selectedList.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedList.map((m) => (
-                <button
-                  key={m.uid}
-                  type="button"
-                  onClick={() => setSelected((prev) => {
-                    const next = { ...prev };
-                    delete next[m.uid];
-                    return next;
-                  })}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-acid/15 py-1 pl-1 pr-2 text-xs font-medium text-ink hover:bg-acid/25"
-                >
-                  <UserAvatar name={m.name} photoUrl={m.photo_url} size="xs" />
-                  {m.name}
-                  <X className="h-3 w-3" />
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-gray-100 p-1">
-            {isLoading ? (
-              <div className="space-y-2 p-2">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
-              </div>
-            ) : isError ? (
-              // Falha não é "não há outros atletas no diretório".
-              <div role="alert" className="px-3 py-6 text-center text-sm text-amber-800">
-                <p>{t('Não foi possível carregar os atletas agora.')}</p>
-                <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-                  {t('Tentar de novo')}
-                </Button>
-              </div>
-            ) : candidates.length === 0 ? (
-              <p className="px-3 py-8 text-center text-sm text-gray-500">
-                {athletes.length <= 1 ? t('Ainda não há outros atletas no diretório.') : t('Nenhum atleta encontrado para a busca.')}
-              </p>
-            ) : (
-              candidates.map((athlete) => {
-                const isChecked = !!selected[athlete.id];
-                return (
-                  <button
-                    key={athlete.id}
-                    type="button"
-                    onClick={() => toggle(athlete)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${isChecked ? 'bg-acid/10' : 'hover:bg-paper'}`}
-                  >
-                    <UserAvatar name={athlete.platform_name} photoUrl={athlete.photo_url} size="sm" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-ink">{athlete.platform_name}</span>
-                      <span className="block truncate text-xs text-gray-500">
-                        {[athlete.city, athlete.level].filter(Boolean).join(' · ') || t('Atleta')}
-                      </span>
-                    </span>
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${isChecked ? 'border-ink bg-ink text-white' : 'border-gray-200'}`}>
-                      {isChecked && <Check className="h-3.5 w-3.5" />}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
+          <PersonPicker
+            multiple
+            pessoas={athletes}
+            carregando={isLoading}
+            falhou={isError}
+            onRetry={() => refetch()}
+            ocultar={exclude}
+            selecionados={selectedList}
+            onChange={(lista) => setSelected(Object.fromEntries(lista.map((p) => {
+              const m = p.platform_name !== undefined ? toMember(p) : p;
+              return [m.uid, m];
+            })))}
+            detalhe={(a) => [a.city, a.level].filter(Boolean).join(' · ')}
+            vazio={athletes.length <= 1 ? t('Ainda não há outros atletas no diretório.') : t('Nenhum atleta encontrado para a busca.')}
+            rotulo={t('Atletas do diretório')}
+          />
 
           {isGroup && (
             <div className="space-y-1.5">

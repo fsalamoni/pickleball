@@ -106,6 +106,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Cloud Function | `47-BACKEND-CLOUD-FUNCTIONS.md` |
 | Módulo (comportamento, arquivos-chave) | `src/modules/X/README.md` + seção em `06-MODULES.md` |
 | Componente de UI compartilhado, token, navegação | `07-DESIGN-STANDARD.md` (+ `45`/`30`/`44` se couber) |
+| Campo que escolhe pessoas (dupla, convidado, membro…) | `07-DESIGN-STANDARD.md` §3.2 (`PersonPicker`, guarda `seletorDePessoas`) |
 | Fluxo de dia de jogo / torneio / arena | o doc temático da §5; e o tutorial/guia/ajuda (`19`, `21`, `32`) |
 | Tela ou funcionalidade que a pessoa vê (qualquer área) | o artigo da central de ajuda e a pista de rota (`helpCenter.js`, doc `21`), o guia e o ponto de dica (`guias.js`, `pontosDeDica.js`, doc `32`) e os catálogos en/es (`44`) |
 | Ícone, manifesto ou instalação do app (PWA) | `04-ARCHITECTURE.md` §7 (+ `python3 scripts/gerar-icones-app.py`, sufixo `-vN` dos ícones e `VERSION` do `sw.js`) |

@@ -12,10 +12,11 @@
  * cadastrar, os parceiros que ainda não dão aula aqui aparecem primeiro, e um
  * toque preenche tudo (nome, foto, valor, conta vinculada, "paga comissão").
  */
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useCreateCoach, useUpdateArenaCoach } from '@/modules/arenas/hooks/useArenaV3';
 import { COACH_LEVEL, COACH_LEVEL_META } from '@/modules/arenas/domain/classes';
 import { arenaCoachFromPartner } from '@/modules/arenas/domain/coachRoster';
@@ -44,7 +45,6 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
     partner: Boolean(coach?.partner),
     active: coach?.active !== false,
   }));
-  const [busca, setBusca] = useState('');
   const criar = useCreateCoach();
   const editar = useUpdateArenaCoach();
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -52,13 +52,6 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
   const vinculado = atletas.find((a) => a.id === form.user_id)
     || (form.user_id ? partners.find((p) => p.id === form.user_id) : null);
   const nomeVinculado = vinculado?.platform_name || vinculado?.full_name || vinculado?.display_name || form.name;
-  const resultados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return [];
-    return atletas
-      .filter((a) => `${a.platform_name || ''} ${a.full_name || ''}`.toLowerCase().includes(termo))
-      .slice(0, 5);
-  }, [atletas, busca]);
 
   const usarParceiro = (p) => {
     const base = arenaCoachFromPartner(p);
@@ -140,33 +133,13 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
         className="mt-3"
         hint={t('Vinculando, o professor passa a ver a agenda dele e os alunos de cada aula.')}
       >
-        {form.user_id ? (
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-paper-pure p-2.5">
-            <div className="flex items-center gap-2">
-              <V2Avatar photoUrl={vinculado?.photo_url || form.photo_url} name={nomeVinculado} size="sm" />
-              <span className="text-sm font-bold text-ink">{nomeVinculado}</span>
-            </div>
-            <button type="button" onClick={() => set({ user_id: '' })} aria-label={t('Desvincular')}
-              className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <V2Input id="pf-conta" value={busca} onChange={(e) => setBusca(e.target.value)}
-            placeholder={t('Buscar pelo nome… (opcional)')} />
-        )}
+        <PersonPicker
+          id="pf-conta"
+          placeholder={t('Filtrar por nome ou cidade (opcional)')}
+          selecionados={form.user_id ? [{ id: form.user_id, name: nomeVinculado, photo_url: vinculado?.photo_url || form.photo_url }] : []}
+          onChange={(lista) => set({ user_id: lista[0] ? (lista[0].id || lista[0].uid) : '' })}
+        />
       </V2Field>
-      {!form.user_id && resultados.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {resultados.map((a) => (
-            <button key={a.id} type="button" onClick={() => { set({ user_id: a.id }); setBusca(''); }}
-              className="flex w-full items-center gap-2 rounded-2xl border border-gray-100 bg-paper-pure p-2.5 text-left hover:border-gray-300">
-              <V2Avatar photoUrl={a.photo_url} name={a.platform_name || a.full_name} size="sm" />
-              <span className="text-sm text-ink">{a.platform_name || a.full_name}</span>
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="mt-3 flex flex-wrap gap-4">
         <label className="flex items-center gap-2 text-sm text-gray-600">

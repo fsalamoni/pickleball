@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Trash2, UserPlus, Users, Globe, Lock, Send } from 'lucide-react';
+import { Trash2, UserPlus, Users, Globe, Lock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useEventInvites,
@@ -207,7 +208,6 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
   const invite = useInviteToEvent(event);
   const { data: members = [] } = useClubMembers(clubId);
   const { data: athletes = [] } = useAthletes();
-  const [search, setSearch] = useState('');
 
   const invitedIds = useMemo(() => new Set(invites.map((i) => i.user_id)), [invites]);
 
@@ -230,8 +230,10 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
     return Array.from(map.values()).sort((a, b) => a.user_name.localeCompare(b.user_name));
   }, [athletes, members, invitedIds]);
 
-  const q = search.trim().toLowerCase();
-  const f = (p) => !q || p.user_name.toLowerCase().includes(q);
+  // Uma lista só, no seletor padrão: quem é do clube vem marcado.
+  const pessoas = useMemo(() => [...clubPool, ...platformPool].map((p) => ({
+    ...p, name: p.user_name, photo_url: p.user_photo, origem: p.source === INVITE_SOURCE.CLUB ? t('Do clube') : t('Da plataforma'),
+  })), [clubPool, platformPool]);
 
   const handleInvite = async (target) => {
     try {
@@ -251,16 +253,13 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
             {t('Convide atletas do clube. Em eventos privados, você também pode convidar outros atletas da plataforma — eles recebem uma notificação para responder.')}
           </DialogDescription>
         </DialogHeader>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('Buscar por nome…')}
-          className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
+        <PersonPicker
+          pessoas={pessoas}
+          onEscolher={({ name: _n, photo_url: _f, origem: _o, ...alvo }) => handleInvite(alvo)}
+          rotuloAcao={t('Convidar')}
+          detalhe={(p) => p.origem}
+          vazio={t('Nenhum atleta disponível.')}
         />
-        <div className="max-h-[50vh] space-y-4 overflow-y-auto">
-          <Pool title={t('Atletas do clube')} people={clubPool.filter(f)} onInvite={handleInvite} emptyText={t('Todos os atletas do clube já participam.')} />
-          <Pool title={t('Outros atletas da plataforma')} people={platformPool.filter(f)} onInvite={handleInvite} emptyText={t('Nenhum outro atleta disponível.')} />
-        </div>
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
@@ -269,25 +268,3 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
   );
 }
 
-function Pool({ title, people, onInvite, emptyText }) {
-  return (
-    <div>
-      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">{title} ({people.length})</h4>
-      {people.length === 0 ? (
-        <p className="text-sm text-gray-400">{emptyText}</p>
-      ) : (
-        <div className="space-y-1.5">
-          {people.map((p) => (
-            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-2xl border border-gray-100 p-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <UserAvatar name={p.user_name} photoUrl={p.user_photo} size="sm" />
-                <span className="truncate text-sm font-bold text-ink">{p.user_name}</span>
-              </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onInvite(p)}><Send className="h-3.5 w-3.5" /> {t('Convidar')}</V2Button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

@@ -9,9 +9,10 @@
  * flag `club_association`: vale para todo clube.
  */
 import React, { useMemo, useState } from 'react';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, Copy, RefreshCw, Save, Search, Share2, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, RefreshCw, Save, Share2, Trash2, UserPlus, X } from 'lucide-react';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -31,7 +32,6 @@ import {
 } from '@/modules/clubs/hooks/useClubs';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { V2Badge, V2Button, V2ErrorState, V2Surface, V2Toggle, V2Input, V2Textarea } from '@/v2/ui/primitives';
-import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 import OrgAffiliationCard from '@/v2/components/federations/OrgAffiliationCard';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
@@ -370,7 +370,6 @@ function V2ClubJoinRequests({ club }) {
 }
 
 function V2ClubAddMembers({ club }) {
-  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState({});
   const atletasQ = useAllAthletes();
   const membrosQ = useClubMembers(club.id);
@@ -389,31 +388,17 @@ function V2ClubAddMembers({ club }) {
   const inviteMany = useInviteMembersToClub(club);
   const cancelInvite = useCancelClubInvite(club.id);
 
-  const memberIds = useMemo(() => new Set(members.map((m) => m.user_id)), [members]);
-  const invitedIds = useMemo(() => new Set(invites.map((i) => i.user_id)), [invites]);
-
   const athleteName = (a) => a.platform_name || a.full_name || a.name || 'Atleta';
 
-  const available = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return athletes
-      .filter((a) => a.id && !memberIds.has(a.id) && !invitedIds.has(a.id))
-      .filter((a) => {
-        if (!q) return true;
-        const hay = `${athleteName(a)} ${a.city || ''} ${a.email || ''}`.toLowerCase();
-        return hay.includes(q);
-      })
-      .sort((a, b) => athleteName(a).localeCompare(athleteName(b), 'pt-BR'));
-  }, [athletes, memberIds, invitedIds, search]);
+  // Quem já é membro ou foi convidado aparece com o motivo (seletor padrão).
+  const jaNoClube = useMemo(() => {
+    const m = new Map();
+    invites.forEach((i) => i.user_id && m.set(i.user_id, t('convidado')));
+    members.forEach((x) => x.user_id && m.set(x.user_id, t('já é membro')));
+    return m;
+  }, [members, invites]);
 
   const selectedCount = Object.keys(selected).length;
-
-  const toggle = (a) => setSelected((prev) => {
-    const next = { ...prev };
-    if (next[a.id]) delete next[a.id];
-    else next[a.id] = a;
-    return next;
-  });
 
   const handleInviteSelected = async () => {
     const targets = Object.values(selected).map((a) => ({
@@ -447,64 +432,17 @@ function V2ClubAddMembers({ club }) {
       <p className="mt-1 text-sm text-gray-500">{t('Selecione atletas da plataforma e envie convites. Eles recebem um aviso e decidem aceitar.')}</p>
 
       <div className="mt-5 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('Filtrar por nome, cidade ou e-mail')}
-            className="w-full rounded-full border border-gray-200 bg-paper px-4 py-2.5 pl-10 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
-          />
-        </div>
-
-        {isLoading ? (
-          <p className="text-sm text-gray-500">{t('Carregando atletas…')}</p>
-        ) : falhou ? (
-          <V2ErrorState
-            inline
-            title={t('Não foi possível carregar os atletas')}
-            description={t('Sem saber quem já é membro, não oferecemos convites — tente de novo.')}
-            onRetry={tentarDeNovo}
-          />
-        ) : available.length === 0 ? (
-          <div className="flex items-center gap-2 rounded-2xl bg-paper px-4 py-5 text-sm text-gray-500">
-            <Users className="h-4 w-4 shrink-0" />
-            {search.trim() ? t('Nenhum atleta encontrado para esse filtro.') : t('Todos os atletas já são membros ou já foram convidados.')}
-          </div>
-        ) : (
-          <div className="max-h-80 space-y-1.5 overflow-y-auto rounded-3xl border border-gray-100 bg-paper-pure p-1.5">
-            {available.map((a) => {
-              const isSel = !!selected[a.id];
-              return (
-                <button
-                  type="button"
-                  key={a.id}
-                  onClick={() => toggle(a)}
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors',
-                    isSel ? 'border-ink bg-ink/5' : 'border-transparent bg-white hover:bg-paper'
-                  )}
-                >
-                  <span className={cn(
-                    'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
-                    isSel ? 'border-ink bg-ink text-acid' : 'border-gray-300 bg-white'
-                  )}>
-                    {isSel && <Check className="h-3 w-3" />}
-                  </span>
-                  <UserAvatar name={athleteName(a)} photoUrl={a.photo_url} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-ink">{athleteName(a)}</div>
-                    {(a.city || a.email) && (
-                      <div className="truncate text-xs text-gray-500">
-                        {a.city ? `${a.city}${a.state ? ` / ${a.state}` : ''}` : a.email}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <PersonPicker
+          multiple
+          pessoas={athletes}
+          carregando={isLoading}
+          falhou={falhou}
+          onRetry={tentarDeNovo}
+          excluir={jaNoClube}
+          selecionados={Object.values(selected)}
+          onChange={(lista) => setSelected(Object.fromEntries(lista.map((a) => [a.id, a])))}
+          rotulo={t('Atletas da plataforma')}
+        />
 
         <V2Button
           onClick={handleInviteSelected}

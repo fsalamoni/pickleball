@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -264,10 +265,6 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
 }
 
 function AddAthletesDialog({ open, onClose, pool, onAdd }) {
-  const [search, setSearch] = useState('');
-  const q = search.trim().toLowerCase();
-  const people = pool.filter((p) => !q || p.name.toLowerCase().includes(q));
-
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
@@ -275,22 +272,7 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
           <DialogTitle>{t('Inserir atletas')}</DialogTitle>
           <DialogDescription>{t('Convide qualquer atleta da plataforma para o seu dia de jogo.')}</DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
-        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-          {people.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum atleta disponível.')}</p>
-          ) : people.map((p) => (
-            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
-                <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-              </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onAdd(p)}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> {t('Inserir')}
-              </V2Button>
-            </div>
-          ))}
-        </div>
+        <PersonPicker pessoas={pool} onEscolher={onAdd} rotuloAcao={t('Inserir')} vazio={t('Nenhum atleta disponível.')} />
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>

@@ -156,8 +156,12 @@ function useOfficialPoints(uid, enabled) {
   });
 }
 
+/** A escolha "Incluir dias de jogo" na linha do tempo — por pessoa, no navegador (zero banco). */
+export const CAREER_GAMEDAYS_PREF = 'carreira:linha:dias-de-jogo';
+
 /**
- * A linha do tempo. `isPending` enquanto alguma fonte ainda não respondeu;
+ * A linha do tempo é de TORNEIOS. Dia de jogo só entra quando a pessoa pede
+ * (`includeGameDays`), e só então é buscado. `isPending` enquanto alguma fonte ainda não respondeu;
  * depois, `timeline.faltou` lista as que falharam e `retry` tenta de novo só elas.
  */
 export function useCareerTimeline({ enabled = true } = {}) {
@@ -167,21 +171,28 @@ export function useCareerTimeline({ enabled = true } = {}) {
   // A mesma chave do início e da Minha área (cache compartilhado).
   const tournamentsQ = useMyTournaments({ enabled });
   const trophiesQ = useTrophies(uid, { enabled });
-  const gamesQ = usePublishedGameDayGames(uid, enabled);
+  const [includeGameDays, setIncludeState] = useState(() => readViewPreference(uid, CAREER_GAMEDAYS_PREF) === '1');
+  useEffect(() => { setIncludeState(readViewPreference(uid, CAREER_GAMEDAYS_PREF) === '1'); }, [uid]);
+  const setIncludeGameDays = useCallback((v) => {
+    setIncludeState(Boolean(v));
+    writeViewPreference(uid, CAREER_GAMEDAYS_PREF, v ? '1' : null);
+  }, [uid]);
+  const gamesQ = usePublishedGameDayGames(uid, enabled && includeGameDays);
   const pointsQ = useOfficialPoints(uid, enabled);
   const partnersQ = useCareerPartners({ enabled });
-  const qs = [careerQ, tournamentsQ, trophiesQ, gamesQ, pointsQ, partnersQ];
+  const qs = [careerQ, tournamentsQ, trophiesQ, ...(includeGameDays ? [gamesQ] : []), pointsQ, partnersQ];
   const pending = qs.some((q) => q.isPending);
   const ok = (q) => (q.isSuccess ? q.data : undefined);
   const timeline = useMemo(() => (pending ? null : buildCareerTimeline({
     career: ok(careerQ),
     tournaments: ok(tournamentsQ),
     trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
-    gameDayGames: ok(gamesQ),
+    includeGameDays,
+    gameDayGames: includeGameDays ? ok(gamesQ) : undefined,
     federationPoints: ok(pointsQ),
     partners: ok(partnersQ),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [pending, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess, partnersQ.data, partnersQ.isSuccess]);
+  })), [pending, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, includeGameDays, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess, partnersQ.data, partnersQ.isSuccess]);
   const retry = () => qs.filter((q) => q.isError).forEach((q) => q.refetch());
   return {
     timeline,
@@ -189,6 +200,8 @@ export function useCareerTimeline({ enabled = true } = {}) {
     // Tudo falhou: não há linha do tempo para mostrar.
     isError: !pending && qs.every((q) => q.isError),
     retry,
+    includeGameDays,
+    setIncludeGameDays,
     events: careerQ.data,
     myTournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined,
     // Os pódios da plataforma (com a dupla): a retrospectiva da temporada acha a melhor parceria.

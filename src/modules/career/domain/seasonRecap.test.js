@@ -50,13 +50,13 @@ describe('melhor parceria', () => {
 });
 
 describe('o cartão da temporada', () => {
-  const tl = (career) => buildCareerTimeline({ career, tournaments: [], trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: [], federationPoints: [], today: '2026-11-04' });
+  const tl = (career) => buildCareerTimeline({ career, tournaments: [], trophies: { torneios: [] }, gameDayGames: [], federationPoints: [], today: '2026-11-04' });
 
   it('⭐ torneios, medalhas e a parceria; diz quando há resultado declarado', () => {
     const career = [ev('a'), ev('b', { entries: [{ format: 'doubles', placement: 'runner_up', partner: { name: 'Ana' } }] })];
     const timeline = tl(career);
     const r = buildSeasonRecap({ season: timeline.seasons[0], faltou: timeline.faltou, career, trophies: [], me: ME, today: '2026-11-04' });
-    expect(r).toMatchObject({ year: 2025, tournaments: 2, gameDays: 0, gold: 1, silver: 1, bronze: 0, declared: true, partner: { name: 'Ana', together: 2, medals: 2 } });
+    expect(r).toMatchObject({ year: 2025, tournaments: 2, gold: 1, silver: 1, bronze: 0, declared: true, partner: { name: 'Ana', together: 2, medals: 2 } });
   });
 
   it('não oferece com fonte faltando, antes de dezembro ou com a temporada vazia', () => {

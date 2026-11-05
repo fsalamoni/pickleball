@@ -113,7 +113,7 @@ describe('o que a tela deriva', () => {
   });
 
   it('a linha do tempo diz quando as confirmações não carregaram, e mostra o selo', () => {
-    const fontes = { career: [EV], tournaments: [], trophies: { torneios: [], diasDeJogo: [] }, gameDayGames: [], federationPoints: [] };
+    const fontes = { career: [EV], tournaments: [], trophies: { torneios: [] }, gameDayGames: [], federationPoints: [] };
     expect(buildCareerTimeline({ ...fontes, partners: undefined }).faltou.join(' ')).toContain('duplas');
     const conf = { event_id: 'eu_1', partner_uid: 'bia', status: 'confirmed', fingerprint: careerFingerprint(EV, citedEntryIndexes(EV, 'bia')) };
     const tl = buildCareerTimeline({ ...fontes, partners: [conf] });

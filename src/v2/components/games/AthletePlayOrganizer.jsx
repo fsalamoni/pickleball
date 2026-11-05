@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import PersonPicker from '@/v2/components/people/PersonPicker';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -525,12 +526,9 @@ export function PlayParticipantsSection({
 }
 
 function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
-  const [search, setSearch] = useState('');
   // Com grupos: o grupo em que cada atleta inserido NESTA conversa vai cair.
   // `undefined` é o automático (pelo nível dele); `null`, sem grupo.
   const [grupoDoLote, setGrupoDoLote] = useState(undefined);
-  const q = search.trim().toLowerCase();
-  const people = pool.filter((p) => !q || p.name.toLowerCase().includes(q));
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -539,7 +537,6 @@ function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
           <DialogTitle>{t('Inserir atletas')}</DialogTitle>
           <DialogDescription>{t('Convide qualquer atleta da plataforma para o Play.')}</DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
         {groups && (
           <label className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
             {t('Colocar no grupo:')}
@@ -552,21 +549,12 @@ function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
             />
           </label>
         )}
-        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-          {people.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum atleta disponível.')}</p>
-          ) : people.map((p) => (
-            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
-                <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-              </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onAdd(grupoDoLote !== undefined ? { ...p, play_group_id: grupoDoLote } : p)}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> {t('Inserir')}
-              </V2Button>
-            </div>
-          ))}
-        </div>
+        <PersonPicker
+          pessoas={pool}
+          onEscolher={(p) => onAdd(grupoDoLote !== undefined ? { ...p, play_group_id: grupoDoLote } : p)}
+          rotuloAcao={t('Inserir')}
+          vazio={t('Nenhum atleta disponível.')}
+        />
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
@@ -824,15 +812,11 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
  */
 export function PartnerDialog({ participant, participants, view, onClose, onConfirm, description = null }) {
   const open = !!participant;
-  const [search, setSearch] = useState('');
-  React.useEffect(() => { if (participant) setSearch(''); }, [participant]);
   if (!participant) return null;
 
-  const q = search.trim().toLowerCase();
   // Candidatos: qualquer outro participante que não seja o próprio.
   const candidates = participants
     .filter((p) => p.id !== participant.id)
-    .filter((p) => !q || (p.name || '').toLowerCase().includes(q));
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -847,23 +831,13 @@ export function PartnerDialog({ participant, participants, view, onClose, onConf
             )}
           </DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
-        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-          {candidates.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum participante disponível.')}</p>
-          ) : candidates.map((p) => (
-            <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
-                <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-                {p.partner_id && <span className="text-2xs text-amber-600">{t('já tem dupla')}</span>}
-              </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onConfirm(p.id)}>
-                <Link2 className="mr-1 h-3.5 w-3.5" /> {t('Escolher')}
-              </V2Button>
-            </div>
-          ))}
-        </div>
+        <PersonPicker
+          pessoas={candidates}
+          onEscolher={(p) => onConfirm(p.id)}
+          rotuloAcao={t('Escolher')}
+          detalhe={(p) => (p.partner_id ? t('já tem dupla') : '')}
+          vazio={t('Nenhum participante disponível.')}
+        />
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         </DialogFooter>
