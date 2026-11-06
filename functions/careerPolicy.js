@@ -31,11 +31,13 @@ const INTERNAL_LINK_PATTERN = '^/([A-Za-z0-9_?=&%.:-][A-Za-z0-9/_?=&%.:-]*)?$';
 
 const s = (v) => (v === null || v === undefined ? '' : String(v));
 const partnerDocId = (eventId, partnerUid) => `${eventId}__${partnerUid}`;
+/** Cópia de `formatHasPartner` (cliente): simples e americano não têm dupla fixa. */
+const formatHasPartner = (format) => format !== 'singles' && format !== 'americano';
 
 function citedEntryIndexes(event, partnerUid) {
   if (!partnerUid) return [];
   return ((event && event.entries) || []).reduce((acc, e, i) => {
-    if (e && e.format !== 'singles' && e.partner && e.partner.uid === partnerUid) acc.push(i);
+    if (e && formatHasPartner(e.format) && e.partner && e.partner.uid === partnerUid) acc.push(i);
     return acc;
   }, []);
 }
@@ -104,7 +106,7 @@ function partnerNameKey(name) {
 function namedPartners(event) {
   const m = new Map();
   ((event && event.entries) || []).forEach((e, i) => {
-    if (!e || e.format === 'singles' || !e.partner || e.partner.uid) return;
+    if (!e || !formatHasPartner(e.format) || !e.partner || e.partner.uid) return;
     const key = partnerNameKey(e.partner.name);
     if (!key) return;
     if (!m.has(key)) m.set(key, { name: s(e.partner.name).trim(), key, indexes: [] });
@@ -122,6 +124,7 @@ module.exports = {
   ADULT_AGE,
   INTERNAL_LINK_PATTERN,
   partnerDocId,
+  formatHasPartner,
   citedEntryIndexes,
   careerFingerprint,
   ageOn,

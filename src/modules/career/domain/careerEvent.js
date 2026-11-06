@@ -29,11 +29,18 @@ export const CAREER_EVENTS = 'career_events';
 /** Status gravado. Nunca renomeie. */
 export const CAREER_STATUS = Object.freeze({ PLAYED: 'played', PLANNED: 'planned', CANCELLED: 'cancelled' });
 
-/** Formato da participação. "Equipes" existe só na carreira. Gravado. */
-export const CAREER_FORMAT = Object.freeze({ SINGLES: 'singles', DOUBLES: 'doubles', TEAMS: 'teams' });
+/** Formato da participação. "Equipes" existe só na carreira. Gravado: nunca renomeie. */
+export const CAREER_FORMAT = Object.freeze({ SINGLES: 'singles', DOUBLES: 'doubles', TEAMS: 'teams', AMERICANO: 'americano' });
 export const CAREER_FORMAT_LABEL = Object.freeze({
-  singles: tk('Simples'), doubles: tk('Duplas'), teams: tk('Equipe'),
+  singles: tk('Simples'), doubles: tk('Duplas'), teams: tk('Equipe'), americano: tk('Americano'),
 });
+
+/**
+ * O formato tem dupla FIXA? Simples não tem dupla e no Americano a dupla troca a
+ * cada jogo: nos dois a ficha não pede "com quem você jogou" nem convida
+ * ninguém. Cópia no servidor (`functions/careerPolicy.js`), com paridade.
+ */
+export const formatHasPartner = (format) => format !== CAREER_FORMAT.SINGLES && format !== CAREER_FORMAT.AMERICANO;
 
 /** Gênero da categoria: os valores de `GENDER_CATEGORY` (o registro rápido oferece os três primeiros). */
 export const CAREER_GENDERS = Object.freeze([GENDER_CATEGORY.MALE, GENDER_CATEGORY.FEMALE, GENDER_CATEGORY.MIXED, GENDER_CATEGORY.OPEN]);
@@ -44,8 +51,39 @@ export const CAREER_GENDER_LABEL = Object.freeze({
 /** Idade: `AGE_CATEGORY` ou `other` (com `age_label` livre — o 40+ não existe na lista). */
 export const CAREER_AGES = Object.freeze([...Object.values(AGE_CATEGORY), 'other']);
 
-/** Faixa de nível DECLARADA. Nunca alimenta a régua 2.0–8.0. Gravado. */
-export const LEVEL_BRACKETS = Object.freeze(['2.5', '3.0', '3.5', '4.0', '4.5', '5.0+', 'A', 'B', 'C', 'D', 'open', 'other']);
+/**
+ * Faixa de nível DECLARADA (como o torneio de fora chamou a categoria). Nunca
+ * alimenta a régua 2.0–8.0. Os valores são GRAVADOS: nunca renomeie. A ordem é
+ * a do seletor, como o Flavio pediu em 2026-11-06.
+ */
+export const LEVEL_BRACKETS = Object.freeze([
+  '2.000-2.999', '3.000-3.499', '3.500-3.999', '3.000-3.999', '4.000-4.499', '4.500+',
+  'beginner', 'intermediate', 'advanced', 'pro', 'open', 'other',
+]);
+/**
+ * As faixas da primeira versão (até 2026-11-06). Saíram do seletor, mas o que
+ * já foi gravado com elas continua valendo: é aceito ao salvar de novo e
+ * aparece como foi gravado. Nada é migrado.
+ */
+export const LEGACY_LEVEL_BRACKETS = Object.freeze(['2.5', '3.0', '3.5', '4.0', '4.5', '5.0+', 'A', 'B', 'C', 'D']);
+const ACCEPTED_LEVEL_BRACKETS = Object.freeze([...LEVEL_BRACKETS, ...LEGACY_LEVEL_BRACKETS]);
+export const LEVEL_BRACKET_LABEL = Object.freeze({
+  '2.000-2.999': tk('Entre 2,000 e 2,999'),
+  '3.000-3.499': tk('Entre 3,000 e 3,499'),
+  '3.500-3.999': tk('Entre 3,500 e 3,999'),
+  '3.000-3.999': tk('Entre 3,000 e 3,999'),
+  '4.000-4.499': tk('Entre 4,000 e 4,499'),
+  '4.500+': tk('Superior a 4,500'),
+  beginner: tk('Iniciante'), intermediate: tk('Intermediário'), advanced: tk('Avançado'),
+  pro: tk('PRO'), open: tk('OPEN'), other: tk('Outra'),
+});
+
+/** O texto de uma faixa gravada: a da lista atual traduzida; a antiga, como foi gravada. */
+export function levelBracketText(bracket, label = '') {
+  if (!bracket) return '';
+  if (bracket === 'other') return label || t(LEVEL_BRACKET_LABEL.other);
+  return LEVEL_BRACKET_LABEL[bracket] ? t(LEVEL_BRACKET_LABEL[bracket]) : bracket;
+}
 
 /** Colocação. Gravado: nunca renomeie. */
 export const PLACEMENT = Object.freeze({
@@ -121,7 +159,7 @@ export function normalizeEntry(raw = {}) {
     format,
     gender: umDe(raw.gender, CAREER_GENDERS, null),
     age: umDe(raw.age, CAREER_AGES, null),
-    level_bracket: umDe(raw.level_bracket, LEVEL_BRACKETS, null),
+    level_bracket: umDe(raw.level_bracket, ACCEPTED_LEVEL_BRACKETS, null),
     placement: umDe(raw.placement, Object.values(PLACEMENT), null),
   };
   if (out.age === 'other') out.age_label = txt(raw.age_label, CAREER_LIMITS.label);
@@ -130,8 +168,8 @@ export function normalizeEntry(raw = {}) {
   if (out.placement === PLACEMENT.OTHER && n !== null && n >= 1 && n <= 999) out.placement_n = Math.round(n);
   const pts = numero(raw.points_declared);
   if (pts !== null && pts >= 0 && pts <= 100000) out.points_declared = Math.round(pts);
-  // Simples não tem dupla. Equipe guarda a dupla de dentro da equipe (PR 3 convida).
-  const partner = format === CAREER_FORMAT.SINGLES ? null : normalizePartner(raw.partner);
+  // Simples e Americano não têm dupla fixa. Equipe guarda a dupla de dentro da equipe (PR 3 convida).
+  const partner = formatHasPartner(format) ? normalizePartner(raw.partner) : null;
   if (partner) out.partner = partner;
   return out;
 }
@@ -256,7 +294,7 @@ export function entryLabel(entry) {
   const partes = [t(CAREER_FORMAT_LABEL[entry.format] || CAREER_FORMAT_LABEL.doubles)];
   if (entry.gender) partes[0] += ` ${t(CAREER_GENDER_LABEL[entry.gender])}`;
   if (entry.age && entry.age !== 'open') partes.push(entry.age === 'other' ? entry.age_label : AGE_CATEGORY_LABELS[entry.age]);
-  if (entry.level_bracket) partes.push(entry.level_bracket === 'other' ? entry.level_label : (entry.level_bracket === 'open' ? t('Open') : entry.level_bracket));
+  if (entry.level_bracket) partes.push(levelBracketText(entry.level_bracket, entry.level_label));
   return partes.filter(Boolean).join(' · ');
 }
 
@@ -288,7 +326,7 @@ const LAYER_STEP = Object.freeze({
 export function careerCompleteness(event, { debriefDone } = {}) {
   if (!event || event.status !== CAREER_STATUS.PLAYED) return null;
   const entries = event.entries || [];
-  const precisaDupla = entries.filter((e) => e.format !== CAREER_FORMAT.SINGLES);
+  const precisaDupla = entries.filter((e) => formatHasPartner(e.format));
   const layers = [
     { id: CAREER_LAYER.RESULT, done: entries.length > 0 && entries.every((e) => Boolean(e.placement)), available: true },
     { id: CAREER_LAYER.PHOTO, done: (event.photos || []).length > 0, available: true },

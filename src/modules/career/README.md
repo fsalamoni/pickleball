@@ -9,7 +9,9 @@ declarado, foto, dupla). Documento completo: `docs/54-CARREIRA-DO-ATLETA.md`.
 career/
 ├── domain/      # PURO e testado — nada de React/Firebase
 │   ├── careerEvent.js  # o documento (normalizeCareerEvent), enums gravados, camadas da ficha,
-│   │                   # "É este?" (matchPlatformTournament), selo, modo lista, "repetir"
+│   │                   # "É este?" (matchPlatformTournament), selo, modo lista, "repetir",
+│   │                   # formatos (com o Americano) e formatHasPartner, faixas de nível
+│   │                   # (LEVEL_BRACKETS + as antigas aceitas, LEGACY_LEVEL_BRACKETS)
 │   ├── timeline.js     # buildCareerTimeline (5 fontes, cada uma falha sozinha), temporadas,
 │   │                   # filtros da URL, troféus de fora, abas (CAREER_TAB), resumo da Minha área
 │   ├── draftQueue.js   # a fila do aparelho para quando não há sinal

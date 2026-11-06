@@ -26,7 +26,7 @@ import { usePublicFederations } from '@/modules/federations/hooks/useFederations
 import { prepareUpload } from '@/modules/training/services/mediaUploadService';
 import {
   CAREER_AGES, CAREER_FORMAT, CAREER_LAYER, CAREER_LIMITS, CAREER_STATUS, LEVEL_BRACKETS, PHOTO_KIND, PHOTO_KIND_LABEL, PLACEMENT, PLACEMENT_LABEL,
-  bestPosition, careerCompleteness, careerSeal, entryLabel, matchPlatformTournament, withDerivedStatus,
+  bestPosition, careerCompleteness, careerSeal, entryLabel, formatHasPartner, levelBracketText, matchPlatformTournament, withDerivedStatus,
 } from '@/modules/career/domain/careerEvent.js';
 import { careerTrophies } from '@/modules/career/domain/timeline.js';
 import { partnerSealFor } from '@/modules/career/domain/careerPartner.js';
@@ -95,7 +95,9 @@ function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
         <V2Field label={t('Faixa de nível')} htmlFor={`${id}-faixa`}>
           <V2Select id={`${id}-faixa`} value={entry.level_bracket || ''} onChange={(e) => set('level_bracket', e.target.value || null)}>
             <option value="">{t('— Sem faixa —')}</option>
-            {LEVEL_BRACKETS.map((b) => <option key={b} value={b}>{b === 'open' ? t('Open') : b === 'other' ? t('Outra') : b}</option>)}
+            {LEVEL_BRACKETS.map((b) => <option key={b} value={b}>{levelBracketText(b)}</option>)}
+            {/* Faixa da lista antiga, já gravada: continua escolhida, como foi gravada. */}
+            {entry.level_bracket && !LEVEL_BRACKETS.includes(entry.level_bracket) && <option value={entry.level_bracket}>{entry.level_bracket}</option>}
           </V2Select>
         </V2Field>
         {entry.level_bracket === 'other' && (
@@ -118,7 +120,7 @@ function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
           <V2Input id={`${id}-pts`} type="number" min={0} max={100000} value={entry.points_declared ?? ''} onChange={(e) => set('points_declared', e.target.value)} />
         </V2Field>
       </div>
-      {entry.format !== CAREER_FORMAT.SINGLES && (
+      {formatHasPartner(entry.format) && (
         <div className="space-y-2">
           <V2Field label={t('Com quem você jogou')} htmlFor={`${id}-dupla`}>
             <V2Input

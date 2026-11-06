@@ -1,6 +1,6 @@
 /**
  * Peças pequenas da Carreira: o grupo de botões (Simples / Duplas /
- * Equipe; Masc / Fem / Mista; a medalha), a data do torneio de fora e o selo.
+ * Equipe / Americano; Masc / Fem / Mista; a medalha), a data do torneio de fora e o selo.
  */
 import React from 'react';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
@@ -10,7 +10,7 @@ import { SEAL, SEAL_LABEL } from '@/modules/career/domain/timeline.js';
 import { CAREER_FORMAT, CAREER_FORMAT_LABEL, CAREER_GENDER_LABEL, PLACEMENT } from '@/modules/career/domain/careerEvent.js';
 import { fmtData, t, tk } from '@/core/i18n';
 
-/** Os três formatos e os três gêneros do registro rápido (o "Aberta" fica na ficha). */
+/** Os quatro formatos e os três gêneros do registro rápido (o "Aberta" fica na ficha). */
 export const FORMAT_CHOICES = Object.values(CAREER_FORMAT).map((v) => ({ value: v, label: CAREER_FORMAT_LABEL[v] }));
 export const GENDER_CHOICES = ['male', 'female', 'mixed'].map((v) => ({ value: v, label: CAREER_GENDER_LABEL[v] }));
 export const GENDER_CHOICES_ALL = [...GENDER_CHOICES, { value: 'open', label: CAREER_GENDER_LABEL.open }];
