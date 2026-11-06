@@ -29,6 +29,11 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.GAMEDAY_MEXICANO, FEATURE_FLAG.GAMEDAY_KING_OF_COURT, FEATURE_FLAG.LINE_CONTROL],
   },
   {
+    id: 'tournament',
+    label: tk('Torneios'),
+    keys: [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW],
+  },
+  {
     id: 'career',
     label: tk('Carreira do atleta'),
     keys: [FEATURE_FLAG.ATHLETE_CAREER],

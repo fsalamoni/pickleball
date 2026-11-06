@@ -39,9 +39,9 @@ pública, impressão e telão.
   `domain/podium.js`, `domain/checkin.js`, `domain/americanoEtapas.js`,
   `services/registrationService.js`, `hooks/useTournament.js`. Regras e
   formatos: `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`, `docs/12-TEAM-TOURNAMENTS.md`,
-  `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+  `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`, `docs/55-TORNEIO-MINHA-PARTICIPACAO.md`.
 - **Telas**: `/torneios`, `/torneios/criar`, `/torneios/ingressar`,
-  `/torneios/guia`, `/torneios/:id` (`V2Tournament`), `/torneios/:id/gerenciar`
+  `/torneios/guia`, `/torneios/:id` (`V2Tournament`, abas por `/:tab` — com a flag `tournament_personal_view`, também `minha-participacao` e `acompanhar`), `/torneios/:id/gerenciar`
   (`V2TournamentAdmin`), `/torneios/:id/modalidades/:modalityId`
   (`V2ModalityPage`), `/perfil/torneios`; públicas em `src/App.jsx`:
   `/p/:id`, `/torneios/:id/imprimir`, `/torneios/:id/telao`. Componentes em

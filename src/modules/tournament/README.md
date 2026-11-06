@@ -189,3 +189,16 @@ Ver `docs/27-FALHA-NAO-E-VAZIO.md`.
   só depois da última etapa.
 
 Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+
+## Minha participação e Acompanhar (flag `tournament_personal_view`)
+
+- Abas `/torneios/:id/minha-participacao` (só quem está inscrito) e
+  `/torneios/:id/acompanhar?pessoas=` (qualquer pessoa, até 10 inscritos pelo
+  `PersonPicker`, só inscritos do torneio), mais a faixa "Seu próximo jogo".
+- Regra pura em `domain/personalTimeline.js` (`tournamentPeople`,
+  `buildPersonalTimeline`); dados por `hooks/usePersonalTimeline.js` (as três
+  consultas públicas que a página já faz). Zero banco, zero regra, zero índice.
+- Colocação pelo pódio (`modalityPlacement`) e projeção pela estrutura da chave
+  (`buildKnockoutDiagram`) — nunca uma cópia dessas contas.
+
+Ver `docs/55-TORNEIO-MINHA-PARTICIPACAO.md`.
