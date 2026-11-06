@@ -25,6 +25,7 @@ caminho da quadra). As regras do jogo julgadas, com o número da regra: docs/53 
 - `domain/ballDetection.js` — bola por cor + movimento (trocável por um modelo TrackNet).
 - `domain/cameraCheck.js` — a câmera entrega o mínimo? (30 q/s e 720p; bom: 60 e 1080p).
 - `domain/replay.js` — fita de quadros por tempo (3,5 s, memória limitada) e janela do replay; `domain/report.js` — resumo e CSV da quadra; `domain/calibrationCheck.js` — o 5º ponto (erro em cm); `domain/cameraHealth.js` — a câmera saiu do lugar / pouca luz; `domain/snapCorner.js` — "Grudar na linha" (canto externo do L branco); `domain/readiness.js` — "Pronto para começar?" da central; `domain/setupKits.js` — os quatro kits de montagem, o que o aparelho aguenta e a fonte da câmera (OBS, NDI, celular sem fio, captura).
+- `domain/zones.js` — a área que cada câmera vigia (quadra inteira, um lado, um fundo, as cozinhas, uma cozinha): os quatro cantos tocados, o 5º ponto e `eventInZone` (fora da área a câmera fica calada). Guardada só na calibração do aparelho. A tela de marcação é `CalibrationView` (zoom com pontos presos em pixels do vídeo, controles sobre a imagem, tela cheia; conta em `zoomMath.js`).
 - `domain/testkit/courtSim.js` — o simulador que filma pontos inteiros com a projeção de câmeras reais (só testes).
 - `services/cameraService.js` — `getUserMedia`; `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
 - `services/lineCallSync.js` — presença da câmera e envio das marcações; `services/saveEach.js` — várias quadras de uma vez, a que falhar não derruba as outras.

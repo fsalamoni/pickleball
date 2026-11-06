@@ -22,6 +22,7 @@ import { CAMERA_POSITIONS, calibrationPoints } from '../domain/cameraLayouts.js'
 import { findBallCandidates, pickBall, rgbToHsv, BALL_DEFAULTS } from '../domain/ballDetection.js';
 import { assessCamera, worstCmPerPixel } from '../domain/cameraCheck.js';
 import { checkPointFor, calibrationCheck } from '../domain/calibrationCheck.js';
+import { zoneById, zoneCalibrationPoints, zoneCheckPoint, eventInZone } from '../domain/zones.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
 import { headlineFirst } from '../domain/fusion.js';
 import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
@@ -107,14 +108,16 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const pos = CAMERA_POSITIONS[position] || CAMERA_POSITIONS.fundo_a;
-  const targets = useMemo(() => calibrationPoints(pos.id), [pos.id]);
-  const checkPoint = useMemo(() => checkPointFor(pos.id), [pos.id]);
   const videoRef = useRef(null);
   const [cameras, setCameras] = useState([]);
   const [stream, setStream] = useState(null);
   const [settings, setSettings] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [calib, setCalib] = useState(() => readCalib(uid, gameDayId, pos.id));
+  // A área vigiada (quadra inteira ou uma parte) decide os pontos tocados e o que a câmera marca.
+  const zone = zoneById(calib.zone).id;
+  const targets = useMemo(() => zoneCalibrationPoints(zone) || calibrationPoints(pos.id), [zone, pos.id]);
+  const checkPoint = useMemo(() => zoneCheckPoint(zone) || checkPointFor(pos.id), [zone, pos.id]);
   const [running, setRunning] = useState(false);
   const [poseState, setPoseState] = useState('idle'); // idle | loading | ready | failed | off
   const [events, setEvents] = useState([]);
@@ -252,6 +255,8 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     snapBackup.current = null;
     if (prev) setCalib((c) => ({ ...c, checkTap: null, corners: prev }));
   }, []);
+  /** Troca a área vigiada: os pontos são outros, então a marcação recomeça. */
+  const setZone = useCallback((id) => setCalib((c) => (zoneById(c.zone).id === id ? c : { ...c, zone: id, corners: [], checkTap: null })), []);
   const resetCorners = useCallback(() => setCalib((c) => ({ ...c, corners: [], checkTap: null })), []);
   /** Toque no 5º ponto (o de conferência). */
   const setCheckTap = useCallback((pt) => setCalib((c) => ({ ...c, checkTap: pt })), []);
@@ -374,6 +379,8 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         // Com a câmera fora do lugar a medida não vale: o lance vai para revisão.
         engine ??= makeEngine();
         const found = engine.push({ t, ball: last, players })
+          // Fora da área escolhida esta câmera não marca: ali cuida outra.
+          .filter((e) => eventInZone(e, zone))
           .map((e) => (moved ? { ...e, call: 'review', moved: true } : e));
         if (found.length) {
           snap.width = 320;
@@ -432,12 +439,12 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     };
   // `stream`: trocar de câmera recomeça o relógio do vídeo, então o motor, o
   // replay e o lance pendente nascem de novo com ele.
-  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream]);
+  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream, zone]);
 
   return {
     position: pos, targets, checkPoint,
     videoRef, cameras, start, stream, settings, cameraError, cameraChecks,
-    calib, addCorner, moveCorner, resetCorners, snapCorners, undoSnap, setCheckTap, check, learnBallColor, H, Hinv, cmPerPixel,
+    calib, zone, setZone, addCorner, moveCorner, resetCorners, snapCorners, undoSnap, setCheckTap, check, learnBallColor, H, Hinv, cmPerPixel,
     running, setRunning, poseState, events, clearEvents, fps, ball, shareError, battery, health,
   };
 }
