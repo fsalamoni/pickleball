@@ -1943,7 +1943,7 @@ const ATLETA = {
       ],
       guias: ['carreira-registrar'],
       blocks: [
-        p(tk('Na Carreira, "Registrar torneio" pede só o nome, a data, o formato (Simples, Duplas ou Equipe), a categoria (Masc, Fem ou Mista) e, se quiser, a medalha. Data passada entra como jogado; data futura, como planejado. Depois de salvar, "Outra categoria" acrescenta mais uma.')),
+        p(tk('Na Carreira, "Registrar torneio" pede só o nome, a data, o formato (Simples, Duplas, Equipe ou Americano), a categoria (Masc, Fem ou Mista) e, se quiser, a medalha. Data passada entra como jogado; data futura, como planejado. Depois de salvar, "Outra categoria" acrescenta mais uma.')),
         list(
           tk('A FICHA — toque no torneio para completar em camadas: o resultado (colocação, faixa, pontos que a federação deu, a federação e o link), a foto da medalha, do pódio ou da chave, a dupla e o balanço. O cartão diz "3 de 4" e o próximo passo.'),
           tk('VÁRIOS DE UMA VEZ — para o passado: uma linha por torneio (ano, nome, categoria, medalha), tudo salvo junto.'),

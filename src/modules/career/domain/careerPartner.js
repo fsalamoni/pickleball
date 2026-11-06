@@ -18,7 +18,7 @@
  * aspectos são uma CÓPIA com teste de paridade (`careerPartner.test.js`).
  */
 import { t, tk } from '@/core/i18n';
-import { CAREER_FORMAT, CAREER_STATUS } from './careerEvent.js';
+import { CAREER_STATUS, formatHasPartner } from './careerEvent.js';
 
 export const CAREER_PARTNER = 'career_partner';
 
@@ -61,7 +61,7 @@ export const partnerDocId = (eventId, partnerUid) => `${eventId}__${partnerUid}`
 export function citedEntryIndexes(event, partnerUid) {
   if (!partnerUid) return [];
   return (event?.entries || []).reduce((acc, e, i) => {
-    if (e && e.format !== CAREER_FORMAT.SINGLES && e.partner && e.partner.uid === partnerUid) acc.push(i);
+    if (e && formatHasPartner(e.format) && e.partner && e.partner.uid === partnerUid) acc.push(i);
     return acc;
   }, []);
 }
@@ -70,7 +70,7 @@ export function citedEntryIndexes(event, partnerUid) {
 export function eventPartnerUids(event) {
   const out = [];
   (event?.entries || []).forEach((e) => {
-    const uid = e && e.format !== CAREER_FORMAT.SINGLES && e.partner && e.partner.uid;
+    const uid = e && formatHasPartner(e.format) && e.partner && e.partner.uid;
     if (uid && !out.includes(uid)) out.push(uid);
   });
   return out;
@@ -153,7 +153,7 @@ export function partnerNameKey(name) {
 export function namedPartners(event) {
   const m = new Map();
   (event?.entries || []).forEach((e, i) => {
-    if (!e || e.format === CAREER_FORMAT.SINGLES || !e.partner || e.partner.uid) return;
+    if (!e || !formatHasPartner(e.format) || !e.partner || e.partner.uid) return;
     const key = partnerNameKey(e.partner.name);
     if (!key) return;
     if (!m.has(key)) m.set(key, { name: s(e.partner.name).trim(), key, indexes: [] });

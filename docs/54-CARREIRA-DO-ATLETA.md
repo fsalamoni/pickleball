@@ -42,12 +42,25 @@ gravar (limites em `CAREER_LIMITS`).
 | `organizer`, `city`, `state` | string | `state` só UF válida |
 | `start_date`, `end_date` | `AAAA-MM-DD` | `date_precision`: `day` ou `year` (modo lista) |
 | `status` | `played` / `planned` / `cancelled` | derivado da data (`deriveCareerStatus`): futura ⇒ planejado. O gravado é o do dia em que se salvou; a LEITURA recalcula (`withDerivedStatus` em `listCareerEvents` e na ficha), então o planejado cuja data passou é jogado |
-| `entries[]` (≤ 6) | objeto | `format` (`singles`/`doubles`/`teams`), `gender` (`male`/`female`/`mixed`/`open`), `age`, `level_bracket`, `placement` (`champion`/`runner_up`/`third`/`semis`/`quarters`/`round_of_16`/`groups`/`other`), `placement_n`, `points_declared`, `partner { name, uid }` |
+| `entries[]` (≤ 6) | objeto | `format` (`singles`/`doubles`/`teams`/`americano`), `gender` (`male`/`female`/`mixed`/`open`), `age`, `level_bracket` (ver abaixo), `level_label` (com `other`), `placement` (`champion`/`runner_up`/`third`/`semis`/`quarters`/`round_of_16`/`groups`/`other`), `placement_n`, `points_declared`, `partner { name, uid }` — só nos formatos com dupla FIXA (`formatHasPartner`: duplas e equipe; simples e americano não têm, porque no americano a dupla troca a cada jogo) |
 | `federated`, `federation_id`, `federation_name`, `federation_acronym`, `stage_tier` | | federação do diretório (com a flag `federations`) ou texto livre |
 | `link` | `https://…` ≤ 300 | guardado, nunca aberto pela plataforma |
 | `photos[]` (≤ 6) | `{ path, url, kind, alt }` | `kind`: `medal`/`podium`/`draw`/`other`; `alt` é a descrição |
 | `notes` | ≤ 2000 | só o dono lê |
 | `platform_tournament_id` | string \| null | gravado quando a pessoa responde "É este" (ver §4.3) |
+
+**Faixa de nível (`level_bracket`).** É a faixa DECLARADA (como o torneio de
+fora chamou a categoria) e nunca alimenta a régua 2.0–8.0. O seletor oferece,
+nesta ordem (`LEVEL_BRACKETS`, texto em `LEVEL_BRACKET_LABEL`, lista do Flavio
+de 2026-11-06): `2.000-2.999` (Entre 2,000 e 2,999), `3.000-3.499`,
+`3.500-3.999`, `3.000-3.999` (a categoria inteira, que convive com as duas
+metades), `4.000-4.499`, `4.500+` (Superior a 4,500), `beginner`
+(Iniciante), `intermediate`, `advanced`, `pro`, `open` (OPEN) e `other`
+(Outra, com `level_label` livre); "— Sem faixa —" grava `null`. A lista da
+primeira versão (`2.5`, `3.0`, `3.5`, `4.0`, `4.5`, `5.0+`, `A`, `B`, `C`,
+`D` — `LEGACY_LEVEL_BRACKETS`) saiu do seletor, mas **nada foi migrado**: o
+registro antigo segue aceito ao salvar de novo, a ficha mostra o valor dele
+como opção escolhida e `levelBracketText` o exibe como foi gravado.
 | `created_at_ms`, `updated_at_ms` | número | |
 
 **Zero índice composto**: a única consulta é `where('uid', '==', uid)`, com a
@@ -294,7 +307,7 @@ aberta consulta: as cinco leituras levam `enabled` (por isso
 
 ### 4.3 Registrar (`CareerQuickRegister`)
 
-Em 30 segundos: nome, data, formato (Simples / Duplas / Equipe), categoria
+Em 30 segundos: nome, data, formato (Simples / Duplas / Equipe / Americano), categoria
 (Masc / Fem / Mista) e a medalha opcional. Data futura entra como planejado.
 Depois de salvar: "Outra categoria", "Completar a ficha" e "Pronto".
 "Repetir o torneio do ano passado" (`repeatableEvents` / `repeatEvent`)

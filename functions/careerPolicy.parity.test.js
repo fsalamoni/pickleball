@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 import * as c from '@/modules/career/domain/careerPartner.js';
+import { CAREER_FORMAT, formatHasPartner } from '@/modules/career/domain/careerEvent.js';
 import { GAME_ASPECTS } from '@/modules/training/domain/debrief.js';
 import { INTERNAL_LINK_PATTERN } from '@/core/domain/internalLink.js';
 
@@ -21,6 +22,8 @@ const EVENTOS = [
     { format: 'singles', partner: { uid: 'bia123', name: 'Bia' } },
     { format: 'doubles', gender: 'male', age: 'other', age_label: '40+', level_bracket: 'other', level_label: 'B+', placement: 'other', placement_n: 5, partner: { uid: 'bia123', name: 'Bia' } },
     { format: 'teams', partner: { uid: 'cau456', name: 'Cau' } },
+    { format: 'americano', partner: { uid: 'cau456', name: 'Cau' } },
+    { format: 'americano', partner: { name: 'Sem conta' } },
   ] },
 ];
 
@@ -32,6 +35,12 @@ describe('paridade: a dupla da Carreira', () => {
     expect(s.PARTNER_LIMITS).toEqual({ ...c.PARTNER_LIMITS });
     expect(s.ADULT_AGE).toBe(c.ADULT_AGE);
     expect(s.partnerDocId('ev1', 'u2')).toBe(c.partnerDocId('ev1', 'u2'));
+  });
+
+  it('⭐ os formatos com dupla fixa: simples e americano não têm, nos dois lados', () => {
+    for (const f of [...Object.values(CAREER_FORMAT), undefined, 'x']) expect(s.formatHasPartner(f)).toBe(formatHasPartner(f));
+    expect(s.formatHasPartner('americano')).toBe(false);
+    expect(s.citedEntryIndexes(EVENTOS[3], 'cau456')).toEqual([2]);
   });
 
   it('os aspectos são os do balanço (GAME_ASPECTS), nos dois lados', () => {

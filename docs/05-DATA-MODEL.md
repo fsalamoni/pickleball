@@ -1555,7 +1555,7 @@ ativo). A regra confere o prefixo do id e a forma. Zero índice. Ver
 Torneio de FORA da plataforma registrado pelo atleta (Carreira):
 `uid`, `name`, `organizer`, `city`, `state`, `start_date`, `end_date`,
 `date_precision` (`day|year`), `status` (`played|planned|cancelled`, derivado
-da data), `entries[]` (≤ 6: `format`, `gender`, `age`, `level_bracket`,
+da data), `entries[]` (≤ 6: `format` (`singles|doubles|teams|americano`), `gender`, `age`, `level_bracket` (lista em docs/54 §2.1),
 `placement`, `placement_n`, `points_declared`, `partner { name, uid }`),
 `federated`, `federation_id`, `federation_name`, `federation_acronym`,
 `stage_tier`, `link` (só `https://`), `photos[]` (≤ 6: `path`, `url`, `kind`

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  CAREER_LIMITS, CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, deriveCareerStatus, entryLabel,
+  CAREER_FORMAT, CAREER_LIMITS, CAREER_STATUS, LEGACY_LEVEL_BRACKETS, LEVEL_BRACKETS, formatHasPartner, levelBracketText, bestPosition, careerCompleteness, careerSeal, deriveCareerStatus, entryLabel,
   listRowsToEvents, matchPlatformTournament, newCareerEventId, normalizeCareerEvent, normalizeCareerLink,
   normalizeEntry, normalizePhoto, normalizeTournamentName, registeredProgress, repeatEvent, repeatableEvents,
   withDerivedStatus,
@@ -76,6 +76,32 @@ describe('participação', () => {
     expect(normalizeEntry({ format: 'singles', partner: { name: 'Ana' } }).partner).toBeUndefined();
     expect(normalizeEntry({ format: 'doubles', partner: { name: 'Ana', uid: 'abcdef123' } }).partner).toEqual({ uid: 'abcdef123', name: 'Ana' });
     expect(normalizeEntry({ format: 'doubles', partner: { name: 'Ana', uid: '../x' } }).partner).toEqual({ name: 'Ana' });
+  });
+  it('⭐ americano é formato gravado e não tem dupla fixa (a dupla troca a cada jogo)', () => {
+    expect(Object.values(CAREER_FORMAT)).toEqual(['singles', 'doubles', 'teams', 'americano']);
+    expect(normalizeEntry({ format: 'americano', partner: { name: 'Ana', uid: 'abcdef123' } })).toEqual({ format: 'americano', gender: null, age: null, level_bracket: null, placement: null });
+    expect(['singles', 'americano'].map(formatHasPartner)).toEqual([false, false]);
+    expect(['doubles', 'teams'].map(formatHasPartner)).toEqual([true, true]);
+    expect(entryLabel({ format: 'americano', gender: 'mixed' })).toBe('Americano Mista');
+    // A camada "dupla" não fica pendente no americano.
+    const c = careerCompleteness({ status: 'played', entries: [{ format: 'americano', placement: 'champion' }], photos: [{ path: 'carreira/x/a.webp' }] }, { debriefDone: true });
+    expect(c.layers.find((l) => l.id === 'dupla').done).toBe(true);
+  });
+  it('⭐ faixas de nível: a lista nova, na ordem pedida, com o texto de cada uma', () => {
+    expect(LEVEL_BRACKETS.map((b) => levelBracketText(b))).toEqual([
+      'Entre 2,000 e 2,999', 'Entre 3,000 e 3,499', 'Entre 3,500 e 3,999', 'Entre 3,000 e 3,999', 'Entre 4,000 e 4,499',
+      'Superior a 4,500', 'Iniciante', 'Intermediário', 'Avançado', 'PRO', 'OPEN', 'Outra',
+    ]);
+    expect(entryLabel(normalizeEntry({ format: 'doubles', gender: 'mixed', level_bracket: '3.500-3.999' }))).toBe('Duplas Mista · Entre 3,500 e 3,999');
+  });
+  it('🔴 faixa da lista antiga já gravada não se perde: salva de novo e aparece como foi gravada', () => {
+    for (const b of LEGACY_LEVEL_BRACKETS) {
+      expect(LEVEL_BRACKETS).not.toContain(b);
+      expect(normalizeEntry({ format: 'doubles', level_bracket: b }).level_bracket).toBe(b);
+      expect(levelBracketText(b)).toBe(b);
+    }
+    expect(levelBracketText('open')).toBe('OPEN');
+    expect(levelBracketText('other', 'B+')).toBe('B+');
   });
   it('rótulo e melhor degrau', () => {
     expect(entryLabel(normalizeEntry({ format: 'doubles', gender: 'mixed', level_bracket: '4.0' }))).toBe('Duplas Mista · 4.0');
