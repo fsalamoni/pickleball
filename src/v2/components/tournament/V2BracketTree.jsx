@@ -33,10 +33,13 @@ function sideGames(m, side) {
   return (Array.isArray(m.games) ? m.games : []).map((g) => Number(g[side]) || 0);
 }
 
-function Side({ label, games, won, lost, vazio }) {
+function Side({ label, games, won, lost, vazio, marcado = false }) {
   return (
     <div className={cn(
       'relative flex h-[30px] items-center justify-between gap-2 pl-3 pr-2.5 text-xs',
+      // Quem a pessoa acompanha (Minha participação / Acompanhar): sublinhado
+      // forte, que não se confunde com o verde-limão de quem venceu.
+      marcado && 'font-bold underline decoration-ink decoration-2 underline-offset-2',
       won && 'bg-acid/15 font-bold text-ink',
       lost && 'text-gray-500',
       !won && !lost && !vazio && 'text-ink',
@@ -68,7 +71,8 @@ function statusChip(m) {
   return m.court ? String(m.court) : null;
 }
 
-function MatchCard({ m, nameOf, onClick }) {
+function MatchCard({ m, nameOf, onClick, destaque }) {
+  const marca = (ids) => Boolean(destaque && !m.placeholder && (ids || []).some((id) => destaque.has(String(id))));
   const decided = m.winner_side === 'a' || m.winner_side === 'b';
   const aNome = m.placeholder ? '' : nameOf(m.side_a_ids, m.side_a);
   const bNome = m.placeholder ? '' : nameOf(m.side_b_ids, m.side_b);
@@ -109,6 +113,7 @@ function MatchCard({ m, nameOf, onClick }) {
         won={aWon}
         lost={decided && !aWon}
         vazio={!aNome}
+        marcado={marca(m.side_a_ids)}
       />
       <div className="h-px shrink-0 bg-gray-100" />
       <Side
@@ -117,6 +122,7 @@ function MatchCard({ m, nameOf, onClick }) {
         won={bWon}
         lost={decided && !bWon}
         vazio={!bNome}
+        marcado={marca(m.side_b_ids)}
       />
     </Tag>
   );
@@ -142,7 +148,7 @@ function ChampionCard({ nome, aguardando }) {
 }
 
 /** Uma seção desenhada: colunas posicionadas + as linhas entre elas. */
-function Section({ section, nameOf, onMatchClick, champion, thirdPlace }) {
+function Section({ section, nameOf, onMatchClick, champion, thirdPlace, destaque }) {
   const cols = section.columns;
   const { ys, height: baseH } = layoutBracketColumns(cols, { cardH: CARD_H, gapY: GAP_Y });
   const x = (ci) => ci * (CARD_W + GAP_X);
@@ -217,12 +223,12 @@ function Section({ section, nameOf, onMatchClick, champion, thirdPlace }) {
         </svg>
         {cols.map((col, ci) => col.cells.map((m, i) => (
           <div key={m.id} className="absolute" style={{ left: x(ci), top: HEAD_H + ys[ci][i] - CARD_H / 2 }}>
-            <MatchCard m={m} nameOf={nameOf} onClick={onMatchClick} />
+            <MatchCard m={m} nameOf={nameOf} onClick={onMatchClick} destaque={destaque} />
           </div>
         )))}
         {thirdPlace && (
           <div className="absolute" style={{ left: x(ultima), top: HEAD_H + thirdY - CARD_H / 2 }}>
-            <MatchCard m={thirdPlace} nameOf={nameOf} onClick={onMatchClick} />
+            <MatchCard m={thirdPlace} nameOf={nameOf} onClick={onMatchClick} destaque={destaque} />
           </div>
         )}
         {champion && (
@@ -236,7 +242,7 @@ function Section({ section, nameOf, onMatchClick, champion, thirdPlace }) {
 }
 
 export default function V2BracketTree({
-  matches = [], labelById, title, onMatchClick, thirdPlace = false, double = false, larguraMax,
+  matches = [], labelById, title, onMatchClick, thirdPlace = false, double = false, larguraMax, destaque,
 }) {
   const diagram = useMemo(
     () => buildKnockoutDiagram(matches, { thirdPlace, double }),
@@ -265,6 +271,7 @@ export default function V2BracketTree({
               section={s}
               nameOf={nameOf}
               onMatchClick={onMatchClick}
+              destaque={destaque}
               champion={si === 0 ? champion : null}
               thirdPlace={si === 0 ? diagram.thirdPlace : null}
             />

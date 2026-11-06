@@ -1,8 +1,12 @@
 import React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  Archive, Calendar, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy,
+  Archive, Calendar, CalendarClock, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy, Users,
 } from 'lucide-react';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { MyNextMatchStrip, V2FollowPlayers, V2MyParticipation } from '@/v2/components/tournament/TournamentTimeline';
+import { useMeInTournament } from '@/modules/tournament/hooks/usePersonalTimeline';
 import { buildICS, icsFilename } from '@/modules/tournament/domain/ics';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useTournament, useIsTournamentAdmin, useModalities } from '@/modules/tournament/hooks/useTournament';
@@ -55,6 +59,10 @@ export default function V2Tournament() {
   const navigate = useNavigate();
   const { data: tournament, isLoading, isError, refetch } = useTournament(tournamentId);
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
+  // "Minha participação" e "Acompanhar" (docs/55): com a flag desligada,
+  // nenhuma consulta a mais é feita (o id nulo desliga as três).
+  const personalOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW);
+  const { eu } = useMeInTournament(personalOn ? tournamentId : null);
   const { data: modalities = [] } = useModalities(tournamentId);
   const modalityPagesOn = true;
   const galleryOn = true;
@@ -143,13 +151,17 @@ export default function V2Tournament() {
     return <Navigate to={`/torneios/${tournamentId}/gerenciar`} replace />;
   }
 
-  const activeTab = ['visao-geral', 'jogos', 'ranking', 'fotos', 'admin'].includes(tab) ? tab : 'visao-geral';
+  const abasPessoais = personalOn ? ['minha-participacao', 'acompanhar'] : [];
+  const activeTab = ['visao-geral', 'jogos', 'ranking', 'fotos', 'admin', ...abasPessoais].includes(tab) ? tab : 'visao-geral';
   const goTab = (v) => navigate(`/torneios/${tournamentId}/${v}`);
 
   const tabs = [
+    // Quem está inscrito vê a própria linha do tempo primeiro na barra.
+    ...(personalOn && eu ? [{ value: 'minha-participacao', label: t('Minha participação'), icon: CalendarClock }] : []),
     { value: 'visao-geral', label: t('Visão geral') },
     { value: 'jogos', label: t('Jogos') },
     { value: 'ranking', label: t('Ranking') },
+    ...(personalOn ? [{ value: 'acompanhar', label: t('Acompanhar'), icon: Users }] : []),
     ...(showGallery ? [{ value: 'fotos', label: t('Fotos'), icon: Images }] : []),
     // Aba "Admin" embutida só quando o console dedicado está desligado.
     ...(isAdmin && !adminConsoleOn ? [{ value: 'admin', label: t('Admin'), icon: ShieldCheck }] : []),
@@ -248,6 +260,10 @@ export default function V2Tournament() {
 
       <TournamentRefereeCrew tournament={tournament} className="mt-6" />
 
+      {personalOn && eu && activeTab !== 'minha-participacao' && (
+        <MyNextMatchStrip tournament={tournament} onOpen={() => goTab('minha-participacao')} />
+      )}
+
       {/* Tabs */}
       <div data-dica="torneio-abas" className="mt-6 inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
         {tabs.map((tt) => {
@@ -266,6 +282,8 @@ export default function V2Tournament() {
         {activeTab === 'visao-geral' && <V2TournamentOverview tournament={tournament} isAdmin={isAdmin} />}
         {activeTab === 'jogos' && <V2TournamentMatches tournament={tournament} />}
         {activeTab === 'ranking' && <V2TournamentRanking tournament={tournament} />}
+        {activeTab === 'minha-participacao' && <V2MyParticipation tournament={tournament} onGoOverview={() => goTab('visao-geral')} />}
+        {activeTab === 'acompanhar' && <V2FollowPlayers tournament={tournament} />}
         {activeTab === 'fotos' && showGallery && <V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />}
         {activeTab === 'admin' && isAdmin && !adminConsoleOn && <V2TournamentAdminPanel tournament={tournament} />}
       </div>

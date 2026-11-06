@@ -19,12 +19,12 @@
 | Blocos `match` (raiz + subcoleções) | 272 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
 | Cloud Functions exportadas | 124 |
-| Feature flags ligáveis (`FEATURE_FLAG`) | 10 |
+| Feature flags ligáveis (`FEATURE_FLAG`) | 11 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 951 |
+| Arquivos de teste (`*.test.js(x)`) | 953 |
 | Workflows do GitHub Actions | 8 |
-| Documentos/pastas em `docs/` | 60 |
+| Documentos/pastas em `docs/` | 61 |
 
 ## 2. Stack (de `package.json`)
 
@@ -67,7 +67,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `search` | 1 | · | · | · | · | · | sim |
 | `sharing` | 1 | · | · | 2 | · | · | sim |
 | `social` | 1 | 1 | 2 | 1 | · | · | sim |
-| `tournament` | 53 | 15 | 3 | 15 | · | 2 | sim |
+| `tournament` | 54 | 15 | 4 | 15 | · | 2 | sim |
 | `training` | 19 | 13 | 12 | · | · | 2 | sim |
 | `trophies` | 2 | 1 | 1 | · | · | · | sim |
 
@@ -445,7 +445,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 
 ## 8. Feature flags
 
-**Ligáveis pelo admin (`FEATURE_FLAG`, padrão desligado):** `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`, `marketplace`, `federations`, `club_association`, `multi_language`, `external_messaging`, `line_control`, `athlete_career`.
+**Ligáveis pelo admin (`FEATURE_FLAG`, padrão desligado):** `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`, `marketplace`, `federations`, `club_association`, `multi_language`, `external_messaging`, `line_control`, `athlete_career`, `tournament_personal_view`.
 
 **Incorporadas (`PERMANENT_FEATURE`, sempre ligadas, 33):** `dupr_match_export`, `action_home`, `smart_matchmaking`, `post_game_flow`, `push_notifications`, `arena_ops_kpis`, `arena_unified_checkout`, `arena_dynamic_pricing`, `arena_member_crm`, `coach_public_discovery`, `coach_booking_pay`, `coach_student_progress`, `coach_level_rating_seed`, `gamification_v2`, `play_smart_rotation`, `play_groups`, `gameday_americano_live`, `help_center`, `arena_game_day`, `arena_modules`, `personalized_home`, `home_cards`, `platform_marketing`, `coach_marketing`, `dark_mode`, `guided_tips`, `essential_profile`, `my_region`, `notifications_center`, `tournament_americano_etapas`, `user_hub`, `training_center`, `game_debrief`.
 
@@ -489,4 +489,4 @@ Workflows:
 
 ## 11. Documentos em `docs/`
 
-`00-INDEX.md` · `01-AI-CONTEXT.md` · `02-STANDARDS.md` · `03-WORKFLOW.md` · `04-ARCHITECTURE.md` · `05-DATA-MODEL.md` · `06-MODULES.md` · `07-DESIGN-STANDARD.md` · `08-ARENA-ROADMAP.md` · `09-UX-ANALYSIS` · `10-ARENA-V3` · `11-REFERENCE` · `12-TEAM-TOURNAMENTS.md` · `13-NIVEL-UNIFICADO.md` · `14-DIA-DE-JOGO-TELAO.md` · `15-DIA-DE-JOGO-PERMISSOES.md` · `16-DIA-DE-JOGO-RODIZIO.md` · `17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` · `18-RANKINGS.md` · `19-TUTORIAIS.md` · `20-SEGURANCA-E-PRIVACIDADE` · `21-CENTRAL-DE-AJUDA.md` · `22-DIA-DE-JOGO-DA-ARENA.md` · `23-ARENA-CALENDARIO-E-RESERVA.md` · `24-MODULOS-DE-ARENA` · `25-DIA-DE-JOGO-COMO-MODULO.md` · `26-TORNEIO-FORMATOS-E-REGRAS.md` · `27-FALHA-NAO-E-VAZIO.md` · `28-ERRO-NAO-DERRUBA-O-APP.md` · `29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` · `30-MODO-ESCURO.md` · `31-INICIO-SOB-MEDIDA.md` · `32-DICAS-GUIADAS.md` · `33-CADASTRO-ESSENCIAL.md` · `34-MINHA-REGIAO.md` · `35-JOGAR-ENTRAR-E-SAIR.md` · `36-NOTIFICACOES.md` · `37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` · `38-GAMIFICACAO-V2.md` · `39-PLAY-GRUPOS.md` · `40-CENTRO-DE-TREINO.md` · `40a-AVALIACAO-100-DRILLS.md` · `41-MINHA-AREA.md` · `42-BALANCO-DO-JOGO.md` · `43-TROFEUS-E-CARTOES.md` · `44-IDIOMAS.md` · `45-MOLDURA-DAS-PAGINAS.md` · `46-INVENTARIO.md` · `47-BACKEND-CLOUD-FUNCTIONS.md` · `48-PERMISSOES-POR-PERFIL.md` · `49-AVISOS-POR-EMAIL-E-CELULAR.md` · `50-FEDERACAO.md` · `51-DUPR.md` · `52-CLUBE-ASSOCIACAO.md` · `53-CONTROLE-DE-LINHAS.md` · `54-CARREIRA-DO-ATLETA.md` · `AUDIT-2026-09-28.md` · `FUTURO` · `HISTORICO-POR-ONDA.md` · `PUSH-ATIVACAO.md`
+`00-INDEX.md` · `01-AI-CONTEXT.md` · `02-STANDARDS.md` · `03-WORKFLOW.md` · `04-ARCHITECTURE.md` · `05-DATA-MODEL.md` · `06-MODULES.md` · `07-DESIGN-STANDARD.md` · `08-ARENA-ROADMAP.md` · `09-UX-ANALYSIS` · `10-ARENA-V3` · `11-REFERENCE` · `12-TEAM-TOURNAMENTS.md` · `13-NIVEL-UNIFICADO.md` · `14-DIA-DE-JOGO-TELAO.md` · `15-DIA-DE-JOGO-PERMISSOES.md` · `16-DIA-DE-JOGO-RODIZIO.md` · `17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` · `18-RANKINGS.md` · `19-TUTORIAIS.md` · `20-SEGURANCA-E-PRIVACIDADE` · `21-CENTRAL-DE-AJUDA.md` · `22-DIA-DE-JOGO-DA-ARENA.md` · `23-ARENA-CALENDARIO-E-RESERVA.md` · `24-MODULOS-DE-ARENA` · `25-DIA-DE-JOGO-COMO-MODULO.md` · `26-TORNEIO-FORMATOS-E-REGRAS.md` · `27-FALHA-NAO-E-VAZIO.md` · `28-ERRO-NAO-DERRUBA-O-APP.md` · `29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` · `30-MODO-ESCURO.md` · `31-INICIO-SOB-MEDIDA.md` · `32-DICAS-GUIADAS.md` · `33-CADASTRO-ESSENCIAL.md` · `34-MINHA-REGIAO.md` · `35-JOGAR-ENTRAR-E-SAIR.md` · `36-NOTIFICACOES.md` · `37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` · `38-GAMIFICACAO-V2.md` · `39-PLAY-GRUPOS.md` · `40-CENTRO-DE-TREINO.md` · `40a-AVALIACAO-100-DRILLS.md` · `41-MINHA-AREA.md` · `42-BALANCO-DO-JOGO.md` · `43-TROFEUS-E-CARTOES.md` · `44-IDIOMAS.md` · `45-MOLDURA-DAS-PAGINAS.md` · `46-INVENTARIO.md` · `47-BACKEND-CLOUD-FUNCTIONS.md` · `48-PERMISSOES-POR-PERFIL.md` · `49-AVISOS-POR-EMAIL-E-CELULAR.md` · `50-FEDERACAO.md` · `51-DUPR.md` · `52-CLUBE-ASSOCIACAO.md` · `53-CONTROLE-DE-LINHAS.md` · `54-CARREIRA-DO-ATLETA.md` · `55-TORNEIO-MINHA-PARTICIPACAO.md` · `AUDIT-2026-09-28.md` · `FUTURO` · `HISTORICO-POR-ONDA.md` · `PUSH-ATIVACAO.md`

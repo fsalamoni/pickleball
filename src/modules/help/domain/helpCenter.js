@@ -1751,6 +1751,24 @@ const ATLETA = {
       ],
     },
     {
+      id: 'minha-participacao-torneio',
+      flags: ['tournament_personal_view'],
+      title: tk('Ver os meus jogos e acompanhar outros inscritos'),
+      summary: tk('As abas "Minha participação" e "Acompanhar": os jogos de todas as categorias, por dia e horário, com o que vem pela frente na chave.'),
+      keywords: ['minha participação', 'meus jogos', 'acompanhar', 'seguir', 'linha do tempo', 'próximo jogo', 'horário', 'quadra', 'chave', 'dupla', 'alunos'],
+      blocks: [
+        p(tk('Dentro do torneio, quem está inscrito ganha a aba "Minha participação": todos os seus jogos, de todas as categorias em que você se inscreveu, numa lista só, por dia e horário. Ela já sai da sua conta, então não há nada para escolher, e se atualiza sozinha enquanto a página está aberta.')),
+        list(
+          tk('CADA JOGO — horário, quadra, categoria, fase e rodada, os dois lados e, depois do jogo, o placar e "Vitória" ou "Derrota". O jogo em quadra aparece marcado e o próximo fica em destaque.'),
+          tk('SUAS CATEGORIAS — a colocação quando a categoria termina, quantos jogos, vitórias e derrotas, e "Ver a chave", que abre a chave com o seu nome em negrito.'),
+          tk('O QUE VEM PELA FRENTE — na chave, contra quem você joga se vencer (ou quem ainda pode chegar); nos grupos, quando saem os classificados.'),
+          tk('SEU PRÓXIMO JOGO — uma faixa no topo do torneio, em todas as abas, com o horário, a quadra e o adversário.'),
+          tk('ACOMPANHAR — a aba ao lado: escolha um ou mais inscritos (até 10) e veja os jogos deles juntos, do mesmo jeito. A lista só traz quem está inscrito neste torneio. A escolha fica guardada neste aparelho e vai no link, para mandar à família ou aos alunos.'),
+        ),
+        tip(tk('Depois do torneio, a mesma aba vira o resumo da sua participação: todos os resultados e a colocação em cada categoria.')),
+      ],
+    },
+    {
       id: 'organizar-torneio',
       title: tk('Organizar um torneio'),
       summary: tk('Criar, gerir modalidades, inscrições, sorteio e resultados.'),
@@ -2911,6 +2929,14 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     ] },
   { pattern: '/torneios/guia', label: tk('os formatos de chave'),
     refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'inscritos-numero-incomum']] },
+  // As abas do torneio (/jogos, /ranking, /minha-participacao, /acompanhar…):
+  // depois de linhas e gerenciar, que são telas próprias.
+  { pattern: '/torneios/*/*', label: tk('este torneio'),
+    refs: [
+      [HELP_SECTION.ATHLETE, 'minha-participacao-torneio'],
+      [HELP_SECTION.ATHLETE, 'durante-torneio'],
+      [HELP_SECTION.ATHLETE, 'inscrever-torneio'],
+    ] },
   { pattern: '/torneios/*', label: tk('este torneio'),
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
   { pattern: '/torneios', label: tk('torneios'),

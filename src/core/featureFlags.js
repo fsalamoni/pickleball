@@ -155,6 +155,17 @@ export const FEATURE_FLAG = Object.freeze({
    */
   ATHLETE_CAREER: 'athlete_career',
 
+  /**
+   * TORNEIO — "Minha participação" e "Acompanhar" (docs/55): dentro do
+   * torneio, a linha do tempo dos jogos da pessoa em TODAS as categorias, em
+   * ordem de dia e horário, com fase, quadra, placar e o próximo confronto
+   * possível na chave; e a mesma linha do tempo para outros inscritos que
+   * ela escolher. Só lê o que o quadro do torneio já mostra (inscrições,
+   * categorias e jogos, de leitura pública). Zero coleção, zero índice, zero
+   * regra; quem acompanha quem fica no navegador. Desligada, as abas somem.
+   */
+  TOURNAMENT_PERSONAL_VIEW: 'tournament_personal_view',
+
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -573,6 +584,10 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.ATHLETE_CAREER]: {
     label: tk('Carreira (torneios de fora)'),
     description: tk('Abre /carreira: a linha do tempo da pessoa com os torneios e dias de jogo da plataforma e os torneios de fora que ela registra (resultado declarado, foto, dupla), a estante "Fora da plataforma" e a seção Carreira na Minha área. O resultado declarado nunca entra em ranking, rating nem XP. Desligada, tudo some e a regra recusa criar e editar; apagar continua valendo.'),
+  },
+  [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW]: {
+    label: tk('Torneio — Minha participação e Acompanhar'),
+    description: tk('Dentro de cada torneio, quem está inscrito ganha a aba "Minha participação": todos os seus jogos, de todas as categorias, em ordem de dia e horário, com fase, quadra, placar, colocação e o próximo confronto possível na chave. A aba "Acompanhar" mostra o mesmo para outros inscritos escolhidos na lista do torneio. Só usa o que o quadro do torneio já mostra; nada é gravado. Desligada, as duas abas somem.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: tk('DUPR oficial (conexão da conta e rating)'),
