@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AvatarGroup } from '@/components/ui/user-avatar';
 import { Trophy, MapPin, Calendar, Hash, Eye, Printer, Share2, Copy, Check } from 'lucide-react';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
+import { effectiveTournamentStatus } from '@/modules/tournament/domain/registrationWindow';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
@@ -72,10 +73,12 @@ export default function PublicTournament() {
   }
 
   const {
-    data: tournament, isLoading: loadingT, isError: falhouTorneio, refetch: recarregarTorneio,
+    data: tournament, isLoading: loadingT, isError: falhouTorneio, error: erroTorneio, refetch: recarregarTorneio,
   } = useQuery({
     queryKey: ['public', 'tournament', tournamentId],
     queryFn: () => getTournament(tournamentId),
+    // Recusa da regra (rascunho ou arquivado) não melhora tentando de novo.
+    retry: (n, err) => err?.code !== 'permission-denied' && n < 3,
     refetchInterval: 30_000,
   });
 
@@ -107,6 +110,22 @@ export default function PublicTournament() {
   // conta: espectador, familiar, jogador a caminho. Dizer "Verifique o link
   // recebido" quando o que falhou foi a REDE manda essa pessoa cobrar do
   // organizador um link que está certo — e ela não tem como descobrir sozinha.
+  // Rascunho (ou arquivado): a regra recusa a leitura. Não é a rede, e o link
+  // está certo — ele passa a abrir quando a organização publicar.
+  if (falhouTorneio && !tournament && erroTorneio?.code === 'permission-denied') {
+    return (
+      <div className="v2-root min-h-screen bg-paper font-inter text-ink">
+        <div className="mx-auto max-w-md p-6 text-center">
+          <Trophy className="mx-auto h-10 w-10 text-gray-300" aria-hidden="true" />
+          <h2 className="mt-3 font-semibold">{t('Este torneio ainda não está disponível')}</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {t('A organização ainda não o publicou, ou ele foi arquivado. Quando for publicado, este mesmo link passa a abrir.')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (falhouTorneio && !tournament) {
     return (
       <div className="v2-root min-h-screen bg-paper font-inter text-ink">
@@ -184,7 +203,7 @@ export default function PublicTournament() {
               )}
               <span className="inline-flex items-center gap-1">
                 <Calendar className="w-3 h-3" />{' '}
-                {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
+                {TOURNAMENT_STATUS_LABELS[effectiveTournamentStatus(tournament)] || tournament.status}
               </span>
               <Link
                 to={`/torneios/${tournament.id}/imprimir`}

@@ -320,6 +320,9 @@ export const AGE_CATEGORY_LABELS = rotulos({
 /** Status do torneio. */
 export const TOURNAMENT_STATUS = Object.freeze({
   DRAFT: 'draft',
+  // Publicado: visível, com as inscrições ainda por abrir (abrem sozinhas na
+  // data marcada — `registrationWindow.js`).
+  PUBLISHED: 'published',
   REGISTRATIONS_OPEN: 'registrations_open',
   REGISTRATIONS_CLOSED: 'registrations_closed',
   IN_PROGRESS: 'in_progress',
@@ -327,8 +330,19 @@ export const TOURNAMENT_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
+/**
+ * Os status que quem é de fora pode ver — todos menos o rascunho. Toda
+ * CONSULTA de torneios que não é do admin da plataforma filtra
+ * `where('status', 'in', VISIBLE_TOURNAMENT_STATUSES)`: sem o filtro a regra
+ * do banco recusa a consulta inteira (o rascunho poderia estar no resultado).
+ */
+export const VISIBLE_TOURNAMENT_STATUSES = Object.freeze([
+  'published', 'registrations_open', 'registrations_closed', 'in_progress', 'finished', 'cancelled',
+]);
+
 export const TOURNAMENT_STATUS_LABELS = rotulos({
   [TOURNAMENT_STATUS.DRAFT]: tk('Rascunho'),
+  [TOURNAMENT_STATUS.PUBLISHED]: tk('Inscrições em breve'),
   [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: tk('Inscrições abertas'),
   [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: tk('Inscrições encerradas'),
   [TOURNAMENT_STATUS.IN_PROGRESS]: tk('Em andamento'),

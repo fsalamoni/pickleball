@@ -97,7 +97,7 @@ professor · **Vend** vendedor do Mercado · **Plat** admin da plataforma.
 |---|---|---|---|---|
 | Flags e configurações (`platform_settings/*`) | ✔ ler | ✔ ler | rules | escrita só `Plat` (`isPlatformAdmin()`) |
 | Rankings (`player_ratings`, `player_skill_ratings`, `doubles_rankings`, `rating_history`, `skill_rating_history`, `club_internal_*`) | ✔ ler | ✔ ler | rules | **escrita `✖` para todos, inclusive `Plat`** (`allow write: if false`); só a Cloud Function escreve |
-| Torneios não arquivados, modalidades, **inscrições**, jogos | ✔ ler | ✔ ler | rules | inscrição pública = nomes; o e-mail mora em `tournament_registrations/{rid}/private` |
+| Torneios não arquivados, modalidades, **inscrições**, jogos | ✔ ler | ✔ ler | rules | inscrição pública = nomes; o e-mail mora em `tournament_registrations/{rid}/private`. Torneio em **rascunho** (`status: 'draft'`) só o criador, `tournament_admins` e `Plat` leem; a LISTA precisa do filtro de status (`docs/56` §4) |
 | Arenas, gestores, quadras, janelas, módulos ligados, vagas abertas, bloqueios | ✔ ler | ✔ ler | rules | `arena_managers` e `arenas` são públicos para leitura |
 | Professores (`coaches`), validações de nível, clínicas, pacotes, disponibilidade | ✔ ler | ✔ ler | rules | — |
 | Resultados publicados de dia de jogo (`club_event_games`) | ✔ ler | ✔ ler | rules | faz parte do ranking oficial |
@@ -194,6 +194,8 @@ organizador. Datas novas nascem como `game_days` (doc
 |---|---|---|---|---|---|
 | Criar torneio | ✔ qualquer conta (`creator_uid == uid`); com `arena_id` de arena que **não** gere, nasce `arena_confirmed: false` | — | — | ✔ | rules (`tournamentArenaOk`). Nada exige `can_create_pools` |
 | Editar torneio | ✖ | ✔ | ✔ (não troca `creator_uid`) | ✔ | rules |
+| Publicar o rascunho / voltar para rascunho (sem inscrição ativa) | ✖ | ✔ | ✔ | ✔ | rules (edição do torneio); a conferência das inscrições é do serviço (`unpublishTournament`) |
+| Inscrever-se (a própria pessoa) | ◐ só dentro da janela: `registrations_open`, ou `published` com a abertura vencida, e antes do encerramento | ✔ inscreve qualquer pessoa, a qualquer hora | ✔ idem | ✔ | rules (`tRegOpen`, relógio do servidor); serviço e tela dizem o motivo (`registrationBlockReason`) |
 | Arquivar / desarquivar | ✖ | ✔ (só se `status == 'cancelled'`) | **✖** | ✔ | rules |
 | Apagar torneio | ✖ | ✔ | ✖ | ✔ | rules |
 | Ver torneio arquivado | ✖ | ✔ | ◐ não (a leitura só libera criador e `Plat`) | ✔ | rules |

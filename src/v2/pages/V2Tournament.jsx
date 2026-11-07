@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  Archive, Calendar, CalendarClock, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy, Users,
+  Archive, Calendar, CalendarClock, CalendarPlus, Check, Copy, Eye, EyeOff, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy, Users,
 } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -13,6 +13,7 @@ import { useTournament, useIsTournamentAdmin, useModalities } from '@/modules/to
 import {
   MODALITY_FORMAT_LABELS,
   SKILL_LEVEL_LABELS,
+  TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
   TOURNAMENT_VISIBILITY,
   TOURNAMENT_VISIBILITY_LABELS,
@@ -27,6 +28,8 @@ import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
 import ClubTournamentBadge from '@/v2/components/clubs/ClubTournamentBadge';
+import { PublishTournamentBanner, RegistrationWindowNote, formatInstant } from '@/v2/components/tournament/RegistrationSchedule';
+import { effectiveTournamentStatus } from '@/modules/tournament/domain/registrationWindow';
 import TournamentIntegrityNotice from '@/v2/components/federations/integrity/TournamentIntegrityNotice';
 import { TournamentRefereeCrew } from '@/v2/components/federations/referees/RefereesPublic';
 
@@ -57,7 +60,7 @@ function formatDateRange(start, end) {
 export default function V2Tournament() {
   const { tournamentId, tab = 'visao-geral' } = useParams();
   const navigate = useNavigate();
-  const { data: tournament, isLoading, isError, refetch } = useTournament(tournamentId);
+  const { data: tournament, isLoading, isError, error, refetch } = useTournament(tournamentId);
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
   // "Minha participação" e "Acompanhar" (docs/55): com a flag desligada,
   // nenhuma consulta a mais é feita (o id nulo desliga as três).
@@ -83,6 +86,19 @@ export default function V2Tournament() {
   // ⚠️ FALHA não é ausência. "Torneio não encontrado — verifique o link" numa
   // queda de rede manda o organizador conferir um link que está certo e
   // concluir que apagaram o torneio.
+  // Rascunho (ou arquivado) de outra pessoa: a regra recusa a leitura. Não é
+  // queda de rede — tentar de novo não muda nada —, então a tela diz o que é.
+  if (isError && error?.code === 'permission-denied') {
+    return (
+      <V2Page>
+        <V2Surface>
+          <V2EmptyState icon={EyeOff} title={t('Este torneio ainda não está disponível')}
+            description={t('A organização ainda não o publicou, ou ele foi arquivado. Quando for publicado, este mesmo link passa a abrir.')}
+            action={<Link to="/torneios" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar aos torneios')}</Link>} />
+        </V2Surface>
+      </V2Page>
+    );
+  }
   if (isError) {
     return (
       <V2Page>
@@ -112,7 +128,9 @@ export default function V2Tournament() {
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
   const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${tournament.id}` : '';
   const dateRange = formatDateRange(tournament.starts_at, tournament.ends_at);
-  const deadline = formatDate(tournament.registration_deadline);
+  const deadline = formatInstant(tournament.registration_closes_ms) || formatDate(tournament.registration_deadline);
+  const isDraft = tournament.status === TOURNAMENT_STATUS.DRAFT;
+  const statusAgora = effectiveTournamentStatus(tournament);
   const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : t('Local a definir');
 
   const toDateSafe = (v) => {
@@ -184,6 +202,8 @@ export default function V2Tournament() {
         </div>
       )}
 
+      {isAdmin && isDraft && <div className="mb-5"><PublishTournamentBanner tournament={tournament} /></div>}
+
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-acid opacity-20 blur-[80px]" />
@@ -197,7 +217,7 @@ export default function V2Tournament() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}</span>
+            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_STATUS_LABELS[statusAgora] || statusAgora}</span>
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</span>
             {isAdmin && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> {t('Admin')}</span>}
             <TournamentSanctionBadge tournament={tournament} />
@@ -207,8 +227,9 @@ export default function V2Tournament() {
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <HeroFact icon={MapPin} label={t('Local')} value={location} />
             <HeroFact icon={Calendar} label={t('Datas')} value={dateRange || 'A definir'} />
-            <HeroFact icon={Hash} label={t('Inscrições até')} value={deadline || 'A definir'} />
+            <HeroFact icon={Hash} label={t('Inscrições até')} value={deadline || t('A definir')} />
           </div>
+          <RegistrationWindowNote tournament={tournament} className="mt-4 text-sm leading-6 text-gray-300" />
 
           <div className="mt-6 flex flex-wrap gap-2">
             {adminConsoleOn && isAdmin && (
@@ -221,7 +242,7 @@ export default function V2Tournament() {
                 {copied ? <Check className="h-4 w-4 text-acid" /> : <Copy className="h-4 w-4" />} {t('Código:')} <strong>{tournament.invite_code}</strong>
               </button>
             )}
-            {isPublic && (
+            {isPublic && !isDraft && (
               <button onClick={() => copy(publicUrl, t('Link público copiado!'))} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
                 <Share2 className="h-4 w-4" /> {t('Compartilhar link')}
               </button>

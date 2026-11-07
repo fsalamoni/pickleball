@@ -1501,9 +1501,23 @@ service cloud.firestore {
       // Leitura: pública se NÃO arquivado; se arquivado, só platform_admin
       // e criador continuam vendo (preserva histórico pra eles, esconde
       // da UI pública, das listas de torneio e da visão de espectador).
-      allow read: if og('archived', false) != true
-        || adm()
-        || isTournamentCreator(tid);
+      // RASCUNHO (2026-11-07): o torneio nasce `draft` e só o criador, os
+      // administradores dele e o admin da plataforma o veem — até "Publicar".
+      // `get` e `list` separados: numa CONSULTA a leitura do administrador
+      // (`tournament_admins/{tid}_{uid}`) não tem como ser provada, e com ela
+      // no OU o emulador devolvia o rascunho a quem não tem conta. Toda
+      // consulta de fora filtra `status in` (sem o rascunho) — senão a regra
+      // a recusa inteira; o co-administrador acha o rascunho pelo `get`.
+      allow get: if adm()
+        || og('creator_uid', '') == me()
+        || isTournamentAdmin(tid)
+        || (og('archived', false) != true && og('status', '') != 'draft');
+      // ⚠️ Campo DIRETO, nunca `og()`: numa consulta o `.get(campo, padrão)`
+      // de um campo que a consulta não filtra vale o PADRÃO — `'' != 'draft'`
+      // passava e o rascunho saía em toda lista (provado no emulador).
+      allow list: if adm()
+        || od().status != 'draft'
+        || od().creator_uid == me();
       // Sede: quem não gere a arena cria o torneio com a sede PENDENTE
       // (`arena_confirmed: false`) — a arena confirma ou recusa. Antes qualquer
       // conta punha o torneio na página e no ranking da casa de qualquer arena.
@@ -1581,6 +1595,22 @@ service cloud.firestore {
       return exists(p) && get(p).data.status == 'active'
         && get(p).data.get('discipline_until_ms', 0) < request.time.toMillis()
         && get(p).data.get('docs_block', false) != true;
+    }
+    // A própria inscrição só com as inscrições ABERTAS, pelo relógio do banco
+    // (2026-11-07). É a conta de `registrationWindow.js`: aberto — ou
+    // publicado com a abertura vencida, porque a tarefa que vira o status roda
+    // a cada 5 min — e sem o encerramento vencido. Rascunho, encerrado,
+    // andamento e arquivado não aceitam; o organizador inscreve quando quiser.
+    function tRegOpen(tid) {
+      let tdoc = gd('tournaments/' + tid);
+      let st = tdoc.get('status', '');
+      let ag = request.time.toMillis();
+      return tdoc.get('archived', false) != true
+        && (st == 'registrations_open'
+          || (st == 'published' && tdoc.get('registration_opens_ms', null) is int
+            && tdoc.registration_opens_ms <= ag))
+        && (tdoc.get('registration_closes_ms', null) == null
+          || ag < tdoc.registration_closes_ms);
     }
     // O torneio exige filiação? Então a DUPLA inteira está em dia na federação dele:
     // quem se inscreve e o parceiro com conta. Parceiro sem conta não se prova
@@ -1708,6 +1738,7 @@ service cloud.firestore {
             || adm()
             || (nd().created_by == me()
                 && ng('seed', null) == null
+                && tRegOpen(nd().tournament_id)
                 && tournamentMembershipOk(nd().tournament_id)
                 && (ng('status', '') in ['waitlist', 'pending_payment']
                     || (ng('status', '') == 'confirmed'

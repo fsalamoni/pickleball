@@ -53,14 +53,14 @@ const TORNEIO = {
         tk('Um torneio na plataforma segue sempre a mesma ordem: você cria o torneio, define as MODALIDADES, abre as INSCRIÇÕES, faz o SORTEIO e lança os RESULTADOS. O encerramento é automático quando o último resultado entra.'),
         tk('Cada uma dessas etapas é uma aba do console de gestão. Você pode ir e voltar entre elas à vontade — nada é definitivo até você sortear, e mesmo depois há como corrigir.'),
       ],
-      tip: tk('O torneio nasce como Rascunho. Enquanto estiver assim, só você o enxerga.'),
+      tip: tk('O torneio nasce como Rascunho: só você e os administradores dele o enxergam. "Publicar torneio" o mostra a todos.'),
     },
     {
       id: 'criar',
       title: tk('1. Criar o torneio'),
       body: [
         tk('Em Torneios → Criar torneio, você começa do zero ou a partir de um MODELO pronto (que já traz modalidades e formato sugeridos — dá para ajustar tudo depois).'),
-        tk('Preencha nome, datas, local, cidade e o prazo final das inscrições. O campo Acesso define se o torneio é público (aparece na busca) ou privado (só quem tem o link ou o código entra).'),
+        tk('Preencha nome, datas, local e cidade, e quando as inscrições abrem, encerram e até quando se paga (data e hora). O campo Acesso define se o torneio é público (aparece na busca) ou privado (só quem tem o link ou o código entra).'),
         tk('Se o torneio acontece numa arena cadastrada, vincule-a: ele passa a aparecer também na página da arena.'),
       ],
       tip: tk('Não precisa acertar tudo agora. Nome, datas e acesso bastam para começar; o resto se edita na aba Geral.'),
@@ -80,7 +80,7 @@ const TORNEIO = {
       id: 'inscricoes',
       title: tk('3. Inscrições'),
       body: [
-        tk('Com as inscrições abertas, os atletas se inscrevem pela página pública do torneio. Você também pode inscrever alguém manualmente pela aba Inscrições.'),
+        tk('Depois de publicado, as inscrições abrem e encerram sozinhas na data e hora marcadas (ou à mão, em Configurações). Enquanto estão abertas, os atletas se inscrevem pela página do torneio; você inscreve alguém manualmente pela aba Inscrições a qualquer momento.'),
         tk('Cada inscrição tem um estado que você controla: Pagamento pendente → Confirmada → Check-in feito. Há também Lista de espera, para quando a modalidade lota, e Cancelada.'),
         tk('Na aba você confirma pagamento, faz e desfaz check-in, promove alguém da lista de espera, edita os dados da inscrição e remove quem desistiu.'),
       ],

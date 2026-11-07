@@ -20,6 +20,8 @@ import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
+import { RegistrationScheduleFields, formatInstant, scheduleFromInputs, scheduleInputProblems, withPaymentDefault } from '@/v2/components/tournament/RegistrationSchedule';
+import { localInputToMs } from '@/modules/tournament/domain/registrationWindow';
 import { t, tk, fmtData } from '@/core/i18n';
 
 // Só baixa o código da federação quando a tela vem da Central (`?federacao=`).
@@ -56,7 +58,8 @@ export default function V2CreateTournament() {
   const [form, setForm] = useState(() => ({
     name: '', description: '', city: '', state: '', venue: '',
     visibility: TOURNAMENT_VISIBILITY.PUBLIC, ruleset: RULESET.CBP,
-    starts_at: '', ends_at: '', registration_deadline: '',
+    starts_at: '', ends_at: '',
+    schedule: { opens: '', closes: '', payment: '' }, // abertura, encerramento e prazo de pagamento
     arena_id: params.get('arena') || '', // Sprint 4 ARE-14: arena vinculada (opcional)
   }));
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
@@ -84,11 +87,14 @@ export default function V2CreateTournament() {
     if (wizardOn && !isLastStep) { goNext(); return; }
     if (!form.name.trim()) { setStep(0); return toast.error(t('Informe o nome do torneio.')); }
     if (!roleConsent.guardBeforeSubmit()) return;
+    const problemas = scheduleInputProblems(form.schedule);
+    if (problemas.length) { setStep(WIZARD_STEPS.length - 1); return toast.error(problemas[0]); }
     try {
       const payload = {
         name: form.name, description: form.description, city: form.city, state: form.state, venue: form.venue,
         visibility: form.visibility, ruleset: form.ruleset,
-        starts_at: form.starts_at || null, ends_at: form.ends_at || null, registration_deadline: form.registration_deadline || null,
+        starts_at: form.starts_at || null, ends_at: form.ends_at || null,
+        ...withPaymentDefault(scheduleFromInputs(form.schedule)),
         scoring: { ruleset: form.ruleset, win_by_two: true },
         arena_id: form.arena_id || null,
         ...(clubChoice || {}),
@@ -107,7 +113,7 @@ export default function V2CreateTournament() {
         navigate(`/torneios/${id}`);
         return;
       }
-      toast.success(t('Torneio criado!'));
+      toast.success(t('Torneio criado como rascunho. Publique quando estiver pronto.'));
       navigate(`/torneios/${id}`);
     } catch (err) {
       toast.error(err.message || t('Falha ao criar torneio.'));
@@ -155,7 +161,7 @@ export default function V2CreateTournament() {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <PreviewFact icon={form.visibility === TOURNAMENT_VISIBILITY.PUBLIC ? Globe : Lock} label={t('Acesso')} value={TOURNAMENT_VISIBILITY_LABELS[form.visibility]} />
                 <PreviewFact icon={ShieldCheck} label={t('Regras')} value={RULESET_LABELS[form.ruleset]} />
-                <PreviewFact icon={Trophy} label={t('Inscrições até')} value={formatDatePreview(form.registration_deadline)} />
+                <PreviewFact icon={Trophy} label={t('Inscrições até')} value={formatInstant(localInputToMs(form.schedule.closes)) || t('A definir')} />
                 <PreviewFact icon={CalendarDays} label={t('Datas')} value={`${formatDatePreview(form.starts_at)} → ${formatDatePreview(form.ends_at)}`} />
               </div>
             </div>
@@ -229,11 +235,15 @@ export default function V2CreateTournament() {
 
             {showStep(2) && (<>
             <V2SectionHeader eyebrow={t('Calendário')} title={t('Janela do evento')} titleClassName="text-xl" />
-            <div data-dica="criar-torneio-datas" className="grid gap-4 sm:grid-cols-3">
+            <div data-dica="criar-torneio-datas" className="grid gap-4 sm:grid-cols-2">
               <V2Field label={t('Início')}><V2Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} /></V2Field>
               <V2Field label={t('Fim')}><V2Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} /></V2Field>
-              <V2Field label={t('Fim das inscrições')}><V2Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} /></V2Field>
             </div>
+            <V2SectionHeader eyebrow={t('Inscrições')} title={t('Quando abrem e encerram')} titleClassName="text-xl" />
+            <RegistrationScheduleFields value={form.schedule} onChange={(v) => set('schedule', v)} />
+            <p className="rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-600">
+              {t('O torneio nasce como rascunho: só você e os administradores dele o veem. Monte as modalidades e, quando estiver pronto, toque em "Publicar torneio".')}
+            </p>
             </>)}
 
             {(!wizardOn || isLastStep) && roleConsent.field && (

@@ -1414,6 +1414,36 @@ exports.federationDocumentsOnWrite = onDocumentWritten(
   },
 );
 
+// Prazos do torneio (2026-11-07): as inscrições abrem e encerram sozinhas na
+// data e hora marcadas, e a comunidade é avisada UMA vez quando um torneio
+// público abre — `functions/tournamentSchedule.js`.
+const tournamentSchedule = require('./tournamentSchedule');
+exports.tournamentScheduleWorker = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'America/Sao_Paulo', region: REGION },
+  async () => {
+    try {
+      const virados = await tournamentSchedule.runScheduleWorker(fedCtx());
+      if (virados) logger.info('tournamentScheduleWorker', { virados });
+    } catch (err) {
+      logger.error('tournamentScheduleWorker falhou', err);
+    }
+  },
+);
+exports.tournamentScheduleNotify = onDocumentUpdated(
+  { document: 'tournaments/{tournamentId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 120 },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    // Só interessa a virada de status (quase toda escrita sai daqui sem ler nada).
+    if (!a || !d || a.status === d.status) return;
+    try {
+      await tournamentSchedule.onTournamentUpdated(fedCtx(), a, d, event.params.tournamentId);
+    } catch (err) {
+      logger.error('tournamentScheduleNotify falhou', err);
+    }
+  },
+);
+
 // Competições (Bloco 2): o pedido de chancela é conferido pelo servidor
 // (antecedência, diretor credenciado, taxa da categoria), a chancela aprovada
 // abre o relatório do diretor, e a final do circuito convida pelo ranking —

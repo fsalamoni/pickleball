@@ -331,6 +331,15 @@ as dos outros ficam (`accountDeletion.pseudo.test.js`). Usa o índice de grupo
 de `uid` (`firestore.indexes.json` → `fieldOverrides`); consulta que falha ou
 passa do teto de 400 deixa a exclusão **parcial**.
 
+### 7.0 Prazos das inscrições do torneio (`functions/tournamentSchedule.js`)
+
+| Função | Gatilho | O que faz | Escreve |
+|---|---|---|---|
+| `tournamentScheduleWorker` | agendada, a cada 5 min (`America/Sao_Paulo`) | vira `published → registrations_open` e `registrations_open → registrations_closed` pelas datas (`registration_opens_ms`/`registration_closes_ms`); não toca o resto | `tournaments` (`status`, `schedule_change`, `schedule_changed_ms`, `updated_at`) |
+| `tournamentScheduleNotify` | `onDocumentUpdated tournaments/{id}` (só com mudança de status) | torneio **público** que abre: aviso `tournament_open` à comunidade, uma vez (`registrations_open_notified` gravado antes); virada pela data: aviso ao criador e aos `tournament_admins` | `notifications` (`origin: 'server'`), `tournaments.registrations_open_notified` |
+
+A decisão (`dueScheduleChange`) é cópia de `src/modules/tournament/domain/registrationWindow.js`, com teste de paridade em `functions/tournamentSchedule.test.js`. Ver `docs/56-TORNEIO-RASCUNHO-E-PRAZOS.md`.
+
 ### 7.1 Erros do navegador → Error Reporting (`clientErrorReport`)
 
 A única função **HTTP** (`onRequest`, `invoker: 'public'`, `maxInstances: 2`,

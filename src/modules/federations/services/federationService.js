@@ -30,6 +30,7 @@ import { SANCTION_ORIGIN, SANCTION_WITHDRAW_PATCH, buildSanctionRequest, sanctio
 import { normalizeRankingConfig, resultSeason, seasonClosed, seasonLastDay, tournamentDay, validateTiers } from '../domain/officialRanking.js';
 import { staffPerms } from '../domain/staff.js';
 import { modalityPlacement, registrationAllPeople } from '@/modules/tournament/domain/podium.js';
+import { VISIBLE_TOURNAMENT_STATUSES } from '@/modules/tournament/domain/constants.js';
 import { availableModules, fedModuleOn, isFederationPublic, normalizeFederationBranding, normalizeFederationRules, normalizeModules, validateFederationInput, validateFederationPayment, validateFederationPublicInput } from '../domain/federation.js';
 import { docLabel, documentStoragePath, validateDocumentFile } from '../domain/privateData.js';
 import { validateValidUntil } from '../domain/regularity.js';
@@ -694,7 +695,8 @@ export async function answerAffiliationInvite(affiliation, accept, { uid } = {})
  * chegava a Chancelas nem à página da federação.
  */
 export async function listFederationTournaments(fedId) {
-  const q = query(collection(db, 'tournaments'), where('federation_id', '==', fedId));
+  // Rascunho só a equipe do torneio vê: a federação recebe o pedido publicado.
+  const q = query(collection(db, 'tournaments'), where('federation_id', '==', fedId), where('status', 'in', VISIBLE_TOURNAMENT_STATUSES));
   return (await getDocs(q)).docs.map(toDoc).filter((tt) => tt.archived !== true);
 }
 

@@ -16,7 +16,7 @@ import { dataCurta } from '../../federations/referees/refUi';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
-const TOM = { draft: 'neutral', registrations_open: 'green', registrations_closed: 'amber', in_progress: 'blue', finished: 'neutral', cancelled: 'red' };
+const TOM = { draft: 'neutral', published: 'blue', registrations_open: 'green', registrations_closed: 'amber', in_progress: 'blue', finished: 'neutral', cancelled: 'red' };
 
 const periodo = (x) => (x.ends_at && x.ends_at !== x.starts_at ? `${dataCurta(x.starts_at)} – ${dataCurta(x.ends_at)}` : dataCurta(x.starts_at));
 

@@ -45,6 +45,8 @@ import { useRespondPartnerInvite, useSelfCheckIn } from '@/modules/tournament/ho
 import { toast } from 'sonner';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { isPaymentOpen, registrationBlockReason } from '@/modules/tournament/domain/registrationWindow';
+import { formatInstant } from './RegistrationSchedule';
 import { t, fmtData } from '@/core/i18n';
 
 function formatDate(value) {
@@ -115,7 +117,7 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
 
   const startsAt = formatDate(tournament.starts_at);
   const endsAt = formatDate(tournament.ends_at);
-  const deadline = formatDate(tournament.registration_deadline);
+  const deadline = formatInstant(tournament.registration_closes_ms) || formatDate(tournament.registration_deadline);
 
   const infoModality = modalities.find((m) => m.id === infoModalityId) || null;
   const registerModality = modalities.find((m) => m.id === registerModalityId) || null;
@@ -256,7 +258,10 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   const alreadyRegistered = allRegistrations.some(
     (r) => r.modality_id === modality.id && registrationIncludesUid(r, currentUserId),
   );
-  const canRegister = isAdmin || isPublic || hasPrivateAccess;
+  // Fora da janela (rascunho, antes de abrir, depois de encerrar) só a equipe
+  // do torneio inscreve; a pessoa vê o motivo no lugar do botão.
+  const windowBlock = isAdmin ? null : registrationBlockReason(tournament);
+  const canRegister = !windowBlock && (isAdmin || isPublic || hasPrivateAccess);
   const modalityRegs = allRegistrations.filter((r) => r.modality_id === modality.id);
   const partnerInvitesOn = true;
   const paymentOn = true;
@@ -276,6 +281,8 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
     && tournamentHasPixConfig(tournament)
     && myRegistration
     && myRegistration.status === REGISTRATION_STATUS.PENDING_PAYMENT
+    // O pagamento fica à vista da abertura até o prazo para pagamento.
+    && isPaymentOpen(tournament)
     && (myRegistration.created_by === currentUserId || myRegistration.player_a_user_id === currentUserId),
   );
 
@@ -427,7 +434,9 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
                 : isAdmin
                   ? t('Como admin, você pode adicionar jogadores diretamente por aqui.')
                   : t('Abra o diálogo para concluir sua inscrição nesta modalidade.')
-              : t('Modalidade bloqueada até que o código de acesso do torneio privado seja validado.')}
+              : windowBlock
+                ? t(windowBlock)
+                : t('Modalidade bloqueada até que o código de acesso do torneio privado seja validado.')}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -472,7 +481,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
                     {slotsFull && !isAdmin ? t('Modalidade lotada') : t('Inscrever equipe')}
                   </V2Button>
                 ) : (
-                  <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>
+                  <V2Badge tone="neutral">{windowBlock ? t(windowBlock) : t('Privado: exige código')}</V2Badge>
                 )}
               </>
             ) : alreadyRegistered ? (
@@ -483,7 +492,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
                 {canWaitlist ? t('Entrar na lista de espera') : slotsFull ? t('Modalidade lotada') : isAdmin ? t('Inscrever jogador') : t('Inscrever-se')}
               </V2Button>
             ) : (
-              <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>
+              <V2Badge tone="neutral">{windowBlock ? t(windowBlock) : t('Privado: exige código')}</V2Badge>
             )}
           </div>
         </div>

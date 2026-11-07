@@ -547,7 +547,7 @@ const GUIAS_BASE = [
         route: '/torneios/criar',
         target: 'criar-torneio-datas',
         title: tk('Datas e prazo'),
-        body: tk('Início, fim e o fim das inscrições.'),
+        body: tk('Início e fim do torneio. Logo abaixo: quando as inscrições abrem, encerram e até quando se paga.'),
       },
       {
         id: 'criar',
@@ -555,7 +555,7 @@ const GUIAS_BASE = [
         target: 'criar-torneio-criar',
         title: tk('Criar'),
         body: [
-          tk('O torneio nasce como rascunho: só você o vê.'),
+          tk('O torneio nasce como rascunho: só você e os administradores dele o veem, até você tocar em "Publicar torneio".'),
           tk('Depois vêm as modalidades, as inscrições e o sorteio — no console de gestão, em "Gerenciar torneio".'),
         ],
         tip: tk('No console, "Como funciona" abre o guia completo da organização.'),

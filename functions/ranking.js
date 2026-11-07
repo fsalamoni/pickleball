@@ -129,7 +129,7 @@ function toMillis(value) {
  * porque o pacote de Functions é publicado isolado; mudar um só faz o servidor
  * e a tela discordarem sobre quem está no ranking.
  */
-const RANKING_ELIGIBLE_STATUSES = ['registrations_open', 'registrations_closed', 'in_progress', 'finished'];
+const RANKING_ELIGIBLE_STATUSES = ['published', 'registrations_open', 'registrations_closed', 'in_progress', 'finished'];
 
 /**
  * O torneio conta para o ranking?

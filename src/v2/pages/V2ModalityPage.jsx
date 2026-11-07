@@ -19,6 +19,7 @@ import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState, V2BackLink, V2P
 import { cn } from '@/core/lib/utils';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
+import { registrationBlockReason } from '@/modules/tournament/domain/registrationWindow';
 import { t } from '@/core/i18n';
 
 function competitionLabel(modality) {
@@ -27,11 +28,11 @@ function competitionLabel(modality) {
   return TOURNAMENT_STAGE_TYPE_LABELS[stages[0]?.type] || t('Formato competitivo definido');
 }
 
-function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin, isTeam }) {
+function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin, isTeam, windowBlock }) {
   // Esta é a página do atleta: o CTA é a inscrição dele. O organizador inscreve
   // e edita equipes no painel (aba Inscrições), não por aqui.
   if (alreadyRegistered) return isTeam ? t('Sua equipe está inscrita') : t('Você já está inscrito');
-  if (!canRegister) return t('Torneio privado: exige código');
+  if (!canRegister) return windowBlock ? t(windowBlock) : t('Torneio privado: exige código');
   if (slotsFull && !isAdmin) return t('Modalidade lotada');
   if (isTeam) return t('Inscrever equipe');
   return isAdmin ? t('Inscrever jogador') : t('Inscrever-se');
@@ -94,9 +95,11 @@ export default function V2ModalityPage() {
   const slotsFull = isRegistrationCapacityReached(occupiedCount, modality.max_entries);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
-  const canRegister = !!isAdmin || isPublic || hasPrivateAccess;
+  // Fora da janela (rascunho, antes de abrir, depois de encerrar) só a equipe inscreve.
+  const windowBlock = isAdmin ? null : registrationBlockReason(tournament);
+  const canRegister = !!isAdmin || (!windowBlock && (isPublic || hasPrivateAccess));
   const alreadyRegistered = registrations.some((r) => registrationIncludesUid(r, user?.uid));
-  const registerLabel = registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin: !!isAdmin, isTeam });
+  const registerLabel = registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin: !!isAdmin, isTeam, windowBlock });
 
   const badges = [
     isTeam ? t('Equipes') : MODALITY_FORMAT_LABELS[modality.format],
@@ -194,7 +197,7 @@ export default function V2ModalityPage() {
               </div>
               {canRegister ? (
                 <V2Button onClick={() => setRegisterOpen(true)} disabled={alreadyRegistered || (slotsFull && !isAdmin)}><Plus className="h-4 w-4" /> {registerLabel}</V2Button>
-              ) : <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>}
+              ) : <V2Badge tone="neutral">{windowBlock ? t(windowBlock) : t('Privado: exige código')}</V2Badge>}
             </div>
             <div className="mt-5">
               <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink"><Users className="h-4 w-4" /> {t('Inscritos confirmados')}</h4>
