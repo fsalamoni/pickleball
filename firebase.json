@@ -81,6 +81,19 @@
       ],
       "headers": [
         {
+          "source": "/ponte/*.@(ps1|sh)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
           "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
           "headers": [
             {

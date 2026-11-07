@@ -653,4 +653,11 @@ export default {
   "a câmera saiu do lugar: calibrar de novo": "the camera moved: calibrate again",
   "imagem escura demais": "image too dark",
   "Uma aba ou uma tela por câmera: escolha a posição, e na lista de câmeras pegue a câmera daquela posição. Para a próxima, toque em \"Mais uma câmera nesta tela\".": "One tab or one screen per camera: pick the position, and in the camera list choose that position's camera. For the next one, tap \"One more camera on this screen\".",
+  "Um comando só: aperte a tecla Windows, digite PowerShell, abra, cole o comando abaixo e aperte Enter.": "Just one command: press the Windows key, type PowerShell, open it, paste the command below and press Enter.",
+  "Um comando só: abra o Terminal (no Mac, Command + Espaço e digite Terminal), cole o comando abaixo e aperte Enter.": "Just one command: open the Terminal (on a Mac, Command + Space and type Terminal), paste the command below and press Enter.",
+  "Comando copiado.": "Command copied.",
+  "Copiar o comando de instalação da ponte": "Copy the bridge install command",
+  "Ele baixa a go2rtc da página oficial, cria o arquivo da ponte, deixa a ponte ligando sozinha com o computador e já a liga. Não precisa de administrador, e rodar de novo atualiza sem perder as câmeras.": "It downloads go2rtc from the official page, creates the bridge file, makes the bridge start with the computer and starts it now. No administrator needed, and running it again updates without losing the cameras.",
+  "Prefiro fazer à mão": "I prefer to do it by hand",
+  "Fechar o passo a passo à mão": "Close the manual steps",
 };

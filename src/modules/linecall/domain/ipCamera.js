@@ -159,6 +159,20 @@ export const BRIDGE_DOWNLOADS = Object.freeze([
 ]);
 export const bridgeDownloadUrl = (file) => `https://github.com/AlexxIT/go2rtc/releases/latest/download/${file}`;
 
+/**
+ * O instalador de UM comando (`public/ponte/instalar.ps1|sh`): baixa a go2rtc,
+ * cria o arquivo mínimo, deixa ligando sozinha e liga. A pessoa copia, cola
+ * no PowerShell (Windows) ou no Terminal (Mac/Linux) e aperta Enter.
+ * @param {string} os  um id de `BRIDGE_DOWNLOADS`
+ * @param {string} origin  de onde a página foi aberta (o instalador vem do mesmo site)
+ */
+export function bridgeInstallCommand(os, origin) {
+  const base = String(origin || 'https://picklerush.web.app').replace(/\/+$/, '');
+  return os === 'win'
+    ? { shell: 'powershell', text: `irm ${base}/ponte/instalar.ps1 | iex` }
+    : { shell: 'terminal', text: `curl -fsSL ${base}/ponte/instalar.sh | sh` };
+}
+
 /** O sistema deste aparelho, pelo que o navegador conta (para sugerir o download). */
 export function guessBridgeOs(ua = '', platform = '') {
   const s = `${ua} ${platform}`;

@@ -21,8 +21,9 @@ import {
   bridgeBase, webrtcUrl, withOnvifCredentials, freeStreamName, codecPlaysInBrowser, BRIDGE_DEFAULT_BASE,
 } from '@/modules/linecall/domain/bridgeDiscovery';
 import {
-  go2rtcBaseConfig, bridgeAutostart, guessBridgeOs, BRIDGE_DOWNLOADS, bridgeDownloadUrl,
+  go2rtcBaseConfig, bridgeAutostart, guessBridgeOs, BRIDGE_DOWNLOADS, bridgeDownloadUrl, bridgeInstallCommand,
 } from '@/modules/linecall/domain/ipCamera';
+import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import {
   bridgeStreams, discoverOnvif, cameraProfiles, addBridgeStream, probeStreamCodec,
 } from '@/modules/linecall/services/bridgeService';
@@ -52,6 +53,7 @@ export default function BridgeFinder({ savedUrl, suggestedName, onOpen }) {
   const [passo, setPasso] = useState(null); // null | 'adding' | 'probing'
   const [aviso, setAviso] = useState(null); // { tone, text }
   const [manual, setManual] = useState(false);
+  const [aMao, setAMao] = useState(false);
 
   const conferir = useCallback(async () => {
     if (!bridge) { setEstado('offline'); return; }
@@ -128,6 +130,7 @@ export default function BridgeFinder({ savedUrl, suggestedName, onOpen }) {
     baixarArquivo(s.file, s.text, s.mime);
   };
   const download = BRIDGE_DOWNLOADS.find((d) => d.id === os) || BRIDGE_DOWNLOADS[0];
+  const comando = bridgeInstallCommand(os, globalThis.location?.origin);
 
   return (
     <div className="space-y-3" data-dica="linhas-ponte">
@@ -145,13 +148,32 @@ export default function BridgeFinder({ savedUrl, suggestedName, onOpen }) {
       {estado === 'offline' && bridge && (
         <div className="space-y-3 rounded-2xl border border-gray-100 bg-white p-3">
           <p className="text-sm text-ink">{t('A ponte ainda não respondeu. Para ligá-la neste computador, uma vez só:')}</p>
-          <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-600">
+          <div className="flex flex-wrap items-center gap-2">
+            <V2Select value={os} onChange={(e) => setOs(e.target.value)} aria-label={t('Sistema do computador da ponte')} className="w-auto">
+              {BRIDGE_DOWNLOADS.map((d) => <option key={d.id} value={d.id}>{t(OS_LABEL[d.id])}</option>)}
+            </V2Select>
+          </div>
+          {/* O comando monta a ponte NESTE computador; ponte em outro da rede vai pelo passo a passo. */}
+          {!bridge.local && <div className="space-y-2" data-dica="linhas-ponte-comando">
+            <p className="text-sm font-semibold text-ink">
+              {comando.shell === 'powershell'
+                ? t('Um comando só: aperte a tecla Windows, digite PowerShell, abra, cole o comando abaixo e aperte Enter.')
+                : t('Um comando só: abra o Terminal (no Mac, Command + Espaço e digite Terminal), cole o comando abaixo e aperte Enter.')}
+            </p>
+            <CopyCodeButton code={comando.text} size="sm" successMessage={t('Comando copiado.')} label={t('Copiar o comando de instalação da ponte')} className="max-w-full break-all text-left font-mono" />
+            <p className="text-sm text-gray-500">
+              {t('Ele baixa a go2rtc da página oficial, cria o arquivo da ponte, deixa a ponte ligando sozinha com o computador e já a liga. Não precisa de administrador, e rodar de novo atualiza sem perder as câmeras.')}
+            </p>
+          </div>}
+          {!bridge.local && (
+            <V2Button type="button" size="sm" variant="ghost" aria-expanded={aMao} onClick={() => setAMao(!aMao)}>
+              {aMao ? t('Fechar o passo a passo à mão') : t('Prefiro fazer à mão')}
+            </V2Button>
+          )}
+          {(aMao || bridge.local) && <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-600">
             <li className="space-y-2">
               <span>{t('Baixe a go2rtc (programa gratuito, um arquivo só) para o seu sistema:')}</span>
               <div className="flex flex-wrap items-center gap-2">
-                <V2Select value={os} onChange={(e) => setOs(e.target.value)} aria-label={t('Sistema do computador da ponte')} className="w-auto">
-                  {BRIDGE_DOWNLOADS.map((d) => <option key={d.id} value={d.id}>{t(OS_LABEL[d.id])}</option>)}
-                </V2Select>
                 <a href={bridgeDownloadUrl(download.file)} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-3 py-1.5 text-sm font-semibold text-white coarse:min-h-11">
                   <Download className="h-4 w-4" aria-hidden="true" /> {t('Baixar a go2rtc')}
@@ -174,7 +196,7 @@ export default function BridgeFinder({ savedUrl, suggestedName, onOpen }) {
                 </V2Button>
               </div>
             </li>
-          </ol>
+          </ol>}
           <p className="flex items-center gap-2 text-sm text-gray-500" aria-live="polite">
             <RefreshCw className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
             {t('Esta tela confere sozinha e segue quando a ponte abrir. Se o Chrome perguntar sobre a rede local, permita.')}

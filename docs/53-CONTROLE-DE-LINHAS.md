@@ -342,7 +342,21 @@ câmera a comprar): Claude Doc "Câmeras IP e Wi-Fi no controle de linhas".
 câmera pela ponte (ou ligar a ponte)" fala com a go2rtc pela API dela, sem a
 pessoa editar arquivo:
 
-- **Ponte fora do ar**: o download certo da go2rtc para o sistema
+- **Ponte fora do ar, neste computador: UM comando.** A tela mostra o comando
+  do sistema (`bridgeInstallCommand`) com botão de copiar — no Windows
+  `irm <site>/ponte/instalar.ps1 | iex` (PowerShell), no Mac/Linux/Raspberry
+  `curl -fsSL <site>/ponte/instalar.sh | sh`. Os scripts moram em
+  `public/ponte/` (servidos como `text/plain`, sem cache — `firebase.json`) e
+  fazem tudo: baixam a go2rtc da página oficial, criam o `go2rtc.yaml` mínimo
+  **só se ainda não existe** (rodar de novo atualiza a go2rtc sem perder as
+  câmeras), deixam a ponte ligando sozinha (tarefa ao entrar, `launchd`,
+  `systemd --user`; sem systemd ela liga agora e o script diz como deixar
+  automática) e a ligam. Sem administrador; no Windows só a go2rtc da pasta da
+  ponte é parada. `bridgeInstaller.test.js` confere que os scripts criam a
+  MESMA ponte mínima da tela, baixam os mesmos arquivos e são só ASCII. Ponte
+  em OUTRO computador da rede e quem prefere à mão ("Prefiro fazer à mão")
+  seguem o passo a passo abaixo.
+- **Ponte fora do ar, passo a passo**: o download certo da go2rtc para o sistema
   (`guessBridgeOs`, `BRIDGE_DOWNLOADS`, página de versões oficial), o arquivo
   MÍNIMO (`go2rtcBaseConfig`: só `api.listen` e `origin: '*'`, sem câmera) e o
   **"liga sozinha"** (`bridgeAutostart`): no Windows um `.cmd` que registra a

@@ -653,4 +653,11 @@ export default {
   "a câmera saiu do lugar: calibrar de novo": "la cámara se movió: calibrar de nuevo",
   "imagem escura demais": "imagen demasiado oscura",
   "Uma aba ou uma tela por câmera: escolha a posição, e na lista de câmeras pegue a câmera daquela posição. Para a próxima, toque em \"Mais uma câmera nesta tela\".": "Una pestaña o una pantalla por cámara: elija la posición y en la lista de cámaras tome la cámara de esa posición. Para la siguiente, toque \"Una cámara más en esta pantalla\".",
+  "Um comando só: aperte a tecla Windows, digite PowerShell, abra, cole o comando abaixo e aperte Enter.": "Un solo comando: presiona la tecla Windows, escribe PowerShell, ábrelo, pega el comando de abajo y presiona Enter.",
+  "Um comando só: abra o Terminal (no Mac, Command + Espaço e digite Terminal), cole o comando abaixo e aperte Enter.": "Un solo comando: abre la Terminal (en Mac, Command + Espacio y escribe Terminal), pega el comando de abajo y presiona Enter.",
+  "Comando copiado.": "Comando copiado.",
+  "Copiar o comando de instalação da ponte": "Copiar el comando de instalación del puente",
+  "Ele baixa a go2rtc da página oficial, cria o arquivo da ponte, deixa a ponte ligando sozinha com o computador e já a liga. Não precisa de administrador, e rodar de novo atualiza sem perder as câmeras.": "Descarga go2rtc de la página oficial, crea el archivo del puente, hace que el puente arranque solo con la computadora y lo enciende ya. No necesita administrador, y ejecutarlo de nuevo actualiza sin perder las cámaras.",
+  "Prefiro fazer à mão": "Prefiero hacerlo a mano",
+  "Fechar o passo a passo à mão": "Cerrar los pasos a mano",
 };
