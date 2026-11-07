@@ -10,7 +10,7 @@
  * quadro), que não sai do aparelho; para a central vai só a marcação.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Camera, Crosshair, Palette, Play, Pause, Trash2, Check, Radio, AlertTriangle,
   Move, Target, ScanSearch, Volume2, VolumeX, Film, BatteryLow, Magnet,
@@ -32,7 +32,9 @@ import { cameraSource, CAMERA_SOURCE_TIP } from '@/modules/linecall/domain/setup
 import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
 import { pickHeadline } from '@/modules/linecall/domain/fusion';
 import { hasReplay } from '@/modules/linecall/domain/replay';
+import { stationCheck, STATION_NEXT } from '@/modules/linecall/domain/stationCheck';
 import CourtDiagram from './CourtDiagram';
+import IpBridgeWizard from './IpBridgeWizard';
 import CalibrationView from './CalibrationView';
 import PlacementGuide, { DeviceTips } from './PlacementGuide';
 import LanceReplay from './LanceReplay';
@@ -85,6 +87,31 @@ const IP_ERROR = {
 };
 const IP_OPTION = '__ip__';
 const IP_PREF = 'linhas:camera-ip:ponte';
+/** A última câmera aberta neste aparelho (id do sistema, `padrao` ou a ponte). */
+const LAST_PREF = 'linhas:camera:ultima';
+
+/** A câmera já foi permitida para este site? (sem perguntar nada à pessoa) */
+async function cameraPermitida() {
+  try {
+    const st = await navigator.permissions?.query?.({ name: 'camera' });
+    return st?.state === 'granted';
+  } catch { return false; }
+}
+
+const NEXT_TEXT = {
+  [STATION_NEXT.OPEN]: { title: tk('Abra a câmera'), text: tk('Escolha a câmera e toque em "Abrir câmera". O navegador pede permissão na primeira vez.'), action: tk('Abrir câmera') },
+  [STATION_NEXT.CAMERA]: { title: tk('Troque de câmera'), text: tk('Esta câmera entrega menos do que o mínimo (30 quadros/s e 720p). Escolha outra na lista.'), action: null },
+  [STATION_NEXT.MARK]: { title: tk('Marque os quatro pontos da quadra'), text: tk('Toque nos cantos na ordem do desenho, na borda de fora da linha. Leva cerca de um minuto.'), action: tk('Começar a marcar') },
+  [STATION_NEXT.REMARK]: { title: tk('Marque os pontos de novo'), text: tk('A calibração não confere com a quadra (a câmera mexeu ou o erro passou de 6 cm).'), action: tk('Marcar de novo') },
+  [STATION_NEXT.CHECK]: { title: tk('Confira com o 5º ponto'), text: tk('Um toque a mais diz o erro da calibração em centímetros. Sem isso ninguém sabe se a câmera mede certo.'), action: tk('Conferir agora') },
+  [STATION_NEXT.START]: { title: tk('Tudo pronto: comece a analisar'), text: tk('A câmera passa a marcar os lances e a mandar para a central.'), action: tk('Começar a analisar') },
+};
+const ITEM_TEXT = {
+  camera: tk('Câmera'), moved: tk('A câmera saiu do lugar'), calibration: tk('Calibração'), far: tk('Fundo longe demais (mais de 3 cm por pixel)'),
+  analysis: tk('Análise'), pose: tk('Detector de pés'), light: tk('Luz'), battery: tk('Bateria'), central: tk('Ligação com a central'),
+};
+const LEVEL_TONE = { ok: 'green', todo: 'neutral', warn: 'amber', block: 'red' };
+const LEVEL_TEXT = { ok: tk('ok'), todo: tk('falta'), warn: tk('atenção'), block: tk('resolver') };
 function Step({ n, done, active, title, children, dica }) {
   return (
     <li className={cn('flex gap-3', !active && !done && 'opacity-60')} data-dica={dica}>
@@ -130,8 +157,10 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   // Câmera IP: o endereço da ponte fica só neste aparelho (nunca no banco).
   const [ponte, setPonte] = useState(() => readViewPreference(user?.uid, IP_PREF) || IP_BRIDGE_EXAMPLE);
   const [ponteErro, setPonteErro] = useState(null);
-  const abrir = () => {
-    if (deviceId !== IP_OPTION) { s.start(deviceId || undefined); return; }
+  const [assistente, setAssistente] = useState(false);
+  const abrir = (escolha = deviceId) => {
+    writeViewPreference(user?.uid, LAST_PREF, escolha || 'padrao');
+    if (escolha !== IP_OPTION) { s.start(escolha || undefined); return; }
     const r = parseBridgeUrl(ponte);
     setPonteErro(r.ok ? null : r.error);
     if (!r.ok) return;
@@ -139,6 +168,32 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
     s.start(r);
   };
   const [mode, setMode] = useState(null); // 'corners' | 'adjust' | 'check' | 'inspect' | 'color' | null
+
+  // Quem volta a esta posição já calibrada e com a câmera permitida não
+  // repete nada: a mesma câmera reabre sozinha e falta só "Começar a analisar".
+  const reabriu = useRef(false);
+  useEffect(() => {
+    if (reabriu.current || s.stream || s.calib.corners.length !== 4) return undefined;
+    reabriu.current = true;
+    const ultima = readViewPreference(user?.uid, LAST_PREF);
+    if (!ultima) return undefined;
+    let vivo = true;
+    cameraPermitida().then((ok) => {
+      if (!vivo || !ok) return;
+      const escolha = ultima === 'padrao' ? '' : ultima;
+      setDeviceId(escolha);
+      abrir(escolha);
+    });
+    return () => { vivo = false; };
+  }, [s.calib.corners.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Câmera aberta e nada marcado: já entra na marcação (um toque a menos).
+  const abriuAgora = useRef(null);
+  useEffect(() => {
+    if (!s.stream || abriuAgora.current === s.stream) return;
+    abriuAgora.current = s.stream;
+    if (s.calib.corners.length === 0 && !mode) setMode('corners');
+  }, [s.stream]); // eslint-disable-line react-hooks/exhaustive-deps
   // Resultado do "Grudar na linha" (quantos cantos andaram); mexer nos pontos de outro jeito o apaga.
   const [snapped, setSnapped] = useState(null);
   useEffect(() => { if (mode) setSnapped(null); }, [mode]);
@@ -177,6 +232,20 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
   // Pausar ao mexer na calibração: análise com pontos mudando mede errado.
   useEffect(() => { if (mode && mode !== 'inspect' && mode !== 'color') s.setRunning(false); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // O diagnóstico deste aparelho e a UMA coisa a fazer agora (`domain/stationCheck.js`).
+  const diag = stationCheck({
+    hasStream: Boolean(s.stream), cameraChecks: s.cameraChecks, calibrated: calibrada, checkLevel: s.check?.level || null,
+    cmPerPixel: s.cmPerPixel, running: s.running, fps: s.fps, frameMs: s.frameMs, moved: mexeu, dark: s.health?.dark,
+    battery: s.battery, shareError: s.shareError, usesPose: s.position.usesPose, poseState: s.poseState,
+  });
+  const fazerProximo = () => {
+    if (diag.next === STATION_NEXT.OPEN) abrir();
+    else if (diag.next === STATION_NEXT.MARK || diag.next === STATION_NEXT.REMARK) { s.setRunning(false); s.resetCorners(); setMode('corners'); }
+    else if (diag.next === STATION_NEXT.CHECK) setMode('check');
+    else if (diag.next === STATION_NEXT.START) { setMode(null); s.setRunning(true); }
+  };
+  const proximo = diag.next ? NEXT_TEXT[diag.next] : null;
 
   let hint = null;
   if (mode === 'corners' && nextPoint) hint = t('Ponto {n} de 4: toque em {p}. Aproxime com dois dedos ou com o +; com zoom o ponto continua preso na quadra.', { n: s.calib.corners.length + 1, p: t(POINT_LABEL[nextPoint]) });
@@ -256,6 +325,36 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
         </div>
       </V2Surface>
 
+      <V2Surface className="space-y-3 p-4" aria-live="polite" data-dica="linhas-proximo-passo">
+        {proximo ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('Próximo passo')}</p>
+              <p className="text-base font-semibold text-ink">{t(proximo.title)}</p>
+              <p className="text-sm text-gray-600">{t(proximo.text)}</p>
+            </div>
+            {proximo.action && !(diag.next === STATION_NEXT.START && bloqueada) && !(diag.next === STATION_NEXT.MARK && mode === 'corners') && (
+              <V2Button type="button" onClick={fazerProximo}>{t(proximo.action)}</V2Button>
+            )}
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 text-base font-semibold text-ink">
+            <Check className="h-5 w-5 text-green-600" aria-hidden="true" />
+            {diag.ready ? t('Câmera pronta e analisando') : t('Câmera analisando')}
+          </p>
+        )}
+        {s.stream && (
+          <ul className="flex flex-wrap gap-2" aria-label={t('Diagnóstico deste aparelho')}>
+            {diag.items.map((i) => (
+              <li key={i.code}><V2Badge tone={LEVEL_TONE[i.level]}>{t(ITEM_TEXT[i.code])}: {t(LEVEL_TEXT[i.level])}</V2Badge></li>
+            ))}
+            {s.running && Number.isFinite(s.frameMs) && (
+              <li><V2Badge tone={s.frameMs > 33 ? 'amber' : 'neutral'}>{t('{n} ms por quadro', { n: s.frameMs })}</V2Badge></li>
+            )}
+          </ul>
+        )}
+      </V2Surface>
+
       <V2Surface className="space-y-4 p-4">
         <ol className="space-y-4">
           <Step n={1} done={Boolean(s.stream)} active={!s.stream} title={t('Abra a câmera')} dica="linhas-abrir-camera">
@@ -268,7 +367,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                   <option value={IP_OPTION}>{t('Câmera IP (ponte local)')}</option>
                 </V2Select>
               </label>
-              <V2Button type="button" onClick={abrir}>
+              <V2Button type="button" onClick={() => abrir()}>
                 <Camera className="mr-1.5 h-4 w-4" /> {s.stream ? t('Trocar câmera') : t('Abrir câmera')}
               </V2Button>
             </div>
@@ -292,6 +391,15 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 <p className="text-sm text-gray-500">
                   {t('A ponte roda num computador da arena e transforma o vídeo da câmera para o navegador. Use o Chrome nesse computador; o endereço fica guardado só aqui. Passo a passo na ajuda do controle de linhas.')}
                 </p>
+                <V2Button type="button" size="sm" variant="secondary" aria-expanded={assistente} onClick={() => setAssistente(!assistente)}>
+                  {assistente ? t('Fechar o assistente') : t('Ainda não tenho a ponte: gerar o arquivo dela')}
+                </V2Button>
+                {assistente && (
+                  <IpBridgeWizard
+                    suggestedName={`quadra ${s.position.id}`}
+                    onUse={(url) => { setPonte(url); setPonteErro(null); }}
+                  />
+                )}
               </div>
             )}
             {fonteDica && (

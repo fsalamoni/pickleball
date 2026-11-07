@@ -78,8 +78,8 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv || !v?.videoWidth) return;
-    cv.width = v.videoWidth;
-    cv.height = v.videoHeight;
+    // Redimensionar realoca o canvas (Full HD = 8 MB): só quando o vídeo muda de tamanho.
+    if (cv.width !== v.videoWidth || cv.height !== v.videoHeight) { cv.width = v.videoWidth; cv.height = v.videoHeight; }
     const ctx = cv.getContext('2d');
     ctx.clearRect(0, 0, cv.width, cv.height);
     // Com zoom, o traço afina na mesma conta: segue fino na tela e não cobre a linha.
