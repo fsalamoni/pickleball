@@ -164,3 +164,27 @@ describe('as marcações', () => {
     await assertFails(updateDoc(doc(como(DONO), `${Q1}/line_calls/c0`), { ...dec(DONO, 'in'), call: 'out' }));
   });
 });
+
+describe('o convite da câmera sem conta (QR, docs/53 §5c)', () => {
+  const H = 'a'.repeat(64);
+  const inv = (extra = {}) => ({ position: 'fundo_a', exp_ms: Date.now() + 3600000, created_at: serverTimestamp(), ...extra });
+  const ref = (uid, id = H) => doc(como(uid), `${Q1}/line_invites/${id}`);
+
+  it('⭐ quem organiza (o nomeado também) gera, lê e apaga o convite', async () => {
+    await assertSucceeds(setDoc(ref(NOMEADO), inv()));
+    await assertSucceeds(getDocs(collection(como(DONO), `${Q1}/line_invites`)));
+    await assertSucceeds(deleteDoc(ref(DONO)));
+  });
+
+  it('🔴 quem participa ou só vê não gera nem lê', async () => {
+    await assertFails(setDoc(ref(ATLETA), inv()));
+    await assertFails(getDocs(collection(como(ESTRANHO), `${Q1}/line_invites`)));
+  });
+
+  it('🔴 validade de no máximo 12 h, id de hash, sem chave a mais', async () => {
+    await assertFails(setDoc(ref(DONO), inv({ exp_ms: Date.now() + 13 * 3600000 })));
+    await assertFails(setDoc(ref(DONO), inv({ exp_ms: Date.now() - 1000 })));
+    await assertFails(setDoc(ref(DONO, 'token-cru'), inv()));
+    await assertFails(setDoc(ref(DONO), inv({ token: 'x' })));
+  });
+});

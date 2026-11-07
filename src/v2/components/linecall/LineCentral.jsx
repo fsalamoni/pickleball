@@ -226,7 +226,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
                     ) : (
                       <>
                         <V2Badge tone="neutral">{t('Sem câmera')}</V2Badge>
-                        <CameraInvite gameDayId={gameDay.id} position={p} positionLabel={t(CAMERA_POSITIONS[p].label)} linkBase={linkBase} />
+                        <CameraInvite gameDayId={gameDay.id} position={p} positionLabel={t(CAMERA_POSITIONS[p].label)} linkBase={linkBase} host={gameDay.id} canGuest={podeLimpar} />
                       </>
                     )}
                   </li>

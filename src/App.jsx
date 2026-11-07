@@ -17,6 +17,7 @@ const Landing = lazy(() => import('@/v2/pages/V2Landing'));
 const Login = lazy(() => import('@/v2/pages/V2Login'));
 const ReferralLanding = lazy(() => import('@/v2/pages/V2ReferralLanding'));
 const CareerInvite = lazy(() => import('@/v2/pages/V2CareerInvite'));
+const LineGuestCamera = lazy(() => import('@/v2/pages/V2LineGuestCamera'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const Telao = lazy(() => import('@/pages/Telao'));
@@ -190,6 +191,12 @@ export default function App() {
               {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).
                   Pública: quem chega por aqui ainda não tem conta. */}
               <Route path="/r/:code" element={<ReferralLanding />} />
+              {/* Câmera do controle de linhas pelo QR, SEM conta (docs/53 §5c):
+                  o servidor confere o convite a cada sinal e marcação. */}
+              <Route
+                path="/linhas/convidado"
+                element={<V2RouteBoundary name="linhas-convidado"><LineGuestCamera /></V2RouteBoundary>}
+              />
 
               {/* Redirects de compatibilidade com URLs legadas (V1) */}
               <Route path="/inicio" element={<Navigate to="/" replace />} />

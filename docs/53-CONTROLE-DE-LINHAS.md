@@ -337,6 +337,34 @@ captura (`captureTime` do `requestVideoFrameCallback`, que o Chrome calcula
 pelos relatórios RTCP) em vez da hora de chegada; HTTPS na ponte para
 tablet/iPhone; e a caixa nativa na quadra (60–120 quadros, modelo treinado).
 
+## 5c. Câmera sem conta pelo QR (`lineGuestService.js`, `functions/lineGuest.js`)
+
+Na central, em cada posição sem câmera, "Chamar um aparelho" tem dois jeitos:
+**Com conta** (o link de sempre: o aparelho entra com uma conta que pode ser
+câmera) e, para quem organiza, **Sem conta**: escolhe a validade (3, 6 ou
+12 h), toca em "Gerar QR sem conta", e qualquer celular que ler o QR vira a
+câmera DAQUELA posição, sem login — o aparelho extra na beira da quadra é de
+qualquer um. "Cancelar este QR" apaga o convite e a câmera é recusada no
+próximo sinal.
+
+- O token (24 bytes aleatórios) vai só no **fragmento** do link
+  (`/linhas/convidado#h=<quadra>&t=<token>`), que o navegador não manda a
+  servidor nenhum nem fica em registro de acesso. O banco guarda
+  `{quadra}/line_invites/{sha256(token)}` com `position`, `exp_ms` e
+  `created_at`; a regra (`lcInv`) só deixa quem organiza a quadra criar, ler e
+  apagar, e a validade não passa de 12 h.
+- A página `/linhas/convidado` (`V2LineGuestCamera`, fora do layout do app,
+  sem login) pergunta à função `lineGuest` se o QR vale (`peek`) e abre a
+  MESMA estação de câmera (`CameraStation` com `sink`): o sinal e as marcações
+  vão pela função (`beat`, `call`, `leave`), que confere convite, quadra
+  ligada e flag a cada chamada e grava só os campos de `lcCam`/`lcCall`, na
+  posição do convite, com `uid: guest_{16 do hash}` e nome "Convidado".
+- Vencido, cancelado, quadra desligada ou flag desligada: a tela diz "Este QR
+  não vale mais" (a mesma resposta para tudo). A calibração fica no aparelho,
+  como na câmera com conta.
+- Nada de pessoa é gravado: não entra na exclusão de conta. As câmeras e
+  marcações do convidado saem quando quem organiza limpa a quadra.
+
 ## 5a. Montagens — "Como você vai montar?" (`domain/setupKits.js`, `SetupGuide`)
 
 A entrada do controle de linhas mostra quatro kits, com passo a passo, prós e

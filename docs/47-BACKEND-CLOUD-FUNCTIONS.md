@@ -362,6 +362,20 @@ Reporting** agrupa, conta e avisa por e-mail quando aparece um erro novo
 hostil, teto); cliente em `src/core/domain/errorReport.test.js`. O deploy
 confere `POST /api/erro` → 204 depois de publicar (aviso, não falha).
 
+### 7.2 Câmera de linhas sem conta (`lineGuest`, `functions/lineGuest.js`)
+
+Callable **sem login** (flag `line_control`, docs/53 §5c). O celular que leu
+o QR de quem organiza a quadra manda por aqui o sinal "no ar" (`beat`), as
+marcações (`call`) e a saída (`leave`); `peek` diz se o QR vale, a posição,
+o arranjo e o nome da quadra. A cada chamada confere: caminho da quadra no
+formato (`game_days/{id}/line_courts/court-N` ou
+`tournament_line_courts/{id}`), o convite `line_invites/{sha256(token)}`
+existe e não venceu, a quadra está ligada e a flag também — senão a MESMA
+recusa. Grava com o Admin SDK só os campos de `lcCam`/`lcCall`, na posição DO
+CONVITE, com `uid: guest_{16 do hash}` e nome "Convidado"; marcação com a
+hora a mais de 10 min da de agora é recusada. Testes:
+`functions/lineGuest.test.js`.
+
 ## 7a. Carreira — a dupla confirma (flag `athlete_career`, `functions/career.js`)
 
 | Função | Gatilho | O que faz | Escreve |
