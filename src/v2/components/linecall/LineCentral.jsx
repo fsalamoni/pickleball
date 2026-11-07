@@ -12,7 +12,7 @@
 
 import React, { useCallback, useState } from 'react';
 import {
-  Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target, CheckCircle2, AlertTriangle, Bell, BellOff,
+  Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target, CheckCircle2, AlertTriangle, Bell, BellOff, Crosshair, Play, Pause,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
@@ -28,6 +28,9 @@ import { clearLineCalls, decideLance } from '@/modules/linecall/services/lineCal
 import CourtDiagram from './CourtDiagram';
 import CourtMark from './CourtMark';
 import CameraInvite from './CameraInvite';
+import RemoteCalibration from './RemoteCalibration';
+import { setCameraRun } from '@/modules/linecall/services/lineCalibService';
+import { camDocId } from '@/modules/linecall/services/lineCallSync';
 import CallFlash from './CallFlash';
 import { CALL_TEXT, CALL_TONE, CALL_LABEL, callLabel, callDetail, callSpoken } from './callLabels';
 import { cn } from '@/core/lib/utils';
@@ -126,6 +129,10 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
   const [confirmar, setConfirmar] = useState(false);
   const [limpando, setLimpando] = useState(false);
   const [aberto, setAberto] = useState(null);
+  // A posição sendo calibrada PELA CENTRAL (docs/53 §5d), uma câmera por vez.
+  const [calibrando, setCalibrando] = useState(null);
+  const comecarPausar = (c, run) => setCameraRun(gameDay.id, camDocId(c.uid, c.position), user?.uid, run)
+    .catch(() => toast.error(t('Não deu para falar com esta câmera. Ela está com a página aberta?')));
   // O lance grande é a MANCHETE (a mesma do telão): o mais grave dos últimos
   // segundos. O pé do saque é marcado na batida e chega com o quique do saque:
   // pela hora, a falta dele sumia atrás de um "Saque: dentro".
@@ -222,6 +229,20 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
                           </span>
                         )}
                         {c.name && <span className="text-xs text-gray-500">{c.name}</span>}
+                        {podeLimpar && (
+                          <span className="flex flex-wrap gap-1.5">
+                            <V2Button type="button" size="sm" variant={c.calibrated ? 'ghost' : 'secondary'} aria-pressed={calibrando === p} onClick={() => setCalibrando(calibrando === p ? null : p)}>
+                              <Crosshair className="mr-1.5 h-4 w-4" /> {t('Calibrar daqui')}
+                            </V2Button>
+                            {c.calibrated && (
+                              <V2Button type="button" size="sm" variant="ghost" onClick={() => comecarPausar(c, !c.analyzing)}>
+                                {c.analyzing
+                                  ? <><Pause className="mr-1.5 h-4 w-4" /> {t('Pausar')}</>
+                                  : <><Play className="mr-1.5 h-4 w-4" /> {t('Começar a analisar')}</>}
+                              </V2Button>
+                            )}
+                          </span>
+                        )}
                       </>
                     ) : (
                       <>
@@ -236,6 +257,15 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
           </div>
         </div>
       </V2Surface>
+
+      {podeLimpar && calibrando && (
+        <RemoteCalibration
+          host={gameDay.id}
+          cam={occ[calibrando] || null}
+          positionLabel={t(CAMERA_POSITIONS[calibrando]?.label || calibrando)}
+          onClose={() => setCalibrando(null)}
+        />
+      )}
 
       <V2Surface className="space-y-4 p-6" aria-live="polite" data-dica="linhas-central-lance">
         {ultimo ? (

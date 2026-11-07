@@ -106,8 +106,72 @@ async function beat(ctx, data) {
 
 async function leave(ctx, data) {
   const { host, hash, invite } = await convite(ctx, data);
-  await refOf(ctx.db, `${host}/line_cams/${guestUid(hash)}_${invite.position}`).delete();
+  const id = `${guestUid(hash)}_${invite.position}`;
+  await Promise.all([
+    refOf(ctx.db, `${host}/line_cams/${id}`).delete(),
+    // A foto da quadra sai junto (a câmera com conta apaga a dela ao sair).
+    refOf(ctx.db, `${host}/line_calib/${id}`).delete(),
+  ]);
   return { ok: true };
+}
+
+/** Teto do texto da foto (o mesmo da regra `lcCal`): o documento tem 1 MiB. */
+const SNAP_MAX = 900000;
+const SNAP_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]/;
+const ZONE_RE = /^[a-z_]{1,20}$/;
+const pt = (p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: num(p.x), y: num(p.y) } : null);
+
+/** A calibração que a câmera diz ter (`cur`): só números e uma área com cara de id. */
+function limparCalib(c) {
+  if (!c || typeof c !== 'object') return null;
+  const corners = (Array.isArray(c.corners) ? c.corners : []).slice(0, 4).map(pt);
+  if (corners.some((p) => !p)) return null;
+  return semNulos({
+    corners,
+    hue: Number.isFinite(c.hue) ? Math.max(0, Math.min(360, c.hue)) : null,
+    hueSet: c.hueSet === true ? true : null,
+    zone: typeof c.zone === 'string' && ZONE_RE.test(c.zone) ? c.zone : null,
+    checkTap: pt(c.checkTap),
+  });
+}
+
+/**
+ * A calibração pela central (docs/53 §5d). Com `fields`, grava o lado da
+ * câmera (foto, tamanho do vídeo, o que ela tem, a última calibração
+ * aplicada); sempre devolve o que quem organiza mandou.
+ */
+async function calib(ctx, data) {
+  const { host, hash, invite } = await convite(ctx, data);
+  const uid = guestUid(hash);
+  const ref = refOf(ctx.db, `${host}/line_calib/${uid}_${invite.position}`);
+  const f = data.fields;
+  if (f && typeof f === 'object') {
+    const out = { uid, position: invite.position };
+    if (f.snap !== undefined) {
+      if (typeof f.snap !== 'string' || f.snap.length >= SNAP_MAX || !SNAP_RE.test(f.snap)) {
+        throw new LineGuestError('invalid-argument', 'Foto inválida.');
+      }
+      out.snap = f.snap;
+      out.snap_ms = ctx.now;
+    }
+    ['vw', 'vh'].forEach((k) => { if (Number.isFinite(f[k])) out[k] = Math.max(1, Math.min(8192, Math.round(f[k]))); });
+    if (Number.isFinite(f.applied_ms)) out.applied_ms = Math.round(f.applied_ms);
+    const cur = limparCalib(f.cur);
+    if (cur) out.cur = cur;
+    await ref.set(out, { merge: true });
+  }
+  const s = await ref.get();
+  const d = s.exists ? s.data() : {};
+  // Para a câmera, só o que quem organiza mandou (a foto ela mesma tem).
+  return {
+    calib: d.calib || null,
+    calib_ms: d.calib_ms || 0,
+    snap_req_ms: d.snap_req_ms || 0,
+    snap_ms: d.snap_ms || 0,
+    run: typeof d.run === 'boolean' ? d.run : null,
+    run_ms: d.run_ms || 0,
+    vw: d.vw || null,
+  };
 }
 
 async function call(ctx, data) {
@@ -136,7 +200,7 @@ async function call(ctx, data) {
   return { ok: true };
 }
 
-const ACOES = { peek, beat, leave, call };
+const ACOES = { peek, beat, leave, call, calib };
 
 async function lineGuest(ctx, data = {}) {
   const fn = ACOES[data.action];
@@ -144,4 +208,4 @@ async function lineGuest(ctx, data = {}) {
   return fn(ctx, data);
 }
 
-module.exports = { lineGuest, LineGuestError, hashToken, guestUid, MAX_HOURS, NEUTRO };
+module.exports = { lineGuest, LineGuestError, hashToken, guestUid, MAX_HOURS, NEUTRO, SNAP_MAX };
