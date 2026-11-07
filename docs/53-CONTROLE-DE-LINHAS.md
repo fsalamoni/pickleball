@@ -234,13 +234,66 @@ própria tela ("Como posicionar esta câmera", `PlacementGuide` + `DeviceTips`).
 | celular/tablet | o próprio aparelho, câmera traseira, no Chrome (Android) ou Safari (iPhone) | horizontal, tripé, na tomada; a grande-angular (0,5×) aparece na lista — usar só se a quadra não couber |
 | webcam USB | notebook; uma câmera por aba | 60 quadros/1080p; extensão USB ativa para chegar ao alto |
 | câmera de ação | modo webcam por USB (GoPro Hero 8+, DJI Osmo Action 3+) ou HDMI + placa de captura | lente **linear** |
-| câmera Wi-Fi/IP (RTSP) | ❌ direto no navegador; ✅ pelo OBS Studio ("Câmera virtual") ou go2rtc | software fora do PickleRush |
+| câmera IP (RTSP) | ✅ "Câmera IP (ponte local)": go2rtc ou MediaMTX num computador da arena (§5b); ou OBS Studio ("Câmera virtual") | Chrome; Safari/iPhone ainda não |
+| câmera Wi-Fi de consumo / de ação | ❌ o vídeo Wi-Fi só abre no app da marca | usar por cabo (USB/HDMI) |
 | Bluetooth | ❌ não transmite vídeo | — |
 
 **Requisitos mínimos** (`domain/cameraCheck.js`, conferidos com o que a câmera
 ENTREGOU): 30 quadros/s e 720p (abaixo disso a tela recusa analisar); o bom é
 **60 quadros e 1080p**. O selo "cm por pixel" no ponto mais longe deve ficar
 ≤ 3. A bola anda 10–25 m/s: a 30 quadros ela salta até 80 cm entre duas fotos.
+
+## 5b. Câmera IP pela ponte local (`domain/ipCamera.js`, `openIpCamera`)
+
+O navegador não fala RTSP. Uma **ponte** num computador da arena — a
+[go2rtc](https://github.com/AlexxIT/go2rtc) (MIT, um executável) ou a MediaMTX —
+recebe o RTSP da câmera e o entrega por WebRTC. Na tela da câmera, a opção
+**"Câmera IP (ponte local)"** pede o endereço da ponte; `openIpCamera` faz a
+oferta WebRTC só de receber (`POST` com `application/sdp`: o
+`/api/webrtc?src=<câmera>` da go2rtc ou o `/<caminho>/whep` da MediaMTX) e
+devolve um `MediaStream` comum. Calibração, motor, central, telão e voz não
+mudam. A pesquisa que levou a isso (quem já faz, caminhos descartados,
+câmera a comprar): Claude Doc "Câmeras IP e Wi-Fi no controle de linhas".
+
+- **Zero banco.** O endereço da ponte fica no aparelho
+  (`v2:view:<uid>:linhas:camera-ip:ponte`). `parseBridgeUrl` recusa endereço
+  `rtsp://` (é o da câmera, não o da ponte) e usuário/senha no endereço: a
+  credencial da câmera mora só no `go2rtc.yaml`, no computador da arena.
+- **Quadros de verdade.** O que aparece nos selos (quadros/s e resolução) vem
+  das estatísticas da conexão (`inbound-rtp`: `framesPerSecond`,
+  `frameWidth/Height`) depois de 1,5 s, não do anúncio da câmera.
+- **Navegadores.** No mesmo computador (`localhost`) o Chrome e o Edge abrem
+  direto. Ponte em outro computador da rede (`http://192.168…`): o Chrome pede
+  a permissão "Acesso à rede local" (o `fetch` vai com `targetAddressSpace:
+  'local'`). Safari/iPhone bloqueiam `http` local a partir de página `https`
+  — fica para quando a ponte tiver HTTPS.
+- **Erros** ditos na tela: `ip-unreachable` (ponte fora do ar, permissão
+  negada ou navegador que bloqueia), `ip-refused` (a ponte não conhece a
+  câmera), `ip-no-video` (conectou e o vídeo não veio em 10 s).
+
+Montagem mínima (go2rtc no mesmo computador):
+
+```yaml
+# go2rtc.yaml, ao lado do executável
+streams:
+  quadra1: rtsp://usuario:senha@192.168.0.30:554/stream1   # o fluxo PRINCIPAL da câmera
+```
+
+1. Baixe a go2rtc da página de versões do projeto e rode-a com esse arquivo.
+2. Abra `http://localhost:1984` e confira a câmera tocando lá.
+3. No PickleRush, no Chrome desse computador: posição → "Câmera IP (ponte
+   local)" → `http://localhost:1984/api/webrtc?src=quadra1` → Abrir câmera.
+4. Uma aba por câmera ("Abrir outra câmera neste computador").
+
+Câmera boa para isso: RTSP + ONVIF, **H.264** (não H.265) no fluxo
+principal, 1080p a 50–60 quadros (conferir com `ffprobe`: há câmera que
+anuncia 60 e entrega 30 por RTSP/TCP), obturador manual ≤ 1/1000 s, sem
+WDR nem redução de ruído digital, PoE por cabo, lente fixa 2,8–4 mm, NTP.
+
+**Ainda não feito** (próximas etapas): juntar as câmeras pela hora da
+captura (`captureTime` do `requestVideoFrameCallback`, que o Chrome calcula
+pelos relatórios RTCP) em vez da hora de chegada; HTTPS na ponte para
+tablet/iPhone; e a caixa nativa na quadra (60–120 quadros, modelo treinado).
 
 ## 5a. Montagens — "Como você vai montar?" (`domain/setupKits.js`, `SetupGuide`)
 
