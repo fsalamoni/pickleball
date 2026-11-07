@@ -150,9 +150,11 @@ function inspectText(H, pt) {
 /**
  * @param {{ gameDayId: string, position: string, layout: string, layoutPositions: string[] }} props
  */
-export default function CameraStation({ gameDayId, position, layout, layoutPositions }) {
-  const s = useLineCallSession(gameDayId, position, { layout });
-  const { user } = useAuth();
+export default function CameraStation({ gameDayId, position, layout, layoutPositions, sink = null }) {
+  const s = useLineCallSession(gameDayId, position, { layout, sink });
+  const { user: conta } = useAuth();
+  // A câmera convidada (sem conta) guarda as preferências deste aparelho no escopo dela.
+  const user = sink ? { uid: sink.uid } : conta;
   const [deviceId, setDeviceId] = useState('');
   // Câmera IP: o endereço da ponte fica só neste aparelho (nunca no banco).
   const [ponte, setPonte] = useState(() => readViewPreference(user?.uid, IP_PREF) || IP_BRIDGE_EXAMPLE);

@@ -2168,3 +2168,21 @@ exports.careerReminders = onSchedule(
     }
   },
 );
+
+// Controle de linhas (docs/53 §5c): a câmera CONVIDADA, sem conta — o QR leva
+// um token cujo hash é o convite gravado por quem organiza a quadra. Sem
+// login de propósito: quem filma é um celular qualquer, só daquela posição,
+// só enquanto o convite vale.
+const lineGuestMod = require('./lineGuest');
+exports.lineGuest = onCall({ region: REGION, timeoutSeconds: 20, memory: '256MiB' }, async (req) => {
+  try {
+    return await lineGuestMod.lineGuest(
+      { db: getFirestore(getApp(), DATABASE_ID), FieldValue: FieldValueDel, now: Date.now() },
+      req.data || {},
+    );
+  } catch (err) {
+    if (err instanceof lineGuestMod.LineGuestError) throw new HttpsError(err.code, err.message);
+    logger.error('lineGuest falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});

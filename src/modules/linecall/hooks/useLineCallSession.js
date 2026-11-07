@@ -109,11 +109,18 @@ function useBattery(enabled) {
 /**
  * @param {string} gameDayId
  * @param {string} position  id em `CAMERA_POSITIONS`
- * @param {{ layout?: string, share?: boolean }} [opts] `share`: mandar para a central
+ * @param {{ layout?: string, share?: boolean, sink?: object }} [opts] `share`: mandar para a central;
+ *   `sink`: a câmera CONVIDADA, sem conta (`guestSink`), que manda tudo pelo servidor
  */
-export function useLineCallSession(gameDayId, position, { layout = null, share = true } = {}) {
+export function useLineCallSession(gameDayId, position, { layout = null, share = true, sink = null } = {}) {
   const { user, userProfile } = useAuth();
-  const uid = user?.uid || null;
+  const uid = sink?.uid || user?.uid || null;
+  // Para onde vão o sinal e as marcações: o banco direto (conta) ou o servidor (convidado).
+  const sinkRef = useRef(sink);
+  sinkRef.current = sink;
+  const upsert = useCallback((c) => (sinkRef.current ? sinkRef.current.upsert(c) : upsertLineCam(gameDayId, c)), [gameDayId]);
+  const remove = useCallback((p) => (sinkRef.current ? sinkRef.current.remove() : removeLineCam(gameDayId, uid, p)), [gameDayId, uid]);
+  const post = useCallback((c) => (sinkRef.current ? sinkRef.current.post(c) : postLineCall(gameDayId, c)), [gameDayId]);
   const pos = CAMERA_POSITIONS[position] || CAMERA_POSITIONS.fundo_a;
   const videoRef = useRef(null);
   const [cameras, setCameras] = useState([]);
@@ -204,23 +211,23 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     calibrated: Boolean(H), analyzing: running, fps,
     battery: battery.level, charging: battery.charging, checkCm: check?.cm ?? null,
   };
-  const name = userProfile?.full_name || userProfile?.display_name || user?.displayName || '';
+  const name = sink?.name || userProfile?.full_name || userProfile?.display_name || user?.displayName || '';
   useEffect(() => {
     if (!share || !uid || !stream || !gameDayId) return undefined;
-    const beat = () => upsertLineCam(gameDayId, { uid, name, position: pos.id, layout, ...live.current })
+    const beat = () => upsert({ uid, name, position: pos.id, layout, ...live.current })
       .then(() => setShareError(false))
       .catch((e) => { logger.warn('linhas: sinal da câmera falhou', e); setShareError(true); });
     beat();
     const id = setInterval(beat, HEARTBEAT_MS);
     return () => {
       clearInterval(id);
-      removeLineCam(gameDayId, uid, pos.id).catch(() => {});
+      remove(pos.id).catch(() => {});
     };
-  }, [share, uid, stream, gameDayId, pos.id, layout, name]);
+  }, [share, uid, stream, gameDayId, pos.id, layout, name, upsert, remove]);
   // Mudou o estado (calibrou, conferiu, começou, pausou): avisa já, sem esperar o próximo sinal.
   useEffect(() => {
     if (!share || !uid || !stream || !gameDayId) return;
-    upsertLineCam(gameDayId, { uid, name, position: pos.id, layout, ...live.current }).catch(() => {});
+    upsert({ uid, name, position: pos.id, layout, ...live.current }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Boolean(H), running, check?.cm]);
 
@@ -407,7 +414,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
             found.forEach((event) => {
               // A hora do LANCE (não a de agora) no relógio deste aparelho.
               const tMs = at - Math.max(0, t - event.t) * 1000;
-              postLineCall(gameDayId, { uid, position: pos.id, event, tMs })
+              post({ uid, position: pos.id, event, tMs })
                 .catch((e) => { logger.warn('linhas: marcação não foi enviada', e); setShareError(true); });
             });
           }
@@ -460,7 +467,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     };
   // `stream`: trocar de câmera recomeça o relógio do vídeo, então o motor, o
   // replay e o lance pendente nascem de novo com ele.
-  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream, zone]);
+  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream, zone, post]);
 
   return {
     position: pos, targets, checkPoint,

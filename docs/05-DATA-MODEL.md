@@ -784,11 +784,18 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
   central lê `orderBy created_at` numa subcoleção, que é índice simples). A
   exclusão de conta acha as da pessoa por GRUPO de coleção (`uid`), o que pede o
   índice de grupo de `line_cams.uid` e `line_calls.uid` (`fieldOverrides`, ver
-  Índices). Vídeo e calibração ficam no aparelho
+  Índices). Vídeo e calibração ficam no aparelho.
+  - `line_invites/{sha256(token)}` — o convite da câmera SEM CONTA (QR,
+    docs/53 §5c): `position`, `exp_ms` (no máximo 12 h à frente), `created_at`.
+    Só quem organiza (`lineOrgOf`) cria, lê e apaga; o token nunca vem ao banco.
+    Quem usa é a função `lineGuest`, que grava a câmera como
+    `line_cams/guest_{16 do hash}_{posição}` (nome "Convidado") e as marcações
+    com `uid: guest_…` — não é conta de ninguém, nada a excluir com a conta
 - coleção `tournament_line_courts/{torneio}_{quadra}` (flag `line_control`) —
   o controle de linhas de uma QUADRA de torneio: `tournament_id`, `court_id`
   (`court-N`), `court_name`, `line_control`, `line_control_layout`,
-  `updated_by`, `updated_at`; as mesmas subcoleções `line_cams`/`line_calls`.
+  `updated_by`, `updated_at`; as mesmas subcoleções `line_cams`/`line_calls`
+  e `line_invites` (convite sem conta, só a equipe).
   Lê qualquer conta logada; grava a equipe do torneio (`tLineOrg`). Ver docs/53 §9
 - `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
   operar as partidas (sortear, criar próxima partida, substituir jogador, marcar

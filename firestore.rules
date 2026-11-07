@@ -240,6 +240,14 @@ service cloud.firestore {
       return nd().line_control is bool && nd().updated_by == me()
         && (!('line_control_layout' in nd()) || (nd().line_control_layout is string && nd().line_control_layout.size() <= 40));
     }
+    // O convite da câmera SEM CONTA (QR, docs/53 §5c): id = sha256 do token
+    // (o token nunca vem ao banco), a posição e a validade de até 12 h. Quem
+    // usa o convite é a função `lineGuest`, pelo servidor.
+    function lcInv(iId) {
+      return iId.matches('[0-9a-f]{64}') && nd().keys().hasOnly(['position', 'exp_ms', 'created_at'])
+        && nd().position is string && nd().position.size() <= 20 && nd().exp_ms is int
+        && nd().exp_ms > request.time.toMillis() && nd().exp_ms <= request.time.toMillis() + 43200000;
+    }
     // Quem pode ver um dia de jogo: dono, membro, qualquer um se público — e,
     // num dia de jogo de CLUBE, quem é do clube.
     function canAccessGameDay(gdId) {
@@ -859,6 +867,10 @@ service cloud.firestore {
           allow create: if lcGdCam(gdId, cId) && lcCall();
           allow update: if lineOrgOf(gdId) && lcDec();
           allow delete: if lineOrgOf(gdId);
+        }
+        match /line_invites/{iId} {
+          allow read, delete: if lineOrgOf(gdId);
+          allow create: if lineOrgOf(gdId) && lcInv(iId);
         }
       }
     }
@@ -1677,6 +1689,10 @@ service cloud.firestore {
         allow create: if tLineCamOk(lcId) && lcCall();
         allow update: if tLineOrg(tLineTid(lcId)) && lcDec();
         allow delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
+      }
+      match /line_invites/{iId} {
+        allow read, delete: if tLineOrg(tLineTid(lcId));
+        allow create: if tLineOrg(tLineTid(lcId)) && lcInv(iId);
       }
     }
 

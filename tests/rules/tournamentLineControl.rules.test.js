@@ -83,3 +83,15 @@ describe('câmeras e marcações na quadra', () => {
     await assertFails(setDoc(camRef(CRIADOR), cam(CRIADOR)));
   });
 });
+
+describe('o convite da câmera sem conta (QR, docs/53 §5c)', () => {
+  const ref = (uid) => doc(como(uid), `tournament_line_courts/T1_court-2/line_invites/${'b'.repeat(64)}`);
+  const inv = () => ({ position: 'rede_1', exp_ms: Date.now() + 3600000, created_at: serverTimestamp() });
+
+  it('⭐ a equipe do torneio gera e lê o convite; quem joga, não', async () => {
+    await assertSucceeds(setDoc(ref(CRIADOR), inv()));
+    await assertSucceeds(getDocs(collection(como(ADMIN_T), 'tournament_line_courts/T1_court-2/line_invites')));
+    await assertFails(setDoc(ref(ATLETA), inv()));
+    await assertFails(getDocs(collection(como(ATLETA), 'tournament_line_courts/T1_court-2/line_invites')));
+  });
+});
