@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBridgeUrl, inboundVideoSettings, IP_BRIDGE_EXAMPLE } from './ipCamera.js';
+import { parseBridgeUrl, inboundVideoSettings, IP_BRIDGE_EXAMPLE, go2rtcConfig, streamName } from './ipCamera.js';
 
 describe('parseBridgeUrl', () => {
   it('aceita a go2rtc no mesmo computador, sem pedir rede local', () => {
@@ -32,5 +32,52 @@ describe('inboundVideoSettings', () => {
   });
   it('sem vídeo chegando, não inventa número', () => {
     expect(inboundVideoSettings([{ type: 'inbound-rtp', kind: 'audio' }])).toEqual({});
+  });
+});
+
+describe('go2rtcConfig (assistente da câmera IP)', () => {
+  const cam = { name: 'Quadra 1 · Fundo A', brand: 'intelbras', host: '192.168.0.30', user: 'admin', pass: 'p@ss:w/rd' };
+
+  it('gera o arquivo com CORS liberado, a senha escapada e o endereço da ponte', () => {
+    const r = go2rtcConfig({ cameras: [cam] });
+    expect(r.ok).toBe(true);
+    expect(r.yaml).toContain("origin: '*'");
+    expect(r.yaml).toContain("listen: '127.0.0.1:1984'");
+    expect(r.yaml).toContain("quadra_1_fundo_a: 'rtsp://admin:p%40ss%3Aw%2Frd@192.168.0.30:554/cam/realmonitor?channel=1&subtype=0'");
+    expect(r.bridges).toEqual([{ name: 'quadra_1_fundo_a', url: 'http://localhost:1984/api/webrtc?src=quadra_1_fundo_a' }]);
+    // o endereço da ponte passa na mesma conferência da tela
+    expect(parseBridgeUrl(r.bridges[0].url)).toMatchObject({ ok: true, local: false });
+  });
+
+  it('ponte em outro computador escuta na rede e usa o IP dele', () => {
+    const r = go2rtcConfig({ cameras: [{ ...cam, brand: 'hikvision', port: '8554' }], sameComputer: false, bridgeHost: '192.168.0.10' });
+    expect(r.yaml).toContain("listen: ':1984'");
+    expect(r.yaml).toContain('@192.168.0.30:8554/Streaming/Channels/101');
+    expect(parseBridgeUrl(r.bridges[0].url)).toMatchObject({ ok: true, local: true });
+  });
+
+  it('aspas simples na senha não quebram o YAML', () => {
+    const r = go2rtcConfig({ cameras: [{ ...cam, pass: "it's" }] });
+    expect(r.yaml).toContain("admin:it''s@"); // o YAML devolve uma aspa só
+  });
+
+  it('acusa campo errado sem gerar nada', () => {
+    const r = go2rtcConfig({
+      cameras: [{ name: 'a', host: '300.1.1.1', brand: 'outra' }, { name: 'A', host: 'cam.local', port: 0, brand: 'tapo' }],
+      sameComputer: false,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.errors).toEqual(expect.arrayContaining([
+      { index: 0, field: 'host', code: 'invalid' },
+      { index: 0, field: 'path', code: 'required' },
+      { index: 1, field: 'name', code: 'duplicate' },
+      { index: 1, field: 'port', code: 'invalid' },
+      { index: -1, field: 'bridgeHost', code: 'invalid' },
+    ]));
+    expect(go2rtcConfig({ cameras: [] }).ok).toBe(false);
+  });
+
+  it('o nome vira identificador simples', () => {
+    expect(streamName('  Quadra Ção #2 ')).toBe('quadra_cao_2');
   });
 });

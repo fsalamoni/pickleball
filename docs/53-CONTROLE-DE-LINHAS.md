@@ -238,6 +238,30 @@ própria tela ("Como posicionar esta câmera", `PlacementGuide` + `DeviceTips`).
 | câmera Wi-Fi de consumo / de ação | ❌ o vídeo Wi-Fi só abre no app da marca | usar por cabo (USB/HDMI) |
 | Bluetooth | ❌ não transmite vídeo | — |
 
+**Próximo passo e diagnóstico** (`domain/stationCheck.js`): no topo da tela
+da câmera um cartão diz a UMA coisa a fazer agora, na ordem da quadra
+(abrir a câmera → trocar de câmera, se abaixo do mínimo → marcar os pontos →
+conferir com o 5º ponto → começar a analisar; câmera que mexeu ou erro acima
+de 6 cm = marcar de novo), com o botão que faz. Embaixo, um selo por item
+(câmera, calibração, fundo longe, análise, detector de pés, luz, bateria,
+ligação com a central: ok / falta / atenção / resolver) e quanto a análise
+de um quadro leva NESTE aparelho (`frameMs`; acima de 33 ms ele não acompanha
+30 quadros/s). Ids de `STATION_NEXT` são só de tela.
+
+**Menos toques**: câmera aberta sem pontos já entra na marcação; e quem volta
+a uma posição já calibrada, com a câmera permitida para o site
+(`navigator.permissions`), tem a MESMA câmera reaberta sozinha
+(`linhas:camera:ultima`, no aparelho) — falta só "Começar a analisar".
+
+**Desempenho do aparelho que filma** (medido no código, não em campo): a bola
+desenhada na tela é atualizada a no máximo ~12 vezes por segundo
+(`BALL_UI_MS`) — antes o estado mudava a cada quadro e a tela inteira (lista
+de lances com fotos incluída) era redesenhada 30–60 vezes por segundo,
+disputando o processador com a análise; a análise segue quadro a quadro. Os
+canvases da análise e do desenho só mudam de tamanho quando o vídeo muda
+(redimensionar realoca a memória, 8 MB em Full HD), e `findBallCandidates`
+reaproveita a máscara e calcula a cor sem criar um objeto por pixel.
+
 **Requisitos mínimos** (`domain/cameraCheck.js`, conferidos com o que a câmera
 ENTREGOU): 30 quadros/s e 720p (abaixo disso a tela recusa analisar); o bom é
 **60 quadros e 1080p**. O selo "cm por pixel" no ponto mais longe deve ficar
@@ -271,12 +295,30 @@ câmera a comprar): Claude Doc "Câmeras IP e Wi-Fi no controle de linhas".
   negada ou navegador que bloqueia), `ip-refused` (a ponte não conhece a
   câmera), `ip-no-video` (conectou e o vídeo não veio em 10 s).
 
-Montagem mínima (go2rtc no mesmo computador):
+**Assistente da ponte** (`go2rtcConfig` em `domain/ipCamera.js`,
+`IpBridgeWizard`): na opção "Câmera IP", "Ainda não tenho a ponte: gerar o
+arquivo dela" pede, por câmera, nome, marca (Intelbras, Hikvision,
+Dahua/Amcrest, Reolink, TP-Link Tapo, ou o caminho do manual), IP, porta,
+usuário e senha, e se a ponte roda neste computador ou em outro da rede. A
+tela baixa o `go2rtc.yaml` pronto e "Usar esta câmera aqui" preenche o
+endereço da ponte. Tudo no navegador: a senha vai **só para o arquivo
+baixado** (a preferência `linhas:camera-ip:assistente` guarda marca, IP e
+nome, nunca a senha). O arquivo já leva o que a montagem à mão esquecia:
+`api.origin: '*'` (sem ele a go2rtc recusa o pedido que vem da página do
+PickleRush — CORS — e a tela dizia "a ponte não respondeu"), `listen:
+127.0.0.1:1984` quando a ponte é no mesmo computador (a rede da arena não
+alcança) e usuário/senha escapados no endereço RTSP (`@`, `:` e `/` na senha
+quebravam o endereço).
+
+Montagem mínima à mão (go2rtc no mesmo computador):
 
 ```yaml
 # go2rtc.yaml, ao lado do executável
+api:
+  listen: '127.0.0.1:1984'   # outro computador da rede: ':1984'
+  origin: '*'                # obrigatório: a página do PickleRush chama a ponte de outro endereço
 streams:
-  quadra1: rtsp://usuario:senha@192.168.0.30:554/stream1   # o fluxo PRINCIPAL da câmera
+  quadra1: 'rtsp://usuario:senha@192.168.0.30:554/stream1'   # o fluxo PRINCIPAL da câmera
 ```
 
 1. Baixe a go2rtc da página de versões do projeto e rode-a com esse arquivo.

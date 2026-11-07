@@ -52,16 +52,35 @@ const hueDiff = (a, b) => {
  * @param {Uint8ClampedArray|null} prev o quadro anterior, mesmo tamanho
  * @returns {Array<{ x: number, y: number, area: number }>}
  */
+// A máscara é reaproveitada entre quadros do mesmo tamanho: a cada quadro
+// (30–60 por segundo) alocar 130 mil bytes e um objeto de cor POR PIXEL era o
+// que mais pesava na coleta de lixo do celular.
+let maskBuf = null;
+
 export function findBallCandidates(rgba, prev, width, height, opts = {}) {
   const o = { ...BALL_DEFAULTS, ...opts };
   const n = width * height;
-  const mask = new Uint8Array(n);
+  if (!maskBuf || maskBuf.length !== n) maskBuf = new Uint8Array(n);
+  else maskBuf.fill(0);
+  const mask = maskBuf;
+  const minV = o.minVal * 255;
   for (let i = 0; i < n; i += 1) {
     const j = i * 4;
     const r = rgba[j]; const g = rgba[j + 1]; const b = rgba[j + 2];
     if (prev && Math.abs(r - prev[j]) + Math.abs(g - prev[j + 1]) + Math.abs(b - prev[j + 2]) < o.motion) continue;
-    const { h, s, v } = rgbToHsv(r, g, b);
-    if (s >= o.minSat && v >= o.minVal && hueDiff(h, o.hue) <= o.hueTol) mask[i] = 1;
+    // O mesmo HSV de `rgbToHsv`, sem criar objeto e saindo cedo pelo brilho e pela saturação.
+    const max = r > g ? (r > b ? r : b) : (g > b ? g : b);
+    if (max < minV) continue;
+    const min = r < g ? (r < b ? r : b) : (g < b ? g : b);
+    const d = max - min;
+    if (!d || d / max < o.minSat) continue;
+    let h;
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+    if (hueDiff(h, o.hue) <= o.hueTol) mask[i] = 1;
   }
   const out = [];
   const stack = [];

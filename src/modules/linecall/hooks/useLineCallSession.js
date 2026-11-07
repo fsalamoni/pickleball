@@ -38,6 +38,13 @@ const REPLAY_W = 480;
 const MAX_EVENTS = 30;
 /** De quanto em quanto tempo conferir se a câmera mexeu e se tem luz (ms). */
 const HEALTH_EVERY_MS = 1000;
+/**
+ * De quanto em quanto tempo a bola desenhada na tela é atualizada (ms). A
+ * análise segue QUADRO A QUADRO; só o desenho é mais espaçado: atualizar o
+ * estado a cada quadro redesenhava a tela inteira 30–60 vezes por segundo e
+ * roubava da análise o tempo do celular.
+ */
+const BALL_UI_MS = 80;
 /** Os cantos da quadra (os únicos que o "Ajustar à linha" mexe). */
 const COURT_CORNER_IDS = ['A1', 'A2', 'B1', 'B2'];
 
@@ -122,6 +129,8 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const [poseState, setPoseState] = useState('idle'); // idle | loading | ready | failed | off
   const [events, setEvents] = useState([]);
   const [fps, setFps] = useState(0);
+  // Quanto a análise de UM quadro leva neste aparelho (ms, média do último segundo).
+  const [frameMs, setFrameMs] = useState(null);
   const [ball, setBall] = useState(null);
   const [shareError, setShareError] = useState(false);
   const battery = useBattery(Boolean(stream));
@@ -303,7 +312,10 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     let prev = null;
     let last = null;
     let frames = 0;
+    let busy = 0;
     let since = performance.now();
+    let ballAt = 0;
+    let shownBall = false;
     let handle = null;
     let healthAt = 0;
     let moved = false;
@@ -355,9 +367,11 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       const w = video.videoWidth;
       const h = video.videoHeight;
       if (w && h) {
+        const t0 = performance.now();
         const k = SCAN_W / w;
-        scan.width = SCAN_W;
-        scan.height = Math.round(h * k);
+        // Mudar o tamanho de um canvas apaga e realoca a memória dele: só quando muda.
+        const sh = Math.round(h * k);
+        if (scan.width !== SCAN_W || scan.height !== sh) { scan.width = SCAN_W; scan.height = sh; }
         sctx.drawImage(video, 0, 0, scan.width, scan.height);
         const img = sctx.getImageData(0, 0, scan.width, scan.height).data;
         const cands = findBallCandidates(img, prev, scan.width, scan.height, { hue: calib.hue });
@@ -372,7 +386,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         }
         const got = pickBall(cands, last ? { x: last.x * k, y: last.y * k } : null);
         last = got ? { x: got.x / k, y: got.y / k } : null;
-        setBall(last);
+        if ((last || shownBall) && now - ballAt >= BALL_UI_MS) { ballAt = now; shownBall = Boolean(last); setBall(last); }
         let players = [];
         try { players = pose ? pose.detect(video, now) : []; } catch { players = []; }
         const t = meta?.mediaTime ?? now / 1000;
@@ -422,7 +436,12 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
           if (pending[i].until <= t) finalize(pending.splice(i, 1)[0], w, h);
         }
         frames += 1;
-        if (now - since >= 1000) { setFps(Math.round((frames * 1000) / (now - since))); frames = 0; since = now; }
+        busy += performance.now() - t0;
+        if (now - since >= 1000) {
+          setFps(Math.round((frames * 1000) / (now - since)));
+          setFrameMs(Math.round(busy / frames));
+          frames = 0; busy = 0; since = now;
+        }
       }
       handle = schedule(onFrame);
     };
@@ -437,6 +456,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       ring.clear();
       setBall(null);
       setFps(0);
+      setFrameMs(null);
     };
   // `stream`: trocar de câmera recomeça o relógio do vídeo, então o motor, o
   // replay e o lance pendente nascem de novo com ele.
@@ -446,6 +466,6 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     position: pos, targets, checkPoint,
     videoRef, cameras, start, stream, settings, cameraError, cameraChecks,
     calib, zone, setZone, addCorner, moveCorner, resetCorners, snapCorners, undoSnap, setCheckTap, check, learnBallColor, H, Hinv, cmPerPixel,
-    running, setRunning, poseState, events, clearEvents, fps, ball, shareError, battery, health,
+    running, setRunning, poseState, events, clearEvents, fps, frameMs, ball, shareError, battery, health,
   };
 }
