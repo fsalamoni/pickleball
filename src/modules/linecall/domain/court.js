@@ -37,6 +37,9 @@ export const COURT_POINTS = Object.freeze({
   KA2: Object.freeze({ x: W, y: N - K }),
   KB1: Object.freeze({ x: 0, y: N + K }),
   KB2: Object.freeze({ x: W, y: N + K }),
+  // Onde a rede cruza cada lateral (para calibrar só um lado ou só uma cozinha).
+  N1: Object.freeze({ x: 0, y: N }),
+  N2: Object.freeze({ x: W, y: N }),
 });
 
 /** Os quatro cantos da quadra e os quatro cantos das cozinhas, na ordem de toque. */

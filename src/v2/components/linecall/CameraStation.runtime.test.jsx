@@ -97,3 +97,24 @@ describe('CameraStation: o aviso do lote', () => {
     expect(container.textContent).toMatch(/Ver foto/);
   });
 });
+
+describe('CameraStation: a marcação sobre a imagem', () => {
+  const comCamera = (extra = {}) => ({ stream: { getVideoTracks: () => [] }, running: false, zone: 'full', setZone: vi.fn(), ...extra });
+  const botao = (nome) => [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === nome || b.getAttribute('aria-label') === nome);
+
+  it('escolher só uma parte da quadra troca a área da câmera', async () => {
+    const setZone = vi.fn();
+    await show([], 0, comCamera({ setZone }));
+    expect(botao('Quadra inteira').getAttribute('aria-pressed')).toBe('true');
+    await act(async () => { botao('As duas cozinhas').click(); });
+    expect(setZone).toHaveBeenCalledWith('kitchens');
+  });
+
+  it('os botões da marcação e o zoom ficam dentro da imagem', async () => {
+    await show([], 0, comCamera());
+    const sobre = container.querySelector('[data-sobre-imagem]').closest('.overflow-hidden');
+    expect(sobre.contains(botao('Começar a marcar'))).toBe(true);
+    expect(sobre.contains(botao('Aproximar'))).toBe(true);
+    expect(sobre.contains(botao('Tela cheia'))).toBe(true);
+  });
+});
