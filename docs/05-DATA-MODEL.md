@@ -134,7 +134,8 @@ Registro auditável de aceites legais (LGPD).
 
 ### `tournaments/{id}`
 - `name`, `description`, `owner_id`, `status`
-  (`draft | registrations_open | registrations_closed | in_progress | finished | cancelled`),
+  (`draft | published | registrations_open | registrations_closed | in_progress | finished | cancelled`;
+  `draft` só a equipe do torneio lê, `published` = visível com as inscrições ainda por abrir — `docs/56`),
 - `visibility`: `'public' | 'private'`, `invite_code` (ingresso por código),
 - config de regras/scoring (CBP/USAP, pontos, sets), datas, sede.
 - **Arquivamento**: `archived: bool` (default `false`), `archived_at: Timestamp`,
@@ -147,6 +148,12 @@ Registro auditável de aceites legais (LGPD).
   criação. Quem não gere a arena cria o torneio com a sede **pendente**
   (`arena_confirmed: false`) e a arena confirma ou recusa (`arena_id`,
   `arena_confirmed`, `updated_at`). O co-administrador não vira criador.
+- **Prazos das inscrições** (2026-11-07, opcionais): `registration_opens_ms`,
+  `registration_closes_ms`, `payment_deadline_ms` (≥ encerramento) e o
+  `registration_deadline` (dia do encerramento) em sincronia; `published_at`;
+  o servidor grava `schedule_change` (`open`|`close`), `schedule_changed_ms` e
+  `registrations_open_notified`. Ausentes = torneio antigo, status manual.
+  Ver `docs/56-TORNEIO-RASCUNHO-E-PRAZOS.md`.
 
 ### `tournament_modalities/{id}`
 Modalidade dentro de um torneio: `tournament_id`, formato

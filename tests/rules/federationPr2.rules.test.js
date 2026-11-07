@@ -203,12 +203,12 @@ describe('⭐ chancela de torneios', () => {
   it('a lista de torneios da federação é consultável só pela federação — e traz o torneio criado sem o campo `archived`', async () => {
     // 🐞 A consulta antiga pedia também `archived == false`, e torneio novo nasce SEM o campo: nenhum pedido aparecia em Chancelas.
     await semRegras(async (db) => {
-      await setDoc(doc(db, 'tournaments', 'novo'), { id: 'novo', creator_uid: ORG, name: 'Novo', federation_id: FED, federation_sanction: chancela('pending') });
-      await setDoc(doc(db, 'tournaments', 'velho'), { id: 'velho', creator_uid: ORG, name: 'Arquivado', federation_id: FED, archived: true, federation_sanction: chancela('approved') });
+      await setDoc(doc(db, 'tournaments', 'novo'), { id: 'novo', creator_uid: ORG, name: 'Novo', status: 'published', federation_id: FED, federation_sanction: chancela('pending') });
+      await setDoc(doc(db, 'tournaments', 'velho'), { id: 'velho', creator_uid: ORG, name: 'Arquivado', status: 'finished', federation_id: FED, archived: true, federation_sanction: chancela('approved') });
     });
-    const snap = await assertSucceeds(getDocs(query(collection(anonimo(), 'tournaments'), where('federation_id', '==', FED))));
+    const snap = await assertSucceeds(getDocs(query(collection(anonimo(), 'tournaments'), where('federation_id', '==', FED), where('status', 'in', ['published', 'registrations_open', 'registrations_closed', 'in_progress', 'finished', 'cancelled']))));
     expect(snap.docs.map((d) => d.id)).toContain('novo');
-    await assertSucceeds(getDocs(query(collection(como(ANA), 'tournaments'), where('federation_id', '==', FED))));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'tournaments'), where('federation_id', '==', FED), where('status', 'in', ['published', 'registrations_open', 'registrations_closed', 'in_progress', 'finished', 'cancelled']))));
   });
 });
 

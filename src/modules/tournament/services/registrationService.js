@@ -36,6 +36,7 @@ import {
   markClaimsClaimed, deleteProvisionalClaim,
 } from './registrationContactService.js';
 import { hasLegacyPublicEmail } from '../domain/registrationContact.js';
+import { registrationBlockReason } from '../domain/registrationWindow.js';
 import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../domain/placeholders.js';
 import {
   buildOfficialPlayer,
@@ -93,6 +94,11 @@ export async function createRegistration(input, actor) {
   const tournament = await getTournament(tournament_id);
   if (!tournament) throw new Error(t('Torneio não encontrado.'));
   const actorIsAdmin = await isTournamentAdmin(tournament_id, actor?.uid);
+  // Fora da janela de inscrição só a equipe do torneio inscreve. A regra
+  // (`tRegOpen`) recusa igual; aqui a pessoa recebe o motivo em vez de
+  // "permissão negada".
+  const bloqueio = actorIsAdmin ? null : registrationBlockReason(tournament);
+  if (bloqueio) throw new Error(t(bloqueio));
   if (
     tournament.visibility === TOURNAMENT_VISIBILITY.PRIVATE &&
     !actorIsAdmin &&

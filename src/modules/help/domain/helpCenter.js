@@ -1789,6 +1789,21 @@ const ATLETA = {
       ],
     },
     {
+      id: 'torneio-rascunho-e-prazos',
+      title: tk('Rascunho, publicação e prazos das inscrições'),
+      summary: tk('Quem vê o torneio antes de publicar, e como as inscrições abrem e encerram sozinhas.'),
+      keywords: ['rascunho', 'publicar', 'publicar torneio', 'abertura', 'encerramento', 'prazo', 'prazo de pagamento', 'inscrições em breve', 'abrir inscrições', 'encerrar inscrições'],
+      blocks: [
+        p(tk('Todo torneio nasce como RASCUNHO: só quem o criou e os administradores dele o veem. Ele não aparece em lista nenhuma, o link e o código ainda não abrem para os outros e ninguém se inscreve. É o tempo de montar as modalidades e conferir as datas com calma.')),
+        steps(
+          tk('Na criação (ou depois, em Configurações → Datas operacionais), marque a ABERTURA e o ENCERRAMENTO das inscrições, com data e hora, e o PRAZO PARA PAGAMENTO (igual ou depois do encerramento; em branco, vale o encerramento).'),
+          tk('Quando estiver pronto, toque em "Publicar torneio". Ele passa a aparecer para todos; com a abertura no futuro, mostra "Inscrições em breve" e abre sozinho na hora marcada.'),
+          tk('No encerramento as inscrições fecham sozinhas e a organização recebe um aviso. O botão de pagar a inscrição fica à vista da abertura até o prazo para pagamento.'),
+        ),
+        tip(tk('Dá para abrir ou encerrar antes da hora em Configurações → Status, e voltar para rascunho enquanto ninguém se inscreveu. A organização inscreve pessoas a qualquer momento, mesmo fora do prazo.')),
+      ],
+    },
+    {
       id: 'dois-turnos',
       title: tk('Dois turnos (ida e volta)'),
       summary: tk('Cada confronto duas vezes, com os lados trocados no returno.'),
@@ -2916,12 +2931,13 @@ function buscarEm(secoes, termo, opts = {}) {
 export const HELP_ROUTE_HINTS = Object.freeze([
   // --- torneio (do mais específico ao mais genérico) -----------------------
   { pattern: '/torneios/criar', label: tk('criar um torneio'),
-    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.START, 'nivelamento']] },
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'torneio-rascunho-e-prazos'], [HELP_SECTION.START, 'nivelamento']] },
   { pattern: '/torneios/*/linhas', label: tk('o controle de linhas'),
     refs: [[HELP_SECTION.ATHLETE, 'controle-de-linhas'], [HELP_SECTION.ATHLETE, 'controle-de-linhas-montagem']] },
   { pattern: '/torneios/*/gerenciar', label: tk('gerenciar o torneio'),
     refs: [
       [HELP_SECTION.ATHLETE, 'organizar-torneio'],
+      [HELP_SECTION.ATHLETE, 'torneio-rascunho-e-prazos'],
       [HELP_SECTION.ATHLETE, 'inscritos-numero-incomum'],
       [HELP_SECTION.ATHLETE, 'durante-torneio'],
     ] },

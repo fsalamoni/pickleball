@@ -69,7 +69,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 
 **Dia de jogo:** [`14` telão](./14-DIA-DE-JOGO-TELAO.md) · [`15` permissões](./15-DIA-DE-JOGO-PERMISSOES.md) · [`16` rodízio do Play](./16-DIA-DE-JOGO-RODIZIO.md) · [`17` Americano aprimorado](./17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md) · [`22` dia de jogo da arena](./22-DIA-DE-JOGO-DA-ARENA.md) · [`25` como módulo](./25-DIA-DE-JOGO-COMO-MODULO.md) · [`39` grupos do Play](./39-PLAY-GRUPOS.md) · [`35` jogar, entrar e sair](./35-JOGAR-ENTRAR-E-SAIR.md) · [`53` controle de linhas por câmera](./53-CONTROLE-DE-LINHAS.md).
 
-**Torneio:** [`12` equipes](./12-TEAM-TOURNAMENTS.md) · [`26` formatos e regras](./26-TORNEIO-FORMATOS-E-REGRAS.md) · [`37` etapas, turnos e check-in](./37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md) · [`55` Minha participação e Acompanhar](./55-TORNEIO-MINHA-PARTICIPACAO.md) · [`43` troféus e cartões](./43-TROFEUS-E-CARTOES.md).
+**Torneio:** [`12` equipes](./12-TEAM-TOURNAMENTS.md) · [`26` formatos e regras](./26-TORNEIO-FORMATOS-E-REGRAS.md) · [`37` etapas, turnos e check-in](./37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md) · [`55` Minha participação e Acompanhar](./55-TORNEIO-MINHA-PARTICIPACAO.md) · [`56` rascunho, publicação e prazos](./56-TORNEIO-RASCUNHO-E-PRAZOS.md) · [`43` troféus e cartões](./43-TROFEUS-E-CARTOES.md).
 
 **Arena:** [`08` roadmap](./08-ARENA-ROADMAP.md) · [`23` calendário e reserva](./23-ARENA-CALENDARIO-E-RESERVA.md) · [`24-MODULOS-DE-ARENA/`](./24-MODULOS-DE-ARENA/00-INDEX.md) (matchmaking, membros, marketing, operações, aulas, PDV, chegada/totem, integração) · [`10-ARENA-V3/`](./10-ARENA-V3/00-INDEX.md) (histórico e referência do V3).
 

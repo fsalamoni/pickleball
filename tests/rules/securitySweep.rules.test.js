@@ -50,7 +50,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'clubs', CLUBE), { created_by: DONO });
     await setDoc(doc(db, 'clubs', CLUBE_INV), { created_by: INVASOR });
     // Torneios.
-    await setDoc(doc(db, 'tournaments', TORNEIO), { creator_uid: DONO, archived: false });
+    // Inscrições abertas: a auto-inscrição só vale dentro da janela (`tRegOpen`).
+    await setDoc(doc(db, 'tournaments', TORNEIO), { creator_uid: DONO, archived: false, status: 'registrations_open' });
     await setDoc(doc(db, 'tournaments', TORNEIO_INV), { creator_uid: INVASOR, archived: false });
     await setDoc(doc(db, 'tournament_admins', `${TORNEIO}_${DONO}`), { tournament_id: TORNEIO, user_id: DONO });
     await setDoc(doc(db, 'tournament_admins', `${TORNEIO_INV}_${INVASOR}`), { tournament_id: TORNEIO_INV, user_id: INVASOR });

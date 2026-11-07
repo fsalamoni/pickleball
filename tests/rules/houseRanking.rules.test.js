@@ -97,7 +97,8 @@ describe('as leituras do ranking da casa passam pelas regras de sempre', () => {
 
   it('o atleta lê os torneios da casa: torneio, categorias, inscrições e partidas', async () => {
     const db = como(ANA);
-    await assertSucceeds(getDocs(query(collection(db, 'tournaments'), where('arena_id', '==', ARENA))));
+    // A lista leva o filtro de status: rascunho só a equipe do torneio vê.
+    await assertSucceeds(getDocs(query(collection(db, 'tournaments'), where('arena_id', '==', ARENA), where('status', 'in', ['published', 'registrations_open', 'registrations_closed', 'in_progress', 'finished', 'cancelled']))));
     await assertSucceeds(getDocs(query(collection(db, 'tournament_modalities'), where('tournament_id', '==', 't1'))));
     await assertSucceeds(getDocs(query(collection(db, 'tournament_registrations'), where('tournament_id', '==', 't1'))));
     await assertSucceeds(getDocs(query(collection(db, 'tournament_matches'), where('tournament_id', '==', 't1'))));

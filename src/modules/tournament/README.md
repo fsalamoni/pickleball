@@ -58,7 +58,8 @@ fora dali — há guarda de fonte.
 ## Schema (Firestore)
 
 ### `tournaments/{id}`
-- `name`, `description`, `owner_id`, `status` (draft/open/running/finished/cancelled)
+- `name`, `description`, `owner_id`, `status` (draft/published/registrations_open/registrations_closed/in_progress/finished/cancelled — `draft` só a equipe lê)
+- `registration_opens_ms`, `registration_closes_ms`, `payment_deadline_ms` (opcionais, `docs/56`) + `registration_deadline` (o dia, em sincronia)
 - `public: bool` (visível em `/p/:id`)
 - `arena_id` (opcional, Sprint 4 ARE-14)
 - `archived`, `archived_at`, `archived_by`
@@ -97,9 +98,9 @@ Regras: `firestore.rules` — match por coleção.
 
 ## Fluxo típico
 
-1. Criar torneio → `createTournament` (status=draft)
+1. Criar torneio → `createTournament` (status=draft, só a equipe vê; valida as datas com `scheduleProblems`)
 2. Adicionar modalidades → `addModality`
-3. Abrir inscrições (`status=open`) → notifica comunidade se `public`
+3. Publicar → `publishTournament` (`published`, ou já `registrations_open` sem abertura futura); a arena da sede é avisada aqui. As inscrições abrem e encerram sozinhas pela data (`tournamentScheduleWorker`, servidor); o aviso à comunidade, se `public`, é do gatilho `tournamentScheduleNotify`. Regra pura em `domain/registrationWindow.js` — ver `docs/56-TORNEIO-RASCUNHO-E-PRAZOS.md`
 4. Inscrições/check-in → `registerPlayer`, `checkinPlayer`
 5. Sortear → `drawService` + `domain/draw.js` (seed reproduzível)
 6. Agendar quadras → `courtService` + `domain/scheduling.js`

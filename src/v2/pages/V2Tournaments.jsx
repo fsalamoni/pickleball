@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useRelogio } from '@/core/lib/useRelogio';
 import { hojeLocal, isTournamentOpen } from '@/modules/home/domain/freshness';
 import { discoverTournaments, sortMyTournaments } from '@/modules/tournament/domain/tournamentDiscovery';
+import { effectiveTournamentStatus } from '@/modules/tournament/domain/registrationWindow';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
@@ -31,6 +32,7 @@ const STATUS_TONE = {
   [TOURNAMENT_STATUS.IN_PROGRESS]: 'blue',
   [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'green',
   [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 'amber',
+  [TOURNAMENT_STATUS.PUBLISHED]: 'blue',
   [TOURNAMENT_STATUS.DRAFT]: 'neutral',
   [TOURNAMENT_STATUS.FINISHED]: 'neutral',
   [TOURNAMENT_STATUS.CANCELLED]: 'red',
@@ -199,8 +201,8 @@ function TournamentCard({ tournament, distancia = null }) {
           <h3 className="truncate font-display text-lg font-bold text-ink">{tournament.name}</h3>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <V2Badge tone={STATUS_TONE[tournament.status] || 'neutral'}>
-            {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
+          <V2Badge tone={STATUS_TONE[effectiveTournamentStatus(tournament)] || 'neutral'}>
+            {TOURNAMENT_STATUS_LABELS[effectiveTournamentStatus(tournament)] || tournament.status}
           </V2Badge>
           {tournament.archived && (
             <V2Badge tone="neutral">

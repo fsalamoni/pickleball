@@ -43,7 +43,7 @@ async function semear({ flag = true } = {}) {
     await setDoc(doc(db, 'club_x', CLUBE, 'staff', ESP), { user_id: ESP, perms: ['sports'], term_end_ms: 0 });
     await setDoc(doc(db, 'club_x', CLUBE, 'staff', FIN), { user_id: FIN, perms: ['finance'], term_end_ms: 0 });
     // Um torneio do clube já existente (criado por quem tem a permissão) e um comum.
-    await setDoc(doc(db, 'tournaments', 'doClube'), { creator_uid: ESP, name: 'Aberto do Clube', club_id: CLUBE, club_name: 'Clube A', status: 'draft' });
+    await setDoc(doc(db, 'tournaments', 'doClube'), { creator_uid: ESP, name: 'Aberto do Clube', club_id: CLUBE, club_name: 'Clube A', status: 'published' });
     await setDoc(doc(db, 'tournaments', 'comum'), { creator_uid: ATL, name: 'Comum', status: 'draft' });
   });
 }
@@ -87,7 +87,8 @@ describe('torneio do clube nas regras', () => {
   });
 
   it('3. a lista pública por club_id funciona sem conta', async () => {
-    const snap = await assertSucceeds(getDocs(query(collection(anonimo(), 'tournaments'), where('club_id', '==', CLUBE))));
+    // Com o filtro de status (o rascunho só a equipe vê; sem o filtro a regra recusa).
+    const snap = await assertSucceeds(getDocs(query(collection(anonimo(), 'tournaments'), where('club_id', '==', CLUBE), where('status', 'in', ['published', 'registrations_open', 'registrations_closed', 'in_progress', 'finished', 'cancelled']))));
     if (snap.size !== 1) throw new Error(`esperava 1 torneio do clube, veio ${snap.size}`);
   });
 });

@@ -19,7 +19,10 @@ const uniq = (xs) => Array.from(new Set(xs.filter(Boolean)));
 export async function listTournamentTrophies(uid) {
   const registrations = await listMyRegistrations(uid);
   if (registrations.length === 0) return [];
-  const tournaments = await Promise.all(uniq(registrations.map((r) => r.tournament_id)).map((id) => getTournament(id)));
+  const tournaments = await Promise.all(uniq(registrations.map((r) => r.tournament_id)).map((id) => getTournament(id)
+    // Rascunho ou arquivado de outra pessoa: a regra recusa, e ele não tem troféu.
+    // Queda de rede segue derrubando a estante (falha não é vazio).
+    .catch((e) => { if (e?.code === 'permission-denied') return null; throw e; })));
   const tournamentById = new Map(tournaments.filter(Boolean).map((t) => [t.id, t]));
   // Só categoria de torneio ENCERRADO pode ter troféu: as outras nem são lidas.
   const encerrados = registrations.filter((r) => tournamentById.get(r.tournament_id)?.status === TOURNAMENT_STATUS.FINISHED);

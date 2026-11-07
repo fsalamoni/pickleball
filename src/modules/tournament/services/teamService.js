@@ -21,6 +21,8 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { advanceBracketAfterResult } from './matchService.js';
+import { getTournament, isTournamentAdmin } from './tournamentService.js';
+import { registrationBlockReason } from '../domain/registrationWindow.js';
 import { REGISTRATION_STATUS, MATCH_STATUS } from '../domain/constants.js';
 import {
   validateTeamRoster, validateConfrontationLineup, computeConfrontationResult, buildTeamRanking,
@@ -65,6 +67,15 @@ export async function registerTeam({ tournament, modality, input, actor } = {}) 
   const existing = await listTeamRegistrations(modality.id);
   const clash = validateTeamAgainstExisting({ teamName, members, existingTeams: existing });
   if (!clash.valid) throw new Error(clash.errors[0]);
+
+  // Fora da janela de inscrição só a equipe do torneio inscreve (a regra
+  // `tRegOpen` recusa igual; aqui sai o motivo). O torneio é RELIDO: o da tela
+  // pode ter sido carregado antes de as inscrições encerrarem.
+  const tournamentId = modality.tournament_id || tournament?.id || null;
+  if (tournamentId && !(await isTournamentAdmin(tournamentId, actor?.uid))) {
+    const bloqueio = registrationBlockReason(await getTournament(tournamentId));
+    if (bloqueio) throw new Error(t(bloqueio));
+  }
 
   const id = doc(collection(db, REG_COL)).id;
   const payload = {

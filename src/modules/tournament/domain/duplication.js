@@ -52,6 +52,11 @@ export function duplicatedTournamentFields(source = {}, options = {}) {
     starts_at: source.starts_at || null,
     ends_at: source.ends_at || null,
     registration_deadline: source.registration_deadline || null,
+    // Abertura, encerramento e prazo de pagamento vão juntos (a cópia nasce
+    // rascunho; a organização ajusta as datas antes de publicar).
+    registration_opens_ms: source.registration_opens_ms ?? null,
+    registration_closes_ms: source.registration_closes_ms ?? null,
+    payment_deadline_ms: source.payment_deadline_ms ?? null,
   };
 }
 

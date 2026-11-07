@@ -30,12 +30,16 @@ import { logger } from '@/core/lib/logger';
 import { publicDisplayName } from '@/core/lib/displayName';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
-import { listAthletes } from '@/modules/athletes/services/athleteService';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_ADMIN_ROLE,
   TOURNAMENT_VISIBILITY,
+  VISIBLE_TOURNAMENT_STATUSES,
+  REGISTRATION_STATUS,
 } from '../domain/constants.js';
+import {
+  instante, msToLocalDate, publishOutcome, scheduleProblems, statusPatchForManualChange,
+} from '../domain/registrationWindow.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
 import { isTournamentComplete } from '../domain/tournamentCompletion.js';
 import { summarizeMyRegistrations } from '../domain/participation.js';
@@ -73,6 +77,13 @@ async function arenaManagerIds(arenaId) {
 
 export async function createTournament(creator, data) {
   if (!creator?.uid) throw new Error(t('Usuário não autenticado.'));
+  const prazos = {
+    registration_opens_ms: instante(data.registration_opens_ms),
+    registration_closes_ms: instante(data.registration_closes_ms),
+    payment_deadline_ms: instante(data.payment_deadline_ms),
+  };
+  const problemas = scheduleProblems({ opens: prazos.registration_opens_ms, closes: prazos.registration_closes_ms, payment: prazos.payment_deadline_ms });
+  if (problemas.length) throw new Error(t(problemas[0]));
   const id = doc(collection(db, COL.tournaments)).id;
   // Sede: quem gere a arena confirma na hora; os outros pedem, e a arena
   // confirma ou recusa na Central (a regra exige a sede pendente).
@@ -93,7 +104,11 @@ export async function createTournament(creator, data) {
     cover_image_url: data.cover_image_url || '',
     starts_at: data.starts_at || null,
     ends_at: data.ends_at || null,
-    registration_deadline: data.registration_deadline || null,
+    // O dia (AAAA-MM-DD) segue gravado para quem ainda lê só ele; o instante
+    // é o que abre e encerra (`registrationWindow.js`).
+    registration_deadline: msToLocalDate(prazos.registration_closes_ms) || data.registration_deadline || null,
+    ...prazos,
+    // Nasce RASCUNHO: só a equipe vê até "Publicar" (a regra confere).
     status: TOURNAMENT_STATUS.DRAFT,
     creator_uid: creator.uid,
     // P1-02: `tournaments` é de leitura PÚBLICA — nunca publicar o e-mail.
@@ -128,17 +143,62 @@ export async function createTournament(creator, data) {
     actor: creator,
     details: { tournament_id: id, name: payload.name },
   });
-  if (arenaId && !arenaConfirmada) {
-    notifyUsers(gestores, {
-      title: tx('"{torneio}" quer a sua arena como sede', { torneio: payload.name.slice(0, 60) }),
-      message: tx('Confirme ou recuse em Torneios, na Central da arena. Até lá ele não aparece na página da arena.'),
-      type: NOTIFICATION_TYPE.GENERIC,
-      link: `/arenas/${arenaId}/gerir?aba=torneios`,
-      actor: { uid: creator.uid, displayName: payload.creator_name },
-    });
-  }
+  // A arena da sede é avisada na PUBLICAÇÃO: o rascunho ela não lê.
   logger.info('tournament_created', { id });
   return id;
+}
+
+/** Avisa os gestores da arena que o torneio publicado a quer como sede. */
+async function avisarSedePendente(tournament, actor) {
+  if (!tournament?.arena_id || tournament.arena_confirmed !== false) return;
+  const gestores = await arenaManagerIds(tournament.arena_id);
+  notifyUsers(gestores, {
+    title: tx('"{torneio}" quer a sua arena como sede', { torneio: String(tournament.name || 'Torneio').slice(0, 60) }),
+    message: tx('Confirme ou recuse em Torneios, na Central da arena. Até lá ele não aparece na página da arena.'),
+    type: NOTIFICATION_TYPE.GENERIC,
+    link: `/arenas/${tournament.arena_id}/gerir?aba=torneios`,
+    actor,
+  });
+}
+
+/**
+ * PUBLICA o rascunho: ele fica visível e as inscrições abrem agora (sem data
+ * de abertura), na data marcada ou — com o encerramento vencido — já
+ * encerradas. O aviso à comunidade sai do servidor quando as inscrições abrem.
+ */
+export async function publishTournament(tournament, actor) {
+  if (!tournament?.id) throw new Error(t('Torneio não encontrado.'));
+  if (tournament.status !== TOURNAMENT_STATUS.DRAFT) throw new Error(t('Este torneio já está publicado.'));
+  const agora = Date.now();
+  const { status, opensNow } = publishOutcome(tournament, agora);
+  await updateDoc(doc(db, COL.tournaments, tournament.id), {
+    status,
+    ...(opensNow ? { registration_opens_ms: agora } : {}),
+    published_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'tournament_published', actor, details: { tournament_id: tournament.id, status } });
+  try {
+    await avisarSedePendente(tournament, actor);
+  } catch (err) {
+    logger.error('Falha ao avisar a arena da sede pendente:', err);
+  }
+  return status;
+}
+
+/**
+ * Volta o torneio para RASCUNHO (some de quem é de fora). Só sem nenhuma
+ * inscrição ativa — quem se inscreveu deixaria de ver o torneio em que está.
+ */
+export async function unpublishTournament(tournament, actor) {
+  if (!tournament?.id) throw new Error(t('Torneio não encontrado.'));
+  const snap = await getDocs(query(collection(db, COL.registrations), where('tournament_id', '==', tournament.id)));
+  const ativas = snap.docs.filter((d) => ![REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.WITHDRAWN].includes(d.data().status));
+  if (ativas.length) {
+    throw new Error(t('Já há {n} inscrição(ões) ativa(s). Com gente inscrita, o torneio não volta para rascunho.', { n: ativas.length }));
+  }
+  await updateDoc(doc(db, COL.tournaments, tournament.id), { status: TOURNAMENT_STATUS.DRAFT, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'tournament_unpublished', actor, details: { tournament_id: tournament.id } });
 }
 
 /** A arena decide a sede: confirma, ou recusa (o torneio deixa de ser da casa). */
@@ -174,7 +234,12 @@ export async function getTournament(id) {
 }
 
 export async function getTournamentByInviteCode(code) {
-  const q = query(collection(db, COL.tournaments), where('invite_code', '==', String(code).toUpperCase()));
+  // Sem o rascunho (a regra recusaria a consulta): o código só vale publicado.
+  const q = query(
+    collection(db, COL.tournaments),
+    where('invite_code', '==', String(code).toUpperCase()),
+    where('status', 'in', VISIBLE_TOURNAMENT_STATUSES),
+  );
   const snap = await getDocs(q);
   if (snap.empty) return null;
   return snap.docs[0].data();
@@ -202,28 +267,14 @@ export async function setTournamentStatus(id, status, actor) {
     logger.error('Falha ao ler torneio antes de mudar status:', err);
   }
 
-  await updateTournament(id, { status }, actor);
-
-  // Aviso à comunidade quando um torneio PÚBLICO passa a aceitar inscrições.
-  if (
-    status === TOURNAMENT_STATUS.REGISTRATIONS_OPEN
-    && previousStatus !== TOURNAMENT_STATUS.REGISTRATIONS_OPEN
-    && tournament?.visibility === TOURNAMENT_VISIBILITY.PUBLIC
-  ) {
-    try {
-      const athletes = await listAthletes();
-      const ids = athletes.map((a) => a.id).filter(Boolean);
-      notifyUsers(ids, {
-        title: tx('Inscrições abertas: "{torneio}"', { torneio: String(tournament.name || 'Novo torneio').slice(0, 60) }),
-        message: tx('Um torneio público está com inscrições abertas. Toque para ver e participar.'),
-        type: NOTIFICATION_TYPE.TOURNAMENT_OPEN,
-        link: '/torneios',
-        actor,
-      });
-    } catch (err) {
-      logger.error('Falha ao avisar a comunidade sobre torneio aberto:', err);
-    }
-  }
+  // Abrir/encerrar à mão acerta a data junto (`statusPatchForManualChange`).
+  const patch = tournament ? statusPatchForManualChange(tournament, status, Date.now()) : { status };
+  if (patch.erro) throw new Error(t(patch.erro));
+  await updateTournament(id, patch, actor);
+  // O aviso à comunidade quando um torneio PÚBLICO passa a aceitar inscrições
+  // sai do servidor (`functions/tournamentSchedule.js`), uma vez só — à mão ou
+  // pela data marcada.
+  logger.info('tournament_status', { id, from: previousStatus, to: status });
 }
 
 export async function deleteTournament(id, actor) {
@@ -459,7 +510,12 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
   const unique = Array.from(new Set(tournamentIds));
   // Em paralelo (antes era um torneio de cada vez, em fila — a tela inicial
   // esperava a soma de todas as leituras). Mesma ordem e mesmo resultado.
-  const docs = await Promise.all(unique.map((id) => getTournament(id)));
+  // Inscrito pela organização num RASCUNHO: a regra não deixa ler até ele ser
+  // publicado — esse torneio fica de fora, sem derrubar a lista inteira.
+  const docs = await Promise.all(unique.map((id) => getTournament(id).catch((err) => {
+    if (err?.code === 'permission-denied') return null;
+    throw err;
+  })));
   const results = [];
   unique.forEach((id, i) => {
     const tt = docs[i];
@@ -513,7 +569,11 @@ export async function listAllTournaments({ includeArchived = false } = {}) {
 
 export async function listPublicTournaments() {
   if (!db) return [];
-  const q = query(collection(db, COL.tournaments), where('visibility', '==', TOURNAMENT_VISIBILITY.PUBLIC));
+  const q = query(
+    collection(db, COL.tournaments),
+    where('visibility', '==', TOURNAMENT_VISIBILITY.PUBLIC),
+    where('status', 'in', VISIBLE_TOURNAMENT_STATUSES),
+  );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data());
 }
@@ -532,6 +592,7 @@ export async function listArenaTournaments(arenaId) {
   const q = query(
     collection(db, COL.tournaments),
     where('arena_id', '==', arenaId),
+    where('status', 'in', VISIBLE_TOURNAMENT_STATUSES),
   );
   const snap = await getDocs(q);
   return snap.docs

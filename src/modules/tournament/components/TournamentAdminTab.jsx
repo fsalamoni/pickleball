@@ -9,6 +9,10 @@ import {
   PlatformSurfaceCard,
 } from '@/components/ui/platform-page';
 import TournamentSanctionCard from '@/v2/components/federations/TournamentSanctionCard';
+import {
+  PublishTournamentBanner, RegistrationScheduleFields, registrationWindowText, scheduleFromInputs, scheduleInputProblems, scheduleInputsFrom, withPaymentDefault,
+} from '@/v2/components/tournament/RegistrationSchedule';
+import { instante, msToLocalDate, statusFromSchedule, effectiveTournamentStatus } from '@/modules/tournament/domain/registrationWindow';
 import { toast } from 'sonner';
 import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import {
@@ -29,6 +33,7 @@ import {
   ArchiveRestore,
   Ban,
   Wallet,
+  EyeOff,
 } from 'lucide-react';
 import {
   useTournamentAdmins,
@@ -39,6 +44,7 @@ import {
   useSetResultsLocked,
   useArchiveTournament,
   useUnarchiveTournament,
+  usePublishTournament,
 } from '@/modules/tournament/hooks/useTournament';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
@@ -67,7 +73,13 @@ function buildFormState(tournament) {
     ruleset: tournament?.scoring?.ruleset || tournament?.ruleset || RULESET.CBP,
     starts_at: tournament?.starts_at || '',
     ends_at: tournament?.ends_at || '',
-    registration_deadline: tournament?.registration_deadline || '',
+    // Abertura, encerramento e prazo de pagamento (data e hora). O torneio
+    // antigo só tinha o DIA do encerramento: ele vira o fim daquele dia.
+    schedule: {
+      ...scheduleInputsFrom(tournament),
+      ...(instante(tournament?.registration_closes_ms) == null && tournament?.registration_deadline
+        ? { closes: `${String(tournament.registration_deadline).slice(0, 10)}T23:59` } : {}),
+    },
     payment_pix_key: tournament?.payment_pix_key || '',
     payment_pix_name: tournament?.payment_pix_name || '',
     payment_pix_city: tournament?.payment_pix_city || '',
@@ -78,14 +90,14 @@ function buildFormState(tournament) {
 const STATUS_ACTIONS = [
   {
     value: TOURNAMENT_STATUS.REGISTRATIONS_OPEN,
-    label: tk('Abrir inscrições'),
-    description: tk('Permite novas entradas nas modalidades.'),
+    label: tk('Abrir inscrições agora'),
+    description: tk('Permite novas entradas nas modalidades a partir de agora (a abertura marcada passa a ser agora).'),
     icon: Play,
   },
   {
     value: TOURNAMENT_STATUS.REGISTRATIONS_CLOSED,
-    label: tk('Encerrar inscrições'),
-    description: tk('Fecha novas entradas e estabiliza a lista.'),
+    label: tk('Encerrar inscrições agora'),
+    description: tk('Fecha novas entradas e estabiliza a lista (o encerramento marcado passa a ser agora).'),
     icon: Lock,
   },
   {
@@ -111,6 +123,11 @@ export default function TournamentAdminTab({ tournament }) {
   const updateMutation = useUpdateTournament(tournament.id);
   const archiveMutation = useArchiveTournament(tournament.id);
   const unarchiveMutation = useUnarchiveTournament(tournament.id);
+  const publishMutation = usePublishTournament(tournament.id);
+  const isDraft = tournament.status === TOURNAMENT_STATUS.DRAFT;
+  const statusAgora = effectiveTournamentStatus(tournament);
+  const fechaMs = instante(tournament.registration_closes_ms);
+  const encerramentoPassou = fechaMs != null && fechaMs <= Date.now();
   const [email, setEmail] = useState('');
   const [form, setForm] = useState(() => buildFormState(tournament));
   const duplicationOn = true;
@@ -194,6 +211,12 @@ export default function TournamentAdminTab({ tournament }) {
 
   async function handleSave() {
     if (!form.name.trim()) return toast.error(t('Informe o nome do torneio.'));
+    const problemas = scheduleInputProblems(form.schedule);
+    if (problemas.length) return toast.error(problemas[0]);
+    // As datas mandam antes do jogo: mudar a abertura ou o encerramento acerta
+    // o status junto (`statusFromSchedule`), e a tarefa do servidor não briga.
+    const prazos = withPaymentDefault(scheduleFromInputs(form.schedule));
+    const statusPelasDatas = statusFromSchedule({ ...tournament, ...prazos }, Date.now());
     try {
       await updateMutation.mutateAsync({
         name: form.name.trim(),
@@ -205,7 +228,9 @@ export default function TournamentAdminTab({ tournament }) {
         ruleset: form.ruleset,
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
-        registration_deadline: form.registration_deadline || null,
+        ...prazos,
+        registration_deadline: msToLocalDate(prazos.registration_closes_ms),
+        ...(statusPelasDatas !== tournament.status ? { status: statusPelasDatas } : {}),
         ...(paymentOn ? {
           payment_pix_key: form.payment_pix_key.trim(),
           payment_pix_name: form.payment_pix_name.trim(),
@@ -411,9 +436,9 @@ export default function TournamentAdminTab({ tournament }) {
             <PlatformFormSection
               icon={CalendarDays}
               title={t('Datas operacionais')}
-              description={t('Controle o período do evento e o fechamento das inscrições sem sair da área administrativa.')}
+              description={t('O período do evento e quando as inscrições abrem, encerram e até quando se paga. Salve para valer.')}
             >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label>{t('Início')}</Label>
                   <Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} className="mt-2" />
@@ -422,11 +447,8 @@ export default function TournamentAdminTab({ tournament }) {
                   <Label>{t('Fim')}</Label>
                   <Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} className="mt-2" />
                 </div>
-                <div>
-                  <Label>{t('Fim das inscrições')}</Label>
-                  <Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} className="mt-2" />
-                </div>
               </div>
+              <RegistrationScheduleFields value={form.schedule} onChange={(v) => set('schedule', v)} />
             </PlatformFormSection>
 
             {paymentOn && (
@@ -491,23 +513,67 @@ export default function TournamentAdminTab({ tournament }) {
               {t('Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.')}
             </p>
 
+            {isDraft ? (
+              <div className="mt-5"><PublishTournamentBanner tournament={tournament} compact /></div>
+            ) : (
+              <p className="mt-4 rounded-[1.25rem] border border-gray-100 bg-white/75 p-4 text-sm leading-6 text-ink">{registrationWindowText(tournament)}</p>
+            )}
+
             <div className="mt-5 space-y-3">
-              {STATUS_ACTIONS.map(({ value, label, description, icon: Icon }) => (
+              {!isDraft && (<>
+              {STATUS_ACTIONS.filter(({ value }) => value !== statusAgora).map(({ value, label, description, icon: Icon }) => {
+                const travado = value === TOURNAMENT_STATUS.REGISTRATIONS_OPEN && encerramentoPassou;
+                return (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setStatus(value)}
-                  className="flex w-full items-start gap-3 rounded-[1.35rem] border border-gray-100 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                  disabled={travado || statusMutation.isPending}
+                  className="flex w-full items-start gap-3 rounded-[1.35rem] border border-gray-100 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-acid/15 text-ink">
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div>
                     <div className="font-semibold text-ink">{t(label)}</div>
-                    <p className="mt-1 text-sm leading-6 text-gray-500">{t(description)}</p>
+                    <p className="mt-1 text-sm leading-6 text-gray-500">
+                      {travado ? t('O encerramento marcado já passou. Para reabrir, mude o encerramento em "Datas operacionais" e salve.') : t(description)}
+                    </p>
                   </div>
                 </button>
-              ))}
+                );
+              })}
+
+              <ConfirmDialog
+                title={t('Voltar para rascunho?')}
+                description={t('O torneio some para quem é de fora até você publicar de novo. Só dá para fazer sem nenhuma inscrição ativa.')}
+                confirmLabel={t('Voltar para rascunho')}
+                destructive={false}
+                onConfirm={async () => {
+                  try {
+                    await publishMutation.mutateAsync({ tournament, publish: false });
+                    toast.success(t('O torneio voltou a ser rascunho.'));
+                  } catch (err) {
+                    toast.error(err?.message || t('Não foi possível voltar para rascunho.'));
+                  }
+                }}
+                trigger={(
+                  <button
+                    type="button"
+                    disabled={publishMutation.isPending}
+                    className="flex w-full items-start gap-3 rounded-[1.35rem] border border-gray-100 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-ink">
+                      <EyeOff className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-ink">{t('Voltar para rascunho')}</div>
+                      <p className="mt-1 text-sm leading-6 text-gray-500">{t('Esconde o torneio de quem é de fora. Só sem inscrições ativas.')}</p>
+                    </div>
+                  </button>
+                )}
+              />
+              </>)}
 
               {cancelActionOn && !isCancelled && (
                 <ConfirmDialog

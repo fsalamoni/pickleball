@@ -26,7 +26,7 @@ export default function V2JoinTournament() {
     setLoading(true);
     try {
       const tt = await getTournamentByInviteCode(code.trim());
-      if (!tt) { toast.error(t('Código não encontrado.')); return; }
+      if (!tt) { toast.error(t('Código não encontrado. Se o torneio ainda é rascunho, ele só vale depois de publicado.')); return; }
       sessionStorage.setItem(`tournament_access_${tt.id}`, code.trim().toUpperCase());
       toast.success(t('Acesso concedido a "{name}".', { name: tt.name }));
       navigate(`/torneios/${tt.id}/visao-geral?join=1`);

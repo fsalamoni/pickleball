@@ -22,6 +22,7 @@ import { t, tk } from '@/core/i18n';
 import { formatDateISO } from '../../arenas/domain/calendar.js';
 import { instanteEmMs } from '../../../core/domain/instant.js';
 import { TOURNAMENT_STATUS } from '../../tournament/domain/constants.js';
+import { effectiveTournamentStatus, instante } from '../../tournament/domain/registrationWindow.js';
 
 /** Hoje, como dia local 'YYYY-MM-DD'. */
 export function hojeLocal(agora = new Date()) {
@@ -88,10 +89,12 @@ export const TOURNAMENT_PHASE = Object.freeze({
  * @param {string} hoje 'YYYY-MM-DD'
  * @returns {string} um valor de `TOURNAMENT_PHASE`
  */
-export function tournamentPhase(t, hoje) {
+export function tournamentPhase(t, hoje, agora = Date.now()) {
   if (!t) return TOURNAMENT_PHASE.OVER;
   if (t.archived === true) return TOURNAMENT_PHASE.OVER;
-  const status = t.status;
+  // O status que vale AGORA: a abertura e o encerramento com hora marcada
+  // valem na hora, sem esperar a passada do servidor.
+  const status = effectiveTournamentStatus(t, agora);
   if (status === TOURNAMENT_STATUS.FINISHED || status === TOURNAMENT_STATUS.CANCELLED) {
     return TOURNAMENT_PHASE.OVER;
   }
@@ -109,11 +112,13 @@ export function tournamentPhase(t, hoje) {
 
   const comecou = inicio && inicio <= hoje;
   if (status === TOURNAMENT_STATUS.REGISTRATIONS_OPEN) {
-    const prazoVencido = prazo && prazo < hoje;
+    // Com o instante do encerramento gravado, ele já decidiu acima; o dia
+    // (`registration_deadline`) é o prazo dos torneios antigos.
+    const prazoVencido = instante(t.registration_closes_ms) == null && prazo && prazo < hoje;
     if (!prazoVencido) return TOURNAMENT_PHASE.OPEN;
     return comecou ? TOURNAMENT_PHASE.LIVE : TOURNAMENT_PHASE.UPCOMING;
   }
-  if (status === TOURNAMENT_STATUS.REGISTRATIONS_CLOSED) {
+  if (status === TOURNAMENT_STATUS.REGISTRATIONS_CLOSED || status === TOURNAMENT_STATUS.PUBLISHED) {
     return comecou ? TOURNAMENT_PHASE.LIVE : TOURNAMENT_PHASE.UPCOMING;
   }
   // Status desconhecido: não afirma nada de atual.

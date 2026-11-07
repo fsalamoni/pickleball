@@ -14,6 +14,8 @@ import {
   addTournamentAdmin,
   removeTournamentAdmin,
   setTournamentStatus,
+  publishTournament,
+  unpublishTournament,
   getTournamentByInviteCode,
   maybeAutoCloseTournament,
   setResultsLocked,
@@ -113,6 +115,8 @@ export function useTournament(id) {
     queryKey: ['tournament', id],
     queryFn: () => getTournament(id),
     enabled: !!id,
+    // Rascunho de outra pessoa: a regra recusa, e insistir não muda a resposta.
+    retry: (n, err) => err?.code !== 'permission-denied' && n < 3,
   });
 }
 
@@ -196,6 +200,20 @@ export function useUpdateTournament(id) {
       qc.invalidateQueries({ queryKey: ['my-tournaments'] });
       qc.invalidateQueries({ queryKey: ['tournaments-public'] });
       qc.invalidateQueries({ queryKey: ['tournaments-all'] });
+    },
+  });
+}
+
+/** Publicar o rascunho e voltar para rascunho (`publishTournament`/`unpublishTournament`). */
+export function usePublishTournament(id) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tournament, publish }) => (publish ? publishTournament(tournament, user) : unpublishTournament(tournament, user)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament', id] });
+      qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-public'] });
     },
   });
 }

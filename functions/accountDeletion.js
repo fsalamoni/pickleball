@@ -650,7 +650,7 @@ function limparBemDe(bem, uid) {
  * Rascunho não entra — ninguém depende de um rascunho, e a conta de teste que
  * deixou um rascunho para trás não pode ficar impossível de excluir.
  */
-const TOURNAMENT_LIVE = Object.freeze(['registrations_open', 'registrations_closed', 'in_progress']);
+const TOURNAMENT_LIVE = Object.freeze(['published', 'registrations_open', 'registrations_closed', 'in_progress']);
 
 /** Pedido do Mercado nesses estados acabou (cópia de `ORDER_FINAL_STATUSES`). */
 const MARKET_ORDER_FINAL = Object.freeze(['completed', 'cancelled', 'expired']);

@@ -57,6 +57,7 @@ import { resolveRegistrationContact } from '@/modules/tournament/domain/registra
 import { hasCheckedIn, isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { registrationSlotsWithoutAccount } from '@/modules/tournament/domain/registrationAccounts';
 import { isTournamentRankingEligible } from '@/modules/tournament/domain/rankingEligibility';
+import { isPaymentOpen, registrationBlockReason } from '@/modules/tournament/domain/registrationWindow';
 import { t, fmtLista } from '@/core/i18n';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
@@ -160,7 +161,8 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const [editTarget, setEditTarget] = useState(null);
   const [payOpen, setPayOpen] = useState(false);
   // Inscrição pendente de pagamento do próprio usuário (flag payment_instructions).
-  const ownPendingPayment = paymentOn && tournamentHasPixConfig(tournament)
+  // O pagamento fica à vista da abertura até o prazo para pagamento.
+  const ownPendingPayment = paymentOn && tournamentHasPixConfig(tournament) && isPaymentOpen(tournament)
     ? registrations.find((r) => (
         r.status === REGISTRATION_STATUS.PENDING_PAYMENT
         && currentUserId
@@ -179,7 +181,9 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
   const alreadyRegistered = registrations.some((r) => registrationIncludesUid(r, currentUserId));
-  const canJoin = isAdmin || isPublic || hasPrivateAccess || alreadyRegistered;
+  // Fora da janela (rascunho, antes de abrir, depois de encerrar) só a equipe inscreve.
+  const windowBlock = isAdmin ? null : registrationBlockReason(tournament);
+  const canJoin = isAdmin || (!windowBlock && (isPublic || hasPrivateAccess || alreadyRegistered));
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
 
   return (
@@ -197,7 +201,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
             <Plus className="w-4 h-4 mr-1" /> {slotsFull && !alreadyRegistered ? t('Modalidade lotada') : isAdmin ? t('Inscrever jogador') : t('Inscrever-se')}
           </V2Button>
         ) : (
-          <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>
+          <V2Badge tone="neutral">{windowBlock ? t(windowBlock) : t('Privado: exige código')}</V2Badge>
         )}
       </div>
         {ownPendingPayment && (
