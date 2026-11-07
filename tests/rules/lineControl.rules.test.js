@@ -19,7 +19,7 @@ import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-  addDoc, collection, deleteDoc, doc, getDocs, setDoc, updateDoc, serverTimestamp,
+  addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore';
 
 const DONO = 'dono_uid';
@@ -186,5 +186,45 @@ describe('o convite da câmera sem conta (QR, docs/53 §5c)', () => {
     await assertFails(setDoc(ref(DONO), inv({ exp_ms: Date.now() - 1000 })));
     await assertFails(setDoc(ref(DONO, 'token-cru'), inv()));
     await assertFails(setDoc(ref(DONO), inv({ token: 'x' })));
+  });
+});
+
+describe('a calibração pela central (docs/53 §5d)', () => {
+  const FOTO = 'data:image/jpeg;base64,/9j/4AAQ';
+  const id = (uid) => `${uid}_fundo_a`;
+  const ref = (quem, dono = ATLETA, q = Q1) => doc(como(quem), `${q}/line_calib/${id(dono)}`);
+  const lado = (uid, extra = {}) => ({ uid, position: 'fundo_a', snap: FOTO, snap_ms: 1, vw: 1920, vh: 1080, cur: { corners: [] }, ...extra });
+
+  it('⭐ a câmera manda a foto; quem organiza calibra, pede foto nova e começa (apagando a foto)', async () => {
+    // Quem organiza já acompanha antes de a câmera mandar algo (o documento ainda não existe).
+    await assertSucceeds(getDoc(ref(DONO)));
+    await assertSucceeds(setDoc(ref(ATLETA), lado(ATLETA)));
+    await assertSucceeds(getDoc(ref(ATLETA)));
+    await assertSucceeds(getDocs(collection(como(DONO), `${Q1}/line_calib`)));
+    await assertSucceeds(updateDoc(ref(NOMEADO), { calib: { corners: [] }, calib_ms: 2, run: true, run_ms: 2, by: NOMEADO, snap: deleteField() }));
+    await assertSucceeds(updateDoc(ref(DONO), { snap_req_ms: 3, by: DONO, snap: deleteField() }));
+    // A câmera aplica, diz que aplicou e manda foto nova.
+    await assertSucceeds(setDoc(ref(ATLETA), { applied_ms: 2, snap: FOTO, snap_ms: 4 }, { merge: true }));
+    await assertSucceeds(deleteDoc(ref(ATLETA)));
+  });
+
+  it('🔴 quem organiza não troca a foto nem a deixa no banco; não grava por outro', async () => {
+    await assertSucceeds(setDoc(ref(ATLETA), lado(ATLETA)));
+    await assertFails(updateDoc(ref(DONO), { calib: { corners: [] }, calib_ms: 2, by: DONO }));
+    await assertFails(updateDoc(ref(DONO), { snap: FOTO, by: DONO }));
+    await assertFails(updateDoc(ref(DONO), { calib: {}, calib_ms: 2, by: ATLETA, snap: deleteField() }));
+    await assertFails(updateDoc(ref(DONO), { uid: DONO, by: DONO, snap: deleteField() }));
+  });
+
+  it('🔴 a foto: só da própria câmera, só JPEG, abaixo do teto; ninguém de fora lê', async () => {
+    await assertFails(setDoc(ref(DONO), lado(ATLETA)));
+    await assertFails(setDoc(ref(ATLETA), lado(ATLETA, { snap: 'data:text/html,oi' })));
+    await assertFails(setDoc(ref(ATLETA), lado(ATLETA, { snap: FOTO + 'A'.repeat(900000) })));
+    await assertFails(setDoc(ref(ATLETA), lado(ATLETA, { extra: 1 })));
+    await assertFails(setDoc(ref(ESTRANHO, ESTRANHO), lado(ESTRANHO)));
+    await assertFails(setDoc(ref(ATLETA, ATLETA, Q2), lado(ATLETA)));
+    await assertSucceeds(setDoc(ref(ATLETA), lado(ATLETA)));
+    await assertFails(getDocs(collection(como(ESTRANHO), `${Q1}/line_calib`)));
+    await assertFails(getDocs(collection(como(ATLETA), `${Q1}/line_calib`)));
   });
 });

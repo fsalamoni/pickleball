@@ -373,8 +373,13 @@ formato (`game_days/{id}/line_courts/court-N` ou
 existe e não venceu, a quadra está ligada e a flag também — senão a MESMA
 recusa. Grava com o Admin SDK só os campos de `lcCam`/`lcCall`, na posição DO
 CONVITE, com `uid: guest_{16 do hash}` e nome "Convidado"; marcação com a
-hora a mais de 10 min da de agora é recusada. Testes:
-`functions/lineGuest.test.js`.
+hora a mais de 10 min da de agora é recusada. A ação `calib` é a calibração
+PELA CENTRAL (docs/53 §5d): com `fields`, grava em
+`{quadra}/line_calib/guest_…_{posição}` a foto da quadra (só JPEG em data URL,
+abaixo de 900 mil caracteres), o tamanho do vídeo, a calibração que a câmera
+tem e a última aplicada; sempre devolve o que quem organiza mandou
+(calibração, pedido de foto, começar/pausar), sem a foto. `leave` apaga também
+a `line_calib` da câmera. Testes: `functions/lineGuest.test.js`.
 
 ## 7a. Carreira — a dupla confirma (flag `athlete_career`, `functions/career.js`)
 

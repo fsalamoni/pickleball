@@ -220,8 +220,20 @@ a consulta falha e a exclusão sai **parcial**, nunca "nada a apagar"; mais de
 400 documentos numa coleção também (a próxima rodada apaga o resto).
 
 Vídeo, calibração (por posição: `v2:view:<uid>:linhas:calibracao:<dia>:<posição>`)
-e as fotos das marcações ficam **no aparelho**. Imagem de atleta não sai do
-celular (sem questão de LGPD sobre vídeo de terceiros).
+e as fotos das marcações ficam **no aparelho**. A ÚNICA imagem que sai dele é a
+foto da quadra para a calibração pela central (§5d): só a própria câmera e quem
+organiza a leem, ela some a cada escrita de quem organiza e quando a câmera
+sai, e entra na exclusão de conta.
+
+- **A calibração pela central**: `…/line_courts/court-N/line_calib/{uid}_{posição}`
+  (o id da câmera) — a câmera grava `uid, position, vw, vh` (tamanho do
+  vídeo), `cur` (a calibração que ela tem), `snap` (JPEG em data URL, abaixo
+  de 900 mil caracteres) + `snap_ms`, e `applied_ms`; quem organiza grava
+  `calib` + `calib_ms` (pontos em pixels do VÍDEO), `snap_req_ms`, `run` +
+  `run_ms` e `by` (ele mesmo). Regra `lcCal` (a câmera, em nome próprio,
+  com o controle ligado na quadra) e `lcCalOrg` (quem organiza, só essas
+  chaves e sempre apagando `snap`); ler e apagar, só a própria câmera e quem
+  organiza. Exclusão de conta pelo grupo `line_calib.uid`.
 
 ## 5. Guia de uso por aparelho
 
@@ -361,9 +373,42 @@ próximo sinal.
   posição do convite, com `uid: guest_{16 do hash}` e nome "Convidado".
 - Vencido, cancelado, quadra desligada ou flag desligada: a tela diz "Este QR
   não vale mais" (a mesma resposta para tudo). A calibração fica no aparelho,
-  como na câmera com conta.
+  como na câmera com conta — e quem organiza pode calibrar pela central (§5d).
 - Nada de pessoa é gravado: não entra na exclusão de conta. As câmeras e
   marcações do convidado saem quando quem organiza limpa a quadra.
+
+## 5d. Calibrar pela central, câmera por câmera (`useRemoteCalibration`, `RemoteCalibration`)
+
+Câmera presa no alto de um poste, atrás do vidro ou longe da beira da quadra
+não se calibra pela tela dela. Então quem organiza calibra **na central**, uma
+câmera por vez: em cada câmera no ar, **"Calibrar daqui"** abre, embaixo do
+quadro das câmeras, a MESMA marcação do aparelho que filma
+(`CalibrationMarker`: área vigiada, os quatro pontos com zoom, lupa e ajuste
+fino, "Grudar na linha", 5º ponto e teste com a bola) sobre uma **foto** da
+quadra que a câmera mandou. Depois, **"Mandar e começar a analisar"** (ou
+"Só mandar a calibração"). Na linha da câmera calibrada, **"Começar a
+analisar" / "Pausar"** também saem da central. No aparelho que filma basta
+abrir a câmera e deixar a página aberta (a dica do passo 2 diz isso); quando a
+calibração chega, ele avisa "A central calibrou esta câmera às …".
+
+- **A foto**: a câmera manda uma foto (maior lado até 1600 px, JPEG) quando
+  abre ainda sem calibração e sempre que a central pede ("Pedir imagem nova";
+  ao abrir "Calibrar daqui" com foto ausente ou de mais de 2 min, o pedido sai
+  sozinho). Os pontos são marcados em pixels da FOTO e vão em pixels do VÍDEO
+  (`snapScale`); a câmera ainda reescala pela resolução que tem na hora
+  (`remoteCalibFor`). A tela começa pelo que a câmera já tem (`cur`).
+- **Quem faz o quê** (`domain/remoteCalib.js`, `cameraTodo`): a câmera aplica
+  a calibração com `calib_ms` mais novo que a última aplicada (guardada junto
+  da calibração do aparelho, `remoteMs`), pausa a análise para trocar os
+  pontos, responde `applied_ms` e a central mostra "A câmera aplicou" (e o
+  erro do 5º ponto, que chega pelo sinal da câmera). `run` só começa com a
+  calibração pronta e a câmera acima do mínimo — a mesma trava do botão.
+- **Privacidade**: é a única imagem que sai do aparelho. Só a câmera e quem
+  organiza leem; toda escrita de quem organiza APAGA a foto (a regra exige);
+  a câmera apaga o documento ao sair da página; entra na exclusão de conta.
+- **Câmera sem conta** (§5c): o mesmo, pela função `lineGuest` (ação
+  `calib`): grava a foto (só JPEG, abaixo do teto) e devolve o que quem
+  organiza mandou; o aparelho pergunta a cada 4 s. `leave` apaga a foto.
 
 ## 5a. Montagens — "Como você vai montar?" (`domain/setupKits.js`, `SetupGuide`)
 

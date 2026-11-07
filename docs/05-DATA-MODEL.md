@@ -791,11 +791,20 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
     Quem usa é a função `lineGuest`, que grava a câmera como
     `line_cams/guest_{16 do hash}_{posição}` (nome "Convidado") e as marcações
     com `uid: guest_…` — não é conta de ninguém, nada a excluir com a conta
+  - `line_calib/{uid}_{posição}` — a calibração PELA CENTRAL (docs/53 §5d),
+    uma por câmera. A câmera grava `uid`, `position`, `vw`/`vh` (tamanho do
+    vídeo), `cur` (a calibração que tem), `snap` (a FOTO da quadra, JPEG em
+    data URL < 900 mil caracteres) + `snap_ms` e `applied_ms`; quem organiza
+    grava `calib` + `calib_ms` (pontos em pixels do vídeo), `snap_req_ms`,
+    `run` + `run_ms` e `by`, e toda escrita dele apaga `snap` (regras `lcCal`
+    e `lcCalOrg`). Ler/apagar: só a própria câmera e quem organiza. A câmera
+    apaga ao sair; a exclusão de conta acha pelo grupo `line_calib.uid`
+    (índice de grupo em `fieldOverrides`)
 - coleção `tournament_line_courts/{torneio}_{quadra}` (flag `line_control`) —
   o controle de linhas de uma QUADRA de torneio: `tournament_id`, `court_id`
   (`court-N`), `court_name`, `line_control`, `line_control_layout`,
-  `updated_by`, `updated_at`; as mesmas subcoleções `line_cams`/`line_calls`
-  e `line_invites` (convite sem conta, só a equipe).
+  `updated_by`, `updated_at`; as mesmas subcoleções `line_cams`/`line_calls`,
+  `line_invites` (convite sem conta, só a equipe) e `line_calib` (calibração pela central).
   Lê qualquer conta logada; grava a equipe do torneio (`tLineOrg`). Ver docs/53 §9
 - `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
   operar as partidas (sortear, criar próxima partida, substituir jogador, marcar

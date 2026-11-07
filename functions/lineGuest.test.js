@@ -98,3 +98,33 @@ describe('a câmera no ar e as marcações', () => {
     await expect(chamar(db, { action: 'beat', cam: {} })).rejects.toMatchObject({ message: g.NEUTRO });
   });
 });
+
+describe('a calibração pela central (sem conta)', () => {
+  const FOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+  const CAL = `${HOST}/line_calib/${UID}_fundo_a`;
+
+  it('⭐ grava a foto na posição do convite e devolve o que quem organiza mandou', async () => {
+    const db = cenario();
+    await chamar(db, { action: 'calib', fields: { snap: FOTO, vw: 1920, vh: 1080, cur: { corners: [{ x: 1, y: 2 }], zone: 'full', hue: 60 }, position: 'topo', uid: 'x' } });
+    expect(db.store.docs.get(CAL)).toMatchObject({ uid: UID, position: 'fundo_a', snap: FOTO, snap_ms: NOW, vw: 1920, vh: 1080, cur: { corners: [{ x: 1, y: 2 }], zone: 'full', hue: 60 } });
+    db.store.docs.set(CAL, { ...db.store.docs.get(CAL), calib: { corners: [] }, calib_ms: 7, run: true, run_ms: 8, snap_req_ms: 9 });
+    const r = await chamar(db, { action: 'calib' });
+    expect(r).toMatchObject({ calib: { corners: [] }, calib_ms: 7, run: true, run_ms: 8, snap_req_ms: 9, vw: 1920 });
+    expect(r.snap).toBeUndefined();
+  });
+
+  it('🔴 foto que não é JPEG ou grande demais é recusada; sair apaga a foto', async () => {
+    const db = cenario();
+    await expect(chamar(db, { action: 'calib', fields: { snap: 'data:text/html,<b>' } })).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(chamar(db, { action: 'calib', fields: { snap: `${FOTO}${'A'.repeat(g.SNAP_MAX)}` } })).rejects.toMatchObject({ code: 'invalid-argument' });
+    await chamar(db, { action: 'calib', fields: { snap: FOTO } });
+    await chamar(db, { action: 'leave' });
+    expect(db.store.docs.has(CAL)).toBe(false);
+  });
+
+  it('🔴 sem convite válido, nada da calibração passa', async () => {
+    const db = cenario({ line: false });
+    await expect(chamar(db, { action: 'calib', fields: { snap: FOTO } })).rejects.toMatchObject({ message: g.NEUTRO });
+    expect(db.store.docs.has(CAL)).toBe(false);
+  });
+});

@@ -6,7 +6,9 @@ um torneio liga o seu controle e escolhe o seu arranjo, de 1 a 5 câmeras
 fora — longa, lateral, curta, área errada, rede — / revisar), o pé na cozinha no
 voleio, o pé no saque e os dois quiques; a central da quadra junta o que as
 câmeras dela viram. O vídeo fica no aparelho; vão ao banco só a configuração da
-quadra, a presença de cada câmera (`line_cams`) e as marcações (`line_calls`):
+quadra, a presença de cada câmera (`line_cams`), as marcações (`line_calls`) e,
+para calibrar pela central, uma foto da quadra que só a câmera e quem organiza
+veem e que some a cada envio (`line_calib`, docs/53 §5d):
 
 - dia de jogo: `game_days/{id}/line_courts/court-N` (`domain/gameDayLine.js`,
   `services/gameDayLineService.js`, `hooks/useGameDayLineCourts.js`);
@@ -30,7 +32,8 @@ caminho da quadra). As regras do jogo julgadas, com o número da regra: docs/53 
 - `services/cameraService.js` — `getUserMedia`, e `openIpCamera` (câmera IP pela ponte local go2rtc/MediaMTX, WebRTC só de receber; regra do endereço e o assistente que gera o `go2rtc.yaml` (`go2rtcConfig`, `IpBridgeWizard`; a senha só vai para o arquivo baixado) em `domain/ipCamera.js`, zero banco — docs/53 §5b); `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
 - `services/lineGuestService.js` — a câmera SEM CONTA pelo QR (docs/53 §5c): o convite `line_invites/{sha256(token)}` (token só no fragmento do link), a página `/linhas/convidado` e o `guestSink` que manda sinal e marcações pela função `lineGuest` (`functions/lineGuest.js`).
 - `services/lineCallSync.js` — presença da câmera e envio das marcações; `services/saveEach.js` — várias quadras de uma vez, a que falhar não derruba as outras.
-- `hooks/useLineCallSession.js` — uma câmera: abrir, calibrar (navegador, por posição), analisar, enviar.
+- `hooks/useLineCallSession.js` — uma câmera: abrir, calibrar (navegador, por posição), analisar, enviar; e a calibração que chega da central.
+- `hooks/useCalibration.js` — a conta da marcação (pontos, área, "Grudar na linha", 5º ponto, cor da bola) sobre um vídeo OU uma foto; `hooks/useRemoteCalibration.js` — a central calibrando uma câmera pela foto dela. `domain/remoteCalib.js` — escala foto ⇄ vídeo, limpeza e o que a câmera faz com o documento; `services/lineCalibService.js` — `{quadra}/line_calib/{camId}` (docs/53 §5d). A tela da marcação é `CalibrationMarker`, a MESMA no aparelho que filma e na central (`RemoteCalibration`).
 - `hooks/useAnnounce.js` — toque na hora (`domain/alertTones.js` + `services/alertSound.js`), vibração e voz (preferências por pessoa); só a falta é dita, e no aparelho que filma o "revisar" fica calado.
 - `hooks/useLineControlLive.js` — a central: câmeras no ar e lances juntados (tempo real).
 

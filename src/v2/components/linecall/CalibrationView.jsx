@@ -11,12 +11,15 @@
  *   está embaixo dele).
  * · Os avisos ficam numa faixa em cima, os botões embaixo e o zoom na lateral,
  *   longe do meio da imagem; dá para esconder tudo e para abrir em tela cheia.
+ * · Com `s.still` (a FOTO que a câmera mandou, na central — docs/53 §5d) a
+ *   imagem é uma foto em vez do vídeo; o resto é igual.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ZoomIn, ZoomOut, Hand, Maximize2, Minimize2, Eye, EyeOff, Scan } from 'lucide-react';
 
 import { applyHomography } from '@/modules/linecall/domain/homography';
+import { mediaSize } from '@/modules/linecall/hooks/useCalibration';
 import { COURT, courtSegments } from '@/modules/linecall/domain/court';
 import { pickHeadline } from '@/modules/linecall/domain/fusion';
 import CourtDiagram from './CourtDiagram';
@@ -71,15 +74,17 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
   const pointers = useRef(new Map());
   const gesture = useRef(null); // { kind: 'pinch'|'pan', start, from, d0 }
   const v = s.videoRef.current;
+  // O tamanho da imagem: do vídeo ou da foto.
+  const { w: vw, h: vh } = mediaSize(v);
   const { w, h } = dims;
   const z = view.z;
 
   // O desenho: as linhas da calibração, a área vigiada, os pontos, a bola e o último lance.
   useEffect(() => {
     const cv = canvasRef.current;
-    if (!cv || !v?.videoWidth) return;
+    if (!cv || !vw) return;
     // Redimensionar realoca o canvas (Full HD = 8 MB): só quando o vídeo muda de tamanho.
-    if (cv.width !== v.videoWidth || cv.height !== v.videoHeight) { cv.width = v.videoWidth; cv.height = v.videoHeight; }
+    if (cv.width !== vw || cv.height !== vh) { cv.width = vw; cv.height = vh; }
     const ctx = cv.getContext('2d');
     ctx.clearRect(0, 0, cv.width, cv.height);
     // Com zoom, o traço afina na mesma conta: segue fino na tela e não cobre a linha.
@@ -142,24 +147,24 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
       ctx.lineWidth = lw * 2;
       ctx.beginPath(); ctx.arc(last.imagePoint.x, last.imagePoint.y, lw * 10, 0, Math.PI * 2); ctx.stroke();
     }
-  }, [v, dims, z, zone, s.Hinv, s.calib.corners, s.calib.checkTap, s.ball, s.events, s.checkPoint, mode]);
+  }, [v, vw, vh, dims, z, zone, s.Hinv, s.calib.corners, s.calib.checkTap, s.ball, s.events, s.checkPoint, mode]);
 
   // A lupa: o pedaço do vídeo em volta do dedo, ampliado, com a mira.
   useEffect(() => {
     const cv = loupeRef.current;
-    if (!cv || !press || !v?.videoWidth) return;
+    if (!cv || !press || !vw) return;
     const dpr = window.devicePixelRatio || 1;
     cv.width = LOUPE * dpr;
     cv.height = LOUPE * dpr;
     const ctx = cv.getContext('2d');
     const r = v.getBoundingClientRect(); // já com o zoom: a lupa amplia o que a tela mostra
-    const src = (LOUPE / LOUPE_ZOOM) * (v.videoWidth / r.width);
+    const src = (LOUPE / LOUPE_ZOOM) * (vw / r.width);
     ctx.drawImage(v, press.x - src / 2, press.y - src / 2, src, src, 0, 0, cv.width, cv.height);
     ctx.strokeStyle = '#d4f82e';
     ctx.lineWidth = 2 * dpr;
     const c = cv.width / 2;
     ctx.beginPath(); ctx.moveTo(c - 14 * dpr, c); ctx.lineTo(c + 14 * dpr, c); ctx.moveTo(c, c - 14 * dpr); ctx.lineTo(c, c + 14 * dpr); ctx.stroke();
-  }, [press, v]);
+  }, [press, v, vw]);
 
   const box = () => viewportRef.current?.getBoundingClientRect() || { left: 0, top: 0, width: 1, height: 1 };
   const local = (ev) => { const r = box(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
@@ -169,7 +174,7 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
     const r = canvasRef.current.getBoundingClientRect();
     const sx = (ev.clientX - r.left) / r.width;
     const sy = (ev.clientY - r.top) / r.height;
-    return { x: sx * v.videoWidth, y: sy * v.videoHeight, sx, sy, scale: v.videoWidth / r.width };
+    return { x: sx * vw, y: sy * vh, sx, sy, scale: vw / r.width };
   };
 
   const zoomBy = useCallback((factor, p) => {
@@ -204,7 +209,7 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
   const panning = hand || !mode;
 
   const down = (ev) => {
-    if (isUi(ev) || !v?.videoWidth) return;
+    if (isUi(ev) || !vw) return;
     ev.currentTarget.setPointerCapture?.(ev.pointerId);
     pointers.current.set(ev.pointerId, local(ev));
     if (pointers.current.size === 2) {
@@ -317,14 +322,25 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
           className="absolute inset-0 origin-top-left"
           style={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${z})` }}
         >
-          <video
-            ref={s.videoRef}
-            autoPlay
-            playsInline
-            muted
-            onLoadedMetadata={(e) => setDims({ w: e.currentTarget.videoWidth || 16, h: e.currentTarget.videoHeight || 9 })}
-            className="absolute inset-0 h-full w-full"
-          />
+          {s.still ? (
+            <img
+              ref={s.videoRef}
+              src={s.still}
+              alt=""
+              draggable={false}
+              onLoad={(e) => setDims({ w: e.currentTarget.naturalWidth || 16, h: e.currentTarget.naturalHeight || 9 })}
+              className="absolute inset-0 h-full w-full"
+            />
+          ) : (
+            <video
+              ref={s.videoRef}
+              autoPlay
+              playsInline
+              muted
+              onLoadedMetadata={(e) => setDims({ w: e.currentTarget.videoWidth || 16, h: e.currentTarget.videoHeight || 9 })}
+              className="absolute inset-0 h-full w-full"
+            />
+          )}
           <canvas
             ref={canvasRef}
             aria-label={mode ? t('Imagem da câmera: toque para marcar') : t('Imagem da câmera')}

@@ -1171,6 +1171,8 @@ async function coletarLinhas(db, uid) {
   const consultas = [
     () => db.collectionGroup('line_cams').where('uid', '==', uid),
     () => db.collectionGroup('line_calls').where('uid', '==', uid),
+    // A foto da quadra que a câmera mandou para a central calibrar (docs/53 §5d).
+    () => db.collectionGroup('line_calib').where('uid', '==', uid),
   ];
   for (const consulta of consultas) {
     try {

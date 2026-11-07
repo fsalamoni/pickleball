@@ -67,5 +67,21 @@ export function guestSink({ host, token }) {
     }),
     remove: () => chamar({ action: 'leave', host, token }),
     post: (m) => chamar({ action: 'call', host, token, call: lineCallFields(m) }),
+    // A calibração pela central (docs/53 §5d): sem conta não há assinatura do
+    // banco, então a câmera pergunta ao servidor de tempos em tempos.
+    calib: {
+      write: (fields) => chamar({ action: 'calib', host, token, fields }),
+      watch: (cb, onError) => {
+        const ler = () => chamar({ action: 'calib', host, token }).then(cb, onError);
+        ler();
+        const id = setInterval(ler, GUEST_CALIB_POLL_MS);
+        return () => clearInterval(id);
+      },
+      // Sair do ar (`leave`) já apaga a foto e o resto.
+      remove: () => Promise.resolve(),
+    },
   };
 }
+
+/** De quanto em quanto tempo a câmera convidada pergunta pela central (ms). */
+export const GUEST_CALIB_POLL_MS = 4000;
