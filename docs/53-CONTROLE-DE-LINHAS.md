@@ -449,6 +449,29 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
 
 ## 7a. Confiança — o que a pessoa vê
 
+- **Marcar com zoom, controles sobre a imagem** (`CalibrationView`,
+  `zoomMath.js`): pinça com dois dedos (que também arrasta), roda do mouse e
+  botões + e − (até 8×), mãozinha para arrastar com um dedo, tela cheia e
+  "esconder os controles". O zoom é só da TELA (`translate + scale` em volta do
+  vídeo e do desenho): os pontos ficam guardados em pixels do VÍDEO, então dar
+  ou tirar zoom não mexe em ponto nenhum. O ponto é um anel com um pingo (a
+  linha embaixo segue à vista) e o traço afina com o zoom. A dica fica numa
+  faixa em cima, os botões da marcação embaixo, o zoom na lateral e o mapa
+  pequeno no canto. Em janela estreita (celular em pé, < 560 px) a dica e os
+  botões descem para logo abaixo da imagem e nela ficam só o zoom e a tela
+  cheia.
+- **Área vigiada** (`domain/zones.js`): cada câmera escolhe a quadra inteira
+  ou uma parte — lado A/B inteiro, fundo A/B, as duas cozinhas, cozinha A/B.
+  Com uma parte, a pessoa marca os quatro cantos DELA (o retângulo pintado
+  mais próximo; para um lado ou uma cozinha entram `N1`/`N2`, onde a rede
+  cruza a lateral) e o 5º ponto é o da parte (`TA`/`TB`/`KTA`/`KTB`). A câmera
+  só marca o lance da área (`eventInZone`): o quique pelo ponto onde caiu
+  (borda de fundo aberta para fora, as outras com 30 cm de folga), o pé na
+  cozinha só se a área cobre aquela cozinha, o pé no saque só se ela chega
+  àquela linha de fundo, e lance sem ponto conhecido fica. Fora da área ela
+  fica calada — nada vai para a central. A área mora na calibração do aparelho
+  (`calib.zone`, ausente = quadra inteira, igual a antes); zero banco. Os ids
+  das áreas e dos pontos são contrato: nunca renomeie.
 - **Calibração com prova**: lupa ao tocar (4×), "Ajustar os pontos" (arrastar),
   e o **5º ponto** (`domain/calibrationCheck.js`: o "T" da central com a
   cozinha) mede o erro em cm — até 3 ótimo, até 6 bom, acima refazer. O erro vai

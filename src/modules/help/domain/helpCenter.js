@@ -1631,6 +1631,8 @@ const ATLETA = {
           tk('CÂMERA DE CIMA (no centro, apontando para baixo) — ótima para ONDE a bola caiu, mas precisa de 7 a 9 m de altura (ou 4 a 5 m com lente grande-angular linear), não vê bem o momento do quique e não julga o pé na cozinha. Use como complemento.'),
           tk('VÁRIOS CELULARES — cada pessoa usa o próprio celular, entrando com a própria conta (quem participa ou organiza o dia). Também dá para usar a mesma conta em vários aparelhos. Cada um escolhe uma posição diferente; o desenho mostra quais já estão ocupadas.'),
           tk('O VÍDEO NÃO SAI DO APARELHO — só as marcações (dentro/fora, a distância e a hora) vão para a central.'),
+          tk('SÓ UMA PARTE DA QUADRA — cada câmera pode vigiar a quadra inteira ou só uma parte (um lado, um fundo, as duas cozinhas, uma cozinha). Escolha em "O que esta câmera vigia": você marca os quatro cantos daquela parte e a câmera só marca lances que caem nela.'),
+          tk('ZOOM — na marcação, aproxime com dois dedos ou com o botão +. Os pontos ficam presos na quadra: dar ou tirar zoom não mexe em nenhum. A tela cheia deixa a imagem maior, com os botões por cima dela.'),
         ),
         steps(
           tk('Combine com quem vai filmar qual é o lado A da quadra (por exemplo, o lado da entrada). Todos usam o mesmo desenho.'),

@@ -10,7 +10,7 @@
  * quadro), que não sai do aparelho; para a central vai só a marcação.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Camera, Crosshair, Palette, Play, Pause, Trash2, Check, Radio, AlertTriangle,
   Move, Target, ScanSearch, Volume2, VolumeX, Film, BatteryLow, Magnet,
@@ -25,13 +25,15 @@ import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useLineCallSession } from '@/modules/linecall/hooks/useLineCallSession';
 import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnounce';
 import { applyHomography } from '@/modules/linecall/domain/homography';
-import { courtSegments, insideMargin, kitchenDepth } from '@/modules/linecall/domain/court';
+import { insideMargin, kitchenDepth } from '@/modules/linecall/domain/court';
+import { CAMERA_ZONES, zoneById } from '@/modules/linecall/domain/zones';
 import { CAMERA_LEVEL } from '@/modules/linecall/domain/cameraCheck';
 import { cameraSource, CAMERA_SOURCE_TIP } from '@/modules/linecall/domain/setupKits';
 import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
 import { pickHeadline } from '@/modules/linecall/domain/fusion';
 import { hasReplay } from '@/modules/linecall/domain/replay';
 import CourtDiagram from './CourtDiagram';
+import CalibrationView from './CalibrationView';
 import PlacementGuide, { DeviceTips } from './PlacementGuide';
 import LanceReplay from './LanceReplay';
 import CallFlash from './CallFlash';
@@ -48,11 +50,14 @@ const POINT_LABEL = {
   KA2: tk('a ponta da linha da cozinha do lado A, no lado 2'),
   KB1: tk('a ponta da linha da cozinha do lado B, no lado 1'),
   KB2: tk('a ponta da linha da cozinha do lado B, no lado 2'),
+  N1: tk('o ponto onde a rede cruza a lateral do lado 1'),
+  N2: tk('o ponto onde a rede cruza a lateral do lado 2'),
 };
 const CHECK_LABEL = {
   KTA: tk('o "T" onde a linha central encontra a linha da cozinha do lado A'),
   KTB: tk('o "T" onde a linha central encontra a linha da cozinha do lado B'),
   TA: tk('o meio da linha de fundo do lado A (onde começa a linha central)'),
+  TB: tk('o meio da linha de fundo do lado B (onde começa a linha central)'),
 };
 const CHECK_TEXT = {
   [CHECK_LEVEL.GREAT]: tk('Ótima: erro de {n} cm.'),
@@ -80,161 +85,6 @@ const IP_ERROR = {
 };
 const IP_OPTION = '__ip__';
 const IP_PREF = 'linhas:camera-ip:ponte';
-
-const LOUPE = 132; // px na tela
-const ZOOM = 4;
-const GRAB_PX = 28; // distância, na tela, para pegar um ponto e arrastar
-
-/**
- * O vídeo com a quadra desenhada por cima. Tocar marca os pontos, o 5º ponto,
- * a cor da bola ou testa um ponto; em "ajustar", arrastar move um ponto. Com
- * o dedo na tela, a LUPA mostra o ponto ampliado num canto (o dedo esconde o
- * que está embaixo dele).
- */
-function CameraView({ s, mode, onTap }) {
-  const canvasRef = useRef(null);
-  const loupeRef = useRef(null);
-  const [dims, setDims] = useState({ w: 16, h: 9 });
-  const [press, setPress] = useState(null); // { x, y (vídeo), sx, sy (tela 0–1), drag?: index }
-  const v = s.videoRef.current;
-  const { w, h } = dims;
-
-  useEffect(() => {
-    const cv = canvasRef.current;
-    if (!cv || !v?.videoWidth) return;
-    cv.width = v.videoWidth;
-    cv.height = v.videoHeight;
-    const ctx = cv.getContext('2d');
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    const lw = Math.max(2, cv.width / 400);
-    if (s.Hinv) {
-      ctx.strokeStyle = 'rgba(56,189,248,0.9)';
-      ctx.lineWidth = lw;
-      courtSegments().forEach(([a, b]) => {
-        const p = applyHomography(s.Hinv, a);
-        const q = applyHomography(s.Hinv, b);
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
-      });
-      if (mode === 'check') {
-        const cp = applyHomography(s.Hinv, s.checkPoint);
-        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-        ctx.setLineDash([lw * 3, lw * 3]);
-        ctx.beginPath(); ctx.arc(cp.x, cp.y, lw * 12, 0, Math.PI * 2); ctx.stroke();
-        ctx.setLineDash([]);
-      }
-    }
-    ctx.fillStyle = '#d4f82e';
-    ctx.font = `${lw * 8}px sans-serif`;
-    s.calib.corners.forEach((p, i) => {
-      ctx.beginPath(); ctx.arc(p.x, p.y, lw * (mode === 'adjust' ? 6 : 3), 0, Math.PI * 2); ctx.fill();
-      ctx.fillText(String(i + 1), p.x + lw * 6, p.y - lw * 6);
-    });
-    if (s.calib.checkTap) {
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = lw;
-      const c = s.calib.checkTap;
-      ctx.beginPath(); ctx.moveTo(c.x - lw * 6, c.y); ctx.lineTo(c.x + lw * 6, c.y); ctx.moveTo(c.x, c.y - lw * 6); ctx.lineTo(c.x, c.y + lw * 6); ctx.stroke();
-    }
-    if (s.ball) {
-      ctx.strokeStyle = '#d4f82e';
-      ctx.lineWidth = lw;
-      ctx.beginPath(); ctx.arc(s.ball.x, s.ball.y, lw * 6, 0, Math.PI * 2); ctx.stroke();
-    }
-    const last = pickHeadline(s.events);
-    if (last?.imagePoint) {
-      ctx.strokeStyle = CALL_COLOR[last.call] || '#fff';
-      ctx.lineWidth = lw * 2;
-      ctx.beginPath(); ctx.arc(last.imagePoint.x, last.imagePoint.y, lw * 10, 0, Math.PI * 2); ctx.stroke();
-    }
-  }, [v, dims, s.Hinv, s.calib.corners, s.calib.checkTap, s.ball, s.events, s.checkPoint, mode]);
-
-  // A lupa: o pedaço do vídeo em volta do dedo, ampliado, com a mira.
-  useEffect(() => {
-    const cv = loupeRef.current;
-    if (!cv || !press || !v?.videoWidth) return;
-    const dpr = window.devicePixelRatio || 1;
-    cv.width = LOUPE * dpr;
-    cv.height = LOUPE * dpr;
-    const ctx = cv.getContext('2d');
-    const r = v.getBoundingClientRect();
-    const src = (LOUPE / ZOOM) * (v.videoWidth / r.width);
-    ctx.drawImage(v, press.x - src / 2, press.y - src / 2, src, src, 0, 0, cv.width, cv.height);
-    ctx.strokeStyle = '#d4f82e';
-    ctx.lineWidth = 2 * dpr;
-    const c = cv.width / 2;
-    ctx.beginPath(); ctx.moveTo(c - 14 * dpr, c); ctx.lineTo(c + 14 * dpr, c); ctx.moveTo(c, c - 14 * dpr); ctx.lineTo(c, c + 14 * dpr); ctx.stroke();
-  }, [press, v]);
-
-  const toVideo = (ev) => {
-    const r = ev.currentTarget.getBoundingClientRect();
-    const sx = (ev.clientX - r.left) / r.width;
-    const sy = (ev.clientY - r.top) / r.height;
-    return { x: sx * v.videoWidth, y: sy * v.videoHeight, sx, sy, scale: v.videoWidth / r.width };
-  };
-
-  const down = (ev) => {
-    if (!mode || !v?.videoWidth) return;
-    ev.currentTarget.setPointerCapture?.(ev.pointerId);
-    const p = toVideo(ev);
-    let drag = null;
-    if (mode === 'adjust') {
-      const near = s.calib.corners
-        .map((c, i) => ({ i, d: Math.hypot(c.x - p.x, c.y - p.y) / p.scale }))
-        .sort((a, b) => a.d - b.d)[0];
-      if (!near || near.d > GRAB_PX) return;
-      drag = near.i;
-    }
-    setPress({ ...p, drag });
-  };
-  const move = (ev) => {
-    if (!press) return;
-    const p = toVideo(ev);
-    setPress((old) => ({ ...p, drag: old?.drag ?? null }));
-    if (press.drag != null) s.moveCorner(press.drag, { x: p.x, y: p.y });
-  };
-  const up = (ev) => {
-    if (!press) return;
-    const p = toVideo(ev);
-    if (press.drag == null) onTap({ x: p.x, y: p.y });
-    setPress(null);
-  };
-
-  const loupeLeft = press ? press.sx > 0.5 : false;
-
-  return (
-    <div className="relative w-full overflow-hidden rounded-2xl bg-ink" style={{ aspectRatio: `${w} / ${h}` }}>
-      <video
-        ref={s.videoRef}
-        autoPlay
-        playsInline
-        muted
-        onLoadedMetadata={(e) => setDims({ w: e.currentTarget.videoWidth || 16, h: e.currentTarget.videoHeight || 9 })}
-        className="absolute inset-0 h-full w-full"
-      />
-      <canvas
-        ref={canvasRef}
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerCancel={() => setPress(null)}
-        aria-label={mode ? t('Imagem da câmera: toque para marcar') : t('Imagem da câmera')}
-        className={cn('absolute inset-0 h-full w-full touch-none', mode && 'cursor-crosshair')}
-      />
-      {press && (
-        <canvas
-          ref={loupeRef}
-          aria-hidden="true"
-          style={{ width: LOUPE, height: LOUPE }}
-          className={cn(
-            'pointer-events-none absolute top-2 rounded-full border-2 border-acid shadow-lg',
-            loupeLeft ? 'left-2' : 'right-2',
-          )}
-        />
-      )}
-    </div>
-  );
-}
-
 function Step({ n, done, active, title, children, dica }) {
   return (
     <li className={cn('flex gap-3', !active && !done && 'opacity-60')} data-dica={dica}>
@@ -329,12 +179,65 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   useEffect(() => { if (mode && mode !== 'inspect' && mode !== 'color') s.setRunning(false); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   let hint = null;
-  if (mode === 'corners' && nextPoint) hint = t('Toque, na imagem, em {p} (o ponto piscando no desenho). Segure e arraste: a lupa no canto mostra o ponto de perto.', { p: t(POINT_LABEL[nextPoint]) });
+  if (mode === 'corners' && nextPoint) hint = t('Ponto {n} de 4: toque em {p}. Aproxime com dois dedos ou com o +; com zoom o ponto continua preso na quadra.', { n: s.calib.corners.length + 1, p: t(POINT_LABEL[nextPoint]) });
   else if (mode === 'adjust') hint = t('Arraste um ponto amarelo para o lugar exato, olhando a lupa. Toque em "Pronto" ao terminar.');
   else if (mode === 'check') hint = t('Agora toque em {p}. É a prova de que a calibração está certa.', { p: t(CHECK_LABEL[s.checkPoint.id]) });
   else if (mode === 'inspect') hint = t('Ponha a bola parada sobre uma linha e toque nela: a tela diz onde a calibração acha que ela está.');
   else if (calibrada) hint = t('Calibrada. Confira se as linhas azuis caem em cima das linhas da quadra; se não, ajuste os pontos.');
   else hint = t('Toque nos quatro pontos, na ordem que o desenho mostra. Use a borda EXTERNA da linha.');
+
+  const zona = zoneById(s.zone);
+  // Os botões da marcação, sobre a imagem.
+  const toolbar = mode && mode !== 'color' ? (
+    <V2Button size="sm" onClick={() => { setMode(null); setInspected(null); }}>
+      <Check className="mr-1.5 h-4 w-4" /> {t('Pronto')}
+    </V2Button>
+  ) : (
+    <>
+      <V2Button size="sm" variant={calibrada ? 'secondary' : 'primary'} onClick={() => { s.resetCorners(); setMode('corners'); }}>
+        <Crosshair className="mr-1.5 h-4 w-4" /> {calibrada ? t('Marcar de novo') : t('Começar a marcar')}
+      </V2Button>
+      {calibrada && (
+        <>
+          <V2Button size="sm" variant="secondary" onClick={() => setMode('adjust')}>
+            <Move className="mr-1.5 h-4 w-4" /> {t('Ajustar os pontos')}
+          </V2Button>
+          <V2Button size="sm" variant="secondary" onClick={() => setSnapped(s.snapCorners())}>
+            <Magnet className="mr-1.5 h-4 w-4" /> {t('Grudar na linha')}
+          </V2Button>
+          <V2Button size="sm" variant={s.check ? 'secondary' : 'primary'} onClick={() => setMode('check')}>
+            <Target className="mr-1.5 h-4 w-4" /> {s.check ? t('Conferir de novo') : t('Conferir com o 5º ponto')}
+          </V2Button>
+          <V2Button size="sm" variant="secondary" onClick={() => { setInspected(null); setMode('inspect'); }} data-dica="linhas-testar-bola">
+            <ScanSearch className="mr-1.5 h-4 w-4" /> {t('Testar com a bola')}
+          </V2Button>
+        </>
+      )}
+    </>
+  );
+  // Os avisos da marcação, sobre a imagem (logo abaixo da dica).
+  const status = (s.check || (mode === 'inspect' && inspected && s.H) || (snapped != null && !mode)) ? (
+    <div className="space-y-1">
+      {s.check && (
+        <V2Badge tone={CHECK_TONE[s.check.level]}>{t(CHECK_TEXT[s.check.level], { n: String(s.check.cm).replace('.', ',') })}</V2Badge>
+      )}
+      {mode === 'inspect' && inspected && s.H && (
+        <p className="rounded-xl bg-white/90 px-3 py-1.5 text-sm font-semibold text-ink" aria-live="polite">{inspectText(s.H, inspected)}</p>
+      )}
+      {snapped != null && !mode && (
+        <p className="flex flex-wrap items-center gap-2 rounded-xl bg-white/90 px-3 py-1.5 text-sm text-ink" aria-live="polite">
+          {snapped > 0
+            ? t('{n} canto(s) da quadra foram para a borda de fora da linha. Confira com o 5º ponto.', { n: snapped })
+            : t('Não achei a linha branca com certeza perto dos cantos: os pontos ficaram como estavam.')}
+          {snapped > 0 && (
+            <V2Button size="sm" variant="ghost" onClick={() => { s.undoSnap(); setSnapped(null); }}>
+              {t('Desfazer')}
+            </V2Button>
+          )}
+        </p>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-4">
@@ -427,66 +330,54 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
           <Step n={2} done={calibrada && s.check?.level !== CHECK_LEVEL.REDO && Boolean(s.check)} active={Boolean(s.stream) && (!calibrada || !s.check)} title={t('Marque os pontos da quadra e confira')} dica="linhas-calibrar">
             {s.stream && (
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,120px)_1fr] sm:items-start">
+              <fieldset className="space-y-2" data-dica="linhas-area">
+                <legend className="text-xs font-semibold text-gray-500">{t('O que esta câmera vigia')}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {CAMERA_ZONES.map((z) => (
+                    <V2Button
+                      key={z.id}
+                      size="sm"
+                      variant={zona.id === z.id ? 'primary' : 'secondary'}
+                      aria-pressed={zona.id === z.id}
+                      onClick={() => { if (zona.id !== z.id) { s.setZone(z.id); setMode(null); } }}
+                    >
+                      {t(z.label)}
+                    </V2Button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {zona.id === 'full'
+                    ? t('A câmera marca os lances da quadra toda.')
+                    : t('Você marca os quatro cantos só desta parte, e a câmera só marca lances que caem nela. O resto fica com as outras câmeras. Trocar a parte apaga os pontos marcados.')}
+                </p>
+              </fieldset>
+            )}
+            <div className={cn(!s.stream && 'hidden')}>
+              {/* O vídeo fica montado desde o início: o elemento recebe a câmera assim que ela abre. */}
+              <CalibrationView
+                s={s}
+                mode={mode}
+                onTap={onTap}
+                zone={zona}
+                hint={s.stream ? hint : null}
+                status={status}
+                toolbar={s.stream ? toolbar : null}
+                diagram={{ points: ids, current: nextPoint, done: ids.slice(0, s.calib.corners.length), label: t('Os pontos da calibração no desenho da quadra') }}
+              />
+            </div>
+            {s.stream && (
+              <div className="flex items-start gap-3">
                 <CourtDiagram
                   positions={[s.position.id]}
                   active={s.position.id}
                   points={ids}
                   current={nextPoint}
                   done={ids.slice(0, s.calib.corners.length)}
-                  className="mx-auto w-full max-w-[120px] text-ink"
+                  zone={zona}
+                  className="w-20 shrink-0 text-ink sm:hidden"
                   label={t('Os pontos da calibração no desenho da quadra')}
                 />
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600" role="status">{hint}</p>
-                  {s.check && (
-                    <V2Badge tone={CHECK_TONE[s.check.level]}>{t(CHECK_TEXT[s.check.level], { n: String(s.check.cm).replace('.', ',') })}</V2Badge>
-                  )}
-                  {mode === 'inspect' && inspected && s.H && (
-                    <p className="rounded-xl bg-gray-50 p-2 text-sm font-semibold text-ink" aria-live="polite">{inspectText(s.H, inspected)}</p>
-                  )}
-                  {snapped != null && !mode && (
-                    <p className="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 p-2 text-sm text-ink" aria-live="polite">
-                      {snapped > 0
-                        ? t('{n} canto(s) da quadra foram para a borda de fora da linha. Confira com o 5º ponto.', { n: snapped })
-                        : t('Não achei a linha branca com certeza perto dos cantos: os pontos ficaram como estavam.')}
-                      {snapped > 0 && (
-                        <V2Button size="sm" variant="ghost" onClick={() => { s.undoSnap(); setSnapped(null); }}>
-                          {t('Desfazer')}
-                        </V2Button>
-                      )}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {mode && mode !== 'color' ? (
-                      <V2Button size="sm" onClick={() => { setMode(null); setInspected(null); }}>
-                        <Check className="mr-1.5 h-4 w-4" /> {t('Pronto')}
-                      </V2Button>
-                    ) : (
-                      <>
-                        <V2Button size="sm" variant={calibrada ? 'secondary' : 'primary'} onClick={() => { s.resetCorners(); setMode('corners'); }}>
-                          <Crosshair className="mr-1.5 h-4 w-4" /> {calibrada ? t('Marcar de novo') : t('Começar a marcar')}
-                        </V2Button>
-                        {calibrada && (
-                          <>
-                            <V2Button size="sm" variant="secondary" onClick={() => setMode('adjust')}>
-                              <Move className="mr-1.5 h-4 w-4" /> {t('Ajustar os pontos')}
-                            </V2Button>
-                            <V2Button size="sm" variant="secondary" onClick={() => setSnapped(s.snapCorners())}>
-                              <Magnet className="mr-1.5 h-4 w-4" /> {t('Grudar na linha')}
-                            </V2Button>
-                            <V2Button size="sm" variant={s.check ? 'ghost' : 'primary'} onClick={() => setMode('check')}>
-                              <Target className="mr-1.5 h-4 w-4" /> {s.check ? t('Conferir de novo') : t('Conferir com o 5º ponto')}
-                            </V2Button>
-                            <V2Button size="sm" variant="ghost" onClick={() => { setInspected(null); setMode('inspect'); }} data-dica="linhas-testar-bola">
-                              <ScanSearch className="mr-1.5 h-4 w-4" /> {t('Testar com a bola')}
-                            </V2Button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
+                <p className="text-xs text-gray-500">{t('Os botões e os avisos ficam sobre a imagem. Use a tela cheia para marcar com mais precisão.')}</p>
               </div>
             )}
           </Step>
@@ -557,10 +448,6 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
       {s.cameraError && <V2ErrorState inline title={t('Câmera')} description={cameraErrorText(s.cameraError)} />}
 
-      {/* O vídeo fica montado desde o início: o elemento recebe a câmera assim que ela abre. */}
-      <div className={cn(!s.stream && 'hidden')}>
-        <CameraView s={s} mode={mode} onTap={onTap} />
-      </div>
 
       {last && (
         <V2Surface className="flex flex-wrap items-center justify-between gap-3 p-4" aria-live="polite">

@@ -49,10 +49,11 @@ function Camera({ p, state, n }) {
 
 /**
  * @param {{ positions?: string[], active?: string|null, taken?: string[],
- *   points?: string[], current?: string|null, done?: string[], className?: string, label?: string }} props
+ *   points?: string[], current?: string|null, done?: string[], zone?: {id:string,y0:number,y1:number}|null,
+ *   className?: string, label?: string }} props  `zone`: a área vigiada (o resto fica escurecido)
  */
 export default function CourtDiagram({
-  positions = [], active = null, taken = [], points = [], current = null, done = [], className, label,
+  positions = [], active = null, taken = [], points = [], current = null, done = [], zone = null, className, label,
 }) {
   return (
     <svg
@@ -72,6 +73,14 @@ export default function CourtDiagram({
       <text x={sx(W / 2)} y={sy(L + 0.55)} textAnchor="middle" fontSize={0.95} fontWeight={700} fill="currentColor">{t('Lado B')}</text>
       <text x={sx(-0.6)} y={sy(L * 0.25)} textAnchor="middle" fontSize={0.8} fill="currentColor" transform={`rotate(-90 ${sx(-0.6)} ${sy(L * 0.25)})`}>{t('Lado 1')}</text>
       <text x={sx(W + 0.6)} y={sy(L * 0.25)} textAnchor="middle" fontSize={0.8} fill="currentColor" transform={`rotate(90 ${sx(W + 0.6)} ${sy(L * 0.25)})`}>{t('Lado 2')}</text>
+
+      {zone && zone.id !== 'full' && (
+        <g>
+          {zone.y0 > 0 && <rect x={sx(0)} y={sy(zone.y0)} width={W} height={zone.y0} fill="#0b0f19" opacity={0.55} />}
+          {zone.y1 < L && <rect x={sx(0)} y={sy(L)} width={W} height={L - zone.y1} fill="#0b0f19" opacity={0.55} />}
+          <rect x={sx(0)} y={sy(zone.y1)} width={W} height={zone.y1 - zone.y0} fill="none" stroke={COR.alvo} strokeWidth={0.22} />
+        </g>
+      )}
 
       {points.map((id) => {
         const p = COURT_POINTS[id];
