@@ -26,7 +26,7 @@ caminho da quadra). As regras do jogo julgadas, com o número da regra: docs/53 
 - `domain/cameraCheck.js` — a câmera entrega o mínimo? (30 q/s e 720p; bom: 60 e 1080p).
 - `domain/replay.js` — fita de quadros por tempo (3,5 s, memória limitada) e janela do replay; `domain/report.js` — resumo e CSV da quadra; `domain/calibrationCheck.js` — o 5º ponto (erro em cm); `domain/cameraHealth.js` — a câmera saiu do lugar / pouca luz; `domain/snapCorner.js` — "Grudar na linha" (canto externo do L branco); `domain/readiness.js` — "Pronto para começar?" da central; `domain/setupKits.js` — os quatro kits de montagem, o que o aparelho aguenta e a fonte da câmera (OBS, NDI, celular sem fio, captura).
 - `domain/testkit/courtSim.js` — o simulador que filma pontos inteiros com a projeção de câmeras reais (só testes).
-- `services/cameraService.js` — `getUserMedia`; `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
+- `services/cameraService.js` — `getUserMedia`, e `openIpCamera` (câmera IP pela ponte local go2rtc/MediaMTX, WebRTC só de receber; regra do endereço em `domain/ipCamera.js`, zero banco — docs/53 §5b); `services/poseService.js` — MediaPipe Pose (Apache-2.0), import dinâmico.
 - `services/lineCallSync.js` — presença da câmera e envio das marcações; `services/saveEach.js` — várias quadras de uma vez, a que falhar não derruba as outras.
 - `hooks/useLineCallSession.js` — uma câmera: abrir, calibrar (navegador, por posição), analisar, enviar.
 - `hooks/useAnnounce.js` — toque na hora (`domain/alertTones.js` + `services/alertSound.js`), vibração e voz (preferências por pessoa); só a falta é dita, e no aparelho que filma o "revisar" fica calado.

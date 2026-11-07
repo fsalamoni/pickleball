@@ -474,4 +474,13 @@ export default {
   "Quadra não encontrada neste dia de jogo": "Cancha no encontrada en este día de juego",
   "Desligado nas {total} quadra(s)": "Apagado en las {total} cancha(s)",
   "Quadra {n}: {cams} câmera(s)": "Cancha {n}: {cams} cámara(s)",
+  "A ponte não respondeu. Confira se a go2rtc está aberta e o endereço está certo. Se o Chrome perguntou sobre a rede local, permita. No iPhone e no Safari, use um computador com o Chrome.": "El puente no respondió. Verifica que go2rtc esté abierto y que la dirección sea correcta. Si Chrome preguntó por la red local, permítelo. En iPhone y Safari, usa una computadora con Chrome.",
+  "A ponte respondeu, mas não conhece essa câmera. Confira o nome da câmera no fim do endereço (src=…).": "El puente respondió, pero no conoce esta cámara. Verifica el nombre de la cámara al final de la dirección (src=…).",
+  "A ponte conectou, mas o vídeo não chegou. Confira se a câmera está ligada e manda H.264.": "El puente se conectó, pero el video no llegó. Verifica que la cámara esté encendida y envíe H.264.",
+  "Esse não é um endereço válido. Exemplo: {ex}": "Esa no es una dirección válida. Ejemplo: {ex}",
+  "Esse é o endereço da câmera (rtsp). Ele vai no arquivo da ponte; aqui vai o endereço da ponte. Exemplo: {ex}": "Esa es la dirección de la cámara (rtsp). Va en el archivo del puente; aquí va la dirección del puente. Ejemplo: {ex}",
+  "Tire o usuário e a senha do endereço: eles ficam só no arquivo da ponte, no computador da arena.": "Quita el usuario y la contraseña de la dirección: quedan solo en el archivo del puente, en la computadora del club.",
+  "Câmera IP (ponte local)": "Cámara IP (puente local)",
+  "Endereço da ponte (go2rtc ou MediaMTX)": "Dirección del puente (go2rtc o MediaMTX)",
+  "A ponte roda num computador da arena e transforma o vídeo da câmera para o navegador. Use o Chrome nesse computador; o endereço fica guardado só aqui. Passo a passo na ajuda do controle de linhas.": "El puente corre en una computadora del club y convierte el video de la cámara para el navegador. Usa Chrome en esa computadora; la dirección se guarda solo aquí. Paso a paso en la ayuda del control de líneas.",
 };

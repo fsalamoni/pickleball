@@ -176,7 +176,8 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       setSettings(opened.settings);
       refreshCameras(); // depois da permissão os nomes aparecem
     } catch (e) {
-      setCameraError(e?.name || e?.message || 'error');
+      // Erro do navegador tem nome próprio (NotAllowedError…); o nosso vem na mensagem.
+      setCameraError((e?.name && e.name !== 'Error' ? e.name : e?.message) || 'error');
     }
   }, [stream, refreshCameras, clearEvents]);
 

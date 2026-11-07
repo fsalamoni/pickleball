@@ -17,7 +17,10 @@ import {
   Bell, BellOff,
 } from 'lucide-react';
 
-import { V2Surface, V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2Select, V2Input, V2ErrorState } from '@/v2/ui/primitives';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
+import { parseBridgeUrl, IP_BRIDGE_EXAMPLE } from '@/modules/linecall/domain/ipCamera';
 import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useLineCallSession } from '@/modules/linecall/hooks/useLineCallSession';
 import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnounce';
@@ -64,8 +67,19 @@ function cameraErrorText(code) {
   if (code === 'OverconstrainedError') return t('Esta câmera não entrega o mínimo de quadros por segundo.');
   if (code === 'NotReadableError') return t('A câmera está em uso por outro aplicativo ou outra aba. Feche-o e tente de novo.');
   if (code === 'camera-unsupported') return t('Este navegador não dá acesso à câmera. Use o Chrome, o Edge ou o Safari atualizados.');
+  if (code === 'ip-unreachable') return t('A ponte não respondeu. Confira se a go2rtc está aberta e o endereço está certo. Se o Chrome perguntou sobre a rede local, permita. No iPhone e no Safari, use um computador com o Chrome.');
+  if (code === 'ip-refused') return t('A ponte respondeu, mas não conhece essa câmera. Confira o nome da câmera no fim do endereço (src=…).');
+  if (code === 'ip-no-video') return t('A ponte conectou, mas o vídeo não chegou. Confira se a câmera está ligada e manda H.264.');
   return t('Não foi possível abrir a câmera.');
 }
+
+const IP_ERROR = {
+  'ip-url-invalid': tk('Esse não é um endereço válido. Exemplo: {ex}'),
+  'ip-rtsp': tk('Esse é o endereço da câmera (rtsp). Ele vai no arquivo da ponte; aqui vai o endereço da ponte. Exemplo: {ex}'),
+  'ip-credentials': tk('Tire o usuário e a senha do endereço: eles ficam só no arquivo da ponte, no computador da arena.'),
+};
+const IP_OPTION = '__ip__';
+const IP_PREF = 'linhas:camera-ip:ponte';
 
 const LOUPE = 132; // px na tela
 const ZOOM = 4;
@@ -261,7 +275,19 @@ function inspectText(H, pt) {
  */
 export default function CameraStation({ gameDayId, position, layout, layoutPositions }) {
   const s = useLineCallSession(gameDayId, position, { layout });
+  const { user } = useAuth();
   const [deviceId, setDeviceId] = useState('');
+  // Câmera IP: o endereço da ponte fica só neste aparelho (nunca no banco).
+  const [ponte, setPonte] = useState(() => readViewPreference(user?.uid, IP_PREF) || IP_BRIDGE_EXAMPLE);
+  const [ponteErro, setPonteErro] = useState(null);
+  const abrir = () => {
+    if (deviceId !== IP_OPTION) { s.start(deviceId || undefined); return; }
+    const r = parseBridgeUrl(ponte);
+    setPonteErro(r.ok ? null : r.error);
+    if (!r.ok) return;
+    writeViewPreference(user?.uid, IP_PREF, r.url);
+    s.start(r);
+  };
   const [mode, setMode] = useState(null); // 'corners' | 'adjust' | 'check' | 'inspect' | 'color' | null
   // Resultado do "Grudar na linha" (quantos cantos andaram); mexer nos pontos de outro jeito o apaga.
   const [snapped, setSnapped] = useState(null);
@@ -336,12 +362,35 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 <V2Select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} className="mt-1">
                   <option value="">{t('Câmera traseira / padrão')}</option>
                   {s.cameras.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  <option value={IP_OPTION}>{t('Câmera IP (ponte local)')}</option>
                 </V2Select>
               </label>
-              <V2Button onClick={() => s.start(deviceId || undefined)}>
+              <V2Button type="button" onClick={abrir}>
                 <Camera className="mr-1.5 h-4 w-4" /> {s.stream ? t('Trocar câmera') : t('Abrir câmera')}
               </V2Button>
             </div>
+            {deviceId === IP_OPTION && (
+              <div className="space-y-2 rounded-2xl bg-paper p-3" data-dica="linhas-camera-ip">
+                <label className="block text-xs font-semibold text-gray-500">
+                  {t('Endereço da ponte (go2rtc ou MediaMTX)')}
+                  <V2Input
+                    value={ponte}
+                    onChange={(e) => { setPonte(e.target.value); setPonteErro(null); }}
+                    placeholder={IP_BRIDGE_EXAMPLE}
+                    inputMode="url"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="mt-1"
+                  />
+                </label>
+                {ponteErro && (
+                  <p className="text-sm text-red-700" role="alert">{t(IP_ERROR[ponteErro], { ex: IP_BRIDGE_EXAMPLE })}</p>
+                )}
+                <p className="text-sm text-gray-500">
+                  {t('A ponte roda num computador da arena e transforma o vídeo da câmera para o navegador. Use o Chrome nesse computador; o endereço fica guardado só aqui. Passo a passo na ajuda do controle de linhas.')}
+                </p>
+              </div>
+            )}
             {fonteDica && (
               <p className="rounded-2xl bg-paper p-3 text-sm text-ink" aria-live="polite">{t(fonteDica)}</p>
             )}

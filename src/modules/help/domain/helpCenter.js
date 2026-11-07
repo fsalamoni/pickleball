@@ -1669,6 +1669,7 @@ const ATLETA = {
           tk('VÁRIOS CELULARES (clube e arena) — 2 a 5 celulares, cada um numa posição. Cada um analisa sozinho e só envia as marcações: nada de vídeo pela rede. Na central, cada posição vazia tem um QR que abre o celular já naquela posição.'),
           tk('COMPUTADOR COM CÂMERAS (torneio) — um notebook ou PC recebendo câmeras por cabo (USB ou placa de captura HDMI). É o jeito mais estável: 60 a 120 quadros por segundo, nada depende de bateria. Uma aba do navegador por câmera ("Abrir outra câmera neste computador").'),
           tk('ESTÚDIO COM OBS (profissional) — câmeras sem fio (celular com app NDI ou SRT, câmera IP por RTSP, câmera NDI) ou com fio chegando ao OBS Studio, que entrega cada uma ao navegador como câmera. A mesma câmera serve à transmissão.'),
+          tk('CÂMERA IP COM A PONTE (arena) — câmeras fixas com cabo de rede (PoE) e um computador ao lado da quadra rodando a go2rtc (grátis), que transforma o vídeo RTSP da câmera para o navegador. No Chrome desse computador, escolha "Câmera IP (ponte local)" e cole o endereço da ponte, por exemplo http://localhost:1984/api/webrtc?src=quadra1. Uma aba por câmera.'),
         ),
         steps(
           tk('Celular dos jogadores ou celular separado? Prefira aparelhos SEPARADOS para o jogo inteiro: o celular do jogador sai da quadra com ele. Celular separado entra com a conta de quem organiza, ou com uma conta incluída como participante do dia.'),
@@ -1678,6 +1679,7 @@ const ATLETA = {
           tk('Antes do jogo, abra a central: cada câmera mostra se está no ar, a bateria, os quadros por segundo e o erro da calibração. Comece quando todas estiverem verdes. O telão mostra quantas câmeras estão analisando e avisa quando um lance está em revisão.'),
         ),
         tip(tk('Notebook pede menos: uma webcam USB num tripé alto atrás do fundo já é melhor que a câmera embutida na tela.')),
+        tip(tk('Câmera IP: prefira H.264 a 60 quadros por segundo, obturador rápido (1/1000 s ou mais) e cabo, não Wi-Fi. Usuário e senha da câmera ficam só no arquivo da go2rtc, nunca no PickleRush. No iPhone e no Safari a ponte ainda não abre: use o Chrome num computador.')),
         warn(tk('Bola EXATAMENTE na linha, ao milímetro, como nos grandes torneios, exige câmeras sincronizadas por hardware e software próprio. Aqui, o que fica abaixo da precisão vira "revisar" e a decisão volta para quem organiza.')),
       ],
     },
