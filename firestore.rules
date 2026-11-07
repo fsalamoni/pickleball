@@ -223,7 +223,7 @@ service cloud.firestore {
     function lcCam(camId) {
       return nd().position is string && nd().position.size() <= 20
         && camId == me() + '_' + nd().position
-        && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
+        && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm', 'alert']);
     }
     function lcCall() {
       return nd().kind in ['bounce', 'volley', 'serve_foot', 'two_bounce']

@@ -20,6 +20,7 @@ import { V2Surface, V2Button, V2Badge, V2Select, V2Input, V2ErrorState } from '@
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { parseBridgeUrl, IP_BRIDGE_EXAMPLE } from '@/modules/linecall/domain/ipCamera';
+import { cameraKey, fixedPrefId } from '@/modules/linecall/domain/fixedCalib';
 import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useLineCallSession } from '@/modules/linecall/hooks/useLineCallSession';
 import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnounce';
@@ -29,7 +30,8 @@ import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
 import { pickHeadline } from '@/modules/linecall/domain/fusion';
 import { hasReplay } from '@/modules/linecall/domain/replay';
 import { stationCheck, STATION_NEXT } from '@/modules/linecall/domain/stationCheck';
-import IpBridgeWizard from './IpBridgeWizard';
+import BridgeFinder from './BridgeFinder';
+import WebcamTuning from './WebcamTuning';
 import CalibrationMarker from './CalibrationMarker';
 import PlacementGuide, { DeviceTips } from './PlacementGuide';
 import LanceReplay from './LanceReplay';
@@ -42,7 +44,7 @@ function cameraErrorText(code) {
   if (code === 'NotAllowedError') return t('O navegador não deixou usar a câmera. Permita o acesso à câmera para este site e tente de novo.');
   if (code === 'NotFoundError') return t('Nenhuma câmera encontrada. Conecte a câmera (USB ou placa de captura) e tente de novo.');
   if (code === 'OverconstrainedError') return t('Esta câmera não entrega o mínimo de quadros por segundo.');
-  if (code === 'NotReadableError') return t('A câmera está em uso por outro aplicativo ou outra aba. Feche-o e tente de novo.');
+  if (code === 'NotReadableError') return t('O sistema não entregou a câmera. Ela pode estar em uso por outro aplicativo ou aba (feche-o). Se for a segunda webcam no mesmo computador, ligue-a numa porta USB do outro lado do computador ou direto nele (sem hub): duas câmeras em Full HD na mesma porta não cabem.');
   if (code === 'camera-unsupported') return t('Este navegador não dá acesso à câmera. Use o Chrome, o Edge ou o Safari atualizados.');
   if (code === 'ip-unreachable') return t('A ponte não respondeu. Confira se a go2rtc está aberta e o endereço está certo. Se o Chrome perguntou sobre a rede local, permita. No iPhone e no Safari, use um computador com o Chrome.');
   if (code === 'ip-refused') return t('A ponte respondeu, mas não conhece essa câmera. Confira o nome da câmera no fim do endereço (src=…).');
@@ -59,6 +61,14 @@ const IP_OPTION = '__ip__';
 const IP_PREF = 'linhas:camera-ip:ponte';
 /** A última câmera aberta neste aparelho (id do sistema, `padrao` ou a ponte). */
 const LAST_PREF = 'linhas:camera:ultima';
+const SEM_LANCES = [];
+/** A câmera fixa reabriu num dia novo: o que aconteceu com a calibração de antes (`domain/fixedCalib.js`). */
+const RESTORED_TEXT = {
+  same: tk('A câmera está no mesmo lugar de {d}: a calibração voltou sozinha. É só começar a analisar.'),
+  unsure: tk('A calibração de {d} voltou, mas a imagem mudou (luz ou gente na frente). Confira com o 5º ponto antes de começar.'),
+  moved: tk('A câmera saiu do lugar desde {d}: marque os quatro pontos de novo.'),
+  size: tk('A câmera está com outra resolução desde {d}: marque os quatro pontos de novo.'),
+};
 
 /** A câmera já foi permitida para este site? (sem perguntar nada à pessoa) */
 async function cameraPermitida() {
@@ -103,9 +113,11 @@ function Step({ n, done, active, title, children, dica }) {
 }
 
 /**
- * @param {{ gameDayId: string, position: string, layout: string, layoutPositions: string[] }} props
+ * @param {{ gameDayId: string, position: string, layout: string, layoutPositions: string[], announce?: boolean, bridgeName?: string }} props
+ *   `announce`: esta câmera fala os lances (com várias na mesma tela, só a primeira);
+ *   `bridgeName`: o nome sugerido para a câmera IP na ponte
  */
-export default function CameraStation({ gameDayId, position, layout, layoutPositions, sink = null }) {
+export default function CameraStation({ gameDayId, position, layout, layoutPositions, sink = null, announce = true, bridgeName }) {
   const s = useLineCallSession(gameDayId, position, { layout, sink });
   const { user: conta } = useAuth();
   // A câmera convidada (sem conta) guarda as preferências deste aparelho no escopo dela.
@@ -115,10 +127,14 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   const [ponte, setPonte] = useState(() => readViewPreference(user?.uid, IP_PREF) || IP_BRIDGE_EXAMPLE);
   const [ponteErro, setPonteErro] = useState(null);
   const [assistente, setAssistente] = useState(false);
-  const abrir = (escolha = deviceId) => {
+  // A última câmera é lembrada POR POSIÇÃO: o computador com duas webcams
+  // reabre cada uma na sua posição (a chave antiga, sem posição, vale de reserva).
+  const lastKey = `${LAST_PREF}:${position}`;
+  const abrir = (escolha = deviceId, url = ponte) => {
+    writeViewPreference(user?.uid, lastKey, escolha || 'padrao');
     writeViewPreference(user?.uid, LAST_PREF, escolha || 'padrao');
     if (escolha !== IP_OPTION) { s.start(escolha || undefined); return; }
-    const r = parseBridgeUrl(ponte);
+    const r = parseBridgeUrl(url);
     setPonteErro(r.ok ? null : r.error);
     if (!r.ok) return;
     writeViewPreference(user?.uid, IP_PREF, r.url);
@@ -130,9 +146,13 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   // repete nada: a mesma câmera reabre sozinha e falta só "Começar a analisar".
   const reabriu = useRef(false);
   useEffect(() => {
-    if (reabriu.current || s.stream || s.calib.corners.length !== 4) return undefined;
+    if (reabriu.current || s.stream) return undefined;
+    const ultima = readViewPreference(user?.uid, lastKey) || readViewPreference(user?.uid, LAST_PREF);
+    // Calibrada hoje, ou câmera FIXA com a calibração de outro dia guardada.
+    const chave = ultima === IP_OPTION ? cameraKey({ url: ponte }) : cameraKey(ultima === 'padrao' ? '' : ultima);
+    const fixa = ultima && readViewPreference(user?.uid, fixedPrefId(position, chave));
+    if (s.calib.corners.length !== 4 && !fixa) return undefined;
     reabriu.current = true;
-    const ultima = readViewPreference(user?.uid, LAST_PREF);
     if (!ultima) return undefined;
     let vivo = true;
     cameraPermitida().then((ok) => {
@@ -155,11 +175,15 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
   // A central mandou uma calibração: a marcação daqui sai do meio (os pontos chegaram).
   const remotoAgora = Boolean(s.remoteApplied);
   useEffect(() => { if (s.remoteApplied) setMode(null); }, [s.remoteApplied]);
+  // A calibração de antes voltou: sai da marcação que abriu junto com a câmera.
+  useEffect(() => {
+    if (s.restored?.decision === 'same' || s.restored?.decision === 'unsure') setMode(null);
+  }, [s.restored]);
   useWakeLock(Boolean(s.stream));
   // O lance grande é o mais grave dos últimos segundos (a mesma regra da central e do telão).
   const last = pickHeadline(s.events);
   // Ao lado da quadra, só a falta grita: "revisar" não interrompe o ponto.
-  const [falar, setFalar, som, setSom, aviso] = useAnnounce(s.events, callSpoken, 'linhas:voz:camera', { quietReview: true });
+  const [falar, setFalar, som, setSom, aviso] = useAnnounce(announce ? s.events : SEM_LANCES, callSpoken, 'linhas:voz:camera', { quietReview: true });
 
   const bloqueada = s.cameraChecks.some((c) => c.level === CAMERA_LEVEL.BLOCK);
   // A dica pela FONTE da câmera (OBS, NDI, celular sem fio, captura), pelo nome que o sistema dá a ela.
@@ -277,12 +301,17 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                   {t('A ponte roda num computador da arena e transforma o vídeo da câmera para o navegador. Use o Chrome nesse computador; o endereço fica guardado só aqui. Passo a passo na ajuda do controle de linhas.')}
                 </p>
                 <V2Button type="button" size="sm" variant="secondary" aria-expanded={assistente} onClick={() => setAssistente(!assistente)}>
-                  {assistente ? t('Fechar o assistente') : t('Ainda não tenho a ponte: gerar o arquivo dela')}
+                  {assistente ? t('Fechar o assistente') : t('Achar a câmera pela ponte (ou ligar a ponte)')}
                 </V2Button>
                 {assistente && (
-                  <IpBridgeWizard
-                    suggestedName={`quadra ${s.position.id}`}
-                    onUse={(url) => { setPonte(url); setPonteErro(null); }}
+                  <BridgeFinder
+                    savedUrl={ponte}
+                    suggestedName={bridgeName || t(s.position.label)}
+                    onOpen={(url, abrirJa) => {
+                      setPonte(url);
+                      setPonteErro(null);
+                      if (abrirJa) abrir(IP_OPTION, url);
+                    }}
                   />
                 )}
               </div>
@@ -311,6 +340,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 )}
               </div>
             )}
+            {s.stream && deviceId !== IP_OPTION && (
+              <WebcamTuning stream={s.stream} announcedFps={s.cameraChecks.find((c) => c.key === 'fps')?.value} />
+            )}
             {bloqueada && (
               <p className="text-sm text-red-600">{t('Esta câmera está abaixo do mínimo. As marcações ficariam imprecisas demais; use outra câmera.')}</p>
             )}
@@ -333,6 +365,17 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
               <p className="rounded-2xl bg-green-50 p-3 text-sm font-medium text-green-800" role="status">
                 {t('A central calibrou esta câmera às {h}.', { h: fmtData(s.remoteApplied, { timeStyle: 'short' }) })}
               </p>
+            )}
+            {s.restored && RESTORED_TEXT[s.restored.decision] && (
+              <div
+                className={cn('flex flex-wrap items-start justify-between gap-2 rounded-2xl p-3 text-sm', s.restored.decision === 'same' ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900')}
+                role="status"
+              >
+                <p className="min-w-0 flex-1 font-medium">
+                  {t(RESTORED_TEXT[s.restored.decision], { d: s.restored.savedMs ? fmtData(s.restored.savedMs, { dateStyle: 'short' }) : '' })}
+                </p>
+                <V2Button type="button" size="sm" variant="ghost" onClick={s.dismissRestored}>{t('Entendi')}</V2Button>
+              </div>
             )}
           </Step>
 

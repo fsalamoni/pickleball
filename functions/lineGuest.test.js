@@ -78,6 +78,14 @@ describe('a câmera no ar e as marcações', () => {
     expect(docs(db, `${HOST}/line_cams/`)).toHaveLength(0);
   });
 
+  it('o aviso da câmera (mexeu / escura) passa; outro texto não', async () => {
+    const db = cenario();
+    await chamar(db, { action: 'beat', cam: { calibrated: true, alert: 'moved' } });
+    expect(docs(db, `${HOST}/line_cams/`)[0][1].alert).toBe('moved');
+    await chamar(db, { action: 'beat', cam: { calibrated: true, alert: '<script>' } });
+    expect(docs(db, `${HOST}/line_cams/`)[0][1].alert).toBeUndefined();
+  });
+
   it('a marcação vai para line_calls com a posição do convite', async () => {
     const db = cenario();
     await chamar(db, { action: 'call', call: { kind: 'bounce', call: 'out', reason: 'long', t_ms: NOW - 500, margin_m: -0.39123, x: 1, y: 2, uid: 'outra', position: 'topo' } });

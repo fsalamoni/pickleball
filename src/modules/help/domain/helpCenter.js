@@ -1669,7 +1669,7 @@ const ATLETA = {
         list(
           tk('UM CELULAR (dia a dia) — um celular num tripé ou no alambrado, atrás do fundo, de 2 a 4 m de altura, no carregador. Monta em 5 minutos; julga melhor a metade de quadra perto da câmera.'),
           tk('VÁRIOS CELULARES (clube e arena) — 2 a 5 celulares, cada um numa posição. Cada um analisa sozinho e só envia as marcações: nada de vídeo pela rede. Na central, cada posição vazia tem um QR que abre o celular já naquela posição.'),
-          tk('COMPUTADOR COM CÂMERAS (torneio) — um notebook ou PC recebendo câmeras por cabo (USB ou placa de captura HDMI). É o jeito mais estável: 60 a 120 quadros por segundo, nada depende de bateria. Uma aba do navegador por câmera ("Abrir outra câmera neste computador").'),
+          tk('COMPUTADOR COM CÂMERAS (torneio) — um notebook ou PC recebendo câmeras por cabo (USB ou placa de captura HDMI). É o jeito mais estável: 60 a 120 quadros por segundo, nada depende de bateria. Várias câmeras na mesma tela ("Mais uma câmera nesta tela") ou uma aba por câmera.'),
           tk('ESTÚDIO COM OBS (profissional) — câmeras sem fio (celular com app NDI ou SRT, câmera IP por RTSP, câmera NDI) ou com fio chegando ao OBS Studio, que entrega cada uma ao navegador como câmera. A mesma câmera serve à transmissão.'),
           tk('CÂMERA IP COM A PONTE (arena) — câmeras fixas com cabo de rede (PoE) e um computador ao lado da quadra rodando a go2rtc (grátis), que transforma o vídeo RTSP da câmera para o navegador. No Chrome desse computador, escolha "Câmera IP (ponte local)" e cole o endereço da ponte, por exemplo http://localhost:1984/api/webrtc?src=quadra1. Uma aba por câmera.'),
         ),

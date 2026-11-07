@@ -15,6 +15,9 @@ import { V2Button, V2Input, V2Select } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { go2rtcConfig, IP_CAMERA_BRANDS } from '@/modules/linecall/domain/ipCamera';
+import { webrtcUrl } from '@/modules/linecall/domain/bridgeDiscovery';
+import { addBridgeStream } from '@/modules/linecall/services/bridgeService';
+import { baixarArquivo } from './baixarArquivo';
 import { t, tk } from '@/core/i18n';
 
 const PREF = 'linhas:camera-ip:assistente';
@@ -46,16 +49,38 @@ function loadSaved(uid) {
 }
 
 /**
- * @param {{ onUse: (url: string) => void, suggestedName?: string }} props
- *   `onUse`: põe o endereço da ponte no campo da tela
+ * @param {{ onUse: (url: string) => void, suggestedName?: string, bridge?: { base: string, local: boolean }|null }} props
+ *   `onUse`: põe o endereço da ponte no campo da tela; `bridge`: a ponte já
+ *   está no ar — a câmera vai DIRETO para ela, sem baixar arquivo
  */
-export default function IpBridgeWizard({ onUse, suggestedName }) {
+export default function IpBridgeWizard({ onUse, suggestedName, bridge = null }) {
   const { user } = useAuth();
   const [form, setForm] = useState(() => loadSaved(user?.uid) || {
     sameComputer: true, bridgeHost: '', cameras: [{ ...blank(1), ...(suggestedName ? { name: suggestedName } : {}) }],
   });
   const [tried, setTried] = useState(false);
   const [usado, setUsado] = useState(null);
+  const [enviando, setEnviando] = useState(null);
+  const [erroPonte, setErroPonte] = useState(null);
+  const lembrar = () => writeViewPreference(user?.uid, PREF, JSON.stringify({ ...form, cameras: form.cameras.map((c) => ({ ...c, pass: '' })) }));
+  // Com a ponte no ar: a câmera entra nela agora (a go2rtc grava no arquivo dela).
+  const mandar = async (i) => {
+    setTried(true);
+    if (!result.ok || !bridge) return;
+    setEnviando(i);
+    setErroPonte(null);
+    try {
+      const b = result.bridges[i];
+      await addBridgeStream(bridge, b.name, b.rtsp);
+      lembrar();
+      onUse(webrtcUrl(bridge.base, b.name), true);
+      setUsado(i);
+    } catch (e) {
+      setErroPonte(e?.message === 'bridge-offline' ? 'offline' : 'error');
+    } finally {
+      setEnviando(null);
+    }
+  };
   const result = useMemo(() => go2rtcConfig(form), [form]);
   const errs = (i, field) => (tried && !result.ok ? result.errors.filter((e) => e.index === i && e.field === field) : []);
   const setCam = (i, patch) => setForm((f) => ({ ...f, cameras: f.cameras.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
@@ -63,15 +88,8 @@ export default function IpBridgeWizard({ onUse, suggestedName }) {
   const baixar = () => {
     setTried(true);
     if (!result.ok) return;
-    writeViewPreference(user?.uid, PREF, JSON.stringify({ ...form, cameras: form.cameras.map((c) => ({ ...c, pass: '' })) }));
-    const url = URL.createObjectURL(new Blob([result.yaml], { type: 'text/yaml;charset=utf-8' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'go2rtc.yaml';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    lembrar();
+    baixarArquivo('go2rtc.yaml', result.yaml, 'text/yaml;charset=utf-8');
   };
 
 
@@ -79,9 +97,11 @@ export default function IpBridgeWizard({ onUse, suggestedName }) {
     <div className="space-y-3" data-dica="linhas-assistente-ip">
       <p className="flex items-start gap-2 text-sm text-ink">
         <Wand2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        {t('Preencha cada câmera e baixe o arquivo da ponte pronto. A senha vai só para o arquivo, neste aparelho: o PickleRush não a guarda nem a envia.')}
+        {bridge
+          ? t('Preencha a câmera e mande direto para a ponte. A senha vai só deste aparelho para a ponte, no computador da arena: o PickleRush não a guarda nem a envia.')
+          : t('Preencha cada câmera e baixe o arquivo da ponte pronto. A senha vai só para o arquivo, neste aparelho: o PickleRush não a guarda nem a envia.')}
       </p>
-      <fieldset className="flex flex-wrap gap-2">
+      {!bridge && <fieldset className="flex flex-wrap gap-2">
         <legend className="sr-only">{t('Onde a ponte vai rodar')}</legend>
         <V2Button type="button" size="sm" variant={form.sameComputer ? 'primary' : 'secondary'} aria-pressed={form.sameComputer}
           onClick={() => setForm((f) => ({ ...f, sameComputer: true }))}>
@@ -91,8 +111,8 @@ export default function IpBridgeWizard({ onUse, suggestedName }) {
           onClick={() => setForm((f) => ({ ...f, sameComputer: false }))}>
           {t('Em outro computador da rede')}
         </V2Button>
-      </fieldset>
-      {!form.sameComputer && (
+      </fieldset>}
+      {!bridge && !form.sameComputer && (
         <label className="block text-xs font-semibold text-gray-500">
           {t('IP do computador da ponte')}
           <V2Input value={form.bridgeHost} onChange={(e) => setForm((f) => ({ ...f, bridgeHost: e.target.value }))} placeholder="192.168.0.10" inputMode="decimal" autoComplete="off" className="mt-1" />
@@ -142,7 +162,13 @@ export default function IpBridgeWizard({ onUse, suggestedName }) {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {result.ok && (
+              {bridge && (
+                <V2Button type="button" size="sm" variant={usado === i ? 'secondary' : 'primary'} disabled={enviando !== null} onClick={() => mandar(i)}>
+                  {usado === i ? <Check className="mr-1.5 h-4 w-4" /> : null}
+                  {enviando === i ? t('Mandando…') : usado === i ? t('Na ponte e aberta') : t('Mandar para a ponte e abrir')}
+                </V2Button>
+              )}
+              {!bridge && result.ok && (
                 <V2Button type="button" size="sm" variant={usado === i ? 'secondary' : 'primary'} onClick={() => { onUse(result.bridges[i].url); setUsado(i); }}>
                   {usado === i ? <Check className="mr-1.5 h-4 w-4" /> : null}
                   {usado === i ? t('Endereço preenchido') : t('Usar esta câmera aqui')}
@@ -163,15 +189,24 @@ export default function IpBridgeWizard({ onUse, suggestedName }) {
           onClick={() => setForm((f) => ({ ...f, cameras: [...f.cameras, blank(f.cameras.length + 1)] }))}>
           <Plus className="mr-1.5 h-4 w-4" /> {t('Outra câmera')}
         </V2Button>
-        <V2Button type="button" size="sm" onClick={baixar}>
-          <Download className="mr-1.5 h-4 w-4" /> {t('Baixar go2rtc.yaml')}
-        </V2Button>
+        {!bridge && (
+          <V2Button type="button" size="sm" onClick={baixar}>
+            <Download className="mr-1.5 h-4 w-4" /> {t('Baixar go2rtc.yaml')}
+          </V2Button>
+        )}
       </div>
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-gray-600">
+      {erroPonte && (
+        <p className="text-sm text-red-700" role="alert">
+          {erroPonte === 'offline'
+            ? t('A ponte parou de responder. Confira se a go2rtc continua aberta e tente de novo.')
+            : t('A ponte recusou a câmera. Confira o IP, a porta e o caminho.')}
+        </p>
+      )}
+      {!bridge && <ol className="list-decimal space-y-1 pl-5 text-sm text-gray-600">
         <li>{t('Ponha o arquivo na mesma pasta do programa go2rtc (página de versões do projeto AlexxIT/go2rtc) e abra o programa.')}</li>
         <li>{t('Confira em http://localhost:1984, no computador da ponte, se a câmera aparece tocando.')}</li>
         <li>{t('Toque em "Usar esta câmera aqui" e depois em "Abrir câmera".')}</li>
-      </ol>
+      </ol>}
     </div>
   );
 }

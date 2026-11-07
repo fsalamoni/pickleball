@@ -98,6 +98,7 @@ async function beat(ctx, data) {
     battery: Number.isFinite(c.battery) ? Math.max(0, Math.min(100, Math.round(c.battery))) : null,
     charging: typeof c.charging === 'boolean' ? c.charging : null,
     check_cm: Number.isFinite(c.checkCm) ? Math.round(c.checkCm * 10) / 10 : null,
+    alert: c.alert === 'moved' || c.alert === 'dark' ? c.alert : null,
     seen_ms: ctx.now,
     updated_at: ctx.FieldValue.serverTimestamp(),
   }));

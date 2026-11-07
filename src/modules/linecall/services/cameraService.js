@@ -74,8 +74,9 @@ export async function openIpCamera(bridge, { Pc = globalThis.RTCPeerConnection, 
         method: 'POST',
         headers: { 'Content-Type': 'application/sdp' },
         body: pc.localDescription.sdp,
-        // Chrome: página segura falando com a rede da arena pede a permissão de "rede local".
-        ...(bridge.local ? { targetAddressSpace: 'local' } : {}),
+        // Chrome (Local Network Access): página segura falando com a rede da
+        // arena OU com o próprio computador declara para onde vai e pede a permissão.
+        targetAddressSpace: bridge.local ? 'local' : 'loopback',
       });
     } catch {
       throw new Error('ip-unreachable');

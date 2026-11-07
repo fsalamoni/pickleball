@@ -24,6 +24,7 @@ import { eventInZone } from '../domain/zones.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
 import { headlineFirst } from '../domain/fusion.js';
 import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
+import { cameraKey, fixedPrefId, fixedSnapshot, fixedPatches, restoreDecision, restoredCalib } from '../domain/fixedCalib.js';
 import { cameraTodo, remoteCalibFor, calibForDb } from '../domain/remoteCalib.js';
 import { listCameras, openCamera, closeCamera } from '../services/cameraService.js';
 import { createPoseDetector } from '../services/poseService.js';
@@ -155,6 +156,49 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     setHealth((st) => ({ ...st, moved: false, px: null, known: false }));
   }, [H, calib.corners]);
 
+  // ---- Câmera FIXA: a calibração volta no dia seguinte (`domain/fixedCalib.js`) ----
+  const camKey = useRef('padrao');
+  const [restored, setRestored] = useState(null); // { decision, savedMs } | null
+  const restoredRef = useRef(null);
+  // Guarda a calibração pronta, com a "foto" dos pontos, para esta posição e esta câmera.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!H || !uid || !v?.videoWidth) return;
+    // Voltou sem certeza e o 5º ponto ainda não confirmou: não regrava por cima.
+    if (restoredRef.current === 'unsure' && !calib.checkTap) return;
+    const snap = fixedSnapshot(calib, { vw: v.videoWidth, vh: v.videoHeight, patches: refPatches.current });
+    if (snap) writeViewPreference(uid, fixedPrefId(pos.id, camKey.current), JSON.stringify(snap));
+  }, [H, calib, uid, pos.id]);
+  // Câmera aberta e nada marcado hoje: procura a calibração de antes na imagem de agora.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!stream || !v || !uid) return undefined;
+    let vivo = true;
+    const tentar = () => {
+      if (!vivo || !v.videoWidth || calibNowRef.current.corners.length) return;
+      let saved = null;
+      try { saved = JSON.parse(readViewPreference(uid, fixedPrefId(pos.id, camKey.current)) || 'null'); } catch { saved = null; }
+      if (!saved) return;
+      let drift = { known: false };
+      try {
+        const snap = grabGray(v);
+        if (snap) drift = driftFrom(fixedPatches(saved).map((p) => matchPatch(snap.gray, snap.w, snap.h, p)));
+      } catch { /* sem imagem: sem certeza */ }
+      const decision = restoreDecision(saved, { vw: v.videoWidth, vh: v.videoHeight, drift });
+      if (decision === 'none') return;
+      restoredRef.current = decision;
+      setRestored({ decision, savedMs: saved.savedMs || null });
+      const c = restoredCalib(saved, decision);
+      if (c) setCalib(c);
+    };
+    // Espera o primeiro quadro de verdade (a imagem preta da abertura não serve).
+    const id = setTimeout(tentar, 800);
+    return () => { vivo = false; clearTimeout(id); };
+  }, [stream, uid, pos.id]);
+  const calibNowRef = useRef(calib);
+  calibNowRef.current = calib;
+  const dismissRestored = useCallback(() => setRestored(null), []);
+
   const refreshCameras = useCallback(() => listCameras().then(setCameras).catch(() => setCameras([])), []);
   useEffect(() => { refreshCameras(); }, [refreshCameras]);
 
@@ -175,6 +219,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       // e o círculo dele seria pintado sobre a imagem nova.
       if (stream) clearEvents();
       closeCamera(stream);
+      camKey.current = cameraKey(deviceId);
+      restoredRef.current = null;
+      setRestored(null);
       const opened = await openCamera(deviceId);
       setStream(opened.stream);
       setSettings(opened.settings);
@@ -195,6 +242,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   live.current = {
     calibrated: Boolean(H), analyzing: running, fps,
     battery: battery.level, charging: battery.charging, checkCm: check?.cm ?? null,
+    alert: running && health.moved ? 'moved' : running && health.dark ? 'dark' : null,
   };
   const name = sink?.name || userProfile?.full_name || userProfile?.display_name || user?.displayName || '';
   useEffect(() => {
@@ -214,7 +262,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     if (!share || !uid || !stream || !gameDayId) return;
     upsert({ uid, name, position: pos.id, layout, ...live.current }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Boolean(H), running, check?.cm]);
+  }, [Boolean(H), running, check?.cm, live.current.alert]);
 
   // ---- Calibração PELA CENTRAL (docs/53 §5d) ----------------------------
   // Câmera em lugar alto não se calibra pela tela dela: ela manda uma foto da
@@ -471,5 +519,6 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     ...cal, position: pos,
     videoRef, cameras, start, stream, settings, cameraError, cameraChecks, remote: remoteOn, remoteApplied,
     running, setRunning, poseState, events, clearEvents, fps, frameMs, ball, shareError, battery, health,
+    restored, dismissRestored,
   };
 }

@@ -36,7 +36,7 @@ export const camDocId = (uid, position) => `${uid}_${position}`;
 
 /** Grava (ou renova) a câmera deste aparelho. */
 export function upsertLineCam(gameDayId, {
-  uid, name, position, layout, calibrated, analyzing, fps, battery = null, charging = null, checkCm = null,
+  uid, name, position, layout, calibrated, analyzing, fps, battery = null, charging = null, checkCm = null, alert = null,
 }) {
   const extra = {};
   // Saúde da câmera, quando o navegador conta: bateria (0–100), carregando, e o
@@ -44,6 +44,8 @@ export function upsertLineCam(gameDayId, {
   if (Number.isFinite(battery)) extra.battery = Math.max(0, Math.min(100, Math.round(battery)));
   if (typeof charging === 'boolean') extra.charging = charging;
   if (Number.isFinite(checkCm)) extra.check_cm = Math.round(checkCm * 10) / 10;
+  // A câmera saiu do lugar ou ficou escura: a central avisa antes do saque.
+  if (alert === 'moved' || alert === 'dark') extra.alert = alert;
   return setDoc(doc(camsCol(gameDayId), camDocId(uid, position)), {
     uid,
     name: String(name || '').slice(0, 60),

@@ -244,7 +244,7 @@ própria tela ("Como posicionar esta câmera", `PlacementGuide` + `DeviceTips`).
 | aparelho | como entra | cuidado |
 |---|---|---|
 | celular/tablet | o próprio aparelho, câmera traseira, no Chrome (Android) ou Safari (iPhone) | horizontal, tripé, na tomada; a grande-angular (0,5×) aparece na lista — usar só se a quadra não couber |
-| webcam USB | notebook; uma câmera por aba | 60 quadros/1080p; extensão USB ativa para chegar ao alto |
+| webcam USB | notebook; várias na mesma tela ("Mais uma câmera nesta tela") ou uma por aba, cada uma numa porta USB | 60 quadros/1080p; extensão USB ativa para chegar ao alto |
 | câmera de ação | modo webcam por USB (GoPro Hero 8+, DJI Osmo Action 3+) ou HDMI + placa de captura | lente **linear** |
 | câmera IP (RTSP) | ✅ "Câmera IP (ponte local)": go2rtc ou MediaMTX num computador da arena (§5b); ou OBS Studio ("Câmera virtual") | Chrome; Safari/iPhone ainda não |
 | câmera Wi-Fi de consumo / de ação | ❌ o vídeo Wi-Fi só abre no app da marca | usar por cabo (USB/HDMI) |
@@ -263,7 +263,37 @@ de um quadro leva NESTE aparelho (`frameMs`; acima de 33 ms ele não acompanha
 **Menos toques**: câmera aberta sem pontos já entra na marcação; e quem volta
 a uma posição já calibrada, com a câmera permitida para o site
 (`navigator.permissions`), tem a MESMA câmera reaberta sozinha
-(`linhas:camera:ultima`, no aparelho) — falta só "Começar a analisar".
+(`linhas:camera:ultima:<posição>`, no aparelho; a chave sem posição vale de
+reserva) — falta só "Começar a analisar".
+
+**Câmera fixa lembra a calibração** (`domain/fixedCalib.js`): ao ficar pronta,
+a calibração é guardada também por POSIÇÃO e por CÂMERA
+(`linhas:calibracao:fixa:<posição>:<dev:id | ip:endereço | padrao>`), com a
+"foto" dos pedaços em volta dos pontos (`cameraHealth.cutPatch`, ~1,5 kB, no
+aparelho). Num dia de jogo NOVO, a câmera reabre sozinha e os pedaços são
+procurados na imagem de agora (`restoreDecision`): no lugar → a calibração
+volta inteira (`same`); deslocados → não volta e pede marcar de novo
+(`moved`); não achados (luz, gente na frente) → volta SEM o 5º ponto, que é
+pedido de novo (`unsure`, e nada é regravado até ele confirmar); outra
+resolução → não volta (`size`). A tela diz qual dos quatro aconteceu.
+
+**Várias câmeras na mesma tela** (`LineControlScreen`, `?posicao=a,b`, até 4):
+"Mais uma câmera nesta tela" acrescenta a próxima posição livre; cada uma tem
+"Tirar desta tela". Só a primeira fala os lances (`announce`), para a voz não
+sair dobrada; todas mandam para a central. "Abrir em outra aba" continua.
+
+**Webcam** (`domain/webcamTuning.js`, `WebcamTuning`): quando a câmera deixa
+(`getCapabilities().exposureMode` com `manual`), botões de obturador
+Automático · 1/250 · 1/500 · 1/1000 (`applyConstraints`, `exposureTime` em
+unidades de 100 µs); e o selo "Chegando N quadros/s" pelo que o navegador
+ENTREGOU (`track.stats.deliveredFrames`, Chrome), avisando quando ela anuncia
+60 e entrega 30 (falta de luz). O erro `NotReadableError` agora explica a
+segunda webcam na mesma porta USB.
+
+**A central sabe que a câmera mexeu ou ficou escura**: o sinal de vida leva
+`alert: 'moved' | 'dark'` (só enquanto analisa; regra `lcCam` aceita o campo,
+o servidor do convidado só aceita esses dois valores) e o "Pronto para
+começar?" (`readinessCheck`) trava na câmera que saiu do lugar e avisa a escura.
 
 **Desempenho do aparelho que filma** (medido no código, não em campo): a bola
 desenhada na tela é atualizada a no máximo ~12 vezes por segundo
@@ -307,9 +337,42 @@ câmera a comprar): Claude Doc "Câmeras IP e Wi-Fi no controle de linhas".
   negada ou navegador que bloqueia), `ip-refused` (a ponte não conhece a
   câmera), `ip-no-video` (conectou e o vídeo não veio em 10 s).
 
+**A página comanda a ponte** (`domain/bridgeDiscovery.js`,
+`services/bridgeService.js`, `BridgeFinder`). Na opção "Câmera IP", "Achar a
+câmera pela ponte (ou ligar a ponte)" fala com a go2rtc pela API dela, sem a
+pessoa editar arquivo:
+
+- **Ponte fora do ar**: o download certo da go2rtc para o sistema
+  (`guessBridgeOs`, `BRIDGE_DOWNLOADS`, página de versões oficial), o arquivo
+  MÍNIMO (`go2rtcBaseConfig`: só `api.listen` e `origin: '*'`, sem câmera) e o
+  **"liga sozinha"** (`bridgeAutostart`): no Windows um `.cmd` que registra a
+  tarefa "PickleRush ponte" ao entrar (`schtasks /SC ONLOGON`, sem
+  administrador); no Mac um `launchd` (`app.picklerush.ponte`, tira a
+  quarentena); no Linux/Raspberry um serviço `systemd --user`. A tela confere
+  a ponte a cada 3 s e segue sozinha quando ela abre.
+- **Ponte no ar** (`GET /api/streams`): as câmeras que ela já tem viram botões
+  "Usar …"; **"Procurar câmeras na rede"** (`GET /api/onvif`, descoberta
+  ONVIF da própria go2rtc) lista as câmeras com nome e IP; com usuário e senha
+  (`withOnvifCredentials`) a ponte devolve os perfis (`GET /api/onvif?src=`), o
+  PRINCIPAL entra com o nome da quadra e da posição (`freeStreamName`, sem
+  repetir) por `PUT /api/streams?name=&src=` — que a go2rtc também grava no
+  `go2rtc.yaml` — e a câmera abre. Antes, `GET /api/streams?src=` diz o
+  formato: **H.265 é avisado** (o navegador não toca) com o que trocar no site
+  da câmera.
+- Câmera sem ONVIF: o assistente de marca/IP/senha abaixo, que com a ponte no
+  ar ganha **"Mandar para a ponte e abrir"** (o mesmo `PUT`, sem baixar arquivo).
+- **Segurança**: a senha passa só deste navegador para a ponte (no computador
+  da arena) e nunca vai ao banco nem à preferência; a página **nunca lê
+  `/api/config`** (é onde a go2rtc guarda as senhas). Todo pedido declara
+  `targetAddressSpace` (`loopback` ou `local`, Chrome — Local Network Access).
+  A ponte mínima escuta em `127.0.0.1`: ninguém da rede a alcança.
+- A go2rtc não foi executada neste ambiente (a sandbox não roda binários
+  baixados); os formatos foram lidos do código da go2rtc 1.9 e estão nos
+  testes de `bridgeDiscovery.test.js`. Conferir em campo.
+
 **Assistente da ponte** (`go2rtcConfig` em `domain/ipCamera.js`,
-`IpBridgeWizard`): na opção "Câmera IP", "Ainda não tenho a ponte: gerar o
-arquivo dela" pede, por câmera, nome, marca (Intelbras, Hikvision,
+`IpBridgeWizard`): "Câmera sem ONVIF: preencher marca, IP e senha à mão" pede,
+por câmera, nome, marca (Intelbras, Hikvision,
 Dahua/Amcrest, Reolink, TP-Link Tapo, ou o caminho do manual), IP, porta,
 usuário e senha, e se a ponte roda neste computador ou em outro da rede. A
 tela baixa o `go2rtc.yaml` pronto e "Usar esta câmera aqui" preenche o
@@ -337,7 +400,7 @@ streams:
 2. Abra `http://localhost:1984` e confira a câmera tocando lá.
 3. No PickleRush, no Chrome desse computador: posição → "Câmera IP (ponte
    local)" → `http://localhost:1984/api/webrtc?src=quadra1` → Abrir câmera.
-4. Uma aba por câmera ("Abrir outra câmera neste computador").
+4. Mais câmeras: "Mais uma câmera nesta tela" (ou "Abrir em outra aba").
 
 Câmera boa para isso: RTSP + ONVIF, **H.264** (não H.265) no fluxo
 principal, 1080p a 50–60 quadros (conferir com `ffprobe`: há câmera que

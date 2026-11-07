@@ -119,7 +119,7 @@ describe('a câmera no ar', () => {
 
   it('a saúde da câmera entra', async () => {
     await assertSucceeds(setDoc(doc(como(ATLETA), `${Q1}/line_cams`, `${ATLETA}_fundo_a`),
-      { ...cam(ATLETA), battery: 40, charging: false, check_cm: 2.1 }));
+      { ...cam(ATLETA), battery: 40, charging: false, check_cm: 2.1, alert: 'moved' }));
   });
 });
 

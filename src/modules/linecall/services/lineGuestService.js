@@ -63,7 +63,7 @@ export function guestSink({ host, token }) {
     name: 'Convidado',
     upsert: (c) => chamar({
       action: 'beat', host, token,
-      cam: { calibrated: c.calibrated, analyzing: c.analyzing, fps: c.fps, battery: c.battery, charging: c.charging, checkCm: c.checkCm },
+      cam: { calibrated: c.calibrated, analyzing: c.analyzing, fps: c.fps, battery: c.battery, charging: c.charging, checkCm: c.checkCm, alert: c.alert },
     }),
     remove: () => chamar({ action: 'leave', host, token }),
     post: (m) => chamar({ action: 'call', host, token, call: lineCallFields(m) }),
