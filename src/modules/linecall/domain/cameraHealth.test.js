@@ -65,5 +65,10 @@ describe('cameraHealth', () => {
   it('diz quando a imagem está escura', () => {
     expect(brightness(new Uint8Array(100).fill(20)).dark).toBe(true);
     expect(brightness(new Uint8Array(100).fill(HEALTH.DARK + 40)).dark).toBe(false);
+    // Sol ou reflexo: um terço da imagem estourada; quadra coberta clara, não.
+    const sol = new Uint8Array(700).fill(120);
+    sol.fill(255, 0, 250);
+    expect(brightness(sol).glare).toBe(true);
+    expect(brightness(new Uint8Array(700).fill(230)).glare).toBe(false);
   });
 });

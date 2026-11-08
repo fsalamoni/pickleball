@@ -104,6 +104,20 @@ export function findBallCandidates(rgba, prev, width, height, opts = {}) {
 }
 
 /**
+ * Onde a bola deve estar no próximo quadro: seguindo o rumo dos dois últimos
+ * (velocidade constante), como fazem os rastreadores abertos (PickleIQ,
+ * TrackNet com Kalman). Num drive a 30 quadros/s a bola anda dezenas de pixels
+ * por quadro; procurar perto de onde ela ESTAVA escolhe a mancha errada quando
+ * há outra coisa amarela no caminho (camisa, bola da quadra vizinha). Sem o
+ * quadro anterior, é a última posição — o de sempre.
+ */
+export function predictNext(last, before) {
+  if (!last) return null;
+  if (!before) return last;
+  return { x: 2 * last.x - before.x, y: 2 * last.y - before.y };
+}
+
+/**
  * A bola entre os candidatos: a mais perto da posição esperada; sem
  * referência, a maior mancha. Longe demais do esperado = não é a bola.
  */
@@ -111,8 +125,14 @@ export function pickBall(candidates, expected = null, opts = {}) {
   const o = { ...BALL_DEFAULTS, ...opts };
   if (!candidates.length) return null;
   if (!expected) return [...candidates].sort((a, b) => b.area - a.area)[0];
+  // `anchor`: a última posição vista. Com a previsão (`predictNext`) em
+  // `expected`, vence a mais perto da previsão, mas vale a que está perto de
+  // uma OU de outra: no quique e na batida a bola volta e se afasta da
+  // previsão, e continua perto de onde estava.
+  const near = (c, p) => (p ? Math.hypot(c.x - p.x, c.y - p.y) : Infinity);
   const best = candidates
-    .map((c) => ({ c, d: Math.hypot(c.x - expected.x, c.y - expected.y) }))
+    .map((c) => ({ c, d: near(c, expected), ok: Math.min(near(c, expected), near(c, o.anchor)) <= o.maxJump }))
+    .filter((x) => x.ok)
     .sort((a, b) => a.d - b.d)[0];
-  return best.d <= o.maxJump ? best.c : null;
+  return best ? best.c : null;
 }

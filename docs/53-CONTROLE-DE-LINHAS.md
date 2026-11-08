@@ -135,6 +135,30 @@ junta as marcações das câmeras dela por **janela de tempo**:
 - a medida mostrada é a da melhor câmera (menor incerteza ÷ peso), e o motivo
   (`reason`) é o dela.
 
+**Os relógios dos aparelhos** (`domain/clockSync.js`, no `useLineControlLive`).
+Cada câmera marca `t_ms` e `seen_ms` no relógio DELA. 🐞 Antes a central
+comparava essas horas direto: celular com o relógio errado alguns segundos
+aparecia "fora do ar" estando no ar, o mesmo quique visto por duas câmeras
+virava dois lances (janela de 0,35–0,7 s) e o telão não mostrava o lance.
+Agora, sem nada novo gravado: o sinal de vida já leva a hora do aparelho
+(`seen_ms`) e a do servidor (`updated_at`), então `updated_at − seen_ms` leva
+o relógio da câmera ao do servidor, e `chegada − updated_at` (só de sinais que
+mudaram depois da carga inicial, fora do cache) leva o do servidor ao da tela.
+Vale a MENOR de até 8 amostras (como no NTP: o atraso da rede só soma). Sem
+amostra, a diferença é zero — igual a antes. As listas devolvidas (`cams`,
+`calls`) já vêm no relógio da tela, com o original em `seen_ms_raw`/`t_ms_raw`.
+A câmera sem conta manda `client_ms` com a marcação e a função `lineGuest`
+converte a hora do lance para a do servidor (o sinal dela já é gravado com a
+hora do servidor). A hora do lance sai da hora de CAPTURA do quadro
+(`requestVideoFrameCallback` → `captureTime`) quando o navegador conta, não da
+hora em que o quadro foi processado.
+
+**Câmera que para no meio do jogo é avisada** (`judgingPositions` /
+`stoppedJudging`, `readiness.js`): a posição que julgava (no ar, calibrada,
+analisando, no lugar) e deixou de julgar vira um aviso vermelho na central por
+10 s — e a voz o diz, se estiver ligada. Lição de Wimbledon 2025: metade da
+quadra ficou sem chamada por um game e ninguém foi avisado.
+
 A presença de cada câmera é `…/line_cams/{uid}_{posição}`, renovada a cada
 15 s (online = visto há ≤ 45 s) e apagada ao sair da tela. Se o aparelho
 apaga, a bateria acaba ou a aba é fechada à força, o documento FICA: a central
@@ -604,6 +628,10 @@ linha é menor que ela, ele diz **Revisar**.
 - **Detecção da bola sem modelo treinado**: cor + movimento; perde a bola com
   sombra forte, contra luz ou atrás do jogador. O ganho real é um TrackNet
   (MIT) treinado com vídeo de pickleball — só `findBallCandidates` muda.
+  Entre os candidatos, vence o mais perto de onde a bola DEVE estar pelo rumo
+  dos dois últimos quadros (`predictNext`), aceitando também o que está perto
+  de onde ela estava (no quique e na batida ela volta): camisa amarela ou bola
+  da quadra vizinha perto da última posição não roubam mais o rastro.
 - **Quem ganhou o ponto** não é marcado, nem o placar.
 - **Nada disto foi testado em quadra.** As medidas vêm de testes sintéticos
   (`lineCallScenarios.test.js` sobre o simulador `testkit/courtSim.js`, que
@@ -702,7 +730,10 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
   estão (±10 px). Com 2+ achados e deslocamento mediano ≥ 3 px, aviso em
   vermelho (voz e vibração) e **todo lance vira "Revisar"** com `moved: true`
   até marcar os pontos de novo. Canto coberto por alguém não decide. Pouca luz
-  (brilho médio < 55) dá aviso. Nada novo no banco: "revisar" já existia.
+  (brilho médio < 55) dá aviso. **Sol ou reflexo** (15% ou mais da imagem
+  estourada, tom ≥ 250) também avisa, no aparelho e na central (`alert:
+  'glare'`, só aviso, não trava): é o inimigo nº 1 fora de quadra coberta.
+  Nada novo no banco: "revisar" já existia e `alert` já era livre na regra.
 - Dois guias de dicas (`controle-de-linhas-camera`, `controle-de-linhas-central`,
   atrás da flag) apontam os botões reais (`data-dica="linhas-…"`).
 

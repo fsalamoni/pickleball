@@ -14,19 +14,25 @@ import { onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { logger } from '@/core/lib/logger';
 import { camsCol, callsCol } from '../services/lineCallSync.js';
 import { fuseLineCalls } from '../domain/fusion.js';
+import { addClockSamples, clockOffsets, alignCalls, alignCams } from '../domain/clockSync.js';
 
 /** Quantas marcações a central lê (as mais recentes). */
 const CALLS_LIMIT = 150;
 
-function useLive(makeQuery, enabled) {
+function useLive(makeQuery, enabled, onSnap = null) {
   const [state, setState] = useState({ list: [], isLoading: enabled, isError: false });
   const [tentativa, setTentativa] = useState(0);
   useEffect(() => {
     if (!enabled) { setState({ list: [], isLoading: false, isError: false }); return undefined; }
     setState((s) => ({ ...s, isLoading: true, isError: false }));
+    let inicial = true;
     return onSnapshot(
       makeQuery(),
-      (snap) => setState({ list: snap.docs.map((d) => ({ id: d.id, ...d.data() })), isLoading: false, isError: false }),
+      (snap) => {
+        onSnap?.(snap, inicial);
+        inicial = false;
+        setState({ list: snap.docs.map((d) => ({ id: d.id, ...d.data() })), isLoading: false, isError: false });
+      },
       (err) => {
         logger.warn('linhas: escuta falhou', err);
         setState((s) => ({ ...s, isLoading: false, isError: true }));
@@ -53,15 +59,28 @@ export function useNow(stepMs = 5000) {
  */
 export function useLineControlLive(gameDayId, { enabled = true, calls: withCalls = true } = {}) {
   const on = Boolean(enabled && gameDayId);
-  const [cams, retryCams] = useLive(() => camsCol(gameDayId), on);
+  // As horas de cada aparelho viram as do relógio desta tela (domain/clockSync.js).
+  const [samples, setSamples] = useState(null);
+  useEffect(() => { setSamples(null); }, [gameDayId]);
+  const onCams = useCallback((snap, inicial) => {
+    const changed = snap.docChanges().filter((ch) => ch.type !== 'removed').map((ch) => ch.doc.data());
+    // A carga inicial e o retrato do cache trazem sinais antigos: servem para o
+    // relógio da câmera, não para medir a chegada nesta tela.
+    const fresh = !inicial && !snap.metadata?.fromCache;
+    if (changed.length) setSamples((s) => addClockSamples(s, changed, fresh ? Date.now() : null));
+  }, []);
+  const [cams, retryCams] = useLive(() => camsCol(gameDayId), on, onCams);
   const [calls, retryCalls] = useLive(
     () => query(callsCol(gameDayId), orderBy('created_at', 'desc'), limit(CALLS_LIMIT)),
     on && withCalls,
   );
-  const lances = useMemo(() => fuseLineCalls(calls.list), [calls.list]);
+  const offsets = useMemo(() => clockOffsets(samples), [samples]);
+  const alignedCalls = useMemo(() => alignCalls(calls.list, offsets), [calls.list, offsets]);
+  const alignedCams = useMemo(() => alignCams(cams.list, offsets), [cams.list, offsets]);
+  const lances = useMemo(() => fuseLineCalls(alignedCalls), [alignedCalls]);
   return {
-    cams: cams.list,
-    calls: calls.list,
+    cams: alignedCams,
+    calls: alignedCalls,
     lances,
     isLoading: cams.isLoading || calls.isLoading,
     isError: cams.isError || calls.isError,

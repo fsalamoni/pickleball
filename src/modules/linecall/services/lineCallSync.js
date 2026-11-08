@@ -45,7 +45,7 @@ export function upsertLineCam(gameDayId, {
   if (typeof charging === 'boolean') extra.charging = charging;
   if (Number.isFinite(checkCm)) extra.check_cm = Math.round(checkCm * 10) / 10;
   // A câmera saiu do lugar ou ficou escura: a central avisa antes do saque.
-  if (alert === 'moved' || alert === 'dark') extra.alert = alert;
+  if (alert === 'moved' || alert === 'dark' || alert === 'glare') extra.alert = alert;
   return setDoc(doc(camsCol(gameDayId), camDocId(uid, position)), {
     uid,
     name: String(name || '').slice(0, 60),

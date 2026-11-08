@@ -91,6 +91,16 @@ describe('a câmera no ar e as marcações', () => {
     await chamar(db, { action: 'call', call: { kind: 'bounce', call: 'out', reason: 'long', t_ms: NOW - 500, margin_m: -0.39123, x: 1, y: 2, uid: 'outra', position: 'topo' } });
     const [[, d]] = docs(db, `${HOST}/line_calls/`);
     expect(d).toMatchObject({ uid: UID, position: 'fundo_a', kind: 'bounce', call: 'out', reason: 'long', margin_m: -0.391 });
+    expect(d.t_ms).toBe(NOW - 500);
+  });
+
+  it('com a hora do aparelho no envio, a do lance vira a do servidor (relógio 20 min atrasado)', async () => {
+    const db = cenario();
+    const atraso = 20 * 60000;
+    // Antes seria recusada por "fora de hora"; agora entra na hora certa.
+    await chamar(db, { action: 'call', client_ms: NOW - atraso, call: { kind: 'bounce', call: 'in', t_ms: NOW - atraso - 800 } });
+    const [[, d]] = docs(db, `${HOST}/line_calls/`);
+    expect(d.t_ms).toBe(NOW - 800);
   });
 
   it('🔴 marcação de tipo desconhecido ou fora de hora é recusada', async () => {

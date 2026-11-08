@@ -17,6 +17,8 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid
 vi.mock('@/modules/linecall/hooks/useLineControlLive', () => ({ useNow: () => 5_000 }));
 vi.mock('@/modules/linecall/services/lineCallSync', () => ({ clearLineCalls: vi.fn(), decideLance: vi.fn() }));
 vi.mock('./CameraInvite', () => ({ default: () => null }));
+const toastError = vi.fn();
+vi.mock('sonner', () => ({ toast: { error: (...a) => toastError(...a), success: vi.fn(), warning: vi.fn() } }));
 
 const { default: LineCentral } = await import('./LineCentral.jsx');
 
@@ -48,6 +50,24 @@ const show = (calls, { isLoading = false, podeLimpar = true } = {}) => act(async
 });
 const flash = () => container.querySelector('[role="alert"]')?.textContent || '';
 const grande = () => container.querySelector('[data-dica="linhas-central-lance"]')?.textContent || '';
+
+describe('LineCentral: câmera que para no meio do jogo', () => {
+  const cam = (o = {}) => ({ uid: 'c1', position: 'fundo_a', calibrated: true, analyzing: true, fps: 60, seen_ms: 4_000, ...o });
+  const showCams = (cams) => act(async () => {
+    root.render(<LineCentral gameDay={GD} live={{ isError: false, isLoading: false, cams, lances: [], retry: () => {} }} />);
+  });
+
+  it('⭐ avisa quando uma câmera que julgava sai do ar ou pausa — o sistema não para calado', async () => {
+    toastError.mockClear();
+    await showCams([cam()]);
+    expect(toastError).not.toHaveBeenCalled(); // abrir a central não avisa nada
+    await showCams([cam({ analyzing: false })]);
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(toastError.mock.calls[0][0]).toMatch(/parou de julgar.*Fundo/i);
+    await showCams([]);
+    expect(toastError).toHaveBeenCalledTimes(1); // já tinha parado: não repete
+  });
+});
 
 describe('LineCentral: o aviso do lance', () => {
   it('⭐ a falta do pé no saque é o que toca e pisca, não o "Saque: dentro" que chegou junto', async () => {

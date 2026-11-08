@@ -18,7 +18,7 @@ import { logger } from '@/core/lib/logger';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { createLineCallEngine } from '../domain/lineCallEngine.js';
 import { CAMERA_POSITIONS } from '../domain/cameraLayouts.js';
-import { findBallCandidates, pickBall, BALL_DEFAULTS } from '../domain/ballDetection.js';
+import { findBallCandidates, pickBall, predictNext, BALL_DEFAULTS } from '../domain/ballDetection.js';
 import { assessCamera, CAMERA_LEVEL } from '../domain/cameraCheck.js';
 import { eventInZone } from '../domain/zones.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
@@ -137,7 +137,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const [shareError, setShareError] = useState(false);
   const battery = useBattery(Boolean(stream));
   // A câmera mexeu? Tem luz? (`domain/cameraHealth.js`)
-  const [health, setHealth] = useState({ moved: false, px: null, known: false, dark: false });
+  const [health, setHealth] = useState({ moved: false, px: null, known: false, dark: false, glare: false });
   const refPatches = useRef(null);
 
   // Trocar de posição troca a calibração.
@@ -242,7 +242,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   live.current = {
     calibrated: Boolean(H), analyzing: running, fps,
     battery: battery.level, charging: battery.charging, checkCm: check?.cm ?? null,
-    alert: running && health.moved ? 'moved' : running && health.dark ? 'dark' : null,
+    alert: !running ? null : health.moved ? 'moved' : health.dark ? 'dark' : health.glare ? 'glare' : null,
   };
   const name = sink?.name || userProfile?.full_name || userProfile?.display_name || user?.displayName || '';
   useEffect(() => {
@@ -364,6 +364,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     let seq = 0;
     let prev = null;
     let last = null;
+    let before = null;
     let frames = 0;
     let busy = 0;
     let since = performance.now();
@@ -435,9 +436,13 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
           if (!refPatches.current) refPatches.current = cutRefs({ gray, w: scan.width, h: scan.height, k }, calib.corners);
           const drift = driftFrom((refPatches.current || []).map((p) => matchPatch(gray, scan.width, scan.height, p)));
           moved = drift.moved;
-          setHealth({ moved: drift.moved, px: drift.px, known: drift.known, dark: brightness(gray).dark });
+          const luz = brightness(gray);
+          setHealth({ moved: drift.moved, px: drift.px, known: drift.known, dark: luz.dark, glare: luz.glare });
         }
-        const got = pickBall(cands, last ? { x: last.x * k, y: last.y * k } : null);
+        // Procura onde a bola deve estar pelo rumo dos dois últimos quadros.
+        const sc = (p) => (p ? { x: p.x * k, y: p.y * k } : null);
+        const got = pickBall(cands, sc(predictNext(last, before)), { anchor: sc(last) });
+        before = got ? last : null;
         last = got ? { x: got.x / k, y: got.y / k } : null;
         if ((last || shownBall) && now - ballAt >= BALL_UI_MS) { ballAt = now; shownBall = Boolean(last); setBall(last); }
         let players = [];
@@ -455,7 +460,12 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
           snap.height = Math.round(h * (320 / w));
           snap.getContext('2d').drawImage(video, 0, 0, snap.width, snap.height);
           const image = snap.toDataURL('image/jpeg', 0.7);
-          const at = Date.now();
+          // A hora em que o QUADRO foi capturado (`captureTime`, quando o
+          // navegador conta), não a de agora: o processamento atrasa cada
+          // aparelho de um jeito, e a central compara as horas entre câmeras.
+          const agora = Date.now();
+          const cap = Number.isFinite(meta?.captureTime) ? performance.timeOrigin + meta.captureTime : NaN;
+          const at = Math.abs(agora - cap) < 2000 ? cap : agora;
           if (share && uid) {
             found.forEach((event) => {
               // A hora do LANCE (não a de agora) no relógio deste aparelho.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readinessCheck } from './readiness';
+import { readinessCheck, judgingPositions, stoppedJudging } from './readiness';
 
 const ok = { calibrated: true, analyzing: true, fps: 60, battery: 90, charging: false, check_cm: 2 };
 
@@ -31,5 +31,20 @@ describe('readinessCheck', () => {
 
   it('bateria baixa carregando não avisa', () => {
     expect(readinessCheck(['fundo_a'], { fundo_a: { ...ok, battery: 5, charging: true } }).ready).toBe(true);
+  });
+});
+
+describe('câmera que para de julgar', () => {
+  it('julga quem está no ar, calibrado, analisando e no lugar; sol avisa sem bloquear', () => {
+    const occ = { fundo_a: ok, fundo_b: { ...ok, alert: 'moved' }, rede_1: { ...ok, analyzing: false }, topo: null };
+    expect(judgingPositions(['fundo_a', 'fundo_b', 'rede_1', 'topo'], occ)).toEqual(['fundo_a']);
+    const r = readinessCheck(['fundo_a'], { fundo_a: { ...ok, alert: 'glare' } });
+    expect(r).toMatchObject({ blocking: 0, warnings: 1 });
+    expect(r.issues[0].code).toBe('glare');
+  });
+
+  it('diz só as que julgavam e pararam', () => {
+    expect(stoppedJudging(['fundo_a', 'fundo_b'], ['fundo_b'])).toEqual(['fundo_a']);
+    expect(stoppedJudging([], ['fundo_b'])).toEqual([]);
   });
 });

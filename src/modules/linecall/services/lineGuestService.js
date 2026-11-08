@@ -66,7 +66,8 @@ export function guestSink({ host, token }) {
       cam: { calibrated: c.calibrated, analyzing: c.analyzing, fps: c.fps, battery: c.battery, charging: c.charging, checkCm: c.checkCm, alert: c.alert },
     }),
     remove: () => chamar({ action: 'leave', host, token }),
-    post: (m) => chamar({ action: 'call', host, token, call: lineCallFields(m) }),
+    // `client_ms`: a hora deste aparelho no envio, para o servidor trazer a do lance à dele.
+    post: (m) => chamar({ action: 'call', host, token, call: lineCallFields(m), client_ms: Date.now() }),
     // A calibração pela central (docs/53 §5d): sem conta não há assinatura do
     // banco, então a câmera pergunta ao servidor de tempos em tempos.
     calib: {
