@@ -156,6 +156,8 @@ torneio, `/c/:clubId`) existem para isso.
 
 | Ligar o **controle de linhas** de uma QUADRA / escolher o arranjo dela (`line_courts/court-N`) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf` + `lcCfg`: id `court-N`, só `line_control`, `line_control_layout`, `updated_by` = quem grava, `updated_at`) + `canConfigureLineControl` (`podeConfigurarLinhas`) |
 | Ser **câmera** da quadra (`line_cams`, `line_calls` create) | ◐ se está em `member_uids` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | rules (`lcGdCam`: só com `line_control == true` NAQUELA quadra, em nome próprio; formato `lcCam`/`lcCall`) |
+| Gerar o **QR de câmera sem conta** (`line_invites` create/read/delete) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf` + `lcInv`: id = hash de 64 hex, só `position`/`exp_ms`/`created_at`, validade ≤ 12 h); quem lê o QR filma SEM conta pela função `lineGuest`, que confere o convite, a quadra ligada e a flag a cada chamada (docs/53 §5c) |
+| **Calibrar uma câmera pela central** e começar/pausar a análise dela (`line_calib` update: só `calib`/`calib_ms`/`snap_req_ms`/`run`/`run_ms`/`by`, apagando a foto) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf` + `lcCalOrg`: em nome próprio, toda escrita apaga `snap`); a FOTO da quadra só a própria câmera grava (`lcCal`: com o controle ligado, em nome próprio, JPEG < 900 mil caracteres) e só ela e quem organiza leem (docs/53 §5d) |
 | Dar a **palavra final** num lance (`line_calls` update: só `decision`/`decided_by`/`decided_ms`) | ✖ | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf` + `lcDec`: decisão em nome próprio, valor do tipo do lance) |
 | Ver a **central** de linhas | ◐ quem vê o dia | ✔ | ✔ | ✔ | ✔* | ✔ | ✔ | rules (`canAccessGameDay`) |
 | Limpar marcações | ✖ (só a própria câmera) | ✔ | ✔ | ✖ | ✔ | ✔ | ✔ | rules (`lineOrgOf`) |

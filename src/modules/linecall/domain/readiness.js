@@ -14,6 +14,8 @@ export const READINESS_TEXT = Object.freeze({
   slow: 'menos de 24 quadros/s',
   battery: 'bateria baixa fora do carregador',
   calibration: 'calibração com erro acima de 6 cm',
+  moved: 'a câmera saiu do lugar: calibrar de novo',
+  dark: 'imagem escura demais',
 });
 
 /**
@@ -34,6 +36,9 @@ export function readinessCheck(positions, occ) {
     if (c.analyzing && c.fps > 0 && c.fps < L.minFps) add(p, 'slow', 'warn');
     if (Number.isFinite(c.battery) && c.battery <= L.lowBattery && c.charging !== true) add(p, 'battery', 'warn');
     if (Number.isFinite(c.check_cm) && c.check_cm > L.maxCheckCm) add(p, 'calibration', 'warn');
+    // A câmera mesma conta (`cameraHealth`): saiu do lugar = mede errado; escura = perde a bola.
+    if (c.alert === 'moved') add(p, 'moved', 'block');
+    else if (c.alert === 'dark') add(p, 'dark', 'warn');
   }
   const blocking = issues.filter((i) => i.level === 'block').length;
   return { ready: blocking === 0 && issues.length === 0, blocking, warnings: issues.length - blocking, issues };

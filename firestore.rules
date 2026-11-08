@@ -223,7 +223,7 @@ service cloud.firestore {
     function lcCam(camId) {
       return nd().position is string && nd().position.size() <= 20
         && camId == me() + '_' + nd().position
-        && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm']);
+        && nd().keys().hasOnly(['uid', 'name', 'position', 'layout', 'calibrated', 'analyzing', 'fps', 'seen_ms', 'updated_at', 'battery', 'charging', 'check_cm', 'alert']);
     }
     function lcCall() {
       return nd().kind in ['bounce', 'volley', 'serve_foot', 'two_bounce']
@@ -239,6 +239,27 @@ service cloud.firestore {
     function lcCfg() {
       return nd().line_control is bool && nd().updated_by == me()
         && (!('line_control_layout' in nd()) || (nd().line_control_layout is string && nd().line_control_layout.size() <= 40));
+    }
+    // O convite da câmera SEM CONTA (QR, docs/53 §5c): id = sha256 do token
+    // (o token nunca vem ao banco), a posição e a validade de até 12 h. Quem
+    // usa o convite é a função `lineGuest`, pelo servidor.
+    function lcInv(iId) {
+      return iId.matches('[0-9a-f]{64}') && nd().keys().hasOnly(['position', 'exp_ms', 'created_at'])
+        && nd().position is string && nd().position.size() <= 20 && nd().exp_ms is int
+        && nd().exp_ms > request.time.toMillis() && nd().exp_ms <= request.time.toMillis() + 43200000;
+    }
+    // A calibração PELA CENTRAL (docs/53 §5d): `line_calib/{camId}`. A câmera
+    // grava, em nome próprio, a FOTO da quadra (JPEG, abaixo de 900 mil
+    // caracteres), o tamanho do vídeo e o que tem; quem organiza grava só a
+    // calibração, o pedido de foto nova e o começar/pausar — e toda escrita
+    // dela apaga a foto. Ler: só a própria câmera e quem organiza.
+    function lcCal(camId) {
+      return camId == me() + '_' + nd().position && isOwner(nd().uid)
+        && nd().keys().hasOnly(['uid', 'position', 'snap', 'snap_ms', 'vw', 'vh', 'cur', 'applied_ms', 'calib', 'calib_ms', 'snap_req_ms', 'run', 'run_ms', 'by'])
+        && (!('snap' in nd()) || (nd().snap is string && nd().snap.size() < 900000 && nd().snap.matches('data:image/jpeg;base64,.*')));
+    }
+    function lcCalOrg() {
+      return chg().hasOnly(['calib', 'calib_ms', 'snap_req_ms', 'run', 'run_ms', 'by', 'snap']) && nd().by == me() && !('snap' in nd());
     }
     // Quem pode ver um dia de jogo: dono, membro, qualquer um se público — e,
     // num dia de jogo de CLUBE, quem é do clube.
@@ -859,6 +880,14 @@ service cloud.firestore {
           allow create: if lcGdCam(gdId, cId) && lcCall();
           allow update: if lineOrgOf(gdId) && lcDec();
           allow delete: if lineOrgOf(gdId);
+        }
+        match /line_invites/{iId} {
+          allow read, delete: if lineOrgOf(gdId);
+          allow create: if lineOrgOf(gdId) && lcInv(iId);
+        }
+        match /line_calib/{camId} {
+          allow read, delete: if isOwner(od().uid) || lineOrgOf(gdId);
+          allow create, update: if (lcGdCam(gdId, cId) && lcCal(camId)) || (lineOrgOf(gdId) && lcCalOrg());
         }
       }
     }
@@ -1677,6 +1706,14 @@ service cloud.firestore {
         allow create: if tLineCamOk(lcId) && lcCall();
         allow update: if tLineOrg(tLineTid(lcId)) && lcDec();
         allow delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
+      }
+      match /line_invites/{iId} {
+        allow read, delete: if tLineOrg(tLineTid(lcId));
+        allow create: if tLineOrg(tLineTid(lcId)) && lcInv(iId);
+      }
+      match /line_calib/{camId} {
+        allow read, delete: if isOwner(od().uid) || tLineOrg(tLineTid(lcId));
+        allow create, update: if (tLineCamOk(lcId) && lcCal(camId)) || (tLineOrg(tLineTid(lcId)) && lcCalOrg());
       }
     }
 

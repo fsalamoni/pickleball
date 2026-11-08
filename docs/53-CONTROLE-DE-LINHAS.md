@@ -220,8 +220,20 @@ a consulta falha e a exclusão sai **parcial**, nunca "nada a apagar"; mais de
 400 documentos numa coleção também (a próxima rodada apaga o resto).
 
 Vídeo, calibração (por posição: `v2:view:<uid>:linhas:calibracao:<dia>:<posição>`)
-e as fotos das marcações ficam **no aparelho**. Imagem de atleta não sai do
-celular (sem questão de LGPD sobre vídeo de terceiros).
+e as fotos das marcações ficam **no aparelho**. A ÚNICA imagem que sai dele é a
+foto da quadra para a calibração pela central (§5d): só a própria câmera e quem
+organiza a leem, ela some a cada escrita de quem organiza e quando a câmera
+sai, e entra na exclusão de conta.
+
+- **A calibração pela central**: `…/line_courts/court-N/line_calib/{uid}_{posição}`
+  (o id da câmera) — a câmera grava `uid, position, vw, vh` (tamanho do
+  vídeo), `cur` (a calibração que ela tem), `snap` (JPEG em data URL, abaixo
+  de 900 mil caracteres) + `snap_ms`, e `applied_ms`; quem organiza grava
+  `calib` + `calib_ms` (pontos em pixels do VÍDEO), `snap_req_ms`, `run` +
+  `run_ms` e `by` (ele mesmo). Regra `lcCal` (a câmera, em nome próprio,
+  com o controle ligado na quadra) e `lcCalOrg` (quem organiza, só essas
+  chaves e sempre apagando `snap`); ler e apagar, só a própria câmera e quem
+  organiza. Exclusão de conta pelo grupo `line_calib.uid`.
 
 ## 5. Guia de uso por aparelho
 
@@ -232,11 +244,65 @@ própria tela ("Como posicionar esta câmera", `PlacementGuide` + `DeviceTips`).
 | aparelho | como entra | cuidado |
 |---|---|---|
 | celular/tablet | o próprio aparelho, câmera traseira, no Chrome (Android) ou Safari (iPhone) | horizontal, tripé, na tomada; a grande-angular (0,5×) aparece na lista — usar só se a quadra não couber |
-| webcam USB | notebook; uma câmera por aba | 60 quadros/1080p; extensão USB ativa para chegar ao alto |
+| webcam USB | notebook; várias na mesma tela ("Mais uma câmera nesta tela") ou uma por aba, cada uma numa porta USB | 60 quadros/1080p; extensão USB ativa para chegar ao alto |
 | câmera de ação | modo webcam por USB (GoPro Hero 8+, DJI Osmo Action 3+) ou HDMI + placa de captura | lente **linear** |
 | câmera IP (RTSP) | ✅ "Câmera IP (ponte local)": go2rtc ou MediaMTX num computador da arena (§5b); ou OBS Studio ("Câmera virtual") | Chrome; Safari/iPhone ainda não |
 | câmera Wi-Fi de consumo / de ação | ❌ o vídeo Wi-Fi só abre no app da marca | usar por cabo (USB/HDMI) |
 | Bluetooth | ❌ não transmite vídeo | — |
+
+**Próximo passo e diagnóstico** (`domain/stationCheck.js`): no topo da tela
+da câmera um cartão diz a UMA coisa a fazer agora, na ordem da quadra
+(abrir a câmera → trocar de câmera, se abaixo do mínimo → marcar os pontos →
+conferir com o 5º ponto → começar a analisar; câmera que mexeu ou erro acima
+de 6 cm = marcar de novo), com o botão que faz. Embaixo, um selo por item
+(câmera, calibração, fundo longe, análise, detector de pés, luz, bateria,
+ligação com a central: ok / falta / atenção / resolver) e quanto a análise
+de um quadro leva NESTE aparelho (`frameMs`; acima de 33 ms ele não acompanha
+30 quadros/s). Ids de `STATION_NEXT` são só de tela.
+
+**Menos toques**: câmera aberta sem pontos já entra na marcação; e quem volta
+a uma posição já calibrada, com a câmera permitida para o site
+(`navigator.permissions`), tem a MESMA câmera reaberta sozinha
+(`linhas:camera:ultima:<posição>`, no aparelho; a chave sem posição vale de
+reserva) — falta só "Começar a analisar".
+
+**Câmera fixa lembra a calibração** (`domain/fixedCalib.js`): ao ficar pronta,
+a calibração é guardada também por POSIÇÃO e por CÂMERA
+(`linhas:calibracao:fixa:<posição>:<dev:id | ip:endereço | padrao>`), com a
+"foto" dos pedaços em volta dos pontos (`cameraHealth.cutPatch`, ~1,5 kB, no
+aparelho). Num dia de jogo NOVO, a câmera reabre sozinha e os pedaços são
+procurados na imagem de agora (`restoreDecision`): no lugar → a calibração
+volta inteira (`same`); deslocados → não volta e pede marcar de novo
+(`moved`); não achados (luz, gente na frente) → volta SEM o 5º ponto, que é
+pedido de novo (`unsure`, e nada é regravado até ele confirmar); outra
+resolução → não volta (`size`). A tela diz qual dos quatro aconteceu.
+
+**Várias câmeras na mesma tela** (`LineControlScreen`, `?posicao=a,b`, até 4):
+"Mais uma câmera nesta tela" acrescenta a próxima posição livre; cada uma tem
+"Tirar desta tela". Só a primeira fala os lances (`announce`), para a voz não
+sair dobrada; todas mandam para a central. "Abrir em outra aba" continua.
+
+**Webcam** (`domain/webcamTuning.js`, `WebcamTuning`): quando a câmera deixa
+(`getCapabilities().exposureMode` com `manual`), botões de obturador
+Automático · 1/250 · 1/500 · 1/1000 (`applyConstraints`, `exposureTime` em
+unidades de 100 µs); e o selo "Chegando N quadros/s" pelo que o navegador
+ENTREGOU (`track.stats.deliveredFrames`, Chrome), avisando quando ela anuncia
+60 e entrega 30 (falta de luz). O erro `NotReadableError` agora explica a
+segunda webcam na mesma porta USB.
+
+**A central sabe que a câmera mexeu ou ficou escura**: o sinal de vida leva
+`alert: 'moved' | 'dark'` (só enquanto analisa; regra `lcCam` aceita o campo,
+o servidor do convidado só aceita esses dois valores) e o "Pronto para
+começar?" (`readinessCheck`) trava na câmera que saiu do lugar e avisa a escura.
+
+**Desempenho do aparelho que filma** (medido no código, não em campo): a bola
+desenhada na tela é atualizada a no máximo ~12 vezes por segundo
+(`BALL_UI_MS`) — antes o estado mudava a cada quadro e a tela inteira (lista
+de lances com fotos incluída) era redesenhada 30–60 vezes por segundo,
+disputando o processador com a análise; a análise segue quadro a quadro. Os
+canvases da análise e do desenho só mudam de tamanho quando o vídeo muda
+(redimensionar realoca a memória, 8 MB em Full HD), e `findBallCandidates`
+reaproveita a máscara e calcula a cor sem criar um objeto por pixel.
 
 **Requisitos mínimos** (`domain/cameraCheck.js`, conferidos com o que a câmera
 ENTREGOU): 30 quadros/s e 720p (abaixo disso a tela recusa analisar); o bom é
@@ -271,19 +337,84 @@ câmera a comprar): Claude Doc "Câmeras IP e Wi-Fi no controle de linhas".
   negada ou navegador que bloqueia), `ip-refused` (a ponte não conhece a
   câmera), `ip-no-video` (conectou e o vídeo não veio em 10 s).
 
-Montagem mínima (go2rtc no mesmo computador):
+**A página comanda a ponte** (`domain/bridgeDiscovery.js`,
+`services/bridgeService.js`, `BridgeFinder`). Na opção "Câmera IP", "Achar a
+câmera pela ponte (ou ligar a ponte)" fala com a go2rtc pela API dela, sem a
+pessoa editar arquivo:
+
+- **Ponte fora do ar, neste computador: UM comando.** A tela mostra o comando
+  do sistema (`bridgeInstallCommand`) com botão de copiar — no Windows
+  `irm <site>/ponte/instalar.ps1 | iex` (PowerShell), no Mac/Linux/Raspberry
+  `curl -fsSL <site>/ponte/instalar.sh | sh`. Os scripts moram em
+  `public/ponte/` (servidos como `text/plain`, sem cache — `firebase.json`) e
+  fazem tudo: baixam a go2rtc da página oficial, criam o `go2rtc.yaml` mínimo
+  **só se ainda não existe** (rodar de novo atualiza a go2rtc sem perder as
+  câmeras), deixam a ponte ligando sozinha (tarefa ao entrar, `launchd`,
+  `systemd --user`; sem systemd ela liga agora e o script diz como deixar
+  automática) e a ligam. Sem administrador; no Windows só a go2rtc da pasta da
+  ponte é parada. `bridgeInstaller.test.js` confere que os scripts criam a
+  MESMA ponte mínima da tela, baixam os mesmos arquivos e são só ASCII. Ponte
+  em OUTRO computador da rede e quem prefere à mão ("Prefiro fazer à mão")
+  seguem o passo a passo abaixo.
+- **Ponte fora do ar, passo a passo**: o download certo da go2rtc para o sistema
+  (`guessBridgeOs`, `BRIDGE_DOWNLOADS`, página de versões oficial), o arquivo
+  MÍNIMO (`go2rtcBaseConfig`: só `api.listen` e `origin: '*'`, sem câmera) e o
+  **"liga sozinha"** (`bridgeAutostart`): no Windows um `.cmd` que registra a
+  tarefa "PickleRush ponte" ao entrar (`schtasks /SC ONLOGON`, sem
+  administrador); no Mac um `launchd` (`app.picklerush.ponte`, tira a
+  quarentena); no Linux/Raspberry um serviço `systemd --user`. A tela confere
+  a ponte a cada 3 s e segue sozinha quando ela abre.
+- **Ponte no ar** (`GET /api/streams`): as câmeras que ela já tem viram botões
+  "Usar …"; **"Procurar câmeras na rede"** (`GET /api/onvif`, descoberta
+  ONVIF da própria go2rtc) lista as câmeras com nome e IP; com usuário e senha
+  (`withOnvifCredentials`) a ponte devolve os perfis (`GET /api/onvif?src=`), o
+  PRINCIPAL entra com o nome da quadra e da posição (`freeStreamName`, sem
+  repetir) por `PUT /api/streams?name=&src=` — que a go2rtc também grava no
+  `go2rtc.yaml` — e a câmera abre. Antes, `GET /api/streams?src=` diz o
+  formato: **H.265 é avisado** (o navegador não toca) com o que trocar no site
+  da câmera.
+- Câmera sem ONVIF: o assistente de marca/IP/senha abaixo, que com a ponte no
+  ar ganha **"Mandar para a ponte e abrir"** (o mesmo `PUT`, sem baixar arquivo).
+- **Segurança**: a senha passa só deste navegador para a ponte (no computador
+  da arena) e nunca vai ao banco nem à preferência; a página **nunca lê
+  `/api/config`** (é onde a go2rtc guarda as senhas). Todo pedido declara
+  `targetAddressSpace` (`loopback` ou `local`, Chrome — Local Network Access).
+  A ponte mínima escuta em `127.0.0.1`: ninguém da rede a alcança.
+- A go2rtc não foi executada neste ambiente (a sandbox não roda binários
+  baixados); os formatos foram lidos do código da go2rtc 1.9 e estão nos
+  testes de `bridgeDiscovery.test.js`. Conferir em campo.
+
+**Assistente da ponte** (`go2rtcConfig` em `domain/ipCamera.js`,
+`IpBridgeWizard`): "Câmera sem ONVIF: preencher marca, IP e senha à mão" pede,
+por câmera, nome, marca (Intelbras, Hikvision,
+Dahua/Amcrest, Reolink, TP-Link Tapo, ou o caminho do manual), IP, porta,
+usuário e senha, e se a ponte roda neste computador ou em outro da rede. A
+tela baixa o `go2rtc.yaml` pronto e "Usar esta câmera aqui" preenche o
+endereço da ponte. Tudo no navegador: a senha vai **só para o arquivo
+baixado** (a preferência `linhas:camera-ip:assistente` guarda marca, IP e
+nome, nunca a senha). O arquivo já leva o que a montagem à mão esquecia:
+`api.origin: '*'` (sem ele a go2rtc recusa o pedido que vem da página do
+PickleRush — CORS — e a tela dizia "a ponte não respondeu"), `listen:
+127.0.0.1:1984` quando a ponte é no mesmo computador (a rede da arena não
+alcança) e usuário/senha escapados no endereço RTSP (`@`, `:` e `/` na senha
+quebravam o endereço).
+
+Montagem mínima à mão (go2rtc no mesmo computador):
 
 ```yaml
 # go2rtc.yaml, ao lado do executável
+api:
+  listen: '127.0.0.1:1984'   # outro computador da rede: ':1984'
+  origin: '*'                # obrigatório: a página do PickleRush chama a ponte de outro endereço
 streams:
-  quadra1: rtsp://usuario:senha@192.168.0.30:554/stream1   # o fluxo PRINCIPAL da câmera
+  quadra1: 'rtsp://usuario:senha@192.168.0.30:554/stream1'   # o fluxo PRINCIPAL da câmera
 ```
 
 1. Baixe a go2rtc da página de versões do projeto e rode-a com esse arquivo.
 2. Abra `http://localhost:1984` e confira a câmera tocando lá.
 3. No PickleRush, no Chrome desse computador: posição → "Câmera IP (ponte
    local)" → `http://localhost:1984/api/webrtc?src=quadra1` → Abrir câmera.
-4. Uma aba por câmera ("Abrir outra câmera neste computador").
+4. Mais câmeras: "Mais uma câmera nesta tela" (ou "Abrir em outra aba").
 
 Câmera boa para isso: RTSP + ONVIF, **H.264** (não H.265) no fluxo
 principal, 1080p a 50–60 quadros (conferir com `ffprobe`: há câmera que
@@ -294,6 +425,67 @@ WDR nem redução de ruído digital, PoE por cabo, lente fixa 2,8–4 mm, NTP.
 captura (`captureTime` do `requestVideoFrameCallback`, que o Chrome calcula
 pelos relatórios RTCP) em vez da hora de chegada; HTTPS na ponte para
 tablet/iPhone; e a caixa nativa na quadra (60–120 quadros, modelo treinado).
+
+## 5c. Câmera sem conta pelo QR (`lineGuestService.js`, `functions/lineGuest.js`)
+
+Na central, em cada posição sem câmera, "Chamar um aparelho" tem dois jeitos:
+**Com conta** (o link de sempre: o aparelho entra com uma conta que pode ser
+câmera) e, para quem organiza, **Sem conta**: escolhe a validade (3, 6 ou
+12 h), toca em "Gerar QR sem conta", e qualquer celular que ler o QR vira a
+câmera DAQUELA posição, sem login — o aparelho extra na beira da quadra é de
+qualquer um. "Cancelar este QR" apaga o convite e a câmera é recusada no
+próximo sinal.
+
+- O token (24 bytes aleatórios) vai só no **fragmento** do link
+  (`/linhas/convidado#h=<quadra>&t=<token>`), que o navegador não manda a
+  servidor nenhum nem fica em registro de acesso. O banco guarda
+  `{quadra}/line_invites/{sha256(token)}` com `position`, `exp_ms` e
+  `created_at`; a regra (`lcInv`) só deixa quem organiza a quadra criar, ler e
+  apagar, e a validade não passa de 12 h.
+- A página `/linhas/convidado` (`V2LineGuestCamera`, fora do layout do app,
+  sem login) pergunta à função `lineGuest` se o QR vale (`peek`) e abre a
+  MESMA estação de câmera (`CameraStation` com `sink`): o sinal e as marcações
+  vão pela função (`beat`, `call`, `leave`), que confere convite, quadra
+  ligada e flag a cada chamada e grava só os campos de `lcCam`/`lcCall`, na
+  posição do convite, com `uid: guest_{16 do hash}` e nome "Convidado".
+- Vencido, cancelado, quadra desligada ou flag desligada: a tela diz "Este QR
+  não vale mais" (a mesma resposta para tudo). A calibração fica no aparelho,
+  como na câmera com conta — e quem organiza pode calibrar pela central (§5d).
+- Nada de pessoa é gravado: não entra na exclusão de conta. As câmeras e
+  marcações do convidado saem quando quem organiza limpa a quadra.
+
+## 5d. Calibrar pela central, câmera por câmera (`useRemoteCalibration`, `RemoteCalibration`)
+
+Câmera presa no alto de um poste, atrás do vidro ou longe da beira da quadra
+não se calibra pela tela dela. Então quem organiza calibra **na central**, uma
+câmera por vez: em cada câmera no ar, **"Calibrar daqui"** abre, embaixo do
+quadro das câmeras, a MESMA marcação do aparelho que filma
+(`CalibrationMarker`: área vigiada, os quatro pontos com zoom, lupa e ajuste
+fino, "Grudar na linha", 5º ponto e teste com a bola) sobre uma **foto** da
+quadra que a câmera mandou. Depois, **"Mandar e começar a analisar"** (ou
+"Só mandar a calibração"). Na linha da câmera calibrada, **"Começar a
+analisar" / "Pausar"** também saem da central. No aparelho que filma basta
+abrir a câmera e deixar a página aberta (a dica do passo 2 diz isso); quando a
+calibração chega, ele avisa "A central calibrou esta câmera às …".
+
+- **A foto**: a câmera manda uma foto (maior lado até 1600 px, JPEG) quando
+  abre ainda sem calibração e sempre que a central pede ("Pedir imagem nova";
+  ao abrir "Calibrar daqui" com foto ausente ou de mais de 2 min, o pedido sai
+  sozinho). Os pontos são marcados em pixels da FOTO e vão em pixels do VÍDEO
+  (`snapScale`); a câmera ainda reescala pela resolução que tem na hora
+  (`remoteCalibFor`). A tela começa pelo que a câmera já tem (`cur`).
+- **Quem faz o quê** (`domain/remoteCalib.js`, `cameraTodo`): a câmera aplica
+  a calibração com `calib_ms` mais novo que a última aplicada (guardada junto
+  da calibração do aparelho, `remoteMs`), pausa a análise para trocar os
+  pontos, responde `applied_ms` e a central mostra "A câmera aplicou" (e o
+  erro do 5º ponto, que chega pelo sinal da câmera). `run` só começa com a
+  calibração pronta e a câmera acima do mínimo — a mesma trava do botão.
+- **Privacidade**: é a única imagem que sai do aparelho. Só a câmera e quem
+  organiza leem; toda escrita de quem organiza APAGA a foto (a regra exige);
+  a câmera apaga o documento ao sair da página; entra na exclusão de conta.
+- **Câmera sem conta** (§5c): o mesmo, pela função `lineGuest` (ação
+  `calib`): grava a foto (só JPEG, abaixo do teto) e devolve o que quem
+  organiza mandou; o aparelho pergunta a cada 4 s. `leave` apaga a foto.
 
 ## 5a. Montagens — "Como você vai montar?" (`domain/setupKits.js`, `SetupGuide`)
 

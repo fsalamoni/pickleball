@@ -110,11 +110,41 @@ describe('CameraStation: a marcação sobre a imagem', () => {
     expect(setZone).toHaveBeenCalledWith('kitchens');
   });
 
-  it('os botões da marcação e o zoom ficam dentro da imagem', async () => {
+  it('câmera aberta sem pontos já entra na marcação, com os botões e o zoom dentro da imagem', async () => {
     await show([], 0, comCamera());
     const sobre = container.querySelector('[data-sobre-imagem]').closest('.overflow-hidden');
-    expect(sobre.contains(botao('Começar a marcar'))).toBe(true);
+    // um toque a menos: a marcação começa sozinha (e o "Pronto" sai dela)
+    expect(sobre.contains(botao('Pronto'))).toBe(true);
     expect(sobre.contains(botao('Aproximar'))).toBe(true);
     expect(sobre.contains(botao('Tela cheia'))).toBe(true);
+  });
+});
+
+describe('CameraStation: o próximo passo', () => {
+  const calibrada = { stream: { getVideoTracks: () => [] }, zone: 'full', setZone: vi.fn(), H: [1, 0, 0, 0, 1, 0, 0, 0, 1], Hinv: null, calib: { corners: [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 2, y: 2 }, { x: 1, y: 2 }], hue: 60 } };
+  const botao = (nome) => [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === nome);
+
+  it('sem câmera, o cartão pede para abrir e o botão abre', async () => {
+    await show([], 0, { running: false });
+    expect(container.textContent).toMatch(/Próximo passo/);
+    const start = session.current.start;
+    await act(async () => { botao('Abrir câmera').click(); });
+    expect(start).toHaveBeenCalled();
+  });
+
+  it('calibrada sem conferir, pede o 5º ponto; conferida e parada, começa a analisar pelo cartão', async () => {
+    await show([], 0, { ...calibrada, running: false });
+    expect(container.textContent).toMatch(/Confira com o 5º ponto/);
+    await show([], 0, { ...calibrada, running: false, check: { level: 'great', cm: 1.2 } });
+    expect(container.textContent).toMatch(/Tudo pronto: comece a analisar/);
+    const setRunning = session.current.setRunning;
+    await act(async () => { [...container.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Começar a analisar')[0].click(); });
+    expect(setRunning).toHaveBeenCalledWith(true);
+  });
+
+  it('analisando com tudo em ordem diz que está pronta e mostra quanto leva cada quadro', async () => {
+    await show([], 0, { ...calibrada, running: true, fps: 60, frameMs: 14, check: { level: 'great', cm: 1.2 }, cameraChecks: [{ key: 'fps', level: 'ok', value: 60 }] });
+    expect(container.textContent).toMatch(/Câmera pronta e analisando/);
+    expect(container.textContent).toMatch(/14 ms por quadro/);
   });
 });

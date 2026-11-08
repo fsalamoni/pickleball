@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { addDoc, collection, doc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, deleteField, doc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const CRIADOR = 'criador_uid';
 const ADMIN_T = 'admin_torneio_uid';
@@ -81,5 +81,29 @@ describe('câmeras e marcações na quadra', () => {
       await updateDoc(doc(ctx.firestore(), 'tournament_line_courts', 'T1_court-2'), { line_control: false });
     });
     await assertFails(setDoc(camRef(CRIADOR), cam(CRIADOR)));
+  });
+});
+
+describe('o convite da câmera sem conta (QR, docs/53 §5c)', () => {
+  const ref = (uid) => doc(como(uid), `tournament_line_courts/T1_court-2/line_invites/${'b'.repeat(64)}`);
+  const inv = () => ({ position: 'rede_1', exp_ms: Date.now() + 3600000, created_at: serverTimestamp() });
+
+  it('⭐ a equipe do torneio gera e lê o convite; quem joga, não', async () => {
+    await assertSucceeds(setDoc(ref(CRIADOR), inv()));
+    await assertSucceeds(getDocs(collection(como(ADMIN_T), 'tournament_line_courts/T1_court-2/line_invites')));
+    await assertFails(setDoc(ref(ATLETA), inv()));
+    await assertFails(getDocs(collection(como(ATLETA), 'tournament_line_courts/T1_court-2/line_invites')));
+  });
+});
+
+describe('a calibração pela central (docs/53 §5d)', () => {
+  const ref = (quem, dono) => doc(como(quem), `tournament_line_courts/T1_court-2/line_calib/${dono}_rede_1`);
+  const lado = (uid) => ({ uid, position: 'rede_1', snap: 'data:image/jpeg;base64,/9j/', snap_ms: 1, vw: 1280, vh: 720 });
+
+  it('⭐ a câmera da equipe manda a foto; outra pessoa da equipe calibra; quem joga não lê', async () => {
+    await assertSucceeds(setDoc(ref(CRIADOR, CRIADOR), lado(CRIADOR)));
+    await assertSucceeds(updateDoc(ref(ADMIN_T, CRIADOR), { calib: { corners: [] }, calib_ms: 2, by: ADMIN_T, snap: deleteField() }));
+    await assertFails(getDocs(collection(como(ATLETA), 'tournament_line_courts/T1_court-2/line_calib')));
+    await assertFails(setDoc(ref(ATLETA, ATLETA), lado(ATLETA)));
   });
 });

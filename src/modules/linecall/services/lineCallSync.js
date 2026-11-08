@@ -36,7 +36,7 @@ export const camDocId = (uid, position) => `${uid}_${position}`;
 
 /** Grava (ou renova) a câmera deste aparelho. */
 export function upsertLineCam(gameDayId, {
-  uid, name, position, layout, calibrated, analyzing, fps, battery = null, charging = null, checkCm = null,
+  uid, name, position, layout, calibrated, analyzing, fps, battery = null, charging = null, checkCm = null, alert = null,
 }) {
   const extra = {};
   // Saúde da câmera, quando o navegador conta: bateria (0–100), carregando, e o
@@ -44,6 +44,8 @@ export function upsertLineCam(gameDayId, {
   if (Number.isFinite(battery)) extra.battery = Math.max(0, Math.min(100, Math.round(battery)));
   if (typeof charging === 'boolean') extra.charging = charging;
   if (Number.isFinite(checkCm)) extra.check_cm = Math.round(checkCm * 10) / 10;
+  // A câmera saiu do lugar ou ficou escura: a central avisa antes do saque.
+  if (alert === 'moved' || alert === 'dark') extra.alert = alert;
   return setDoc(doc(camsCol(gameDayId), camDocId(uid, position)), {
     uid,
     name: String(name || '').slice(0, 60),
@@ -68,7 +70,12 @@ const num = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null);
  * Uma marcação do motor (`lineCallEngine`) desta câmera.
  * @param {number} tMs a hora do lance no relógio do aparelho (ms)
  */
-export function postLineCall(gameDayId, { uid, position, event, tMs }) {
+export function postLineCall(gameDayId, m) {
+  return addDoc(callsCol(gameDayId), { ...lineCallFields(m), created_at: serverTimestamp() });
+}
+
+/** Os campos de uma marcação (sem a hora do servidor): os mesmos pela regra e pela câmera convidada. */
+export function lineCallFields({ uid, position, event, tMs }) {
   const c = {
     uid,
     position,
@@ -82,10 +89,9 @@ export function postLineCall(gameDayId, { uid, position, event, tMs }) {
     serve: event.serve === true ? true : null,
     x: num(event.point?.x),
     y: num(event.point?.y),
-    created_at: serverTimestamp(),
   };
   Object.keys(c).forEach((k) => { if (c[k] === null) delete c[k]; });
-  return addDoc(callsCol(gameDayId), c);
+  return c;
 }
 
 /**

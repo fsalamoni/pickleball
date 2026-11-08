@@ -16,20 +16,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { logger } from '@/core/lib/logger';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
-import { solveHomography, invertHomography } from '../domain/homography.js';
 import { createLineCallEngine } from '../domain/lineCallEngine.js';
-import { CAMERA_POSITIONS, calibrationPoints } from '../domain/cameraLayouts.js';
-import { findBallCandidates, pickBall, rgbToHsv, BALL_DEFAULTS } from '../domain/ballDetection.js';
-import { assessCamera, worstCmPerPixel } from '../domain/cameraCheck.js';
-import { checkPointFor, calibrationCheck } from '../domain/calibrationCheck.js';
-import { zoneById, zoneCalibrationPoints, zoneCheckPoint, eventInZone } from '../domain/zones.js';
+import { CAMERA_POSITIONS } from '../domain/cameraLayouts.js';
+import { findBallCandidates, pickBall, BALL_DEFAULTS } from '../domain/ballDetection.js';
+import { assessCamera, CAMERA_LEVEL } from '../domain/cameraCheck.js';
+import { eventInZone } from '../domain/zones.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
 import { headlineFirst } from '../domain/fusion.js';
 import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
-import { snapToOuterCorner, centroid } from '../domain/snapCorner.js';
+import { cameraKey, fixedPrefId, fixedSnapshot, fixedPatches, restoreDecision, restoredCalib } from '../domain/fixedCalib.js';
+import { cameraTodo, remoteCalibFor, calibForDb } from '../domain/remoteCalib.js';
 import { listCameras, openCamera, closeCamera } from '../services/cameraService.js';
 import { createPoseDetector } from '../services/poseService.js';
 import { upsertLineCam, removeLineCam, postLineCall, HEARTBEAT_MS } from '../services/lineCallSync.js';
+import { cameraCalibSync, grabSnap } from '../services/lineCalibService.js';
+import { useCalibration } from './useCalibration.js';
 
 /** Largura da imagem reduzida em que a bola é procurada (px). */
 const SCAN_W = 480;
@@ -38,8 +39,13 @@ const REPLAY_W = 480;
 const MAX_EVENTS = 30;
 /** De quanto em quanto tempo conferir se a câmera mexeu e se tem luz (ms). */
 const HEALTH_EVERY_MS = 1000;
-/** Os cantos da quadra (os únicos que o "Ajustar à linha" mexe). */
-const COURT_CORNER_IDS = ['A1', 'A2', 'B1', 'B2'];
+/**
+ * De quanto em quanto tempo a bola desenhada na tela é atualizada (ms). A
+ * análise segue QUADRO A QUADRO; só o desenho é mais espaçado: atualizar o
+ * estado a cada quadro redesenhava a tela inteira 30–60 vezes por segundo e
+ * roubava da análise o tempo do celular.
+ */
+const BALL_UI_MS = 80;
 
 /** A imagem atual em cinza, na escala da análise. */
 function grabGray(video) {
@@ -102,11 +108,18 @@ function useBattery(enabled) {
 /**
  * @param {string} gameDayId
  * @param {string} position  id em `CAMERA_POSITIONS`
- * @param {{ layout?: string, share?: boolean }} [opts] `share`: mandar para a central
+ * @param {{ layout?: string, share?: boolean, sink?: object }} [opts] `share`: mandar para a central;
+ *   `sink`: a câmera CONVIDADA, sem conta (`guestSink`), que manda tudo pelo servidor
  */
-export function useLineCallSession(gameDayId, position, { layout = null, share = true } = {}) {
+export function useLineCallSession(gameDayId, position, { layout = null, share = true, sink = null } = {}) {
   const { user, userProfile } = useAuth();
-  const uid = user?.uid || null;
+  const uid = sink?.uid || user?.uid || null;
+  // Para onde vão o sinal e as marcações: o banco direto (conta) ou o servidor (convidado).
+  const sinkRef = useRef(sink);
+  sinkRef.current = sink;
+  const upsert = useCallback((c) => (sinkRef.current ? sinkRef.current.upsert(c) : upsertLineCam(gameDayId, c)), [gameDayId]);
+  const remove = useCallback((p) => (sinkRef.current ? sinkRef.current.remove() : removeLineCam(gameDayId, uid, p)), [gameDayId, uid]);
+  const post = useCallback((c) => (sinkRef.current ? sinkRef.current.post(c) : postLineCall(gameDayId, c)), [gameDayId]);
   const pos = CAMERA_POSITIONS[position] || CAMERA_POSITIONS.fundo_a;
   const videoRef = useRef(null);
   const [cameras, setCameras] = useState([]);
@@ -114,14 +127,12 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   const [settings, setSettings] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [calib, setCalib] = useState(() => readCalib(uid, gameDayId, pos.id));
-  // A área vigiada (quadra inteira ou uma parte) decide os pontos tocados e o que a câmera marca.
-  const zone = zoneById(calib.zone).id;
-  const targets = useMemo(() => zoneCalibrationPoints(zone) || calibrationPoints(pos.id), [zone, pos.id]);
-  const checkPoint = useMemo(() => zoneCheckPoint(zone) || checkPointFor(pos.id), [zone, pos.id]);
   const [running, setRunning] = useState(false);
   const [poseState, setPoseState] = useState('idle'); // idle | loading | ready | failed | off
   const [events, setEvents] = useState([]);
   const [fps, setFps] = useState(0);
+  // Quanto a análise de UM quadro leva neste aparelho (ms, média do último segundo).
+  const [frameMs, setFrameMs] = useState(null);
   const [ball, setBall] = useState(null);
   const [shareError, setShareError] = useState(false);
   const battery = useBattery(Boolean(stream));
@@ -133,18 +144,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   useEffect(() => { setCalib(readCalib(uid, gameDayId, pos.id)); setRunning(false); }, [uid, gameDayId, pos.id]);
   useEffect(() => { writeViewPreference(uid, prefId(gameDayId, pos.id), JSON.stringify(calib)); }, [uid, gameDayId, pos.id, calib]);
 
-  const H = useMemo(
-    () => (calib.corners.length === 4 ? solveHomography(calib.corners, targets) : null),
-    [calib.corners, targets],
-  );
-  const Hinv = useMemo(() => (H ? invertHomography(H) : null), [H]);
+  const cal = useCalibration(pos.id, calib, setCalib, videoRef);
+  const { zone, H, check } = cal;
   const cameraChecks = useMemo(() => (settings ? assessCamera(settings) : []), [settings]);
-  const cmPerPixel = useMemo(() => (H ? worstCmPerPixel(H, calib.corners) : null), [H, calib.corners]);
-  // A conferência do 5º ponto vale para ESTA calibração: marcar de novo apaga.
-  const check = useMemo(
-    () => (H && calib.checkTap ? calibrationCheck(H, calib.checkTap, checkPoint) : null),
-    [H, calib.checkTap, checkPoint],
-  );
   const checkCm = check?.cm ?? null;
 
   // A referência de "onde a quadra está" é tirada quando a calibração fica
@@ -153,6 +155,49 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     try { refPatches.current = H ? cutRefs(grabGray(videoRef.current), calib.corners) : null; } catch { refPatches.current = null; }
     setHealth((st) => ({ ...st, moved: false, px: null, known: false }));
   }, [H, calib.corners]);
+
+  // ---- Câmera FIXA: a calibração volta no dia seguinte (`domain/fixedCalib.js`) ----
+  const camKey = useRef('padrao');
+  const [restored, setRestored] = useState(null); // { decision, savedMs } | null
+  const restoredRef = useRef(null);
+  // Guarda a calibração pronta, com a "foto" dos pontos, para esta posição e esta câmera.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!H || !uid || !v?.videoWidth) return;
+    // Voltou sem certeza e o 5º ponto ainda não confirmou: não regrava por cima.
+    if (restoredRef.current === 'unsure' && !calib.checkTap) return;
+    const snap = fixedSnapshot(calib, { vw: v.videoWidth, vh: v.videoHeight, patches: refPatches.current });
+    if (snap) writeViewPreference(uid, fixedPrefId(pos.id, camKey.current), JSON.stringify(snap));
+  }, [H, calib, uid, pos.id]);
+  // Câmera aberta e nada marcado hoje: procura a calibração de antes na imagem de agora.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!stream || !v || !uid) return undefined;
+    let vivo = true;
+    const tentar = () => {
+      if (!vivo || !v.videoWidth || calibNowRef.current.corners.length) return;
+      let saved = null;
+      try { saved = JSON.parse(readViewPreference(uid, fixedPrefId(pos.id, camKey.current)) || 'null'); } catch { saved = null; }
+      if (!saved) return;
+      let drift = { known: false };
+      try {
+        const snap = grabGray(v);
+        if (snap) drift = driftFrom(fixedPatches(saved).map((p) => matchPatch(snap.gray, snap.w, snap.h, p)));
+      } catch { /* sem imagem: sem certeza */ }
+      const decision = restoreDecision(saved, { vw: v.videoWidth, vh: v.videoHeight, drift });
+      if (decision === 'none') return;
+      restoredRef.current = decision;
+      setRestored({ decision, savedMs: saved.savedMs || null });
+      const c = restoredCalib(saved, decision);
+      if (c) setCalib(c);
+    };
+    // Espera o primeiro quadro de verdade (a imagem preta da abertura não serve).
+    const id = setTimeout(tentar, 800);
+    return () => { vivo = false; clearTimeout(id); };
+  }, [stream, uid, pos.id]);
+  const calibNowRef = useRef(calib);
+  calibNowRef.current = calib;
+  const dismissRestored = useCallback(() => setRestored(null), []);
 
   const refreshCameras = useCallback(() => listCameras().then(setCameras).catch(() => setCameras([])), []);
   useEffect(() => { refreshCameras(); }, [refreshCameras]);
@@ -174,6 +219,9 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       // e o círculo dele seria pintado sobre a imagem nova.
       if (stream) clearEvents();
       closeCamera(stream);
+      camKey.current = cameraKey(deviceId);
+      restoredRef.current = null;
+      setRestored(null);
       const opened = await openCamera(deviceId);
       setStream(opened.stream);
       setSettings(opened.settings);
@@ -194,85 +242,99 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   live.current = {
     calibrated: Boolean(H), analyzing: running, fps,
     battery: battery.level, charging: battery.charging, checkCm: check?.cm ?? null,
+    alert: running && health.moved ? 'moved' : running && health.dark ? 'dark' : null,
   };
-  const name = userProfile?.full_name || userProfile?.display_name || user?.displayName || '';
+  const name = sink?.name || userProfile?.full_name || userProfile?.display_name || user?.displayName || '';
   useEffect(() => {
     if (!share || !uid || !stream || !gameDayId) return undefined;
-    const beat = () => upsertLineCam(gameDayId, { uid, name, position: pos.id, layout, ...live.current })
+    const beat = () => upsert({ uid, name, position: pos.id, layout, ...live.current })
       .then(() => setShareError(false))
       .catch((e) => { logger.warn('linhas: sinal da câmera falhou', e); setShareError(true); });
     beat();
     const id = setInterval(beat, HEARTBEAT_MS);
     return () => {
       clearInterval(id);
-      removeLineCam(gameDayId, uid, pos.id).catch(() => {});
+      remove(pos.id).catch(() => {});
     };
-  }, [share, uid, stream, gameDayId, pos.id, layout, name]);
+  }, [share, uid, stream, gameDayId, pos.id, layout, name, upsert, remove]);
   // Mudou o estado (calibrou, conferiu, começou, pausou): avisa já, sem esperar o próximo sinal.
   useEffect(() => {
     if (!share || !uid || !stream || !gameDayId) return;
-    upsertLineCam(gameDayId, { uid, name, position: pos.id, layout, ...live.current }).catch(() => {});
+    upsert({ uid, name, position: pos.id, layout, ...live.current }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Boolean(H), running, check?.cm]);
+  }, [Boolean(H), running, check?.cm, live.current.alert]);
 
-  /** Toque na imagem (coordenadas do VÍDEO): marca o próximo ponto. */
-  const addCorner = useCallback((pt) => {
-    setCalib((c) => ({ ...c, checkTap: null, corners: c.corners.length >= 4 ? [pt] : [...c.corners, pt] }));
-  }, []);
-  /** Arrasta um ponto já marcado (ajuste fino com a lupa). */
-  const moveCorner = useCallback((i, pt) => {
-    setCalib((c) => ({ ...c, checkTap: null, corners: c.corners.map((p, j) => (j === i ? pt : p)) }));
-  }, []);
-  /**
-   * "Ajustar à linha": leva os cantos da QUADRA para a borda externa do L
-   * branco (`domain/snapCorner.js`). As pontas da cozinha ficam como estão.
-   * Devolve quantos pontos andaram; o anterior fica guardado para desfazer.
-   */
-  const snapBackup = useRef(null);
-  const snapCorners = useCallback(() => {
-    const v = videoRef.current;
-    if (!v?.videoWidth || calib.corners.length !== 4) return 0;
-    const cv = document.createElement('canvas');
-    cv.width = v.videoWidth; cv.height = v.videoHeight;
-    const ctx = cv.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(v, 0, 0);
-    const img = ctx.getImageData(0, 0, cv.width, cv.height).data;
-    const mid = centroid(calib.corners);
-    let moved = 0;
-    const next = calib.corners.map((p, i) => {
-      if (!COURT_CORNER_IDS.includes(targets[i]?.id)) return p;
-      const q = snapToOuterCorner(img, cv.width, cv.height, p, mid);
-      if (!q) return p;
-      moved += 1;
-      return q;
-    });
-    if (!moved) return 0;
-    snapBackup.current = calib.corners;
-    setCalib((c) => ({ ...c, checkTap: null, corners: next }));
-    return moved;
-  }, [calib.corners, targets]);
-  const undoSnap = useCallback(() => {
-    const prev = snapBackup.current;
-    snapBackup.current = null;
-    if (prev) setCalib((c) => ({ ...c, checkTap: null, corners: prev }));
-  }, []);
-  /** Troca a área vigiada: os pontos são outros, então a marcação recomeça. */
-  const setZone = useCallback((id) => setCalib((c) => (zoneById(c.zone).id === id ? c : { ...c, zone: id, corners: [], checkTap: null })), []);
-  const resetCorners = useCallback(() => setCalib((c) => ({ ...c, corners: [], checkTap: null })), []);
-  /** Toque no 5º ponto (o de conferência). */
-  const setCheckTap = useCallback((pt) => setCalib((c) => ({ ...c, checkTap: pt })), []);
+  // ---- Calibração PELA CENTRAL (docs/53 §5d) ----------------------------
+  // Câmera em lugar alto não se calibra pela tela dela: ela manda uma foto da
+  // quadra a `line_calib`, quem organiza marca os pontos na central e devolve;
+  // a central também começa e pausa a análise. Sem conta, pelo servidor.
+  const remoteOn = share && Boolean(uid) && Boolean(gameDayId);
+  const calibSync = useMemo(
+    () => (remoteOn ? (sink?.calib || cameraCalibSync(gameDayId, uid, pos.id)) : null),
+    [remoteOn, sink, gameDayId, uid, pos.id],
+  );
+  const [remote, setRemote] = useState(null);
+  const [remoteApplied, setRemoteApplied] = useState(null);
+  const [pendingRun, setPendingRun] = useState(null);
+  const calibNow = useRef(calib);
+  calibNow.current = calib;
+  const seen = useRef({ calibMs: 0, runMs: 0, snapMs: 0 });
+  useEffect(() => { seen.current = { calibMs: calibNow.current.remoteMs || 0, runMs: 0, snapMs: 0 }; setRemote(null); }, [calibSync]);
 
-  /** Toque na bola parada: aprende a cor dela. */
-  const learnBallColor = useCallback((pt) => {
+  // Câmera aberta: diz o tamanho do vídeo e o que tem; sem calibração, já manda a foto.
+  useEffect(() => {
+    if (!calibSync || !stream) return undefined;
+    let vivo = true;
+    let unsub = null;
+    let timer = null;
+    const first = () => {
+      if (!vivo) return;
+      const v = videoRef.current;
+      if (!v?.videoWidth) { timer = setTimeout(first, 400); return; }
+      const fields = { vw: v.videoWidth, vh: v.videoHeight, cur: calibForDb(calibNow.current) };
+      if (calibNow.current.corners.length !== 4) {
+        const sn = grabSnap(v);
+        if (sn) { fields.snap = sn.snap; fields.snap_ms = Date.now(); seen.current.snapMs = fields.snap_ms; }
+      }
+      calibSync.write(fields)
+        .then(() => { if (vivo) unsub = calibSync.watch(setRemote, (e) => logger.warn('linhas: calibração pela central', e)); })
+        .catch((e) => logger.warn('linhas: calibração pela central indisponível', e));
+    };
+    first();
+    return () => { vivo = false; clearTimeout(timer); unsub?.(); };
+  }, [calibSync, stream]);
+  // Saiu da tela: a foto e o resto saem do banco (o convidado sai pelo servidor).
+  useEffect(() => () => { calibSync?.remove?.()?.catch?.(() => {}); }, [calibSync]);
+
+  // O que a central pediu: aplicar a calibração, mandar foto nova, começar/pausar.
+  useEffect(() => {
+    if (!remote || !calibSync) return;
+    const todo = cameraTodo(remote, seen.current);
     const v = videoRef.current;
-    if (!v) return;
-    const cv = document.createElement('canvas');
-    cv.width = 5; cv.height = 5;
-    const ctx = cv.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(v, pt.x - 2, pt.y - 2, 5, 5, 0, 0, 5, 5);
-    const d = ctx.getImageData(2, 2, 1, 1).data;
-    setCalib((c) => ({ ...c, hue: Math.round(rgbToHsv(d[0], d[1], d[2]).h), hueSet: true }));
-  }, []);
+    if (todo.applyCalib) {
+      seen.current.calibMs = remote.calib_ms;
+      const c = remoteCalibFor(remote, v?.videoWidth);
+      if (c) {
+        setRunning(false);
+        setCalib((old) => ({ ...old, ...c, remoteMs: remote.calib_ms }));
+        setRemoteApplied(remote.calib_ms);
+        calibSync.write({ applied_ms: remote.calib_ms, cur: calibForDb(c) }).catch(() => {});
+      }
+    }
+    if (todo.sendSnap && v?.videoWidth) {
+      seen.current.snapMs = remote.snap_req_ms;
+      const sn = grabSnap(v);
+      if (sn) calibSync.write({ ...sn, snap_ms: Date.now(), cur: calibForDb(calibNow.current) }).catch((e) => logger.warn('linhas: foto para a central', e));
+    }
+    if (todo.run !== null) { seen.current.runMs = remote.run_ms; setPendingRun(todo.run); }
+  }, [remote, calibSync]);
+  // Começar só com a calibração pronta e a câmera acima do mínimo (a mesma trava do botão).
+  useEffect(() => {
+    if (pendingRun === null) return;
+    setPendingRun(null);
+    if (!pendingRun) { setRunning(false); return; }
+    if (H && !cameraChecks.some((c) => c.level === CAMERA_LEVEL.BLOCK)) setRunning(true);
+  }, [pendingRun, H, cameraChecks]);
 
   // A análise, quadro a quadro.
   useEffect(() => {
@@ -303,7 +365,10 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     let prev = null;
     let last = null;
     let frames = 0;
+    let busy = 0;
     let since = performance.now();
+    let ballAt = 0;
+    let shownBall = false;
     let handle = null;
     let healthAt = 0;
     let moved = false;
@@ -355,9 +420,11 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       const w = video.videoWidth;
       const h = video.videoHeight;
       if (w && h) {
+        const t0 = performance.now();
         const k = SCAN_W / w;
-        scan.width = SCAN_W;
-        scan.height = Math.round(h * k);
+        // Mudar o tamanho de um canvas apaga e realoca a memória dele: só quando muda.
+        const sh = Math.round(h * k);
+        if (scan.width !== SCAN_W || scan.height !== sh) { scan.width = SCAN_W; scan.height = sh; }
         sctx.drawImage(video, 0, 0, scan.width, scan.height);
         const img = sctx.getImageData(0, 0, scan.width, scan.height).data;
         const cands = findBallCandidates(img, prev, scan.width, scan.height, { hue: calib.hue });
@@ -372,7 +439,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         }
         const got = pickBall(cands, last ? { x: last.x * k, y: last.y * k } : null);
         last = got ? { x: got.x / k, y: got.y / k } : null;
-        setBall(last);
+        if ((last || shownBall) && now - ballAt >= BALL_UI_MS) { ballAt = now; shownBall = Boolean(last); setBall(last); }
         let players = [];
         try { players = pose ? pose.detect(video, now) : []; } catch { players = []; }
         const t = meta?.mediaTime ?? now / 1000;
@@ -393,7 +460,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
             found.forEach((event) => {
               // A hora do LANCE (não a de agora) no relógio deste aparelho.
               const tMs = at - Math.max(0, t - event.t) * 1000;
-              postLineCall(gameDayId, { uid, position: pos.id, event, tMs })
+              post({ uid, position: pos.id, event, tMs })
                 .catch((e) => { logger.warn('linhas: marcação não foi enviada', e); setShareError(true); });
             });
           }
@@ -422,7 +489,12 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
           if (pending[i].until <= t) finalize(pending.splice(i, 1)[0], w, h);
         }
         frames += 1;
-        if (now - since >= 1000) { setFps(Math.round((frames * 1000) / (now - since))); frames = 0; since = now; }
+        busy += performance.now() - t0;
+        if (now - since >= 1000) {
+          setFps(Math.round((frames * 1000) / (now - since)));
+          setFrameMs(Math.round(busy / frames));
+          frames = 0; busy = 0; since = now;
+        }
       }
       handle = schedule(onFrame);
     };
@@ -437,15 +509,16 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       ring.clear();
       setBall(null);
       setFps(0);
+      setFrameMs(null);
     };
   // `stream`: trocar de câmera recomeça o relógio do vídeo, então o motor, o
   // replay e o lance pendente nascem de novo com ele.
-  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream, zone]);
+  }, [running, H, calib.hue, calib.corners, pos.mode, pos.usesPose, pos.id, share, uid, gameDayId, checkCm, stream, zone, post]);
 
   return {
-    position: pos, targets, checkPoint,
-    videoRef, cameras, start, stream, settings, cameraError, cameraChecks,
-    calib, zone, setZone, addCorner, moveCorner, resetCorners, snapCorners, undoSnap, setCheckTap, check, learnBallColor, H, Hinv, cmPerPixel,
-    running, setRunning, poseState, events, clearEvents, fps, ball, shareError, battery, health,
+    ...cal, position: pos,
+    videoRef, cameras, start, stream, settings, cameraError, cameraChecks, remote: remoteOn, remoteApplied,
+    running, setRunning, poseState, events, clearEvents, fps, frameMs, ball, shareError, battery, health,
+    restored, dismissRestored,
   };
 }

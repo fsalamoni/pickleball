@@ -65,7 +65,7 @@ export const SETUP_KITS = Object.freeze({
     steps: [
       tk('Ligue as câmeras no computador. Cabo USB passa de 5 m só com extensor ativo; HDMI longo com cabo de fibra ou extensor por cabo de rede.'),
       tk('Abra o controle de linhas no navegador do computador (Chrome ou Edge atualizados) e escolha "Usar este aparelho como câmera".'),
-      tk('Uma aba por câmera: escolha a posição, e na lista de câmeras pegue a câmera daquela posição. Para a próxima, toque em "Abrir outra câmera neste computador".'),
+      tk('Uma aba ou uma tela por câmera: escolha a posição, e na lista de câmeras pegue a câmera daquela posição. Para a próxima, toque em "Mais uma câmera nesta tela".'),
       tk('Deixe o computador na tomada, no modo de alto desempenho, com as abas visíveis (aba escondida analisa mais devagar). Uma tela grande com as abas lado a lado é o ideal.'),
       tk('Calibre cada aba e abra a central no próprio computador ou numa TV.'),
     ],

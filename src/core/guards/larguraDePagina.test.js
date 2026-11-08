@@ -23,6 +23,7 @@ const ISENTAS = {
   'V2ReferralLanding.jsx': 'convite /r/:code, aberto fora do layout do app',
   'V2ArenaKiosk.jsx': 'totem da recepção em tela cheia',
   'V2GameDayTelao.jsx': 'telão em TV, tela cheia',
+  'V2LineGuestCamera.jsx': 'câmera de linhas sem conta (QR), aberta fora do layout do app',
   'CourtMode.jsx': 'modo quadra do treino, tela cheia sobre o app',
   'V2RouteBoundary.jsx': 'a falha do telão (sem ninguém na frente) é tela cheia; a do app usa PAGE_FRAME',
 };
