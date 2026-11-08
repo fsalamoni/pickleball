@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { MapPin, ArrowUpFromLine, Crosshair, Smartphone, Webcam, Video, Wifi } from 'lucide-react';
+import { MapPin, ArrowUpFromLine, Crosshair, Smartphone, Webcam, Video, Wifi, AlertTriangle } from 'lucide-react';
 import { CAMERA_POSITIONS } from '@/modules/linecall/domain/cameraLayouts';
 import { CAMERA_MIN, CAMERA_GOOD } from '@/modules/linecall/domain/cameraCheck';
 import CourtDiagram from './CourtDiagram';
@@ -45,6 +45,15 @@ const DEVICE_TIPS = [
       tk('O navegador não abre câmera Wi-Fi direto. No computador, abra a câmera no OBS Studio (gratuito) e ligue a "Câmera virtual": ela aparece aqui como uma webcam. Bluetooth não transmite vídeo.'),
     ],
   },
+];
+
+/** O que as plataformas de análise por vídeo mais apontam como causa de erro. */
+const COMMON_MISTAKES = [
+  tk('Câmera baixa demais: a bola some atrás dos jogadores e a linha de longe vira um risco fino.'),
+  tk('Um canto da quadra fora da imagem: sem os quatro cantos (ou os da área vigiada) não dá para calibrar.'),
+  tk('Câmera contra o sol ou contra um refletor: a imagem estoura e a bola desaparece.'),
+  tk('Tripé que balança ou alambrado que treme com a bolada: a calibração deixa de bater.'),
+  tk('Gente parada na frente da câmera, ou a capa do celular tampando um pedaço da lente.'),
 ];
 
 export function DeviceTips() {
@@ -96,6 +105,12 @@ export default function PlacementGuide({ position, layoutPositions }) {
             </div>
           ))}
         </dl>
+        <div className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+          <p className="flex items-center gap-1.5 font-semibold"><AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" /> {t('Erros que mais estragam a marcação')}</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {COMMON_MISTAKES.map((m) => <li key={m}>{t(m)}</li>)}
+          </ul>
+        </div>
         <p className="text-xs leading-5 text-gray-500">
           {t('Combine com quem está nas outras câmeras qual é o lado A da quadra (por exemplo, o lado da entrada). Todos os aparelhos usam o mesmo desenho.')}
         </p>

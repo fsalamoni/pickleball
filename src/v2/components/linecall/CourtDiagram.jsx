@@ -53,7 +53,7 @@ function Camera({ p, state, n }) {
  *   className?: string, label?: string }} props  `zone`: a área vigiada (o resto fica escurecido)
  */
 export default function CourtDiagram({
-  positions = [], active = null, taken = [], points = [], current = null, done = [], zone = null, className, label,
+  positions = [], active = null, taken = [], points = [], current = null, done = [], zone = null, marks = [], className, label,
 }) {
   return (
     <svg
@@ -81,6 +81,12 @@ export default function CourtDiagram({
           <rect x={sx(0)} y={sy(zone.y1)} width={W} height={zone.y1 - zone.y0} fill="none" stroke={COR.alvo} strokeWidth={0.22} />
         </g>
       )}
+
+      {marks.map((m) => (
+        m.serve
+          ? <rect key={m.id} x={sx(m.x) - 0.22} y={sy(m.y) - 0.22} width={0.44} height={0.44} fill={m.color} stroke="#0b0f19" strokeWidth={0.05} />
+          : <circle key={m.id} cx={sx(m.x)} cy={sy(m.y)} r={0.22} fill={m.color} stroke="#0b0f19" strokeWidth={0.05} />
+      ))}
 
       {points.map((id) => {
         const p = COURT_POINTS[id];

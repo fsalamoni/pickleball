@@ -24,6 +24,21 @@ export function lanceSummary(lances) {
   return { ...out, faults, total: (lances || []).length, decided, serves };
 }
 
+/**
+ * O MAPA DOS QUIQUES (como nas análises de jogo): onde cada bola quicou, no
+ * desenho comum da quadra, e a profundidade média do saque (quanto ele
+ * caiu da linha de fundo do recebedor). Só quiques com posição.
+ * @returns {{ marks: Array<{ id, x, y, call, serve }>, serveDepthM: number|null }}
+ */
+export function bounceMap(lances, { length = 13.411 } = {}) {
+  const marks = (lances || [])
+    .filter((l) => l.kind === 'bounce' && Number.isFinite(l.best?.x) && Number.isFinite(l.best?.y))
+    .map((l) => ({ id: l.id, x: l.best.x, y: l.best.y, call: l.call, serve: Boolean(l.serve) }));
+  const fundo = marks.filter((m) => m.serve && m.call === 'in').map((m) => Math.min(m.y, length - m.y));
+  const serveDepthM = fundo.length ? fundo.reduce((a, b) => a + b, 0) / fundo.length : null;
+  return { marks, serveDepthM };
+}
+
 const cm = (m) => (Number.isFinite(m) ? String(Math.round(m * 100)) : '');
 const cell = (v) => {
   const s = String(v ?? '');
