@@ -193,6 +193,27 @@ câmera no aparelho limpa os lances da anterior e recomeça a análise (o motor,
 replay e o lance pendente): o relógio do vídeo recomeça do zero, e um lance
 velho seguiria de manchete.
 
+## 3b. Teste de precisão e mapa dos quiques (`domain/precisionTest.js`, `PrecisionTest`, `bounceMap`)
+
+**Teste de precisão da quadra** (na central, para quem organiza): marca-se no
+chão, com fita, um ponto a 2, 5 ou 10 cm da borda de fora da linha (dentro ou
+fora), escolhe-se a distância e solta-se a bola sobre a marca. O próximo
+quique que ACONTECER depois da escolha (pela hora do lance, não pelo id, que
+muda quando uma câmera atrasada entra na junção) vira a tentativa. O relatório
+segue as faixas da ITF para o nível Bronze em piso duro: até 2,5 cm da linha
+(meta 75%) e de 2,5 a 10 cm (meta 85%), com no mínimo 10 lances por faixa para
+dar veredito, mais o erro médio em cm. "Revisar" não conta como acerto (a ITF
+mede a chamada), mas aparece separado do erro. Nada vai ao banco; a planilha
+baixa no aparelho. É o que dá o número honesto antes de falar em precisão.
+
+**Mapa dos quiques**: a central desenha cada quique com posição no desenho
+comum da quadra, na cor do lance (o saque em quadrado), e a profundidade média
+do saque válido (quanto ele caiu da linha de fundo de quem recebe). Zero banco.
+
+O guia de posicionamento (`PlacementGuide`) lista os erros de montagem que
+mais estragam a marcação (câmera baixa, canto fora, contra o sol, tripé que
+balança, gente na frente).
+
 ## 4. O que é gravado
 
 - **A quadra**: `game_days/{id}/line_courts/court-N` (o id é `court-` + o número
@@ -313,6 +334,16 @@ unidades de 100 µs); e o selo "Chegando N quadros/s" pelo que o navegador
 ENTREGOU (`track.stats.deliveredFrames`, Chrome), avisando quando ela anuncia
 60 e entrega 30 (falta de luz). O erro `NotReadableError` agora explica a
 segunda webcam na mesma porta USB.
+
+**Captura: quadros antes de pixels, foco travado, grande-angular**
+(`framesFirst`, `lockOptions`/`lockConstraints`, `wideZoom`). Ao abrir, se a
+câmera veio em 1080p abaixo de 50 q/s e aceita 50 ou mais, `openCamera` troca
+para 720p no máximo de quadros dela: para a bola, 60 q/s em 720p rendem mais
+que 30 em 1080p. Quando a câmera deixa, `WebcamTuning` oferece **Travar foco e
+cor** (o foco automático "respira" quando alguém passa perto e a imagem mexe o
+bastante para a calibração deixar de bater; o balanço de branco muda a cor da
+bola) e **Grande-angular** pelo zoom abaixo de 1 (em parte dos Android a lente
+0,5× não aparece na lista de câmeras). A lente se escolhe ANTES de calibrar.
 
 **A central sabe que a câmera mexeu ou ficou escura**: o sinal de vida leva
 `alert: 'moved' | 'dark'` (só enquanto analisa; regra `lcCam` aceita o campo,

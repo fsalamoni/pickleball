@@ -8,6 +8,7 @@
 
 import { t } from '@/core/i18n';
 import { inboundVideoSettings } from '../domain/ipCamera.js';
+import { framesFirst } from '../domain/webcamTuning.js';
 
 /** As câmeras disponíveis (os nomes só aparecem depois da permissão). */
 export async function listCameras() {
@@ -35,6 +36,13 @@ export async function openCamera(deviceId) {
     },
   });
   const track = stream.getVideoTracks()[0];
+  // Abriu em 1080p a 30 podendo 720p a 60? Troca: para a bola, quadro vale mais que pixel.
+  let caps = null;
+  try { caps = track?.getCapabilities?.() || null; } catch { /* navegador sem getCapabilities */ }
+  const troca = framesFirst(track?.getSettings?.(), caps);
+  if (troca) {
+    try { await track.applyConstraints(troca); } catch { /* fica no modo que abriu */ }
+  }
   return { stream, settings: track?.getSettings?.() || {} };
 }
 

@@ -68,7 +68,7 @@ jobs:
   # ver docs/20-SEGURANCA-E-PRIVACIDADE/01-AUDITORIA-ACHADOS.md.
   firestore-rules:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
 
@@ -92,7 +92,8 @@ jobs:
         run: node scripts/firestore-rules-compactar.mjs --escrever
       - name: Test (regras do Firestore no emulador)
         run: npm run test:rules
-        timeout-minutes: 10
+        # Os 76 arquivos de regra já levam ~10 min no emulador (main: 9min55s em 2026-11-08).
+        timeout-minutes: 20
 
   # Testes de navegador (Playwright): o build DESTE PR servido localmente, com
   # Auth e Firestore nos emuladores. Entra numa conta de teste e abre as telas

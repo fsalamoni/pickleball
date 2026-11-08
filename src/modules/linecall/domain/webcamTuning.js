@@ -38,6 +38,59 @@ export function shutterConstraints(step, caps) {
 }
 
 /**
+ * QUADROS antes de pixels: o navegador escolhe o modo mais perto do pedido
+ * (1080p e 120 q/s), e muita câmera abre em 1080p a 30 quando teria 720p a 60.
+ * Para a bola, 60 q/s em 720p rendem mais que 30 em 1080p (a bola anda
+ * metade entre um quadro e outro). Devolve as restrições da troca, ou null
+ * quando não há o que ganhar.
+ * @param {{ frameRate?: number, height?: number }} settings o que a câmera entregou
+ * @param {object} caps `track.getCapabilities()`
+ */
+export function framesFirst(settings, caps) {
+  const fps = settings?.frameRate;
+  const max = caps?.frameRate?.max;
+  if (!Number.isFinite(fps) || !Number.isFinite(max)) return null;
+  if (fps >= 50 || max < 50 || !(settings.height > 720)) return null;
+  return { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: Math.min(max, 120), min: 50 } };
+}
+
+/**
+ * TRAVAR foco e cor depois de enquadrar: com o foco automático a lente
+ * "respira" quando um jogador passa perto (a imagem mexe um pouco e a
+ * calibração deixa de bater) e a cor da bola muda com o balanço de branco.
+ * @returns {{ focus: boolean, color: boolean }} o que ESTA câmera deixa travar
+ */
+export function lockOptions(caps) {
+  const fm = Array.isArray(caps?.focusMode) ? caps.focusMode : [];
+  const wb = Array.isArray(caps?.whiteBalanceMode) ? caps.whiteBalanceMode : [];
+  return { focus: fm.includes('manual') || fm.includes('single-shot'), color: wb.includes('manual') };
+}
+
+/** As restrições que travam (ou soltam) foco e cor, no ponto de agora. */
+export function lockConstraints(caps, settings, lock) {
+  const o = lockOptions(caps);
+  const fm = Array.isArray(caps?.focusMode) ? caps.focusMode : [];
+  const adv = [];
+  if (o.focus) {
+    if (!lock) adv.push({ focusMode: 'continuous' });
+    else if (fm.includes('manual') && Number.isFinite(settings?.focusDistance)) adv.push({ focusMode: 'manual', focusDistance: settings.focusDistance });
+    else adv.push({ focusMode: fm.includes('single-shot') ? 'single-shot' : 'manual' });
+  }
+  if (o.color) adv.push({ whiteBalanceMode: lock ? 'manual' : 'continuous' });
+  return adv.length ? { advanced: adv } : null;
+}
+
+/**
+ * A GRANDE-ANGULAR pelo zoom: em parte dos Android a lente 0,5× não aparece
+ * na lista de câmeras, mas a câmera aceita zoom abaixo de 1. Devolve esse
+ * zoom (o mínimo), ou null quando não há.
+ */
+export function wideZoom(caps) {
+  const min = caps?.zoom?.min;
+  return Number.isFinite(min) && min < 1 ? min : null;
+}
+
+/**
  * Quadros por segundo que CHEGARAM entre duas leituras de `track.stats`.
  * null se não dá para saber (navegador sem `stats`, leitura muito curta).
  * @param {{ deliveredFrames: number, at: number }|null} a

@@ -20,7 +20,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { CAMERA_POSITIONS, layoutById } from '@/modules/linecall/domain/cameraLayouts';
 import { positionOccupancy, decisionsFor, pickHeadline } from '@/modules/linecall/domain/fusion';
 import { nearestBoundary } from '@/modules/linecall/domain/court';
-import { lanceSummary, lancesCsv } from '@/modules/linecall/domain/report';
+import { lanceSummary, lancesCsv, bounceMap } from '@/modules/linecall/domain/report';
 import { readinessCheck, READINESS_TEXT, judgingPositions, stoppedJudging } from '@/modules/linecall/domain/readiness';
 import { useNow } from '@/modules/linecall/hooks/useLineControlLive';
 import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnounce';
@@ -32,7 +32,8 @@ import RemoteCalibration from './RemoteCalibration';
 import { setCameraRun } from '@/modules/linecall/services/lineCalibService';
 import { camDocId } from '@/modules/linecall/services/lineCallSync';
 import CallFlash from './CallFlash';
-import { CALL_TEXT, CALL_TONE, CALL_LABEL, callLabel, callDetail, callSpoken } from './callLabels';
+import PrecisionTest from './PrecisionTest';
+import { CALL_COLOR, CALL_TEXT, CALL_TONE, CALL_LABEL, callLabel, callDetail, callSpoken } from './callLabels';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 
@@ -162,6 +163,7 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
 
   const noAr = Object.values(occ).filter(Boolean).length;
   const resumo = lanceSummary(live.lances);
+  const mapa = bounceMap(live.lances);
   const pronto = readinessCheck(layout.positions, occ);
 
   const limpar = async () => {
@@ -330,6 +332,29 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
           {resumo.decided > 0 && <V2Badge tone="neutral">{t('{n} decididos por quem organiza', { n: resumo.decided })}</V2Badge>}
         </div>
       )}
+
+      {mapa.marks.length > 0 && (
+        <V2Surface className="p-4" data-dica="linhas-central-mapa">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,160px)_1fr]">
+            <CourtDiagram
+              marks={mapa.marks.map((m) => ({ ...m, color: CALL_COLOR[m.call] || '#ca8a04' }))}
+              className="mx-auto w-full max-w-[160px] text-ink"
+              label={t('Mapa dos quiques do jogo: {n} quiques', { n: mapa.marks.length })}
+            />
+            <div className="space-y-2 text-sm">
+              <p className="font-semibold text-ink">{t('Mapa dos quiques')}</p>
+              <p className="text-gray-600">{t('Cada ponto é um quique, na cor do lance. O quadrado é o quique do saque.')}</p>
+              {mapa.serveDepthM !== null && (
+                <p className="text-gray-600">
+                  {t('Saque válido caiu, em média, a {n} m da linha de fundo de quem recebe.', { n: String(Math.round(mapa.serveDepthM * 10) / 10).replace('.', ',') })}
+                </p>
+              )}
+            </div>
+          </div>
+        </V2Surface>
+      )}
+
+      {podeLimpar && <PrecisionTest lances={live.lances} onCsv={(txt) => baixar(`precisao-${tag}.csv`, txt)} />}
 
       {anteriores.length > 0 && (
         <V2Surface className="space-y-3 p-4">

@@ -5,10 +5,12 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Aperture } from 'lucide-react';
+import { Aperture, Lock, Maximize } from 'lucide-react';
 
 import { V2Button, V2Badge } from '@/v2/ui/primitives';
-import { shutterOptions, shutterConstraints, deliveredFps, fpsShortfall } from '@/modules/linecall/domain/webcamTuning';
+import {
+  shutterOptions, shutterConstraints, deliveredFps, fpsShortfall, lockOptions, lockConstraints, wideZoom,
+} from '@/modules/linecall/domain/webcamTuning';
 import { t } from '@/core/i18n';
 
 const lerStats = (track) => {
@@ -23,10 +25,14 @@ export default function WebcamTuning({ stream, announcedFps }) {
   const [atual, setAtual] = useState(null); // id do tempo escolhido; null = automático
   const [erro, setErro] = useState(false);
   const [entregue, setEntregue] = useState(null);
+  const [travado, setTravado] = useState(false);
+  const [largo, setLargo] = useState(false);
 
   useEffect(() => {
     try { setCaps(track?.getCapabilities?.() || null); } catch { setCaps(null); }
     setAtual(null);
+    setTravado(false);
+    setLargo(false);
   }, [track]);
 
   // Mede os quadros que chegaram, de 2 em 2 segundos.
@@ -54,7 +60,22 @@ export default function WebcamTuning({ stream, announcedFps }) {
     }
   };
   const curto = fpsShortfall(announcedFps, entregue);
-  if (!opcoes.length && entregue === null) return null;
+  const trava = lockOptions(caps);
+  const podeTravar = trava.focus || trava.color;
+  const grande = wideZoom(caps);
+  const mudar = async (constraints, ok) => {
+    setErro(false);
+    if (!constraints) return;
+    try {
+      await track.applyConstraints(constraints);
+      ok();
+    } catch {
+      setErro(true);
+    }
+  };
+  const travar = (on) => mudar(lockConstraints(caps, track?.getSettings?.(), on), () => setTravado(on));
+  const angular = (on) => mudar({ advanced: [{ zoom: on ? grande : 1 }] }, () => setLargo(on));
+  if (!opcoes.length && entregue === null && !podeTravar && grande === null) return null;
 
   return (
     <div className="space-y-2 rounded-2xl bg-paper p-3" data-dica="linhas-webcam-ajuste">
@@ -80,9 +101,30 @@ export default function WebcamTuning({ stream, announcedFps }) {
             ))}
           </div>
           <p className="text-sm text-gray-500">{t('Mais curto deixa a bola nítida e escurece a imagem. Comece por 1/500 e confira se a quadra continua clara.')}</p>
-          {erro && <p className="text-sm text-red-700" role="alert">{t('A câmera não aceitou esse ajuste.')}</p>}
         </div>
       )}
+      {(podeTravar || grande !== null) && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            {grande !== null && (
+              <V2Button type="button" size="sm" variant={largo ? 'primary' : 'secondary'} aria-pressed={largo} onClick={() => angular(!largo)}>
+                <Maximize className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                {t('Grande-angular ({z}×)', { z: String(grande).replace('.', ',') })}
+              </V2Button>
+            )}
+            {podeTravar && (
+              <V2Button type="button" size="sm" variant={travado ? 'primary' : 'secondary'} aria-pressed={travado} onClick={() => travar(!travado)}>
+                <Lock className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                {travado ? t('Foco e cor travados') : t('Travar foco e cor')}
+              </V2Button>
+            )}
+          </div>
+          <p className="text-sm text-gray-500">
+            {t('Escolha a lente antes de calibrar (trocar depois desfaz a calibração). Com a quadra enquadrada e nítida, trave o foco e a cor: o foco automático mexe na imagem quando alguém passa perto da câmera.')}
+          </p>
+        </div>
+      )}
+      {erro && <p className="text-sm text-red-700" role="alert">{t('A câmera não aceitou esse ajuste.')}</p>}
     </div>
   );
 }
