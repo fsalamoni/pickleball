@@ -10,7 +10,7 @@
  * também para falar o lance em voz alta e baixar a planilha do jogo.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Radio, Trash2, Users, Volume2, VolumeX, Download, Gavel, ChevronDown, BatteryLow, Target, CheckCircle2, AlertTriangle, Bell, BellOff, Crosshair, Play, Pause,
 } from 'lucide-react';
@@ -21,9 +21,9 @@ import { CAMERA_POSITIONS, layoutById } from '@/modules/linecall/domain/cameraLa
 import { positionOccupancy, decisionsFor, pickHeadline } from '@/modules/linecall/domain/fusion';
 import { nearestBoundary } from '@/modules/linecall/domain/court';
 import { lanceSummary, lancesCsv } from '@/modules/linecall/domain/report';
-import { readinessCheck, READINESS_TEXT } from '@/modules/linecall/domain/readiness';
+import { readinessCheck, READINESS_TEXT, judgingPositions, stoppedJudging } from '@/modules/linecall/domain/readiness';
 import { useNow } from '@/modules/linecall/hooks/useLineControlLive';
-import { useAnnounce, canSpeak } from '@/modules/linecall/hooks/useAnnounce';
+import { useAnnounce, canSpeak, speak } from '@/modules/linecall/hooks/useAnnounce';
 import { clearLineCalls, decideLance } from '@/modules/linecall/services/lineCallSync';
 import CourtDiagram from './CourtDiagram';
 import CourtMark from './CourtMark';
@@ -140,6 +140,22 @@ export default function LineCentral({ gameDay, live, podeLimpar = false, linkBas
   const anteriores = live.lances.filter((l) => l !== ultimo);
   const spoken = useCallback((l) => callSpoken(l), []);
   const [falar, setFalar, som, setSom, aviso] = useAnnounce(live.isLoading ? null : live.lances, spoken, 'linhas:voz:central');
+
+  // Câmera que parou de julgar no meio do jogo é AVISADA, não some calada da lista.
+  const julgando = live.isLoading || live.isError ? null : judgingPositions(layout.positions, occ).join(',');
+  const julgavam = useRef(null);
+  useEffect(() => {
+    if (julgando === null) return;
+    const antes = julgavam.current;
+    julgavam.current = julgando ? julgando.split(',') : [];
+    if (!antes) return;
+    const pararam = stoppedJudging(antes, julgavam.current);
+    if (!pararam.length) return;
+    const quais = pararam.map((p) => t(CAMERA_POSITIONS[p]?.label || p)).join(', ');
+    const texto = t('Câmera parou de julgar: {quais}. Esta parte da quadra está sem chamada.', { quais });
+    toast.error(texto, { duration: 10000 });
+    if (falar) speak(texto);
+  }, [julgando]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (live.isError) return <V2ErrorState onRetry={live.retry} description={t('Não deu para ouvir as câmeras deste jogo.')} />;
   if (live.isLoading) return <V2Skeleton lines={4} />;

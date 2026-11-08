@@ -22,6 +22,7 @@ caminho da quadra). As regras do jogo julgadas, com o número da regra: docs/53 
 - `domain/cameraLayouts.js` — as posições (`fundo_a`, `rede_1`, `topo`, cantos…), os pesos de cada uma (pé na cozinha, pé no saque) e os 11 arranjos de 1 a 5 câmeras; `layoutJudges` diz se o arranjo julga pé. **Ids gravados: nunca renomeie.**
 - `domain/homography.js` — quadra ⇄ imagem (4 pontos tocados), onde a câmera está (`estimateCamera`) e a correção de altura.
 - `domain/lineCallEngine.js` — o motor quadro a quadro (modo imagem e modo de cima): o ponto do saque ao fim, quique × batida, incerteza por eixo, impulso, o 1º quique escondido pela rede e a formação de saque depois de um ponto (`serveFormation`: a bola devolvida a quem vai sacar não é saque). Os `kind` e `reason` são gravados: nunca renomeie.
+- `domain/clockSync.js` — traz a hora de cada aparelho (`t_ms`, `seen_ms`) para o relógio de quem olha, pelas duas horas do sinal de vida (`seen_ms` e `updated_at`); usado no `useLineControlLive`. Nada novo no banco.
 - `domain/fusion.js` — junta as marcações das câmeras de uma quadra por janela de tempo; quem está no ar; o estado do telão; a manchete (`pickHeadline`, a mesma regra na câmera, na central, no aviso e no telão) e o que chegou (`newArrivals`).
 - `domain/gameDayLine.js` — as quadras do dia, o anfitrião e a página de cada uma, quem pode ser câmera, "Copiar para os meus próximos dias de jogo".
 - `domain/ballDetection.js` — bola por cor + movimento (trocável por um modelo TrackNet).

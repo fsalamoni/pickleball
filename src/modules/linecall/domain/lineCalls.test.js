@@ -8,7 +8,7 @@ import { fuseLineCalls, isCamOnline, positionOccupancy, decisionsFor } from './f
 
 const CALIBRATION_CORNERS = calibrationPoints('fundo_a');
 import { decide, LINE_CALL } from './lineCallEngine.js';
-import { findBallCandidates, pickBall, rgbToHsv } from './ballDetection.js';
+import { findBallCandidates, pickBall, predictNext, rgbToHsv } from './ballDetection.js';
 import {
   gameDayLineCourts, lineCourtCopyPlan, lineCourtNumber, gameDayLineHost, gameDayLinePage,
 } from './gameDayLine.js';
@@ -85,6 +85,20 @@ describe('detecção da bola', () => {
     expect(pickBall(c, { x: 0, y: 0 })).toEqual(c[0]);
     expect(pickBall(c, { x: 400, y: 400 })).toBeNull();
     expect(rgbToHsv(220, 240, 40).h).toBeCloseTo(66, 0);
+  });
+
+  it('segue o rumo da bola: a mancha na previsão vence a parada perto de onde ela estava', () => {
+    // A bola vinha de (100,100) para (160,100): a próxima deve estar em (220,100).
+    const prevista = predictNext({ x: 160, y: 100 }, { x: 100, y: 100 });
+    expect(prevista).toEqual({ x: 220, y: 100 });
+    expect(predictNext({ x: 1, y: 2 }, null)).toEqual({ x: 1, y: 2 });
+    const camisa = { x: 170, y: 104, area: 30 };
+    const bola = { x: 218, y: 101, area: 6 };
+    expect(pickBall([camisa, bola], { x: 160, y: 100 })).toBe(camisa); // o jeito antigo
+    expect(pickBall([camisa, bola], prevista, { anchor: { x: 160, y: 100 } })).toBe(bola);
+    // No quique a bola volta: longe da previsão, mas perto de onde estava, continua valendo.
+    const voltou = { x: 100, y: 100, area: 6 };
+    expect(pickBall([voltou], { x: 300, y: 100 }, { anchor: { x: 160, y: 100 } })).toBe(voltou);
   });
 });
 

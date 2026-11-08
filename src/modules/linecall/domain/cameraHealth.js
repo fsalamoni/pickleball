@@ -27,6 +27,15 @@ export const HEALTH = {
   MIN_TEXTURE: 6,
   /** Brilho médio abaixo do qual a imagem é escura (0–255). */
   DARK: 55,
+  /** Tom a partir do qual o pixel está "estourado" (sol, reflexo no piso, contraluz). */
+  BLOWN: 250,
+  /**
+   * Fração da imagem estourada a partir da qual há sol ou reflexo demais: ali
+   * a bola amarela e as linhas brancas viram a mesma mancha. É o inimigo nº 1
+   * fora de quadra coberta (Hawk-Eye testa sol e sombra antes de cada evento;
+   * os apps de celular param no fim de tarde).
+   */
+  GLARE: 0.15,
 };
 
 /** Tons de cinza de uma imagem RGBA (`ImageData.data`). */
@@ -102,11 +111,16 @@ export function driftFrom(matches) {
 
 /** Brilho médio (0–255) e se está escuro. */
 export function brightness(gray) {
-  if (!gray?.length) return { mean: null, dark: false };
+  if (!gray?.length) return { mean: null, dark: false, glare: false };
   let s = 0;
+  let blown = 0;
   const step = 7; // amostra: não precisa de todos os pixels
   let n = 0;
-  for (let i = 0; i < gray.length; i += step) { s += gray[i]; n += 1; }
+  for (let i = 0; i < gray.length; i += step) {
+    s += gray[i];
+    if (gray[i] >= HEALTH.BLOWN) blown += 1;
+    n += 1;
+  }
   const mean = Math.round(s / n);
-  return { mean, dark: mean < HEALTH.DARK };
+  return { mean, dark: mean < HEALTH.DARK, glare: blown / n >= HEALTH.GLARE };
 }

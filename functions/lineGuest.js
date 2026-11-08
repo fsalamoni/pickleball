@@ -98,7 +98,7 @@ async function beat(ctx, data) {
     battery: Number.isFinite(c.battery) ? Math.max(0, Math.min(100, Math.round(c.battery))) : null,
     charging: typeof c.charging === 'boolean' ? c.charging : null,
     check_cm: Number.isFinite(c.checkCm) ? Math.round(c.checkCm * 10) / 10 : null,
-    alert: c.alert === 'moved' || c.alert === 'dark' ? c.alert : null,
+    alert: ['moved', 'dark', 'glare'].includes(c.alert) ? c.alert : null,
     seen_ms: ctx.now,
     updated_at: ctx.FieldValue.serverTimestamp(),
   }));
@@ -175,21 +175,35 @@ async function calib(ctx, data) {
   };
 }
 
+/**
+ * Do relógio do aparelho para o do servidor: soma a diferença medida no envio.
+ * Sem a hora do aparelho (versão antiga do app) fica como veio. A diferença
+ * inclui a ida da chamada (algumas centenas de ms), como a do sinal de vida.
+ */
+function toServerMs(tMs, clientMs, nowMs) {
+  if (!Number.isFinite(clientMs)) return tMs;
+  return tMs + (nowMs - clientMs);
+}
+
 async function call(ctx, data) {
   const { host, hash, invite } = await convite(ctx, data);
   const e = data.call || {};
   if (!KINDS.includes(e.kind) || !CALLS.includes(e.call) || !Number.isFinite(e.t_ms)) {
     throw new LineGuestError('invalid-argument', 'Marcação inválida.');
   }
-  // A hora do lance não pode estar longe da hora de agora (o relógio do aparelho erra um pouco).
-  if (Math.abs(e.t_ms - ctx.now) > 10 * 60000) throw new LineGuestError('invalid-argument', 'Marcação fora de hora.');
+  // A hora do lance vem no relógio do aparelho; com a hora dele no envio
+  // (`client_ms`), vira a do servidor — a mesma régua do sinal de vida, que
+  // esta função grava com a hora do servidor (docs/53 §3, relógios).
+  const tMs = toServerMs(e.t_ms, data.client_ms, ctx.now);
+  // A hora do lance não pode estar longe da hora de agora.
+  if (Math.abs(tMs - ctx.now) > 10 * 60000) throw new LineGuestError('invalid-argument', 'Marcação fora de hora.');
   await refOf(ctx.db, host).collection('line_calls').add(semNulos({
     uid: guestUid(hash),
     position: invite.position,
     kind: e.kind,
     call: e.call,
     reason: typeof e.reason === 'string' ? e.reason.slice(0, 12) : null,
-    t_ms: Math.round(e.t_ms),
+    t_ms: Math.round(tMs),
     margin_m: num(e.margin_m),
     uncertainty_m: num(e.uncertainty_m),
     depth_m: num(e.depth_m),

@@ -16,7 +16,28 @@ export const READINESS_TEXT = Object.freeze({
   calibration: 'calibração com erro acima de 6 cm',
   moved: 'a câmera saiu do lugar: calibrar de novo',
   dark: 'imagem escura demais',
+  glare: 'sol ou reflexo forte na imagem',
 });
+
+/**
+ * As posições que estão JULGANDO agora: câmera no ar, calibrada, analisando e
+ * no lugar. A central compara de um retrato para o outro (`stoppedJudging`)
+ * para AVISAR quando uma câmera para no meio do jogo — o sistema não pode
+ * parar calado (Wimbledon 2025: metade da quadra ficou sem chamada por um
+ * game e ninguém foi avisado).
+ */
+export function judgingPositions(positions, occ) {
+  return (positions || []).filter((p) => {
+    const c = occ?.[p];
+    return Boolean(c && c.calibrated && c.analyzing && c.alert !== 'moved');
+  });
+}
+
+/** As que julgavam no retrato anterior e não julgam mais. */
+export function stoppedJudging(before, now) {
+  const agora = new Set(now || []);
+  return (before || []).filter((p) => !agora.has(p));
+}
 
 /**
  * @param {string[]} positions  as posições do arranjo
@@ -39,6 +60,7 @@ export function readinessCheck(positions, occ) {
     // A câmera mesma conta (`cameraHealth`): saiu do lugar = mede errado; escura = perde a bola.
     if (c.alert === 'moved') add(p, 'moved', 'block');
     else if (c.alert === 'dark') add(p, 'dark', 'warn');
+    else if (c.alert === 'glare') add(p, 'glare', 'warn');
   }
   const blocking = issues.filter((i) => i.level === 'block').length;
   return { ready: blocking === 0 && issues.length === 0, blocking, warnings: issues.length - blocking, issues };

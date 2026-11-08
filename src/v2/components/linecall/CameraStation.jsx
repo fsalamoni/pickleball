@@ -433,6 +433,9 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 {s.running && s.health?.dark && (
                   <p className="text-sm text-amber-700">{t('Pouca luz: a bola vira um borrão e some. Acenda as luzes da quadra ou mude o aparelho de lugar, longe da contraluz.')}</p>
                 )}
+                {s.running && !s.health?.dark && s.health?.glare && (
+                  <p className="text-sm text-amber-700">{t('Sol ou reflexo forte na imagem: a bola some no branco estourado. Vire o aparelho de costas para o sol, abaixe um pouco o brilho ou escolha outro horário.')}</p>
+                )}
                 {lento && (
                   <p className="text-sm text-amber-700">{t('Poucos quadros por segundo: feche outros aplicativos, tire o modo de economia de bateria ou use outro aparelho. Com menos de 24 por segundo a bola pula muito entre um quadro e outro.')}</p>
                 )}
