@@ -296,6 +296,12 @@ describe('a visão da dupla, a decisão e a moderação', () => {
   it('ação desconhecida é recusada', async () => {
     await expect(chamar(cenario(), ANA, { action: 'publish' })).rejects.toMatchObject({ code: 'invalid-argument' });
   });
+
+  it('chave herdada do protótipo não é ação (devolvia o contexto do servidor)', async () => {
+    for (const action of ['constructor', 'toString', 'valueOf', '__proto__', 'hasOwnProperty']) {
+      await expect(chamar(cenario(), ANA, { action })).rejects.toMatchObject({ code: 'invalid-argument' });
+    }
+  });
 });
 
 describe('lembretes do planejado (varredura diária)', () => {

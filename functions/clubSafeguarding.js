@@ -322,7 +322,7 @@ const ROTAS = {
 };
 
 async function safeguarding(ctx, actor, data = {}) {
-  const fn = ROTAS[data.action];
+  const fn = (Object.hasOwn(ROTAS, data.action) ? ROTAS[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   const c = await contexto(ctx, actor, data);
   return fn(ctx, actor, data, c);

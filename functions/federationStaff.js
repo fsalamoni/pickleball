@@ -238,7 +238,7 @@ async function passar(ctx, actor, fed, lista, ator, data) {
 const ACOES = { role_save: salvarCargo, role_delete: apagarCargo, appoint: nomear, extend: prorrogar, remove: tirar, transfer: passar };
 
 async function staff(ctx, actor, data) {
-  const acao = ACOES[data.action];
+  const acao = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!acao) falha('invalid-argument', 'Ação desconhecida.');
   if (!(await f.flagLigada(ctx))) falha('failed-precondition', 'As federações não estão ligadas nesta plataforma.');
   const fed = await f.federacao(ctx, data.federationId);

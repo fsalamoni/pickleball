@@ -372,7 +372,7 @@ async function publicarAtoDeTexto(ctx, actor, club, input) {
 async function docs(ctx, actor, data = {}) {
   const c = await contexto(ctx, actor, data);
   if (data.action === 'file') return file(ctx, actor, data, c);
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   if (!podeAcervo(c.perms)) falha('permission-denied', 'Você não tem permissão para o acervo deste clube.');
   return fn(ctx, actor, data, c);

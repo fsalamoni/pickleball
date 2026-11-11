@@ -293,7 +293,7 @@ async function answer(ctx, actor, data, c) {
 const ROTAS = { list, members, save, publish, close, cancel, add, remove, member_update: memberUpdate, mine, answer };
 
 async function selection(ctx, actor, data = {}) {
-  const fn = ROTAS[data.action];
+  const fn = (Object.hasOwn(ROTAS, data.action) ? ROTAS[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   const c = await contexto(ctx, actor, data);
   if (['mine', 'answer'].includes(data.action) && !(await ehMembro(ctx, c.club, actor.uid))) {

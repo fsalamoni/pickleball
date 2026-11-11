@@ -311,7 +311,7 @@ async function publicConsent(ctx, actor, data) {
 const ACOES = { publish, unpublish, public_consent: publicConsent };
 
 async function careerPublic(ctx, actor, data = {}) {
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   return fn(ctx, actor, data);
 }

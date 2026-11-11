@@ -724,6 +724,11 @@ Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas li
   `firebase-tools@13` vai até o 22; o 24 exige subir a CLI junto, num PR
   próprio. Guarda em `src/core/guards/deployFunctions.test.js`; ver
   `docs/03-WORKFLOW.md` §9.5
+- **Tabela de ações de Cloud Function: leia pela chave PRÓPRIA.**
+  `ACOES[data.action]` cru aceita `'constructor'` (o `Object` do protótipo), que
+  devolvia o contexto do servidor — com o token da conta de serviço — na
+  resposta da chamada. Use `Object.hasOwn(ACOES, data.action) ? … : undefined`;
+  guarda em `src/core/guards/despachoDeAcoes.test.js` (docs/47 §1.1).
 - **Diálogo cortado em paisagem (tablet/celular):** `DialogContent`/`AlertDialogContent`
   precisam de `max-h-[90dvh] overflow-y-auto`. Sem isso, em telas baixas o
   rodapé (campos + botão salvar) fica fora da viewport e inacessível.

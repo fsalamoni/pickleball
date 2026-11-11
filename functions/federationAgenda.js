@@ -284,7 +284,7 @@ const ACOES = {
 };
 
 async function agenda(ctx, actor, data = {}) {
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   const c = await contexto(ctx, actor, data);
   return fn(ctx, actor, data, c);

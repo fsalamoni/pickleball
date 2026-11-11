@@ -219,6 +219,18 @@ describe('career_rank (a posição no ranking da federação)', () => {
   });
 });
 
+describe('player_goals (a meta é de quem a criou)', () => {
+  it('⭐ o dono edita e apaga, mas não passa a meta para a conta de outra pessoa', async () => {
+    const ref = doc(como(DONO), 'player_goals', `${DONO}_g1`);
+    await assertSucceeds(setDoc(ref, { id: `${DONO}_g1`, uid: DONO, kind: 'process', title: 'Treinar' }));
+    await assertSucceeds(updateDoc(ref, { title: 'Treinar mais' }));
+    await assertFails(updateDoc(ref, { uid: OUTRO }));
+    await assertFails(updateDoc(doc(como(OUTRO), 'player_goals', `${DONO}_g1`), { title: 'x' }));
+    await assertFails(setDoc(doc(como(OUTRO), 'player_goals', `${OUTRO}_g2`), { uid: DONO, title: 'forjada' }));
+    await assertSucceeds(deleteDoc(ref));
+  });
+});
+
 /* ------------------------------------------------------------- PR 7 -- */
 
 describe('career_public (a vitrine: lê qualquer pessoa, grava só o servidor)', () => {

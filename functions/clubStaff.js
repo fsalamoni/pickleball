@@ -210,7 +210,7 @@ async function tirar(ctx, actor, club, lista, ator, data) {
 const ACOES = { role_save: salvarCargo, role_delete: apagarCargo, appoint: nomear, extend: prorrogar, remove: tirar };
 
 async function staff(ctx, actor, data) {
-  const acao = ACOES[data.action];
+  const acao = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!acao) falha('invalid-argument', 'Ação desconhecida.');
   if (!(await a.flagLigada(ctx))) falha('failed-precondition', 'A associação de clubes não está ligada nesta plataforma.');
   const club = await a.clube(ctx, data.clubId);

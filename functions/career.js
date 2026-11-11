@@ -585,7 +585,7 @@ const ACOES = {
 };
 
 async function career(ctx, actor, data = {}) {
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   return fn(ctx, actor, data);
 }

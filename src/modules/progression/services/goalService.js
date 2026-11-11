@@ -57,7 +57,8 @@ export async function updateGoal(goal, patch) {
 export async function listGoals(uid) {
   if (!db || !uid) return [];
   const snap = await getDocs(query(collection(db, COL), where('uid', '==', uid)));
-  return snap.docs.map((d) => d.data());
+  // O id é o do DOCUMENTO: é por ele que a tela edita e apaga.
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 }
 
 /** Remove uma meta. */

@@ -133,7 +133,7 @@ async function assetRetire(ctx, actor, data, c) {
 const ACOES = { asset_save: assetSave, asset_loan: assetLoan, asset_return: assetReturn, asset_retire: assetRetire };
 
 async function management(ctx, actor, data = {}) {
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   return fn(ctx, actor, data, await contexto(ctx, actor, data));
 }

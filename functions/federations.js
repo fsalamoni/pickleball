@@ -167,7 +167,7 @@ function modulosIniciais(raw) {
 async function review(ctx, actor, data) {
   if (!actor.isPlatformAdmin) falha('permission-denied', 'Só o admin da plataforma revisa federações.');
   if (!(await flagLigada(ctx))) falha('failed-precondition', 'As federações não estão ligadas nesta plataforma.');
-  const acao = REVIEW[data.action];
+  const acao = (Object.hasOwn(REVIEW, data.action) ? REVIEW[data.action] : undefined);
   if (!acao) falha('invalid-argument', 'Ação desconhecida.');
   const reason = texto(data.reason, 500);
   if (acao.needsReason && reason.length < 3) falha('invalid-argument', 'Diga o motivo.');
