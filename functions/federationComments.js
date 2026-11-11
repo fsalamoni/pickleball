@@ -255,7 +255,7 @@ const ACOES = { post, reply, report, hide, restore, delete: remove, settings, qu
 
 async function comments(ctx, actor, data = {}) {
   if (data.action === 'list') return list(ctx, actor, data);
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   const c = await contexto(ctx, actor, data);
   return fn(ctx, actor, data, c);

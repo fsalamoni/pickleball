@@ -576,7 +576,10 @@ service cloud.firestore {
     match /player_goals/{id} {
       allow read: if isOwner(od().uid);
       allow create: if isOwner(nd().uid);
-      allow update, delete: if isOwner(od().uid);
+      // O dono não muda no update: sem isso a meta podia ser passada para a conta
+      // de outra pessoa, que a via como sua e não conseguia apagar.
+      allow update: if isOwner(od().uid) && nd().uid == od().uid;
+      allow delete: if isOwner(od().uid);
     }
 
     // ---- Carreira (flag `athlete_career`, docs/54) -----------------

@@ -182,7 +182,10 @@ mostra só essas; a da temporada mora na carreira). As métricas novas
 (`career_events_played`, `career_podiums`, `federated_events`,
 `dupr_rating`) contam DATAS dentro da janela `since → due_date`
 (`goalProgress`); os valores saem de `careerGoalValues`, nunca do motor de XP.
-Nenhuma regra nova: `player_goals` já é só do dono.
+`player_goals` é só do dono, e desde 2026-11-11 o dono **não muda no update**
+(`nd().uid == od().uid`): antes dava para passar a meta para a conta de outra
+pessoa. A lista devolve o id do DOCUMENTO (`listGoals`), que é por onde a tela
+edita e apaga. Prova em `tests/rules/career.rules.test.js`.
 
 ### 2.8 `career_public/{uid}_{evento}` — a vitrine pública (PR 7)
 

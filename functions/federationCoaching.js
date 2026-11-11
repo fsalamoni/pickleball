@@ -54,7 +54,7 @@ async function contexto(ctx, actor, data) {
   const fed = await f.federacao(ctx, data.federationId);
   if (fed.status !== 'approved') falha('failed-precondition', 'A federação ainda não foi aprovada pela plataforma.');
   const mods = fed.modules || {};
-  const modulo = ACOES[data.action];
+  const modulo = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (modulo === 'coach' && mods.coach_licenses !== true) falha('failed-precondition', 'Esta federação não tem a licença de professor ligada.');
   if (modulo === 'sg' && mods.safeguarding !== true) falha('failed-precondition', 'Esta federação não tem a proteção de menores ligada.');
   const perms = await f.staffPerms(ctx, fed.id, actor);
@@ -323,7 +323,7 @@ const DECISOES = {
 
 async function licenseDecide(ctx, actor, data, c) {
   exigeLicencas(c);
-  const d = DECISOES[data.action];
+  const d = (Object.hasOwn(DECISOES, data.action) ? DECISOES[data.action] : undefined);
   const { fed, hoje } = c;
   const uid = texto(data.userId, 128);
   const { ref, lic } = await licenca(ctx, fed, uid);
@@ -509,7 +509,7 @@ const ROTAS = {
 };
 
 async function coaching(ctx, actor, data = {}) {
-  const fn = ROTAS[data.action];
+  const fn = (Object.hasOwn(ROTAS, data.action) ? ROTAS[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   const c = await contexto(ctx, actor, data);
   return fn(ctx, actor, data, c);

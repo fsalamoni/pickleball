@@ -427,7 +427,7 @@ async function publicarAto(ctx, actor, fed, doc) {
 async function acervo(ctx, actor, data = {}) {
   const c = await contexto(ctx, actor, data);
   if (data.action === 'file') return file(ctx, actor, data, c);
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   if (!podeAcervo(c.perms)) falha('permission-denied', 'Você não tem permissão para o acervo desta federação.');
   return fn(ctx, actor, data, c);

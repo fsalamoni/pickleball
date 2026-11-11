@@ -218,7 +218,7 @@ async function call(ctx, data) {
 const ACOES = { peek, beat, leave, call, calib };
 
 async function lineGuest(ctx, data = {}) {
-  const fn = ACOES[data.action];
+  const fn = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!fn) throw new LineGuestError('invalid-argument', 'Ação desconhecida.');
   return fn(ctx, data);
 }

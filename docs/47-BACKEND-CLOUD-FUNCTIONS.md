@@ -41,6 +41,13 @@ porque a escrita não pode ser do navegador.
 - **Pacote isolado**: `functions/` é publicado sozinho e **não importa
   `src/`**. Tudo que o cliente também calcula existe em duas cópias com teste
   de paridade (§9).
+- **A ação de uma chamada é lida pela chave PRÓPRIA da tabela**:
+  `Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined`, nunca
+  `ACOES[data.action]` cru. 🐞 `ACOES['constructor']` é o `Object` do
+  protótipo: `{ action: 'constructor' }` devolvia o contexto do servidor (com o
+  cliente do Storage e o token da conta de serviço) na resposta, em toda função
+  com esse despacho (corrigido em 2026-11-11). Guarda:
+  `src/core/guards/despachoDeAcoes.test.js`.
 - **Texto de aviso** vai por `functions/avisoI18n.js` (`tx`, `textoDoAviso`,
   `i18nDoAviso`) para o aviso carregar as traduções (`functions/i18n/avisos.json`,
   gerado por `npm run i18n:avisos`).

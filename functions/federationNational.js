@@ -265,7 +265,7 @@ const ACOES = {
 };
 
 async function national(ctx, actor, data = {}) {
-  const acao = ACOES[data.action];
+  const acao = (Object.hasOwn(ACOES, data.action) ? ACOES[data.action] : undefined);
   if (!acao) falha('invalid-argument', 'Ação desconhecida.');
   return acao(ctx, actor, data, await contexto(ctx, actor, data));
 }

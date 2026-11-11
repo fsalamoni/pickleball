@@ -607,7 +607,7 @@ const EQUIPE = { roster_add: rosterAdd, roster_update: rosterUpdate, roster_remo
 const ARBITRO = { respond, report, self, crew, evaluate, evaluator_crew: evaluatorCrew, promotion_request: promotionRequest };
 
 async function referees(ctx, actor, data = {}) {
-  const fn = EQUIPE[data.action] || ARBITRO[data.action];
+  const fn = (Object.hasOwn(EQUIPE, data.action) ? EQUIPE[data.action] : undefined) || (Object.hasOwn(ARBITRO, data.action) ? ARBITRO[data.action] : undefined);
   if (!fn) falha('invalid-argument', 'Ação desconhecida.');
   const c = await contexto(ctx, actor, data);
   return fn(ctx, actor, data, c);

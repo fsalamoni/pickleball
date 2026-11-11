@@ -1956,7 +1956,7 @@ exports.duprIntegration = onCall({ region: REGION, timeoutSeconds: 300, maxInsta
     submissions_run: duprEnvios.runNow, submissions_approve: duprEnvios.approve, submissions_retry: duprEnvios.retry,
     submissions_remove: duprEnvios.remove, submissions_unblock: duprEnvios.unblock,
   };
-  const fn = acoes[data.action];
+  const fn = (Object.hasOwn(acoes, data.action) ? acoes[data.action] : undefined);
   if (!fn) throw new HttpsError('invalid-argument', 'Ação desconhecida.');
   try {
     const ctx = duprCtx();
@@ -2104,7 +2104,7 @@ const careerCtx = () => {
   try { bucket = getStorage().bucket(); } catch (err) { logger.warn('careerPublic: Storage indisponível.', err); }
   return { ...fedCtx(), bucket };
 };
-exports.career = federationCallable('career', (ctx, actor, data) => (careerPublic.ACOES[data && data.action]
+exports.career = federationCallable('career', (ctx, actor, data) => (Object.hasOwn(careerPublic.ACOES, data && data.action)
   ? careerPublic.careerPublic({ ...ctx, bucket: careerCtx().bucket }, actor, data)
   : career.career(ctx, actor, data)), { timeoutSeconds: 120, memory: '512MiB' });
 
