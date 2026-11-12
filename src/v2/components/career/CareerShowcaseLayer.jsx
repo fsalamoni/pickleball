@@ -40,7 +40,17 @@ export default function CareerShowcaseLayer({ event, saved, dirty }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.id, versao, uid]);
 
-  if (!saved || !jogado) return <p className="text-xs text-gray-500">{t('Depois de salvar um torneio já jogado, você pode mostrá-lo no seu perfil público.')}</p>;
+  // Plano em andamento (começou e o último dia não passou): só abre com a colocação salva — a tela diz.
+  const emAndamento = event?.status === 'planned' && Boolean(event?.start_date) && String(event.start_date) <= todayLocal();
+  if (!saved || !jogado) {
+    return (
+      <p className="text-xs text-gray-500">
+        {emAndamento
+          ? t('Este torneio ainda está em andamento. Salve a colocação em Resultado — ou espere o último dia passar — para mostrá-lo no seu perfil público.')
+          : t('Depois de salvar um torneio já jogado, você pode mostrá-lo no seu perfil público.')}
+      </p>
+    );
+  }
   if (!adulto) {
     return (
       <p className="text-xs text-gray-500">
@@ -70,7 +80,7 @@ export default function CareerShowcaseLayer({ event, saved, dirty }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        {publicado ? <V2Badge tone="green">{t('No seu perfil público')}</V2Badge> : <V2Badge tone="neutral">{t('Só você vê')}</V2Badge>}
+        {publicado ? <V2Badge tone="green">{t('No seu perfil público')}</V2Badge> : <V2Badge tone="neutral">{event.shared_coach_id ? t('Só você e o seu professor veem') : t('Só você vê')}</V2Badge>}
       </div>
       <p className="text-xs text-gray-600">
         {t('Vai ao perfil: o nome do torneio, a data, a cidade, a categoria, a colocação, o selo (declarado, confirmado ou oficial) e as fotos que você escolher. Nunca vão: anotações, link, custo, metas, o balanço nem a visão da dupla.')}

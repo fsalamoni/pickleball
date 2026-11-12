@@ -27,6 +27,8 @@ function Item({ item }) {
   const [motivo, setMotivo] = useState('');
   const sm = item.summary || {};
   const fb = item.feedback;
+  // O pedido já foi apagado (registro excluído) e a denúncia segue aberta: sobra o nome do torneio, sem data nem visão.
+  const apagado = item.status === 'removed';
   async function decidir(decision) {
     try {
       await acao.mutateAsync({ action: 'moderate', docId: item.id, decision, reason: motivo });
@@ -46,11 +48,16 @@ function Item({ item }) {
         {[
           t('{dono} com {dupla}', { dono: item.owner_name || '—', dupla: item.partner_name || '—' }),
           careerDateLabel(sm.start_date, sm.date_precision),
-          t(PARTNER_STATUS_LABEL[item.status] || ''),
+          PARTNER_STATUS_LABEL[item.status] ? t(PARTNER_STATUS_LABEL[item.status]) : '',
           item.reported_by === 'owner' ? t('Denunciado por quem registrou') : t('Denunciado pela dupla'),
           item.reported_at_ms ? fmtData(new Date(item.reported_at_ms), { day: 'numeric', month: 'short' }) : '',
         ].filter(Boolean).join(' · ')}
       </p>
+      {apagado && (
+        <p className="rounded-2xl border border-gray-200 p-3 text-sm text-gray-700">
+          {t('O pedido já foi apagado: não há mais confirmação nem visão para ver. Encerre a denúncia mantendo-a como sem fundamento ou registrando a retirada do pedido.')}
+        </p>
+      )}
       {item.report_note && <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700">{item.report_note}</p>}
       {fb && (
         <div className="space-y-1 text-sm text-gray-700">
@@ -63,7 +70,7 @@ function Item({ item }) {
         <V2Textarea id={`${id}-motivo`} rows={2} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
       </V2Field>
       <div className="flex flex-wrap gap-2">
-        {DECISOES.filter((d) => !d.precisaVisao || fb).map((d) => (
+        {DECISOES.filter((d) => !d.precisaVisao || (fb && !apagado)).map((d) => (
           <V2Button key={d.id} type="button" size="sm" variant={d.variant} disabled={motivo.trim().length < 5 || acao.isPending} onClick={() => decidir(d.id)}>
             {t(d.label)}
           </V2Button>

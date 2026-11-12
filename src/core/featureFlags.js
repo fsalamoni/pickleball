@@ -583,7 +583,7 @@ export const FEATURE_FLAG_META = Object.freeze({
   },
   [FEATURE_FLAG.ATHLETE_CAREER]: {
     label: tk('Carreira (torneios de fora)'),
-    description: tk('Abre /carreira: a linha do tempo da pessoa com os torneios e dias de jogo da plataforma e os torneios de fora que ela registra (resultado declarado, foto, dupla), a estante "Fora da plataforma" e a seção Carreira na Minha área. O resultado declarado nunca entra em ranking, rating nem XP. Desligada, tudo some e a regra recusa criar e editar; apagar continua valendo.'),
+    description: tk('Abre /carreira: a linha do tempo da pessoa com os torneios e dias de jogo da plataforma e os torneios de fora que ela registra (resultado declarado, foto, dupla), a estante "Fora da plataforma" e a seção Carreira na Minha área. O resultado declarado nunca entra em ranking, rating nem XP. Desligada, a regra recusa criar e editar; quem já tem registros continua abrindo /carreira para apagar e tirar do perfil público.'),
   },
   [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW]: {
     label: tk('Torneio — Minha participação e Acompanhar'),

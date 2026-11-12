@@ -236,6 +236,20 @@ describe('modo lista', () => {
     expect(events[0].id.startsWith(`${UID}_`)).toBe(true);
     expect(errors).toEqual([{ row: 2, error: expect.any(String) }]);
   });
+  it('⭐ a linha com id do dono o mantém (salvar de novo regrava o mesmo documento); id alheio é trocado', () => {
+    const linhas = [{ id: `${UID}_fixo`, year: 2023, name: 'A' }, { id: 'outro_x', year: 2023, name: 'B' }];
+    const um = listRowsToEvents(linhas, { uid: UID, today: HOJE });
+    const dois = listRowsToEvents(linhas, { uid: UID, today: HOJE });
+    expect(um.events[0].id).toBe(`${UID}_fixo`);
+    expect(dois.events[0].id).toBe(`${UID}_fixo`);
+    expect(um.events[1].id).not.toBe('outro_x');
+    expect(um.events[1].id.startsWith(`${UID}_`)).toBe(true);
+  });
+  it('linha sem nome mas com categoria ou medalha é erro; a vazia segue ignorada', () => {
+    const { events, errors } = listRowsToEvents([{ year: 2024, name: '', placement: 'champion' }, { year: 2024, name: ' ' }], { uid: UID, today: HOJE });
+    expect(events).toEqual([]);
+    expect(errors).toEqual([{ row: 0, error: expect.any(String) }]);
+  });
   it('"7 de ~20": só com a estimativa', () => {
     expect(registeredProgress([{ status: 'played' }, { status: 'planned' }], 20)).toEqual({ done: 1, estimate: 20, complete: false });
     expect(registeredProgress([], null)).toBeNull();
@@ -255,16 +269,23 @@ describe('modo lista', () => {
 
 describe('repetir o do ano passado', () => {
   it('⭐ nome (com o ano somado), organizador, cidade e federação; resultado em branco', () => {
-    const r = repeatEvent({ name: 'Open Floripa 2025', organizer: 'FCP', city: 'Floripa', state: 'SC', federation_id: 'f', federation_acronym: 'FCP', federated: true, start_date: '2025-05-10', entries: [{ placement: 'champion' }] });
+    const r = repeatEvent({ name: 'Open Floripa 2025', organizer: 'FCP', city: 'Floripa', state: 'SC', federation_id: 'f', federation_acronym: 'FCP', federated: true, start_date: '2025-05-10', entries: [{ placement: 'champion' }] }, '2026-03-01');
     expect(r).toMatchObject({ name: 'Open Floripa 2026', organizer: 'FCP', city: 'Floripa', state: 'SC', federation_id: 'f', federated: true, start_date: '2026-05-09' });
     expect(r.entries).toBeUndefined();
   });
-  it('⭐ torneio de dois ou três anos atrás vem para ESTE ano (nunca nasce no passado); do ano corrente, +1', () => {
+  it('⭐ torneio de anos atrás vem para ESTE ano; do ano corrente, +1', () => {
+    const ev = (ano) => ({ name: `Open de Gramado ${ano}`, start_date: `${ano}-12-10` });
+    expect(repeatEvent(ev(2024), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-12-08' });
+    expect(repeatEvent(ev(2023), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-12-06' });
+    expect(repeatEvent(ev(2025), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-12-09' });
+    expect(repeatEvent(ev(2026), HOJE)).toMatchObject({ name: 'Open de Gramado 2027', start_date: '2027-12-09' });
+  });
+  it('⭐ a sugestão nunca nasce no passado: a data deste ano já passou ⇒ vai para o próximo', () => {
     const ev = (ano) => ({ name: `Open de Gramado ${ano}`, start_date: `${ano}-08-10` });
-    expect(repeatEvent(ev(2024), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-08-08' });
-    expect(repeatEvent(ev(2023), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-08-06' });
-    expect(repeatEvent(ev(2025), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-08-09' });
-    expect(repeatEvent(ev(2026), HOJE)).toMatchObject({ name: 'Open de Gramado 2027', start_date: '2027-08-09' });
+    expect(repeatEvent(ev(2025), HOJE)).toMatchObject({ name: 'Open de Gramado 2027', start_date: '2027-08-08' });
+    expect(repeatEvent(ev(2023), HOJE)).toMatchObject({ name: 'Open de Gramado 2027', start_date: '2027-08-05' });
+    // Só o ano conhecido: sem data sugerida, e o nome anda uma edição.
+    expect(repeatEvent({ name: 'Copa 2025', start_date: '2025-01-01', date_precision: 'year' }, HOJE)).toMatchObject({ name: 'Copa 2026', start_date: '' });
   });
   it('⭐ o plano de um torneio do PickleRush que passou não é "repetir" (duplicaria o oficial)', () => {
     expect(repeatableEvents([{ status: 'played', start_date: '2025-01-01', origin_ref: 'tor:t1' }, { status: 'played', planned_passed: true, start_date: '2025-02-01', entries: [{}] }], HOJE)).toEqual([]);

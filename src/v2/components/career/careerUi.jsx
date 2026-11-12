@@ -2,9 +2,12 @@
  * Peças pequenas da Carreira: o grupo de botões (Simples / Duplas /
  * Equipe / Americano; Masc / Fem / Mista; a medalha), a data do torneio de fora e o selo.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
+import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
+import { CAREER_ESTIMATE_PREF } from '@/modules/career/domain/draftQueue.js';
 import { V2Badge } from '@/v2/ui/primitives';
 import { SEAL, SEAL_LABEL } from '@/modules/career/domain/timeline.js';
 import { CAREER_FORMAT, CAREER_FORMAT_LABEL, CAREER_GENDER_LABEL, PLACEMENT } from '@/modules/career/domain/careerEvent.js';
@@ -21,6 +24,19 @@ export const MEDAL_CHOICES = [
   { value: PLACEMENT.THIRD, label: '🥉', aria: tk('Bronze') },
   { value: null, label: '—', aria: tk('Sem medalha') },
 ];
+
+/**
+ * A estimativa guardada: número, `skip` ("Agora não") ou `null` (ainda não perguntou).
+ * Mora aqui (e não no modo lista) para a linha do tempo não puxar o diálogo, que é `lazy`.
+ */
+export function useCareerEstimate() {
+  const { user } = useAuth();
+  const uid = user?.uid || null;
+  const [valor, setValor] = useState(() => readViewPreference(uid, CAREER_ESTIMATE_PREF));
+  useEffect(() => { setValor(readViewPreference(uid, CAREER_ESTIMATE_PREF)); }, [uid]);
+  const gravar = (v) => { writeViewPreference(uid, CAREER_ESTIMATE_PREF, v == null ? null : String(v)); setValor(v == null ? null : String(v)); };
+  return { valor, gravar };
+}
 
 /**
  * Um grupo de botões de escolha única. `allowNone`: tocar no escolhido desmarca.

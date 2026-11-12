@@ -96,23 +96,30 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
   // em "Fora" — a colocação dele é a oficial, que já está na aba Torneios (`careerTrophies`).
   const meusQ = useMyTournaments({ enabled: carreiraOn });
   const meus = meusQ.isSuccess ? meusQ.data : undefined;
-  const fora = useMemo(() => {
+  const foraTodos = useMemo(() => {
     if (!carreiraOn || !foraQ.isSuccess) return [];
     return careerTrophies(foraQ.data, { myTournaments: meus, me: { uid, name: nome || t('Você') } });
   }, [carreiraOn, foraQ.isSuccess, foraQ.data, meus, uid, nome]);
+  // Sem os torneios da plataforma em mãos não dá para saber se o ligado ("É este") é
+  // oficial: ele fica de fora (e é dito), em vez de aparecer como Declarado E duplicado.
+  const fora = useMemo(() => (meus ? foraTodos : foraTodos.filter((tr) => !tr.platformTournamentId)), [foraTodos, meus]);
+  const ligadosSemConferir = foraTodos.length - fora.length;
   const foraConta = careerTrophyCounts(fora);
   const [aba, setAba] = useState(abaInicial);
   const [aberto, setAberto] = useState(null);
+  const [expandido, setExpandido] = useState(false);
 
-  if (q.isPending || (carreiraOn && foraQ.isPending)) return <V2Skeleton lines={4} />;
+  if (q.isPending || (carreiraOn && (foraQ.isPending || meusQ.isPending))) return <V2Skeleton lines={4} />;
   if (q.isError) {
     return <V2ErrorState inline title={t('Não carregou os troféus')} description={t('Eles continuam lá — a conexão é que falhou.')} onRetry={() => q.refetch()} />;
   }
 
   const ehFora = aba === ABA_FORA && carreiraOn;
   const lista = ehFora ? fora : grupo.torneios;
-  const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0 && fora.length === 0 && !foraQ.isError;
+  const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0 && fora.length === 0 && !foraQ.isError && ligadosSemConferir === 0;
   const quem = mine ? t('Você') : (nome || t('Esta pessoa'));
+  const recolhido = compacto && !(expandido && !mine);
+  const registrarFora = carreiraOn ? <HomeAction to="/carreira?registrar=1">{t('Registrar torneio de fora')}</HomeAction> : null;
 
   return (
     <div className="space-y-4">
@@ -122,7 +129,7 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
       {vazioTotal ? (
         <HomeEmpty
           icon={Medal}
-          actions={mine ? <HomeAction to="/torneios">{t('Ver torneios abertos')}</HomeAction> : null}
+          actions={mine ? <><HomeAction to="/torneios">{t('Ver torneios abertos')}</HomeAction>{registrarFora}</> : null}
         >
           {mine
             ? t('Sua estante ainda está vazia. O primeiro pódio num torneio aparece aqui, com o cartão pronto para compartilhar.')
@@ -144,17 +151,31 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
           {ehFora && (
             <p className="text-xs text-gray-500">{t('Declarados por você na Carreira. Não entram em ranking, rating nem XP.')}</p>
           )}
+          {ehFora && ligadosSemConferir > 0 && (
+            <V2ErrorState
+              inline
+              title={t('Não deu para conferir os torneios da plataforma')}
+              description={t('Os pódios ligados a um torneio daqui ficaram de fora até a conexão voltar.')}
+              onRetry={() => meusQ.refetch()}
+            />
+          )}
           {ehFora && foraQ.isError ? (
             <V2ErrorState inline title={t('Não carregaram os torneios de fora')} onRetry={() => foraQ.refetch()} />
           ) : lista.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              {ehFora
-                ? t('Nenhum pódio de fora registrado ainda. Registre um torneio na Carreira.')
-                : t('Nenhum pódio de torneio ainda.')}
-            </p>
+            ehFora ? (
+              // Com pódio ligado sem conferir, o vazio não é afirmado: o aviso acima já diz.
+              ligadosSemConferir === 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500">{t('Você ainda não registrou pódio de torneio de fora.')}</p>
+                  {registrarFora}
+                </div>
+              )
+            ) : (
+              <p className="text-sm text-gray-500">{t('Nenhum pódio de torneio ainda.')}</p>
+            )
           ) : (
-            <ul className={cn('grid gap-3', compacto ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
-              {(compacto ? lista.slice(0, 4) : lista).map((tr) => (
+            <ul id={`estante-${uid}`} className={cn('grid gap-3', compacto ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
+              {(recolhido ? lista.slice(0, 4) : lista).map((tr) => (
                 <TrofeuCard key={tr.id} t={tr} onOpen={() => setAberto(tr)}>
                   {tr.declared && <V2Badge tone="neutral">{t('Declarado')}</V2Badge>}
                   {!mine && user?.uid !== uid && (
@@ -175,7 +196,14 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
             </ul>
           )}
           {compacto && lista.length > 4 && (
-            <Link to="/perfil?secao=trofeus" className="text-sm font-semibold text-ink underline-offset-2 hover:underline">Ver todos os {lista.length}</Link>
+            mine ? (
+              <Link to="/perfil?secao=trofeus" className="text-sm font-semibold text-ink underline-offset-2 hover:underline">{t('Ver todos os {n}', { n: lista.length })}</Link>
+            ) : (
+              // Na estante de OUTRA pessoa não há página para ir: abre aqui mesmo (o botão fica, e o foco com ele).
+              <V2Button type="button" size="sm" variant="ghost" aria-expanded={expandido} aria-controls={`estante-${uid}`} onClick={() => setExpandido((v) => !v)}>
+                {expandido ? t('Mostrar menos') : t('Ver todos os {n}', { n: lista.length })}
+              </V2Button>
+            )
           )}
         </>
       )}

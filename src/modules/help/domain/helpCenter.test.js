@@ -479,6 +479,18 @@ describe('helpLinkFor', () => {
     expect(helpForRoute(de)).toBeTruthy();
   });
 
+  it('em /carreira a ajuda oferece planejar logo depois de registrar; sem a flag, nada', () => {
+    const ids = helpCatalog({ athlete_career: true }).forRoute('/carreira').articles.map((a) => a.id);
+    expect(ids.slice(0, 2)).toEqual(['carreira-registrar', 'carreira-planejar']);
+    expect(helpCatalog({}).forRoute('/carreira')?.articles.some((a) => a.id.startsWith('carreira-')) ?? false).toBe(false);
+  });
+
+  it('🔴 a ajuda da Carreira não promete o que a tela não cumpre (privacidade e XP de menor)', () => {
+    const texto = JSON.stringify(helpCatalog({ athlete_career: true, gamification_v2: true }).all().filter((a) => a.id.startsWith('carreira-')));
+    expect(texto).not.toContain('Ninguém mais lê');
+    expect(texto).toContain('só para maiores de 18 anos');
+  });
+
   it('a validade do convite da carreira escrita na ajuda é a do código (INVITE_TTL_DAYS)', async () => {
     const { INVITE_TTL_DAYS } = await import('../../career/domain/careerPartner.js');
     const linhas = ['helpCenter.js', 'guias.js', 'pontosDeDica.js']

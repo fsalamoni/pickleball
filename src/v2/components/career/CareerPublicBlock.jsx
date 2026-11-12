@@ -17,7 +17,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCareerPublic } from '@/modules/career/hooks/useCareer';
 import { entryLabel, placementText } from '@/modules/career/domain/careerEvent.js';
 import { showcasePartnerships, showcasePodium, showcaseTrophyContextId } from '@/modules/career/domain/careerPublic.js';
-import { V2Avatar, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { Link } from 'react-router-dom';
+import { V2Avatar, V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import CongratulateButton from '@/v2/components/trophies/CongratulateButton';
 import { SealBadge, careerDateLabel } from './careerUi';
 import { t, tn } from '@/core/i18n';
@@ -26,7 +27,8 @@ import { t, tn } from '@/core/i18n';
 export default function CareerPublicBlock({ uid, nome = '' }) {
   const { user } = useAuth();
   const q = useCareerPublic(uid);
-  if (q.isPending) return <V2Surface className="mt-8"><V2Skeleton lines={3} /></V2Surface>;
+  // Sem esqueleto: quase nenhum perfil tem vitrine, e o bloco piscando empurrava o resto da página.
+  if (q.isPending) return null;
   // Perfil oculto pela moderação: a regra fecha a vitrine. Não é falha de conexão, não há o que tentar de novo.
   if (q.error?.code === 'permission-denied') return null;
   if (q.isError) {
@@ -40,7 +42,10 @@ export default function CareerPublicBlock({ uid, nome = '' }) {
   return (
     <V2Surface as="section" className="mt-8 space-y-4" aria-labelledby="carreira-publica-titulo" data-dica="carreira-publica">
       <div>
-        <h2 id="carreira-publica-titulo" className="inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Route className="h-5 w-5" aria-hidden="true" /> {t('Carreira')}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="carreira-publica-titulo" className="inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Route className="h-5 w-5" aria-hidden="true" /> {t('Carreira')}</h2>
+          {user?.uid === uid && <V2Button asChild size="sm" variant="ghost"><Link to="/carreira">{t('Gerir na Carreira')}</Link></V2Button>}
+        </div>
         <p className="mt-1 text-xs text-gray-500">{t('Torneios de fora da plataforma que {quem} escolheu mostrar. O selo diz quem conferiu; o declarado não entra em ranking, rating nem XP.', { quem: nome || t('esta pessoa') })}</p>
       </div>
 

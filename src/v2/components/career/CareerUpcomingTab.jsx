@@ -8,7 +8,7 @@
  *    meu plano" cria o planejado já preenchido.
  * Cada fonte falha sozinha e a tela diz qual — nunca "não há torneio".
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CalendarClock, Plus } from 'lucide-react';
@@ -29,6 +29,8 @@ import { careerDateLabel } from './careerUi';
 import { t, tn } from '@/core/i18n';
 
 const lugar = (x) => [x.city, x.state].filter(Boolean).join(' - ');
+// Lista vazia de identidade estável: um `[]` novo a cada render desfaria o `useMemo` da descoberta.
+const VAZIO = [];
 
 function Prazo({ event }) {
   const p = deadlineInfo(event);
@@ -57,6 +59,8 @@ function ItemDoPlano({ item, save, onOpenEvent }) {
   }
   const ev = item.event;
   const grava = async (patch, ok) => {
+    // O seletor não é desligado enquanto salva (perderia o foco no teclado): a mudança concorrente é ignorada.
+    if (busy) return;
     setBusy(true);
     try {
       const { saved } = await save({ ...ev, ...patch });
@@ -67,7 +71,6 @@ function ItemDoPlano({ item, save, onOpenEvent }) {
       setBusy(false);
     }
   };
-  const p = deadlineInfo(ev);
   const ics = careerEventIcs(ev);
   return (
     <li className="space-y-2 rounded-2xl border border-gray-100 p-3">
@@ -84,12 +87,17 @@ function ItemDoPlano({ item, save, onOpenEvent }) {
           aria-label={t('Prioridade de {torneio}', { torneio: ev.name })}
           className="w-auto"
           value={ev.priority || 'casual'}
-          disabled={busy}
+          aria-busy={busy}
           onChange={(e) => grava({ priority: e.target.value }, t('Prioridade salva.'))}
         >
           {CAREER_PRIORITY.map((v) => <option key={v} value={v}>{t(PRIORITY_LABEL[v])}</option>)}
         </V2Select>
-        {p && !p.closed && !ev.registered && (
+        {/* Sem depender do prazo de inscrição (campo opcional): quem se inscreveu marca — e desmarca — aqui. */}
+        {ev.registered ? (
+          <V2Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => grava({ registered: false }, t('Inscrição desmarcada.'))}>
+            {t('Desmarcar inscrição')}
+          </V2Button>
+        ) : (
           <V2Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => grava({ registered: true }, t('Marcado como inscrito.'))}>
             {t('Já me inscrevi')}
           </V2Button>
@@ -105,15 +113,17 @@ function Descoberta({ events, myTournaments, save, onOpenEvent }) {
   const publicos = usePublicTournaments();
   const agenda = useFederationAgendaForMe({ enabled: fedOn });
   const [busy, setBusy] = useState('');
-  const itens = buildDiscovery({
-    federationEvents: fedOn ? agenda.events : [],
-    tournaments: publicos.isSuccess ? publicos.data : [],
-    events,
-    myTournaments,
-    federations: agenda.federations,
-  });
+  // Identidades estáveis: o hook devolve `[]` e o mapa das federações novos a cada render.
+  const fedEvents = !fedOn ? VAZIO : agenda.events?.length ? agenda.events : agenda.events && VAZIO;
+  const torneios = publicos.isSuccess ? publicos.data : VAZIO;
+  const fedsKey = JSON.stringify(agenda.federations || {});
+  // Memo: sem ele o filtro por região (distância cidade a cidade) rodava a cada render da aba.
+  const itens = useMemo(() => buildDiscovery({
+    federationEvents: fedEvents, tournaments: torneios, events, myTournaments, federations: JSON.parse(fedsKey),
+  }), [fedEvents, torneios, events, myTournaments, fedsKey]);
   const regional = useRegionalList(itens, (x) => ({ city: x.city, state: x.state }));
-  const carregando = publicos.isPending || (fedOn && agenda.isPending);
+  // Agenda que FALHOU não segura o esqueleto: os torneios do PickleRush aparecem e o aviso diz o que faltou.
+  const carregando = publicos.isPending || (fedOn && agenda.isPending && !agenda.isError);
   const faltou = [publicos.isError && t('os torneios do PickleRush'), fedOn && (agenda.isError || agenda.incompleto) && t('a agenda das suas federações')].filter(Boolean);
 
   async function porNoPlano(item) {

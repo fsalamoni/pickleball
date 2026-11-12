@@ -89,6 +89,19 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
   (cada salvar invalidava até 12 rankings de federação).
 - `useCareerTimeline` devolve `isPaused` (consultas pausadas por falta de conexão).
 
+## Telas (pente fino, etapa 2, 2026-11)
+
+- A ficha confirma descartar/excluir/tirar foto, valida por campo
+  (`conferirFicha`) e o "Como foi?" responde "Joguei" ou "Não fui"
+  (`status: 'cancelled'`). Detalhe em `docs/54` §4.15.
+- Quem AFIRMA "não existe mais" a partir da URL (`?evento=`, `?dupla=`) espera
+  `eventsFetching`/`partnersFetching` de `useCareerTimeline`: cache velho não
+  decide.
+- Com a flag desligada, `/carreira` vira a página de apagar registros e tirar da
+  vitrine (`CarreiraDesligada`, em `V2Career.jsx`).
+- Confirmação no próprio lugar: `ConfirmarInline` (em `CareerPartnerUi.jsx`);
+  em diálogo: o `ConfirmDialog` do projeto.
+
 ## O que não pode regredir
 
 1. **Declarado nunca pontua**: nenhum motor de ranking, rating ou federação

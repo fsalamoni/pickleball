@@ -461,7 +461,8 @@ export function emptyListRow(year = Number(todayLocal().slice(0, 4))) {
 
 /**
  * Linhas do modo lista → eventos (só o ano é conhecido: `date_precision:
- * 'year'`, data 1º de janeiro, nunca no futuro). Linha sem nome é ignorada.
+ * 'year'`, data 1º de janeiro, nunca no futuro). Linha vazia é ignorada; sem
+ * nome mas com categoria ou medalha, é erro.
  * `{ events, errors }` — `errors` diz QUAL linha ficou de fora e por quê.
  */
 export function listRowsToEvents(rows, { uid, today = todayLocal(), nowMs = Date.now(), rand = Math.random } = {}) {
@@ -469,7 +470,11 @@ export function listRowsToEvents(rows, { uid, today = todayLocal(), nowMs = Date
   const events = [];
   const errors = [];
   (rows || []).forEach((r, i) => {
-    if (!txt(r?.name, CAREER_LIMITS.name)) return;
+    if (!txt(r?.name, CAREER_LIMITS.name)) {
+      // Linha com categoria ou medalha e sem nome foi começada: dizer, em vez de ignorar calada.
+      if (r?.gender || r?.placement) errors.push({ row: i, error: t('Falta o nome do torneio.') });
+      return;
+    }
     const ano = Math.round(Number(r.year));
     if (!Number.isFinite(ano) || ano < 1990 || ano > anoAtual) {
       errors.push({ row: i, error: t('Ano entre 1990 e {ano}.', { ano: anoAtual }) });
@@ -483,7 +488,9 @@ export function listRowsToEvents(rows, { uid, today = todayLocal(), nowMs = Date
       entries: [{ format: r.format, gender: r.gender, placement: r.placement }],
     }, { uid, today, nowMs });
     if (!valid) { errors.push({ row: i, error }); return; }
-    events.push({ id: newCareerEventId(uid, nowMs + i, rand()), ...value });
+    // A linha que já tem id (dado pela tela ao criá-la) o mantém: salvar de novo regrava o MESMO documento.
+    const id = uid && typeof r.id === 'string' && r.id.startsWith(`${uid}_`) ? r.id : newCareerEventId(uid, nowMs + i, rand());
+    events.push({ id, ...value });
   });
   return { events, errors };
 }
@@ -502,16 +509,20 @@ export function registeredProgress(events, estimate) {
 /**
  * O rascunho de "repetir o torneio do ano passado": nome (com o ano trazido
  * para a edição seguinte, se o nome tiver ano), organizador, cidade e
- * federação. A data sugerida mantém o dia da semana (364 dias por ano); o
- * torneio de dois ou mais anos atrás anda os anos todos — o plano nunca nasce
- * no passado. As categorias e o resultado ficam em branco.
+ * federação. A data sugerida mantém o dia da semana (364 dias por edição) e
+ * anda quantas edições forem precisas para não nascer no passado: o torneio de
+ * anos atrás vem para este ano e, se a data deste ano já passou, para o
+ * próximo. As categorias e o resultado ficam em branco.
  */
 export function repeatEvent(previous, today = todayLocal()) {
   if (!previous) return null;
   const comData = isISODate(previous.start_date);
-  const n = comData ? Math.max(1, Number(today.slice(0, 4)) - Number(previous.start_date.slice(0, 4))) : 1;
+  let n = comData ? Math.max(1, Number(today.slice(0, 4)) - Number(previous.start_date.slice(0, 4))) : 1;
+  const comDia = comData && previous.date_precision !== 'year';
+  // 20 edições é teto de segurança (data absurda não trava a tela).
+  while (comDia && n < 20 && addDays(previous.start_date, 364 * n) < today) n += 1;
   const nome = String(previous.name || '').replace(/\b(19|20)\d{2}\b/, (a) => String(Number(a) + n));
-  const sugestao = comData && previous.date_precision !== 'year' ? addDays(previous.start_date, 364 * n) : '';
+  const sugestao = comDia ? addDays(previous.start_date, 364 * n) : '';
   return {
     name: nome,
     organizer: previous.organizer || '',

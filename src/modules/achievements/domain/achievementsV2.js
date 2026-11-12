@@ -77,7 +77,8 @@ export const ACHIEVEMENT_FAMILY_META = Object.freeze({
     description: tk('Clubes, ajudar novatos, mentorear.'),
   },
   [ACHIEVEMENT_FAMILY.MY_CAREER]: {
-    name: tk('Carreira'),
+    // Nome próprio: a família `career` (a trajetória na plataforma) já se chama "Carreira".
+    name: tk('Torneios de fora'),
     color: 'teal',
     icon: '📒',
     description: tk('Registrar, completar e refletir os torneios de fora. O resultado declarado não conta.'),

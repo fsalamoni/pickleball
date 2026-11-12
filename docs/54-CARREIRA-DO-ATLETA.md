@@ -812,6 +812,78 @@ O que mudou de comportamento para quem usa (o detalhe do servidor está em
 - `useCareerTimeline` mora em `hooks/useCareerTimeline.js`; `useCareer.js` não
   o reexporta (seria ciclo de import — guarda `fronteirasDeModulos`).
 
+### 4.15 Pente fino de 2026-11-11 (Etapa 2: telas, toque, teclado e idiomas)
+
+Zero banco, zero regra, zero função. O que mudou para quem usa (onde este
+texto e as seções anteriores divergirem, vale este):
+
+**Ficha (`CareerEventSheet`)**
+- "Alterações não salvas" compara com o que está GRAVADO; fechar com alteração,
+  excluir e tirar foto perguntam num `ConfirmDialog` (um toque não apaga).
+- O Salvar fica preso embaixo (alcance do polegar) e o Enter salva. Durante o
+  envio de uma foto o Salvar espera.
+- Validação por campo (`conferirFicha`): o primeiro campo errado recebe o foco e
+  a mensagem; o link só abre se for `https` válido.
+- **"Como foi?" tem duas respostas: "Joguei" e "Não fui".** "Não fui" grava
+  `status: 'cancelled'` (o enum que já existia); o plano que passou não salva
+  sem resposta. Num torneio "Não fui" não há colocação nem foto, não dá para
+  pedir confirmação da dupla, e a resposta pode ser desfeita na própria ficha.
+- Mudar a data refaz o status na hora, mas só com a data inteira e dentro de
+  `careerDateBounds()`; o torneio já gravado como jogado que passeou pelo
+  futuro não volta perguntando "Como foi?".
+- Dupla ligada a uma conta mostra o nome só para leitura.
+- Com `shared_coach_id`, os textos deixam de dizer "só você vê": a regra entrega
+  o documento do torneio ao professor com vínculo ativo (anotações e fotos
+  inclusive). Voltar a prometer "só você" pede mover `notes`/`photos` para um
+  subdocumento privado: decisão do dono (toca o banco), fora desta etapa.
+
+**Página, linha do tempo, registro rápido e modo lista**
+- Com a flag desligada, quem tem registros vê uma página só para apagar os
+  registros e tirar do perfil o que estava na vitrine (ler e apagar seguem
+  valendo na regra); quem não tem nada vai para a Minha área.
+- `?evento=` e `?dupla=` de algo que não existe mais são ditos e limpos da URL,
+  **só com dado fresco** (`eventsFetching`/`partnersFetching` de
+  `useCareerTimeline`): o cache de outra tela não decide. A ficha aberta a
+  partir do registro rápido toma o lugar dele no histórico (o Voltar não reabre
+  o registro em branco).
+- Modo lista: as linhas ficam guardadas no navegador (`carreira:lista`, por
+  pessoa) até salvar, com ids estáveis: tentar de novo regrava as mesmas, sem
+  duplicar. Linha sem nome é apontada, não descartada.
+- "Repetir" não cria torneio jogado com data no futuro nem plano no passado.
+- Rascunhos do aparelho aparecem como botões de 44 px que abrem a ficha.
+
+**Dupla, convite e moderação**
+- Apagar pedido, cancelar convite e mandar link novo pedem um segundo toque no
+  próprio lugar (`ConfirmarInline`); a recusa do servidor fica dita no item e
+  num aviso.
+- O link do convite aparece na tela com "Copiar link" (o WhatsApp é uma âncora,
+  não `window.open`).
+- `/carreira/convite/:token`: "Tentar de novo" depois de queda de rede; recusa
+  definitiva trava. Se uma tentativa caiu sem resposta e a seguinte é recusada,
+  a tela diz que o aceite pode já ter passado e leva à Carreira (o convite é de
+  uso único). A tela diz com QUAL conta a pessoa entrou e oferece trocar.
+- Torneio "Não fui" não oferece pedir confirmação nem convidar.
+
+**Próximos, Metas e Ranking**
+- "Já me inscrevi" não depende do prazo de inscrição e ganhou "Desmarcar
+  inscrição". A agenda das federações que falhou não segura o esqueleto.
+- Metas: editar (o tipo não muda), estado em palavras (Alcançada, Concluída,
+  Deixada de lado, Prazo encerrado), aviso do torneio lançado só com o ano,
+  excluir com confirmação, rating DUPR com três casas e o separador do idioma.
+- Ranking: datas no eixo, "Anotar nova posição" na série, apagar com confirmação.
+
+**Ligações**
+- A família de conquistas `my_career` chama-se **"Torneios de fora"** (a família
+  `career`, da trajetória na plataforma, já se chama "Carreira").
+- Estante: pódio de fora ligado a um torneio daqui fica de fora (e é dito)
+  enquanto os torneios da plataforma não carregam; "Ver todos" abre ali mesmo
+  no perfil de outra pessoa; parabéns de pódio de fora leva a
+  `/carreira?aba=conquistas`.
+- Exportação da conta: o bloco `career` traz sete listas (`events`, `partners`,
+  `partner_reports`, `partner_invites`, `public`, `ranks`, `photos`) e
+  `not_included` dizendo o que fica só com a moderação.
+- Idiomas: todo texto novo em en/es no catálogo da carreira.
+
 ## 6. O que não pode regredir
 
 1. **Declarado nunca pontua**: nenhum motor de ranking, rating ou federação

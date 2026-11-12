@@ -7,6 +7,7 @@
 import React from 'react';
 import { CalendarClock, CircleHelp, Medal } from 'lucide-react';
 import { useCareerEvents } from '@/modules/career/hooks/useCareer';
+import { awaitsResult } from '@/modules/career/domain/careerEvent.js';
 import { countdownText, deadlineInfo, mainCountdown, upcomingPlan } from '@/modules/career/domain/careerUpcoming.js';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from '@/v2/components/home/personal/HomeSection';
@@ -24,7 +25,8 @@ export default function HomeCareerCard() {
   if (q.isError) return moldura(<V2ErrorState inline title={t('A sua carreira não carregou')} onRetry={() => q.refetch()} />);
   const eventos = q.data || [];
   const principal = mainCountdown(eventos);
-  const comoFoi = eventos.filter((e) => e.planned_passed && !(e.entries || []).some((x) => x.placement)).slice(0, 2);
+  // A MESMA pergunta da linha do tempo e dos próximos (resultado = colocação, posição ou pontos).
+  const comoFoi = eventos.filter(awaitsResult).slice(0, 2);
   const plano = upcomingPlan({ events: eventos }).filter((i) => i.event.id !== principal?.event.id).slice(0, 3);
   if (!principal && !comoFoi.length && !plano.length) {
     return moldura(

@@ -83,6 +83,14 @@ de pontos nova. O resultado declarado continua sem pontuar
 digitava um nome de campeão). O cartão só nasce do pódio REAL.
 "Pickleholics" nos textos de compartilhamento virou "PickleRush".
 
+### Estante e a Carreira (2026-11-11)
+
+- O pódio de fora ligado a um torneio da plataforma ("É este") só é mostrado
+  com os torneios da pessoa carregados; sem eles fica de fora e a estante diz
+  que não deu para conferir (antes aparecia como Declarado e duplicado).
+- No perfil de outra pessoa, "Ver todos os N" abre a lista ali mesmo.
+- Parabéns de pódio de fora (`trofeu:ext:…`) leva a `/carreira?aba=conquistas`.
+
 ## 5. O que não pode regredir
 
 1. Pódio nunca de categoria incompleta.
