@@ -27,6 +27,7 @@ import LeaguesGate from '@/v2/components/leagues/LeaguesGate';
 import DivisionFields, { suggestedDivisions, emptyDivision } from '@/v2/components/leagues/DivisionFields';
 import SeasonFields from '@/v2/components/leagues/SeasonFields';
 import PointsFields from '@/v2/components/leagues/PointsFields';
+import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
 import { divisionSummary } from '@/v2/components/leagues/leagueUi';
 
 const PASSOS = [
@@ -80,6 +81,7 @@ function Criar() {
   const [divisoes, setDivisoes] = useState([emptyDivision(1)]);
   const [dados, setDados] = useState({ name: '', description: '', city: profile?.city || '', state: profile?.state || '', location: '', visibility: 'public', self_registration: true });
   const duplas = formatMeta(format)?.players === 2;
+  const ladder = isLadderFormat(format);
 
   const problema = (() => {
     if (passo === 0 && !org) return t('Escolha em nome de quem a liga é criada.');
@@ -217,8 +219,8 @@ function Criar() {
         {passo === 2 && (
           <section className="space-y-6">
             <V2SectionHeader eyebrow={t('Passo 3')} title={t('Temporada e pontuação')} />
-            <SeasonFields value={season} onChange={setSeason} />
-            <PointsFields value={standings} onChange={setStandings} />
+            <SeasonFields value={season} onChange={setSeason} ladder={ladder} />
+            <PointsFields value={standings} onChange={setStandings} ladder={ladder} />
           </section>
         )}
 

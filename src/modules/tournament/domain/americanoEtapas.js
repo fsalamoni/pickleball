@@ -56,6 +56,7 @@ import {
   normalizeEtapaCount, normalizeEtapaGroupSize,
 } from './americanoEtapasConfig.js';
 import { t, tn, fmtLista } from '@/core/i18n';
+import { americanoFecha, americanoGroupSizes } from '@/core/domain/americanoGroups.js';
 
 export const AMERICANO_ETAPAS = TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
 
@@ -64,10 +65,8 @@ export {
   normalizeEtapaCount, normalizeEtapaGroupSize,
 };
 
-/** O Americano fecha com este número de atletas? (N ≡ 0 ou 1 mod 4, N ≥ 4) */
-export function americanoFecha(n) {
-  return n >= 4 && (n % 4 === 0 || n % 4 === 1);
-}
+/** O Americano fecha com este número de atletas? (N ≡ 0 ou 1 mod 4, N ≥ 4) — do núcleo. */
+export { americanoFecha };
 
 /** Jogos de cada um num grupo de `tamanho` (cada dupla uma vez por turno). */
 export function jogosNoGrupo(tamanho, legs = 1) {
@@ -78,37 +77,15 @@ export function jogosNoGrupo(tamanho, legs = 1) {
  * Os tamanhos dos grupos de uma etapa para `n` atletas, o mais perto possível
  * do tamanho escolhido, só com tamanhos que fecham o Americano. Maiores
  * primeiro (Grupo A é o maior). `null` quando não há divisão possível
- * (6, 7 e 11 atletas com grupos de 4 ou 5, por exemplo).
+ * (6, 7 e 11 atletas com grupos de 4 ou 5, por exemplo). A conta é a do
+ * núcleo (`core/domain/americanoGroups.js`), a mesma da escada da liga.
  *
  * @param {number} n
  * @param {number} [alvo]
  * @returns {number[]|null}
  */
 export function etapaGroupSizes(n, alvo = TAMANHO_PADRAO) {
-  const total = Math.floor(Number(n));
-  if (!Number.isFinite(total) || total < 4) return null;
-  const meta = normalizeEtapaGroupSize(alvo);
-  const candidatos = [];
-  for (let s = 4; s <= 2 * meta + 1; s += 1) if (americanoFecha(s)) candidatos.push(s);
-
-  // Programação dinâmica: menor soma de (tamanho − alvo)²; no empate, menos
-  // grupos (cada grupo a menos é uma quadra a menos ocupada ao mesmo tempo).
-  const melhor = new Array(total + 1).fill(null);
-  melhor[0] = { custo: 0, grupos: [] };
-  for (let k = 1; k <= total; k += 1) {
-    candidatos.forEach((s) => {
-      if (s > k || !melhor[k - s]) return;
-      const anterior = melhor[k - s];
-      const custo = anterior.custo + (s - meta) ** 2;
-      const grupos = [...anterior.grupos, s];
-      const atual = melhor[k];
-      if (!atual || custo < atual.custo || (custo === atual.custo && grupos.length < atual.grupos.length)) {
-        melhor[k] = { custo, grupos };
-      }
-    });
-  }
-  const r = melhor[total];
-  return r ? r.grupos.slice().sort((a, b) => b - a) : null;
+  return americanoGroupSizes(n, normalizeEtapaGroupSize(alvo));
 }
 
 /** Os números de atletas mais próximos (abaixo e acima) que fecham os grupos. */

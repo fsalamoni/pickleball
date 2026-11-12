@@ -25,13 +25,18 @@ const iconBtn = 'inline-flex h-8 w-8 items-center justify-center rounded-full te
  *   defaultOrder?: string[],
  *   label?: string,
  *   className?: string,
- * }} props
+ *   allowedKeys?: string[],
+ * }} props `allowedKeys` limita os critérios (a escada da liga não tem
+ *   confronto direto); com ele as ordens prontas, que o usam, não aparecem.
  */
-export default function TiebreakOrderEditor({ value, onChange, defaultOrder = DEFAULT_TIEBREAK_ORDER, label, className }) {
-  const padrao = normalizeTiebreakOrder(defaultOrder);
-  const ordem = Array.isArray(value) && value.length ? normalizeTiebreakOrder(value) : padrao;
-  const porChave = new Map(TIEBREAK_CRITERIA.map((c) => [c.key, c]));
-  const foraDaOrdem = TIEBREAK_CRITERIA.filter((c) => !ordem.includes(c.key));
+export default function TiebreakOrderEditor({ value, onChange, defaultOrder = DEFAULT_TIEBREAK_ORDER, label, className, allowedKeys }) {
+  const vale = (k) => !allowedKeys || allowedKeys.includes(k);
+  const criterios = TIEBREAK_CRITERIA.filter((c) => vale(c.key));
+  const padrao = normalizeTiebreakOrder(defaultOrder).filter(vale);
+  const escolhida = Array.isArray(value) && value.length ? normalizeTiebreakOrder(value).filter(vale) : [];
+  const ordem = escolhida.length ? escolhida : padrao;
+  const porChave = new Map(criterios.map((c) => [c.key, c]));
+  const foraDaOrdem = criterios.filter((c) => !ordem.includes(c.key));
   const ehPadrao = igual(ordem, padrao);
 
   const mover = (i, delta) => {
@@ -56,7 +61,7 @@ export default function TiebreakOrderEditor({ value, onChange, defaultOrder = DE
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label={t('Ordens prontas')}>
-        {TIEBREAK_PRESETS.map((p) => {
+        {(allowedKeys ? [] : TIEBREAK_PRESETS).map((p) => {
           const ativo = igual(ordem, normalizeTiebreakOrder(p.order));
           return (
             <button key={p.id} type="button" title={p.help} aria-pressed={ativo} onClick={() => onChange([...p.order])}

@@ -52,10 +52,11 @@ com paridade). **Disponíveis no PR 1:**
 | `divisional_pairs` — Duplas por divisão (padrão DUPR) | dupla fixa | pontos corridos dentro da divisão, uma rodada por data |
 | `flex_pairs` — Liga flexível (DUPR Flex) | dupla fixa | idem, mas cada rodada tem prazo e as duplas combinam dia e local |
 | `divisional_singles` — Simples por divisão | atleta | pontos corridos em simples |
+| `ladder_individual` — Escada individual (King of the Court) | atleta | por SESSÃO: quadras de 4 ou 5 pela posição, um Americano em cada; o 1º sobe e o último desce (§10) |
+| `ladder_pairs` — Escada de duplas | dupla fixa | por SESSÃO: grupos de 3 a 5 duplas pela posição, todos contra todos no grupo; a 1ª sobe e a última desce (§10) |
 
 **Desenhados e marcados "Em breve"** (aparecem no passo 2 da criação, desabilitados):
-escada de duplas, escada individual (sobe e desce / King of the Court), equipes
-4×4 mista com DreamBreaker (MiLP), equipes 3×3 (MiLP v3) e equipes 4×4 do mesmo
+equipes 4×4 mista com DreamBreaker (MiLP), equipes 3×3 (MiLP v3) e equipes 4×4 do mesmo
 gênero (v4). As divisões por soma do DUPR da equipe (MiLP: 12–22, v3: 9–15) já
 estão no domínio (`MILP_DIVISIONS`, regra `dupr_sum`).
 
@@ -73,6 +74,7 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 | `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, bracket, label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
 | `…/entries/{id}` | `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`/`withdrawn`), `override`, `added_by` |
 | `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by` |
+| `…/matches/{id}` na escada | `phase: 'ladder'`, `session` (nº da sessão), `group` (quadra, a partir de 0), `round` (a volta DENTRO da quadra), `team_a[]`/`team_b[]` (ids de inscrição; na escada individual, a dupla da vez), `side_a`/`side_b` nulos; `scheduled_date` nulo (a data sai do calendário da sessão) |
 
 - **Classificação e datas das rodadas são DERIVADAS**, nunca gravadas:
   `computeLeagueStandings(entries, matches, standings)` e `roundCalendar(season, n)`.
@@ -105,7 +107,8 @@ chave própria. Ações:
 | `register` | o atleta | liga aberta, `self_registration`, divisão não lotada, faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso |
 | `withdraw` | o próprio atleta ou quem gere | sem jogo gerado ⇒ apaga; com jogo ⇒ `withdrawn` (os placares seguem valendo para os adversários) |
 | `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **fora da regra da divisão**: como no torneio, a organização vê o motivo como aviso e inscreve assim mesmo — o servidor marca `override: true` sozinho quando não cabe (§9.3) |
-| `schedule` | quem gere | gera os jogos da divisão em pontos corridos (`roundRobin`, método do círculo; folga quando é ímpar); refazer só sem placar lançado; com a liga aberta, começa a temporada |
+| `session` | quem gere | só escada: gera a próxima sessão com quem veio (`present`, ids de inscrição ativos; ausente = todos), na ordem da escada; número que não fecha é recusado; sessão sem nenhum placar é REFEITA, com algum placar só depois de fechada; avisa cada atleta da quadra; com a liga aberta, começa a temporada |
+| `schedule` | quem gere | gera os jogos da divisão em pontos corridos (recusado na escada) (`roundRobin`, método do círculo; folga quando é ímpar); refazer só sem placar lançado; com a liga aberta, começa a temporada |
 | `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; `clear` apaga |
 | `staff` | quem gere | até 10 organizadores; o criador não sai |
 
@@ -116,7 +119,7 @@ lista `admins`.
 
 Grava `audit_logs` na criação, na troca de status, ao gerar rodadas, ao lançar
 ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
-`league_schedule`, `league_result`, `league_result_cleared`, `league_staff`).
+`league_schedule`, `league_session`, `league_result`, `league_result_cleared`, `league_staff`).
 
 ## 6. Telas
 
@@ -124,7 +127,7 @@ ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
 |---|---|
 | `/ligas` | `V2Leagues` — "Abertas a todos" e "Minhas ligas"; "Criar liga" e "Criar torneio" |
 | `/ligas/criar` | `V2CreateLeague` — 5 passos: organizador, formato, temporada e pontuação (com a ordem do desempate), divisões ("Uma divisão por faixa de DUPR" monta as cinco faixas numéricas da lista oficial), dados |
-| `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `inscritos` e, para quem gere, `gerir` (`?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe`) |
+| `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `inscritos` e, para quem gere, `gerir` (`?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe`). Na escada as abas se chamam **Escada** (`LeagueLadder`) e **Sessões** (`LeagueSessions`), e Gerir → Sessões é a chamada (`LeagueSessionPanel`) — os valores de aba são os mesmos |
 
 Componentes em `src/v2/components/leagues/`. Sem nenhuma flag ligada, as rotas
 redirecionam para `/torneios` (`LeaguesGate`). Os valores de aba e de `?secao=`
@@ -140,15 +143,10 @@ são contrato de link.
 
 ## 8. Ainda não (decisões e próximos PRs)
 
-- **Escada individual / King of the Court**: vai usar o padrão do AMERICANO que já
-  existe no torneio e no dia de jogo (grupos de 4 ou 5 pela posição na escada, o
-  rodízio de parceiros do americano dentro do grupo, quem fica em 1º sobe e o
-  último desce) — a rotação será levada ao núcleo, como o desempate.
-
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- **PR 2**: escadas (duplas e individual), equipes MiLP/v3/v4 com DreamBreaker,
-  playoff no fim da temporada.
+- **Próximos PRs**: equipes MiLP/v3/v4 com DreamBreaker; playoff no fim da
+  temporada.
 - **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
 - Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
   contagem não é transacional) — anotado no código.
@@ -203,3 +201,36 @@ ou o atleta não cabe na divisão (faixa de DUPR, categoria, soma do time), com 
 motivo — e pode inscrever assim mesmo. Não há mais o interruptor "por exceção":
 o servidor confere e marca `override: true` quando não cabe. Quem não tem conta
 entra sem DUPR e sem categoria, e a tela pede para conferir.
+
+## 10. Escada (King of the Court e escada de duplas)
+
+Pedido do dono: o King of the Court usa o padrão do **Americano** que já existe no
+torneio e no dia de jogo. A divisão em grupos e o rodízio de parceiros foram para
+o núcleo (`core/domain/americanoGroups.js`: `americanoFecha`,
+`americanoGroupSizes`, `americanoCourtMatches`) e o Americano em etapas do torneio
+importa de lá (`etapaGroupSizes`) — a liga não importa nada do torneio.
+
+- **A escada é DERIVADA, nunca gravada** (`computeLadder`, `leagues/domain/leagueLadder.js`,
+  cópia em `functions/leagueLadder.js` com paridade em `leagueLadder.parity.test.js`).
+  Ordem inicial: média do DUPR das inscrições (sem DUPR, no fim), depois a hora da
+  inscrição. Quem se inscreve depois de uma sessão começar entra **embaixo**, antes
+  daquela sessão.
+- **Sessão**: os presentes, na ordem da escada, são cortados em quadras
+  (`buildSessionGroups`): na individual, quadras de 4 ou 5 (o menor desvio de 4,
+  as maiores em cima) jogando um Americano — com 4, três jogos; com 5, cinco jogos
+  e cada um descansa um; na de duplas, grupos de 3 a 5 duplas em todos contra
+  todos. Número de presentes que não fecha (6 ou 7 na individual) é recusado, e a
+  tela diz com quantos fecha (`ladderNearestFits`).
+- **Sobe e desce**: com TODOS os placares da sessão lançados, em cada fronteira de
+  quadras o último da de cima troca com o 1º da de baixo. **Quem falta fica no
+  lugar**: os presentes são recolocados só nas posições que já ocupavam.
+- **Quem fica à frente na quadra**: vitórias → saldo de pontos → pontos feitos por
+  padrão, configurável em Temporada (`standings.tiebreak_order`, o MESMO editor do
+  torneio com `allowedKeys`); confronto direto não entra (na quadra o parceiro
+  muda a cada jogo); empate em tudo fica com quem estava acima.
+- **Refazer**: sessão sem nenhum placar pode ser gerada de novo com outra chamada;
+  com algum placar, a próxima só sai quando a atual fecha. Corrigir um placar de
+  sessão antiga refaz a escada daí em diante (é derivada), mas não refaz as quadras
+  das sessões já geradas.
+- Na escada não há pontos por vitória nem turnos: a Temporada mostra só o
+  calendário de sessões e o desempate da quadra.

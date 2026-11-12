@@ -6,7 +6,8 @@
  * servidor está em `functions/leaguePolicy.js` (teste de paridade).
  *
  * `available: false` = o formato aparece no assistente como "em breve" e não
- * pode ser escolhido: escadas e equipes chegam na entrega seguinte.
+ * pode ser escolhido: as equipes chegam na entrega seguinte. As escadas jogam
+ * por SESSÃO e a posição é derivada (`leagueLadder.js`).
  */
 import { tk } from '@/core/i18n';
 
@@ -51,16 +52,16 @@ export const LEAGUE_FORMAT_META = Object.freeze({
     how: tk('Pontos corridos dentro da divisão: cada atleta enfrenta todos os outros, uma rodada por data.'),
   },
   [LEAGUE_FORMAT.LADDER_PAIRS]: {
-    family: 'pairs', entry: LEAGUE_ENTRY.PAIR, players: 2, available: false,
+    family: 'pairs', entry: LEAGUE_ENTRY.PAIR, players: 2, available: true,
     label: tk('Escada de duplas'),
-    summary: tk('A cada sessão, grupos de 3 ou 4 duplas por posição. Quem vence sobe e quem perde desce.'),
-    how: tk('A posição na escada sai dos resultados de cada sessão.'),
+    summary: tk('A cada sessão, grupos de 3 a 5 duplas pela posição na escada. A 1ª do grupo sobe e a última desce.'),
+    how: tk('Em cada sessão as duplas presentes são divididas em grupos pela posição na escada, e cada dupla enfrenta as outras do grupo. A 1ª de cada grupo sobe para o de cima e a última desce. Quem falta fica no mesmo lugar.'),
   },
   [LEAGUE_FORMAT.LADDER_INDIVIDUAL]: {
-    family: 'individual', entry: LEAGUE_ENTRY.INDIVIDUAL, players: 1, available: false,
-    label: tk('Escada individual (sobe e desce)'),
-    summary: tk('Quadras de 4 por nível, 3 jogos girando o parceiro. O 1º da quadra sobe e o 4º desce.'),
-    how: tk('Cada atleta joga com os outros três da quadra. A posição muda a cada sessão.'),
+    family: 'individual', entry: LEAGUE_ENTRY.INDIVIDUAL, players: 1, available: true,
+    label: tk('Escada individual (King of the Court)'),
+    summary: tk('Quadras de 4 ou 5 pela posição na escada, num Americano: cada um joga com cada outro da quadra. O 1º sobe e o último desce.'),
+    how: tk('Em cada sessão os presentes são divididos em quadras de 4 ou 5 pela posição na escada, e cada quadra joga um Americano (cada um forma dupla com cada outro uma vez). O 1º de cada quadra sobe para a de cima e o último desce. Quem falta fica no mesmo lugar.'),
   },
   [LEAGUE_FORMAT.TEAM_MILP]: {
     family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 4, available: false,

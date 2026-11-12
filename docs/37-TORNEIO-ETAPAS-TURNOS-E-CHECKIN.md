@@ -130,7 +130,7 @@ perfeita, que a versão gulosa não achava: 112). A previsão da tela roda em at
 
 O Americano só fecha (cada dupla exatamente uma vez) com 4, 5, 8, 9, 12, 13…
 atletas. O tamanho escolhido é 4, 5, 8 ou 9, e os grupos de cada etapa saem dos
-tamanhos que fecham, o mais perto do escolhido (`etapaGroupSizes`). 6, 7 e 11
+tamanhos que fecham, o mais perto do escolhido (`etapaGroupSizes`, que usa a divisão do núcleo `core/domain/americanoGroups.js` — a mesma da escada da liga). 6, 7 e 11
 atletas não fecham com grupos de 4/5 — a tela diz o número que fecharia ("Com
 10 ou 12 atletas, fecha").
 
