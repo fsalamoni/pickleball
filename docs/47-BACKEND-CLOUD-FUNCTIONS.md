@@ -403,6 +403,60 @@ maioridade, visão, link do aviso) — paridade em
 `functions/careerPolicy.parity.test.js`. Testes: `functions/career.test.js`.
 Nenhum motor de ranking, rating ou XP lê `career_*`.
 
+**Pente fino (2026-11-11) — o que mudou de comportamento:**
+
+- **Resposta que não é sonda.** Pedido de outra pessoa e pedido inexistente
+  respondem igual (`not-found`, "Este pedido não existe mais.") em `respond`,
+  `feedback`, `decide`, `remove`, `report` e `public_consent`. O
+  `permission-denied` fica só para o papel errado dentro do próprio pedido.
+- **A ficha não é confiável.** A regra de `career_events` não confere forma;
+  antes de copiar para `career_partner` ou `career_public` o servidor limpa
+  (`safeShowcaseEvent`/`safeEntryFields` em `careerPublicPolicy.js`: só texto,
+  com teto; código de enum pela forma; até 6 participações). Ficha com mais de
+  6 participações ou impressão acima de 1.500 caracteres não cita ninguém.
+- **A resposta vale para o que a dupla viu.** `respond` aceita `fingerprint`
+  (opcional): diferente da impressão do registro de agora ⇒
+  `failed-precondition`, e a recusa grava no pedido a impressão de agora (a
+  recarga traz a certa; pedido antigo não fica recusando para sempre). O
+  gatilho mantém a impressão do pedido aberto em dia.
+- **Teto de pedidos** em `invite`: 20 ENVIADOS em 24 h por remetente e 3
+  abertos para a mesma pessoa (`resource-exhausted`). O enviado é contado pela
+  auditoria (`audit_logs` com `action: 'career_partner_invited'` e
+  `details.at_ms`), que fica quando o pedido é apagado: pedir, apagar e pedir
+  de novo não zera a conta. O teto roda depois das respostas idempotentes
+  (tocar de novo num pedido aberto devolve o estado).
+- **Denúncia é do pedido.** A trava "já decidida sobre esta versão da visão"
+  compara também `invited_at_ms` (gravado na denúncia): pedido NOVO para a
+  mesma pessoa pode ser denunciado mesmo com uma denúncia antiga descartada.
+- **Moderação que fica.** `remove_feedback` deixa a marca em
+  `career_partner_reports/{pedido}__owner`: escrever a visão de novo é
+  recusado e a denúncia decidida não é reaberta. O aviso "a visão chegou" sai
+  uma vez por pedido (`feedback_notified_at_ms`, opcional).
+- **Denúncia aberta trava a saída.** Quem foi denunciado não apaga o pedido
+  nem desfaz a confirmação; registro apagado leva o pedido, mas a denúncia
+  aberta (e a decidida) fica — `queue` a devolve com `status: 'removed'` e os
+  nomes que a própria denúncia guarda (`owner_name`, `partner_name`,
+  `event_name`), e `moderate` decide sem o pedido. A dupla só "desfaz" pedido
+  `confirmed`.
+- **Gatilho fora de ordem.** `careerEventWritten` lê o registro de agora em
+  vez de confiar no `after` do evento.
+- **Selo Oficial** (`careerPublic.oficial`): além de torneio público e pessoa
+  inscrita, a inscrição não pode estar `cancelled`/`withdrawn`, a ficha não
+  pode ser "só o ano" e, quando o torneio tem data legível, ela fica a até 3
+  dias da data da ficha. Oficial ⇒ nome, cidade e UF saem do torneio.
+- **Fotos públicas.** `unpublish` e a remoção pelo gatilho apagam por prefixo
+  (`carreira-publica/{uid}/{evento}__`), mesmo sem o documento; Storage
+  falhando ⇒ `unavailable` (tentar de novo limpa).
+- **`careerReminders`:** antes da flag, apaga `career_partner_invites`
+  vencidos (até 400 por passada; devolve `convites`). O "Como foi?" olha os 3
+  últimos dias (`in`), para alcançar a passada que falhou; o prazo segue no
+  dia exato. Registro com id acima de 200 caracteres é pulado, leitura que
+  falha pula só aquele aviso e lote que falha não derruba os seguintes.
+- **XP da ficha** (`careerXp.sync`): o teto do mês e o cadastro só são lidos
+  quando há pagamento a decidir.
+- **Vitrine:** a dupla de formato de equipe segue a regra das duplas
+  (`formatHasPartner`, nos dois lados).
+
 ## 8. Mercado (flag `marketplace`)
 
 Lógica em `functions/marketplace.js` (1.694 linhas), `marketPromo.js` (cupom,

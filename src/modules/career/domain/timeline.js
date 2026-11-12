@@ -21,7 +21,8 @@ import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { toISODate, todayLocal } from '@/modules/training/domain/dates.js';
 import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
 import {
-  CAREER_STATUS, bestPosition, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, isPlatformPlan, placementText, platformPlanTournamentId,
+  CAREER_STATUS, PLACEMENT_POSITION, awaitsResult, careerCompleteness, careerSeal, entryLabel, isCareerPlatformTournament, isOutsidePlayed, isPlatformPlan,
+  placementText, platformPlanTournamentId,
 } from './careerEvent.js';
 import { careerDebriefFor } from './careerDebrief.js';
 import { partnerSealFor } from './careerPartner.js';
@@ -51,11 +52,24 @@ const dia = (v) => {
 };
 const ano = (iso) => Number(String(iso).slice(0, 4));
 
-function itemDeFora(ev, myTournaments, partners) {
+const degraus = (lista) => lista.map(Number).filter((n) => n >= 1 && n <= 3).sort();
+
+/**
+ * O item do torneio de fora. `oficial` (`{ positions, points, federated }`)
+ * chega quando ele está ligado a um torneio daqui ("É este") com o selo
+ * Oficial: o selo confere que a pessoa JOGOU, não a colocação que ela digitou —
+ * então pódio, medalha e pontos saem da PLATAFORMA, nunca do declarado (a mesma
+ * régua da vitrine pública).
+ */
+function itemDeFora(ev, myTournaments, partners, oficial = null) {
   // O selo da dupla sai dos documentos que só o servidor grava (`career_partner`).
   const partnerState = partners ? partnerSealFor(ev, partners) : null;
-  const pos = bestPosition(ev);
-  const cats = (ev.entries || []).map((e) => [entryLabel(e), placementText(e)].filter(Boolean).join(' — '));
+  // Um degrau por PARTICIPAÇÃO com pódio (ouro em duplas e prata na mista são dois pódios).
+  const positions = oficial ? oficial.positions : degraus((ev.entries || []).map((e) => PLACEMENT_POSITION[e.placement]));
+  const pos = positions[0] || null;
+  const cats = (ev.entries || []).map((e) => [entryLabel(e), oficial ? '' : placementText(e)].filter(Boolean).join(' — '));
+  if (oficial && pos) cats.push(t(PODIUM_PLACE[pos].um));
+  if (oficial?.points) cats.push(t('{n} pontos no ranking oficial', { n: oficial.points }));
   return {
     id: `fora:${ev.id}`,
     source: TIMELINE_SOURCE.CAREER,
@@ -63,11 +77,14 @@ function itemDeFora(ev, myTournaments, partners) {
     datePrecision: ev.date_precision === 'year' ? 'year' : 'day',
     upcoming: ev.status === CAREER_STATUS.PLANNED,
     cancelled: ev.status === CAREER_STATUS.CANCELLED,
+    // O plano que passou sem resposta: fica na lista ("Como foi?") e fora das contas.
+    pending: awaitsResult(ev),
     title: ev.name,
     subtitle: cats.join(' · '),
     where: [ev.city, ev.state].filter(Boolean).join(' · '),
     position: pos,
-    federated: ev.federated === true,
+    positions,
+    federated: ev.federated === true || Boolean(oficial?.federated),
     federation: ev.federation_acronym || ev.federation_name || '',
     seal: careerSeal(ev, myTournaments, partnerState),
     partnerState,
@@ -101,12 +118,20 @@ export function buildCareerTimeline(fontes = {}) {
   const myTournaments = fontes.tournaments;
   const itens = [];
 
-  // Pódios da plataforma: só de torneio (dia de jogo não tem medalha).
-  const podioTorneio = new Map();
+  // Pódios da plataforma: só de torneio (dia de jogo não tem medalha). TODOS os
+  // do torneio (um por categoria), o melhor primeiro.
+  const podiosTorneio = new Map();
   (fontes.trophies?.torneios || []).forEach((tr) => {
-    const atual = podioTorneio.get(tr.tournamentId);
-    if (!atual || tr.position < atual.position) podioTorneio.set(tr.tournamentId, tr);
+    if (!podiosTorneio.has(tr.tournamentId)) podiosTorneio.set(tr.tournamentId, []);
+    podiosTorneio.get(tr.tournamentId).push(tr);
   });
+  podiosTorneio.forEach((l) => l.sort((a, b) => a.position - b.position));
+  // Os degraus OFICIAIS de um torneio: os pódios dele e, na falta, o melhor dos pontos lançados.
+  const degrausOficiais = (id, pontos) => {
+    const dosPodios = degraus((podiosTorneio.get(id) || []).map((tr) => tr.position));
+    return dosPodios.length ? dosPodios : degraus(pontos.map((p) => p.position)).slice(0, 1);
+  };
+  const chancelado = (tt) => Boolean(tt?.federation_id && tt.federation_sanction?.status === 'approved');
 
   // Pontos oficiais por torneio (o torneio chancelado também está na lista da plataforma).
   const pontosPorTorneio = new Map();
@@ -117,7 +142,19 @@ export function buildCareerTimeline(fontes = {}) {
   });
 
   // Torneio de fora ligado ao da plataforma ("É este") com o selo oficial: aparece UMA vez.
-  const ligados = new Set((fontes.career || []).filter((e) => careerSeal(e, myTournaments) === SEAL.OFFICIAL).map((e) => e.platform_tournament_id));
+  // O item que fica é o de fora, mas com o resultado OFICIAL (pódios e pontos do
+  // torneio daqui) — a colocação digitada não vira medalha sob o selo Oficial.
+  const oficialDe = new Map();
+  (fontes.career || []).filter((e) => careerSeal(e, myTournaments) === SEAL.OFFICIAL).forEach((e) => {
+    const id = e.platform_tournament_id;
+    const pontos = pontosPorTorneio.get(id) || [];
+    oficialDe.set(id, {
+      positions: degrausOficiais(id, pontos),
+      points: pontos.reduce((s, p) => s + (Number(p.points) || 0), 0),
+      federated: pontos.length > 0 || chancelado(myTournaments.find((tt) => tt?.id === id)),
+    });
+  });
+  const ligados = new Set(oficialDe.keys());
   // Os pontos do torneio ligado também não viram um item "Federação" à parte.
   ligados.forEach((id) => pontosPorTorneio.delete(id));
 
@@ -126,16 +163,17 @@ export function buildCareerTimeline(fontes = {}) {
   const inscrito = new Set((myTournaments || []).filter(isCareerPlatformTournament).map((tt) => tt.id));
   (fontes.career || []).filter((ev) => !isPlatformPlan(ev)
     || (ev.status === CAREER_STATUS.PLANNED && !inscrito.has(platformPlanTournamentId(ev))))
-    .forEach((ev) => itens.push(itemDeFora(ev, myTournaments, fontes.partners)));
+    .forEach((ev) => itens.push(itemDeFora(ev, myTournaments, fontes.partners,
+      careerSeal(ev, myTournaments) === SEAL.OFFICIAL ? oficialDe.get(ev.platform_tournament_id) : null)));
 
   (myTournaments || []).filter((tt) => isCareerPlatformTournament(tt) && !ligados.has(tt.id)).forEach((tt) => {
     const data = dia(tt.starts_at) || dia(tt.start_date);
     if (!data) return;
-    const podio = podioTorneio.get(tt.id);
+    const podio = (podiosTorneio.get(tt.id) || [])[0];
     const pontos = pontosPorTorneio.get(tt.id) || [];
     pontosPorTorneio.delete(tt.id);
-    const melhorOficial = pontos.map((p) => Number(p.position)).filter((n) => n >= 1 && n <= 3).sort()[0] || null;
-    const pos = podio?.position || melhorOficial;
+    const positions = degrausOficiais(tt.id, pontos);
+    const pos = positions[0] || null;
     itens.push({
       id: `torneio:${tt.id}`,
       source: TIMELINE_SOURCE.TOURNAMENT,
@@ -146,8 +184,9 @@ export function buildCareerTimeline(fontes = {}) {
       title: tt.name || t('Torneio'),
       subtitle: [podio?.subtitle, pos ? t(PODIUM_PLACE[pos].um) : '', pontos.length ? t('{n} pontos no ranking oficial', { n: pontos.reduce((s, p) => s + (Number(p.points) || 0), 0) }) : ''].filter(Boolean).join(' · '),
       where: [tt.city, tt.state].filter(Boolean).join(' · '),
-      position: pos || null,
-      federated: Boolean(tt.federation_id && tt.federation_sanction?.status === 'approved') || pontos.length > 0,
+      position: pos,
+      positions,
+      federated: chancelado(tt) || pontos.length > 0,
       federation: pontos[0]?.federation_acronym || '',
       seal: SEAL.OFFICIAL,
       link: `/torneios/${tt.id}`,
@@ -159,7 +198,7 @@ export function buildCareerTimeline(fontes = {}) {
     const p = pontos[0];
     const data = dia(p.date);
     if (!data) return;
-    const pos = pontos.map((x) => Number(x.position)).filter((n) => n >= 1 && n <= 3).sort()[0] || null;
+    const pos = degraus(pontos.map((x) => x.position))[0] || null;
     itens.push({
       id: `federacao:${k}`,
       source: TIMELINE_SOURCE.FEDERATION,
@@ -171,6 +210,7 @@ export function buildCareerTimeline(fontes = {}) {
       subtitle: [p.modality_name, t('{n} pontos no ranking oficial', { n: pontos.reduce((s, x) => s + (Number(x.points) || 0), 0) })].filter(Boolean).join(' · '),
       where: '',
       position: pos,
+      positions: pos ? [pos] : [],
       federated: true,
       federation: p.federation_acronym || '',
       seal: SEAL.OFFICIAL,
@@ -232,16 +272,25 @@ export function buildCareerTimeline(fontes = {}) {
  */
 export function seasonSummary(items) {
   const valendo = (items || []).filter((i) => !i.cancelled);
-  const torneios = valendo.filter((i) => i.source !== TIMELINE_SOURCE.GAME_DAY);
-  const conta = (p) => torneios.filter((i) => i.position === p).length;
+  const dias = valendo.filter((i) => i.source === TIMELINE_SOURCE.GAME_DAY);
+  // O plano que passou sem resposta (`pending`) aparece na lista, mas não é torneio jogado.
+  const torneios = valendo.filter((i) => i.source !== TIMELINE_SOURCE.GAME_DAY && !i.pending);
+  const podios = torneios.flatMap(itemPodiums);
+  const conta = (p) => podios.filter((x) => x === p).length;
   return {
     events: torneios.length,
     tournaments: torneios.length,
-    gameDays: valendo.length - torneios.length,
-    podiums: torneios.filter((i) => i.position).length,
+    gameDays: dias.length,
+    podiums: podios.length,
     gold: conta(1), silver: conta(2), bronze: conta(3),
   };
 }
+
+/**
+ * Os pódios de um item da linha do tempo: um degrau (1–3) por PARTICIPAÇÃO.
+ * O jeito ÚNICO de contar pódio — temporada, metas e retrospectiva usam este.
+ */
+export const itemPodiums = (item) => item?.positions || (item?.position ? [item.position] : []);
 
 /** Lê os filtros da URL (`?podios=1&federados=1&origem=fora|plataforma`). */
 export function timelineFiltersFromParams(params) {
@@ -283,14 +332,16 @@ export function filterTimeline(timeline, f = {}) {
 
 /**
  * Os troféus DECLARADOS para a estante ("Fora da plataforma"): um por
- * participação com pódio (1º a 3º) de um torneio jogado. Selo "declarado"
- * (ou "oficial" com o "É este?" confirmado). Nunca entram no `destaque`.
+ * participação com pódio (1º a 3º) de um torneio jogado. Sempre "declarado"
+ * (ou "confirmado pela dupla"): o torneio ligado a um daqui com o selo Oficial
+ * NÃO gera troféu — o selo confere que a pessoa jogou, não a colocação
+ * digitada, e o troféu verdadeiro já está na aba Torneios. Nunca entram no `destaque`.
  */
 export function careerTrophies(events, { myTournaments, me = null } = {}) {
   const out = [];
-  (events || []).filter((e) => e.status === CAREER_STATUS.PLAYED).forEach((ev) => {
+  (events || []).filter((e) => isOutsidePlayed(e) && careerSeal(e, myTournaments) !== SEAL.OFFICIAL).forEach((ev) => {
     (ev.entries || []).forEach((en, i) => {
-      const pos = { champion: 1, runner_up: 2, third: 3 }[en.placement];
+      const pos = PLACEMENT_POSITION[en.placement];
       if (!pos) return;
       const people = [me ? { user_id: me.uid || null, name: me.name || t('Você'), photo_url: me.photo_url || null } : null, en.partner ? { user_id: en.partner.uid || null, name: en.partner.name, photo_url: null } : null].filter(Boolean);
       out.push({
@@ -307,8 +358,8 @@ export function careerTrophies(events, { myTournaments, me = null } = {}) {
         platformTournamentId: ev.platform_tournament_id || null,
         city: ev.city || '', state: ev.state || '',
         people,
-        declared: careerSeal(ev, myTournaments) !== SEAL.OFFICIAL,
-        seal: careerSeal(ev, myTournaments),
+        declared: true,
+        seal: SEAL.DECLARED,
         eventId: ev.id,
         link: `/carreira?aba=linha-do-tempo&evento=${encodeURIComponent(ev.id)}`,
         publicLink: null,
@@ -351,14 +402,15 @@ export function careerTabFromParam(v) {
  */
 export function careerAreaSummary(events, { debriefs } = {}) {
   if (!Array.isArray(events)) return null;
-  const jogados = events.filter((e) => e.status === CAREER_STATUS.PLAYED)
+  // Só o torneio de fora JOGADO: o plano de um torneio daqui e o plano sem resposta não contam.
+  const jogados = events.filter(isOutsidePlayed)
     .sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)) || (Number(b.updated_at_ms) || 0) - (Number(a.updated_at_ms) || 0));
   const last = jogados[0] || null;
   return {
     total: events.length,
     played: jogados.length,
     planned: events.filter((e) => e.status === CAREER_STATUS.PLANNED).length,
-    podiums: jogados.filter((e) => bestPosition(e)).length,
+    podiums: declaredPodiums(jogados).length,
     last,
     lastCompleteness: last
       ? careerCompleteness(last, Array.isArray(debriefs) ? { debriefDone: Boolean(careerDebriefFor(last, debriefs)) } : {})
@@ -377,14 +429,22 @@ export function careerAreaSummary(events, { debriefs } = {}) {
  */
 export function careerPerformanceSummary(events) {
   if (!Array.isArray(events)) return null;
-  const jogados = events.filter((e) => e.status === CAREER_STATUS.PLAYED);
-  const declarados = jogados.filter((e) => !e.platform_tournament_id && !isPlatformPlan(e));
-  const entradas = declarados.flatMap((e) => e.entries || []);
-  const pos = (en) => ({ champion: 1, runner_up: 2, third: 3 }[en.placement] || null);
+  const jogados = events.filter(isOutsidePlayed);
+  const declarados = jogados.filter((e) => !e.platform_tournament_id);
+  const podios = declaredPodiums(jogados);
   return {
     tournaments: declarados.length,
-    podiums: entradas.filter(pos).length,
-    titles: entradas.filter((en) => pos(en) === 1).length,
-    linked: jogados.filter((e) => e.platform_tournament_id).length,
+    podiums: podios.length,
+    titles: podios.filter((p) => p === 1).length,
+    linked: jogados.length - declarados.length,
   };
+}
+
+/**
+ * Os pódios DECLARADOS de uma lista de torneios de fora: um degrau por
+ * participação, sem os do torneio ligado a um da plataforma (o pódio dele é o
+ * oficial). A conta única de Minha área e Meu desempenho.
+ */
+function declaredPodiums(events) {
+  return degraus(events.filter((e) => !e.platform_tournament_id).flatMap((e) => (e.entries || []).map((en) => PLACEMENT_POSITION[en.placement])));
 }

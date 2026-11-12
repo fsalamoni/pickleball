@@ -18,7 +18,7 @@
  * aspectos são uma CÓPIA com teste de paridade (`careerPartner.test.js`).
  */
 import { t, tk } from '@/core/i18n';
-import { CAREER_STATUS, formatHasPartner } from './careerEvent.js';
+import { CAREER_STATUS, formatHasPartner, isOutsidePlayed } from './careerEvent.js';
 
 export const CAREER_PARTNER = 'career_partner';
 
@@ -304,7 +304,8 @@ export function pastPartners({ career = [], trophies = [], me = null } = {}) {
     if (!p.photo_url && photo) p.photo_url = photo;
     p.eventos.add(evento);
   };
-  (career || []).forEach((ev) => (ev?.entries || []).forEach((e) => {
+  // Só torneio JOGADO: o planejado (ou o plano sem resposta) ainda não é "já jogou".
+  (career || []).filter(isOutsidePlayed).forEach((ev) => (ev?.entries || []).forEach((e) => {
     if (e?.partner?.uid) somar(e.partner.uid, e.partner.name, null, `c:${ev.id}`);
   }));
   // A estante chega como `{ torneios }`; uma lista solta também vale.

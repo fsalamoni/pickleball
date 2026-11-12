@@ -53,6 +53,8 @@ function Item({ item, onOpenEvent }) {
           <SealBadge seal={item.seal} awaiting={item.partnerState === 'awaiting'} />
           {item.federated && <V2Badge tone="blue">{item.federation || t('Federado')}</V2Badge>}
           {item.cancelled && <V2Badge tone="red">{t('Cancelado')}</V2Badge>}
+          {/* O plano que passou sem resposta: está na lista, mas fora das contas até a pessoa dizer. */}
+          {item.pending && !item.cancelled && <V2Badge tone="amber">{t('Como foi?')}</V2Badge>}
         </span>
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
@@ -75,7 +77,7 @@ function Resumo({ s }) {
 }
 
 /**
- * @param {{ data: ReturnType<import('@/modules/career/hooks/useCareer').useCareerTimeline>,
+ * @param {{ data: ReturnType<import('@/modules/career/hooks/useCareerTimeline').useCareerTimeline>,
  *   pending?: object[], onFlush?: Function, onOpenEvent: Function, onRegister: Function }} props
  */
 export default function CareerTimeline({ data, pending = [], onFlush, onOpenEvent, onRegister }) {

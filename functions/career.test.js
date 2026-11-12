@@ -103,7 +103,7 @@ describe('resposta: só quem foi citado confirma', () => {
     const k = cenario();
     await convidar(k);
     await expect(chamar(k, ANA, { action: 'respond', docId: DOC, answer: 'confirm' })).rejects.toMatchObject({ code: 'permission-denied' });
-    await expect(chamar(k, CAU, { action: 'respond', docId: DOC, answer: 'confirm' })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(chamar(k, CAU, { action: 'respond', docId: DOC, answer: 'confirm' })).rejects.toMatchObject({ code: 'not-found' });
     expect(await chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm' })).toMatchObject({ status: 'confirmed' });
     expect(avisos(k).at(-1)).toMatchObject({ user_id: 'ana111', origin: 'server', link: `/carreira?evento=${EV_ID}` });
     await expect(chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm' })).rejects.toMatchObject({ code: 'failed-precondition' });
@@ -213,14 +213,14 @@ describe('a visão da dupla, a decisão e a moderação', () => {
 
   it('o dono apaga o pedido; um terceiro não', async () => {
     const k = await comVisao();
-    await expect(chamar(k, CAU, { action: 'remove', docId: DOC })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(chamar(k, CAU, { action: 'remove', docId: DOC })).rejects.toMatchObject({ code: 'not-found' });
     await chamar(k, ANA, { action: 'remove', docId: DOC });
     expect(doc(k)).toBeUndefined();
   });
 
   it('⭐ denúncia → fila do admin → retirar a visão, com motivo, auditoria e aviso ao autor', async () => {
     const k = await comVisao();
-    await expect(chamar(k, CAU, { action: 'report', docId: DOC, reason: 'offensive' })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(chamar(k, CAU, { action: 'report', docId: DOC, reason: 'offensive' })).rejects.toMatchObject({ code: 'not-found' });
     await expect(chamar(k, ANA, { action: 'report', docId: DOC, reason: 'xx' })).rejects.toMatchObject({ code: 'invalid-argument' });
     await chamar(k, ANA, { action: 'report', docId: DOC, reason: 'offensive', note: 'Desrespeitoso' });
     await expect(chamar(k, ANA, { action: 'queue' })).rejects.toMatchObject({ code: 'permission-denied' });
@@ -321,18 +321,221 @@ describe('lembretes do planejado (varredura diária)', () => {
   });
   it('D-3 só para quem não se inscreveu; D+1 do planejado que terminou ontem; sem repetir', async () => {
     const k = base();
-    expect(await c.reminders(ctx(k))).toEqual({ avisos: 3 });
+    expect(await c.reminders(ctx(k))).toEqual({ avisos: 3, convites: 0 });
     const ids = [...k.db.store.docs.keys()].filter((p) => p.startsWith('notifications/')).sort();
     expect(ids).toEqual([
       'notifications/carreira_d1_ana111_p3', 'notifications/carreira_d1_ana111_p4', 'notifications/carreira_prazo_ana111_p1_2026-11-07',
     ]);
     avisos(k).forEach((a) => expect(a).toMatchObject({ user_id: 'ana111', type: 'career', origin: 'server', read: false }));
     expect(avisos(k).every((a) => !a.link.includes('#'))).toBe(true);
-    expect(await c.reminders(ctx(k))).toEqual({ avisos: 0 });
+    expect(await c.reminders(ctx(k))).toEqual({ avisos: 0, convites: 0 });
   });
   it('sem a flag, nada', async () => {
     const k = base(false);
     expect(await c.reminders(ctx(k))).toMatchObject({ avisos: 0, desligada: true });
     expect(avisos(k)).toHaveLength(0);
+  });
+});
+
+describe('pente fino: o que o servidor não pode deixar passar', () => {
+  const erro = (p) => p.then(() => null, (e) => ({ code: e.code, message: e.message }));
+  async function confirmado() {
+    const k = cenario();
+    await convidar(k);
+    await chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm' });
+    return k;
+  }
+  async function comVisao() {
+    const k = await confirmado();
+    await chamar(k, BIA, { action: 'feedback', docId: DOC, feedback: { strengths: ['dink'], text_improve: 'Devolver mais fundo.' } });
+    return k;
+  }
+
+  it('🔴 pedido de outra pessoa e pedido que não existe respondem IGUAL (o id não vira sonda de quem foi citado)', async () => {
+    const k = await comVisao();
+    for (const extra of [{ action: 'respond', answer: 'confirm' }, { action: 'feedback', feedback: { strengths: ['dink'] } },
+      { action: 'decide', decision: 'use' }, { action: 'remove' }, { action: 'report', reason: 'offensive' }]) {
+      const alheio = await erro(chamar(k, CAU, { ...extra, docId: DOC }));
+      expect(alheio).toEqual(await erro(chamar(k, CAU, { ...extra, docId: `${EV_ID}__zzz999` })));
+      expect(alheio.code).toBe('not-found');
+    }
+  });
+
+  it('⭐ a resposta vale para o que a dupla VIU: registro mudou ⇒ confere de novo; o gatilho atualiza a impressão do pedido aberto', async () => {
+    const k = cenario();
+    await convidar(k);
+    const vista = doc(k).fingerprint;
+    const novo = evento({ entries: [{ ...evento().entries[0], placement: 'groups' }] });
+    k.db.store.docs.set(`career_events/${EV_ID}`, novo);
+    await expect(chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm', fingerprint: vista })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(k).status).toBe('invited');
+    await gatilho(k, evento(), novo);
+    expect(doc(k).fingerprint).not.toBe(vista);
+    expect(doc(k).summary.entries[0].placement).toBe('groups');
+    expect(await chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm', fingerprint: doc(k).fingerprint })).toMatchObject({ status: 'confirmed' });
+    // "Confirmar de novo" também leva a impressão nova (a tela manda a que leu).
+    const outro = evento({ start_date: '2026-10-12' });
+    await gatilho(k, novo, outro);
+    expect(doc(k).status).toBe('reconfirm');
+    expect(await chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm', fingerprint: doc(k).fingerprint })).toMatchObject({ status: 'confirmed' });
+  });
+
+  it('🔴 ficha gravada por fora da tela: nada de mapa ou texto gigante no pedido; participações demais não citam ninguém', async () => {
+    const e0 = evento().entries[0];
+    const k = cenario({ ev: evento({ name: { a: 1 }, city: 'x'.repeat(5000), entries: [{ ...e0, level_label: { b: 2 }, age_label: 'y'.repeat(900) }] }) });
+    await convidar(k);
+    expect(doc(k).summary.name).toBe('');
+    expect(doc(k).summary.city).toHaveLength(80);
+    expect(JSON.stringify(doc(k)).length).toBeLessThan(2500);
+    expect(JSON.stringify(doc(k).summary.entries)).not.toContain('"b"');
+    const muitos = cenario({ ev: evento({ entries: Array.from({ length: 3000 }, () => e0) }) });
+    await expect(convidar(muitos)).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(muitos)).toBeUndefined();
+    const longo = cenario({ ev: evento({ entries: [{ ...e0, level_label: 'z'.repeat(4000) }] }) });
+    await expect(convidar(longo)).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('🔴 teto de pedidos: 20 por dia por remetente e 3 abertos para a mesma pessoa', async () => {
+    const k = cenario();
+    for (let i = 0; i < 20; i += 1) {
+      k.db.store.docs.set(`career_partner/ana111_x${i}__p${i}`, { owner_uid: 'ana111', partner_uid: `p${i}`, event_id: `ana111_x${i}`, status: 'confirmed', invited_at_ms: NOW - 1000 });
+    }
+    await expect(convidar(k)).rejects.toMatchObject({ code: 'resource-exhausted' });
+    expect(avisos(k)).toHaveLength(0);
+    const k2 = cenario();
+    for (let i = 0; i < 3; i += 1) {
+      k2.db.store.docs.set(`career_partner/ana111_y${i}__bia222`, { owner_uid: 'ana111', partner_uid: 'bia222', event_id: `ana111_y${i}`, status: 'invited', invited_at_ms: NOW - 9 * 86400000 });
+    }
+    await expect(convidar(k2)).rejects.toMatchObject({ code: 'resource-exhausted' });
+    // Pedidos antigos e já respondidos não contam.
+    const k3 = cenario();
+    k3.db.store.docs.set('career_partner/ana111_y0__bia222', { owner_uid: 'ana111', partner_uid: 'bia222', event_id: 'ana111_y0', status: 'confirmed', invited_at_ms: NOW - 9 * 86400000 });
+    expect(await convidar(k3)).toMatchObject({ status: 'invited' });
+  });
+
+  it('🔴 o teto conta o que foi ENVIADO: pedir, apagar e pedir de novo não zera a conta', async () => {
+    const k = cenario();
+    for (let i = 0; i < 20; i += 1) {
+      await convidar(k);
+      await chamar(k, ANA, { action: 'remove', docId: DOC });
+    }
+    await expect(convidar(k)).rejects.toMatchObject({ code: 'resource-exhausted' });
+    expect(avisos(k)).toHaveLength(20);
+    // Tocar de novo num pedido que já está aberto devolve o estado, mesmo no teto.
+    const aberto = cenario();
+    await convidar(aberto);
+    for (let i = 0; i < 20; i += 1) {
+      aberto.db.store.docs.set(`audit_logs/t${i}`, { actor_id: 'ana111', action: 'career_partner_invited', details: { at_ms: NOW - 1000 } });
+    }
+    expect(await convidar(aberto)).toMatchObject({ status: 'invited' });
+  });
+
+  it('⭐ impressão antiga no pedido: a recusa conserta o pedido e a segunda resposta passa', async () => {
+    const k = cenario();
+    await convidar(k);
+    const velha = 'impressao-velha';
+    k.db.store.docs.set(`career_partner/${DOC}`, { ...doc(k), fingerprint: velha });
+    await expect(chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm', fingerprint: velha })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(k).fingerprint).not.toBe(velha);
+    expect(await chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'confirm', fingerprint: doc(k).fingerprint })).toBeTruthy();
+    expect(doc(k).status).toBe('confirmed');
+  });
+
+  it('⭐ visão retirada pela moderação não volta: escrever de novo é recusado e a denúncia decidida não é reaberta', async () => {
+    const k = await comVisao();
+    await chamar(k, ANA, { action: 'report', docId: DOC, reason: 'offensive' });
+    await chamar(k, ADM, { action: 'moderate', docId: DOC, decision: 'remove_feedback', reason: 'Ofensivo demais' });
+    await expect(chamar(k, BIA, { action: 'feedback', docId: DOC, feedback: { strengths: ['dink'] } })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(k).feedback).toBeNull();
+    await chamar(k, ANA, { action: 'report', docId: DOC, reason: 'offensive' });
+    expect(denuncia(k, 'owner')).toMatchObject({ open: false, moderation: { decision: 'remove_feedback' } });
+    // Decidida sem denúncia aberta do lado do dono: a marca nasce do mesmo jeito.
+    const k2 = await comVisao();
+    await chamar(k2, BIA, { action: 'report', docId: DOC, reason: 'other' });
+    await chamar(k2, ADM, { action: 'moderate', docId: DOC, decision: 'remove_feedback', reason: 'Retirada pela moderação' });
+    expect(denuncia(k2, 'owner')).toMatchObject({ open: false, moderation: { decision: 'remove_feedback' } });
+    await expect(chamar(k2, BIA, { action: 'feedback', docId: DOC, feedback: { strengths: ['dink'] } })).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('retirar a visão e mandar de novo não repete o aviso "a visão chegou"', async () => {
+    const k = await comVisao();
+    const n = avisos(k).length;
+    await chamar(k, BIA, { action: 'remove', docId: DOC });
+    await chamar(k, BIA, { action: 'feedback', docId: DOC, feedback: { strengths: ['saque'] } });
+    expect(doc(k).feedback.strengths).toEqual(['saque']);
+    expect(avisos(k)).toHaveLength(n);
+  });
+
+  it('⭐ gatilho atrasado (`after` velho) não reabre a confirmação nem apaga o pedido: vale o registro de agora', async () => {
+    const k = await confirmado();
+    await c.eventWritten(ctx(k), EV_ID, evento(), evento({ start_date: '2026-10-11' }));
+    expect(doc(k).status).toBe('confirmed');
+    await c.eventWritten(ctx(k), EV_ID, evento(), evento({ entries: [] }));
+    await c.eventWritten(ctx(k), EV_ID, evento(), null);
+    expect(doc(k)).toMatchObject({ status: 'confirmed' });
+  });
+
+  it('a dupla só "desfaz" o que confirmou: pedido aberto ou recusado não some por ela', async () => {
+    const k = cenario();
+    await convidar(k);
+    await expect(chamar(k, BIA, { action: 'remove', docId: DOC })).rejects.toMatchObject({ code: 'failed-precondition' });
+    await chamar(k, BIA, { action: 'respond', docId: DOC, answer: 'decline' });
+    await expect(chamar(k, BIA, { action: 'remove', docId: DOC })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(k).status).toBe('declined');
+  });
+
+  it('🔴 quem foi denunciado não some com a denúncia: não apaga o pedido, e apagar o registro deixa a denúncia na fila do admin', async () => {
+    const k = await confirmado();
+    await chamar(k, BIA, { action: 'report', docId: DOC, reason: 'false_claim', note: 'Nunca joguei' });
+    await expect(chamar(k, ANA, { action: 'remove', docId: DOC })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(k)).toBeDefined();
+    await gatilho(k, evento(), null);
+    expect(doc(k)).toBeUndefined();
+    expect(denuncia(k, 'partner')).toMatchObject({ open: true, reason: 'false_claim' });
+    const { items } = await chamar(k, ADM, { action: 'queue' });
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ id: DOC, status: 'removed', owner_name: 'Ana Souza', partner_name: 'Bia Lima', summary: { name: 'Copa Sul' }, feedback: null, report_note: 'Nunca joguei' });
+    await chamar(k, ADM, { action: 'moderate', docId: DOC, decision: 'remove_link', reason: 'A dupla disse que não jogou' });
+    expect(denuncia(k, 'partner')).toMatchObject({ open: false, moderation: { decision: 'remove_link' } });
+    expect((await chamar(k, ADM, { action: 'queue' })).items).toHaveLength(0);
+    // Recriar o registro com o mesmo id não desfaz a decisão.
+    k.db.store.docs.set(`career_events/${EV_ID}`, evento());
+    await expect(convidar(k)).rejects.toMatchObject({ code: 'failed-precondition' });
+    // Sem pedido e sem denúncia aberta, não há o que decidir.
+    await expect(chamar(k, ADM, { action: 'moderate', docId: `${EV_ID}__zzz`, decision: 'dismiss', reason: 'Nada aqui' })).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('a dupla denunciada também não desfaz a confirmação para sair da fila', async () => {
+    const k = await confirmado();
+    await chamar(k, ANA, { action: 'report', docId: DOC, reason: 'other' });
+    await expect(chamar(k, BIA, { action: 'remove', docId: DOC })).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(doc(k)).toBeDefined();
+  });
+});
+
+describe('lembretes: folga de 3 dias e tolerância a id fora do padrão', () => {
+  const plano = (extra) => ({ uid: 'ana111', name: 'Open Floripa', status: 'planned', start_date: '2026-11-03', ...extra });
+  const base = () => ({
+    db: createFakeDb({
+      'platform_settings/global': { feature_flags: { athlete_career: true } },
+      'career_events/ana111_p3': plano(),
+      [`career_events/ana111_${'g'.repeat(1500)}`]: plano(),
+    }),
+  });
+  const ids = (k) => [...k.db.store.docs.keys()].filter((p) => p.startsWith('notifications/'));
+
+  it('⭐ a varredura que falhou ontem alcança hoje ("Como foi?" até 3 dias depois), sem repetir', async () => {
+    const k = base();
+    const DIA = 86400000;
+    expect(await c.reminders(ctx(k, NOW + 2 * DIA))).toMatchObject({ avisos: 1 });
+    expect(ids(k)).toEqual(['notifications/carreira_d1_ana111_p3']);
+    expect(await c.reminders(ctx(k, NOW))).toMatchObject({ avisos: 0 });
+    expect(await c.reminders(ctx(base(), NOW + 3 * DIA))).toMatchObject({ avisos: 0 });
+  });
+
+  it('🔴 registro com id gigante não derruba o lote dos outros', async () => {
+    const k = base();
+    expect(await c.reminders(ctx(k))).toMatchObject({ avisos: 1 });
+    expect(ids(k)).toEqual(['notifications/carreira_d1_ana111_p3']);
   });
 });

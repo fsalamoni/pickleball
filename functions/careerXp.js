@@ -77,12 +77,10 @@ async function sync(ctx, { uid, eventId }) {
   const podePagar = ligada && g.moduloLigado(cfg, 'career_xp') && cfg.career.xpPerRecord > 0;
   const grantRef = db.collection(GRANTS).doc(grantDocId(uid, eventId));
   return db.runTransaction(async (tx) => {
-    const [evSnap, debSnap, grantSnap, meus, userSnap] = await Promise.all([
+    const [evSnap, debSnap, grantSnap] = await Promise.all([
       tx.get(db.collection(EVENTS).doc(eventId)),
       tx.get(db.collection(DEBRIEFS).doc(debriefDocId(uid, eventId))),
       tx.get(grantRef),
-      podePagar ? tx.get(db.collection(GRANTS).where('uid', '==', uid)) : Promise.resolve(null),
-      podePagar ? tx.get(db.collection('users').doc(uid)) : Promise.resolve(null),
     ]);
     const ev = evSnap.exists ? { id: eventId, ...evSnap.data() } : null;
     const dono = ev && ev.uid === uid;
@@ -97,13 +95,20 @@ async function sync(ctx, { uid, eventId }) {
     }
     if (!paga) return 'none';
     if (!podePagar) return 'off';
+    // Só quem VAI pagar consulta o teto e o cadastro (ainda antes de qualquer
+    // escrita): a gravação comum da ficha não lê nem trava os grants da pessoa.
+    // Só igualdades (zero índice): todo grant de carreira nasce com `kind` e
+    // `month`, e o zerado os mantém.
+    const mes = mesBR(now);
+    const [meus, userSnap] = await Promise.all([
+      tx.get(db.collection(GRANTS).where('uid', '==', uid).where('kind', '==', KIND).where('month', '==', mes)),
+      tx.get(db.collection('users').doc(uid)),
+    ]);
     // Menor de 18 (ou nascimento desconhecido) não ganha XP de carreira: ele
     // entraria no placar público de sempre (plano §13.4, "Menores").
-    const birth = userSnap && userSnap.exists ? userSnap.data().birth_date : null;
+    const birth = userSnap.exists ? userSnap.data().birth_date : null;
     if (!P.isAdult(birth, hojeBR(now))) return 'minor';
-    const mes = mesBR(now);
-    const noMes = meus.docs.filter((d) => d.data().kind === KIND && d.data().month === mes).length;
-    if (noMes >= cfg.career.monthlyCap) return 'capped';
+    if (meus.docs.length >= cfg.career.monthlyCap) return 'capped';
     tx.set(grantRef, {
       uid, kind: KIND, xp: Math.min(g.MAX_GRANT_XP, Math.round(cfg.career.xpPerRecord)), label: '',
       refId: String(eventId).slice(0, 120), month: mes, at: now, schemaVersion: 1,

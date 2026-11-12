@@ -14,6 +14,16 @@ import { V2Badge, V2ErrorState } from '@/v2/ui/primitives';
 import { careerDateLabel } from './careerUi';
 import { t } from '@/core/i18n';
 
+// O balanço vem do banco do ALUNO e a regra não confere o tipo de cada item:
+// só texto é desenhado (um objeto ali derrubaria a tela do professor).
+const aspectos = (lista) => (Array.isArray(lista) ? lista : [])
+  .filter((a) => typeof a === 'string').map((a) => aspectLabel(a).toLowerCase()).join(', ');
+
+// O torneio também vem cru do banco do aluno, e a regra dele confere ainda
+// menos: só texto vira texto e só inscrição-objeto é desenhada.
+const texto = (v) => (typeof v === 'string' ? v : '');
+const inscricoes = (lista) => (Array.isArray(lista) ? lista : []).filter((e) => e && typeof e === 'object');
+
 export default function CoachStudentCareer({ coachUid, studentUid, nome }) {
   const q = useStudentCareerShares(coachUid, studentUid);
   let corpo;
@@ -32,20 +42,20 @@ export default function CoachStudentCareer({ coachUid, studentUid, nome }) {
           return (
             <li key={ev.id} className="space-y-1 rounded-2xl bg-gray-50 px-3 py-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold text-ink">{ev.name}</p>
-                <span className="text-xs text-gray-500">{careerDateLabel(ev.start_date, ev.date_precision)}</span>
+                <p className="font-semibold text-ink">{texto(ev.name)}</p>
+                <span className="text-xs text-gray-500">{careerDateLabel(texto(ev.start_date), ev.date_precision)}</span>
               </div>
-              {(ev.entries || []).map((e, i) => (
-                <p key={i} className="text-gray-600">{[entryLabel(e), e.placement ? t(PLACEMENT_LABEL[e.placement]) : ''].filter(Boolean).join(' · ')}</p>
+              {inscricoes(ev.entries).map((e, i) => (
+                <p key={i} className="text-gray-600">{[entryLabel(e), PLACEMENT_LABEL[texto(e.placement)] ? t(PLACEMENT_LABEL[e.placement]) : ''].filter(Boolean).join(' · ')}</p>
               ))}
               {ev.status === 'planned' && <V2Badge tone="neutral">{t('Planejado')}</V2Badge>}
-              {ev.aim && <p className="text-gray-600">{t('Meta: {m}', { m: ev.aim })}</p>}
-              {ev.focus_aspect && <p className="text-gray-600">{t('Foco: {aspecto}', { aspecto: aspectLabel(ev.focus_aspect) })}</p>}
+              {texto(ev.aim) && <p className="text-gray-600">{t('Meta: {m}', { m: ev.aim })}</p>}
+              {texto(ev.focus_aspect) && <p className="text-gray-600">{t('Foco: {aspecto}', { aspecto: aspectLabel(ev.focus_aspect) })}</p>}
               {b?.status === 'respondido' && (
                 <p className="text-gray-600">
                   {[
-                    b.strengths?.length ? t('Funcionou: {lista}.', { lista: b.strengths.map((a) => aspectLabel(a).toLowerCase()).join(', ') }) : '',
-                    b.weaknesses?.length ? t('Faltou: {lista}.', { lista: b.weaknesses.map((a) => aspectLabel(a).toLowerCase()).join(', ') }) : '',
+                    aspectos(b.strengths) ? t('Funcionou: {lista}.', { lista: aspectos(b.strengths) }) : '',
+                    aspectos(b.weaknesses) ? t('Faltou: {lista}.', { lista: aspectos(b.weaknesses) }) : '',
                   ].filter(Boolean).join(' ')}
                 </p>
               )}

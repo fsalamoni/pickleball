@@ -17,7 +17,7 @@ mostrar um torneio de fora no perfil público (`/atleta/:uid`, bloco
 
 | Peça | Onde | Quem grava | Quem lê |
 |---|---|---|---|
-| Item da vitrine | `career_public/{uid}_{evento}` | **só o servidor** (callable `career`, ações `publish`/`unpublish`/`public_consent`; gatilhos `careerEventWritten` e `careerPartnerWritten`) | quem tem **conta** (`allow read: if isAuthed()` — o perfil `/atleta/:uid` também só abre logado) |
+| Item da vitrine | `career_public/{uid}_{evento}` | **só o servidor** (callable `career`, ações `publish`/`unpublish`/`public_consent`; gatilhos `careerEventWritten` e `careerPartnerWritten`) | quem tem **conta**, consultando por `uid ==` (o perfil `/atleta/:uid` também só abre logado); com o perfil oculto pela moderação, só o dono e o admin |
 | Foto pública | Storage `carreira-publica/{uid}/{evento}__{arquivo}` | **só o servidor** (cópia da foto privada) | quem tem conta (`get`; sem listagem) — e quem tiver o link com o token |
 | "Sim" da dupla | `career_partner.public_ok_partner` (+ `public_fp`, `public_ok_at_ms`, `public_asked_at_ms`) | **só o servidor** (`public_consent`, pedido pela PRÓPRIA dupla) | o dono e a dupla (regra do PR 3) |
 
@@ -134,13 +134,15 @@ A exportação da conta inclui a vitrine ("Vitrine pública (Carreira)",
 | Foto de outra pessoa / alheia | só da pasta do dono; caminho alheio recusado | terceiros na imagem sem registro de consentimento (§5) |
 | Resultado inventado parecer oficial | selo calculado no servidor, "Declarado" à vista; nunca pontua (guarda `carreiraNaoPontua`) | — |
 | Escrita forjada pelo cliente | `career_public` e `carreira-publica/` sem escrita do cliente (provado no emulador: `tests/rules/career.rules.test.js`, `tests/rules/storage.rules.test.js`) | — |
-| Varredura do acervo público | leitura só com conta; Storage sem listagem | uma conta logada consegue listar a coleção (a regra não exige o filtro por `uid`) — é o mesmo que a vitrine mostra a qualquer conta |
+| Varredura do acervo público | leitura só com conta e só por `uid ==` (a regra olha o perfil de `od().uid`: listar a coleção sem filtro é recusado); Storage sem listagem | uma conta logada ainda lê a vitrine de cada pessoa, uma a uma — é o mesmo que o perfil mostra |
 | O dono troca o nome/cidade de um torneio que a dupla autorizou | `public_fp`: o nome da dupla sai e ela decide de novo | o selo "Confirmado pela dupla" segue a régua do PR 3 (datas e resultado), não o nome do torneio |
-| Conta suspensa ou perfil oculto pela moderação | — | a vitrine segue legível até o admin (console) ou o dono tirá-la |
+| Perfil oculto pela moderação | a regra fecha a vitrine (`athlete_profiles.hidden == true` ⇒ só o dono e o admin leem; `tests/rules/career.rules.test.js`) | o link da foto já copiado (`photos[].url`, com token do Storage) segue abrindo até o item ser tirado |
+| Conta suspensa | — | a vitrine segue legível até o admin (console) ou o dono tirá-la |
 
 ## 10. O que fica para depois
 
 - Denúncia de item/foto da vitrine por terceiros (fila do admin, como a da
   dupla no PR 3).
-- Esconder sozinha a vitrine de conta suspensa ou de perfil oculto.
+- Esconder sozinha a vitrine de conta suspensa (o perfil oculto já fecha, pela
+  regra) e apagar a cópia pública das fotos nos dois casos.
 - Revisão por advogado de fora antes de ligar a flag para todos.

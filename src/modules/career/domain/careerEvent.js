@@ -190,11 +190,23 @@ export function normalizePhoto(raw = {}, uid = null) {
 /**
  * Status pela data LOCAL: futura = planejado; hoje ou antes = jogado.
  * Cancelado fica cancelado. Nunca `Date.parse` cru (seria meia-noite UTC).
+ *
+ * O que JÁ ERA planejado (`current`) segue planejado até o ÚLTIMO dia do
+ * torneio (`endDate`, ou o início): no dia do jogo a tela diz "É hoje" e só no
+ * dia seguinte pergunta "Como foi?" — a mesma régua do aviso D+1 do servidor.
+ * Com a colocação já dita (`hasResult`) vale a data de início: quem lança o
+ * resultado no dia não fica preso em "planejado". Registro novo com a data de
+ * hoje continua sendo jogado.
  */
-export function deriveCareerStatus(startDate, { current = null, today = todayLocal() } = {}) {
+export function deriveCareerStatus(startDate, { current = null, today = todayLocal(), endDate = null, hasResult = false } = {}) {
   if (current === CAREER_STATUS.CANCELLED) return CAREER_STATUS.CANCELLED;
-  return isISODate(startDate) && startDate > today ? CAREER_STATUS.PLANNED : CAREER_STATUS.PLAYED;
+  if (!isISODate(startDate)) return CAREER_STATUS.PLAYED;
+  const emPlano = current === CAREER_STATUS.PLANNED && !hasResult;
+  const fim = emPlano && isISODate(endDate) && endDate > startDate ? endDate : startDate;
+  return (emPlano ? fim >= today : startDate > today) ? CAREER_STATUS.PLANNED : CAREER_STATUS.PLAYED;
 }
+
+const temResultado = (ev) => (ev?.entries || []).some((e) => Boolean(e?.placement));
 
 /**
  * O planejado que veio de um torneio do PickleRush ("Pôr no meu plano",
@@ -211,11 +223,30 @@ export const platformPlanTournamentId = (ev) => (isPlatformPlan(ev) ? ev.origin_
  */
 export function withDerivedStatus(ev, today = todayLocal()) {
   if (!ev) return ev;
-  const status = deriveCareerStatus(ev.start_date, { current: ev.status, today });
-  // `planned_passed`: era planejado e a data passou — a ficha pergunta "Como foi?" (não é gravado).
+  const status = deriveCareerStatus(ev.start_date, { current: ev.status, today, endDate: ev.end_date, hasResult: temResultado(ev) });
+  // `planned_passed`: era planejado e a data (o último dia) passou — a ficha pergunta "Como foi?" (não é gravado).
   // O plano de um torneio do PickleRush não pergunta: quem jogou tem o resultado oficial.
   return status === ev.status ? ev : { ...ev, status, ...(ev.status === CAREER_STATUS.PLANNED && !isPlatformPlan(ev) ? { planned_passed: true } : {}) };
 }
+
+/**
+ * O plano que passou e ainda ESPERA a resposta ("Como foi?"): o último dia
+ * passou e nenhuma colocação foi dita. Não se sabe se a pessoa jogou — é
+ * pendência e fica FORA de toda contagem de torneio jogado.
+ */
+export const awaitsResult = (ev) => ev?.planned_passed === true && !temResultado(ev);
+
+/**
+ * Torneio de FORA que conta como jogado: jogado, não é o plano de um torneio
+ * do PickleRush (ali vale o oficial) e não espera o "Como foi?". A régua ÚNICA
+ * dos resumos (Minha área, Meu desempenho, "N de ~M", repetir, parcerias):
+ * nunca filtre `status === 'played'` à mão para contar.
+ */
+export const isOutsidePlayed = (ev) => ev?.status === CAREER_STATUS.PLAYED && !isPlatformPlan(ev) && !awaitsResult(ev);
+
+/** Data que existe (31/02 não) e o ano aceito: de 1990 a cinco à frente (erro de digitação fica de fora). */
+const dataReal = (iso) => isISODate(iso) && addDays(iso, 0) === iso;
+const ANO_MIN = 1990;
 
 /**
  * Normaliza o evento inteiro, com os limites. `{ valid, error, value }`.
@@ -226,12 +257,16 @@ export function normalizeCareerEvent(raw = {}, { uid = null, today = todayLocal(
   if (!name) return { valid: false, error: t('Dê um nome ao torneio.'), value: null };
   const datePrecision = raw.date_precision === 'year' ? 'year' : 'day';
   const start = String(raw.start_date || '');
-  if (!isISODate(start)) return { valid: false, error: t('Escolha a data do torneio.'), value: null };
-  let end = isISODate(raw.end_date) ? raw.end_date : null;
+  if (!dataReal(start)) return { valid: false, error: t('Escolha a data do torneio.'), value: null };
+  // "0202" e "2206" são erro de digitação: criariam uma temporada absurda e um plano que nunca passa.
+  const anoMax = Number(today.slice(0, 4)) + 5;
+  const anoOk = (iso) => Number(iso.slice(0, 4)) >= ANO_MIN && Number(iso.slice(0, 4)) <= anoMax;
+  if (!anoOk(start)) return { valid: false, error: t('Ano entre 1990 e {ano}.', { ano: anoMax }), value: null };
+  let end = dataReal(raw.end_date) && anoOk(raw.end_date) ? raw.end_date : null;
   if (end && end < start) end = null;
   const entries = (Array.isArray(raw.entries) ? raw.entries : []).slice(0, CAREER_LIMITS.entries).map(normalizeEntry);
   if (!entries.length) return { valid: false, error: t('Escolha pelo menos uma categoria.'), value: null };
-  const status = deriveCareerStatus(start, { current: raw.status, today });
+  const status = deriveCareerStatus(start, { current: raw.status, today, endDate: end, hasResult: entries.some((e) => Boolean(e.placement)) });
   const state = String(raw.state || '').trim().toUpperCase();
   const value = {
     uid: uid || raw.uid || null,
@@ -458,21 +493,25 @@ export function registeredProgress(events, estimate) {
   const total = Math.round(Number(estimate));
   // Lista que não carregou não vira "0 de ~N".
   if (!Array.isArray(events) || !Number.isFinite(total) || total <= 0) return null;
-  const feitos = events.filter((e) => e.status === CAREER_STATUS.PLAYED).length;
+  const feitos = events.filter(isOutsidePlayed).length;
   return { done: feitos, estimate: total, complete: feitos >= total };
 }
 
 /* -------------------------------------------- repetir o do ano passado -- */
 
 /**
- * O rascunho de "repetir o torneio do ano passado": nome (com o ano somado
- * em 1, se o nome tiver ano), organizador, cidade e federação. A data, as
- * categorias e o resultado ficam em branco — são deste ano.
+ * O rascunho de "repetir o torneio do ano passado": nome (com o ano trazido
+ * para a edição seguinte, se o nome tiver ano), organizador, cidade e
+ * federação. A data sugerida mantém o dia da semana (364 dias por ano); o
+ * torneio de dois ou mais anos atrás anda os anos todos — o plano nunca nasce
+ * no passado. As categorias e o resultado ficam em branco.
  */
-export function repeatEvent(previous) {
+export function repeatEvent(previous, today = todayLocal()) {
   if (!previous) return null;
-  const nome = String(previous.name || '').replace(/\b(19|20)\d{2}\b/, (a) => String(Number(a) + 1));
-  const sugestao = isISODate(previous.start_date) && previous.date_precision !== 'year' ? addDays(previous.start_date, 364) : '';
+  const comData = isISODate(previous.start_date);
+  const n = comData ? Math.max(1, Number(today.slice(0, 4)) - Number(previous.start_date.slice(0, 4))) : 1;
+  const nome = String(previous.name || '').replace(/\b(19|20)\d{2}\b/, (a) => String(Number(a) + n));
+  const sugestao = comData && previous.date_precision !== 'year' ? addDays(previous.start_date, 364 * n) : '';
   return {
     name: nome,
     organizer: previous.organizer || '',
@@ -491,6 +530,6 @@ export function repeatEvent(previous) {
 export function repeatableEvents(events, today = todayLocal()) {
   const ano = today.slice(0, 4);
   return (events || [])
-    .filter((e) => e.status === CAREER_STATUS.PLAYED && String(e.start_date).slice(0, 4) < ano)
+    .filter((e) => isOutsidePlayed(e) && String(e.start_date).slice(0, 4) < ano)
     .sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)));
 }

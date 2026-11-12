@@ -105,7 +105,12 @@ describe('o que a tela deriva', () => {
 
   it('"Com quem você já jogou": quem mais jogou junto primeiro, sem a própria pessoa', () => {
     const lista = pastPartners({
-      career: [EV, { id: 'eu_2', entries: [{ partner: { uid: 'cau', name: 'Cau' } }] }],
+      career: [
+        EV, { id: 'eu_2', status: 'played', entries: [{ partner: { uid: 'cau', name: 'Cau' } }] },
+        // ⭐ Planejado e plano que passou sem resposta ainda não são "já jogou".
+        { id: 'eu_3', status: 'planned', entries: [{ partner: { uid: 'novo', name: 'Novo' } }] },
+        { id: 'eu_4', status: 'played', planned_passed: true, entries: [{ partner: { uid: 'bia', name: 'Bia' } }] },
+      ],
       trophies: [{ id: 't1', people: [{ user_id: 'eu', name: 'Eu' }, { user_id: 'dani', name: 'Dani', photo_url: 'f' }] }],
       me: 'eu',
     });

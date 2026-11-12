@@ -17,6 +17,7 @@
  * O resultado aqui é DECLARADO: nunca pontua (guarda `carreiraNaoPontua`).
  */
 import { isAdult } from './careerPartner.js';
+import { formatHasPartner } from './careerEvent.js';
 
 export const CAREER_PUBLIC = 'career_public';
 
@@ -51,7 +52,8 @@ export function showcaseItem(event, { seal, partners = {}, photos = [] } = {}) {
   out.entries = (Array.isArray(ev.entries) ? ev.entries : []).slice(0, 6).map((e) => {
     const x = {};
     SHOWCASE_ENTRY_FIELDS.forEach((k) => { if (e && !vazio(e[k]) && !(oficial && k.startsWith('placement'))) x[k] = e[k]; });
-    if (e && e.format === 'doubles' && e.partner && !vazio(e.partner.name)) {
+    // Todo formato com dupla fixa (duplas E equipe): a mesma pergunta de quem convida e confirma.
+    if (e && formatHasPartner(e.format) && e.partner && !vazio(e.partner.name)) {
       const p = e.partner.uid ? partners[e.partner.uid] : null;
       if (p && p.name) x.partner = { uid: e.partner.uid, name: String(p.name).slice(0, 80), photo_url: p.photo_url || null };
       else x.with_partner = true;

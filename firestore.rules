@@ -592,9 +592,10 @@ service cloud.firestore {
       return gd('platform_settings/global').get('feature_flags', {}).get('athlete_career', false) == true;
     }
     // O dono grava o próprio (`{uid}_…`, com a flag). Usado por `career_events`
-    // e `career_rank`.
+    // e `career_rank`. O id tem teto: o servidor monta com ele o id dos avisos
+    // (`carreira_prazo_{id}_{data}`), e um id gigante derrubava a varredura.
     function careerW(id) {
-      return isOwner(nd().uid) && id.matches(me() + '_.+') && careerOn();
+      return isOwner(nd().uid) && id.matches(me() + '_.+') && id.size() < 100 && careerOn();
     }
     // "Mandar ao meu professor" (PR 4): o professor ATIVO lê o torneio que o
     // aluno lhe mandou (`coachSees`/`coachOk`, o desenho do diário de treino).
@@ -635,9 +636,14 @@ service cloud.firestore {
     // fechada de campos, o selo recalculado e a dupla só com o "sim" dela. Lê
     // quem tem CONTA (o perfil público, `/atleta/:uid`, também só abre logado —
     // minimização: visitante sem login não copia a coleção); grava SÓ o servidor
-    // (`careerPublic.js`).
+    // (`careerPublic.js`). Perfil OCULTO pela moderação (`athlete_profiles.hidden`)
+    // fecha a vitrine para os outros (o dono e o admin seguem lendo). Como a
+    // regra olha o perfil de `od().uid`, a consulta tem de fixar `uid ==`:
+    // listar a coleção inteira é recusado. Quem não tem perfil não é barrado
+    // (`exc` antes do `gdc`).
     match /career_public/{id} {
-      allow read: if isAuthed();
+      allow read: if isOwner(od().uid) || (isAuthed()
+        && !(exc('athlete_profiles', od().uid) && gdc('athlete_profiles', od().uid).get('hidden', false) == true)) || adm();
     }
 
     // ---- Galeria de fotos do torneio -------------------------------------
@@ -4512,7 +4518,10 @@ service cloud.firestore {
         && d.get('note', '') is string && d.get('note', '').size() <= 500
         && (d.get('suggestion', null) == null
           || (d.suggestion is map && d.suggestion.get('item_ids', []) is list && d.suggestion.get('item_ids', []).size() <= 16))
-        && (d.get('applied', null) == null || d.applied is map);
+        && (d.get('applied', null) == null || (d.applied is map && d.applied.size() <= 6))
+        && (d.get('body', null) == null || d.body is int)
+        && (d.get('mind', null) == null || d.mind is int)
+        && d.get('evolution', 'nao_sei') in ['melhorou', 'igual', 'piorou', 'nao_sei'];
     }
     // "Mandar ao meu professor" (Carreira, PR 4): o balanço do torneio
     // vai junto com o torneio — `coachSees`/`coachOk`, como no diário.

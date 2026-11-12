@@ -166,6 +166,29 @@ describe('teto do mês, configuração, flag e módulo', () => {
     }
   });
 
+  it('ficha incompleta e grant já existente não consultam o teto nem o cadastro', async () => {
+    const id = `${UID}_e1`;
+    const ctx = cenario({ eventos: { [id]: ev(id, { photos: [] }) }, balancos: { [id]: balanco(id) } });
+    const lidas = [];
+    const espiar = () => {
+      const original = ctx.db.collection;
+      ctx.db.collection = (nome) => { lidas.push(nome); return original(nome); };
+      return () => { ctx.db.collection = original; };
+    };
+    let soltar = espiar();
+    expect(await sync(ctx, id)).toBe('none');
+    soltar();
+    expect(lidas).not.toContain('users');
+    ctx.db.store.docs.set(`career_events/${id}`, ev(id));
+    expect(await sync(ctx, id)).toBe('paid');
+    lidas.length = 0;
+    soltar = espiar();
+    expect(await sync(ctx, id)).toBe('kept');
+    soltar();
+    expect(lidas).not.toContain('users');
+    expect(lidas.filter((n) => n === 'user_xp_grants')).toHaveLength(1); // só o próprio grant
+  });
+
   it('os outros grants da pessoa não mudam', async () => {
     const outro = { uid: UID, kind: 'duel', xp: 200, refId: 'w1' };
     const ctx = cenario({ ...muitas(1), extra: { [`user_xp_grants/${UID}_duel_w1`]: outro } });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { careerGoalValues, seasonGoalMetrics, splitSeasonGoals } from './careerGoals.js';
+import { careerGoalValues, seasonGoalMetrics, splitSeasonGoals, yearOnlyInGoalWindow } from './careerGoals.js';
 import { goalProgress, normalizeGoalInput } from '@/modules/progression/domain/progression.js';
 
 const timeline = {
@@ -28,6 +28,28 @@ describe('as métricas da carreira saem da linha do tempo', () => {
     const { values } = careerGoalValues(timeline);
     const g = { kind: 'outcome', metric: 'career_podiums', target: 3, since: '2026-01-01', due_date: '2026-12-31' };
     expect(goalProgress(g, values)).toMatchObject({ current: 2, target: 3, done: false, unknown: false });
+  });
+  it('⭐ dois pódios no mesmo torneio são duas datas; o plano sem resposta não é torneio jogado', () => {
+    const { values } = careerGoalValues({ faltou: [], seasons: [{ year: 2026, items: [
+      { source: 'fora', date: '2026-03-01', position: 1, positions: [1, 2] },
+      { source: 'fora', date: '2026-04-01', position: null, positions: [], pending: true },
+    ] }] });
+    expect(values.career_podiums).toEqual(['2026-03-01', '2026-03-01']);
+    expect(values.career_events_played).toEqual(['2026-03-01']);
+  });
+  it('⭐ lançado só com o ano: a meta cuja janela cruza o ano avisa quantos podem estar fora da conta', () => {
+    const { soAno } = careerGoalValues({ faltou: [], seasons: [{ year: 2026, items: [
+      { source: 'fora', date: '2026-01-01', datePrecision: 'year' },
+      { source: 'fora', date: '2026-01-01', datePrecision: 'year' },
+      { source: 'fora', date: '2026-06-10', datePrecision: 'day' },
+      { source: 'fora', date: '2024-01-01', datePrecision: 'year' },
+    ] }] });
+    expect(soAno).toEqual({ 2026: 2, 2024: 1 });
+    const meta = { kind: 'outcome', metric: 'career_events_played', target: 6, since: '2026-03-10', due_date: '2026-12-31' };
+    expect(yearOnlyInGoalWindow(meta, soAno)).toBe(2);
+    expect(yearOnlyInGoalWindow({ ...meta, since: '2027-01-01', due_date: '2027-12-31' }, soAno)).toBe(0);
+    expect(yearOnlyInGoalWindow({ ...meta, metric: 'dupr_rating' }, soAno)).toBe(0);
+    expect(yearOnlyInGoalWindow({ kind: 'process' }, soAno)).toBe(0);
   });
   it('sem linha do tempo, desconhecido — nunca zero', () => {
     const { values } = careerGoalValues(null);

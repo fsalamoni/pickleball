@@ -554,6 +554,26 @@ describe('balanço do jogo', () => {
     await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ source: { ...fonte, type: 'avulso', ref_id: '2026-10-08_1' } })));
   });
 
+  it('🔴 corpo, cabeça, evolução e o plano aplicado têm tipo e teto (o professor lê este documento)', async () => {
+    const id = `${ANA}_avulso_2026-10-08_2`;
+    const avulso = { source: { ...fonte, type: 'avulso', ref_id: '2026-10-08_2' } };
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ ...avulso, body: 'x'.repeat(2000) })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ ...avulso, mind: { a: 1 } })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ ...avulso, evolution: 'x'.repeat(2000) })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({
+      ...avulso, applied: { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 },
+    })));
+    // O que a tela grava segue passando: sem resposta (null), a lista de evolução e o plano aplicado.
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ ...avulso, body: null, mind: null, evolution: 'nao_sei' })));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'training_debriefs', id), {
+      applied: { plan_id: 'p', mode: 'novo', dates: ['2026-10-09'], at: '2026-10-08' },
+    }));
+    // Balanço dispensado não traz esses campos.
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', `${ANA}_avulso_2026-10-08_3`), {
+      uid: ANA, status: 'dispensado', source: { ...fonte, type: 'avulso', ref_id: '2026-10-08_3' },
+    }));
+  });
+
   it('⭐ torneio de fora (`externo`): a dona grava o balanço dele; outra conta não', async () => {
     const id = `${ANA}_externo_${ANA}_mabc123`;
     const fora = { ...fonte, type: 'externo', ref_id: `${ANA}_mabc123`, title: 'Open de Floripa', games: null, wins: null };

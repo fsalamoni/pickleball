@@ -193,6 +193,24 @@ describe('aceitar o link (uma vez, só preenche o vazio)', () => {
     await c.eventWritten(ctx(k), EV_ID, antes, null);
     expect(convites(k)).toHaveLength(0);
   });
+
+  it('⭐ a varredura diária apaga o convite vencido (com a flag desligada também) e deixa o que ainda vale', async () => {
+    const k = cenario();
+    const vale = await gerar(k);
+    k.db.store.docs.set('career_partner_invites/velho', { owner_uid: 'ana111', event_id: 'ana111_outro', partner_name: 'Fulano', expires_at_ms: NOW - 1 });
+    k.db.store.docs.set('platform_settings/global', { feature_flags: { athlete_career: false } });
+    expect(await c.reminders(ctx(k))).toMatchObject({ convites: 1, desligada: true });
+    expect(convites(k).map(([p]) => p)).toEqual([`career_partner_invites/${vale.id}`]);
+  });
+
+  it('🔴 ficha com participações demais (gravada por fora da tela): o link não vale e nada é gravado', async () => {
+    const k = cenario();
+    const { token } = await gerar(k);
+    k.db.store.docs.set(`career_events/${EV_ID}`, evento({ entries: [...evento().entries, ...Array.from({ length: 10 }, () => ({ format: 'singles' }))] }));
+    await expect(aceitar(k, ZE, token)).rejects.toMatchObject({ message: NEUTRO });
+    expect(convites(k)).toHaveLength(1);
+    expect(ev(k).entries[0].partner.uid).toBeUndefined();
+  });
 });
 
 describe('cancelar (só o dono)', () => {

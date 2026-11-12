@@ -76,14 +76,29 @@ function aviso(ctx, batch, userId, { title, message, link }) {
 
 /* ------------------------------------------------------------ o selo -- */
 
-/** O torneio da plataforma ligado ("É este") vale como oficial só se o servidor conferir que a pessoa JOGOU nele. */
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const diasEntre = (a, b) => Math.round(Math.abs(Date.parse(`${a}T12:00:00Z`) - Date.parse(`${b}T12:00:00Z`)) / 86400000);
+
+/**
+ * O torneio da plataforma ligado ("É este") vale como oficial só se o servidor
+ * conferir que a pessoa JOGOU nele: inscrição que não foi cancelada nem
+ * desistência (a régua de `is_player` da tela) e, quando o torneio tem data
+ * legível, a até 3 dias da registrada (a régua do "É este?").
+ * Devolve o documento do torneio (o nome e o lugar OFICIAIS vão à vitrine no
+ * lugar dos digitados) ou `null`.
+ */
 async function oficial(ctx, ev) {
-  const id = texto(ev.platform_tournament_id, 200);
-  if (!id) return false;
-  const t = await ctx.db.collection('tournaments').doc(id).get();
-  if (!t.exists || t.data().status === 'draft' || t.data().visibility === 'private') return false;
+  const id = typeof ev.platform_tournament_id === 'string' ? texto(ev.platform_tournament_id, 200) : '';
+  if (!id || id.includes('/') || ev.date_precision === 'year') return null;
+  const snap = await ctx.db.collection('tournaments').doc(id).get();
+  const t = snap.exists ? snap.data() : null;
+  if (!t || t.status === 'draft' || t.visibility === 'private') return null;
+  const dia = [t.starts_at, t.start_date].map((v) => (typeof v === 'string' ? v.slice(0, 10) : '')).find((v) => ISO.test(v));
+  if (dia && ISO.test(String(ev.start_date || '')) && diasEntre(dia, ev.start_date) > 3) return null;
   const regs = await ctx.db.collection('tournament_registrations').where('tournament_id', '==', id).get();
-  return regs.docs.some((r) => [r.data().player_a_user_id, r.data().player_b_user_id].includes(ev.uid));
+  const jogou = regs.docs.some((r) => !V.INACTIVE_REGISTRATION.includes(r.data().status)
+    && [r.data().player_a_user_id, r.data().player_b_user_id].includes(ev.uid));
+  return jogou ? t : null;
 }
 
 /** As duplas que aparecem com nome: `{ uid: { name, photo_url } }` (confirmadas, maiores, com o "sim" delas). */
@@ -122,8 +137,27 @@ async function copiarFoto(ctx, uid, eventId, src) {
   return { path: dest, url: urlPublica(ctx.bucket, dest, token) };
 }
 
+const registrar = (ctx, msg, err) => { if (ctx.logger && ctx.logger.error) ctx.logger.error(msg, err); };
+
+/** Apaga cópias avulsas (a que sobrou de uma montagem, a foto que saiu da ficha). A falha é registrada, nunca engolida. */
 const apagarFotos = (ctx, fotos) => Promise.all((fotos || []).map((f) => (ctx.bucket && f && f.path
-  ? ctx.bucket.file(f.path).delete().catch(() => {}) : null)));
+  ? ctx.bucket.file(f.path).delete().catch((err) => registrar(ctx, `careerPublic: foto pública não apagada (${f.path}).`, err)) : null)));
+
+/**
+ * O torneio SAIU da vitrine: apaga TODA cópia pública dele, pelo prefixo — também
+ * a que ficou de uma tentativa anterior que falhou (o documento já não aponta
+ * para ela, e o link com token continuaria abrindo). Sem Storage ou com erro, a
+ * falha sobe: quem chamou tenta de novo.
+ */
+async function apagarFotosDoEvento(ctx, uid, eventId) {
+  try {
+    if (!ctx.bucket) throw new Error('Storage indisponível');
+    await ctx.bucket.deleteFiles({ prefix: `carreira-publica/${uid}/${eventId}__` });
+  } catch (err) {
+    registrar(ctx, `careerPublic: fotos públicas de ${eventId} não apagadas.`, err);
+    falha('unavailable', 'O torneio saiu da vitrine, mas as fotos ainda não foram apagadas. Tente de novo em instantes.');
+  }
+}
 
 /* --------------------------------------------------------- montagem -- */
 
@@ -142,13 +176,14 @@ async function rebuild(ctx, eventId, { escolha = null } = {}, tentativa = 0) {
   const dono = ev ? await usuario(ctx, ev.uid) : null;
   if (!ev || !jogado(ev, ctx) || !adulto(dono, ctx)) {
     if (!atual) return 'absent';
+    // O documento primeiro (esconder vale mais); a falha ao apagar as fotos sobe e o gatilho a registra.
     await ref.delete();
-    await apagarFotos(ctx, atual.photos);
+    if (ctx.bucket || (atual.photos || []).length) await apagarFotosDoEvento(ctx, atual.uid, eventId);
     return 'removed';
   }
 
   // Fotos: só as que estão na ficha AGORA, da pasta do dono e com descrição.
-  const naFicha = new Map((ev.photos || []).filter((p) => p && String(p.path || '').startsWith(`carreira/${ev.uid}/`) && texto(p.alt))
+  const naFicha = new Map((Array.isArray(ev.photos) ? ev.photos : []).filter((p) => p && String(p.path || '').startsWith(`carreira/${ev.uid}/`) && texto(p.alt))
     .map((p) => [p.path, p]));
   const antes = new Map((atual?.photos || []).map((f) => [V.sourceOfPublicPhoto(ev.uid, f.path), f]));
   const fontes = (escolha || [...antes.keys()]).filter((src) => naFicha.has(src)).slice(0, V.SHOWCASE_LIMITS.photos);
@@ -160,7 +195,8 @@ async function rebuild(ctx, eventId, { escolha = null } = {}, tentativa = 0) {
       // eslint-disable-next-line no-await-in-loop
       const copia = ja ? { path: ja.path, url: ja.url } : await copiarFoto(ctx, ev.uid, eventId, src);
       if (!ja) novas.push(copia);
-      fotos.push({ ...copia, kind: naFicha.get(src).kind, alt: naFicha.get(src).alt });
+      const k = naFicha.get(src).kind;
+      fotos.push({ ...copia, kind: typeof k === 'string' && k.length <= 24 ? k : 'other', alt: texto(naFicha.get(src).alt, 140) });
     }
   } catch (err) {
     await apagarFotos(ctx, novas); // nada de cópia pública órfã
@@ -171,8 +207,16 @@ async function rebuild(ctx, eventId, { escolha = null } = {}, tentativa = 0) {
   const pedidoDocs = (await ctx.db.collection(PARTNER).where('event_id', '==', eventId).get()).docs
     .filter((d) => d.data().owner_uid === ev.uid);
   const pedidos = pedidoDocs.map((d) => d.data());
-  const item = V.showcaseItem(ev, {
-    seal: V.showcaseSeal(ev, pedidos, await oficial(ctx, ev)),
+  // A ficha é SANEADA antes de virar pública (a regra do evento não confere tipo
+  // nem tamanho); o selo e as impressões seguem sobre a ficha como foi gravada.
+  const torneio = await oficial(ctx, ev);
+  const publica = V.safeShowcaseEvent(ev);
+  if (torneio) {
+    // Sob o selo Oficial vão o nome e o lugar do torneio DA PLATAFORMA, não os digitados.
+    ['name', 'city', 'state'].forEach((k) => { if (typeof torneio[k] === 'string' && torneio[k].trim()) publica[k] = texto(torneio[k], k === 'state' ? 2 : 120); });
+  }
+  const item = V.showcaseItem(publica, {
+    seal: V.showcaseSeal(ev, pedidos, Boolean(torneio)),
     partners: await duplasComNome(ctx, ev, pedidos),
     photos: fotos,
   });
@@ -245,7 +289,7 @@ async function publish(ctx, actor, data) {
   // Menor de 18 (ou nascimento desconhecido): a MESMA resposta, sem gravar nada.
   if (!adulto(await usuario(ctx, actor.uid), ctx)) return resposta;
   if (!jogado(ev, ctx)) falha('failed-precondition', 'Só torneio já jogado vai à vitrine.');
-  const naFicha = new Map((ev.photos || []).map((p) => [p.path, p]));
+  const naFicha = new Map((Array.isArray(ev.photos) ? ev.photos : []).filter(Boolean).map((p) => [p.path, p]));
   if (fotos.some((p) => !naFicha.has(p))) falha('failed-precondition', 'Uma foto não está mais na ficha. Salve a ficha e tente de novo.');
   if (fotos.some((p) => !texto(naFicha.get(p).alt))) falha('failed-precondition', 'Escreva o que aparece em cada foto antes de mostrá-la.');
   const outros = (await ctx.db.collection(COL).where('uid', '==', actor.uid).get()).docs.filter((d) => d.id !== eventId);
@@ -270,12 +314,14 @@ async function unpublish(ctx, actor, data) {
   const snap = await ref.get();
   if (snap.exists && snap.data().uid !== actor.uid) falha('permission-denied', 'Este torneio não é seu.');
   if (snap.exists) {
-    await ref.delete();
-    await apagarFotos(ctx, snap.data().photos);
+    // Some da vitrine na hora; a auditoria vai junto, antes de mexer nos arquivos.
     const batch = ctx.db.batch();
+    batch.delete(ref);
     auditoria(ctx, batch, actor, 'career_public_unpublished', { event_id: eventId });
     await batch.commit();
   }
+  // SEMPRE, com documento ou sem: a segunda tentativa limpa o que a primeira deixou.
+  await apagarFotosDoEvento(ctx, actor.uid, eventId);
   return { id: eventId, published: false };
 }
 
@@ -284,8 +330,10 @@ async function publicConsent(ctx, actor, data) {
   const docId = texto(data.docId, 400);
   const ref = ctx.db.collection(PARTNER).doc(docId);
   const snap = docId ? await ref.get() : null;
-  if (!snap || !snap.exists) falha('not-found', 'Este pedido não existe mais.');
-  const d = snap.data();
+  const d = snap && snap.exists ? snap.data() : null;
+  // Inexistente e "não é seu" respondem IGUAL: o código do erro não pode dizer a
+  // um terceiro quem foi citado como dupla (o id do pedido é evento + uid).
+  if (!d || ![d.owner_uid, d.partner_uid].includes(actor.uid)) falha('not-found', 'Este pedido não existe mais.');
   if (d.partner_uid !== actor.uid) falha('permission-denied', 'Só a dupla decide sobre o próprio nome.');
   const ok = data.ok === true;
   if (ok) {
@@ -299,6 +347,8 @@ async function publicConsent(ctx, actor, data) {
     const evSnap = await ctx.db.collection(EV).doc(texto(d.event_id, 200)).get();
     if (!evSnap.exists) falha('not-found', 'Este torneio não existe mais.');
     fp = V.consentFingerprint({ id: evSnap.id, ...evSnap.data() }, actor.uid);
+    // Ficha fora do que a tela grava (texto gigante): a impressão não vai para o pedido que os dois leem.
+    if (fp.length > 2000) falha('failed-precondition', 'Este registro não pode ir à vitrine como está. Peça a quem registrou para salvá-lo de novo.');
   }
   const batch = ctx.db.batch();
   batch.update(ref, { public_ok_partner: ok, public_ok_at_ms: ctx.now, public_fp: fp });

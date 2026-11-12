@@ -31,10 +31,14 @@ career/
 ├── services/
 │   ├── careerService.js        # career_events + career_rank + Storage carreira/{uid}/ + career_partner (ler) + career_public (ler, PR 7) + callable `career` + "mandar ao professor"
 │   └── careerExportService.js  # o bloco `career` da exportação de dados
-├── hooks/useCareer.js  # useCareerEvents, useCareerTimeline, mutações, useCareerSaveWithDraft,
-│                       # useCareerPartners, useCareerPartnerVoices, useCareerPartnerAction, useCareerModerationQueue,
-│                       # PR 4: useCareerRanks, useOfficialRanks, useSaveCareerRank, useDeleteCareerRank,
-│                       # useShareCareerWithCoach, useStudentCareerShares, useFederationAgendaForMe
+├── hooks/
+│   ├── useCareer.js    # o arquivo LEVE: useCareerEvents, mutações, useCareerSaveWithDraft,
+│   │                   # useCareerPartners, useCareerPartnerVoices, useCareerPartnerAction, useCareerModerationQueue,
+│   │                   # PR 4: useCareerRanks, useOfficialRanks, useSaveCareerRank, useDeleteCareerRank,
+│   │                   # useShareCareerWithCoach, useStudentCareerShares, useFederationAgendaForMe
+│   │                   # (o serviço das federações só por import() dentro do queryFn)
+│   └── useCareerTimeline.js # useCareerTimeline (torneios, pódios, dias de jogo) — importe DAQUI;
+│                       # useCareer.js ainda o reexporta por compatibilidade, até as telas trocarem
 └── i18n/locales/       # en.js, es.js
 ```
 
@@ -56,6 +60,34 @@ Carreira do início). PR 5: o XP da ficha completa é do servidor
 `careerDebriefWritten`, `user_xp_grants` com `kind: 'career'`, módulo de
 gamificação `career_xp`) e as conquistas da família `my_career` vêm das
 fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
+
+## Serviço e hooks: conexão ruim (pente fino, 2026-11)
+
+- **Leitura sempre do servidor** (`getDocsFromServer` em todo `list*`): sem
+  persistência, a leitura comum com sinal ruim resolve com o cache vazio e a
+  tela afirmaria "sua carreira começa aqui". Sem rede a consulta FALHA
+  (docs/27). `careerService.test.js` não oferece `getDocs` de propósito.
+- **Rascunho sem sinal** (`useCareerSaveWithDraft`): `saved: false` só quando
+  guardou MESMO — navegador que recusa guardar ou fila cheia (`pendingFull`)
+  sem resposta do servidor LANÇA. O envio que chega depois do prazo de 8 s sai
+  da fila (só se o rascunho guardado ainda for o mesmo). `flush` devolve
+  `{ enviados, esperando, recusados }` e `flushing`; o recusado no reenvio fica
+  na fila com `refused: true` (não é reenviado, não some calado). O reenvio
+  chama `saveCareerEvent(…, { resend: true })`, que relê antes de gravar.
+- **Excluir** (`useDeleteCareerEvent`, `networkMode: 'always'`): tira da fila
+  antes de qualquer espera, não espera o servidor por rascunho que só existia
+  no aparelho, não espera o Storage, e invalida também `['treino','balanco']`.
+- **Modo lista** (`useSaveCareerBatch`): offline recusa na hora; sem
+  confirmação em 8 s a mutação falha dizendo que o envio ainda pode chegar.
+- **"Mandar ao meu professor"**: balanço lido antes, torneio + balanço num
+  lote só, invalida também na falha, e o professor é AVISADO quando passa a
+  ver (`notifyUsers`, tipo do treino, link `/treino?aba=alunos`); retirar não avisa.
+- **Foto**: envio com prazo de 45 s (`CAREER_PHOTO_TIMEOUT_MS`), cancelado ao
+  vencer. PNG/WebP sobem sempre recodificados (`compressImage`): só o JPEG
+  pode voltar o original, porque só dele o EXIF é tirado.
+- `careerKeys.officialRanks`/`fedAgenda` ficam fora do prefixo `['career']`
+  (cada salvar invalidava até 12 rankings de federação).
+- `useCareerTimeline` devolve `isPaused` (consultas pausadas por falta de conexão).
 
 ## O que não pode regredir
 
@@ -99,7 +131,7 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
     vencido, cancelado e inexistente respondem igual. `INVITE_TTL_DAYS`,
     `INVITE_TOKEN_PATTERN`, `partnerNameKey` e `namedPartners` têm cópia em
     `functions/careerPolicy.js` com paridade. Hook `useCareerPartnerInvites`.
-15. **Vitrine pública (PR 7)**: `career_public` e o Storage `carreira-publica/`
+16. **Vitrine pública (PR 7)**: `career_public` (lê quem tem conta) e o Storage `carreira-publica/`
     só o servidor grava (`functions/careerPublic.js`); só o que o dono
     escolheu, lista fechada de campos, selo calculado (Oficial sem a colocação
     declarada), nome da dupla só com o "sim" dela (`public_consent`, com a impressão `public_fp` do que ela viu), menor

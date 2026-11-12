@@ -7,7 +7,7 @@
  * de 1º de dezembro. Antes disso a tela não promete nada.
  */
 import { SEAL, TIMELINE_SOURCE } from './timeline.js';
-import { CAREER_STATUS } from './careerEvent.js';
+import { isOutsidePlayed } from './careerEvent.js';
 
 const POS = Object.freeze({ champion: 1, runner_up: 2, third: 3 });
 const chave = (nome) => String(nome || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -23,7 +23,9 @@ export function seasonRecapOffered(year, today) {
  * A melhor parceria do ano: quem mais jogou com a pessoa (torneios juntos) e,
  * no empate, mais medalhas juntos. Junta as duplas dos torneios de fora e as
  * dos pódios da plataforma (a única fonte daqui que diz a dupla). O torneio de
- * fora ligado a um pódio da plataforma ("É este") conta uma vez só.
+ * fora ligado a um pódio da plataforma ("É este") conta uma vez só, e a
+ * colocação DIGITADA num torneio ligado nunca vira medalha (a oficial é a do
+ * pódio). Plano sem resposta e plano de torneio daqui não são torneio jogado.
  */
 export function bestPartnership({ year, career = [], trophies = [], me = {} }) {
   const placar = new Map();
@@ -41,10 +43,10 @@ export function bestPartnership({ year, career = [], trophies = [], me = {} }) {
     (tr.people || []).forEach((p) => somar({ uid: p.user_id || null, name: p.name }, `t:${tr.tournamentId}`, true));
   });
   (career || [])
-    .filter((e) => e.status === CAREER_STATUS.PLAYED && Number(String(e.start_date).slice(0, 4)) === year)
+    .filter((e) => isOutsidePlayed(e) && Number(String(e.start_date).slice(0, 4)) === year)
     .filter((e) => !(e.platform_tournament_id && podiosDaqui.has(e.platform_tournament_id)))
     .forEach((e) => (e.entries || []).forEach((en) => {
-      if (en.partner?.name) somar({ uid: en.partner.uid || null, name: en.partner.name }, `c:${e.id}`, Boolean(POS[en.placement]));
+      if (en.partner?.name) somar({ uid: en.partner.uid || null, name: en.partner.name }, `c:${e.id}`, !e.platform_tournament_id && Boolean(POS[en.placement]));
     }));
   // A mesma pessoa pode chegar com conta (pódio daqui, dupla escolhida) e só
   // com o nome (digitado num torneio de fora): junta a entrada só de nome à
@@ -85,6 +87,6 @@ export function buildSeasonRecap({ season, faltou = [], career = [], trophies = 
     bronze: s.bronze || 0,
     partner: bestPartnership({ year: season.year, career, trophies, me }),
     // Há resultado DECLARADO na conta: o cartão diz isso no rodapé.
-    declared: (season.items || []).some((i) => i.source === TIMELINE_SOURCE.CAREER && i.seal === SEAL.DECLARED && !i.cancelled),
+    declared: (season.items || []).some((i) => i.source === TIMELINE_SOURCE.CAREER && i.seal === SEAL.DECLARED && !i.cancelled && !i.pending),
   };
 }

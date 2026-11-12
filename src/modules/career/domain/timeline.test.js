@@ -155,6 +155,48 @@ describe('buildCareerTimeline', () => {
   });
 });
 
+describe('um jeito só de contar pódio: por participação', () => {
+  const duas = fora({ entries: [{ format: 'doubles', placement: 'champion' }, { format: 'doubles', gender: 'mixed', placement: 'runner_up' }, { format: 'singles', placement: 'groups' }] });
+  it('⭐ ouro e prata no mesmo torneio de FORA são dois pódios em toda conta', () => {
+    const tl = buildCareerTimeline({ today: HOJE, career: [duas], tournaments: [], trophies: { torneios: [] }, gameDayGames: [], federationPoints: [] });
+    expect(tl.seasons[0].items[0]).toMatchObject({ position: 1, positions: [1, 2] });
+    expect(tl.seasons[0].summary).toMatchObject({ tournaments: 1, podiums: 2, gold: 1, silver: 1, bronze: 0 });
+    expect(careerAreaSummary([duas]).podiums).toBe(2);
+    expect(careerPerformanceSummary([duas])).toMatchObject({ podiums: 2, titles: 1 });
+    expect(careerTrophies([duas])).toHaveLength(2);
+  });
+  it('⭐ e os de um torneio da PLATAFORMA também (um por categoria)', () => {
+    const tl = buildCareerTimeline({
+      today: HOJE, career: [], gameDayGames: [], federationPoints: [],
+      tournaments: [{ id: 't1', name: 'Arena', starts_at: '2026-03-01', is_player: true }],
+      trophies: { torneios: [{ tournamentId: 't1', position: 2, subtitle: 'Mista' }, { tournamentId: 't1', position: 1, subtitle: 'Duplas' }] },
+    });
+    expect(tl.seasons[0].items[0]).toMatchObject({ position: 1, positions: [1, 2] });
+    expect(tl.seasons[0].items[0].subtitle).toContain('Duplas');
+    expect(tl.seasons[0].summary).toMatchObject({ tournaments: 1, podiums: 2, gold: 1, silver: 1 });
+  });
+});
+
+describe('o plano que passou sem resposta e o plano de um torneio daqui', () => {
+  const semResposta = { id: 'u_s', uid: 'u', name: 'Agenda', status: 'played', planned_passed: true, start_date: '2026-10-01', entries: [{ format: 'doubles', partner: { name: 'Ana' } }] };
+  const daqui = { id: 'u_t', uid: 'u', name: 'Daqui', status: 'played', start_date: '2026-10-05', origin_ref: 'tor:t1', entries: [{ format: 'doubles' }] };
+  const jogado = fora({ start_date: '2026-09-01' });
+  it('⭐ o plano sem resposta fica na lista (pendente) e FORA das contas da temporada', () => {
+    const tl = buildCareerTimeline({ today: HOJE, career: [semResposta, jogado], tournaments: [], trophies: { torneios: [] }, gameDayGames: [], federationPoints: [] });
+    expect(tl.seasons[0].items.map((i) => [i.id, i.pending])).toEqual([['fora:u_s', true], ['fora:u_a', false]]);
+    expect(tl.seasons[0].summary).toMatchObject({ events: 1, tournaments: 1, podiums: 1 });
+    // Só pendentes: a temporada não tem torneio (a retrospectiva não aparece).
+    const so = buildCareerTimeline({ today: HOJE, career: [semResposta], tournaments: [], trophies: { torneios: [] }, gameDayGames: [], federationPoints: [] });
+    expect(so.seasons[0].summary).toMatchObject({ events: 0, tournaments: 0 });
+  });
+  it('⭐ nenhum dos dois conta na Minha área nem em Meu desempenho, nem vira o "último registro"', () => {
+    const r = careerAreaSummary([semResposta, daqui, jogado]);
+    expect(r).toMatchObject({ total: 3, played: 1, podiums: 1 });
+    expect(r.last.id).toBe('u_a');
+    expect(careerPerformanceSummary([semResposta, daqui, jogado])).toEqual({ tournaments: 1, podiums: 1, titles: 1, linked: 0 });
+  });
+});
+
 describe('filtros na URL', () => {
   const tl = buildCareerTimeline({
     today: HOJE, trophies: { torneios: [] }, gameDayGames: [], federationPoints: [],
@@ -200,6 +242,30 @@ describe('torneio ligado pelo "É este" e torneio de teste', () => {
     });
     expect(tl.total).toBe(1);
     expect(tl.seasons[0].items[0]).toMatchObject({ source: TIMELINE_SOURCE.CAREER, seal: 'official' });
+  });
+  it('🔴 ligado pelo "É este": a colocação DIGITADA não vira medalha sob o selo Oficial', () => {
+    const base = {
+      today: HOJE, gameDayGames: [], federationPoints: [],
+      career: [fora({ platform_tournament_id: 't1' })], // digitou "Campeão"
+      tournaments: [{ id: 't1', name: 'Open Sul', starts_at: '2025-05-10', is_player: true, status: 'finished', visibility: 'public' }],
+    };
+    // Sem pódio oficial: sem posição, sem ouro, sem "Campeão" no texto, sem troféu.
+    const semPodio = buildCareerTimeline({ ...base, trophies: { torneios: [] } });
+    const item = semPodio.seasons[0].items[0];
+    expect(item).toMatchObject({ seal: 'official', position: null, positions: [] });
+    expect(item.subtitle).not.toContain('Campeão');
+    expect(semPodio.seasons[0].summary).toMatchObject({ tournaments: 1, podiums: 0, gold: 0 });
+    expect(careerTrophies(base.career, { myTournaments: base.tournaments })).toEqual([]);
+    // Com o pódio oficial (3º): é ele que vale.
+    const comPodio = buildCareerTimeline({ ...base, trophies: { torneios: [{ tournamentId: 't1', position: 3 }] } });
+    expect(comPodio.seasons[0].items[0]).toMatchObject({ position: 3, positions: [3] });
+    expect(comPodio.seasons[0].summary).toMatchObject({ gold: 0, bronze: 1 });
+    // Os pontos oficiais do ligado também valem (posição, federado e o texto).
+    const comPontos = buildCareerTimeline({ ...base, trophies: { torneios: [] }, federationPoints: [{ id: 'p1', tournament_id: 't1', date: '2025-05-10', points: 100, position: 2 }] });
+    expect(comPontos.seasons[0].items[0]).toMatchObject({ position: 2, federated: true });
+    expect(comPontos.seasons[0].items[0].subtitle).toContain('100');
+    // A lista de torneios que FALHOU não dá selo oficial: segue declarado, com o que a pessoa disse.
+    expect(careerTrophies(base.career, {})).toHaveLength(1);
   });
   it('torneio rascunho em que me inscrevi não entra como oficial', () => {
     const tl = buildCareerTimeline({

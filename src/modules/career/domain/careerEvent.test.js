@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  CAREER_FORMAT, CAREER_LIMITS, CAREER_STATUS, LEGACY_LEVEL_BRACKETS, LEVEL_BRACKETS, formatHasPartner, levelBracketText, bestPosition, careerCompleteness, careerSeal, deriveCareerStatus, entryLabel,
+  CAREER_FORMAT, CAREER_LIMITS, CAREER_STATUS, awaitsResult, isOutsidePlayed, LEGACY_LEVEL_BRACKETS, LEVEL_BRACKETS, formatHasPartner, levelBracketText, bestPosition, careerCompleteness, careerSeal, deriveCareerStatus, entryLabel,
   listRowsToEvents, matchPlatformTournament, newCareerEventId, normalizeCareerEvent, normalizeCareerLink,
   normalizeEntry, normalizePhoto, normalizeTournamentName, registeredProgress, repeatEvent, repeatableEvents,
   withDerivedStatus,
@@ -26,6 +26,34 @@ describe('status derivado da data local', () => {
     expect(careerCompleteness(lido)).not.toBeNull();
     expect(withDerivedStatus({ ...ev, status: 'cancelled' }, HOJE).status).toBe('cancelled');
     expect(withDerivedStatus({ ...ev, start_date: '2027-01-01' }, HOJE).status).toBe('planned');
+  });
+  it('⭐ o PLANO segue planejado até o último dia: no dia é "É hoje", só no dia seguinte "Como foi?"', () => {
+    const plano = { id: 'x', status: 'planned', start_date: HOJE, entries: [{ format: 'doubles' }] };
+    // No dia do torneio: ainda planejado, sem pendência.
+    expect(withDerivedStatus(plano, HOJE)).toBe(plano);
+    // Sexta a domingo, no sábado: em andamento.
+    const longo = { ...plano, start_date: '2026-11-06', end_date: '2026-11-08' };
+    expect(withDerivedStatus(longo, '2026-11-07').status).toBe('planned');
+    expect(withDerivedStatus(longo, '2026-11-08').status).toBe('planned');
+    // Segunda: passou.
+    expect(withDerivedStatus(longo, '2026-11-09')).toMatchObject({ status: 'played', planned_passed: true });
+    expect(withDerivedStatus(plano, '2026-11-05')).toMatchObject({ status: 'played', planned_passed: true });
+    // Quem já disse a colocação no dia não fica preso em "planejado".
+    const comResultado = { ...plano, entries: [{ format: 'doubles', placement: 'semis' }] };
+    expect(withDerivedStatus(comResultado, HOJE).status).toBe('played');
+    // Fim antes do início não segura nada; registro novo de hoje continua jogado.
+    expect(deriveCareerStatus('2026-11-01', { current: 'planned', endDate: '2026-10-01', today: HOJE })).toBe('played');
+    expect(deriveCareerStatus(HOJE, { today: HOJE, endDate: '2026-11-08' })).toBe('played');
+  });
+  it('⭐ plano sem resposta espera o "Como foi?" e não conta como jogado; nem o plano de um torneio daqui', () => {
+    const semResposta = withDerivedStatus({ id: 'a', status: 'planned', start_date: '2026-10-01', entries: [{ format: 'doubles' }] }, HOJE);
+    const respondido = withDerivedStatus({ id: 'b', status: 'planned', start_date: '2026-10-01', entries: [{ format: 'doubles', placement: 'groups' }] }, HOJE);
+    const daqui = withDerivedStatus({ id: 'c', status: 'planned', start_date: '2026-10-01', origin_ref: 'tor:t1', entries: [{ format: 'doubles' }] }, HOJE);
+    expect([semResposta, respondido, daqui].map(awaitsResult)).toEqual([true, false, false]);
+    expect([semResposta, respondido, daqui, { status: 'played' }, { status: 'cancelled' }].map(isOutsidePlayed)).toEqual([false, true, false, true, false]);
+    expect(registeredProgress([semResposta, respondido, daqui], 10)).toMatchObject({ done: 1 });
+    // "Não fui": o cancelado gravado continua cancelado, em qualquer data.
+    expect(withDerivedStatus({ ...semResposta, status: 'cancelled' }, HOJE).status).toBe('cancelled');
   });
 });
 
@@ -57,6 +85,24 @@ describe('normalizeCareerEvent', () => {
     expect(r.photos).toHaveLength(6);
     expect(r.state).toBe('');
     expect(r.end_date).toBeNull();
+  });
+  it('⭐ o plano salvo no dia do torneio continua planejado (o aviso D+1 do servidor depende disso)', () => {
+    const n = (extra) => normalizeCareerEvent(base({ start_date: HOJE, status: 'planned', ...extra }), { uid: UID, today: HOJE }).value.status;
+    expect(n()).toBe('planned');
+    expect(n({ start_date: '2026-11-02', end_date: '2026-11-05' })).toBe('planned');
+    expect(n({ entries: [{ format: 'doubles', placement: 'champion' }] })).toBe('played');
+    // Registro novo (sem status) com a data de hoje: jogado.
+    expect(n({ status: undefined })).toBe('played');
+  });
+  it('⭐ data que não existe e ano absurdo são recusados; fim com ano absurdo some', () => {
+    const v = (extra) => normalizeCareerEvent(base(extra), { today: HOJE });
+    expect(v({ start_date: '2026-02-31' }).valid).toBe(false);
+    expect(v({ start_date: '0202-05-10' }).valid).toBe(false);
+    expect(v({ start_date: '2206-05-10' }).valid).toBe(false);
+    expect(v({ start_date: '1990-01-01' }).valid).toBe(true);
+    expect(v({ start_date: '2031-12-31' }).valid).toBe(true);
+    expect(v({ end_date: '2206-05-12' }).value.end_date).toBeNull();
+    expect(v({ end_date: '2026-05-12' }).value.end_date).toBe('2026-05-12');
   });
   it('federação do diretório marca "federado"', () => {
     expect(normalizeCareerEvent(base({ federation_id: 'fgp', federation_acronym: 'FGP' }), { today: HOJE }).value).toMatchObject({ federated: true, federation_id: 'fgp' });
@@ -212,6 +258,16 @@ describe('repetir o do ano passado', () => {
     const r = repeatEvent({ name: 'Open Floripa 2025', organizer: 'FCP', city: 'Floripa', state: 'SC', federation_id: 'f', federation_acronym: 'FCP', federated: true, start_date: '2025-05-10', entries: [{ placement: 'champion' }] });
     expect(r).toMatchObject({ name: 'Open Floripa 2026', organizer: 'FCP', city: 'Floripa', state: 'SC', federation_id: 'f', federated: true, start_date: '2026-05-09' });
     expect(r.entries).toBeUndefined();
+  });
+  it('⭐ torneio de dois ou três anos atrás vem para ESTE ano (nunca nasce no passado); do ano corrente, +1', () => {
+    const ev = (ano) => ({ name: `Open de Gramado ${ano}`, start_date: `${ano}-08-10` });
+    expect(repeatEvent(ev(2024), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-08-08' });
+    expect(repeatEvent(ev(2023), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-08-06' });
+    expect(repeatEvent(ev(2025), HOJE)).toMatchObject({ name: 'Open de Gramado 2026', start_date: '2026-08-09' });
+    expect(repeatEvent(ev(2026), HOJE)).toMatchObject({ name: 'Open de Gramado 2027', start_date: '2027-08-09' });
+  });
+  it('⭐ o plano de um torneio do PickleRush que passou não é "repetir" (duplicaria o oficial)', () => {
+    expect(repeatableEvents([{ status: 'played', start_date: '2025-01-01', origin_ref: 'tor:t1' }, { status: 'played', planned_passed: true, start_date: '2025-02-01', entries: [{}] }], HOJE)).toEqual([]);
   });
   it('só os jogados de anos anteriores', () => {
     const l = repeatableEvents([{ status: 'played', start_date: '2025-01-01' }, { status: 'played', start_date: '2026-03-01' }, { status: 'planned', start_date: '2024-01-01' }], HOJE);

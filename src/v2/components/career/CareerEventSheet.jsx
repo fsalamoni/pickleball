@@ -220,6 +220,8 @@ export default function CareerEventSheet({
       else toast.message(t('Guardado neste aparelho. Enviamos quando a conexão voltar.'));
       return true;
     } catch (err) {
+      // O envio pode seguir vivo: guardar o id faz a nova tentativa regravar o MESMO registro.
+      if (err?.event?.id) setF((x) => (x && !x.id ? { ...x, id: err.event.id } : x));
       setErro(err?.code === 'permission-denied' ? t('O registro de torneios está desligado agora.') : (err?.message || t('Não foi possível salvar. Tente de novo.')));
       return false;
     } finally {

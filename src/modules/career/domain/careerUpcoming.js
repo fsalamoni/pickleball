@@ -17,7 +17,7 @@ import { t, tk } from '@/core/i18n';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { addDays, daysBetween, isISODate, toISODate, todayLocal } from '@/modules/training/domain/dates.js';
 import { brtDateTime } from '@/modules/tournament/domain/ics.js';
-import { CAREER_FORMAT, CAREER_STATUS, platformPlanTournamentId } from './careerEvent.js';
+import { CAREER_FORMAT, CAREER_STATUS, awaitsResult, platformPlanTournamentId } from './careerEvent.js';
 
 /** Rótulos da prioridade (o valor gravado está em `CAREER_PRIORITY`). */
 export const PRIORITY_LABEL = Object.freeze({
@@ -140,7 +140,8 @@ export function planDraftFrom(item) {
 export function upcomingPlan({ events, myTournaments, today = todayLocal() } = {}) {
   const planejados = (events || []).filter((e) => e.status === CAREER_STATUS.PLANNED)
     .map((e) => ({ key: `fora:${e.id}`, kind: 'career', event: e, date: e.start_date, title: e.name }));
-  const ligados = new Set((events || []).flatMap((e) => [e.platform_tournament_id, platformPlanTournamentId(e)]).filter(Boolean));
+  // Só o plano que ESTÁ na lista esconde o torneio: o que já saiu dela (jogado) não pode sumir com ele.
+  const ligados = new Set(planejados.flatMap(({ event: e }) => [e.platform_tournament_id, platformPlanTournamentId(e)]).filter(Boolean));
   const daqui = (myTournaments || []).filter((tt) => tt?.is_player && !ligados.has(tt.id)
     && !['draft', 'cancelled'].includes(tt.status)).map((tt) => {
     const d = dia(tt.starts_at) || dia(tt.start_date);
@@ -154,11 +155,17 @@ export function upcomingPlan({ events, myTournaments, today = todayLocal() } = {
 /** Dias até o planejado (0 = hoje). */
 export const daysUntil = (iso, today = todayLocal()) => (isISODate(iso) ? daysBetween(today, iso) : null);
 
-/** A contagem regressiva: o PRINCIPAL mais próximo que ainda vem, ou `null`. */
+/**
+ * A contagem regressiva: o PRINCIPAL mais próximo que ainda vem; sem nenhum
+ * Principal, o planejado mais próximo (todo plano nasce "Só para jogar").
+ * O torneio em andamento (hoje entre o início e o fim) conta como "É hoje"
+ * (`days: 0`). `null` sem planejado.
+ */
 export function mainCountdown(events, today = todayLocal()) {
-  const p = (events || []).filter((e) => e.status === CAREER_STATUS.PLANNED && e.priority === 'main' && e.start_date >= today)
-    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
-  return p ? { event: p, days: daysUntil(p.start_date, today) } : null;
+  const p = (events || [])
+    .filter((e) => e.status === CAREER_STATUS.PLANNED && isISODate(e.start_date) && fimDe(e.start_date, e.end_date) >= today)
+    .sort((a, b) => (b.priority === 'main') - (a.priority === 'main') || a.start_date.localeCompare(b.start_date))[0];
+  return p ? { event: p, days: Math.max(0, daysUntil(p.start_date, today)) } : null;
 }
 
 /** "Faltam 12 dias", "É amanhã", "É hoje". */
@@ -208,7 +215,7 @@ export function suggestedFocus(debriefs) {
  */
 export function careerPlanPending(events, today = todayLocal()) {
   if (!Array.isArray(events)) return undefined;
-  const comoFoi = events.filter((e) => e.planned_passed && !(e.entries || []).some((x) => x.placement));
+  const comoFoi = events.filter(awaitsResult);
   const prazos = events.filter((e) => e.status === CAREER_STATUS.PLANNED && !e.registered && deadlineInfo(e, today)?.soon);
   return {
     comoFoi: comoFoi.length,

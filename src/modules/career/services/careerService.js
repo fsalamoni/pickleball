@@ -5,17 +5,23 @@
  *
  * Uma igualdade por consulta (`uid ==`), ordenação em memória: zero índice.
  * Tudo passa por `normalizeCareerEvent` antes de gravar (a regra é rasa).
+ *
+ * As leituras vão SEMPRE ao servidor (`getDocsFromServer`): sem persistência,
+ * a leitura comum com sinal ruim resolve com o cache de memória — quase sempre
+ * nada — e a tela afirmaria "sua carreira começa aqui" (docs/27). Sem rede a
+ * consulta FALHA, e a tela diz que falhou.
  */
 import {
-  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocsFromServer, query, setDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { CAREER_RANK, normalizeCareerRank } from '../domain/careerRank.js';
-import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, listAll, ref, uploadBytesResumable } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { storageFileName } from '@/modules/training/domain/media.js';
-import { t } from '@/core/i18n';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { t, tx } from '@/core/i18n';
 import {
   CAREER_EVENTS, newCareerEventId, normalizeCareerEvent, withDerivedStatus,
 } from '../domain/careerEvent.js';
@@ -31,28 +37,33 @@ const porData = (a, b) => String(b.start_date).localeCompare(String(a.start_date
 /** Os torneios de fora da pessoa, do mais novo ao mais antigo. */
 export async function listCareerEvents(uid) {
   if (!db || !uid) return [];
-  const snap = await getDocs(query(collection(db, CAREER_EVENTS), where('uid', '==', uid)));
+  const snap = await getDocsFromServer(query(collection(db, CAREER_EVENTS), where('uid', '==', uid)));
   // O status gravado é o do dia em que se salvou: o planejado que passou vira jogado.
   return snap.docs.map((d) => withDerivedStatus(toDoc(d))).sort(porData);
 }
 
 /**
  * Cria ou substitui um torneio de fora. `input.id` ausente = novo.
+ * `resend` (o reenvio da fila sem sinal): relê o documento mesmo para o
+ * rascunho de registro novo — o primeiro envio pode ter chegado e a dupla,
+ * aceitado o convite pelo link no intervalo.
  * @returns {Promise<object>} o evento gravado, com `id`
  */
-export async function saveCareerEvent(uid, input) {
+export async function saveCareerEvent(uid, input, { resend = false } = {}) {
   if (!uid) throw new CareerError(t('Entre na sua conta.'));
   const { valid, error, value } = normalizeCareerEvent(input, { uid });
   if (!valid) throw new CareerError(error);
   const id = input.id && String(input.id).startsWith(`${uid}_`) ? input.id : newCareerEventId(uid);
   let gravar = value;
-  if (input.id && Number(input.updated_at_ms) > 0) {
+  const carregadoEm = Number(input.updated_at_ms) || 0;
+  if (input.id && (carregadoEm > 0 || resend)) {
     // A dupla pode ter aceitado o convite pelo link com a ficha aberta: não apagar a conta dela.
     try {
       const atual = await getDoc(doc(db, CAREER_EVENTS, id));
-      if (atual.exists()) gravar = keepServerLinkedPartners(value, atual.data(), input.updated_at_ms);
+      if (atual.exists()) gravar = keepServerLinkedPartners(value, atual.data(), carregadoEm);
     } catch (err) {
-      logger.warn('[career] releitura antes de salvar falhou', err);
+      // Rascunho que nunca chegou: a regra olha `resource` nulo e recusa — não é falha.
+      if (err?.code !== 'permission-denied') logger.warn('[career] releitura antes de salvar falhou', err);
     }
   }
   await setDoc(doc(db, CAREER_EVENTS, id), gravar);
@@ -77,19 +88,19 @@ export async function saveCareerEventsBatch(uid, events) {
 }
 
 /**
- * Apaga o torneio, as fotos e o BALANÇO dele (fotos e balanço best-effort: o
- * documento é o que importa). Quem apaga o torneio espera que tudo dele saia —
- * o balanço seguiria pesando no foco das semanas com o título antigo.
+ * Apaga o torneio, as fotos e o BALANÇO dele. O documento é o que importa: a
+ * limpeza das fotos e do balanço é disparada e NÃO é esperada (o Storage tenta
+ * por minutos com sinal ruim, e o diálogo ficaria em "Excluindo…" com o
+ * torneio já apagado). Quem apaga o torneio espera que tudo dele saia — o
+ * balanço seguiria pesando no foco das semanas com o título antigo.
  */
 export async function deleteCareerEvent(event) {
   if (!event?.id) return;
   await deleteDoc(doc(db, CAREER_EVENTS, event.id));
   const uid = event.uid || String(event.id).split('_')[0];
-  await Promise.all([
-    ...(event.photos || []).map((p) => deleteCareerPhoto(p.path)),
-    // Balanço que não existe: a regra de delete olha `resource` (nulo) e recusa — ignorado.
-    deleteDoc(doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id))).catch(() => {}),
-  ]);
+  (event.photos || []).forEach((p) => { deleteCareerPhoto(p.path); });
+  // Balanço que não existe: a regra de delete olha `resource` (nulo) e recusa — ignorado.
+  deleteDoc(doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id))).catch(() => {});
 }
 
 /* --------------------------------------------- "Mandar ao meu professor" -- */
@@ -99,20 +110,39 @@ export async function deleteCareerEvent(event) {
  * ao professor. Ato explícito. A regra confere o vínculo ATIVO e só deixa
  * mandar a quem é professor da pessoa; o balanço que ainda não existe
  * recebe o professor quando for feito (a ficha o passa ao salvar).
+ *
+ * O balanço é lido ANTES e os dois documentos vão num lote só: ou o professor
+ * vê os dois, ou nenhum — nunca o torneio sem o balanço nem (ao retirar) o
+ * balanço ainda legível com a tela dizendo que não.
+ * `actor` ({ uid, name }): com ele o professor é AVISADO quando passa a ver
+ * (como no diário de treino); retirar não avisa.
  */
-export async function shareCareerWithCoach(event, coachId) {
+export async function shareCareerWithCoach(event, coachId, { actor } = {}) {
   if (!event?.id) throw new CareerError(t('Torneio inválido.'));
   const uid = event.uid || String(event.id).split('_')[0];
   const coach = coachId || null;
-  await updateDoc(doc(db, CAREER_EVENTS, event.id), { shared_coach_id: coach || deleteField(), updated_at_ms: Date.now() });
   // Balanço que ainda não existe: nada a fazer (ele leva o professor ao ser feito).
-  // O que EXISTE e falha sobe — a tela não pode afirmar que o professor o vê.
+  // O que EXISTE e falha sobe — antes de qualquer escrita.
   const balanco = doc(db, CAREER_DEBRIEF_COLLECTION, careerDebriefDocId(uid, event.id));
   const existe = await getDoc(balanco).then((s) => s.exists(), (err) => {
     if (err?.code === 'permission-denied') return false; // inexistente: a regra olha `resource` nulo
     throw err;
   });
-  if (existe) await updateDoc(balanco, { shared_coach_id: coach || deleteField() });
+  const lote = writeBatch(db);
+  lote.update(doc(db, CAREER_EVENTS, event.id), { shared_coach_id: coach || deleteField(), updated_at_ms: Date.now() });
+  if (existe) lote.update(balanco, { shared_coach_id: coach || deleteField() });
+  await lote.commit();
+  if (coach && actor?.uid && event.shared_coach_id !== coach) {
+    // O aviso não desfaz o envio nem o segura (sem `await`: com sinal ruim ele ficaria pendurado
+    // e o botão preso em "Enviando…"); se falhar, o professor ainda vê pelo painel do aluno.
+    notifyUsers([coach], {
+      type: NOTIFICATION_TYPE.TRAINING_COMMENT,
+      title: tx('Um aluno mandou um torneio'),
+      message: tx('{nome} mandou "{titulo}" da carreira.', { nome: actor.name || tx('Seu aluno'), titulo: event.name || '' }),
+      link: '/treino?aba=alunos',
+      actor,
+    }).catch(() => 0);
+  }
 }
 
 /**
@@ -125,8 +155,8 @@ export async function listStudentCareerShares(coachUid, studentUid) {
   if (!db || !coachUid || !studentUid) return { events: [], debriefs: [] };
   const filtro = [where('shared_coach_id', '==', coachUid), where('uid', '==', studentUid)];
   const [evs, bal] = await Promise.all([
-    getDocs(query(collection(db, CAREER_EVENTS), ...filtro)),
-    getDocs(query(collection(db, CAREER_DEBRIEF_COLLECTION), ...filtro)),
+    getDocsFromServer(query(collection(db, CAREER_EVENTS), ...filtro)),
+    getDocsFromServer(query(collection(db, CAREER_DEBRIEF_COLLECTION), ...filtro)),
   ]);
   return {
     events: evs.docs.map((d) => withDerivedStatus(toDoc(d))).sort(porData),
@@ -139,7 +169,7 @@ export async function listStudentCareerShares(coachUid, studentUid) {
 /** As posições digitadas da pessoa (`career_rank`, `uid ==`). */
 export async function listCareerRanks(uid) {
   if (!db || !uid) return [];
-  const snap = await getDocs(query(collection(db, CAREER_RANK), where('uid', '==', uid)));
+  const snap = await getDocsFromServer(query(collection(db, CAREER_RANK), where('uid', '==', uid)));
   return snap.docs.map(toDoc).sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
@@ -168,8 +198,8 @@ export async function deleteCareerRank(id) {
 export async function listMyCareerPartnerDocs(uid) {
   if (!db || !uid) return [];
   const [fiz, recebi] = await Promise.all([
-    getDocs(query(collection(db, CAREER_PARTNER), where('owner_uid', '==', uid))),
-    getDocs(query(collection(db, CAREER_PARTNER), where('partner_uid', '==', uid))),
+    getDocsFromServer(query(collection(db, CAREER_PARTNER), where('owner_uid', '==', uid))),
+    getDocsFromServer(query(collection(db, CAREER_PARTNER), where('partner_uid', '==', uid))),
   ]);
   const vistos = new Map();
   [...fiz.docs, ...recebi.docs].forEach((d) => vistos.set(d.id, toDoc(d)));
@@ -179,7 +209,7 @@ export async function listMyCareerPartnerDocs(uid) {
 /** As denúncias que a PESSOA fez (`career_partner_reports`, lê só quem denunciou) — para a exportação. */
 export async function listMyCareerPartnerReports(uid) {
   if (!db || !uid) return [];
-  const snap = await getDocs(query(collection(db, 'career_partner_reports'), where('reporter_uid', '==', uid)));
+  const snap = await getDocsFromServer(query(collection(db, 'career_partner_reports'), where('reporter_uid', '==', uid)));
   return snap.docs.map(toDoc);
 }
 
@@ -190,20 +220,20 @@ export async function listMyCareerPartnerReports(uid) {
  */
 export async function listMyCareerPartnerInvites(uid) {
   if (!db || !uid) return [];
-  const snap = await getDocs(query(collection(db, CAREER_PARTNER_INVITES), where('owner_uid', '==', uid)));
+  const snap = await getDocsFromServer(query(collection(db, CAREER_PARTNER_INVITES), where('owner_uid', '==', uid)));
   return snap.docs.map(toDoc);
 }
 
 /* ------------------------------------------------- a vitrine pública -- */
 
 /**
- * A VITRINE pública de `uid` (`career_public`, `uid ==`, leitura aberta — o
+ * A VITRINE pública de `uid` (`career_public`, `uid ==`, lê quem tem conta — o
  * perfil público e a própria pessoa). Só o servidor grava: publicar e tirar
  * passam por `careerAction('publish' | 'unpublish')`.
  */
 export async function listCareerPublic(uid) {
   if (!db || !uid) return [];
-  const snap = await getDocs(query(collection(db, CAREER_PUBLIC), where('uid', '==', uid)));
+  const snap = await getDocsFromServer(query(collection(db, CAREER_PUBLIC), where('uid', '==', uid)));
   return sortShowcase(snap.docs.map(toDoc));
 }
 
@@ -238,20 +268,28 @@ export async function careerAction(action, payload = {}) {
 /** Caminho no Storage — o mesmo que o `storage.rules` autoriza. */
 export const careerPhotoPath = (uid, fileName) => `carreira/${uid}/${fileName}`;
 
+/** Prazo do envio de UMA foto: passou, o envio é cancelado (o padrão do SDK insiste por 10 min). */
+export const CAREER_PHOTO_TIMEOUT_MS = 45_000;
+
 /**
- * Sobe uma foto JÁ preparada (`prepareUpload`: comprimida, sem EXIF).
+ * Sobe uma foto JÁ preparada (`prepareUpload`: comprimida, sem EXIF). Com
+ * prazo: na quadra, com sinal fraco, o envio não pode segurar a ficha.
  * @returns {Promise<{ path: string, url: string }>}
  */
 export async function uploadCareerPhoto(uid, file) {
   if (!storage) throw new CareerError(t('Envio de arquivos indisponível neste ambiente.'));
   if (!uid) throw new CareerError(t('Entre na sua conta.'));
   const path = careerPhotoPath(uid, storageFileName(file.type));
+  const task = uploadBytesResumable(ref(storage, path), file, { contentType: file.type, cacheControl: 'private, max-age=31536000' });
+  const timer = setTimeout(() => task.cancel(), CAREER_PHOTO_TIMEOUT_MS);
   try {
-    const snap = await uploadBytes(ref(storage, path), file, { contentType: file.type, cacheControl: 'private, max-age=31536000' });
+    const snap = await task;
     return { path, url: await getDownloadURL(snap.ref) };
   } catch (err) {
-    logger.error('Falha no envio da foto da carreira:', err);
+    if (err?.code !== 'storage/canceled') logger.error('Falha no envio da foto da carreira:', err);
     throw new CareerError(t('Não foi possível enviar a foto. Confira a conexão e tente de novo.'));
+  } finally {
+    clearTimeout(timer);
   }
 }
 

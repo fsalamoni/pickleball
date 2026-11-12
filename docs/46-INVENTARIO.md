@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 11 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 974 |
+| Arquivos de teste (`*.test.js(x)`) | 978 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 62 |
 
@@ -42,7 +42,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `analytics` | 1 | · | 1 | 1 | · | · | sim |
 | `arenas` | 62 | 24 | 17 | 6 | · | 2 | sim |
 | `athletes` | 8 | 1 | 2 | 1 | · | · | sim |
-| `career` | 11 | 2 | 1 | · | · | 2 | sim |
+| `career` | 11 | 2 | 2 | · | · | 2 | sim |
 | `chat` | 2 | 1 | 1 | 1 | · | · | sim |
 | `circuits` | 1 | 1 | 1 | · | · | · | sim |
 | `clubs` | 21 | 15 | 14 | 7 | · | 2 | sim |
@@ -84,12 +84,12 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `analytics` | 2 | `games`, `tournament` | — |
 | `arenas` | 8 | `clubs`, `coaches`, `federations`, `games`, `home`, `marketplace`, `promo`, `tournament` | `athletes`, `clubs`, `games`, `rating`, `sharing`, `tournament` |
 | `athletes` | 12 | `admin`, `arenas`, `chat`, `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `search`, `tournament`, `trophies` | `games`, `performance`, `rating`, `tournament` |
-| `career` | 1 | `progression` | `federations`, `games`, `progression`, `tournament`, `training`, `trophies` |
+| `career` | 1 | `progression` | `games`, `progression`, `tournament`, `training`, `trophies` |
 | `chat` | 0 | — | `athletes` |
 | `circuits` | 0 | — | — |
 | `clubs` | 6 | `arenas`, `games`, `help`, `home`, `progression`, `training` | `arenas`, `athletes`, `federations`, `games`, `tournament` |
 | `coaches` | 4 | `home`, `progression`, `promo`, `training` | `arenas`, `athletes`, `leveling`, `marketplace`, `promo`, `rating`, `sharing`, `training` |
-| `federations` | 4 | `career`, `clubs`, `promo`, `tournament` | `arenas`, `marketplace`, `tournament` |
+| `federations` | 3 | `clubs`, `promo`, `tournament` | `arenas`, `marketplace`, `tournament` |
 | `feed` | 0 | — | — |
 | `games` | 10 | `arenas`, `athletes`, `career`, `clubs`, `home`, `performance`, `progression`, `rating`, `social`, `training` | `analytics`, `arenas`, `athletes`, `clubs`, `leveling`, `performance`, `rating`, `tournament` |
 | `help` | 0 | — | `clubs`, `progression` |
