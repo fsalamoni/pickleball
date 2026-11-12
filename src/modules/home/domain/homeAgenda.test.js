@@ -203,4 +203,23 @@ describe('agendaFromCareerEvents (Carreira)', () => {
     expect(r[0]).toMatchObject({ kind: AGENDA_KIND.CARREIRA, acao: true, status: 'Inscrição fecha em 2 dias', link: '/carreira?aba=proximos&evento=u_a' });
     expect(r[1]).toMatchObject({ acao: false, status: 'Inscrito' });
   });
+  it('⭐ o plano de um torneio daqui que já está na agenda não aparece duas vezes', () => {
+    const plano = { id: 'u_p', status: 'planned', name: 'Open', start_date: '2026-10-10', origin_ref: 'tor:t1' };
+    expect(agendaFromCareerEvents([plano], ctx).map((i) => i.key)).toEqual(['carreira:u_p']);
+    expect(agendaFromCareerEvents([plano], { ...ctx, torneios: ['t1'] })).toEqual([]);
+    expect(agendaFromCareerEvents([plano], { ...ctx, torneios: new Set(['t2']) }).map((i) => i.key)).toEqual(['carreira:u_p']);
+  });
+  it('⭐ na junção, o plano sai sozinho quando os jogos do torneio estão na agenda (sem ninguém passar ids)', () => {
+    const jogo = (tournamentId) => agendaFromTournamentMatches([
+      { matchId: 'm1', tournamentId, scheduledAt: new Date(2026, 9, 10, 9, 0).getTime() },
+    ], ctx);
+    const planos = agendaFromCareerEvents([
+      { id: 'u_p', status: 'planned', name: 'Open', start_date: '2026-10-10', origin_ref: 'tor:t1' },
+      { id: 'u_f', status: 'planned', name: 'De fora', start_date: '2026-10-11' },
+    ], ctx);
+    expect(mergeAgenda([jogo('t1'), planos]).map((i) => i.key)).toEqual(['torneio:m1', 'carreira:u_f']);
+    // Jogos de OUTRO torneio não tiram o plano; sem jogo nenhum, ele fica.
+    expect(mergeAgenda([jogo('t2'), planos]).map((i) => i.key)).toContain('carreira:u_p');
+    expect(mergeAgenda([planos]).map((i) => i.key)).toEqual(['carreira:u_p', 'carreira:u_f']);
+  });
 });

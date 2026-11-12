@@ -24,10 +24,20 @@ export function parsePending(raw) {
   }
 }
 
-/** Põe (ou troca, pelo id) um rascunho na fila. */
+/**
+ * A fila está cheia para ESTE rascunho? (Trocar um que já está nela sempre
+ * cabe.) Quem guarda pergunta ANTES e avisa a pessoa — nunca se descarta um
+ * rascunho antigo para caber o novo: a tela já disse "guardado".
+ */
+export function pendingFull(fila, evento) {
+  const l = fila || [];
+  return l.length >= MAX_PENDING && !l.some((x) => x.id === evento?.id);
+}
+
+/** Põe (ou troca, pelo id) um rascunho na fila. Nunca corta o que já estava guardado. */
 export function addPending(fila, evento) {
   if (!evento?.id) return fila || [];
-  return [...(fila || []).filter((x) => x.id !== evento.id), evento].slice(-MAX_PENDING);
+  return [...(fila || []).filter((x) => x.id !== evento.id), evento];
 }
 
 /** Tira da fila o que já foi gravado. */

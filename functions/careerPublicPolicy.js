@@ -36,7 +36,8 @@ function showcaseItem(event, { seal, partners = {}, photos = [] } = {}) {
   out.entries = (Array.isArray(ev.entries) ? ev.entries : []).slice(0, 6).map((e) => {
     const x = {};
     SHOWCASE_ENTRY_FIELDS.forEach((k) => { if (e && !vazio(e[k]) && !(oficial && k.startsWith('placement'))) x[k] = e[k]; });
-    if (e && e.format === 'doubles' && e.partner && !vazio(e.partner.name)) {
+    // Todo formato com dupla fixa (duplas E equipe): a mesma pergunta de quem convida e confirma.
+    if (e && P.formatHasPartner(e.format) && e.partner && !vazio(e.partner.name)) {
       const p = e.partner.uid ? partners[e.partner.uid] : null;
       if (p && p.name) x.partner = { uid: e.partner.uid, name: String(p.name).slice(0, 80), photo_url: p.photo_url || null };
       else x.with_partner = true;
@@ -108,6 +109,54 @@ function consentingPartners(ev, partnerDocs, adultos) {
   });
   return ok;
 }
+
+/* ------------------------------ o que só o servidor faz: sanear a ficha -- */
+
+/**
+ * A regra de `career_events` não confere tipo nem tamanho (os limites moram na
+ * tela): antes de COPIAR a ficha para um documento que outra pessoa lê (o
+ * pedido da dupla, a vitrine), o servidor aceita só texto/número curto. Para a
+ * ficha gravada pela tela é identidade. As impressões seguem sobre a ficha crua.
+ */
+const campo = (v, max) => (typeof v === 'string' || typeof v === 'number' ? String(v).trim().slice(0, max) : '');
+// Valor de lista (formato, gênero, idade, faixa, colocação): um código curto.
+// ponytail: forma em vez da lista — copiar os enums do cliente pediria paridade a cada categoria nova.
+const codigo = (v) => (typeof v === 'string' && /^[\w.+-]{1,24}$/.test(v) ? v : '');
+const MAX_ENTRIES = 6;
+
+/** Os campos públicos de UMA participação (sem a dupla), só com valor válido. */
+function safeEntryFields(e) {
+  const x = {};
+  if (!e || typeof e !== 'object') return x;
+  ['format', 'gender', 'age', 'level_bracket', 'placement'].forEach((k) => { if (codigo(e[k])) x[k] = e[k]; });
+  ['age_label', 'level_label'].forEach((k) => { if (campo(e[k], 40)) x[k] = campo(e[k], 40); });
+  const n = Number(e.placement_n);
+  if (typeof e.placement_n === 'number' && Number.isInteger(n) && n >= 1 && n <= 999) x.placement_n = n;
+  return x;
+}
+
+/** A ficha pronta para `showcaseItem`: só os campos públicos, com tipo e tamanho conferidos. */
+function safeShowcaseEvent(ev) {
+  const e = ev || {};
+  const out = { uid: e.uid, id: e.id };
+  [['name', 120], ['start_date', 10], ['end_date', 10], ['city', 80], ['state', 2],
+    ['federation_name', 120], ['federation_acronym', 16], ['stage_tier', 40]]
+    .forEach(([k, max]) => { if (campo(e[k], max)) out[k] = campo(e[k], max); });
+  if (e.date_precision === 'day' || e.date_precision === 'year') out.date_precision = e.date_precision;
+  if (typeof e.federated === 'boolean') out.federated = e.federated;
+  out.entries = (Array.isArray(e.entries) ? e.entries : []).slice(0, MAX_ENTRIES).map((p) => {
+    const x = safeEntryFields(p);
+    const d = p && typeof p === 'object' ? p.partner : null;
+    if (d && typeof d === 'object' && campo(d.name, 80)) {
+      x.partner = { name: campo(d.name, 80), ...(typeof d.uid === 'string' && d.uid.length <= 128 ? { uid: d.uid } : {}) };
+    }
+    return x;
+  });
+  return out;
+}
+
+/** Inscrição que NÃO conta como "jogou" (cópia de `isInactiveStatus`, `tournament/domain/participation.js`; paridade). */
+const INACTIVE_REGISTRATION = Object.freeze(['cancelled', 'withdrawn']);
 
 /* ------------------------------------------------- EXIF fora do JPEG -- */
 
@@ -219,6 +268,10 @@ module.exports = {
   consentingPartners,
   consentFingerprint,
   canShowcaseEvent,
+  MAX_ENTRIES,
+  safeEntryFields,
+  safeShowcaseEvent,
+  INACTIVE_REGISTRATION,
   stableJson,
   stripJpegMetadataBytes,
   cleanPhotoBytes,

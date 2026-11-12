@@ -12,6 +12,7 @@
  */
 import { t, tk } from '@/core/i18n';
 import { SEASON_GOAL_METRIC } from '@/modules/progression/domain/progression.js';
+import { itemPodiums } from './timeline.js';
 
 const M = SEASON_GOAL_METRIC;
 
@@ -43,16 +44,37 @@ export function seasonGoalMetrics({ dupr = false } = {}) {
 export function careerGoalValues(timeline, { duprRating = null } = {}) {
   if (!timeline) return { values: {}, incompleto: [] };
   const passados = (timeline.seasons || []).flatMap((s) => s.items).filter((i) => !i.cancelled && !i.upcoming);
-  const torneios = passados.filter((i) => i.source !== 'dia_de_jogo');
+  // O plano que passou sem resposta (`pending`) não é torneio jogado.
+  const torneios = passados.filter((i) => i.source !== 'dia_de_jogo' && !i.pending);
   const values = {
     [M.CAREER_EVENTS_PLAYED]: torneios.map((i) => i.date),
-    [M.CAREER_PODIUMS]: passados.filter((i) => i.position >= 1 && i.position <= 3).map((i) => i.date),
+    // Uma data por PÓDIO (a mesma conta da temporada): ouro e prata no mesmo torneio são dois.
+    [M.CAREER_PODIUMS]: passados.flatMap((i) => itemPodiums(i).map(() => i.date)),
     [M.FEDERATED_EVENTS]: torneios.filter((i) => i.federated).map((i) => i.date),
   };
+  // Lançado só com o ANO (modo lista): a data gravada é 1º de janeiro, e a janela
+  // da meta pode deixá-lo de fora (ou contar o que foi antes dela). A tela avisa.
+  const soAno = {};
+  torneios.filter((i) => i.datePrecision === 'year').forEach((i) => {
+    const y = String(i.date).slice(0, 4);
+    soAno[y] = (soAno[y] || 0) + 1;
+  });
   if (duprRating !== null && duprRating !== undefined && Number.isFinite(Number(duprRating))) values[M.DUPR_RATING] = Number(duprRating);
   // As confirmações das duplas não mudam nenhuma conta das metas.
   const duplas = t('as confirmações das duplas');
-  return { values, incompleto: (timeline.faltou || []).filter((f) => f !== duplas) };
+  return { values, incompleto: (timeline.faltou || []).filter((f) => f !== duplas), soAno };
+}
+
+/**
+ * Quantos torneios lançados só com o ano podem estar FORA da conta desta meta:
+ * os dos anos que a janela `since → due_date` cruza. Zero para meta que não é
+ * de contagem da carreira (o rating DUPR não tem janela).
+ */
+export function yearOnlyInGoalWindow(goal, soAno = {}) {
+  if (!goal || goal.metric === M.DUPR_RATING || !Object.values(M).includes(goal.metric)) return 0;
+  const de = String(goal.since || '').slice(0, 4) || '0000';
+  const ate = String(goal.due_date || '').slice(0, 4) || '9999';
+  return Object.entries(soAno).filter(([y]) => y >= de && y <= ate).reduce((s, [, n]) => s + n, 0);
 }
 
 /** As metas da temporada, separadas: ativas (prazo mais perto primeiro), concluídas e abandonadas. */

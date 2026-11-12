@@ -114,6 +114,8 @@ export function agendaFromTournamentMatches(matches = [], { agora = Date.now() }
       title: m.opponent ? t('vs {nome}', { nome: m.opponent }) : t('Jogo de torneio'),
       subtitle: [m.tournamentName, m.court].filter(Boolean).join(' · '),
       link: m.tournamentId ? `/torneios/${m.tournamentId}` : '/torneios',
+      // Lido por `mergeAgenda`: o plano da Carreira deste torneio não se repete.
+      tournamentId: m.tournamentId || null,
     });
   }).filter(Boolean);
 }
@@ -308,12 +310,18 @@ export function agendaFromClubEvents(events = [], { agora = Date.now(), meusClub
 /**
  * Os torneios de FORA planejados (Carreira, `career_events`): o dia
  * inteiro, sem hora. Inscrição fechando em até 3 dias sem "Já me inscrevi"
- * pede ação. O ligado a um torneio do PickleRush não entra (já vem pelos jogos).
+ * pede ação. O ligado a um torneio do PickleRush não entra (já vem pelos jogos),
+ * nem o PLANO de um torneio daqui (`origin_ref: 'tor:<id>'`) que já está na
+ * agenda: quem tira é `mergeAgenda`, que vê os jogos do torneio ao lado
+ * (`originRef` × `tournamentId`). `torneios` (ids) é o atalho para quem já
+ * sabe quais são — quem não passa, nada muda aqui.
  */
-export function agendaFromCareerEvents(events = [], { agora = Date.now() } = {}) {
+export function agendaFromCareerEvents(events = [], { agora = Date.now(), torneios = [] } = {}) {
   const hoje = hojeLocal(new Date(agora));
+  // Texto inline de propósito: o domínio da carreira não entra no pacote do início.
+  const jaNaAgenda = new Set([...(torneios || [])].map((id) => `tor:${id}`));
   return (events || []).map((e) => {
-    if (!e?.id || e.status !== 'planned' || e.platform_tournament_id) return null;
+    if (!e?.id || e.status !== 'planned' || e.platform_tournament_id || jaNaAgenda.has(e.origin_ref)) return null;
     const prazo = diaLocal(e.registration_deadline);
     const dias = prazo ? diasAte(prazo, hoje) : null;
     const fechando = !e.registered && dias !== null && dias >= 0 && dias <= 3;
@@ -327,6 +335,7 @@ export function agendaFromCareerEvents(events = [], { agora = Date.now() } = {})
       status: fechando ? (dias === 0 ? t('Inscrição fecha hoje') : tn(dias, 'Inscrição fecha em {n} dia', 'Inscrição fecha em {n} dias')) : (e.registered ? t('Inscrito') : null),
       acao: fechando,
       link: `/carreira?aba=proximos&evento=${encodeURIComponent(e.id)}`,
+      originRef: str(e.origin_ref) || null,
     });
   }).filter(Boolean);
 }
@@ -366,6 +375,11 @@ export function juntarEventosAosDias(dias = [], eventos = []) {
 /**
  * Junta as listas numa agenda só: sem repetição, pela data, e o que pede ação
  * na frente dentro do mesmo dia.
+ *
+ * O plano da Carreira de um torneio daqui (`originRef: 'tor:<id>'`) sai quando
+ * os jogos desse torneio (`tournamentId`) já estão na agenda: é o mesmo
+ * compromisso, e vale o oficial. É aqui, e não em quem chama, para valer em
+ * toda junção sem depender de alguém lembrar de passar os ids.
  * @param {Array<Array<object>>} listas
  * @param {{ limite?: number }} [opts]
  */
@@ -374,7 +388,10 @@ export function mergeAgenda(listas = [], { limite = Infinity } = {}) {
   (listas || []).flat().filter(Boolean).forEach((i) => {
     if (!porChave.has(i.key)) porChave.set(i.key, i);
   });
-  return [...porChave.values()]
+  const todos = [...porChave.values()];
+  const comJogos = new Set(todos.filter((i) => i.tournamentId).map((i) => `tor:${i.tournamentId}`));
+  return todos
+    .filter((i) => !(i.originRef && comJogos.has(i.originRef)))
     .sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0)
       || Number(b.acao) - Number(a.acao)
       || a.inicioMs - b.inicioMs

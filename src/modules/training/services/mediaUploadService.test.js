@@ -88,6 +88,28 @@ describe('compressImage', () => {
     expect(await compressImage(original)).toBe(original);
     expect(strip).toHaveBeenCalledWith(original);
   });
+
+  // Imagem pequena, já dentro do lado máximo: a recodificação sai MAIOR que o original.
+  const pequena = (tipo) => {
+    globalThis.createImageBitmap = vi.fn(async () => ({ width: 800, height: 600, close: vi.fn() }));
+    return new File([], 'foto', { type: tipo });
+  };
+
+  it('⭐ PNG/WebP cuja recodificação sai maior NÃO volta o original (ele levaria eXIf/XMP com GPS)', async () => {
+    for (const tipo of ['image/png', 'image/webp']) {
+      const original = pequena(tipo);
+      const f = await compressImage(original);
+      expect(f).not.toBe(original);
+      expect(f.type).toBe('image/webp');
+    }
+    expect(strip).not.toHaveBeenCalled();
+  });
+
+  it('JPEG cuja recodificação sai maior volta o original, sem EXIF', async () => {
+    const original = pequena('image/jpeg');
+    expect(await compressImage(original)).toBe(original);
+    expect(strip).toHaveBeenCalledWith(original);
+  });
 });
 
 describe('duração do vídeo', () => {

@@ -69,6 +69,17 @@ describe('pôr no meu plano', () => {
     });
     expect(p.map((x) => x.key)).toEqual(['fora:u_1']);
   });
+  it('⭐ o plano que já saiu da lista (jogado) não esconde o torneio em andamento', () => {
+    const p = upcomingPlan({
+      events: [{ id: 'u_1', status: 'played', start_date: HOJE, name: 'Open', origin_ref: 'tor:t1' }],
+      myTournaments: [{ id: 't1', is_player: true, starts_at: HOJE, name: 'Open' }],
+      today: HOJE,
+    });
+    expect(p.map((x) => x.key)).toEqual(['tor:t1']);
+    // E o plano de HOJE segue na lista (lido do banco, continua planejado no dia).
+    const hoje = withDerivedStatus({ id: 'u_2', status: 'planned', start_date: HOJE, name: 'Copa', origin_ref: 'tor:t2' }, HOJE);
+    expect(upcomingPlan({ events: [hoje], myTournaments: [{ id: 't2', is_player: true, starts_at: HOJE }], today: HOJE }).map((x) => x.key)).toEqual(['fora:u_2']);
+  });
 });
 
 describe('o plano, a contagem e o prazo', () => {
@@ -84,6 +95,12 @@ describe('o plano, a contagem e o prazo', () => {
   it('contagem regressiva do principal', () => {
     expect(mainCountdown(evs, HOJE)).toMatchObject({ days: 16, event: { id: 'a' } });
     expect(mainCountdown([], HOJE)).toBeNull();
+    // ⭐ Sem nenhum Principal, o planejado mais próximo (todo plano nasce "Só para jogar").
+    expect(mainCountdown(evs.filter((e) => e.id !== 'a'), HOJE)).toMatchObject({ days: 6, event: { id: 'b' } });
+    // ⭐ No dia e durante o torneio de vários dias: "É hoje" (0), nunca negativo.
+    expect(mainCountdown([{ id: 'h', status: 'planned', start_date: HOJE }], HOJE)).toMatchObject({ days: 0 });
+    expect(mainCountdown([{ id: 'l', status: 'planned', start_date: '2026-11-02', end_date: '2026-11-05' }], HOJE)).toMatchObject({ days: 0, event: { id: 'l' } });
+    expect(mainCountdown([{ id: 'p', status: 'planned', start_date: '2026-11-02' }], HOJE)).toBeNull();
     expect(countdownText(0)).toBe('É hoje');
     expect(countdownText(1)).toBe('É amanhã');
     expect(countdownText(5)).toBe('Faltam 5 dias');

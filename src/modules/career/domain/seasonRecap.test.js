@@ -26,6 +26,14 @@ describe('melhor parceria', () => {
     ];
     expect(bestPartnership({ year: 2025, career, me: ME })).toEqual({ name: 'Ana', uid: null, together: 2, medals: 1 });
   });
+  it('⭐ plano sem resposta e plano de torneio daqui não são parceria; colocação digitada em torneio ligado não é medalha', () => {
+    const career = [
+      ev('p', { planned_passed: true, entries: [{ format: 'doubles', partner: { name: 'Caio' } }] }),
+      ev('q', { origin_ref: 'tor:t9', entries: [{ format: 'doubles', partner: { name: 'Caio' } }] }),
+      ev('l', { platform_tournament_id: 't7', entries: [{ format: 'doubles', placement: 'champion', partner: { name: 'Duda' } }] }),
+    ];
+    expect(bestPartnership({ year: 2025, career, me: ME })).toEqual({ name: 'Duda', uid: null, together: 1, medals: 0 });
+  });
   it('soma os pódios da plataforma (pela conta) e não conta duas vezes o torneio ligado', () => {
     const trophies = [{ tournamentId: 't1', date: ms('2025-08-01'), people: [{ user_id: 'eu', name: 'Eu' }, { user_id: 'u_bia', name: 'Bia' }] }];
     const career = [ev('x', { platform_tournament_id: 't1', entries: [{ format: 'doubles', placement: 'champion', partner: { name: 'Bia', uid: 'u_bia' } }] }), ev('y')];

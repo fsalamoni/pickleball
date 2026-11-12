@@ -33,7 +33,14 @@ function fakeBucket(seed = {}) {
     async save(buf, opts) { arquivos.set(name, { bytes: Uint8Array.from(buf), contentType: opts.contentType, meta: opts.metadata }); },
     async delete() { arquivos.delete(name); },
   });
-  return { name: 'balde', arquivos, file };
+  const balde = {
+    name: 'balde', arquivos, file, falhaAoApagar: false,
+    async deleteFiles({ prefix }) {
+      if (balde.falhaAoApagar) throw new Error('503');
+      [...arquivos.keys()].filter((p) => p.startsWith(prefix)).forEach((p) => arquivos.delete(p));
+    },
+  };
+  return balde;
 }
 
 const evento = (extra = {}) => ({
@@ -276,5 +283,75 @@ describe('editar, apagar e tirar: a vitrine segue o registro', () => {
     k.db.store.docs.set(`career_events/${EV_ID}`, evento({ status: 'cancelled' }));
     expect(await c.onEvent(ctx(k), EV_ID)).toBe('removed');
     expect(await c.onEvent(ctx(cenario()), EV_ID)).toBe('absent');
+  });
+});
+
+describe('pente fino: selo, cópia e fotos', () => {
+  const comTorneio = (torneio, inscricao, ev = {}) => cenario({
+    ev: evento({ platform_tournament_id: 't1', ...ev }),
+    extra: {
+      'tournaments/t1': { status: 'finished', visibility: 'public', name: 'Open Oficial', city: 'Floripa', state: 'SC', ...torneio },
+      'tournament_registrations/r1': { tournament_id: 't1', player_a_user_id: 'ana111', ...inscricao },
+    },
+  });
+  const selo = async (k) => { await publicar(k, []); return vitrine(k).seal; };
+
+  it('🔴 inscrição cancelada ou desistente não dá o selo Oficial; lista de espera e confirmada dão', async () => {
+    expect(await selo(comTorneio({}, { status: 'cancelled' }))).toBe('declared');
+    expect(await selo(comTorneio({}, { status: 'withdrawn' }))).toBe('declared');
+    expect(await selo(comTorneio({}, { status: 'confirmed' }))).toBe('official');
+    expect(await selo(comTorneio({}, { status: 'waitlist' }))).toBe('official');
+  });
+
+  it('🔴 torneio em rascunho, data longe da do torneio ou ficha "só o ano" não são oficiais', async () => {
+    expect(await selo(comTorneio({ status: 'draft' }, {}))).toBe('declared');
+    expect(await selo(comTorneio({ starts_at: '2026-03-01' }, {}))).toBe('declared');
+    expect(await selo(comTorneio({ starts_at: '2026-10-09' }, {}))).toBe('official');
+    expect(await selo(comTorneio({}, {}, { date_precision: 'year' }))).toBe('declared');
+  });
+
+  it('⭐ o selo Oficial mostra o nome e o lugar do TORNEIO, não o que a pessoa digitou', async () => {
+    const k = comTorneio({}, {}, { name: 'Mundial que eu inventei', city: 'Paris', state: 'XX' });
+    await publicar(k, []);
+    expect(vitrine(k)).toMatchObject({ seal: 'official', name: 'Open Oficial', city: 'Floripa', state: 'SC' });
+    expect(JSON.stringify(vitrine(k))).not.toContain('inventei');
+  });
+
+  it('🔴 ficha gravada por fora da tela: mapa, texto de 1 MB e participações demais não vão à vitrine', async () => {
+    const e0 = evento().entries[0];
+    const k = cenario({ ev: evento({
+      name: { html: '<script>' }, city: 'c'.repeat(1000000), federation_name: ['x'], federated: 'sim',
+      entries: Array.from({ length: 50 }, () => ({ ...e0, level_label: { a: 1 }, age_label: 'i'.repeat(5000), segredo: 'NAO-SAI' })),
+    }) });
+    await publicar(k, []);
+    const v = vitrine(k);
+    expect(v.name).toBeUndefined();
+    expect(v.city).toHaveLength(80);
+    expect(v.federation_name).toBeUndefined();
+    expect(v.federated).toBeUndefined();
+    expect(v.entries).toHaveLength(6);
+    expect(JSON.stringify(v).length).toBeLessThan(4000);
+    expect(JSON.stringify(v)).not.toMatch(/script|NAO-SAI/);
+  });
+
+  it('🔴 tirar da vitrine com o Storage falhando avisa (não diz "tirado"), e tentar de novo limpa as fotos mesmo sem o documento', async () => {
+    const k = cenario();
+    await publicar(k);
+    k.bucket.falhaAoApagar = true;
+    await expect(chamar(k, ANA, { action: 'unpublish', eventId: EV_ID })).rejects.toMatchObject({ code: 'unavailable' });
+    expect(vitrine(k)).toBeUndefined();
+    expect(publico(k)).toHaveLength(1);
+    k.bucket.falhaAoApagar = false;
+    expect(await chamar(k, ANA, { action: 'unpublish', eventId: EV_ID })).toEqual({ id: EV_ID, published: false });
+    expect(publico(k)).toEqual([]);
+  });
+
+  it('🔴 pedido de outra pessoa e pedido que não existe respondem igual no "permitir meu nome"', async () => {
+    const erro = (p) => p.then(() => null, (e) => ({ code: e.code, message: e.message }));
+    const k = cenario({ pedido: confirmado() });
+    const CAU = { uid: 'cau333', name: 'Cau' };
+    const alheio = await erro(chamar(k, CAU, { action: 'public_consent', docId: PEDIDO, ok: true }));
+    expect(alheio).toEqual(await erro(chamar(k, CAU, { action: 'public_consent', docId: `${EV_ID}__zzz`, ok: true })));
+    expect(alheio.code).toBe('not-found');
   });
 });

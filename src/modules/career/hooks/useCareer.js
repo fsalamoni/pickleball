@@ -2,23 +2,23 @@
  * Carreira — os hooks (React Query). Só a aba aberta consulta: cada
  * hook recebe `enabled`, e a linha do tempo junta as fontes sem esperar que
  * todas deem certo — a que falhou chega `undefined` e a tela diz o quê.
+ *
+ * Este arquivo é o LEVE: nada de torneios, pódios, dias de jogo nem do serviço
+ * das federações por import estático (a estante de troféus e o balanço do jogo
+ * importam daqui com a flag desligada). A linha do tempo mora em
+ * `useCareerTimeline.js`; o serviço das federações entra por `import()` dentro
+ * do `queryFn`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useOnline } from '@/core/lib/useOnline';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
-import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
-import { useTrophies } from '@/modules/trophies/hooks/useTrophies';
-import { usePublishedGameDayGames } from '@/modules/games/hooks/usePublishedGameDayGames';
-import {
-  getFederationRanking, listFederationEvents, listMyFederationPoints, listMyMemberships,
-} from '@/modules/federations/services/federationService';
+import { t } from '@/core/i18n';
 import { officialRankPoints } from '../domain/careerRank.js';
-import { buildCareerTimeline } from '../domain/timeline.js';
 import { newCareerEventId, normalizeCareerEvent } from '../domain/careerEvent.js';
 import {
-  CAREER_PENDING_PREF, addPending, parsePending, removePending, serializePending,
+  CAREER_PENDING_PREF, MAX_PENDING, addPending, parsePending, pendingFull, removePending, serializePending,
 } from '../domain/draftQueue.js';
 import {
   CareerError, careerAction, deleteCareerEvent, deleteCareerRank, listCareerEvents, listCareerPublic, listCareerRanks,
@@ -26,6 +26,11 @@ import {
   shareCareerWithCoach,
 } from '../services/careerService.js';
 import { partnerVoices } from '../domain/careerPartner.js';
+
+
+/** O serviço das federações só desce quando uma consulta dele roda. */
+const federacoes = () => import('@/modules/federations/services/federationService');
+const semConexao = () => typeof navigator !== 'undefined' && navigator.onLine === false;
 
 export const careerKeys = Object.freeze({
   all: ['career'],
@@ -41,9 +46,11 @@ export const careerKeys = Object.freeze({
   // A MESMA de `fedKeys.myMemberships` (cache compartilhado com o card do início).
   myMemberships: (uid) => ['federacoes', 'minhas-filiacoes', uid],
   ranks: (uid) => ['career', 'ranks', uid],
-  officialRanks: (uid, pares) => ['career', 'official-ranks', uid, pares],
+  // FORA do prefixo `career`: nada do que a pessoa grava na carreira muda o
+  // ranking nem a agenda das federações, e cada salvar invalida `['career']`.
+  officialRanks: (uid, pares) => ['federacoes', 'carreira-ranks', uid, pares],
   studentShares: (coach, student) => ['career', 'student-shares', coach, student],
-  fedAgenda: (ids) => ['career', 'fed-agenda', ids],
+  fedAgenda: (ids) => ['federacoes', 'carreira-agenda', ids],
 });
 
 /** Prazo para o servidor confirmar a gravação; passou, vale o rascunho no aparelho. */
@@ -146,74 +153,6 @@ export function useCareerModerationQueue({ enabled = true } = {}) {
   });
 }
 
-/** Os pontos lançados no ranking oficial das federações (leitura pública, `uid ==`). */
-function useOfficialPoints(uid, enabled) {
-  return useQuery({
-    queryKey: careerKeys.officialPoints(uid),
-    queryFn: () => listMyFederationPoints(uid),
-    enabled: Boolean(uid) && enabled,
-    staleTime: 5 * 60_000,
-  });
-}
-
-/** A escolha "Incluir dias de jogo" na linha do tempo — por pessoa, no navegador (zero banco). */
-export const CAREER_GAMEDAYS_PREF = 'carreira:linha:dias-de-jogo';
-
-/**
- * A linha do tempo é de TORNEIOS. Dia de jogo só entra quando a pessoa pede
- * (`includeGameDays`), e só então é buscado. `isPending` enquanto alguma fonte ainda não respondeu;
- * depois, `timeline.faltou` lista as que falharam e `retry` tenta de novo só elas.
- */
-export function useCareerTimeline({ enabled = true } = {}) {
-  const { user } = useAuth();
-  const uid = user?.uid;
-  const careerQ = useCareerEvents({ enabled });
-  // A mesma chave do início e da Minha área (cache compartilhado).
-  const tournamentsQ = useMyTournaments({ enabled });
-  const trophiesQ = useTrophies(uid, { enabled });
-  const [includeGameDays, setIncludeState] = useState(() => readViewPreference(uid, CAREER_GAMEDAYS_PREF) === '1');
-  useEffect(() => { setIncludeState(readViewPreference(uid, CAREER_GAMEDAYS_PREF) === '1'); }, [uid]);
-  const setIncludeGameDays = useCallback((v) => {
-    setIncludeState(Boolean(v));
-    writeViewPreference(uid, CAREER_GAMEDAYS_PREF, v ? '1' : null);
-  }, [uid]);
-  const gamesQ = usePublishedGameDayGames(uid, enabled && includeGameDays);
-  const pointsQ = useOfficialPoints(uid, enabled);
-  const partnersQ = useCareerPartners({ enabled });
-  const qs = [careerQ, tournamentsQ, trophiesQ, ...(includeGameDays ? [gamesQ] : []), pointsQ, partnersQ];
-  const pending = qs.some((q) => q.isPending);
-  const ok = (q) => (q.isSuccess ? q.data : undefined);
-  const timeline = useMemo(() => (pending ? null : buildCareerTimeline({
-    career: ok(careerQ),
-    tournaments: ok(tournamentsQ),
-    trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
-    includeGameDays,
-    gameDayGames: includeGameDays ? ok(gamesQ) : undefined,
-    federationPoints: ok(pointsQ),
-    partners: ok(partnersQ),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [pending, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, includeGameDays, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess, partnersQ.data, partnersQ.isSuccess]);
-  const retry = () => qs.filter((q) => q.isError).forEach((q) => q.refetch());
-  return {
-    timeline,
-    isPending: pending,
-    // Tudo falhou: não há linha do tempo para mostrar.
-    isError: !pending && qs.every((q) => q.isError),
-    retry,
-    includeGameDays,
-    setIncludeGameDays,
-    events: careerQ.data,
-    myTournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined,
-    // Os pódios da plataforma (com a dupla): a retrospectiva da temporada acha a melhor parceria.
-    trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,
-    partners: partnersQ.isSuccess ? partnersQ.data : undefined,
-    // Os lançamentos oficiais: de que federações sair a posição oficial no ranking.
-    federationPoints: pointsQ.isSuccess ? pointsQ.data : undefined,
-    partnersError: partnersQ.isError,
-    retryPartners: () => partnersQ.refetch(),
-  };
-}
-
 /* ------------------------------------------- posição no ranking (PR 4) -- */
 
 /** As posições digitadas (`career_rank`). */
@@ -245,6 +184,7 @@ export function useOfficialRanks(points, { enabled = true } = {}) {
   return useQuery({
     queryKey: careerKeys.officialRanks(user?.uid, pares.map((p) => `${p.federation_id}_${p.season}`).join(',')),
     queryFn: async () => {
+      const { getFederationRanking } = await federacoes();
       const res = await Promise.allSettled(pares.map(async (p) => ({ ...p, doc: await getFederationRanking(p.federation_id, p.season) })));
       return {
         points: officialRankPoints(res.filter((r) => r.status === 'fulfilled').map((r) => r.value), user?.uid),
@@ -270,11 +210,17 @@ export function useDeleteCareerRank() {
 /* ------------------------------------------ "Mandar ao meu professor" -- */
 
 export function useShareCareerWithCoach() {
+  const { user, userProfile } = useAuth();
   const invalidar = useInvalidar();
   const qc = useQueryClient();
+  // Quem manda: o aviso ao professor leva o nome (como no diário de treino).
+  const actor = user?.uid
+    ? { uid: user.uid, name: userProfile?.platform_name || userProfile?.full_name || user.displayName || '' }
+    : undefined;
   return useMutation({
-    mutationFn: ({ event, coachId }) => shareCareerWithCoach(event, coachId),
-    onSuccess: () => { invalidar(); qc.invalidateQueries({ queryKey: ['treino', 'balanco'] }); },
+    mutationFn: ({ event, coachId }) => shareCareerWithCoach(event, coachId, { actor }),
+    // Também na falha: a tela relê o que de fato ficou gravado, em vez de supor.
+    onSettled: () => { invalidar(); qc.invalidateQueries({ queryKey: ['treino', 'balanco'] }); },
   });
 }
 
@@ -300,7 +246,7 @@ export function useFederationAgendaForMe({ enabled = true } = {}) {
   const { user } = useAuth();
   const memb = useQuery({
     queryKey: careerKeys.myMemberships(user?.uid),
-    queryFn: () => listMyMemberships(user?.uid),
+    queryFn: async () => (await federacoes()).listMyMemberships(user?.uid),
     enabled: Boolean(user?.uid) && enabled,
     staleTime: 5 * 60_000,
   });
@@ -314,6 +260,7 @@ export function useFederationAgendaForMe({ enabled = true } = {}) {
   const agenda = useQuery({
     queryKey: careerKeys.fedAgenda(ids.join(',')),
     queryFn: async () => {
+      const { listFederationEvents } = await federacoes();
       const res = await Promise.allSettled(ids.map((id) => listFederationEvents(id, 'public')));
       return { events: res.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value), incompleto: res.some((r) => r.status === 'rejected') };
     },
@@ -346,37 +293,68 @@ export function useSaveCareerEvent() {
   });
 }
 
-/** Grava as linhas do modo lista de uma vez. */
+/**
+ * Grava as linhas do modo lista de uma vez. Nunca fica em "Salvando…" para
+ * sempre: sem conexão recusa na hora (nada é enviado), e se o servidor não
+ * confirmar no prazo a mutação FALHA dizendo que o envio ainda pode chegar —
+ * quando chegar, a lista é relida sozinha.
+ */
 export function useSaveCareerBatch() {
   const { user } = useAuth();
   const invalidar = useInvalidar();
   return useMutation({
-    mutationFn: (events) => saveCareerEventsBatch(user?.uid, events),
+    // `always`: sem isso o React Query PAUSA a mutação offline e o botão gira sem explicar.
+    networkMode: 'always',
+    mutationFn: async (events) => {
+      if (semConexao()) throw new CareerError(t('Sem conexão. Tente de novo quando ela voltar.'));
+      const envio = saveCareerEventsBatch(user?.uid, events);
+      const gravados = await comPrazo(envio);
+      if (gravados !== PRAZO) return gravados;
+      envio.then(invalidar, () => {});
+      throw new CareerError(t('A conexão está lenta e o envio ainda não foi confirmado. Confira a linha do tempo antes de salvar de novo.'));
+    },
     onSuccess: invalidar,
   });
 }
 
 /**
  * Apaga um torneio de fora (e as fotos dele). Também o tira da fila do
- * rascunho sem sinal — senão o próximo envio o recriaria. O que só existia na
- * fila não tem documento: a regra recusa apagar o inexistente, e isso não é erro.
+ * rascunho sem sinal — senão o próximo envio o recriaria — e ANTES de qualquer
+ * espera (`networkMode: 'always'`: offline o React Query pausaria a mutação e
+ * o rascunho seguiria na fila). O que só existia na fila não tem documento: a
+ * regra recusa apagar o inexistente, e isso não é erro; nem se espera o
+ * servidor por ele. O `deleteDoc` sai sempre: o SDK o ordena depois de um
+ * `setDoc` ainda pendente do mesmo aparelho.
  */
 export function useDeleteCareerEvent() {
   const { user } = useAuth();
   const uid = user?.uid || null;
   const invalidar = useInvalidar();
+  const qc = useQueryClient();
+  // O balanço do torneio sai junto: o foco das semanas do treino não pode seguir citando-o.
+  const reler = () => { invalidar(); qc.invalidateQueries({ queryKey: ['treino', 'balanco'] }); };
   return useMutation({
+    networkMode: 'always',
     mutationFn: async (event) => {
       const fila = parsePending(readViewPreference(uid, CAREER_PENDING_PREF));
       const naFila = fila.some((x) => x.id === event?.id);
+      // "Só local" é o registro que nunca chegou ao servidor. A fila também guarda EDIÇÃO de
+      // torneio já gravado: esse precisa da confirmação do servidor para sumir de verdade.
+      const soLocal = naFila && !(Number(event?.updated_at_ms) > 0);
+      if (!soLocal && semConexao()) throw new CareerError(t('Sem conexão. Tente de novo quando ela voltar.'));
       if (naFila) writeViewPreference(uid, CAREER_PENDING_PREF, serializePending(removePending(fila, [event.id])));
+      const apagar = deleteCareerEvent(event);
+      // Chegou depois do prazo: a lista é relida quando chegar.
+      apagar.then(reler, () => {});
       try {
-        await deleteCareerEvent(event);
+        const fim = soLocal && semConexao() ? PRAZO : await comPrazo(apagar);
+        if (fim === PRAZO && !soLocal) throw new CareerError(t('Sem conexão. Tente de novo quando ela voltar.'));
       } catch (err) {
-        if (!(naFila && err?.code === 'permission-denied')) throw err;
+        // Apagar o que já não existe (toque repetido, registro só local) é o estado desejado.
+        if (err?.code !== 'permission-denied') throw err;
       }
     },
-    onSuccess: invalidar,
+    onSuccess: reler,
   });
 }
 
@@ -384,8 +362,17 @@ export function useDeleteCareerEvent() {
  * Salvar com o rascunho sem sinal: o evento ganha o id definitivo, vai para a
  * fila do navegador e é gravado; deu certo, sai da fila. Sem conexão (ou se o
  * servidor não confirmar em 8 s), fica guardado e é reenviado quando a
- * conexão volta. Erro definitivo (regra, dado inválido) tira da fila.
- * @returns {{ save: (input) => Promise<{ saved: boolean, event: object }>, pending: object[], flush: () => Promise<void>, refresh: () => void }}
+ * conexão volta. Erro definitivo (regra, dado inválido) ao SALVAR tira da fila
+ * e sobe (a ficha está aberta, a pessoa vê); no REENVIO o rascunho recusado
+ * fica na fila marcado `refused: true` — sai do reenvio automático, mas o que
+ * foi digitado não some calado: a pessoa abre, corrige ou descarta.
+ *
+ * `save` só devolve `saved: false` se o rascunho ficou MESMO guardado: com o
+ * navegador recusando guardar (ou a fila cheia) e sem resposta do servidor, lança.
+ * `flush` devolve o que aconteceu, para o botão "Enviar agora" dar retorno.
+ * @returns {{ save: (input) => Promise<{ saved: boolean, event: object }>, pending: object[],
+ *   flush: () => Promise<{ enviados: number, esperando: number, recusados: Array<{ id: string, name: string }> }>,
+ *   flushing: boolean, refresh: () => void }}
  */
 export function useCareerSaveWithDraft() {
   const { user } = useAuth();
@@ -394,11 +381,14 @@ export function useCareerSaveWithDraft() {
   const invalidar = useInvalidar();
   const [pending, setPending] = useState(() => parsePending(readViewPreference(uid, CAREER_PENDING_PREF)));
   const enviando = useRef(false);
+  const [flushing, setFlushing] = useState(false);
 
   const ler = useCallback(() => parsePending(readViewPreference(uid, CAREER_PENDING_PREF)), [uid]);
+  /** @returns {boolean} se o navegador guardou MESMO (aba anônima, armazenamento cheio ⇒ `false`). */
   const guardar = useCallback((fila) => {
-    writeViewPreference(uid, CAREER_PENDING_PREF, serializePending(fila));
-    setPending(fila);
+    const ok = writeViewPreference(uid, CAREER_PENDING_PREF, serializePending(fila));
+    if (ok) setPending(fila);
+    return ok;
   }, [uid]);
   /** Relê a fila (outra parte da tela — a exclusão — pode tê-la mudado). */
   const refresh = useCallback(() => setPending(ler()), [ler]);
@@ -406,29 +396,36 @@ export function useCareerSaveWithDraft() {
   useEffect(() => { refresh(); }, [refresh]);
 
   const flush = useCallback(async () => {
-    if (!uid || enviando.current) return;
-    const fila = ler();
-    if (!fila.length) return;
+    const aEnviar = (fila) => fila.filter((x) => !x.refused);
+    if (!uid || enviando.current) return { enviados: 0, esperando: aEnviar(ler()).length, recusados: [] };
+    const fila = aEnviar(ler());
+    if (!fila.length) return { enviados: 0, esperando: 0, recusados: [] };
     enviando.current = true;
+    setFlushing(true);
     const sair = [];
+    const recusados = [];
     try {
       for (const ev of fila) {
         try {
-          if (await comPrazo(saveCareerEvent(uid, ev)) === PRAZO) break;
+          // `resend`: o primeiro envio pode ter chegado — relê antes de gravar por cima.
+          if (await comPrazo(saveCareerEvent(uid, ev, { resend: true })) === PRAZO) break;
           sair.push(ev.id);
         } catch (err) {
           // Definitivo: não adianta reenviar, e travaria a fila inteira atrás dele.
-          if (erroDefinitivo(err)) { sair.push(ev.id); continue; }
+          if (erroDefinitivo(err)) { recusados.push({ id: ev.id, name: ev.name || '' }); continue; }
           break;
         }
       }
     } finally {
       enviando.current = false;
+      setFlushing(false);
     }
-    if (sair.length) {
-      guardar(removePending(ler(), sair));
-      invalidar();
+    if (sair.length || recusados.length) {
+      const fora = new Set(recusados.map((r) => r.id));
+      guardar(removePending(ler(), sair).map((x) => (fora.has(x.id) ? { ...x, refused: true } : x)));
     }
+    if (sair.length) invalidar();
+    return { enviados: sair.length, esperando: aEnviar(ler()).length, recusados };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, ler, guardar]);
 
@@ -438,12 +435,37 @@ export function useCareerSaveWithDraft() {
     const { valid, error } = normalizeCareerEvent(input, { uid });
     if (!valid) throw new Error(error);
     const event = { ...input, id: input.id || newCareerEventId(uid) };
-    guardar(addPending(ler(), event));
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return { saved: false, event };
+    delete event.refused; // rascunho recusado que a pessoa corrigiu: volta a valer
+    const fila = ler();
+    // Fila cheia: nunca se derruba um rascunho antigo para caber o novo.
+    const cheia = pendingFull(fila.filter((x) => !x.refused), event);
+    const guardou = !cheia && guardar(addPending(fila, event));
+    // O erro leva o registro (com o id): a ficha o reaproveita e tentar de novo não duplica.
+    const naoGuardou = () => Object.assign(new Error(cheia
+      ? t('Você tem {n} registros esperando conexão neste aparelho. Envie-os antes de registrar outro.', { n: MAX_PENDING })
+      : t('Sem conexão, e este navegador não deixou guardar o registro. Não feche a ficha e tente de novo quando a conexão voltar.')), { event });
+    if (semConexao()) {
+      // Só se afirma "guardado neste aparelho" quando guardou.
+      if (!guardou) throw naoGuardou();
+      return { saved: false, event };
+    }
+    const enviado = JSON.stringify(event);
+    /** Tira da fila só se o rascunho guardado ainda é o MESMO que foi enviado. */
+    const tirarSeMesmo = () => {
+      const atual = ler().find((x) => x.id === event.id);
+      if (atual && JSON.stringify(atual) === enviado) guardar(removePending(ler(), [event.id]));
+    };
+    const envio = saveCareerEvent(uid, event);
     try {
-      const gravado = await comPrazo(saveCareerEvent(uid, event));
-      // Sinal ruim com `onLine`: o servidor não confirmou a tempo — fica na fila.
-      if (gravado === PRAZO) return { saved: false, event };
+      const gravado = await comPrazo(envio);
+      if (gravado === PRAZO) {
+        // Sinal ruim com `onLine`: o servidor não confirmou a tempo — fica na fila.
+        // O `setDoc` segue vivo no SDK: quando chegar, o rascunho sai da fila (senão o
+        // próximo reenvio o regravaria por cima do que mudou depois) e a lista é relida.
+        envio.then(() => { tirarSeMesmo(); invalidar(); }, (err) => { if (erroDefinitivo(err)) tirarSeMesmo(); });
+        if (!guardou) throw naoGuardou();
+        return { saved: false, event };
+      }
       guardar(removePending(ler(), [event.id]));
       invalidar();
       return { saved: true, event: gravado };
@@ -453,10 +475,11 @@ export function useCareerSaveWithDraft() {
         guardar(removePending(ler(), [event.id]));
         throw err;
       }
+      if (!guardou) throw naoGuardou();
       return { saved: false, event };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, ler, guardar]);
 
-  return { save, pending, flush, refresh };
+  return { save, pending, flush, flushing, refresh };
 }

@@ -17,7 +17,7 @@ import { storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { stripImageMetadata } from '@/core/lib/imageMetadata';
 import {
-  IMAGE_MIME, VIDEO_MIME, storageFileName, trainingStoragePath, validateUpload,
+  VIDEO_MIME, storageFileName, trainingStoragePath, validateUpload,
 } from '../domain/media.js';
 import { t, tk } from '@/core/i18n';
 
@@ -81,8 +81,8 @@ async function codificar(canvas, tipo, qualidade) {
 
 /**
  * Reduz e recodifica a imagem em WebP — ou em JPEG, no navegador que não
- * codifica WebP. Se nenhum der certo (ou o resultado ficar maior), devolve o
- * original sem metadados.
+ * codifica WebP. Se nenhum der certo (ou, só no JPEG, o resultado ficar
+ * maior), devolve o original sem metadados.
  */
 export async function compressImage(file) {
   try {
@@ -104,7 +104,10 @@ export async function compressImage(file) {
     }
     bitmap.close?.();
     if (!blob) throw new Error('sem codificador');
-    if (blob.size >= file.size && IMAGE_MIME.includes(file.type) && scale === 1) return stripImageMetadata(file);
+    // O atalho "o original já era menor" só vale para JPEG: é o único formato de que
+    // `stripImageMetadata` tira o EXIF. PNG/WebP sobem recodificados mesmo maiores —
+    // o original levaria eXIf/XMP (GPS) junto; o teto de tamanho é conferido depois.
+    if (blob.size >= file.size && file.type === 'image/jpeg' && scale === 1) return stripImageMetadata(file);
     const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
     return new File([blob], `imagem.${ext}`, { type: blob.type });
   } catch {

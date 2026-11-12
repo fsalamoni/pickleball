@@ -92,16 +92,14 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
   // da própria pessoa. Contagens próprias; o `destaque` segue só o verificado.
   const carreiraOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER) && mine;
   const foraQ = useCareerEvents({ enabled: carreiraOn });
-  // Os torneios em que joguei dão o selo "oficial" ao ligado pelo "É este" (o mesmo da linha do tempo).
+  // Os torneios em que joguei: o ligado pelo "É este" (selo oficial) NÃO gera troféu
+  // em "Fora" — a colocação dele é a oficial, que já está na aba Torneios (`careerTrophies`).
   const meusQ = useMyTournaments({ enabled: carreiraOn });
   const meus = meusQ.isSuccess ? meusQ.data : undefined;
   const fora = useMemo(() => {
     if (!carreiraOn || !foraQ.isSuccess) return [];
-    // Ligado a um torneio cujo pódio já está na aba Torneios: não repete em "Fora".
-    const noPodio = new Set((q.data?.torneios || []).map((x) => x.tournamentId));
-    return careerTrophies(foraQ.data, { myTournaments: meus, me: { uid, name: nome || t('Você') } })
-      .filter((x) => !(x.seal === 'official' && noPodio.has(x.platformTournamentId)));
-  }, [carreiraOn, foraQ.isSuccess, foraQ.data, meus, q.data, uid, nome]);
+    return careerTrophies(foraQ.data, { myTournaments: meus, me: { uid, name: nome || t('Você') } });
+  }, [carreiraOn, foraQ.isSuccess, foraQ.data, meus, uid, nome]);
   const foraConta = careerTrophyCounts(fora);
   const [aba, setAba] = useState(abaInicial);
   const [aberto, setAberto] = useState(null);

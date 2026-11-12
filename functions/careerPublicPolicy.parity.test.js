@@ -22,10 +22,13 @@ const EV = {
     { format: 'doubles', gender: 'female', placement: 'third', partner: { name: 'Sem conta' } },
     { format: 'singles', age: 'other', age_label: '40+', placement: 'other', placement_n: 5 },
     { format: 'teams', team: { name: 'Time', members: [{ name: 'Z' }] } },
+    // Equipe com dupla fixa: o nome da dupla segue a mesma regra das duplas (`formatHasPartner`).
+    { format: 'teams', placement: 'runner_up', partner: { uid: 'cau333', name: 'Cau' }, team: { name: 'Time', members: [{ name: 'Z' }] } },
   ],
 };
 const FOTOS = [{ path: 'carreira-publica/ana111/a__1.jpg', url: 'u', kind: 'medal', alt: 'A' }, { path: 'p2', url: 'u2', alt: 'B' }];
-const PARTNERS = [{}, { bia222: { name: 'Bia Lima', photo_url: 'f' } }, { bia222: { name: 'Bia', photo_url: null } }];
+const PARTNERS = [{}, { bia222: { name: 'Bia Lima', photo_url: 'f' } }, { bia222: { name: 'Bia', photo_url: null } },
+  { bia222: { name: 'Bia Lima' }, cau333: { name: 'Cau Reis', photo_url: 'g' } }];
 
 describe('a vitrine aplica a mesma régua nos dois lados', () => {
   it('limites e listas de campos', () => {
@@ -39,6 +42,23 @@ describe('a vitrine aplica a mesma régua nos dois lados', () => {
       expect(s.showcaseItem(EV, { seal, partners, photos: FOTOS })).toEqual(c.showcaseItem(EV, { seal, partners, photos: FOTOS }));
     }));
     expect(s.showcaseItem(null)).toEqual(c.showcaseItem(null));
+  });
+
+  it('dupla em formato de equipe: com o "sim" sai o nome, sem ele "com dupla"; o time nunca sai', () => {
+    const sem = s.showcaseItem(EV, { seal: 'declared', partners: {} }).entries[4];
+    expect(sem).toMatchObject({ format: 'teams', with_partner: true });
+    const com = s.showcaseItem(EV, { seal: 'declared', partners: PARTNERS[3] });
+    expect(com.entries[4].partner).toEqual({ uid: 'cau333', name: 'Cau Reis', photo_url: 'g' });
+    expect(com.named_uids).toEqual(['bia222', 'cau333']);
+    expect(JSON.stringify(com)).not.toContain('Time');
+  });
+
+  it('inscrição que não vale para o selo Oficial: as mesmas que o torneio trata como inativas', async () => {
+    const { summarizeMyRegistrations } = await import('@/modules/tournament/domain/participation.js');
+    const { REGISTRATION_STATUS } = await import('@/modules/tournament/domain/constants.js');
+    Object.values(REGISTRATION_STATUS).forEach((status) => {
+      expect(s.INACTIVE_REGISTRATION.includes(status)).toBe(!summarizeMyRegistrations([{ status }]).isPlayer);
+    });
   });
 
   it('o caminho da foto pública e a volta para a origem', () => {

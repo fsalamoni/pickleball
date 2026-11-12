@@ -28,6 +28,15 @@ describe('showcaseItem: só a lista fechada', () => {
     expect(showcaseItem(EV, { seal: 'declared', partners: { bia222: { name: 'Bia' } } }).entries[1]).toEqual({ format: 'doubles', placement: 'quarters', with_partner: true });
   });
 
+  it('dupla em formato de EQUIPE segue a mesma regra das duplas (e o time continua fora)', () => {
+    const ev = { ...EV, entries: [{ format: 'teams', partner: { uid: 'bia222', name: 'Bia' }, team: { name: 'Time X' } }] };
+    expect(showcaseItem(ev, { seal: 'declared' }).entries[0]).toEqual({ format: 'teams', with_partner: true });
+    const com = showcaseItem(ev, { seal: 'declared', partners: { bia222: { name: 'Bia Lima' } } });
+    expect(com.entries[0].partner).toEqual({ uid: 'bia222', name: 'Bia Lima', photo_url: null });
+    expect(com.named_uids).toEqual(['bia222']);
+    expect(JSON.stringify(com)).not.toContain('Time X');
+  });
+
   it('selo desconhecido vira declarado', () => {
     expect(showcaseItem(EV, { seal: 'forjado' }).seal).toBe('declared');
   });

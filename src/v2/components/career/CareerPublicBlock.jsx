@@ -27,6 +27,8 @@ export default function CareerPublicBlock({ uid, nome = '' }) {
   const { user } = useAuth();
   const q = useCareerPublic(uid);
   if (q.isPending) return <V2Surface className="mt-8"><V2Skeleton lines={3} /></V2Surface>;
+  // Perfil oculto pela moderação: a regra fecha a vitrine. Não é falha de conexão, não há o que tentar de novo.
+  if (q.error?.code === 'permission-denied') return null;
   if (q.isError) {
     return <V2Surface className="mt-8"><V2ErrorState inline title={t('Não carregou a carreira')} description={t('Os torneios de fora continuam lá — a conexão é que falhou.')} onRetry={() => q.refetch()} /></V2Surface>;
   }

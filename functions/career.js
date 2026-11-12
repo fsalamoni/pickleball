@@ -34,6 +34,7 @@
  */
 const crypto = require('node:crypto');
 const P = require('./careerPolicy.js');
+const V = require('./careerPublicPolicy.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const { FederationError } = require('./federations.js');
 
@@ -92,32 +93,49 @@ function auditoria(ctx, batch, actor, action, details) {
 const linkDoPedido = (docId) => `/carreira?dupla=${encodeURIComponent(docId)}`;
 const linkDoEvento = (eventId) => `/carreira?evento=${encodeURIComponent(eventId)}`;
 
+/** Texto de um campo da ficha: só string/número (um mapa gravado por fora da tela vira vazio). */
+const campo = (v, max) => (typeof v === 'string' || typeof v === 'number' ? texto(v, max) : '');
+
+/**
+ * As participações em que `uid` foi citado. A regra de `career_events` não
+ * confere forma: ficha fora do que a tela grava (participações demais, rótulo
+ * gigante que incharia a impressão) não cita ninguém — nada dela é copiado
+ * para o pedido que a OUTRA pessoa lê.
+ */
+function citadas(ev, uid) {
+  if (!ev || !Array.isArray(ev.entries) || ev.entries.length > V.MAX_ENTRIES) return [];
+  const idx = P.citedEntryIndexes(ev, uid);
+  return P.careerFingerprint(ev, idx).length > 1500 ? [] : idx;
+}
+
 /** O que a dupla vê do registro (ela não lê o documento do dono): datas, lugar e as categorias em que foi citada. */
 function resumo(ev, indexes) {
   return {
-    name: texto(ev.name, 120),
-    start_date: texto(ev.start_date, 10),
-    end_date: ev.end_date ? texto(ev.end_date, 10) : null,
+    name: campo(ev.name, 120),
+    start_date: campo(ev.start_date, 10),
+    end_date: campo(ev.end_date, 10) || null,
     date_precision: ev.date_precision === 'year' ? 'year' : 'day',
-    city: texto(ev.city, 80),
-    state: texto(ev.state, 2),
-    entries: indexes.map((i) => {
-      const e = ev.entries[i] || {};
-      const out = {};
-      ['format', 'gender', 'age', 'age_label', 'level_bracket', 'level_label', 'placement', 'placement_n']
-        .forEach((k) => { if (e[k] !== undefined && e[k] !== null && e[k] !== '') out[k] = e[k]; });
-      return out;
-    }),
+    city: campo(ev.city, 80),
+    state: campo(ev.state, 2),
+    entries: indexes.map((i) => V.safeEntryFields(ev.entries[i])),
   };
 }
 
-async function pedido(ctx, docId) {
+const PEDIDO_SUMIU = 'Este pedido não existe mais.';
+
+/**
+ * Lê o pedido para `actor`. Inexistente e "não é seu" respondem IGUAL
+ * (`not-found`): o id é evento + uid da dupla, e um código de erro diferente
+ * diria a um terceiro quem foi citado naquele torneio. Só o admin lê o de outros.
+ */
+async function pedido(ctx, docId, actor) {
   const id = texto(docId, 400);
-  if (!id) falha('invalid-argument', 'Pedido não informado.');
+  if (!id || id.includes('/')) falha('invalid-argument', 'Pedido não informado.');
   const ref = ctx.db.collection(COL).doc(id);
   const snap = await ref.get();
-  if (!snap.exists) falha('not-found', 'Este pedido não existe mais.');
-  return { ref, id, d: snap.data() };
+  const d = snap.exists ? snap.data() : null;
+  if (!d || !(actor.isPlatformAdmin || [d.owner_uid, d.partner_uid].includes(actor.uid))) falha('not-found', PEDIDO_SUMIU);
+  return { ref, id, d };
 }
 
 /** Solta o vínculo do registro espelhado da dupla ("Pôr na minha carreira também"). */
@@ -127,10 +145,13 @@ async function soltarEspelho(ctx, batch, d) {
   if (esp.exists && esp.data().linked_event && esp.data().linked_event.id === d.event_id) batch.update(esp.ref, { linked_event: null });
 }
 
-/** O pedido some: leva as denúncias e solta o vínculo do espelho. */
+/**
+ * O pedido some e solta o vínculo do espelho. As DENÚNCIAS ficam: a aberta
+ * segue na fila do admin (quem foi denunciado não a apaga tirando a dupla da
+ * ficha) e a decidida é o que impede pedir de novo. Saem na exclusão de conta.
+ */
 async function apagarPedido(ctx, batch, ref, d) {
   batch.delete(ref);
-  ['owner', 'partner'].forEach((papel) => batch.delete(ctx.db.collection(REP).doc(reportId(ref.id, papel))));
   await soltarEspelho(ctx, batch, d);
 }
 
@@ -138,6 +159,15 @@ async function denunciaAberta(ctx, docId, papel) {
   const r = await ctx.db.collection(REP).doc(reportId(docId, papel)).get();
   return r.exists && r.data().open === true;
 }
+
+/** Decisão da moderação que FICA valendo para o pedido (a denúncia decidida é a marca). */
+const decisaoDe = (snap) => (snap.exists && snap.data().moderation && snap.data().moderation.decision) || null;
+const EM_ANALISE = 'Este pedido está em análise pela moderação.';
+
+/* Teto de pedidos por remetente: o aviso sai com texto dele, pelo servidor. */
+const CONVITES_POR_DIA = 20;
+const ABERTOS_POR_DUPLA = 3;
+const DIA_MS = 86400000;
 
 async function exigeAdulto(ctx, uid, msg) {
   const u = await usuario(ctx, uid);
@@ -157,7 +187,7 @@ async function invite(ctx, actor, data) {
   if (!evSnap.exists || evSnap.data().uid !== actor.uid) falha('permission-denied', 'Este torneio não é seu.');
   const ev = evSnap.data();
   if (!ev.start_date || ev.start_date > hojeBR(ctx.now) || ev.status === 'cancelled') falha('failed-precondition', 'Só dá para pedir confirmação de torneio já jogado.');
-  const idx = P.citedEntryIndexes(ev, partnerUid);
+  const idx = citadas(ev, partnerUid);
   if (!idx.length) falha('failed-precondition', 'Esta pessoa não está como dupla neste torneio.');
   const eu = await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não pedem confirmação de dupla.');
   const dupla = await usuario(ctx, partnerUid);
@@ -186,6 +216,20 @@ async function invite(ctx, actor, data) {
   if (rDupla.exists && rDupla.data().moderation && rDupla.data().moderation.decision === 'remove_link') {
     falha('failed-precondition', 'A moderação retirou este pedido. Não dá para pedir de novo a esta pessoa neste torneio.');
   }
+  // Teto por remetente, depois das respostas idempotentes (tocar de novo num pedido aberto
+  // não é pedido novo). Conta o que foi ENVIADO (a auditoria fica quando o pedido é apagado;
+  // sem isso, pedir, apagar e pedir de novo mandava avisos sem fim) e os abertos para a mesma pessoa.
+  const [meusSnap, enviadosSnap] = await Promise.all([
+    ctx.db.collection(COL).where('owner_uid', '==', actor.uid).get(),
+    ctx.db.collection('audit_logs').where('actor_id', '==', actor.uid).where('action', '==', 'career_partner_invited').get(),
+  ]);
+  const meus = meusSnap.docs.map((x) => x.data());
+  const recente = (ms) => Number(ms) > ctx.now - DIA_MS;
+  const enviados = enviadosSnap.docs.filter((x) => recente((x.data().details || {}).at_ms)).length;
+  if (Math.max(enviados, meus.filter((x) => recente(x.invited_at_ms)).length) >= CONVITES_POR_DIA
+    || meus.filter((x) => x.partner_uid === partnerUid && ABERTOS.includes(x.status) && x.event_id !== eventId).length >= ABERTOS_POR_DUPLA) {
+    falha('resource-exhausted', 'Você já pediu muitas confirmações. Espere as respostas antes de pedir de novo.');
+  }
   const batch = ctx.db.batch();
   batch.set(ref, {
     owner_uid: actor.uid,
@@ -202,27 +246,29 @@ async function invite(ctx, actor, data) {
     partner_event_id: (antes && antes.partner_event_id) || null,
     invited_at_ms: ctx.now,
     answered_at_ms: null,
+    // Pedir de novo não reabre o aviso "a visão chegou" (ele sai uma vez por pedido).
+    ...(antes && antes.feedback_notified_at_ms ? { feedback_notified_at_ms: antes.feedback_notified_at_ms } : {}),
   });
   aviso(ctx, batch, partnerUid, {
     title: tx('{nome} pediu sua confirmação', { nome: nomeDe(eu) }),
     message: tx('Confirme que vocês jogaram juntos: {torneio}.', { torneio: texto(ev.name, 120) }),
     link: linkDoPedido(id),
   });
-  auditoria(ctx, batch, actor, 'career_partner_invited', { doc_id: id, event_id: eventId, user_id: partnerUid });
+  auditoria(ctx, batch, actor, 'career_partner_invited', { doc_id: id, event_id: eventId, user_id: partnerUid, at_ms: ctx.now });
   await batch.commit();
   return { id, status: P.PARTNER_STATUS.INVITED };
 }
 
 async function respond(ctx, actor, data) {
   await exigeFlag(ctx);
-  const { ref, id, d } = await pedido(ctx, data.docId);
+  const { ref, id, d } = await pedido(ctx, data.docId, actor);
   if (d.partner_uid !== actor.uid) falha('permission-denied', 'Só quem foi citado como dupla responde.');
   if (!ABERTOS.includes(d.status)) falha('failed-precondition', 'Este pedido já foi respondido.');
   const answer = data.answer === 'confirm' ? 'confirm' : data.answer === 'decline' ? 'decline' : '';
   if (!answer) falha('invalid-argument', 'Resposta inválida.');
   const evSnap = await ctx.db.collection(EV).doc(d.event_id).get();
   const ev = evSnap.exists ? evSnap.data() : null;
-  const idx = ev ? P.citedEntryIndexes(ev, actor.uid) : [];
+  const idx = ev && ev.uid === d.owner_uid ? citadas(ev, actor.uid) : [];
   const batch = ctx.db.batch();
   if (!ev || !idx.length) {
     // O registro mudou e a pessoa não está mais nele: o pedido não tem mais sentido.
@@ -230,10 +276,18 @@ async function respond(ctx, actor, data) {
     await batch.commit();
     falha('failed-precondition', 'O registro mudou e você não está mais como dupla nele.');
   }
+  const fp = P.careerFingerprint(ev, idx);
+  // A resposta vale para o que a pessoa VIU: a tela nova manda a impressão que leu,
+  // e, se o registro mudou no meio, ela confere de novo. Tela antiga (sem o campo) segue como antes.
+  if (typeof data.fingerprint === 'string' && data.fingerprint !== fp) {
+    // Grava o estado de agora: sem isso, pedido aberto com impressão antiga recusaria para sempre.
+    if (d.fingerprint !== fp) await ref.update({ fingerprint: fp, entry_indexes: idx, summary: resumo(ev, idx) });
+    falha('failed-precondition', 'O registro mudou. Confira de novo antes de responder.');
+  }
   if (answer === 'confirm') await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não confirmam dupla.');
   const status = answer === 'confirm' ? P.PARTNER_STATUS.CONFIRMED : P.PARTNER_STATUS.DECLINED;
   batch.update(ref, {
-    status, fingerprint: P.careerFingerprint(ev, idx), entry_indexes: idx, summary: resumo(ev, idx), answered_at_ms: ctx.now,
+    status, fingerprint: fp, entry_indexes: idx, summary: resumo(ev, idx), answered_at_ms: ctx.now,
   });
   aviso(ctx, batch, d.owner_uid, {
     title: answer === 'confirm'
@@ -249,20 +303,28 @@ async function respond(ctx, actor, data) {
 
 async function feedback(ctx, actor, data) {
   await exigeFlag(ctx);
-  const { ref, id, d } = await pedido(ctx, data.docId);
+  const { ref, id, d } = await pedido(ctx, data.docId, actor);
   if (d.partner_uid !== actor.uid) falha('permission-denied', 'Só a dupla deixa a visão dela.');
   if (d.status !== P.PARTNER_STATUS.CONFIRMED) falha('failed-precondition', 'Confirme o torneio antes de deixar a sua visão.');
   if (d.feedback && d.owner_decision && d.owner_decision !== P.OWNER_DECISION.PENDING) {
     falha('failed-precondition', 'A sua dupla já decidiu sobre esta visão. Você pode retirá-la.');
   }
+  const reps = await Promise.all(['owner', 'partner'].map((papel) => ctx.db.collection(REP).doc(reportId(id, papel)).get()));
   // Denúncia em análise: editar não pode tirar a visão da fila da moderação.
-  if (await denunciaAberta(ctx, id, 'owner')) falha('failed-precondition', 'Esta visão está em análise pela moderação. Você pode retirá-la.');
+  if (reps[0].exists && reps[0].data().open === true) falha('failed-precondition', 'Esta visão está em análise pela moderação. Você pode retirá-la.');
+  // A moderação retirou a visão: escrever de novo não desfaz a decisão.
+  if (reps.some((r) => decisaoDe(r) === 'remove_feedback')) falha('failed-precondition', 'A moderação retirou a sua visão neste torneio.');
   await exigeAdulto(ctx, actor.uid, 'Menores de 18 anos não deixam visão de dupla.');
   const { valid, error, value } = P.normalizePartnerFeedback(data.feedback || {});
   if (!valid) falha('invalid-argument', error);
   const batch = ctx.db.batch();
-  batch.update(ref, { feedback: { ...value, edited_at_ms: ctx.now }, owner_decision: P.OWNER_DECISION.PENDING });
-  if (!d.feedback) {
+  // O aviso "a visão chegou" sai UMA vez por pedido: retirar e mandar de novo não repete.
+  const avisar = !d.feedback && !d.feedback_notified_at_ms;
+  batch.update(ref, {
+    feedback: { ...value, edited_at_ms: ctx.now }, owner_decision: P.OWNER_DECISION.PENDING,
+    ...(avisar ? { feedback_notified_at_ms: ctx.now } : {}),
+  });
+  if (avisar) {
     aviso(ctx, batch, d.owner_uid, {
       title: tx('A visão da sua dupla chegou'),
       message: tx('{nome} comentou o {torneio}.', { nome: d.partner_name || 'Sua dupla', torneio: texto(d.summary && d.summary.name, 120) }),
@@ -276,7 +338,7 @@ async function feedback(ctx, actor, data) {
 
 async function decide(ctx, actor, data) {
   await exigeFlag(ctx);
-  const { ref, id, d } = await pedido(ctx, data.docId);
+  const { ref, id, d } = await pedido(ctx, data.docId, actor);
   if (d.owner_uid !== actor.uid) falha('permission-denied', 'Só quem registrou o torneio decide.');
   if (!d.feedback) falha('failed-precondition', 'Não há visão da dupla para decidir.');
   const decision = [P.OWNER_DECISION.USE, P.OWNER_DECISION.KEEP].includes(data.decision) ? data.decision : '';
@@ -290,9 +352,11 @@ async function decide(ctx, actor, data) {
 
 /** O dono apaga o pedido inteiro; a dupla retira a visão — ou, sem visão, desfaz a confirmação. */
 async function remove(ctx, actor, data) {
-  const { ref, id, d } = await pedido(ctx, data.docId);
+  const { ref, id, d } = await pedido(ctx, data.docId, actor);
   const batch = ctx.db.batch();
   if (d.owner_uid === actor.uid) {
+    // Quem foi denunciado não tira o pedido da fila da moderação apagando-o.
+    if (await denunciaAberta(ctx, id, 'partner')) falha('failed-precondition', EM_ANALISE);
     await apagarPedido(ctx, batch, ref, d);
     auditoria(ctx, batch, actor, 'career_partner_removed', { doc_id: id, event_id: d.event_id, by: 'owner' });
   } else if (d.partner_uid === actor.uid) {
@@ -300,6 +364,9 @@ async function remove(ctx, actor, data) {
       batch.update(ref, { feedback: null, owner_decision: null });
       auditoria(ctx, batch, actor, 'career_partner_feedback_withdrawn', { doc_id: id, event_id: d.event_id });
     } else {
+      // Só há o que desfazer depois de confirmar; pedido aberto ou recusado se responde.
+      if (d.status !== P.PARTNER_STATUS.CONFIRMED) falha('failed-precondition', 'Não há confirmação para desfazer. Responda ao pedido.');
+      if (await denunciaAberta(ctx, id, 'owner')) falha('failed-precondition', EM_ANALISE);
       // Desfazer NÃO é "não foi assim": o pedido some e quem registrou é avisado.
       await apagarPedido(ctx, batch, ref, d);
       aviso(ctx, batch, d.owner_uid, {
@@ -317,7 +384,7 @@ async function remove(ctx, actor, data) {
 }
 
 async function report(ctx, actor, data) {
-  const { id, d } = await pedido(ctx, data.docId);
+  const { id, d } = await pedido(ctx, data.docId, actor);
   const papel = d.owner_uid === actor.uid ? 'owner' : d.partner_uid === actor.uid ? 'partner' : '';
   if (!papel) falha('permission-denied', 'Este pedido não é seu.');
   if (!P.PARTNER_REPORT_REASONS.includes(data.reason)) falha('invalid-argument', 'Escolha o motivo da denúncia.');
@@ -325,12 +392,16 @@ async function report(ctx, actor, data) {
   const repRef = ctx.db.collection(REP).doc(reportId(id, papel));
   const antes = await repRef.get();
   // Uma denúncia por lado: aberta, ou já decidida sobre ESTA mesma versão da visão, não abre outra.
-  if (antes.exists && (antes.data().open === true || antes.data().feedback_edited_at_ms === versao)) return { id, reported: true };
+  // A que guarda uma retirada da moderação também fica: reescrevê-la apagaria a marca da decisão.
+  if (antes.exists && (antes.data().open === true || (antes.data().feedback_edited_at_ms === versao && (antes.data().invited_at_ms || 0) === (d.invited_at_ms || 0))
+    || ['remove_feedback', 'remove_link'].includes(decisaoDe(antes)))) return { id, reported: true };
   const batch = ctx.db.batch();
   batch.set(repRef, {
     doc_id: id, event_id: d.event_id, owner_uid: d.owner_uid, partner_uid: d.partner_uid, reporter_uid: actor.uid, role: papel,
-    reason: data.reason, note: texto(data.note, P.PARTNER_LIMITS.reason), feedback_edited_at_ms: versao,
+    reason: data.reason, note: texto(data.note, P.PARTNER_LIMITS.reason), feedback_edited_at_ms: versao, invited_at_ms: d.invited_at_ms || 0,
     open: true, created_at_ms: ctx.now, moderation: null,
+    // Cópia mínima para a fila do admin seguir decidindo se o pedido sumir (registro apagado).
+    owner_name: d.owner_name || '', partner_name: d.partner_name || '', event_name: campo(d.summary && d.summary.name, 120),
   });
   auditoria(ctx, batch, actor, 'career_partner_reported', { doc_id: id, event_id: d.event_id, reason: data.reason, by: papel });
   await batch.commit();
@@ -341,7 +412,18 @@ const DECISOES = ['dismiss', 'remove_feedback', 'remove_link'];
 
 async function moderate(ctx, actor, data) {
   if (!actor.isPlatformAdmin) falha('permission-denied', 'Só a administração da plataforma decide denúncias.');
-  const { ref, id, d } = await pedido(ctx, data.docId);
+  const id = texto(data.docId, 400);
+  if (!id || id.includes('/')) falha('invalid-argument', 'Pedido não informado.');
+  const ref = ctx.db.collection(COL).doc(id);
+  const [snap, ...repSnaps] = await Promise.all([
+    ref.get(), ...['owner', 'partner'].map((papel) => ctx.db.collection(REP).doc(reportId(id, papel)).get()),
+  ]);
+  const reps = repSnaps.filter((r) => r.exists && r.data().open === true);
+  // O pedido pode ter sumido com a denúncia aberta (registro apagado): decide-se pela denúncia.
+  const r0 = reps.length ? reps[0].data() : null;
+  const d = snap.exists ? snap.data()
+    : r0 ? { event_id: r0.event_id, owner_uid: r0.owner_uid, partner_uid: r0.partner_uid, summary: { name: r0.event_name || '' }, feedback: null } : null;
+  if (!d) falha('not-found', PEDIDO_SUMIU);
   const decision = DECISOES.includes(data.decision) ? data.decision : '';
   if (!decision) falha('invalid-argument', 'Decisão inválida.');
   const motivo = texto(data.reason, P.PARTNER_LIMITS.reason);
@@ -351,13 +433,23 @@ async function moderate(ctx, actor, data) {
   // A decisão fica nas DENÚNCIAS (só o servidor e quem denunciou leem), nunca no
   // pedido que as duas pontas leem; o uid do admin vai só para a auditoria.
   const moderation = { decision, reason: motivo, at_ms: ctx.now };
-  const reps = (await Promise.all(['owner', 'partner'].map((papel) => ctx.db.collection(REP).doc(reportId(id, papel)).get())))
-    .filter((r) => r.exists && r.data().open === true);
-  const reportReason = reps.length ? reps[0].data().reason : null;
+  const reportReason = r0 ? r0.reason : null;
   const batch = ctx.db.batch();
   reps.forEach((r) => batch.update(r.ref, { open: false, moderation }));
+  // A marca da decisão fica do lado de quem ela protege, mesmo sem denúncia aberta ali:
+  // é ela que impede escrever a visão de novo (owner) ou pedir de novo (partner).
+  const marcar = (papel) => {
+    if (reps.some((r) => r.id === reportId(id, papel))) return;
+    const antes = repSnaps[papel === 'owner' ? 0 : 1];
+    batch.set(ctx.db.collection(REP).doc(reportId(id, papel)), {
+      doc_id: id, event_id: d.event_id, owner_uid: d.owner_uid, partner_uid: d.partner_uid, reporter_uid: null, role: papel,
+      reason: null, note: '', feedback_edited_at_ms: 0, created_at_ms: ctx.now,
+      ...(antes.exists ? antes.data() : {}), open: false, moderation,
+    });
+  };
   if (decision === 'remove_feedback') {
     batch.update(ref, { feedback: null, owner_decision: null });
+    marcar('owner');
     aviso(ctx, batch, d.partner_uid, {
       title: tx('Sua visão foi retirada pela moderação'),
       message: tx('{torneio}. Motivo: {motivo}', { torneio, motivo }),
@@ -365,14 +457,9 @@ async function moderate(ctx, actor, data) {
     });
   } else if (decision === 'remove_link') {
     // O pedido some, mas a denúncia decidida fica: é ela que impede pedir de novo.
-    batch.delete(ref);
+    if (snap.exists) batch.delete(ref);
     await soltarEspelho(ctx, batch, d);
-    if (!reps.some((r) => r.id === reportId(id, 'partner'))) {
-      batch.set(ctx.db.collection(REP).doc(reportId(id, 'partner')), {
-        doc_id: id, event_id: d.event_id, owner_uid: d.owner_uid, partner_uid: d.partner_uid, reporter_uid: null, role: 'partner',
-        reason: null, note: '', feedback_edited_at_ms: 0, open: false, created_at_ms: ctx.now, moderation,
-      });
-    }
+    marcar('partner');
     aviso(ctx, batch, d.owner_uid, {
       title: tx('O pedido de confirmação foi retirado pela moderação'),
       message: tx('{torneio}. Motivo: {motivo}', { torneio, motivo }),
@@ -395,8 +482,10 @@ async function queue(ctx, actor) {
   snap.docs.forEach((r) => { const x = r.data(); if (!porPedido.has(x.doc_id)) porPedido.set(x.doc_id, x); });
   const itens = await Promise.all([...porPedido.values()].map(async (r) => {
     const p = await ctx.db.collection(COL).doc(r.doc_id).get();
-    if (!p.exists) return null; // o pedido sumiu: nada a decidir
-    const d = p.data();
+    // O pedido sumiu (registro apagado): a denúncia segue na fila, com o que ela mesma guardou.
+    const d = p.exists ? p.data() : {
+      owner_name: r.owner_name, partner_name: r.partner_name, summary: r.event_name ? { name: r.event_name } : null, status: 'removed',
+    };
     return {
       id: r.doc_id,
       owner_name: d.owner_name || '',
@@ -425,7 +514,6 @@ const hashToken = (token) => crypto.createHash('sha256').update(String(token)).d
 const tokenOk = (token) => typeof token === 'string' && new RegExp(P.INVITE_TOKEN_PATTERN).test(token);
 /** A MESMA resposta para usado, vencido, cancelado, inexistente, menor e dupla já preenchida. */
 const CONVITE_NEUTRO = 'Este convite não vale mais. Peça um link novo a quem convidou.';
-const DIA_MS = 86400000;
 
 /** O dono gera (ou troca) o link de convite de uma dupla digitada só com o nome. */
 async function inviteLink(ctx, actor, data) {
@@ -547,9 +635,11 @@ async function inviteAccept(ctx, actor, data) {
     const entries = ev.entries.map((e, i) => (alvo.indexes.includes(i) ? { ...e, partner: { uid: actor.uid, name: e.partner.name } } : e));
     const novo = { ...ev, entries };
     const partnerUids = [...new Set([...(Array.isArray(ev.partner_uids) ? ev.partner_uids : []), actor.uid])];
+    const idx = citadas(novo, actor.uid);
+    // Ficha fora do que a tela grava: o convite não vale (nada dela vai para o pedido).
+    if (!idx.length) falha('failed-precondition', CONVITE_NEUTRO);
     tr.update(evRef, { entries, partner_uids: partnerUids, updated_at_ms: ctx.now });
     tr.delete(invRef);
-    const idx = P.citedEntryIndexes(novo, actor.uid);
     if (!pedidoSnap.exists) {
       tr.set(pedidoRef, {
         owner_uid: inv.owner_uid,
@@ -593,22 +683,30 @@ async function career(ctx, actor, data = {}) {
 /* ------------------------------------------------------------ gatilho -- */
 
 const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const linkDe = (ev) => (ev && ev.linked_event && ev.linked_event.uid && ev.linked_event.id ? ev.linked_event : null);
+const idOk = (v) => typeof v === 'string' && v.length > 0 && v.length <= 200 && !v.includes('/');
+const linkDe = (ev) => (ev && ev.linked_event && idOk(ev.linked_event.uid) && idOk(ev.linked_event.id) ? ev.linked_event : null);
 
 /**
  * `career_events/{id}` mudou. Idempotente: só escreve o que mudou (a escrita
  * que desfaz um `linked_event` forjado dispara o gatilho de novo e termina aí).
  */
-async function eventWritten(ctx, eventId, before, after) {
+async function eventWritten(ctx, eventId, before) {
   const { db } = ctx;
   const batch = db.batch();
   let escritas = 0;
-  const pedidos = await db.collection(COL).where('event_id', '==', eventId).get();
+  // O gatilho pode chegar atrasado ou fora de ordem: vale o registro de AGORA, não o
+  // `after` do evento (um `after` velho reabriria a confirmação ou apagaria um pedido novo).
+  const [agora, pedidos] = await Promise.all([
+    db.collection(EV).doc(eventId).get(), db.collection(COL).where('event_id', '==', eventId).get(),
+  ]);
+  const after = agora.exists ? agora.data() : null;
 
   if (!after) {
     pedidos.docs.forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
+    // A denúncia ABERTA e a DECIDIDA ficam (fila do admin; marca da decisão). Sai só o resto.
     const reps = await db.collection(REP).where('event_id', '==', eventId).get();
-    reps.docs.forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
+    reps.docs.filter((doc) => doc.data().open !== true && !doc.data().moderation)
+      .forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
     // Quem tinha posto este torneio na carreira dele também: o vínculo some dos dois lados.
     const espelhos = await db.collection(EV).where('linked_event.id', '==', eventId).get();
     espelhos.docs.forEach((doc) => { batch.update(doc.ref, { linked_event: null }); escritas += 1; });
@@ -618,14 +716,18 @@ async function eventWritten(ctx, eventId, before, after) {
   } else {
     for (const doc of pedidos.docs) {
       const d = doc.data();
-      const idx = d.owner_uid === after.uid ? P.citedEntryIndexes(after, d.partner_uid) : [];
+      const idx = d.owner_uid === after.uid ? citadas(after, d.partner_uid) : [];
       if (!idx.length) { await apagarPedido(ctx, batch, doc.ref, d); escritas += 1; continue; }
       const patch = {};
       const sm = resumo(after, idx);
+      const fp = P.careerFingerprint(after, idx);
       if (!igual(sm, d.summary)) patch.summary = sm;
       if (!igual(idx, d.entry_indexes)) patch.entry_indexes = idx;
-      if (d.status === P.PARTNER_STATUS.CONFIRMED && P.careerFingerprint(after, idx) !== d.fingerprint) {
+      // Pedido ainda aberto: a impressão acompanha o registro (é ela que a resposta confere).
+      if (ABERTOS.includes(d.status) && fp !== d.fingerprint) patch.fingerprint = fp;
+      if (d.status === P.PARTNER_STATUS.CONFIRMED && fp !== d.fingerprint) {
         patch.status = P.PARTNER_STATUS.RECONFIRM;
+        patch.fingerprint = fp;
         aviso(ctx, batch, d.partner_uid, {
           title: tx('Confirme de novo: {torneio}', { torneio: sm.name }),
           message: tx('{nome} mudou a data, a categoria ou a colocação. Confira e confirme.', { nome: d.owner_name || 'Sua dupla' }),
@@ -640,7 +742,7 @@ async function eventWritten(ctx, eventId, before, after) {
   // "Pôr na minha carreira também": confere o vínculo e liga as duas fichas.
   const antesLink = linkDe(before);
   const depoisLink = linkDe(after);
-  if (antesLink && (!depoisLink || antesLink.id !== depoisLink.id)) {
+  if (antesLink && before.uid && (!depoisLink || antesLink.id !== depoisLink.id)) {
     const velho = await db.collection(COL).doc(P.partnerDocId(antesLink.id, before.uid)).get();
     if (velho.exists && velho.data().partner_event_id === eventId) { batch.update(velho.ref, { partner_event_id: null }); escritas += 1; }
   }
@@ -667,21 +769,43 @@ const somaDias = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 86400
  * Uma igualdade por consulta (zero índice); o resto em memória. Id do aviso
  * DETERMINÍSTICO: rodar de novo no mesmo dia não repete o aviso.
  */
+const registrar = (ctx, msg, err) => { if (ctx.logger && ctx.logger.error) ctx.logger.error(msg, err); };
+
+/** Convite pelo WhatsApp vencido some (guarda o nome de um terceiro sem conta). Vale com a flag desligada. */
+async function limparConvitesVencidos(ctx) {
+  try {
+    // ponytail: 400 por dia; paginar se a fila de vencidos passar disso.
+    const velhos = await ctx.db.collection(INV).where('expires_at_ms', '<', ctx.now).limit(400).get();
+    if (!velhos.docs.length) return 0;
+    const batch = ctx.db.batch();
+    velhos.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    return velhos.docs.length;
+  } catch (err) {
+    registrar(ctx, 'careerReminders: convites vencidos', err);
+    return 0;
+  }
+}
+
 async function reminders(ctx) {
-  if (!(await flagLigada(ctx))) return { avisos: 0, desligada: true };
+  const convites = await limparConvitesVencidos(ctx);
+  if (!(await flagLigada(ctx))) return { avisos: 0, convites, desligada: true };
   const { db } = ctx;
   const hoje = hojeBR(ctx.now);
-  const ontem = somaDias(hoje, -1);
+  // D+1 com 3 dias de folga: a varredura que falhou num dia alcança no seguinte
+  // (o id determinístico não deixa repetir). O prazo fica no dia exato: o título diz "em 3 dias".
+  const passados = [-1, -2, -3].map((n) => somaDias(hoje, n));
   const [prazo, fimOntem, inicioOntem] = await Promise.all([
     db.collection(EV).where('registration_deadline', '==', somaDias(hoje, 3)).get(),
-    db.collection(EV).where('end_date', '==', ontem).get(),
-    db.collection(EV).where('start_date', '==', ontem).get(),
+    db.collection(EV).where('end_date', 'in', passados).get(),
+    db.collection(EV).where('start_date', 'in', passados).get(),
   ]);
-  const planejado = (d) => d.status === 'planned' && d.uid;
+  // Id fora do que a tela gera não entra: o id do aviso derivado estouraria e derrubaria o lote inteiro.
+  const planejado = (d, doc) => d.status === 'planned' && d.uid && doc.id.length <= 200 && !doc.id.includes('/');
   const fila = [];
   prazo.docs.forEach((doc) => {
     const d = doc.data();
-    if (!planejado(d) || d.registered === true) return;
+    if (!planejado(d, doc) || d.registered === true) return;
     fila.push({
       id: `carreira_prazo_${doc.id}_${d.registration_deadline}`, uid: d.uid,
       title: tx('A inscrição fecha em 3 dias'),
@@ -693,7 +817,7 @@ async function reminders(ctx) {
   [...fimOntem.docs, ...inicioOntem.docs.filter((doc) => !doc.data().end_date)].forEach((doc) => {
     const d = doc.data();
     // O plano de um torneio do PickleRush (`origin_ref: 'tor:…'`) não pergunta: vale o oficial.
-    if (!planejado(d) || vistos.has(doc.id) || String(d.origin_ref || '').startsWith('tor:')) return;
+    if (!planejado(d, doc) || vistos.has(doc.id) || String(d.origin_ref || '').startsWith('tor:')) return;
     vistos.add(doc.id);
     fila.push({
       id: `carreira_d1_${doc.id}`, uid: d.uid,
@@ -707,11 +831,12 @@ async function reminders(ctx) {
   let avisos = 0;
   for (let i = 0; i < fila.length; i += 200) {
     const lote = fila.slice(i, i + 200);
-    const existe = await Promise.all(lote.map((a) => db.collection('notifications').doc(a.id).get()));
+    // Uma leitura que falha pula só aquele aviso (a próxima varredura o alcança).
+    const existe = await Promise.allSettled(lote.map((a) => db.collection('notifications').doc(a.id).get()));
     const batch = db.batch();
     let n = 0;
     lote.forEach((a, j) => {
-      if (existe[j].exists) return;
+      if (existe[j].status !== 'fulfilled' || existe[j].value.exists) return;
       const i18n = i18nDoAviso({ title: a.title, message: a.message });
       batch.set(db.collection('notifications').doc(a.id), {
         user_id: a.uid, title: textoDoAviso(a.title), message: textoDoAviso(a.message), ...(i18n ? { i18n } : {}),
@@ -720,10 +845,15 @@ async function reminders(ctx) {
       });
       n += 1;
     });
-    if (n) await batch.commit();
-    avisos += n;
+    // Um lote que falha não derruba os seguintes.
+    try {
+      if (n) await batch.commit();
+      avisos += n;
+    } catch (err) {
+      registrar(ctx, 'careerReminders: lote de avisos', err);
+    }
   }
-  return { avisos };
+  return { avisos, convites };
 }
 
 module.exports = { career, eventWritten, reminders, ACOES };

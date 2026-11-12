@@ -13,7 +13,7 @@ import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 
 const DONO = 'dono_uid';
@@ -67,6 +67,30 @@ describe('career_events', () => {
 
   it('🔴 o uid não muda', async () => {
     await assertFails(updateDoc(doc(como(DONO), 'career_events', `${DONO}_a`), { uid: OUTRO }));
+  });
+
+  it('🔴 id com 100 caracteres ou mais é recusado (o servidor monta o id dos avisos com ele); 99 passa', async () => {
+    const comTamanho = (n) => `${DONO}_`.padEnd(n, 'x');
+    await assertSucceeds(setDoc(doc(como(DONO), 'career_events', comTamanho(99)), evento(DONO)));
+    await assertFails(setDoc(doc(como(DONO), 'career_events', comTamanho(100)), evento(DONO)));
+    await assertFails(setDoc(doc(como(DONO), 'career_events', comTamanho(1400)), evento(DONO, { status: 'planned' })));
+    await assertFails(setDoc(doc(como(DONO), 'career_rank', comTamanho(100)), { uid: DONO, ranking_label: 'Duplas 4.0', date: '2026-03-01', position: 3 }));
+  });
+
+  it('⭐ o modo lista grava 100 torneios num lote só (a flag é UMA leitura de regra, não cem)', async () => {
+    // Uma instância só: `como` cria outra a cada chamada, e o lote recusa referência de outra instância.
+    const db = como(DONO);
+    const lote = writeBatch(db);
+    for (let i = 0; i < 100; i += 1) lote.set(doc(db, 'career_events', `${DONO}_lote${i}`), evento(DONO));
+    await assertSucceeds(lote.commit());
+  });
+
+  it('🔴 no lote, um id alheio derruba tudo (tudo ou nada)', async () => {
+    const db = como(DONO);
+    const lote = writeBatch(db);
+    lote.set(doc(db, 'career_events', `${DONO}_l1`), evento(DONO));
+    lote.set(doc(db, 'career_events', `${OUTRO}_l2`), evento(DONO));
+    await assertFails(lote.commit());
   });
 
   it('⭐ flag desligada: recusa criar e editar, mas deixa apagar (LGPD)', async () => {
@@ -244,6 +268,37 @@ describe('career_public (a vitrine: lê qualquer pessoa, grava só o servidor)',
     await assertFails(getDocs(collection(testEnv.unauthenticatedContext().firestore(), 'career_public')));
   });
 
+  const perfil = (uid, dados) => testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'athlete_profiles', uid), dados));
+  const daVitrine = (quem, uid = DONO) => query(collection(como(quem), 'career_public'), where('uid', '==', uid));
+
+  it('🔴 a coleção inteira não é listável nem por quem tem conta (a consulta fixa `uid ==`)', async () => {
+    await assertFails(getDocs(collection(como(OUTRO), 'career_public')));
+    await assertFails(getDocs(query(collection(como(OUTRO), 'career_public'), where('seal', '==', 'declared'))));
+    await assertFails(getDocs(collection(como(DONO), 'career_public')));
+  });
+
+  it('⭐ perfil visível (com ou sem o campo `hidden`): terceiro lê e consulta', async () => {
+    await perfil(DONO, { name: 'Dono' });
+    await assertSucceeds(getDoc(doc(como(OUTRO), 'career_public', `${DONO}_a`)));
+    await assertSucceeds(getDocs(daVitrine(OUTRO)));
+    await perfil(DONO, { name: 'Dono', hidden: false });
+    await assertSucceeds(getDocs(daVitrine(OUTRO)));
+  });
+
+  it('🔴 perfil OCULTO pela moderação: terceiro não lê nem consulta; o dono segue lendo', async () => {
+    await perfil(DONO, { name: 'Dono', hidden: true });
+    await assertFails(getDoc(doc(como(OUTRO), 'career_public', `${DONO}_a`)));
+    await assertFails(getDocs(daVitrine(OUTRO)));
+    await assertSucceeds(getDoc(doc(como(DONO), 'career_public', `${DONO}_a`)));
+    await assertSucceeds(getDocs(daVitrine(DONO)));
+  });
+
+  it('o perfil oculto de UMA pessoa não fecha a vitrine das outras', async () => {
+    await perfil(DONO, { name: 'Dono', hidden: true });
+    await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'career_public', `${OUTRO}_a`), item(OUTRO)));
+    await assertSucceeds(getDocs(daVitrine(DONO, OUTRO)));
+  });
+
   it('🔴 ninguém grava pelo cliente: nem o dono (selo forjado, dupla sem "sim"), nem outra conta; nem apaga', async () => {
     await assertFails(setDoc(doc(como(DONO), 'career_public', `${DONO}_b`), item(DONO)));
     await assertFails(updateDoc(doc(como(DONO), 'career_public', `${DONO}_a`), { seal: 'official' }));
@@ -279,6 +334,26 @@ describe('"Mandar ao meu professor" (career_events + training_debriefs) — cont
     await assertFails(updateDoc(doc(como(PROF), 'career_events', `${DONO}_a`), { name: 'x' }));
     await assertFails(deleteDoc(doc(como(PROF), 'career_events', `${DONO}_a`)));
     await assertFails(getDocs(query(collection(como(PROF), 'career_events'), where('shared_coach_id', '==', PROF))));
+  });
+
+  it('🔴 vínculo ativo não basta: o professor só lê o que foi MANDADO a ele', async () => {
+    const PROF2 = 'prof2_uid';
+    await vinculo('active');
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'coach_students', `${PROF2}_${DONO}`), { coach_id: PROF2, student_id: DONO, status: 'active' });
+      // Não mandado a ninguém (`_a`, do beforeEach) e mandado a OUTRO professor (`_b`).
+      await setDoc(doc(ctx.firestore(), 'career_events', `${DONO}_b`), evento(DONO, { shared_coach_id: PROF2 }));
+      await setDoc(doc(ctx.firestore(), 'training_debriefs', BAL), balanco());
+    });
+    await assertFails(getDoc(doc(como(PROF), 'career_events', `${DONO}_a`)));
+    await assertFails(getDoc(doc(como(PROF), 'career_events', `${DONO}_b`)));
+    await assertFails(getDoc(doc(como(PROF), 'training_debriefs', BAL)));
+    // Só `uid ==` do aluno (sem fixar o próprio professor) devolveria o que não foi mandado.
+    await assertFails(getDocs(query(collection(como(PROF), 'career_events'), where('uid', '==', DONO))));
+    await assertFails(getDocs(query(collection(como(PROF), 'training_debriefs'), where('uid', '==', DONO))));
+    // Fixar OUTRO professor também não passa.
+    await assertFails(getDocs(query(collection(como(PROF), 'career_events'), where('shared_coach_id', '==', PROF2), where('uid', '==', DONO))));
+    await assertSucceeds(getDoc(doc(como(PROF2), 'career_events', `${DONO}_b`)));
   });
 
   it('🔴 sem vínculo ativo não se manda (nem a um professor qualquer)', async () => {
