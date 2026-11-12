@@ -1202,6 +1202,36 @@ async function coletarLadders(db, uid) {
   return { itens, deletes: [], truncated: false };
 }
 
+/**
+ * LIGAS (docs/57-LIGAS.md): a liga e os jogos ficam (são o histórico dos
+ * adversários); a pessoa sai das listas de membros e organizadores, e nas
+ * inscrições vira "Atleta removido", sem a categoria. A liga é achada por
+ * `ever_uids` (inclui quem já desistiu).
+ */
+async function coletarLigas(db, uid) {
+  const r = await consultar(db, 'leagues', 'ever_uids', 'array-contains', uid);
+  const itens = [];
+  for (const lg of r.docs) {
+    const d = lg.data();
+    const tira = (lista) => (Array.isArray(lista) ? lista.filter((u) => u !== uid) : lista);
+    const patch = { member_uids: tira(d.member_uids), admins: tira(d.admins), ever_uids: tira(d.ever_uids) };
+    if (d.organizer && d.organizer.id === uid && ['athlete', 'coach'].includes(d.organizer.type)) {
+      patch.organizer = { ...d.organizer, name: REMOVED_ATHLETE };
+    }
+    itens.push({ ref: lg.ref, patch });
+    // eslint-disable-next-line no-await-in-loop
+    const entries = await lg.ref.collection('entries').where('player_uids', 'array-contains', uid).limit(QUERY_LIMIT).get();
+    entries.docs.forEach((e) => {
+      const players = patchArrayItems(e.data().players, uid, { idKeys: ['uid'], name: ['name'], clear: ['gender'] });
+      if (!players) return;
+      const p = { players };
+      if (e.data().auto_name) p.name = players.map((x) => (x.name === REMOVED_ATHLETE ? x.name : String(x.name || '').split(' ')[0])).join(' / ');
+      itens.push({ ref: refDe(e), patch: p });
+    });
+  }
+  return { itens, deletes: [], truncated: r.truncated };
+}
+
 /* ---------------------------------------------- Centro de Treino ------ */
 
 /**
@@ -1558,6 +1588,7 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Eventos de clube e partidas', collect: coletarEventosDeClube, deleteLabel: 'Presenças em data de evento' },
   { label: 'Torneios internos de arena', col: 'arena_internal_tournaments', wheres: [['participants', 'array-contains']], patch: patchInternalTournament },
   { label: 'Ladder de arena', collect: coletarLadders },
+  { label: 'Ligas (ficam, sem o nome)', collect: coletarLigas, cols: ['leagues'] },
   { label: 'Câmeras do controle de linhas', collect: coletarLinhas, deleteLabel: 'Câmeras e marcações do controle de linhas' },
   { label: 'Ranking de duplas', col: 'doubles_rankings', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },
   { label: 'Rating de dupla de clube', col: 'club_internal_doubles_ratings', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },

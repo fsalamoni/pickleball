@@ -5860,6 +5860,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // LIGAS (flags `leagues_*`, docs/57-LIGAS.md): módulo próprio, ao lado do
+    // torneio. A liga e as subcoleções (`divisions`, `entries`, `matches`) são
+    // lidas por quem tem conta e NUNCA escritas pelo cliente: toda escrita passa
+    // pela função `leagues` (flag do grupo, organizador, inscrição, placar). A
+    // inscrição guarda só conta e nome público — nenhum contato.
+    match /leagues/{p=**} {
+      allow read: if isAuthed();
+    }
+
     // Ranking oficial por temporada (`{fed}_{ano}`): só o servidor grava (`federationRankingRecompute`).
     match /federation_rankings/{rankId} {
       allow read: if true;

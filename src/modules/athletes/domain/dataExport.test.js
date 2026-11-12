@@ -123,6 +123,14 @@ describe('exportação: e-mails e mensagens enviados', () => {
   });
 });
 
+describe('exportação: Ligas', () => {
+  it('entra só quando coletada, com as ligas e as inscrições', () => {
+    expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('leagues');
+    const leagues = [{ id: 'l1', name: 'Liga de Verão', organizes: false, entries: [{ id: 'e1', division_id: 'd1', players: [{ uid: 'u1', name: 'Ana' }] }] }];
+    expect(buildDataExport({ uid: 'u1', leagues }).leagues).toEqual(leagues);
+  });
+});
+
 describe('exportação: Carreira', () => {
   it('entra só quando coletada, com os torneios de fora e as fotos', () => {
     expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('career');

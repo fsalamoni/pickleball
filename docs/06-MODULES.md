@@ -52,6 +52,18 @@ pública, impressão e telão.
   `tournament_photos`, `tournament_rankings`, `provisional_claims`,
   `club_event_games` (espelho de equipes).
 
+### leagues/ — ligas (flags `leagues_*`)
+
+- **O quê**: temporada com rodadas no calendário, divisões por DUPR e
+  classificação por pontos. **Ao lado do torneio, sem misturar**: não importa
+  `tournament/` e o torneio não importa daqui. `docs/57-LIGAS.md`.
+- **Domínio**: `leagueFlags`, `leagueAccess`, `leagueFormats`, `leagueDivisions`,
+  `leagueSeason`, `leagueResults` (cópia no servidor em `functions/leaguePolicy.js`).
+- **Rotas**: `/ligas`, `/ligas/criar`, `/ligas/:leagueId/:tab?` (`visao`,
+  `classificacao`, `rodadas`, `inscritos`, `gerir`).
+- **Coleções**: `leagues` (+ `divisions`, `entries`, `matches`), escritas só
+  pela função `leagues`.
+
 ### games/ — dia de jogo, jogo aberto e procura-jogo
 O dia de jogo é **um módulo só** para as três origens (atleta, arena, clube):
 formatos Play, Americano, Americano aprimorado, Mexicano e Rei da Quadra;

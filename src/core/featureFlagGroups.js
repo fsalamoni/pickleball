@@ -34,6 +34,15 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW],
   },
   {
+    // Uma flag por grupo de quem cria; qualquer uma ligada mostra a área Ligas.
+    id: 'leagues',
+    label: tk('Ligas'),
+    keys: [
+      FEATURE_FLAG.LEAGUES_ATHLETES, FEATURE_FLAG.LEAGUES_CLUBS, FEATURE_FLAG.LEAGUES_ARENAS,
+      FEATURE_FLAG.LEAGUES_COACHES, FEATURE_FLAG.LEAGUES_FEDERATIONS,
+    ],
+  },
+  {
     id: 'career',
     label: tk('Carreira do atleta'),
     keys: [FEATURE_FLAG.ATHLETE_CAREER],

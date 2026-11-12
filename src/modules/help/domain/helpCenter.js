@@ -1773,6 +1773,29 @@ const ATLETA = {
       ],
     },
     {
+      id: 'ligas',
+      flags: ['leagues_athletes', 'leagues_clubs', 'leagues_arenas', 'leagues_coaches', 'leagues_federations'],
+      title: tk('Ligas: uma temporada de jogos, rodada a rodada'),
+      summary: tk('Liga é diferente de torneio: dura semanas ou meses, com rodadas no calendário e classificação por pontos.'),
+      keywords: ['liga', 'ligas', 'temporada', 'rodada', 'divisão', 'pontos corridos', 'classificação', 'criar liga', 'liga flexível', 'dupr'],
+      blocks: [
+        p(tk('O torneio acontece num fim de semana. A liga é uma temporada: cada divisão joga em pontos corridos, uma rodada por data, e a classificação se atualiza a cada placar. Os dois ficam lado a lado — "Criar liga" ou "Criar torneio".')),
+        steps(
+          tk('Em Ligas → "Criar liga", escolha em nome de quem ela é (você, um clube, uma arena, o seu perfil de professor ou uma federação — o que estiver liberado para você).'),
+          tk('Escolha o formato (duplas por divisão, liga flexível ou simples por divisão), o calendário (toda semana, a cada 2 semanas, todo mês ou datas escolhidas) e a pontuação.'),
+          tk('Monte as divisões: cada uma é uma tabela própria, separada por nível (DUPR) e por categoria. Há um conjunto sugerido por DUPR.'),
+          tk('A liga nasce como rascunho. Em Gerir → Situação, abra as inscrições; depois, em Rodadas, gere os jogos de cada divisão.'),
+        ),
+        list(
+          tk('ENTRAR — na página da liga, escolha a divisão e a dupla. Quem está fora da faixa de nível ou da categoria não entra sozinho; a organização pode inscrever por exceção.'),
+          tk('PLACAR — quem gere a liga lança o placar de cada jogo (até 5 games) ou o W.O. Desempate: vitórias, confronto direto, saldo de games, saldo de pontos e pontos feitos.'),
+          tk('SAIR — quem sai depois das rodadas geradas fica como desistência: os placares já lançados continuam valendo para os adversários.'),
+        ),
+        link('/ligas', tk('Abrir as ligas')),
+        warn(tk('Os jogos da liga ainda não contam no ranking da plataforma nem no DUPR.')),
+      ],
+    },
+    {
       id: 'organizar-torneio',
       title: tk('Organizar um torneio'),
       summary: tk('Criar, gerir modalidades, inscrições, sorteio e resultados.'),
@@ -2962,6 +2985,10 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
   { pattern: '/torneios', label: tk('torneios'),
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'organizar-torneio']] },
+  // --- ligas ----------------------------------------------------------------
+  { pattern: '/ligas/*/*', label: tk('a liga'), refs: [[HELP_SECTION.ATHLETE, 'ligas']] },
+  { pattern: '/ligas/*', label: tk('a liga'), refs: [[HELP_SECTION.ATHLETE, 'ligas']] },
+  { pattern: '/ligas', label: tk('ligas'), refs: [[HELP_SECTION.ATHLETE, 'ligas']] },
   // --- federações -----------------------------------------------------------
   { pattern: '/federacoes/abrir', label: tk('abrir uma federação'),
     refs: [[HELP_SECTION.ATHLETE, 'federacao-gerir']] },
