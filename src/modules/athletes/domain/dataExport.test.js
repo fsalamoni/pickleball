@@ -127,8 +127,32 @@ describe('exportação: Carreira', () => {
   it('entra só quando coletada, com os torneios de fora e as fotos', () => {
     expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('career');
     const out = buildDataExport({ uid: 'u1', career: { events: [{ id: 'u1_a', name: 'Open' }], photos: ['carreira/u1/a.webp'] } });
-    expect(out.career).toEqual({ events: [{ id: 'u1_a', name: 'Open' }], photos: ['carreira/u1/a.webp'], counts: { events: 1, photos: 1 } });
-    expect(buildDataExport({ uid: 'u1', career: {} }).career.counts).toEqual({ events: 0, photos: 0 });
+    expect(out.career.events).toEqual([{ id: 'u1_a', name: 'Open' }]);
+    expect(out.career.photos).toEqual(['carreira/u1/a.webp']);
+    expect(out.career.counts).toMatchObject({ events: 1, photos: 1 });
+    const zero = { events: 0, partners: 0, partner_reports: 0, partner_invites: 0, public: 0, ranks: 0, photos: 0 };
+    expect(buildDataExport({ uid: 'u1', career: {} }).career.counts).toEqual(zero);
+  });
+
+  it('⭐ leva TUDO o que o serviço coleta: dupla, denúncias que fez, convites, vitrine e ranking', () => {
+    const career = {
+      events: [{ id: 'u1_a' }],
+      partners: [{ id: 'u1_a__u2', feedback: { text: 'boa' } }],
+      partnerReports: [{ id: 'u1_a__u2__owner', reporter_uid: 'u1', reason: 'ofensa' }],
+      partnerInvites: [{ id: 'hash', owner_uid: 'u1' }],
+      public: [{ id: 'u1_u1_a', name: 'Open' }],
+      ranks: [{ id: 'u1_r', position: 12 }],
+      photos: ['carreira/u1/a.webp'],
+    };
+    const out = buildDataExport({ uid: 'u1', career }).career;
+    expect(out.partners).toEqual(career.partners);
+    expect(out.partner_reports).toEqual(career.partnerReports);
+    expect(out.partner_invites).toEqual(career.partnerInvites);
+    expect(out.public).toEqual(career.public);
+    expect(out.ranks).toEqual(career.ranks);
+    expect(Object.values(out.counts)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+    // Dito no arquivo: o que é denúncia SOBRE a pessoa não sai.
+    expect(out.not_included.join(' ')).toMatch(/sobre você/);
   });
 });
 

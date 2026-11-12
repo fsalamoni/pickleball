@@ -269,7 +269,8 @@ export function useFederationAgendaForMe({ enabled = true } = {}) {
   });
   const semFiliacao = memb.isSuccess && ids.length === 0;
   return {
-    isPending: enabled && (memb.isPending || (!semFiliacao && agenda.isPending)),
+    // Filiações que FALHARAM deixam a agenda desligada (pendente para sempre): isso é erro, não carregando.
+    isPending: enabled && !memb.isError && (memb.isPending || (!semFiliacao && agenda.isPending)),
     isError: memb.isError || agenda.isError,
     incompleto: Boolean(agenda.data?.incompleto),
     events: semFiliacao ? [] : (agenda.isSuccess ? agenda.data.events : undefined),

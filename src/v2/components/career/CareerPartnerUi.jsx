@@ -15,8 +15,9 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Flag, Handshake, MessageCircle, UserCheck } from 'lucide-react';
+import { Check, Copy, Flag, Handshake, MessageCircle, UserCheck } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useClipboard } from '@/core/lib/useClipboard';
 import { todayLocal } from '@/modules/training/domain/dates.js';
 import {
   OWNER_DECISION, PARTNER_ASPECT_IDS, PARTNER_LIMITS, PARTNER_REPORT_LABEL, PARTNER_REPORT_REASONS,
@@ -38,9 +39,10 @@ function StatusBadge({ status }) {
 
 /** Até 3 aspectos, botões que ligam e desligam (os mesmos do balanço). */
 function AspectChoice({ legenda, value, onChange, dica }) {
+  const cheio = value.length >= PARTNER_LIMITS.aspects;
   const marcar = (id) => {
     if (value.includes(id)) onChange(value.filter((x) => x !== id));
-    else if (value.length < PARTNER_LIMITS.aspects) onChange([...value, id]);
+    else if (!cheio) onChange([...value, id]);
   };
   return (
     <fieldset className="space-y-2" data-dica={dica}>
@@ -52,8 +54,9 @@ function AspectChoice({ legenda, value, onChange, dica }) {
             <button type="button"
               key={id}
               aria-pressed={ativo}
+              disabled={!ativo && cheio}
               onClick={() => marcar(id)}
-              className={`min-h-11 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${ativo ? 'border-ink bg-ink text-acid' : 'border-gray-200 bg-paper-pure text-ink hover:border-ink/40'}`}
+              className={`min-h-11 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:cursor-not-allowed disabled:opacity-50 ${ativo ? 'border-ink bg-ink text-acid' : 'border-gray-200 bg-paper-pure text-ink hover:border-ink/40'}`}
             >
               {aspectLabel(id)}
             </button>
@@ -62,6 +65,44 @@ function AspectChoice({ legenda, value, onChange, dica }) {
       </div>
     </fieldset>
   );
+}
+
+/**
+ * Ação sem volta em DOIS toques: o primeiro troca o botão pela consequência +
+ * confirmar/cancelar (o mesmo desenho do "Excluir de vez" da ficha). O foco vai
+ * para o aviso ao abrir e volta ao botão ao cancelar.
+ */
+function ConfirmarInline({ rotulo, aviso, confirmar, onConfirm, disabled = false, variant = 'ghost', perigo = true, children, ...rest }) {
+  const [aberto, setAberto] = useState(false);
+  const caixa = useRef(null);
+  const mexeu = useRef(false);
+  useEffect(() => {
+    if (!mexeu.current) return;
+    if (aberto) caixa.current?.focus();
+    else caixa.current?.querySelector('button')?.focus();
+  }, [aberto]);
+  const trocar = (v) => { mexeu.current = true; setAberto(v); };
+  if (!aberto) {
+    return (
+      <span ref={caixa} className="inline-flex">
+        <V2Button type="button" size="sm" variant={variant} disabled={disabled} onClick={() => trocar(true)} {...rest}>{children}{rotulo}</V2Button>
+      </span>
+    );
+  }
+  return (
+    <div ref={caixa} tabIndex={-1} role="group" aria-label={rotulo} className="w-full space-y-2 rounded-2xl border border-gray-200 p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+      <p className="text-xs text-gray-600">{aviso}</p>
+      <div className="flex flex-wrap gap-2">
+        <V2Button type="button" size="sm" variant={perigo ? 'danger' : 'primary'} disabled={disabled} onClick={async () => { await onConfirm(); trocar(false); }}>{confirmar}</V2Button>
+        <V2Button type="button" size="sm" variant="ghost" onClick={() => trocar(false)}>{t('Cancelar')}</V2Button>
+      </div>
+    </div>
+  );
+}
+
+/** A recusa do servidor, dita ao lado da ação (o aviso flutuante some em segundos). */
+function ErroDaAcao({ children }) {
+  return children ? <p role="alert" className="text-xs font-semibold text-red-700">{children}</p> : null;
 }
 
 /** A visão da dupla, lida (dos dois lados). */
@@ -131,7 +172,7 @@ function ReportControl({ docId }) {
 export function CareerPartnerLayer({ event, saved, partners, partnersError, onRetry, dirty }) {
   const { userProfile } = useAuth();
   const citados = eventPartnerUids(event);
-  const jogado = event?.status !== CAREER_STATUS.PLANNED && !event?.cancelled;
+  const jogado = event?.status !== CAREER_STATUS.PLANNED && event?.status !== CAREER_STATUS.CANCELLED;
   const adulto = isAdult(userProfile?.birth_date, todayLocal());
   const semNascimento = ageOn(userProfile?.birth_date, todayLocal()) === null;
   const semConta = namedPartners(event);
@@ -173,7 +214,8 @@ function NamedPartnerInvites({ event, semConta, saved, dirty, jogado, adulto, se
         nome: p.name, torneio: event.name || t('torneio'), data: fmtData(r.expires_at_ms, { dateStyle: 'short' }), link: url,
       });
       const wa = whatsappShareUrl(msg);
-      setLinks((x) => ({ ...x, [p.key]: wa }));
+      setLinks((x) => ({ ...x, [p.key]: { wa, url } }));
+      // Tentativa: depois de um `await` o iPhone bloqueia a janela — por isso o botão "Abrir o WhatsApp" abaixo.
       window.open(wa, '_blank', 'noopener,noreferrer');
     } catch (err) {
       toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
@@ -198,12 +240,12 @@ function NamedPartnerInvites({ event, semConta, saved, dirty, jogado, adulto, se
     <ul className="space-y-3">
       {semConta.map((p) => {
         const { invite, state } = inviteStateFor(convites.data, event.id, p.key);
-        const wa = links[p.key];
+        const link = links[p.key];
         return (
           <li key={p.key} className="space-y-2 rounded-2xl bg-paper p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex items-center gap-2 text-sm font-semibold text-ink"><Handshake className="h-4 w-4" aria-hidden="true" /> {p.name}</p>
-              {state === 'pending' && <V2Badge tone="neutral">{t('Convite enviado · aguardando')}</V2Badge>}
+              {state === 'pending' && <V2Badge tone="neutral">{t('Link gerado · aguardando a dupla')}</V2Badge>}
               {state === 'expired' && <V2Badge tone="neutral">{t('O convite venceu')}</V2Badge>}
             </div>
             {!state && <p className="text-xs text-gray-500">{t('{nome} ainda não tem conta aqui. Mande um convite: quem entrar pelo link passa a ser a dupla deste torneio e confirma o resultado.', { nome: p.name })}</p>}
@@ -214,20 +256,23 @@ function NamedPartnerInvites({ event, semConta, saved, dirty, jogado, adulto, se
             {dirty && <p className="text-xs text-gray-500">{t('Salve a ficha antes de convidar a dupla.')}</p>}
             {pode && (
               <div className="flex flex-wrap gap-2">
-                <V2Button type="button" size="sm" variant="secondary" data-dica="carreira-convidar-whatsapp" disabled={acao.isPending} onClick={() => convidar(p)}>
-                  <MessageCircle className="h-4 w-4" /> {state === 'pending' ? t('Mandar um link novo') : t('Convidar pelo WhatsApp')}
-                </V2Button>
+                {state === 'pending' ? (
+                  <ConfirmarInline variant="secondary" perigo={false} data-dica="carreira-convidar-whatsapp" disabled={acao.isPending}
+                    rotulo={t('Mandar um link novo')} confirmar={t('Gerar o link novo')} onConfirm={() => convidar(p)}
+                    aviso={t('O link anterior para de valer. Se {nome} já o recebeu, mande o novo.', { nome: p.name })}>
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  </ConfirmarInline>
+                ) : (
+                  <V2Button type="button" size="sm" variant="secondary" data-dica="carreira-convidar-whatsapp" disabled={acao.isPending} onClick={() => convidar(p)}>
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" /> {t('Convidar pelo WhatsApp')}
+                  </V2Button>
+                )}
                 {state === 'pending' && (
                   <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => cancelar(p, invite.id)}>{t('Cancelar o convite')}</V2Button>
                 )}
               </div>
             )}
-            {wa && (
-              <p className="text-xs text-gray-600">
-                {t('O WhatsApp não abriu?')}{' '}
-                <a href={wa} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline">{t('Abrir o WhatsApp')}</a>
-              </p>
-            )}
+            {link && <LinkDoConvite link={link} />}
           </li>
         );
       })}
@@ -235,22 +280,48 @@ function NamedPartnerInvites({ event, semConta, saved, dirty, jogado, adulto, se
   );
 }
 
+/**
+ * O link recém-gerado: abrir o WhatsApp por um toque direto (âncora — nunca
+ * bloqueada como a janela aberta depois da chamada) ou copiar para outro app.
+ */
+function LinkDoConvite({ link }) {
+  const { copy, copied } = useClipboard();
+  return (
+    <div className="space-y-2 rounded-2xl border border-gray-200 p-3" role="status">
+      <p className="text-xs text-gray-600">{t('O link só aparece agora: mande ou copie antes de fechar a ficha.')}</p>
+      <div className="flex flex-wrap gap-2">
+        <V2Button asChild size="sm" variant="primary">
+          <a href={link.wa} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" aria-hidden="true" /> {t('Abrir o WhatsApp')}</a>
+        </V2Button>
+        <V2Button type="button" size="sm" variant="secondary" onClick={() => copy(link.url, t('Link copiado.'))}>
+          {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />} {t('Copiar link')}
+        </V2Button>
+      </div>
+    </div>
+  );
+}
+
 /** As duplas com conta: pedir a confirmação, a resposta e a visão (PR 3). */
 function CitedPartners({ event, citados, saved, dirty, partners, partnersError, onRetry, jogado, adulto, semNascimento }) {
   const acao = useCareerPartnerAction();
   const [pedidos, setPedidos] = useState(() => new Set());
+  const [erros, setErros] = useState({});
   const nomes = new Map((event?.entries || []).filter((e) => e?.partner?.uid).map((e) => [e.partner.uid, e.partner.name]));
 
   if (partnersError) return <V2ErrorState inline title={t('Não carregaram as confirmações das duplas')} description={t('Sem elas não dá para saber se você já pediu.')} onRetry={onRetry} />;
   if (partners === undefined) return <V2Skeleton lines={2} />;
 
-  async function rodar(payload, ok) {
+  // `uid` informado ⇒ a recusa do servidor (teto de pedidos, pedido em análise…) fica dita no item.
+  async function rodar(payload, ok, uid) {
+    if (uid) setErros((x) => ({ ...x, [uid]: '' }));
     try {
       await acao.mutateAsync(payload);
       if (ok) toast.success(ok);
       return true;
     } catch (err) {
-      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+      const msg = err?.message || t('Não foi possível concluir. Tente de novo.');
+      if (uid) setErros((x) => ({ ...x, [uid]: msg }));
+      else toast.error(msg);
       return false;
     }
   }
@@ -269,7 +340,7 @@ function CitedPartners({ event, citados, saved, dirty, partners, partnersError, 
               <p className="flex items-center gap-2 text-sm font-semibold text-ink"><Handshake className="h-4 w-4" aria-hidden="true" /> {nome}</p>
               {d && <StatusBadge status={d.status} />}
             </div>
-            {d?.status === PARTNER_STATUS.DECLINED && <p className="text-xs text-gray-600">{t('{nome} disse que não foi assim. Corrija a ficha (data, categoria ou colocação) e peça de novo.', { nome })}</p>}
+            {d?.status === PARTNER_STATUS.DECLINED && <p className="text-xs text-gray-600">{t('{nome} disse que não foi assim. Corrija a ficha (data, categoria ou colocação) e peça de novo.', { nome })} {t('Foi engano? Apague o pedido e peça de novo.')}</p>}
             {d?.status === PARTNER_STATUS.RECONFIRM && <p className="text-xs text-gray-600">{t('Você mudou a data ou o resultado: {nome} precisa confirmar de novo.', { nome })}</p>}
             {!d && !jogado && <p className="text-xs text-gray-500">{t('Dá para pedir a confirmação depois que o torneio acontecer.')}</p>}
             {!d && jogado && !adulto && <p className="text-xs text-gray-500">{semNascimento ? t('Preencha a sua data de nascimento no perfil para pedir a confirmação da dupla.') : t('A confirmação pela dupla é só para maiores de 18 anos.')}</p>}
@@ -277,7 +348,7 @@ function CitedPartners({ event, citados, saved, dirty, partners, partnersError, 
             {dirty && !d && <p className="text-xs text-gray-500">{t('Salve a ficha antes de pedir a confirmação.')}</p>}
             {podePedir && (
               <V2Button type="button" size="sm" variant="secondary" data-dica="carreira-pedir-confirmacao" disabled={acao.isPending}
-                onClick={async () => { if (await rodar({ action: 'invite', eventId: event.id, partnerUid: uid }, t('Pedido enviado para {nome}.', { nome }))) setPedidos((x) => new Set(x).add(uid)); }}>
+                onClick={async () => { if (await rodar({ action: 'invite', eventId: event.id, partnerUid: uid }, t('Pedido enviado para {nome}.', { nome }), uid)) setPedidos((x) => new Set(x).add(uid)); }}>
                 <UserCheck className="h-4 w-4" /> {t('Pedir confirmação a {nome}', { nome })}
               </V2Button>
             )}
@@ -295,10 +366,15 @@ function CitedPartners({ event, citados, saved, dirty, partners, partnersError, 
                 )}
               </>
             )}
+            <ErroDaAcao>{erros[uid]}</ErroDaAcao>
             {d && (
               <div className="flex flex-wrap gap-2">
                 <ReportControl docId={d.id} />
-                <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'remove', docId: d.id }, t('Pedido apagado.'))}>{t('Apagar o pedido')}</V2Button>
+                <ConfirmarInline disabled={acao.isPending} rotulo={t('Apagar o pedido')} confirmar={t('Apagar de vez')}
+                  aviso={d.status === PARTNER_STATUS.CONFIRMED || d.feedback
+                    ? t('A confirmação e a visão de {nome} somem e será preciso pedir de novo.', { nome })
+                    : t('O pedido a {nome} some. Dá para pedir de novo depois.', { nome })}
+                  onConfirm={() => rodar({ action: 'remove', docId: d.id }, t('Pedido apagado.'), uid)} />
               </div>
             )}
           </li>
@@ -361,14 +437,23 @@ function InboxItem({ doc, focado, onMirror }) {
   useEffect(() => { if (focado) ref.current?.focus?.(); }, [focado]);
   const sm = doc.summary || {};
   const quem = doc.owner_name || t('Alguém');
+  const [erro, setErro] = useState('');
+  // A recusa fica dita no item ("o registro mudou", "em análise pela moderação"): o
+  // hook recarrega os pedidos também no erro, então o resumo acima já é o novo.
   async function rodar(payload, ok) {
+    setErro('');
     try {
       await acao.mutateAsync(payload);
       if (ok) toast.success(ok);
     } catch (err) {
-      toast.error(err?.message || t('Não foi possível concluir. Tente de novo.'));
+      const msg = err?.message || t('Não foi possível concluir. Tente de novo.');
+      setErro(msg);
+      // O aviso no item pode estar longe do toque (o interruptor da vitrine fica no fim).
+      toast.error(msg);
     }
   }
+  // A impressão do que a dupla VIU vai junto: se o registro mudou, o servidor recusa em vez de confirmar outra coisa.
+  const responder = (answer, ok) => rodar({ action: 'respond', docId: doc.id, answer, fingerprint: doc.fingerprint }, ok);
   const categorias = (sm.entries || []).map((e) => [entryLabel(e), placementText(e)].filter(Boolean).join(' · ')).filter(Boolean);
   const podeVisao = doc.status === PARTNER_STATUS.CONFIRMED && (!doc.feedback || awaitsOwner(doc));
   return (
@@ -383,10 +468,13 @@ function InboxItem({ doc, focado, onMirror }) {
       {categorias.length > 0 && <p className="text-xs text-gray-600">{categorias.join(' — ')}</p>}
       {awaitsPartner(doc) && (
         <div className="flex flex-wrap gap-2">
-          <V2Button type="button" size="sm" variant="primary" disabled={acao.isPending} onClick={() => rodar({ action: 'respond', docId: doc.id, answer: 'confirm' }, t('Confirmado.'))}>{t('Confirmo')}</V2Button>
-          <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'respond', docId: doc.id, answer: 'decline' }, t('Resposta enviada.'))}>{t('Não foi assim')}</V2Button>
+          <V2Button type="button" size="sm" variant="primary" disabled={acao.isPending} onClick={() => responder('confirm', t('Confirmado.'))}>{t('Confirmo')}</V2Button>
+          <ConfirmarInline disabled={acao.isPending} rotulo={t('Não foi assim')} confirmar={t('Responder que não foi assim')}
+            aviso={t('Não dá para voltar atrás: {quem} vai precisar corrigir o registro e pedir de novo.', { quem })}
+            onConfirm={() => responder('decline', t('Resposta enviada.'))} />
         </div>
       )}
+      <ErroDaAcao>{erro}</ErroDaAcao>
       {doc.status === PARTNER_STATUS.CONFIRMED && (
         <>
           {doc.feedback && !visao && <FeedbackView feedback={doc.feedback} />}
@@ -400,9 +488,13 @@ function InboxItem({ doc, focado, onMirror }) {
                 </V2Button>
               )}
               {(doc.partner_event_id || espelho === 'feito') && <V2Badge tone="neutral">{t('Também na sua carreira')}</V2Badge>}
-              <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={() => rodar({ action: 'remove', docId: doc.id }, doc.feedback ? t('Visão retirada.') : t('Confirmação desfeita.'))}>
-                {doc.feedback ? t('Retirar a visão') : t('Desfazer a confirmação')}
-              </V2Button>
+              <ConfirmarInline disabled={acao.isPending}
+                rotulo={doc.feedback ? t('Retirar a visão') : t('Desfazer a confirmação')}
+                confirmar={doc.feedback ? t('Retirar de vez') : t('Desfazer de vez')}
+                aviso={doc.feedback
+                  ? t('O que você escreveu para {quem} é apagado. A confirmação continua.', { quem })
+                  : t('O selo "Confirmado pela dupla" sai da carreira de {quem}, e o pedido some da sua lista.', { quem })}
+                onConfirm={() => rodar({ action: 'remove', docId: doc.id }, doc.feedback ? t('Visão retirada.') : t('Confirmação desfeita.'))} />
               <ReportControl docId={doc.id} />
             </div>
           )}

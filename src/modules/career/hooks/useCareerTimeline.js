@@ -76,6 +76,9 @@ export function useCareerTimeline({ enabled = true } = {}) {
     includeGameDays,
     setIncludeGameDays,
     events: careerQ.data,
+    // Atualização em curso: quem vai AFIRMAR "não existe mais" espera por ela.
+    eventsFetching: careerQ.isFetching,
+    partnersFetching: partnersQ.isFetching,
     myTournaments: tournamentsQ.isSuccess ? tournamentsQ.data : undefined,
     // Os pódios da plataforma (com a dupla): a retrospectiva da temporada acha a melhor parceria.
     trophies: trophiesQ.isSuccess ? trophiesQ.data : undefined,

@@ -48,7 +48,8 @@ export default function CongratulateButton({ contextId, toUids = [], scope = 'to
         type: NOTIFICATION_TYPE.GAMIFICATION,
         title: tx('Você recebeu parabéns'),
         message: tx('{nome} parabenizou você pelo {colocacao} em {evento}.', { nome: user.displayName || 'Alguém', colocacao: placeLabel, evento: eventTitle }),
-        link: '/perfil?secao=trofeus',
+        // O pódio de fora (`trofeu:ext:…`) mora em Carreira → Conquistas, que abre na aba "Fora da plataforma".
+        link: String(contextId).startsWith('trofeu:ext:') ? '/carreira?aba=conquistas' : '/perfil?secao=trofeus',
         actor: user,
       }).catch((err) => logger.warn('Parabéns: aviso não gravado', err));
       return ok.length;

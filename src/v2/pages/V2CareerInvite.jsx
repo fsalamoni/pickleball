@@ -14,16 +14,18 @@
  * Link usado, vencido, cancelado, inexistente — ou de quem não pode ser
  * convidado — recebe a MESMA mensagem: a resposta não serve de sonda.
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Handshake } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { careerAction } from '@/modules/career/services/careerService.js';
 import { V2Button, V2ErrorState, V2Page, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { careerDateLabel } from '@/v2/components/career/careerUi';
+import BrandMark from '@/v2/ui/BrandMark';
 import { t } from '@/core/i18n';
 
 const NEUTRO = () => t('Este convite não vale mais. Peça um link novo a quem convidou.');
@@ -36,12 +38,30 @@ function Icone() {
   );
 }
 
+/**
+ * Moldura de quem chega SEM login: a rota é desenhada fora do V2Layout, então
+ * a marca, o fundo e a fonte (escopada a `.v2-root`) vêm daqui.
+ */
+function ConviteMoldura({ children }) {
+  return (
+    <div className="v2-root min-h-screen bg-paper font-inter text-ink">
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <Link to="/" className="mb-8 inline-flex items-center gap-2.5 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+          <BrandMark className="h-8 w-auto" alt="" />
+          <span className="font-display text-xl font-bold tracking-tight text-ink">PickleRush</span>
+        </Link>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Quem ainda não entrou: explica e leva ao login, voltando a este link. */
 function SemConta() {
   const { pathname } = useLocation();
   const login = `/login?next=${encodeURIComponent(pathname)}`;
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <ConviteMoldura>
       <V2PageIntro
         title={t('Você foi convidado como dupla')}
         subtitle={t('Alguém registrou um torneio com você na carreira do PickleRush e quer que você confirme.')}
@@ -58,14 +78,14 @@ function SemConta() {
           <p className="text-xs text-gray-500">{t('O link vale uma vez só e por pouco tempo. Ninguém recebe o seu telefone.')}</p>
         </div>
       </V2Surface>
-    </div>
+    </ConviteMoldura>
   );
 }
 
 /** Link aberto com a flag desligada por quem não entrou: nada a prometer. */
 function Indisponivel() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <ConviteMoldura>
       <V2Surface>
         <div className="flex flex-col items-center gap-4 text-center">
           <Icone />
@@ -73,13 +93,14 @@ function Indisponivel() {
           <V2Button asChild variant="secondary"><Link to="/">{t('Ir para o PickleRush')}</Link></V2Button>
         </div>
       </V2Surface>
-    </div>
+    </ConviteMoldura>
   );
 }
 
 function ComConta({ token }) {
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  const { user, userProfile, signOut } = useAuth();
   // Conta recém-criada chega aqui sem nascimento (o assistente de cadastro abre
   // por cima): o servidor trataria como menor e diria "não vale". Sem a data,
   // a tela pede o cadastro e só pergunta ao servidor quando ela existir — e a
@@ -91,17 +112,27 @@ function ComConta({ token }) {
     enabled: Boolean(nascimento),
     retry: false,
   });
+  // Uma tentativa caiu sem resposta: o aceite PODE ter passado (o convite é de uso único),
+  // e aí a recusa seguinte não quer dizer que falhou.
+  const incerto = useRef(false);
   const aceitar = useMutation({
     mutationFn: () => careerAction('invite_accept', { token }),
-    onSuccess: (r) => navigate(`/carreira?dupla=${encodeURIComponent(r.docId)}`, { replace: true }),
+    onError: (err) => { if (!String(err?.code || '').endsWith('failed-precondition')) incerto.current = true; },
+    onSuccess: (r) => {
+      // A Carreira pode estar em cache (60 s): sem isto o pedido novo não aparece na caixa.
+      qc.invalidateQueries({ queryKey: ['career'] });
+      navigate(`/carreira?dupla=${encodeURIComponent(r.docId)}`, { replace: true });
+    },
   });
+  // Recusa do servidor (link morto, convite próprio) não muda tentando de novo; queda de rede, sim.
+  const definitivo = String(aceitar.error?.code || '').endsWith('failed-precondition');
 
   let corpo;
   if (!nascimento) {
     corpo = (
       <div className="flex flex-col items-center gap-4 text-center">
         <Icone />
-        <p className="text-sm text-gray-600">{t('Complete o seu cadastro (data de nascimento) para aceitar o convite. Depois volte por este mesmo link.')}</p>
+        <p className="text-sm text-gray-600">{t('Preencha a sua data de nascimento no cadastro. Assim que salvar, o convite aparece aqui.')} {t('Se for completar pelo perfil, volte por este mesmo link depois.')}</p>
         <V2Button asChild variant="secondary"><Link to="/perfil">{t('Completar o cadastro')}</Link></V2Button>
       </div>
     );
@@ -119,20 +150,37 @@ function ComConta({ token }) {
     );
   } else {
     const d = peek.data;
+    const vars = { quem: d.owner_name || t('Alguém'), torneio: d.event_name || t('torneio'), data: careerDateLabel(d.start_date, d.date_precision), nome: d.partner_name };
+    const conta = userProfile?.platform_name || userProfile?.full_name || '';
     corpo = (
       <div className="flex flex-col items-center gap-4 text-center">
         <Icone />
         <p className="text-sm text-gray-600">
-          {t('{quem} registrou o {torneio} ({data}) com "{nome}" como dupla.', {
-            quem: d.owner_name || t('Alguém'), torneio: d.event_name || t('torneio'), data: careerDateLabel(d.start_date, d.date_precision), nome: d.partner_name,
-          })}
+          {vars.data
+            ? t('{quem} registrou o {torneio} ({data}) com "{nome}" como dupla.', vars)
+            : t('{quem} registrou o {torneio} com "{nome}" como dupla.', vars)}
         </p>
         <p className="text-sm text-gray-600">{t('Se é você, a sua conta passa a ser a dupla deste torneio e você confirma o resultado em seguida.')}</p>
-        {aceitar.isError && <p role="alert" className="text-sm font-semibold text-red-700">{aceitar.error?.message || NEUTRO()}</p>}
+        {aceitar.isError && (
+          <p role="alert" className="text-sm font-semibold text-red-700">
+            {definitivo && incerto.current
+              ? t('Se o aceite já tinha passado na tentativa anterior, o torneio está na sua Carreira. Se não estiver, peça um link novo a quem convidou.')
+              : aceitar.error?.message || NEUTRO()}
+          </p>
+        )}
         <div className="flex flex-wrap justify-center gap-2">
-          <V2Button type="button" disabled={aceitar.isPending || aceitar.isError} onClick={() => aceitar.mutate()}>{t('Sou eu, aceitar o convite')}</V2Button>
-          <V2Button asChild variant="ghost"><Link to="/carreira">{t('Não sou eu')}</Link></V2Button>
+          <V2Button type="button" disabled={aceitar.isPending || definitivo} onClick={() => aceitar.mutate()}>
+            {aceitar.isPending ? t('Aceitando…') : aceitar.isError && !definitivo ? t('Tentar de novo') : t('Sou eu, aceitar o convite')}
+          </V2Button>
+          <V2Button asChild variant="ghost"><Link to="/carreira">{definitivo && incerto.current ? t('Abrir a Carreira') : t('Não sou eu')}</Link></V2Button>
         </div>
+        {/* O aceite não troca de conta depois: dizer QUAL conta está aceitando. Deslogado nesta URL, a tela de "sem conta" volta para cá. */}
+        <p className="text-xs text-gray-500">
+          {conta ? t('Você entrou como {nome}.', { nome: conta }) : t('Você entrou com a sua conta.')}{' '}
+          <button type="button" onClick={() => Promise.resolve(signOut()).catch(() => toast.error(t('Não foi possível concluir. Tente de novo.')))} className="inline-flex items-center rounded font-semibold text-ink underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink coarse:min-h-11">
+            {t('Não é você? Trocar de conta')}
+          </button>
+        </p>
       </div>
     );
   }

@@ -128,6 +128,38 @@ function clubsBlock(c = {}) {
 }
 
 /**
+ * O bloco da Carreira (`collectCareerExport`): os torneios de fora, os pedidos de
+ * confirmação da dupla (os que fez e os que recebeu, com a visão), as denúncias que
+ * a pessoa FEZ, os convites à dupla sem conta, a vitrine pública, as posições
+ * anotadas e os caminhos das fotos (`carreira/{uid}/`).
+ */
+function careerBlock(c = {}) {
+  const bloco = {
+    events: lista(c.events),
+    partners: lista(c.partners),
+    partner_reports: lista(c.partnerReports),
+    partner_invites: lista(c.partnerInvites),
+    public: lista(c.public),
+    ranks: lista(c.ranks),
+    photos: (Array.isArray(c.photos) ? c.photos : []).map(String),
+    not_included: [
+      'Denúncias feitas sobre você: o motivo, a nota e quem denunciou ficam só com a moderação.',
+      'O balanço de cada torneio fica no bloco do Centro de Treino.',
+    ],
+  };
+  bloco.counts = {
+    events: bloco.events.length,
+    partners: bloco.partners.length,
+    partner_reports: bloco.partner_reports.length,
+    partner_invites: bloco.partner_invites.length,
+    public: bloco.public.length,
+    ranks: bloco.ranks.length,
+    photos: bloco.photos.length,
+  };
+  return bloco;
+}
+
+/**
  * Monta o pacote de exportação.
  * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, market?, federations?, clubAssociations?, incomplete? }} input
  *   `goals` e `training` só entram quando foram coletados; `incomplete` lista,
@@ -171,12 +203,8 @@ export function buildDataExport({
       ],
     };
   }
-  // Carreira: os torneios de fora e a lista das fotos (`carreira/{uid}/`).
-  if (career !== undefined) {
-    const events = lista(career?.events);
-    const photos = (Array.isArray(career?.photos) ? career.photos : []).map(String);
-    out.career = { events, photos, counts: { events: events.length, photos: photos.length } };
-  }
+  // Carreira (`collectCareerExport`): cada lista é só o que a regra deixa a pessoa ler.
+  if (career !== undefined) out.career = careerBlock(career || {});
   return out;
 }
 

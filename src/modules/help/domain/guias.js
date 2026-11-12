@@ -1288,7 +1288,7 @@ const GUIAS_BASE = [
         route: '/carreira',
         target: ['carreira-foto', 'carreira-abas'],
         title: tk('A foto e o resultado'),
-        body: tk('Toque num torneio da linha do tempo para abrir a ficha: lá ficam a colocação, a federação e a foto da medalha ou do pódio. Só você vê.'),
+        body: tk('Toque num torneio da linha do tempo para abrir a ficha: lá ficam a colocação, a federação e a foto da medalha ou do pódio. Por padrão só você vê; a dupla, o professor e o perfil público só veem o que você pedir, mandar ou publicar.'),
       },
       {
         id: 'balanco',

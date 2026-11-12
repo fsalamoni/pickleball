@@ -26,9 +26,11 @@ import { usePublicFederations } from '@/modules/federations/hooks/useFederations
 import { prepareUpload } from '@/modules/training/services/mediaUploadService';
 import {
   CAREER_AGES, CAREER_FORMAT, CAREER_LAYER, CAREER_LIMITS, CAREER_STATUS, LEVEL_BRACKETS, PHOTO_KIND, PHOTO_KIND_LABEL, PLACEMENT, PLACEMENT_LABEL,
-  bestPosition, careerCompleteness, careerSeal, entryLabel, formatHasPartner, levelBracketText, matchPlatformTournament, withDerivedStatus,
+  bestPosition, careerCompleteness, careerSeal, entryLabel, formatHasPartner, levelBracketText, matchPlatformTournament, normalizeCareerLink, withDerivedStatus,
 } from '@/modules/career/domain/careerEvent.js';
-import { careerTrophies } from '@/modules/career/domain/timeline.js';
+import { SEAL, careerTrophies } from '@/modules/career/domain/timeline.js';
+import { todayLocal } from '@/modules/training/domain/dates.js';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { partnerSealFor } from '@/modules/career/domain/careerPartner.js';
 import { careerDebriefFor, careerDebriefSource } from '@/modules/career/domain/careerDebrief.js';
 import { aspectLabel } from '@/modules/training/domain/debrief.js';
@@ -41,7 +43,7 @@ import { listAthletes } from '@/modules/athletes/services/athleteService';
 import PartnerPicker from '@/v2/components/people/PartnerPicker';
 import { CareerPartnerLayer } from './CareerPartnerUi';
 import CareerShowcaseLayer from './CareerShowcaseLayer';
-import { CareerCoachShare, CareerHowItWent, CareerPlanFields } from './CareerPlanFields';
+import { CareerCoachShare, CareerHowItWent, CareerPlanFields, careerDateBounds, howItWentAnswer } from './CareerPlanFields';
 import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Textarea, V2Toggle } from '@/v2/ui/primitives';
 import { ChoiceGroup, FORMAT_CHOICES, GENDER_CHOICES_ALL, SealBadge, careerDateLabel } from './careerUi';
 import { t } from '@/core/i18n';
@@ -53,6 +55,8 @@ const CareerDebriefDialog = lazy(() => import('./CareerDebriefDialog'));
 const LIMITES_FOTO = Object.freeze({ imageMb: 3, videoEnabled: false, videoMb: 0, videoSeconds: 0 });
 /** Os "não é este" de cada pessoa (no navegador, por uid). */
 const PREF_NAO_E = 'carreira:nao-e';
+/** O formulário da ficha: os campos fora dele se ligam por `form=` (Enter e o "Ir" do teclado salvam). */
+const FORM = 'ficha-form';
 
 function Camada({ n, titulo, dica, children }) {
   return (
@@ -66,7 +70,37 @@ function Camada({ n, titulo, dica, children }) {
   );
 }
 
-function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
+/** Erro de um campo: o texto com id, para o `aria-describedby` do campo. */
+const erroDe = (id, msg) => (msg ? <span id={`${id}-erro`}>{msg}</span> : null);
+const ariaErro = (id, msg) => (msg ? { 'aria-invalid': true, 'aria-describedby': `${id}-erro` } : {});
+
+/**
+ * Confere o que o normalizador descartaria CALADO (a tela diria "Ficha salva."
+ * sem o link, a data final ou os pontos). `{ erros, valor }`: `erros` por id de
+ * campo; `valor` com o link já completado com `https://` quando só faltava isso.
+ */
+export function conferirFicha(f, { semColocacao = false } = {}) {
+  const erros = {};
+  let valor = f;
+  if (!String(f.name || '').trim()) erros['ficha-nome'] = t('Dê um nome ao torneio.');
+  if (f.end_date && f.start_date && f.end_date < f.start_date) erros['ficha-fim'] = t('O último dia não pode ser antes do começo.');
+  const link = String(f.link || '').trim();
+  if (link && !normalizeCareerLink(link)) {
+    const comEsquema = /^[a-z][a-z0-9+.-]*:/i.test(link) ? '' : normalizeCareerLink(`https://${link}`);
+    if (comEsquema) valor = { ...f, link: comEsquema };
+    else erros['ficha-link'] = t('O link precisa começar com https:// e ser um endereço completo.');
+  }
+  const fora = (v, min, max) => v !== null && v !== undefined && v !== '' && !(Number(v) >= min && Number(v) <= max);
+  if (!semColocacao) {
+    (f.entries || []).forEach((e, i) => {
+      if (e.placement === PLACEMENT.OTHER && fora(e.placement_n, 1, 999)) erros[`carreira-cat-${i}-n`] = t('Posição entre 1 e 999.');
+      if (fora(e.points_declared, 0, 100000)) erros[`carreira-cat-${i}-pts`] = t('Pontos entre 0 e 100.000.');
+    });
+  }
+  return { erros, valor };
+}
+
+function Participacao({ entry, idx, onChange, onRemove, selfUid, past, formId, semColocacao = false, erros = {} }) {
   const [escolher, setEscolher] = useState(false);
   // O MESMO diretório (e cache) do convite de parceiro da inscrição de torneio.
   const diretorio = useQuery({ queryKey: ['athletes'], queryFn: listAthletes, enabled: escolher });
@@ -81,15 +115,18 @@ function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
       <ChoiceGroup label={t('Formato')} options={FORMAT_CHOICES} value={entry.format} onChange={(v) => set('format', v || CAREER_FORMAT.DOUBLES)} />
       <ChoiceGroup label={t('Categoria')} options={GENDER_CHOICES_ALL} value={entry.gender} onChange={(v) => set('gender', v)} allowNone />
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label={t('Colocação')} htmlFor={`${id}-col`}>
-          <V2Select id={`${id}-col`} value={entry.placement || ''} onChange={(e) => set('placement', e.target.value || null)}>
-            <option value="">{t('— Não sei / prefiro não dizer —')}</option>
-            {Object.values(PLACEMENT).map((p) => <option key={p} value={p}>{t(PLACEMENT_LABEL[p])}</option>)}
-          </V2Select>
-        </V2Field>
-        {entry.placement === PLACEMENT.OTHER && (
-          <V2Field label={t('Posição')} htmlFor={`${id}-n`}>
-            <V2Input id={`${id}-n`} type="number" min={1} max={999} value={entry.placement_n ?? ''} onChange={(e) => set('placement_n', e.target.value)} />
+        {/* Torneio que ainda não começou (ou "Não fui"): não há colocação a contar. */}
+        {!semColocacao && (
+          <V2Field label={t('Colocação')} htmlFor={`${id}-col`}>
+            <V2Select id={`${id}-col`} value={entry.placement || ''} onChange={(e) => set('placement', e.target.value || null)}>
+              <option value="">{t('— Não sei / prefiro não dizer —')}</option>
+              {Object.values(PLACEMENT).map((p) => <option key={p} value={p}>{t(PLACEMENT_LABEL[p])}</option>)}
+            </V2Select>
+          </V2Field>
+        )}
+        {!semColocacao && entry.placement === PLACEMENT.OTHER && (
+          <V2Field label={t('Posição')} htmlFor={`${id}-n`} error={erroDe(`${id}-n`, erros[`${id}-n`])}>
+            <V2Input id={`${id}-n`} form={formId} type="number" min={1} max={999} value={entry.placement_n ?? ''} onChange={(e) => set('placement_n', e.target.value)} {...ariaErro(`${id}-n`, erros[`${id}-n`])} />
           </V2Field>
         )}
         <V2Field label={t('Faixa de nível')} htmlFor={`${id}-faixa`}>
@@ -102,7 +139,7 @@ function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
         </V2Field>
         {entry.level_bracket === 'other' && (
           <V2Field label={t('Qual faixa?')} htmlFor={`${id}-faixa-l`}>
-            <V2Input id={`${id}-faixa-l`} value={entry.level_label || ''} maxLength={CAREER_LIMITS.label} onChange={(e) => set('level_label', e.target.value)} />
+            <V2Input id={`${id}-faixa-l`} form={formId} value={entry.level_label || ''} maxLength={CAREER_LIMITS.label} onChange={(e) => set('level_label', e.target.value)} />
           </V2Field>
         )}
         <V2Field label={t('Idade')} htmlFor={`${id}-idade`}>
@@ -113,29 +150,42 @@ function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
         </V2Field>
         {entry.age === 'other' && (
           <V2Field label={t('Qual idade?')} htmlFor={`${id}-idade-l`}>
-            <V2Input id={`${id}-idade-l`} value={entry.age_label || ''} maxLength={CAREER_LIMITS.label} placeholder={t('Ex.: 40+')} onChange={(e) => set('age_label', e.target.value)} />
+            <V2Input id={`${id}-idade-l`} form={formId} value={entry.age_label || ''} maxLength={CAREER_LIMITS.label} placeholder={t('Ex.: 40+')} onChange={(e) => set('age_label', e.target.value)} />
           </V2Field>
         )}
-        <V2Field label={t('Pontos no ranking (declarados)')} htmlFor={`${id}-pts`} hint={t('O que a federação diz que você ganhou. Não entra em ranking nenhum daqui.')}>
-          <V2Input id={`${id}-pts`} type="number" min={0} max={100000} value={entry.points_declared ?? ''} onChange={(e) => set('points_declared', e.target.value)} />
-        </V2Field>
+        {!semColocacao && (
+          <V2Field label={t('Pontos no ranking (declarados)')} htmlFor={`${id}-pts`} hint={t('O que a federação diz que você ganhou. Não entra em ranking nenhum daqui.')} error={erroDe(`${id}-pts`, erros[`${id}-pts`])}>
+            <V2Input id={`${id}-pts`} form={formId} type="number" min={0} max={100000} value={entry.points_declared ?? ''} onChange={(e) => set('points_declared', e.target.value)} {...ariaErro(`${id}-pts`, erros[`${id}-pts`])} />
+          </V2Field>
+        )}
       </div>
       {formatHasPartner(entry.format) && (
         <div className="space-y-2">
-          <V2Field label={t('Com quem você jogou')} htmlFor={`${id}-dupla`}>
+          <V2Field label={semColocacao ? t('Com quem você vai jogar') : t('Com quem você jogou')} htmlFor={`${id}-dupla`}>
+            {/* Conta escolhida da lista: o nome é o da conta. Editá-lo trocaria a dupla por um nome solto (sem conta), calado. */}
             <V2Input
               id={`${id}-dupla`}
+              form={formId}
               value={entry.partner?.name || ''}
               maxLength={CAREER_LIMITS.partner}
+              readOnly={Boolean(entry.partner?.uid)}
+              aria-describedby={entry.partner?.uid ? `${id}-dupla-conta` : undefined}
               onChange={(e) => set('partner', e.target.value ? { name: e.target.value } : null)}
               placeholder={t('Nome da dupla')}
             />
           </V2Field>
-          {entry.partner?.uid && <p className="text-xs text-gray-500">{t('Conta escolhida da lista de usuários.')}</p>}
-          <V2Button type="button" size="sm" variant="ghost" onClick={() => setEscolher((v) => !v)}>
-            <UserRound className="h-4 w-4" /> {escolher ? t('Fechar a lista') : t('Escolher da lista de usuários')}
-          </V2Button>
+          {entry.partner?.uid && <p id={`${id}-dupla-conta`} className="text-xs text-gray-500">{t('Conta escolhida da lista de usuários: o nome é o da conta. Para mudar, troque ou tire a dupla.')}</p>}
+          <div className="flex flex-wrap gap-2">
+            <V2Button type="button" size="sm" variant="ghost" aria-expanded={escolher} onClick={() => setEscolher((v) => !v)}>
+              <UserRound className="h-4 w-4" /> {escolher ? t('Fechar a lista') : entry.partner?.uid ? t('Trocar a dupla') : t('Escolher da lista de usuários')}
+            </V2Button>
+            {entry.partner?.uid && (
+              <V2Button type="button" size="sm" variant="ghost" onClick={() => set('partner', null)}>{t('Tirar a dupla')}</V2Button>
+            )}
+          </div>
           {escolher && (
+            // Enter na busca da lista não envia o formulário da ficha.
+            <div onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); }}>
             <PartnerPicker
               id={`${id}-pessoa`}
               athletes={diretorio.data || []}
@@ -152,6 +202,7 @@ function Participacao({ entry, idx, onChange, onRemove, selfUid, past }) {
                 setEscolher(false);
               }}
             />
+            </div>
           )}
         </div>
       )}
@@ -171,9 +222,19 @@ export default function CareerEventSheet({
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const [f, setF] = useState(() => withDerivedStatus(event));
+  // A linha de base do rascunho, por REFERÊNCIA: "há alteração não salva" é `f !== base`.
+  // Comparar o conteúdo com o evento relido mentia (ordem das chaves, `updated_at_ms`,
+  // `planned_passed`): a ficha ficava "não salva" para sempre e dupla e vitrine travavam.
+  const [base, setBase] = useState(f);
+  const fAtual = useRef(f);
+  fAtual.current = f;
   const [busy, setBusy] = useState('');
   const [erro, setErro] = useState('');
-  const [apagar, setApagar] = useState(false);
+  const [erros, setErros] = useState({});
+  // "Joguei" no "Como foi?" (o "Não fui" mora no status do rascunho).
+  const [foi, setFoi] = useState(false);
+  // A pergunta de confirmação em aberto: fechar/repetir com alteração, excluir, tirar foto.
+  const [pergunta, setPergunta] = useState(null);
   const [cartao, setCartao] = useState(false);
   const [naoE, setNaoE] = useState(() => readViewPreference(uid, PREF_NAO_E) || '');
   const arquivo = useRef(null);
@@ -185,8 +246,12 @@ export default function CareerEventSheet({
 
   // O rascunho recomeça ao ABRIR ou ao trocar de torneio — nunca a cada recarga da
   // lista (mandar ao professor recarrega, e o que estava sendo editado sumiria).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (open) { setF(withDerivedStatus(event)); setErro(''); setApagar(false); } }, [open, event?.id]);
+  useEffect(() => {
+    if (!open) return;
+    const novo = withDerivedStatus(event);
+    setF(novo); setBase(novo); setErro(''); setErros({}); setFoi(false); setPergunta(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, event?.id]);
   // O balanço só leva o professor com o vínculo ATIVO: com ele encerrado, a regra
   // recusaria a CRIAÇÃO do balanço (`coachOk` confere `hasActiveStudent`).
   const identity = useTrainingIdentity();
@@ -207,39 +272,93 @@ export default function CareerEventSheet({
   const trofeus = useMemo(() => (f ? careerTrophies([f], { myTournaments, me: { uid, name: userProfile?.platform_name || user?.displayName || t('Você'), photo_url: userProfile?.photo_url || null } }) : []), [f, myTournaments, uid, userProfile, user]);
   if (!f) return null;
 
+  const hoje = todayLocal();
+  const sujo = f !== base;
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const setEntry = (i, e) => setF((x) => ({ ...x, entries: x.entries.map((y, j) => (j === i ? e : y)) }));
+  // Mudar a data refaz o status NA HORA (o plano cuja data passou pergunta "Como foi?";
+  // o jogado que foi para o futuro vira plano) — antes isso só acontecia, calado, ao salvar.
+  const setDatas = (patch) => setF((x) => {
+    const novo = { ...x, ...patch };
+    // Data pela metade (o teclado passa por 0002, 0020…): guarda o que foi digitado e não mexe no status.
+    if (!(String(novo.start_date) >= datas.min && String(novo.start_date) <= datas.max)) return novo;
+    const eraPlano = x.planned_passed || x.status === CAREER_STATUS.PLANNED;
+    delete novo.planned_passed;
+    if (x.status !== CAREER_STATUS.CANCELLED && eraPlano) novo.status = CAREER_STATUS.PLANNED;
+    const derivado = withDerivedStatus(novo, hoje);
+    // O que já estava gravado como JOGADO e só passeou pelo futuro não volta perguntando "Como foi?".
+    if (derivado.planned_passed && base.status === CAREER_STATUS.PLAYED && !base.planned_passed) {
+      const semPergunta = { ...derivado };
+      delete semPergunta.planned_passed;
+      return semPergunta;
+    }
+    return derivado;
+  });
+  // Ainda não começou, ou "Não fui": não há colocação, pontos nem foto a contar.
+  const semColocacaoDe = (x) => x.status === CAREER_STATUS.CANCELLED || (x.status === CAREER_STATUS.PLANNED && String(x.start_date) > hoje);
+  const semColocacao = semColocacaoDe(f);
+  const resposta = howItWentAnswer(f, foi);
+  const responder = (v) => {
+    if (!v) return;
+    setFoi(v === 'sim');
+    setF((x) => ({ ...x, status: v === 'nao' ? CAREER_STATUS.CANCELLED : CAREER_STATUS.PLAYED }));
+  };
 
-  async function gravar(proximo, okMsg = t('Ficha salva.')) {
+  /**
+   * Grava o rascunho ATUAL (com `montar` por cima: a foto nova, o "É este").
+   * Devolve `{ saved }` (`false` = ficou na fila deste aparelho) ou `null` se não gravou.
+   */
+  async function gravar(montar = (x) => x, okMsg = t('Ficha salva.'), { avisar = false } = {}) {
+    const inicio = fAtual.current;
+    const falhou = (msg) => { setErro(msg); if (avisar) toast.error(msg); return null; };
+    const { erros: novos, valor } = conferirFicha(montar(inicio), { semColocacao: semColocacaoDe(inicio) });
+    setErros(novos);
+    const campos = Object.keys(novos);
+    if (campos.length) {
+      document.getElementById(campos[0])?.focus();
+      return falhou(t('Confira os campos marcados antes de salvar.'));
+    }
+    // O plano que passou não vira "jogado" calado: a pessoa diz se foi.
+    if (valor.planned_passed && !howItWentAnswer(valor, foi)) {
+      document.querySelector('[data-dica="carreira-como-foi"] button')?.focus();
+      return falhou(t('Antes de salvar, conte como foi: "Joguei" ou "Não fui".'));
+    }
     setErro('');
     setBusy('salvar');
     try {
-      const { saved, event: gravado } = await save(proximo);
-      setF({ ...proximo, ...gravado });
-      if (saved) toast.success(okMsg);
+      const { saved: enviado, event: gravadoAgora } = await save(valor);
+      const novo = { ...valor, ...gravadoAgora };
+      delete novo.planned_passed; // respondido
+      if (fAtual.current === inicio) { setF(novo); setBase(novo); }
+      // Mexeu na ficha durante o envio: o que foi digitado fica (e segue "não salvo").
+      else setF((x) => ({ ...montar(x), id: novo.id, updated_at_ms: novo.updated_at_ms }));
+      if (enviado) toast.success(okMsg);
       else toast.message(t('Guardado neste aparelho. Enviamos quando a conexão voltar.'));
-      return true;
+      return { saved: enviado === true };
     } catch (err) {
       // O envio pode seguir vivo: guardar o id faz a nova tentativa regravar o MESMO registro.
       if (err?.event?.id) setF((x) => (x && !x.id ? { ...x, id: err.event.id } : x));
-      setErro(err?.code === 'permission-denied' ? t('O registro de torneios está desligado agora.') : (err?.message || t('Não foi possível salvar. Tente de novo.')));
-      return false;
+      return falhou(err?.code === 'permission-denied' ? t('O registro de torneios está desligado agora.') : (err?.message || t('Não foi possível salvar. Tente de novo.')));
     } finally {
-      setBusy('');
+      // A foto em envio segue marcada: só o próprio salvar se desmarca.
+      setBusy((b) => (b === 'salvar' ? '' : b));
     }
   }
 
   async function porFoto(file) {
-    if (!file || (f.photos || []).length >= CAREER_LIMITS.photos) return;
+    if (!file || (fAtual.current.photos || []).length >= CAREER_LIMITS.photos) return;
     setBusy('foto');
     try {
       const pronto = await prepareUpload(file, LIMITES_FOTO);
       if (!pronto.ok || pronto.type !== 'image') { toast.error(pronto.error || t('Só imagem: JPG, PNG ou WebP.')); return; }
       const { path, url } = await uploadCareerPhoto(uid, pronto.file);
-      const kind = bestPosition(f) ? 'medal' : 'podium';
-      const foto = { path, url, kind, alt: `${t(PHOTO_KIND_LABEL[kind])} — ${f.name}` };
+      // Sobre o rascunho de AGORA: o envio leva segundos e a pessoa pode ter seguido editando.
+      const comFoto = (x) => {
+        const kind = bestPosition(x) ? 'medal' : 'podium';
+        return { ...x, photos: [...(x.photos || []).filter((p) => p.path !== path), { path, url, kind, alt: `${t(PHOTO_KIND_LABEL[kind])} — ${x.name}` }] };
+      };
       // Sem o documento que aponta para ela, a foto ficaria órfã no Storage.
-      if (!(await gravar({ ...f, photos: [...(f.photos || []), foto] }, t('Foto guardada.')))) deleteCareerPhoto(path);
+      if (!(await gravar(comFoto, t('Foto guardada.'), { avisar: true }))) deleteCareerPhoto(path);
     } catch (err) {
       toast.error(err?.message || t('Não foi possível enviar a foto. Confira a conexão e tente de novo.'));
     } finally {
@@ -249,7 +368,9 @@ export default function CareerEventSheet({
   }
 
   async function tirarFoto(path) {
-    if (await gravar({ ...f, photos: (f.photos || []).filter((p) => p.path !== path) }, t('Foto removida.'))) deleteCareerPhoto(path);
+    const r = await gravar((x) => ({ ...x, photos: (x.photos || []).filter((p) => p.path !== path) }), t('Foto removida.'), { avisar: true });
+    // Só com o servidor confirmando: na fila, o documento do servidor ainda aponta para o arquivo.
+    if (r?.saved === true) deleteCareerPhoto(path);
   }
 
   function setFoto(path, k, v) {
@@ -266,25 +387,52 @@ export default function CareerEventSheet({
     try {
       await remover.mutateAsync(f);
       toast.success(t('Torneio excluído.'));
+      setPergunta(null);
       onOpenChange(false);
-    } catch {
-      setErro(t('Não foi possível excluir. Tente de novo.'));
+    } catch (err) {
+      const msg = err?.message || t('Não foi possível excluir. Tente de novo.');
+      setPergunta(null);
+      setErro(msg);
+      toast.error(msg);
     }
   }
+
+  // Fechar (X, Esc, Voltar do diálogo) com alteração não salva pergunta antes.
+  const pedirFechar = (v) => { if (!v && sujo) setPergunta({ tipo: 'fechar' }); else onOpenChange(v); };
+  const marcarProfessor = (coachId) => {
+    const novo = { ...fAtual.current, shared_coach_id: coachId || undefined };
+    // Ato já gravado pelo servidor: não conta como alteração pendente da ficha.
+    if (fAtual.current === base) setBase(novo);
+    setF(novo);
+  };
+  const PERGUNTAS = {
+    fechar: { title: t('Descartar as alterações?'), description: t('O que você mudou nesta ficha e ainda não salvou será perdido.'), confirmLabel: t('Descartar'), cancelLabel: t('Continuar editando'), onConfirm: () => { setPergunta(null); onOpenChange(false); } },
+    repetir: { title: t('Descartar as alterações?'), description: t('O que você mudou nesta ficha e ainda não salvou será perdido.'), confirmLabel: t('Descartar'), cancelLabel: t('Continuar editando'), onConfirm: () => { setPergunta(null); onRepeat?.(base); } },
+    excluir: { title: t('Excluir este torneio?'), description: t('"{nome}" sai da sua carreira, com as fotos e o balanço. Não dá para desfazer.', { nome: f.name }), confirmLabel: t('Excluir de vez'), destructive: true, loading: remover.isPending, onConfirm: excluir },
+    foto: { title: t('Tirar esta foto?'), description: t('A foto é apagada e a ficha é salva como está. Não dá para desfazer.'), confirmLabel: t('Tirar a foto'), destructive: true, onConfirm: () => { const { path } = pergunta; setPergunta(null); tirarFoto(path); } },
+  };
+  const perguntaAtual = pergunta ? PERGUNTAS[pergunta.tipo] : null;
 
   const fedLista = fedQ.isSuccess ? fedQ.data || [] : [];
   const fedEscolhida = f.federation_id && fedLista.find((x) => x.id === f.federation_id);
   const fotos = f.photos || [];
   const jogado = f.status !== CAREER_STATUS.PLANNED;
   const pos = bestPosition(f);
+  const datas = careerDateBounds(hoje);
+  // Mandado ao professor: a regra entrega o registro inteiro a ele — a tela não promete "só você".
+  const comProfessor = Boolean(f.shared_coach_id);
+  // Plano que já começou e ainda não tem resultado salvo: dupla e vitrine esperam.
+  const emAndamento = gravado?.status === CAREER_STATUS.PLANNED && String(gravado.start_date) <= hoje;
+  const oficial = careerSeal(f, myTournaments) === SEAL.OFFICIAL;
+  let camada = 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" sheet>
+    <Dialog open={open} onOpenChange={pedirFechar}>
+      <DialogContent className="max-w-2xl" sheet onInteractOutside={(e) => { if (sujo || pergunta) e.preventDefault(); }}>
         <DialogHeader>
-          <DialogTitle>{f.name}</DialogTitle>
+          <DialogTitle>{f.name || t('Torneio')}</DialogTitle>
           <DialogDescription>
-            {[careerDateLabel(f.start_date, f.date_precision), f.city, f.status === CAREER_STATUS.PLANNED ? t('Planejado') : ''].filter(Boolean).join(' · ')}
+            {[careerDateLabel(f.start_date, f.date_precision), f.city, f.status === CAREER_STATUS.PLANNED ? t('Planejado') : '', f.status === CAREER_STATUS.CANCELLED ? t('Não fui') : ''].filter(Boolean).join(' · ')}
           </DialogDescription>
         </DialogHeader>
 
@@ -313,23 +461,24 @@ export default function CareerEventSheet({
             <p className="text-sm font-semibold text-ink">{t('É este torneio do PickleRush?')}</p>
             <p className="mt-1 text-sm text-gray-600">{[match.name, careerDateLabel(match.starts_at || match.start_date), match.city].filter(Boolean).join(' · ')}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <V2Button type="button" size="sm" variant="primary" onClick={() => gravar({ ...f, platform_tournament_id: match.id }, t('Ligado ao torneio do PickleRush.'))}>{t('É este')}</V2Button>
+              <V2Button type="button" size="sm" variant="primary" onClick={() => gravar((x) => ({ ...x, platform_tournament_id: match.id }), t('Ligado ao torneio do PickleRush.'))}>{t('É este')}</V2Button>
               <V2Button type="button" size="sm" variant="ghost" onClick={naoEEste}>{t('Não é')}</V2Button>
             </div>
           </div>
         )}
 
-        {f.planned_passed && <CareerHowItWent value={f} onChange={setF} />}
+        {(f.planned_passed || f.status === CAREER_STATUS.CANCELLED || base.status === CAREER_STATUS.CANCELLED) && <CareerHowItWent value={f} onChange={setF} answer={resposta} onAnswer={responder} />}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label={t('Nome do torneio')} htmlFor="ficha-nome" required className="sm:col-span-2">
-            <V2Input id="ficha-nome" value={f.name} maxLength={CAREER_LIMITS.name} onChange={(e) => set('name', e.target.value)} />
+        {/* `noValidate`: quem confere (e diz o erro no campo) é `conferirFicha`. */}
+        <form id={FORM} noValidate className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); gravar(); }}>
+          <V2Field label={t('Nome do torneio')} htmlFor="ficha-nome" required className="sm:col-span-2" error={erroDe('ficha-nome', erros['ficha-nome'])}>
+            <V2Input id="ficha-nome" value={f.name} maxLength={CAREER_LIMITS.name} required onChange={(e) => set('name', e.target.value)} {...ariaErro('ficha-nome', erros['ficha-nome'])} />
           </V2Field>
-          <V2Field label={t('Começou em')} htmlFor="ficha-inicio">
-            <V2Input id="ficha-inicio" type="date" value={f.start_date} onChange={(e) => setF((x) => ({ ...x, start_date: e.target.value, date_precision: 'day' }))} />
+          <V2Field label={jogado ? t('Começou em') : t('Começa em')} htmlFor="ficha-inicio">
+            <V2Input id="ficha-inicio" type="date" value={f.start_date} min={datas.min} max={datas.max} onChange={(e) => setDatas({ start_date: e.target.value, date_precision: 'day' })} />
           </V2Field>
-          <V2Field label={t('Terminou em (opcional)')} htmlFor="ficha-fim">
-            <V2Input id="ficha-fim" type="date" value={f.end_date || ''} min={f.start_date} onChange={(e) => set('end_date', e.target.value || null)} />
+          <V2Field label={jogado ? t('Terminou em (opcional)') : t('Termina em (opcional)')} htmlFor="ficha-fim" error={erroDe('ficha-fim', erros['ficha-fim'])}>
+            <V2Input id="ficha-fim" type="date" value={f.end_date || ''} min={f.start_date || datas.min} max={datas.max} onChange={(e) => setDatas({ end_date: e.target.value || null })} {...ariaErro('ficha-fim', erros['ficha-fim'])} />
           </V2Field>
           <V2Field label={t('Organizador')} htmlFor="ficha-org">
             <V2Input id="ficha-org" value={f.organizer || ''} maxLength={CAREER_LIMITS.organizer} onChange={(e) => set('organizer', e.target.value)} />
@@ -345,11 +494,11 @@ export default function CareerEventSheet({
               </V2Select>
             </V2Field>
           </div>
-        </div>
+        </form>
 
-        {!jogado && <CareerPlanFields value={f} onChange={setF} debriefs={balancos.isSuccess ? balancos.data : []} />}
+        {!jogado && <CareerPlanFields value={f} onChange={setF} debriefs={balancos.isSuccess ? balancos.data : []} formId={FORM} />}
 
-        <Camada n={1} titulo={t('Resultado')}>
+        <Camada n={++camada} titulo={semColocacao ? t('Categorias') : t('Resultado')}>
           {f.entries.map((e, i) => (
             <Participacao
               key={i}
@@ -358,6 +507,9 @@ export default function CareerEventSheet({
               onChange={(novo) => setEntry(i, novo)}
               selfUid={uid}
               past={past}
+              formId={FORM}
+              semColocacao={semColocacao}
+              erros={erros}
               onRemove={f.entries.length > 1 ? () => setF((x) => ({ ...x, entries: x.entries.filter((_, j) => j !== i) })) : null}
             />
           ))}
@@ -390,25 +542,31 @@ export default function CareerEventSheet({
               {!fedEscolhida && (
                 <>
                   <V2Field label={t('Nome da federação')} htmlFor="ficha-fed-nome">
-                    <V2Input id="ficha-fed-nome" value={f.federation_name || ''} maxLength={CAREER_LIMITS.federation} onChange={(e) => set('federation_name', e.target.value)} />
+                    <V2Input id="ficha-fed-nome" form={FORM} value={f.federation_name || ''} maxLength={CAREER_LIMITS.federation} onChange={(e) => set('federation_name', e.target.value)} />
                   </V2Field>
                   <V2Field label={t('Sigla')} htmlFor="ficha-fed-sigla">
-                    <V2Input id="ficha-fed-sigla" value={f.federation_acronym || ''} maxLength={CAREER_LIMITS.acronym} onChange={(e) => set('federation_acronym', e.target.value)} />
+                    <V2Input id="ficha-fed-sigla" form={FORM} value={f.federation_acronym || ''} maxLength={CAREER_LIMITS.acronym} onChange={(e) => set('federation_acronym', e.target.value)} />
                   </V2Field>
                 </>
               )}
               <V2Field label={t('Etapa ou categoria do torneio')} htmlFor="ficha-etapa" className="sm:col-span-2">
-                <V2Input id="ficha-etapa" value={f.stage_tier || ''} maxLength={CAREER_LIMITS.stage} placeholder={t('Ex.: Etapa 500, Nacional')} onChange={(e) => set('stage_tier', e.target.value)} />
+                <V2Input id="ficha-etapa" form={FORM} value={f.stage_tier || ''} maxLength={CAREER_LIMITS.stage} placeholder={t('Ex.: Etapa 500, Nacional')} onChange={(e) => set('stage_tier', e.target.value)} />
               </V2Field>
             </div>
           )}
-          <V2Field label={t('Link do resultado (opcional)')} htmlFor="ficha-link" hint={t('Só https://. Ele fica guardado; o PickleRush não abre o link.')}>
-            <V2Input id="ficha-link" type="url" inputMode="url" value={f.link || ''} maxLength={CAREER_LIMITS.link} placeholder="https://" onChange={(e) => set('link', e.target.value)} />
+          <V2Field label={semColocacao ? t('Link do torneio (opcional)') : t('Link do resultado (opcional)')} htmlFor="ficha-link" hint={t('Só https://. Ele fica guardado; o PickleRush não abre o link.')} error={erroDe('ficha-link', erros['ficha-link'])}>
+            <V2Input id="ficha-link" form={FORM} type="url" inputMode="url" value={f.link || ''} maxLength={CAREER_LIMITS.link} placeholder="https://" onChange={(e) => set('link', e.target.value)} {...ariaErro('ficha-link', erros['ficha-link'])} />
           </V2Field>
         </Camada>
 
-        <Camada n={2} titulo={t('Foto')} dica="carreira-foto">
-          <p className="text-xs text-gray-500">{t('A medalha, o pódio ou a chave. Até 6 fotos, só você vê. Evite fotos com o rosto de crianças.')}</p>
+        {/* Antes de o torneio começar não há foto a pôr (as que já existem seguem à vista). */}
+        {(!semColocacao || fotos.length > 0) && (
+        <Camada n={++camada} titulo={t('Foto')} dica="carreira-foto">
+          <p className="text-xs text-gray-500">
+            {comProfessor
+              ? t('A medalha, o pódio ou a chave. Até 6 fotos. Você mandou este torneio ao seu professor: as fotos ficam ao alcance dele também. Evite fotos com o rosto de crianças.')
+              : t('A medalha, o pódio ou a chave. Até 6 fotos, só você vê. Evite fotos com o rosto de crianças.')}
+          </p>
           {fotos.length > 0 && (
             <ul className="grid gap-3 sm:grid-cols-2">
               {fotos.map((p) => (
@@ -418,26 +576,31 @@ export default function CareerEventSheet({
                     {PHOTO_KIND.map((k) => <option key={k} value={k}>{t(PHOTO_KIND_LABEL[k])}</option>)}
                   </V2Select>
                   <V2Input aria-label={t('Descrição da foto')} value={p.alt || ''} maxLength={CAREER_LIMITS.alt} placeholder={t('O que aparece na foto')} onChange={(e) => setFoto(p.path, 'alt', e.target.value)} />
-                  <V2Button type="button" size="sm" variant="ghost" onClick={() => tirarFoto(p.path)} disabled={Boolean(busy)}><Trash2 className="h-4 w-4" /> {t('Tirar a foto')}</V2Button>
+                  <V2Button type="button" size="sm" variant="ghost" onClick={() => setPergunta({ tipo: 'foto', path: p.path })} disabled={Boolean(busy)}><Trash2 className="h-4 w-4" /> {t('Tirar a foto')}</V2Button>
                 </li>
               ))}
             </ul>
           )}
           {fotos.length < CAREER_LIMITS.photos && (
             <>
-              <input ref={arquivo} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="ficha-foto" onChange={(e) => porFoto(e.target.files?.[0])} />
+              {/* `hidden`: fora do Tab e do leitor de tela — o botão "Pôr foto" é o único controle. */}
+              <input ref={arquivo} type="file" accept="image/jpeg,image/png,image/webp" hidden tabIndex={-1} id="ficha-foto" onChange={(e) => porFoto(e.target.files?.[0])} />
               <V2Button type="button" size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => arquivo.current?.click()}>
                 <Camera className="h-4 w-4" /> {busy === 'foto' ? t('Enviando…') : t('Pôr foto')}
               </V2Button>
             </>
           )}
         </Camada>
+        )}
 
-        <Camada n={3} titulo={t('Dupla')} dica="carreira-dupla">
+        <Camada n={++camada} titulo={t('Dupla')} dica="carreira-dupla">
+          {emAndamento && (
+            <p className="text-xs text-gray-500">{t('Este torneio ainda está em andamento. Salve a colocação em Resultado — ou espere o último dia passar — para pedir a confirmação da dupla.')}</p>
+          )}
           <CareerPartnerLayer
             event={gravado}
             saved={saved}
-            dirty={JSON.stringify(f) !== JSON.stringify(gravado)}
+            dirty={sujo}
             partners={partners}
             partnersError={partnersError}
             onRetry={onRetryPartners}
@@ -445,7 +608,7 @@ export default function CareerEventSheet({
         </Camada>
 
         {fonteBalanco && (
-          <Camada n={4} titulo={t('Balanço')} dica="carreira-balanco">
+          <Camada n={++camada} titulo={t('Balanço')} dica="carreira-balanco">
             {balancos.isPending ? (
               <V2Skeleton lines={2} />
             ) : balancos.isError ? (
@@ -472,37 +635,48 @@ export default function CareerEventSheet({
 
         <section data-dica="carreira-vitrine" className="space-y-3 rounded-3xl border border-gray-100 p-4">
           <h3 className="font-display text-base font-bold text-ink">{t('Perfil público')}</h3>
-          <CareerShowcaseLayer event={gravado} saved={saved} dirty={JSON.stringify(f) !== JSON.stringify(gravado)} />
+          <CareerShowcaseLayer event={{ ...gravado, shared_coach_id: f.shared_coach_id }} saved={saved} dirty={sujo} />
         </section>
 
-        <CareerCoachShare event={{ ...gravado, shared_coach_id: f.shared_coach_id }} saved={saved}
-          onShared={(coachId) => setF((x) => ({ ...x, shared_coach_id: coachId || undefined }))} />
+        <CareerCoachShare event={{ ...gravado, shared_coach_id: f.shared_coach_id }} saved={saved} onShared={marcarProfessor} />
 
-        <V2Field label={t('Anotações (só você vê)')} htmlFor="ficha-notas">
+        <V2Field
+          label={comProfessor ? t('Anotações') : t('Anotações (só você vê)')}
+          htmlFor="ficha-notas"
+          hint={comProfessor ? t('Você mandou este torneio ao seu professor: as anotações ficam ao alcance dele também.') : null}
+        >
           <V2Textarea id="ficha-notas" rows={3} value={f.notes || ''} maxLength={CAREER_LIMITS.notes} onChange={(e) => set('notes', e.target.value)} />
         </V2Field>
 
-        {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
+        <div className="flex flex-wrap gap-2">
+          {/* Excluir pergunta num diálogo próprio: o toque duplo não cai mais em "Excluir de vez". */}
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => setPergunta({ tipo: 'excluir' })}><Trash2 className="h-4 w-4" /> {t('Excluir')}</V2Button>
+          {jogado && onRepeat && (
+            <V2Button type="button" size="sm" variant="ghost" onClick={() => (sujo ? setPergunta({ tipo: 'repetir' }) : onRepeat(f))}><Repeat className="h-4 w-4" /> {t('Repetir no próximo ano')}</V2Button>
+          )}
+          {normalizeCareerLink(f.link) && <V2Button asChild size="sm" variant="ghost"><a href={f.link} target="_blank" rel="noopener noreferrer nofollow"><Link2 className="h-4 w-4" /> {t('Abrir o link')}</a></V2Button>}
+        </div>
+        {/* Ligado a um torneio daqui com o selo Oficial: o troféu e o cartão são os do resultado oficial. */}
+        {pos && oficial && trofeus.length === 0 && (
+          <p className="text-xs text-gray-500">{t('Este torneio está ligado ao do PickleRush: o troféu e o cartão são os do resultado oficial, em Troféus.')}</p>
+        )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
-            {apagar ? (
-              <>
-                <V2Button type="button" size="sm" variant="danger" onClick={excluir} disabled={remover.isPending}>{t('Excluir de vez')}</V2Button>
-                <V2Button type="button" size="sm" variant="ghost" onClick={() => setApagar(false)}>{t('Cancelar')}</V2Button>
-              </>
-            ) : (
-              <V2Button type="button" size="sm" variant="ghost" onClick={() => setApagar(true)}><Trash2 className="h-4 w-4" /> {t('Excluir')}</V2Button>
-            )}
-            {jogado && onRepeat && <V2Button type="button" size="sm" variant="ghost" onClick={() => onRepeat(f)}><Repeat className="h-4 w-4" /> {t('Repetir no próximo ano')}</V2Button>}
-            {f.link && <V2Button asChild size="sm" variant="ghost"><a href={f.link} target="_blank" rel="noopener noreferrer nofollow"><Link2 className="h-4 w-4" /> {t('Abrir o link')}</a></V2Button>}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {pos && trofeus.length > 0 && <V2Button type="button" variant="secondary" onClick={() => setCartao(true)}><Share2 className="h-4 w-4" /> {t('Cartão')}</V2Button>}
-            <V2Button type="button" variant="primary" onClick={() => gravar(f)} disabled={Boolean(busy) || !f.name.trim()}>{busy === 'salvar' ? t('Salvando…') : t('Salvar')}</V2Button>
+        {/* Preso embaixo: a ficha tem várias telas e as camadas do meio pedem "salve antes". */}
+        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 space-y-2 border-t border-gray-100 bg-background px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+          {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-gray-600" aria-live="polite">{sujo ? t('Alterações não salvas') : ''}</p>
+            <div className="ml-auto flex flex-wrap gap-2">
+              {pos && trofeus.length > 0 && <V2Button type="button" variant="secondary" onClick={() => setCartao(true)}><Share2 className="h-4 w-4" /> {t('Cartão')}</V2Button>}
+              <V2Button type="submit" form={FORM} variant="primary" disabled={Boolean(busy)}>{busy === 'salvar' ? t('Salvando…') : t('Salvar')}</V2Button>
+            </div>
           </div>
         </div>
       </DialogContent>
+
+      {perguntaAtual && (
+        <ConfirmDialog open onOpenChange={(v) => { if (!v) setPergunta(null); }} {...perguntaAtual} />
+      )}
 
       {balanco && fonteBalanco && (
         <Suspense fallback={null}>
