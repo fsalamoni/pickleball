@@ -247,13 +247,13 @@ Ver `docs/57-LIGAS.md` §4.
 `name`, `description`, `city`, `state`, `location`, `format`, `entry_type`,
 `organizer {type, id, name}`, `status` (`draft`|`open`|`running`|`finished`|`cancelled`),
 `season {cadence, start_date, dates[], time, round_window_days, legs, skip_dates[]}`,
-`standings {mode, win, loss, wo_loss}`, `visibility` (`public`|`unlisted`),
+`standings {mode, win, loss, wo_loss, tiebreak_order[]}`, `visibility` (`public`|`unlisted`),
 `self_registration`, `admins[]`, `member_uids[]`, `ever_uids[]`, `entries_count`,
 `creator_uid`, `created_at`, `updated_at`.
 
 ### `leagues/{id}/divisions/{id}` · `…/entries/{id}` · `…/matches/{id}` (subcoleções)
-Divisão: `name`, `order`, `gender`, `rule {kind, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries`.
-Inscrição: `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`|`withdrawn`), `override` — **nenhum contato**.
+Divisão: `name`, `order`, `gender`, `rule {kind (`open`|`bracket`|`dupr_range`|`dupr_sum`), bracket (lista oficial, `core/domain/levelBrackets.js`), label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries`.
+Inscrição: `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`|`withdrawn`), `override` (o servidor marca quando a organização inscreve fora da regra) — **nenhum contato**.
 Jogo: `division_id`, `phase`, `round`, `side_a`, `side_b`, `games[{a,b}]`, `wo_winner`, `status`, `scheduled_date`, `recorded_by`.
 Classificação e datas das rodadas são derivadas, nunca gravadas.
 

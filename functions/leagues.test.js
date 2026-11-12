@@ -98,13 +98,38 @@ describe('inscrição', () => {
     await expect(chama(db, ANA, { action: 'register', leagueId, divisionId, partnerUid: 'cau' })).rejects.toThrow(/acima da faixa/);
   });
 
-  it('a organização inscreve quem não tem conta e pode passar por cima da faixa', async () => {
+  it('a organização inscreve quem não tem conta e, como no torneio, fora da faixa vira exceção marcada', async () => {
     const db = banco();
     const { leagueId, divisionId } = await ligaAberta(db);
     await expect(chama(db, BIA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'cau' }, { name: 'Zé' }] })).rejects.toThrow(/Só quem organiza/);
-    await expect(chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'cau' }, { name: 'Zé' }] })).rejects.toThrow(/acima/);
-    const { entryId } = await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, override: true, players: [{ uid: 'cau' }, { name: 'Zé' }] });
-    expect(db.store.docs.get(`leagues/${leagueId}/entries/${entryId}`)).toMatchObject({ player_uids: ['cau'], eligibility: { override: true } });
+    const { entryId } = await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'cau' }, { name: 'Zé' }] });
+    expect(db.store.docs.get(`leagues/${leagueId}/entries/${entryId}`)).toMatchObject({ player_uids: ['cau'], added_by: 'organizer', eligibility: { override: true } });
+    const dentro = await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'bia' }, { uid: 'duda' }] });
+    expect(db.store.docs.get(`leagues/${leagueId}/entries/${dentro.entryId}`).eligibility.override).toBe(false);
+  });
+
+  it('divisão pela faixa oficial: a numérica confere o DUPR; a descritiva não barra', async () => {
+    const db = banco();
+    const { leagueId } = await chama(db, ANA, { ...base, divisions: [
+      { name: '3,5 a 3,999', rule: { kind: 'bracket', bracket: '3.500-3.999', min: 2, max: 8 } },
+      { name: 'Iniciante', rule: { kind: 'bracket', bracket: 'beginner' } },
+      { name: 'Inventada', rule: { kind: 'bracket', bracket: '9.9' } },
+    ] });
+    const divs = docs(db, `leagues/${leagueId}/divisions/`).map(([p, d]) => ({ id: p.split('/').pop(), ...d }));
+    expect(divs.map((d) => d.rule)).toEqual([
+      { kind: 'bracket', bracket: '3.500-3.999', allow_unrated: true },
+      { kind: 'bracket', bracket: 'beginner', allow_unrated: true },
+      { kind: 'open' },
+    ]);
+    await chama(db, ANA, { action: 'status', leagueId, to: 'open' });
+    await expect(chama(db, ANA, { action: 'register', leagueId, divisionId: divs[0].id, partnerUid: 'cau' })).rejects.toThrow(/acima da faixa/);
+    await expect(chama(db, ANA, { action: 'register', leagueId, divisionId: divs[1].id, partnerUid: 'cau' })).resolves.toHaveProperty('entryId');
+  });
+
+  it('a ordem de desempate escolhida é gravada só com critérios conhecidos', async () => {
+    const db = banco();
+    const { leagueId } = await chama(db, ANA, { ...base, standings: { mode: 'points', tiebreak_order: ['balance', 'x', 'balance', 'head_to_head'] } });
+    expect(db.store.docs.get(`leagues/${leagueId}`).standings.tiebreak_order).toEqual(['balance', 'head_to_head']);
   });
 });
 

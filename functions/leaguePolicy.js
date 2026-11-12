@@ -79,7 +79,29 @@ function normalizeSeason(raw = {}) {
 
 /* ------------------------------------------------------------- divisões -- */
 
-const RULES = ['open', 'dupr_range', 'dupr_sum'];
+const RULES = ['open', 'bracket', 'dupr_range', 'dupr_sum'];
+
+/** A lista OFICIAL de faixas (cópia de `src/core/domain/levelBrackets.js`) e o intervalo das numéricas. */
+const LEVEL_BRACKETS = [
+  '2.000-2.999', '3.000-3.499', '3.500-3.999', '3.000-3.999', '4.000-4.499', '4.500+',
+  'beginner', 'intermediate', 'advanced', 'pro', 'open', 'other',
+];
+const BRACKET_RANGE = {
+  '2.000-2.999': { min: 2, max: 2.999 },
+  '3.000-3.499': { min: 3, max: 3.499 },
+  '3.500-3.999': { min: 3.5, max: 3.999 },
+  '3.000-3.999': { min: 3, max: 3.999 },
+  '4.000-4.499': { min: 4, max: 4.499 },
+  '4.500+': { min: 4.5, max: null },
+};
+
+/** Os critérios de desempate do torneio (cópia das chaves de `src/core/domain/tiebreak.js`). */
+const TIEBREAK_KEYS = ['wins', 'head_to_head', 'balance', 'head_to_head_balance', 'points_for', 'points_against', 'win_rate', 'balance_rate', 'sets'];
+
+/** A ordem gravada: só critérios conhecidos, sem repetir; vazia = o padrão da liga. */
+function tiebreakOrder(raw) {
+  return [...new Set((Array.isArray(raw) ? raw : []).map((k) => String(k || '').trim()).filter((k) => TIEBREAK_KEYS.includes(k)))];
+}
 const GENDERS = ['open', 'male', 'female', 'mixed'];
 
 const num = (v) => {
@@ -96,6 +118,12 @@ function normalizeDivisionRule(raw = {}) {
     let max = num(r.max);
     if (min && max && min > max) [min, max] = [max, min];
     return { kind, min, max, allow_unrated: r.allow_unrated !== false };
+  }
+  if (kind === 'bracket') {
+    if (!LEVEL_BRACKETS.includes(r.bracket)) return { kind: 'open' };
+    const out = { kind, bracket: r.bracket, allow_unrated: r.allow_unrated !== false };
+    if (r.bracket === 'other') out.label = String(r.label == null ? '' : r.label).trim().slice(0, 40);
+    return out;
   }
   if (kind === 'dupr_sum') {
     return { kind, cap: num(r.cap), individual_cap: num(r.individual_cap), unrated_value: num(r.unrated_value) || 3.0 };
@@ -119,13 +147,16 @@ function divisionEligibility(division, players) {
   if (genero) return resp(genero);
   const duprs = lista.map((p) => num(p && p.dupr));
   const semDupr = duprs.some((d) => d == null);
-  if (rule.kind === 'dupr_range') {
+  const faixa = rule.kind === 'bracket' ? (BRACKET_RANGE[rule.bracket] || null) : null;
+  if (rule.kind === 'dupr_range' || faixa) {
+    const min = faixa ? faixa.min : rule.min;
+    const max = faixa ? faixa.max : rule.max;
     const conhecidos = duprs.filter((d) => d != null);
     if (semDupr && !rule.allow_unrated) return resp('missing_dupr');
     if (!conhecidos.length) return resp(null, null, true);
     const media = tres(conhecidos.reduce((a, b) => a + b, 0) / conhecidos.length);
-    if (rule.min && media < rule.min) return resp('below', media, semDupr);
-    if (rule.max && media > rule.max) return resp('above', media, semDupr);
+    if (min && media < min) return resp('below', media, semDupr);
+    if (max && media > max) return resp('above', media, semDupr);
     return resp(null, media, semDupr);
   }
   if (rule.kind === 'dupr_sum') {
@@ -198,5 +229,5 @@ function roundRobin(ids, legs = 1) {
 module.exports = {
   FORMATS, ORGANIZER_FLAG, STATUS_NEXT, canMoveStatus,
   isIsoDate, normalizeSeason, normalizeDivisionRule, divisionEligibility, validateResult, roundRobin,
-  GENDERS, MAX_GAMES,
+  GENDERS, MAX_GAMES, LEVEL_BRACKETS, BRACKET_RANGE, TIEBREAK_KEYS, tiebreakOrder,
 };

@@ -5,7 +5,7 @@ import {
 import { LEAGUE_FORMAT, LEAGUE_FORMAT_META, formatAvailable, canMoveStatus, isLeaguePublic } from './leagueFormats.js';
 import { normalizeSeason, roundCalendar, roundsFor, addMonths, isIsoDate, currentRound } from './leagueSeason.js';
 import { divisionEligibility, normalizeDivisionRule, MILP_DIVISIONS } from './leagueDivisions.js';
-import { validateResult, matchWinner, computeLeagueStandings } from './leagueResults.js';
+import { validateResult, matchWinner, computeLeagueStandings, leagueTiebreakOrder, LEAGUE_DEFAULT_TIEBREAK_ORDER } from './leagueResults.js';
 
 const tudo = Object.fromEntries(Object.values(LEAGUE_FLAG_BY_ORGANIZER).map((k) => [k, true]));
 
@@ -134,6 +134,17 @@ describe('divisões', () => {
     expect(divisionEligibility({ gender: 'female' }, [{ gender: null }]).reason).toBe('gender_unknown');
   });
 
+  it('faixa oficial: a numérica confere a média do DUPR; a descritiva não barra; a desconhecida vira livre', () => {
+    const d = { rule: { kind: 'bracket', bracket: '3.500-3.999' } };
+    expect(divisionEligibility(d, [{ dupr: 3.6 }, { dupr: 3.8 }])).toMatchObject({ ok: true, value: 3.7 });
+    expect(divisionEligibility(d, [{ dupr: 3.9 }, { dupr: 4.4 }]).reason).toBe('above');
+    expect(divisionEligibility({ rule: { kind: 'bracket', bracket: '4.500+' } }, [{ dupr: 7.1 }]).ok).toBe(true);
+    expect(divisionEligibility({ rule: { kind: 'bracket', bracket: 'pro' } }, [{ dupr: 2.1 }]).ok).toBe(true);
+    expect(divisionEligibility({ rule: { kind: 'bracket', bracket: '3.500-3.999', allow_unrated: false } }, [{ dupr: null }]).reason).toBe('missing_dupr');
+    expect(normalizeDivisionRule({ kind: 'bracket', bracket: '4.0' })).toEqual({ kind: 'open' });
+    expect(normalizeDivisionRule({ kind: 'bracket', bracket: 'other', label: 'Série B' })).toMatchObject({ label: 'Série B' });
+  });
+
   it('regra estranha vira livre; faixa invertida é desvirada', () => {
     expect(normalizeDivisionRule({ kind: 'x' })).toEqual({ kind: 'open' });
     expect(normalizeDivisionRule({ kind: 'dupr_range', min: 5, max: 4 })).toMatchObject({ min: 4, max: 5 });
@@ -174,6 +185,32 @@ describe('placar e classificação', () => {
     ]);
     // a e b: 1 vitória e 1 derrota cada; b tem saldo melhor, mas a venceu b.
     expect(rows.map((r) => r.entry_id)).toEqual(['c', 'a', 'b', 'd']);
+  });
+
+  it('desempate configurável: a ordem escolhida (padrão do torneio) vale', () => {
+    const jogos = [
+      J('a', 'b', [{ a: 11, b: 9 }]),
+      J('c', 'a', [{ a: 11, b: 2 }]),
+      J('b', 'd', [{ a: 11, b: 0 }]),
+      J('c', 'd', [{ a: 11, b: 0 }]),
+    ];
+    const ents = [E('a'), E('b'), E('c'), E('d')];
+    // Saldo primeiro: b (+9) passa a (−7) mesmo tendo perdido o confronto.
+    expect(computeLeagueStandings(ents, jogos, { tiebreak_order: ['balance', 'head_to_head'] }).map((r) => r.entry_id))
+      .toEqual(['c', 'b', 'a', 'd']);
+    expect(leagueTiebreakOrder([])).toEqual(LEAGUE_DEFAULT_TIEBREAK_ORDER);
+    expect(leagueTiebreakOrder(['x', 'sets', 'sets'])).toEqual(['sets']);
+  });
+
+  it('três empatados: mini-tabela só entre eles (o círculo cai no saldo)', () => {
+    const ents = [E('a'), E('b'), E('c')];
+    const rows = computeLeagueStandings(ents, [
+      J('a', 'b', [{ a: 11, b: 9 }]),
+      J('b', 'c', [{ a: 11, b: 3 }]),
+      J('c', 'a', [{ a: 11, b: 10 }]),
+    ]);
+    // Cada um 1V 1D e 1 vitória na mini-tabela; saldo de games igual; saldo: b +6, c −7, a +1.
+    expect(rows.map((r) => r.entry_id)).toEqual(['b', 'a', 'c']);
   });
 
   it('aproveitamento; desistente vai para o fim', () => {

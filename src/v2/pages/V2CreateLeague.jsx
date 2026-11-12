@@ -24,7 +24,7 @@ import { LEAGUE_FLAG_BY_ORGANIZER, LEAGUE_ORGANIZER, LEAGUE_ORGANIZER_LABELS, le
 import { LEAGUE_FORMAT, LEAGUE_FORMAT_FAMILY, LEAGUE_FORMAT_META, formatMeta } from '@/modules/leagues/domain/leagueFormats';
 import { STANDINGS_MODE_LABELS } from '@/modules/leagues/domain/leagueResults';
 import LeaguesGate from '@/v2/components/leagues/LeaguesGate';
-import DivisionFields, { SUGGESTED_DIVISIONS, emptyDivision } from '@/v2/components/leagues/DivisionFields';
+import DivisionFields, { suggestedDivisions, emptyDivision } from '@/v2/components/leagues/DivisionFields';
 import SeasonFields from '@/v2/components/leagues/SeasonFields';
 import PointsFields from '@/v2/components/leagues/PointsFields';
 import { divisionSummary } from '@/v2/components/leagues/leagueUi';
@@ -231,8 +231,8 @@ function Criar() {
               description={t('Cada divisão é uma tabela própria: quem entra nela só enfrenta quem está nela. Separe por nível (DUPR) e por categoria.')}
             />
             <div className="flex flex-wrap gap-2">
-              <V2Button type="button" variant="ghost" size="sm" onClick={() => setDivisoes(SUGGESTED_DIVISIONS.map((d) => ({ ...d, name: t(d.name), rule: { ...d.rule } })))}>
-                {t('Usar divisões sugeridas por DUPR')}
+              <V2Button type="button" variant="ghost" size="sm" onClick={() => setDivisoes(suggestedDivisions())}>
+                {t('Uma divisão por faixa de DUPR')}
               </V2Button>
             </div>
             {divisoes.map((d, i) => (

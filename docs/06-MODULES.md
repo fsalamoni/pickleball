@@ -35,7 +35,7 @@ Torneio de ponta a ponta: criação, modalidades e fases, inscrições (com
 contato privado), check-in, sorteio (grupos, chaves, pontos corridos, suíço,
 Americano em etapas, equipes), jogos e placar, classificação, admins, página
 pública, impressão e telão.
-- **Arquivos-chave**: `domain/draw.js`, `domain/tiebreak.js`, `domain/teamFormat.js`,
+- **Arquivos-chave**: `domain/draw.js`, `domain/tiebreak.js` (reexporta `core/domain/tiebreak.js`, que a liga também usa), `domain/teamFormat.js`,
   `domain/podium.js`, `domain/checkin.js`, `domain/americanoEtapas.js`,
   `services/registrationService.js`, `hooks/useTournament.js`. Regras e
   formatos: `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`, `docs/12-TEAM-TOURNAMENTS.md`,

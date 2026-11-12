@@ -163,6 +163,7 @@ export default function ModalityRegistrationDialog({
         competition_gender: form.player_a_gender || null,
         leveling_level: form.player_a_level || null,
         birth_date: selA.birth_date || null,
+        dupr_rating: selA.dupr_rating ?? null,
       };
       // Jogador B só entra na avaliação quando um atleta foi escolhido para ele.
       const profileB = isDoubles && selB
@@ -170,6 +171,7 @@ export default function ModalityRegistrationDialog({
             competition_gender: form.player_b_gender || null,
             leveling_level: form.player_b_level || null,
             birth_date: selB.birth_date || null,
+            dupr_rating: selB.dupr_rating ?? null,
           }
         : undefined;
       const r = evaluateRegistrationEligibility(modality, profileA, profileB);

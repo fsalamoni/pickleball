@@ -19,7 +19,9 @@
  *  - "female"→ competition_gender = "female"
  *  - "mixed" → em duplas, requer um "male" + um "female"
  *
- * Nível: comparado pelo intervalo USAP da modalidade. A engine não bloqueia,
+ * Nível: a categoria é uma faixa da lista OFICIAL (`core/domain/levelBrackets`).
+ * As numéricas são comparadas com o DUPR do perfil; as descritivas e os níveis
+ * antigos, pelo intervalo de antes. OPEN nunca avisa. A engine não bloqueia,
  * apenas devolve um aviso (a auto-declaração do jogador é aceita).
  */
 
@@ -34,7 +36,8 @@ import {
   SKILL_LEVEL_USAP_RANGE,
 } from './constants.js';
 import { calculateAge } from '@/core/lib/profileValidation';
-import { t } from '@/core/i18n';
+import { t, fmtNumero } from '@/core/i18n';
+import { bracketRange } from '@/core/domain/levelBrackets.js';
 
 const MIN_AGE_BY_CATEGORY = Object.freeze({
   [AGE_CATEGORY.A35]: 35,
@@ -75,19 +78,39 @@ function genderIssueForSingle(category, profile) {
   return null;
 }
 
+/**
+ * O intervalo da categoria: o da faixa oficial (numérica) ou, nas descritivas
+ * e nas antigas, o intervalo de antes. OPEN é aberta: nunca avisa.
+ */
+function modalityRange(skill) {
+  const r = bracketRange(skill);
+  if (r) return [r.min, r.max ?? Infinity];
+  if (skill === 'open') return null;
+  return SKILL_LEVEL_USAP_RANGE[skill] || null;
+}
+
+/** O nível do atleta: o DUPR do perfil; na falta, o código de nível antigo. */
+function playerLevel(profile) {
+  const d = Number(profile?.dupr_rating);
+  if (Number.isFinite(d) && d >= 2 && d <= 8) return { range: [d, d], label: t('DUPR {n}', { n: fmtNumero(d, { minimumFractionDigits: 3, maximumFractionDigits: 3 }) }) };
+  const r = SKILL_LEVEL_USAP_RANGE[profile?.leveling_level];
+  return r ? { range: r, label: SKILL_LEVEL_LABELS[profile.leveling_level] } : null;
+}
+
+/** Só AVISA: a categoria de nível nunca barra a inscrição. */
 function levelWarning(modality, profile) {
-  if (!modality?.skill_level || !profile?.leveling_level) return null;
+  if (!modality?.skill_level || !profile) return null;
   if (modality.skill_level === profile.leveling_level) return null;
-  const range = SKILL_LEVEL_USAP_RANGE[modality.skill_level];
-  if (!range) return null;
-  const playerRange = SKILL_LEVEL_USAP_RANGE[profile.leveling_level];
-  if (!playerRange) return null;
-  // Aviso: nível do jogador fora do intervalo da modalidade.
-  if (playerRange[1] < range[0]) {
-    return t('O nível recomendado é {v1}. Seu nível atual ({v2}) é inferior — a organização pode validar a inscrição.', { v1: SKILL_LEVEL_LABELS[modality.skill_level], v2: SKILL_LEVEL_LABELS[profile.leveling_level] });
+  const range = modalityRange(modality.skill_level);
+  const jogador = playerLevel(profile);
+  if (!range || !jogador) return null;
+  const [pMin, pMax] = jogador.range;
+  const v1 = SKILL_LEVEL_LABELS[modality.skill_level];
+  if (pMax < range[0]) {
+    return t('O nível recomendado é {v1}. Seu nível atual ({v2}) é inferior — a organização pode validar a inscrição.', { v1, v2: jogador.label });
   }
-  if (playerRange[0] > range[1]) {
-    return t('O nível recomendado é {v1}. Seu nível atual ({v2}) é superior — a organização pode validar a inscrição.', { v1: SKILL_LEVEL_LABELS[modality.skill_level], v2: SKILL_LEVEL_LABELS[profile.leveling_level] });
+  if (pMin > range[1]) {
+    return t('O nível recomendado é {v1}. Seu nível atual ({v2}) é superior — a organização pode validar a inscrição.', { v1, v2: jogador.label });
   }
   return null;
 }

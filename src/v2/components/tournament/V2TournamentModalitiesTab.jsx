@@ -44,6 +44,7 @@ import { V2Badge, V2Button, V2EmptyState, V2Surface, V2ErrorState } from '@/v2/u
 import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { AdaptedClassField, AdaptedModalityBadge, useAdaptedOptions } from '@/v2/components/federations/adapted/AdaptedModality';
 import { t, fmtLista } from '@/core/i18n';
+import { levelBracketOptions } from '@/core/domain/levelBrackets';
 import { NumberInput } from '@/components/ui/input';
 
 const PREVIEW_PLAYER_COUNT = 8;
@@ -362,9 +363,9 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         <V2Surface className="p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Nível / Perfil')}</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Faixa de nível')}</label>
               <select value={form.skill_level} onChange={(e) => set('skill_level', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
-                {Object.entries(SKILL_LEVEL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {levelBracketOptions(form.skill_level, { withOther: false }).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <div className="space-y-2">

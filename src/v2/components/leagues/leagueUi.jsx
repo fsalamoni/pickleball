@@ -19,6 +19,7 @@ const tres = (n) => fmtNumero(Number(n), { minimumFractionDigits: 3, maximumFrac
 /** "DUPR 3,500 a 4,000", "Soma até 16,300 (ninguém acima de 4,600)", "Aberta a todos os níveis". */
 export function divisionRuleText(division) {
   const d = describeDivisionRule(division, tres);
+  if (d.key === 'bracket') return d.numeric ? t('DUPR: {faixa}', { faixa: d.text }) : d.text;
   if (d.key === 'range') return t('DUPR {min} a {max}', d);
   if (d.key === 'min') return t('DUPR a partir de {min}', d);
   if (d.key === 'max') return t('DUPR até {max}', d);

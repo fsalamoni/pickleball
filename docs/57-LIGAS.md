@@ -17,6 +17,11 @@ misturam** (pedido do dono, 2026-11-12):
   as telas de torneio seguem bit a bit;
 - a única ponte é um **atalho**: a lista de torneios mostra "Criar liga" (quando
   alguma flag de ligas está ligada) e a criação de liga oferece "Crie um torneio".
+- o que as duas competições **dividem** mora no NÚCLEO, não num dos módulos (§9):
+  a lista oficial de faixas (`core/domain/levelBrackets.js`), a regra de desempate
+  (`core/domain/tiebreak.js`) e o editor da ordem
+  (`v2/components/competition/TiebreakOrderEditor.jsx`). A liga não importa nada
+  de `modules/tournament`, e o torneio nada de `modules/leagues`.
 
 ## 2. As cinco flags
 
@@ -65,7 +70,7 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 | Documento | Campos principais |
 |---|---|
 | `leagues/{id}` | `name`, `description`, `city`, `state`, `location`, `format`, `entry_type`, `organizer {type,id,name}`, `status` (`draft`→`open`→`running`→`finished`, ou `cancelled`), `season`, `standings`, `visibility` (`public`/`unlisted`), `self_registration`, `admins[]`, `member_uids[]`, `ever_uids[]`, `entries_count` |
-| `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
+| `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, bracket, label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
 | `…/entries/{id}` | `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`/`withdrawn`), `override`, `added_by` |
 | `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by` |
 
@@ -76,8 +81,12 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 - `season`: `cadence` (`weekly`/`biweekly`/`monthly`/`custom`), `start_date`,
   `dates[]` (custom), `time`, `round_window_days`, `legs` (1 ou 2), `skip_dates[]`.
 - `standings`: `mode` (`points` / `win_pct`, como na MiLP), `win`, `loss`, `wo_loss`
-  (padrão 3/1/0). Desempate: vitórias → confronto direto (só entre DOIS empatados)
-  → saldo de games → saldo de pontos → pontos feitos.
+  (padrão 3/1/0) e `tiebreak_order` (lista de critérios; vazia ou ausente = o padrão
+  da liga, `LEAGUE_DEFAULT_TIEBREAK_ORDER`: vitórias → confronto direto → saldo de
+  games → saldo de pontos → pontos feitos). Ver §9.2.
+- `rule.kind` da divisão: `open`, `bracket` (faixa da lista oficial, §9.1),
+  `dupr_range` (a faixa digitada da primeira versão — continua valendo e editável
+  na divisão que já a usa, mas não é mais oferecida) e `dupr_sum` (equipes).
 - **Nenhum contato** na inscrição: conta, nome público, DUPR e a categoria do perfil.
 - **Zero índice composto**: as consultas são de uma igualdade (`status in`,
   `member_uids array-contains`, `division_id ==`).
@@ -95,7 +104,7 @@ chave própria. Ações:
 | `division_save` / `division_remove` | quem gere | remover só divisão sem inscritos |
 | `register` | o atleta | liga aberta, `self_registration`, divisão não lotada, faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso |
 | `withdraw` | o próprio atleta ou quem gere | sem jogo gerado ⇒ apaga; com jogo ⇒ `withdrawn` (os placares seguem valendo para os adversários) |
-| `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **por exceção** (`override`, fica marcado) |
+| `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **fora da regra da divisão**: como no torneio, a organização vê o motivo como aviso e inscreve assim mesmo — o servidor marca `override: true` sozinho quando não cabe (§9.3) |
 | `schedule` | quem gere | gera os jogos da divisão em pontos corridos (`roundRobin`, método do círculo; folga quando é ímpar); refazer só sem placar lançado; com a liga aberta, começa a temporada |
 | `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; `clear` apaga |
 | `staff` | quem gere | até 10 organizadores; o criador não sai |
@@ -114,7 +123,7 @@ ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
 | Rota | Tela |
 |---|---|
 | `/ligas` | `V2Leagues` — "Abertas a todos" e "Minhas ligas"; "Criar liga" e "Criar torneio" |
-| `/ligas/criar` | `V2CreateLeague` — 5 passos: organizador, formato, temporada e pontuação, divisões (conjunto sugerido por DUPR), dados |
+| `/ligas/criar` | `V2CreateLeague` — 5 passos: organizador, formato, temporada e pontuação (com a ordem do desempate), divisões ("Uma divisão por faixa de DUPR" monta as cinco faixas numéricas da lista oficial), dados |
 | `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `inscritos` e, para quem gere, `gerir` (`?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe`) |
 
 Componentes em `src/v2/components/leagues/`. Sem nenhuma flag ligada, as rotas
@@ -131,6 +140,11 @@ são contrato de link.
 
 ## 8. Ainda não (decisões e próximos PRs)
 
+- **Escada individual / King of the Court**: vai usar o padrão do AMERICANO que já
+  existe no torneio e no dia de jogo (grupos de 4 ou 5 pela posição na escada, o
+  rodízio de parceiros do americano dentro do grupo, quem fica em 1º sobe e o
+  último desce) — a rotação será levada ao núcleo, como o desempate.
+
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
 - **PR 2**: escadas (duplas e individual), equipes MiLP/v3/v4 com DreamBreaker,
@@ -138,3 +152,54 @@ são contrato de link.
 - **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
 - Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
   contagem não é transacional) — anotado no código.
+
+## 9. Padrões compartilhados com o torneio (2026-11-12)
+
+Pedido do dono: aproveitar na liga os padrões, campos e itens que já existem,
+sem misturar os dois módulos.
+
+### 9.1 Faixa de nível: a lista OFICIAL
+
+A lista de faixas da Carreira virou a lista oficial da plataforma, em
+`src/core/domain/levelBrackets.js` (`LEVEL_BRACKETS`, `LEVEL_BRACKET_LABEL`,
+`bracketRange`, `levelBracketOptions`, `levelBracketText`, `levelVsBracket`). A
+Carreira reexporta dela (os valores gravados em `career_events.level_bracket` são
+os mesmos). As faixas numéricas (`2.000-2.999` … `4.500+`) têm faixa de DUPR;
+as descritivas (iniciante, intermediário, avançado, pro, aberta, outra) são nome e
+não barram ninguém.
+
+Onde ela vale hoje:
+
+| Onde | Campo | Como |
+|---|---|---|
+| Carreira | `career_events.level_bracket` | a mesma de sempre |
+| Divisão da liga | `rule: { kind: 'bracket', bracket }` | a faixa numérica confere o DUPR do perfil (média da dupla); a descritiva é o nome |
+| Modalidade do torneio | `tournament_modalities.skill_level` | o seletor oferece a lista oficial; os valores antigos (`beginner` … `pro`, `intermediate_plus`, `elite`) seguem gravados e aparecem com o nome de sempre. O aviso de nível da inscrição compara o DUPR do perfil com a faixa — só avisa, nunca barra |
+| Convite de jogo (`open_games.level`) | `level` | o convite novo grava a faixa oficial; o antigo (código do nivelamento) continua aparecendo |
+
+Onde ela **não** entra, de propósito: o **nível declarado** da pessoa no cadastro
+(`leveling`, é o nível dela, não uma faixa de evento); o **mínimo e o máximo** do
+jogo aberto da arena e dos grupos do Play (são pontos na régua 2.0–8.0 em degraus
+de 0,5, conferidos pela régua única — uma faixa como 3.000–3.499 não cabe nesses
+degraus sem mudar o que está gravado); dificuldade de treino e níveis de árbitro
+(outros conceitos). Nada foi migrado.
+
+### 9.2 Desempate configurável
+
+A regra de desempate do torneio (`tiebreak.js`, USA Pickleball 15.B.4, mini-tabela
+recalculada a cada nível) mudou para `src/core/domain/tiebreak.js`; o caminho
+antigo em `modules/tournament/domain/` só reexporta. A liga usa a MESMA função
+(`rankByOfficialCriteria`) dentro de cada bloco de mesmos pontos (ou mesmo
+aproveitamento), e a ordem é configurável com o MESMO editor do torneio
+(`TiebreakOrderEditor`: ordens prontas, subir, descer, tirar, acrescentar,
+"Voltar ao padrão"). A tabela diz embaixo a ordem que está valendo. O servidor
+filtra a ordem gravada pelos nove critérios conhecidos (`tiebreakOrder` em
+`functions/leaguePolicy.js`, com paridade).
+
+### 9.3 Inscrição pela organização como exceção
+
+Como na inscrição de torneio: a organização vê, antes de inscrever, se a dupla
+ou o atleta não cabe na divisão (faixa de DUPR, categoria, soma do time), com o
+motivo — e pode inscrever assim mesmo. Não há mais o interruptor "por exceção":
+o servidor confere e marca `override: true` quando não cabe. Quem não tem conta
+entra sem DUPR e sem categoria, e a tela pede para conferir.

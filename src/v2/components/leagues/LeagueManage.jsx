@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, Flag, Layers, ListChecks, Plus, Settings, Shuffle, Trash2, UserPlus, Users } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Flag, Layers, ListChecks, Plus, Settings, Shuffle, Trash2, UserPlus, Users } from 'lucide-react';
 import { t, tk } from '@/core/i18n';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
@@ -19,6 +19,7 @@ import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
 import { LEAGUE_STATUS_NEXT, formatMeta } from '@/modules/leagues/domain/leagueFormats';
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason';
+import { ELIGIBILITY_REASON_LABELS, divisionEligibility } from '@/modules/leagues/domain/leagueDivisions';
 import DivisionFields, { emptyDivision } from './DivisionFields';
 import SeasonFields from './SeasonFields';
 import PointsFields from './PointsFields';
@@ -228,7 +229,6 @@ function Inscricoes({ league, divisions, entries }) {
   const [divisionId, setDivisionId] = useState('');
   const [comConta, setComConta] = useState([]);
   const [semConta, setSemConta] = useState('');
-  const [excecao, setExcecao] = useState(false);
   const [tirar, setTirar] = useState(null);
   if (divisions.isError || entries.isError) return <V2Surface><V2ErrorState inline title={t('Não carregaram as inscrições')} onRetry={() => { divisions.refetch(); entries.refetch(); }} /></V2Surface>;
   if (!divisions.isSuccess || !entries.isSuccess) return <V2Skeleton className="h-40" />;
@@ -238,10 +238,17 @@ function Inscricoes({ league, divisions, entries }) {
   const nomesSemConta = semConta.split(/[\n,;]/).map((s) => s.trim()).filter(Boolean);
   const players = [...comConta.map((p) => ({ uid: personUid(p) })), ...nomesSemConta.map((name) => ({ name }))].slice(0, n);
   const fechada = ['finished', 'cancelled'].includes(league.status);
+  // Como no torneio: a organização vê o que não cabe na divisão como AVISO e
+  // pode inscrever assim mesmo — a inscrição fica marcada como exceção.
+  const previa = div && players.length === n ? divisionEligibility(div, [
+    ...comConta.map((p) => ({ dupr: Number(p?.dupr_rating) || null, gender: p?.competition_gender || p?.gender || null })),
+    ...nomesSemConta.map(() => ({ dupr: null, gender: null })),
+  ].slice(0, n)) : null;
+  const temSemConta = nomesSemConta.length > 0 && players.length === n;
 
   async function inscrever() {
-    const r = await salvar({ action: 'entry_add', leagueId: league.id, divisionId: div.id, players, override: excecao }, t('Inscrição feita.'));
-    if (r) { setComConta([]); setSemConta(''); setExcecao(false); }
+    const r = await salvar({ action: 'entry_add', leagueId: league.id, divisionId: div.id, players }, t('Inscrição feita.'));
+    if (r) { setComConta([]); setSemConta(''); }
   }
 
   return (
@@ -258,7 +265,16 @@ function Inscricoes({ league, divisions, entries }) {
               <V2Textarea id="g-insc-sem" rows={2} value={semConta} onChange={(e) => setSemConta(e.target.value)} />
             </V2Field>
           )}
-          <V2Toggle id="g-insc-exc" checked={excecao} onChange={setExcecao} label={t('Inscrever por exceção')} hint={t('Entra mesmo fora da regra de nível ou categoria da divisão. Fica marcado.')} />
+          {previa && !previa.ok && (
+            <div role="status" className="flex gap-3 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <p>
+                <strong>{t(ELIGIBILITY_REASON_LABELS[previa.reason] || 'Esta inscrição não cabe na divisão.')}</strong>{' '}
+                {t('Como organizador você pode prosseguir mesmo assim — a inscrição fica marcada como exceção. Confira os dados.')}
+              </p>
+            </div>
+          )}
+          {temSemConta && <p className="text-xs leading-5 text-gray-500">{t('Quem não tem conta entra sem DUPR e sem categoria: confira o nível e a categoria de cada um.')}</p>}
           <V2Button type="button" disabled={pending || players.length !== n} onClick={inscrever}>
             <UserPlus className="h-4 w-4" aria-hidden="true" /> {t('Inscrever')}
           </V2Button>
