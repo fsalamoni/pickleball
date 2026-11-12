@@ -12,13 +12,10 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, RotateCcw, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  TIEBREAK_CRITERIA, TIEBREAK_PRESETS, DEFAULT_TIEBREAK_ORDER, normalizeTiebreakOrder,
-} from '@/modules/tournament/domain/tiebreak';
+import TiebreakOrderEditor from '@/v2/components/competition/TiebreakOrderEditor';
 import {
   CROSS_GROUP_METHOD, CROSS_GROUP_METHOD_LABELS, CROSS_GROUP_METHOD_HELP,
 } from '@/modules/tournament/domain/crossGroup';
@@ -39,103 +36,6 @@ function parseNumberList(texto) {
     .filter((n) => Number.isFinite(n) && n > 0);
 }
 const formatNumberList = (lista) => (Array.isArray(lista) ? lista.join(', ') : '');
-
-/**
- * Editor da ORDEM dos critérios de desempate. Ligar/desligar e subir/descer —
- * sem arrastar, que não funciona no celular da beira da quadra.
- */
-function TiebreakOrderEditor({ value, onChange }) {
-  const ordem = normalizeTiebreakOrder(value);
-  const porChave = new Map(TIEBREAK_CRITERIA.map((c) => [c.key, c]));
-  const foraDaOrdem = TIEBREAK_CRITERIA.filter((c) => !ordem.includes(c.key));
-
-  const mover = (i, delta) => {
-    const nova = ordem.slice();
-    const j = i + delta;
-    if (j < 0 || j >= nova.length) return;
-    [nova[i], nova[j]] = [nova[j], nova[i]];
-    onChange(nova);
-  };
-  const remover = (chave) => {
-    const nova = ordem.filter((k) => k !== chave);
-    onChange(nova.length > 0 ? nova : [...DEFAULT_TIEBREAK_ORDER]);
-  };
-
-  return (
-    <div className="space-y-2 md:col-span-2">
-      <Label className="text-xs">{t('Ordem dos critérios de desempate (dentro do grupo)')}</Label>
-      <Help>
-        {t('Aplicados nesta ordem, de cima para baixo. Quando um critério separa os empatados, os que continuam empatados são comparados de novo')} <strong>{t('a partir do primeiro critério, só entre eles')}</strong> {t('— é o que faz "eu ganhei dele" continuar valendo depois que um terceiro sai da conta.')}
-      </Help>
-
-      <div className="flex flex-wrap gap-1.5">
-        {TIEBREAK_PRESETS.map((p) => (
-          <Button
-            key={p.id}
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 text-[11px]"
-            title={p.help}
-            onClick={() => onChange([...p.order])}
-          >
-            <Sparkles className="mr-1 h-3 w-3" /> {p.label}
-          </Button>
-        ))}
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-7 text-[11px]"
-          onClick={() => onChange([])}
-        >
-          <RotateCcw className="mr-1 h-3 w-3" /> {t('Voltar ao padrão')}
-        </Button>
-      </div>
-
-      <ol className="space-y-1">
-        {ordem.map((chave, i) => {
-          const c = porChave.get(chave);
-          return (
-            <li key={chave} className="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-2">
-              <span className="mt-0.5 w-5 shrink-0 text-center text-xs font-bold text-gray-400">{t('{n}º', { n: i + 1 })}</span>
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-ink">{c?.label || chave}</div>
-                {c?.help && <Help>{c.help}</Help>}
-              </div>
-              <div className="flex shrink-0 gap-1">
-                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label={t('Subir')}
-                  disabled={i === 0} onClick={() => mover(i, -1)}>
-                  <ArrowUp className="h-3 w-3" />
-                </Button>
-                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label={t('Descer')}
-                  disabled={i === ordem.length - 1} onClick={() => mover(i, 1)}>
-                  <ArrowDown className="h-3 w-3" />
-                </Button>
-                <Button type="button" size="sm" variant="ghost" className="h-6 px-1.5 text-[10px]"
-                  disabled={ordem.length <= 1} onClick={() => remover(chave)}>
-                  {t('tirar')}
-                </Button>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-
-      {foraDaOrdem.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-gray-500">{t('Acrescentar:')}</span>
-          {foraDaOrdem.map((c) => (
-            <Button key={c.key} type="button" size="sm" variant="outline" className="h-6 text-[10px]"
-              title={c.help} onClick={() => onChange([...ordem, c.key])}>
-              + {c.label}
-            </Button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /**
  * @param {{
@@ -202,6 +102,8 @@ export default function PhaseAdvancedRules({
 
           {(grouped || phase.type === 'round_robin' || tabelaUnica) && (
             <TiebreakOrderEditor
+              className="md:col-span-2"
+              label={t('Ordem dos critérios de desempate (dentro do grupo)')}
               value={phase.tiebreak_order}
               onChange={(v) => onChange({ tiebreak_order: v })}
             />

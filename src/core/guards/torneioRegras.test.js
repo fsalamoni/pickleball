@@ -30,6 +30,8 @@ describe('⭐ o desempate tem UMA fonte', () => {
   const CONSUMIDORES = [
     'src/modules/tournament/domain/ranking.js',
     'src/modules/tournament/domain/phaseProgression.js',
+    // A liga é um módulo à parte, mas desempata pela MESMA fonte (2026-11-12).
+    'src/modules/leagues/domain/leagueResults.js',
   ];
 
   CONSUMIDORES.forEach((caminho) => {
@@ -48,7 +50,7 @@ describe('⭐ o desempate tem UMA fonte', () => {
   });
 
   it('⭐ a fonte única implementa o confronto direto', () => {
-    const src = ler('src/modules/tournament/domain/tiebreak.js');
+    const src = ler('src/core/domain/tiebreak.js');
     expect(src).toContain('head_to_head');
     expect(src).toContain('miniTable');
     expect(src).toContain('DEFAULT_TIEBREAK_ORDER');

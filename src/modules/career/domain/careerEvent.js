@@ -18,6 +18,7 @@
 import { t, tk } from '@/core/i18n';
 import { normalizeLocality } from '@/core/domain/locality.js';
 import { isBrazilUF } from '@/core/domain/ufs.js';
+import { LEVEL_BRACKETS, LEGACY_LEVEL_BRACKETS, LEVEL_BRACKET_LABEL, levelBracketText } from '@/core/domain/levelBrackets.js';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { addDays, isISODate, toISODate, todayLocal } from '@/modules/training/domain/dates.js';
 import {
@@ -53,37 +54,12 @@ export const CAREER_AGES = Object.freeze([...Object.values(AGE_CATEGORY), 'other
 
 /**
  * Faixa de nível DECLARADA (como o torneio de fora chamou a categoria). Nunca
- * alimenta a régua 2.0–8.0. Os valores são GRAVADOS: nunca renomeie. A ordem é
- * a do seletor, como o Flavio pediu em 2026-11-06.
+ * alimenta a régua 2.0–8.0. Desde 2026-11-12 é a lista OFICIAL da plataforma
+ * e mora no núcleo (`core/domain/levelBrackets.js`); aqui só se reexporta. As
+ * faixas antigas (`LEGACY_LEVEL_BRACKETS`) seguem aceitas ao salvar de novo.
  */
-export const LEVEL_BRACKETS = Object.freeze([
-  '2.000-2.999', '3.000-3.499', '3.500-3.999', '3.000-3.999', '4.000-4.499', '4.500+',
-  'beginner', 'intermediate', 'advanced', 'pro', 'open', 'other',
-]);
-/**
- * As faixas da primeira versão (até 2026-11-06). Saíram do seletor, mas o que
- * já foi gravado com elas continua valendo: é aceito ao salvar de novo e
- * aparece como foi gravado. Nada é migrado.
- */
-export const LEGACY_LEVEL_BRACKETS = Object.freeze(['2.5', '3.0', '3.5', '4.0', '4.5', '5.0+', 'A', 'B', 'C', 'D']);
+export { LEVEL_BRACKETS, LEGACY_LEVEL_BRACKETS, LEVEL_BRACKET_LABEL, levelBracketText };
 const ACCEPTED_LEVEL_BRACKETS = Object.freeze([...LEVEL_BRACKETS, ...LEGACY_LEVEL_BRACKETS]);
-export const LEVEL_BRACKET_LABEL = Object.freeze({
-  '2.000-2.999': tk('Entre 2,000 e 2,999'),
-  '3.000-3.499': tk('Entre 3,000 e 3,499'),
-  '3.500-3.999': tk('Entre 3,500 e 3,999'),
-  '3.000-3.999': tk('Entre 3,000 e 3,999'),
-  '4.000-4.499': tk('Entre 4,000 e 4,499'),
-  '4.500+': tk('Superior a 4,500'),
-  beginner: tk('Iniciante'), intermediate: tk('Intermediário'), advanced: tk('Avançado'),
-  pro: tk('PRO'), open: tk('OPEN'), other: tk('Outra'),
-});
-
-/** O texto de uma faixa gravada: a da lista atual traduzida; a antiga, como foi gravada. */
-export function levelBracketText(bracket, label = '') {
-  if (!bracket) return '';
-  if (bracket === 'other') return label || t(LEVEL_BRACKET_LABEL.other);
-  return LEVEL_BRACKET_LABEL[bracket] ? t(LEVEL_BRACKET_LABEL[bracket]) : bracket;
-}
 
 /** Colocação. Gravado: nunca renomeie. */
 export const PLACEMENT = Object.freeze({

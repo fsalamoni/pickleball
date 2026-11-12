@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
+import { levelBracketOptions } from '@/core/domain/levelBrackets';
 import { OPEN_GAME_FORMAT_LABELS, normalizeOpenGameInput } from '../domain/openGames.js';
 import { useCreateOpenGame } from '../hooks/useOpenGames.js';
 import { t } from '@/core/i18n';
@@ -106,8 +106,8 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="">{t('Qualquer nível')}</option>
-                {LEVEL_OPTIONS.map((o) => (
-                  <option key={o.code} value={o.code}>{o.label}</option>
+                {levelBracketOptions(level, { withOther: false }).map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             </div>

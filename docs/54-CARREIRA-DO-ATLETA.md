@@ -56,7 +56,7 @@ gravar (limites em `CAREER_LIMITS`).
 | `platform_tournament_id` | string \| null | gravado quando a pessoa responde "É este" (ver §4.4) |
 | `created_at_ms`, `updated_at_ms` | número | |
 
-**Faixa de nível (`level_bracket`).** É a faixa DECLARADA (como o torneio de
+**Faixa de nível (`level_bracket`).** Desde 2026-11-12 esta lista é a **lista OFICIAL de faixas da plataforma** e mora em `src/core/domain/levelBrackets.js` (a Carreira reexporta dela; a divisão da liga, a modalidade do torneio e o convite de jogo usam a mesma — docs/57 §9.1). É a faixa DECLARADA (como o torneio de
 fora chamou a categoria) e nunca alimenta a régua 2.0–8.0. O seletor oferece,
 nesta ordem (`LEVEL_BRACKETS`, texto em `LEVEL_BRACKET_LABEL`, lista do Flavio
 de 2026-11-06): `2.000-2.999` (Entre 2,000 e 2,999), `3.000-3.499`,

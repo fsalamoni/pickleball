@@ -14,7 +14,7 @@
 |---|---|
 | Módulos de domínio (`src/modules/`) | 34 |
 | Telas V2 (`src/v2/pages/V2*.jsx`) | 120 |
-| Pastas de componentes V2 (`src/v2/components/`) | 35 |
+| Pastas de componentes V2 (`src/v2/components/`) | 36 |
 | Coleções raiz no `firestore.rules` | 248 |
 | Blocos `match` (raiz + subcoleções) | 277 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 16 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 999 |
+| Arquivos de teste (`*.test.js(x)`) | 1000 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 63 |
 
@@ -92,12 +92,12 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `coaches` | 4 | `home`, `progression`, `promo`, `training` | `arenas`, `athletes`, `leveling`, `marketplace`, `promo`, `rating`, `sharing`, `training` |
 | `federations` | 4 | `clubs`, `leagues`, `promo`, `tournament` | `arenas`, `marketplace`, `tournament` |
 | `feed` | 0 | — | — |
-| `games` | 10 | `arenas`, `athletes`, `career`, `clubs`, `home`, `performance`, `progression`, `rating`, `social`, `training` | `analytics`, `arenas`, `athletes`, `clubs`, `leveling`, `performance`, `rating`, `tournament` |
+| `games` | 10 | `arenas`, `athletes`, `career`, `clubs`, `home`, `performance`, `progression`, `rating`, `social`, `training` | `analytics`, `arenas`, `athletes`, `clubs`, `performance`, `rating`, `tournament` |
 | `help` | 0 | — | `clubs`, `progression` |
 | `home` | 2 | `tournament`, `training` | `arenas`, `athletes`, `clubs`, `coaches`, `games`, `tournament` |
 | `leagues` | 0 | — | `federations` |
 | `legal` | 0 | — | — |
-| `leveling` | 5 | `admin`, `coaches`, `games`, `rating`, `tournament` | — |
+| `leveling` | 4 | `admin`, `coaches`, `rating`, `tournament` | — |
 | `linecall` | 0 | — | `tournament` |
 | `marketplace` | 2 | `coaches`, `federations` | `arenas`, `training` |
 | `messaging` | 0 | — | `admin`, `notifications` |
@@ -115,7 +115,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `training` | 3 | `career`, `coaches`, `marketplace` | `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `tournament` |
 | `trophies` | 1 | `career` | `athletes`, `tournament` |
 
-Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`, `dicas`, `federations`, `feed`, `games`, `gamification`, `home`, `i18n`, `idioma`, `leagues`, `legal`, `leveling`, `linecall`, `marketplace`, `notifications`, `onboarding`, `people`, `performance`, `profile`, `promo`, `rating`, `region`, `search`, `settings`, `theme`, `tournament`, `training`, `trophies`, `tutorial`, `userArea`.
+Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`, `competition`, `dicas`, `federations`, `feed`, `games`, `gamification`, `home`, `i18n`, `idioma`, `leagues`, `legal`, `leveling`, `linecall`, `marketplace`, `notifications`, `onboarding`, `people`, `performance`, `profile`, `promo`, `rating`, `region`, `search`, `settings`, `theme`, `tournament`, `training`, `trophies`, `tutorial`, `userArea`.
 
 ## 4. Rotas
 

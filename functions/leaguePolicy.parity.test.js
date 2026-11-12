@@ -10,6 +10,8 @@ import { LEAGUE_FLAG_BY_ORGANIZER } from '@/modules/leagues/domain/leagueAccess.
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason.js';
 import { normalizeDivisionRule, divisionEligibility, DIVISION_GENDER } from '@/modules/leagues/domain/leagueDivisions.js';
 import { validateResult, MAX_GAMES } from '@/modules/leagues/domain/leagueResults.js';
+import { LEVEL_BRACKETS, LEVEL_BRACKET_RANGE, isOfficialBracket } from '@/core/domain/levelBrackets.js';
+import { TIEBREAK_CRITERIA, normalizeTiebreakOrder } from '@/core/domain/tiebreak.js';
 
 const require = createRequire(import.meta.url);
 const s = require('./leaguePolicy.js');
@@ -28,6 +30,20 @@ describe('paridade das ligas', () => {
     expect(s.MAX_GAMES).toBe(MAX_GAMES);
   });
 
+  it('a lista oficial de faixas e o intervalo das numéricas iguais', () => {
+    expect(s.LEVEL_BRACKETS).toEqual([...LEVEL_BRACKETS]);
+    const numericas = Object.fromEntries(Object.entries(LEVEL_BRACKET_RANGE).filter(([b]) => isOfficialBracket(b)).map(([b, r]) => [b, { ...r }]));
+    expect(s.BRACKET_RANGE).toEqual(numericas);
+  });
+
+  it('critérios de desempate iguais aos do torneio', () => {
+    expect(s.TIEBREAK_KEYS).toEqual(TIEBREAK_CRITERIA.map((c) => c.key));
+    [['balance', 'x', 'balance'], ['sets', 'wins'], []].forEach((o) => {
+      if (o.length) expect(s.tiebreakOrder(o)).toEqual(normalizeTiebreakOrder(o));
+      else expect(s.tiebreakOrder(o)).toEqual([]);
+    });
+  });
+
   it('temporada normalizada igual', () => {
     const casos = [
       undefined, {}, { start_date: '2026-03-03', cadence: 'biweekly', skip_dates: ['2026-03-17', 'x'], legs: 2 },
@@ -44,6 +60,9 @@ describe('paridade das ligas', () => {
       { rule: { kind: 'dupr_range', min: 3.5, allow_unrated: false } },
       { rule: { kind: 'dupr_sum', cap: 16.3, individual_cap: 4.6, unrated_value: 4 } },
       { gender: 'mixed' }, { gender: 'female', rule: { kind: 'dupr_range', max: 4 } },
+      { rule: { kind: 'bracket', bracket: '3.500-3.999' } }, { rule: { kind: 'bracket', bracket: '4.500+', allow_unrated: false } },
+      { rule: { kind: 'bracket', bracket: 'pro' } }, { rule: { kind: 'bracket', bracket: 'other', label: '  Liga B  ' } },
+      { rule: { kind: 'bracket', bracket: '4.0' } },
     ];
     const elencos = [
       [{ dupr: 3.6, gender: 'male' }, { dupr: 4.2, gender: 'female' }],

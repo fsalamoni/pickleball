@@ -4,11 +4,12 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { t, fmtNumero } from '@/core/i18n';
+import { t, fmtNumero, fmtLista } from '@/core/i18n';
+import { describeTiebreakOrder } from '@/core/domain/tiebreak';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { V2Badge, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
-import { computeLeagueStandings } from '@/modules/leagues/domain/leagueResults';
+import { computeLeagueStandings, leagueTiebreakOrder } from '@/modules/leagues/domain/leagueResults';
 import { divisionSummary } from './leagueUi';
 
 export function DivisionChips({ divisions, value, onChange }) {
@@ -90,6 +91,10 @@ export default function LeagueStandings({ league, divisions, entries, matches })
           </div>
         )}
       </V2Surface>
+      <p className="px-1 text-xs leading-5 text-gray-500">
+        {pontos ? t('Ordem: pontos.') : t('Ordem: aproveitamento.')}{' '}
+        {t('Desempate: {criterios}.', { criterios: fmtLista(describeTiebreakOrder(leagueTiebreakOrder(league.standings?.tiebreak_order)).map((c) => c.label)) })}
+      </p>
     </div>
   );
 }

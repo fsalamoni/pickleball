@@ -39,6 +39,7 @@ import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS } from '@/modules/games/domai
 import { PLAY_KIND } from '@/modules/games/domain/playDiscovery';
 import { hojeLocal } from '@/modules/home/domain/freshness';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
+import { isOfficialBracket, levelBracketText } from '@/core/domain/levelBrackets';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
@@ -59,6 +60,8 @@ import { t } from '@/core/i18n';
 
 function levelLabel(code) {
   if (!code) return null;
+  // Convite novo grava a faixa oficial; o antigo, o código de nível — os dois aparecem.
+  if (isOfficialBracket(code)) return levelBracketText(code);
   return getLevelByCode(code)?.name || code;
 }
 

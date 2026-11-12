@@ -125,6 +125,21 @@ describe('eligibility', () => {
       // Aviso, não erro
       expect(r.errors).toHaveLength(0);
     });
+
+    it('faixa oficial numérica: compara com o DUPR do perfil e só avisa', () => {
+      const m = { format: MODALITY_FORMAT.SINGLES, skill_level: '3.500-3.999' };
+      const acima = evaluatePlayerEligibility(m, { dupr_rating: 4.2 });
+      expect(acima.errors).toHaveLength(0);
+      expect(acima.warnings[0]).toMatch(/Entre 3,500 e 3,999.*DUPR 4,200.*superior/);
+      expect(evaluatePlayerEligibility(m, { dupr_rating: 3.2 }).warnings[0]).toMatch(/inferior/);
+      expect(evaluatePlayerEligibility(m, { dupr_rating: 3.7 }).warnings).toHaveLength(0);
+      expect(evaluatePlayerEligibility(m, {}).warnings).toHaveLength(0);
+    });
+
+    it('OPEN nunca avisa', () => {
+      const m = { format: MODALITY_FORMAT.SINGLES, skill_level: 'open' };
+      expect(evaluatePlayerEligibility(m, { dupr_rating: 2.1 }).warnings).toHaveLength(0);
+    });
   });
 
   describe('evaluateRegistrationEligibility (orquestrador)', () => {

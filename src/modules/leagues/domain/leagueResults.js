@@ -8,7 +8,20 @@
  * servidor (`functions/leaguePolicy.js`, paridade).
  */
 import { tk } from '@/core/i18n';
+import { buildHeadToHead, normalizeTiebreakOrder, rankByOfficialCriteria } from '@/core/domain/tiebreak.js';
 import { DEFAULT_LEAGUE_POINTS } from './leagueFormats.js';
+
+/**
+ * A ordem de desempate da LIGA quando a organização não escolhe: a de sempre
+ * (vitórias, confronto direto, saldo de games, saldo de pontos, pontos feitos).
+ * A organização troca pelo mesmo editor do torneio (`standings.tiebreak_order`).
+ */
+export const LEAGUE_DEFAULT_TIEBREAK_ORDER = Object.freeze(['wins', 'head_to_head', 'sets', 'balance', 'points_for']);
+
+/** A ordem que vale: a escolhida (só critérios conhecidos) ou a da liga. */
+export function leagueTiebreakOrder(order) {
+  return Array.isArray(order) && order.length ? normalizeTiebreakOrder(order) : [...LEAGUE_DEFAULT_TIEBREAK_ORDER];
+}
 
 export const MAX_GAMES = 5;
 export const MAX_SCORE = 99;
@@ -83,13 +96,12 @@ function linhaVazia(entry) {
  *
  * @param {Array<{ id: string, name?: string, status?: string }>} entries
  * @param {Array<object>} matches  só os da divisão (fase de temporada)
- * @param {{ mode?: string, win?: number, loss?: number, wo_loss?: number }} [config]
+ * @param {{ mode?: string, win?: number, loss?: number, wo_loss?: number, tiebreak_order?: string[] }} [config]
  */
 export function computeLeagueStandings(entries, matches, config = {}) {
   const pts = { ...DEFAULT_LEAGUE_POINTS, ...(config || {}) };
   const mode = config?.mode === STANDINGS_MODE.WIN_PCT ? STANDINGS_MODE.WIN_PCT : STANDINGS_MODE.POINTS;
   const linhas = new Map((Array.isArray(entries) ? entries : []).filter((e) => e?.id).map((e) => [e.id, linhaVazia(e)]));
-  const confronto = new Map();
   for (const m of Array.isArray(matches) ? matches : []) {
     const w = matchWinner(m);
     if (!w) continue;
@@ -112,39 +124,32 @@ export function computeLeagueStandings(entries, matches, config = {}) {
         if (g.a > g.b) { A.games_won += 1; B.games_lost += 1; } else { B.games_won += 1; A.games_lost += 1; }
       }
     }
-    confronto.set(`${venc.entry_id}>${perd.entry_id}`, (confronto.get(`${venc.entry_id}>${perd.entry_id}`) || 0) + 1);
   }
-  const rows = [...linhas.values()].map((r) => ({ ...r, win_pct: r.played ? r.wins / r.played : 0 }));
+  const rows = [...linhas.values()].map((r) => ({
+    ...r, win_pct: r.played ? r.wins / r.played : 0, sets_won: r.games_won, sets_lost: r.games_lost,
+  }));
   const chave = mode === STANDINGS_MODE.WIN_PCT ? (r) => r.win_pct : (r) => r.points;
-  // Grupo de empate: mesma situação, mesma chave e (em pontos) as mesmas vitórias.
-  const grupo = (r) => `${r.withdrawn ? 1 : 0}|${chave(r)}|${mode === STANDINGS_MODE.POINTS ? r.wins : ''}`;
-  const primario = (a, b) => {
-    if (a.withdrawn !== b.withdrawn) return a.withdrawn ? 1 : -1;
-    if (chave(b) !== chave(a)) return chave(b) - chave(a);
-    return mode === STANDINGS_MODE.POINTS ? b.wins - a.wins : 0;
-  };
-  const resto = (a, b) => {
-    const dg = (b.games_won - b.games_lost) - (a.games_won - a.games_lost);
-    if (dg) return dg;
-    const dp = (b.points_for - b.points_against) - (a.points_for - a.points_against);
-    if (dp) return dp;
-    if (b.points_for !== a.points_for) return b.points_for - a.points_for;
-    return a.name.localeCompare(b.name, 'pt-BR');
-  };
-  rows.sort((a, b) => primario(a, b) || resto(a, b));
-  // Confronto direto só entre DOIS empatados: com três ou mais ele pode girar
-  // em círculo (A>B>C>A) e deixaria a ordem sem sentido.
-  for (let i = 0; i < rows.length - 1; i += 1) {
-    const g = grupo(rows[i]);
-    let j = i;
-    while (j + 1 < rows.length && grupo(rows[j + 1]) === g) j += 1;
-    if (j === i + 1) {
-      const [a, b] = [rows[i], rows[j]];
-      const ab = confronto.get(`${a.entry_id}>${b.entry_id}`) || 0;
-      const ba = confronto.get(`${b.entry_id}>${a.entry_id}`) || 0;
-      if (ba > ab) [rows[i], rows[j]] = [b, a];
-    }
-    i = j;
-  }
-  return rows.map((r, i) => ({ ...r, position: i + 1 }));
+  // O desempate é o do TORNEIO (`core/domain/tiebreak.js`), na ordem que a
+  // organização escolheu: confronto direto com mini-tabela entre três ou mais,
+  // critério que não se aplica é pulado. Empate absoluto: ordem do nome.
+  const headToHead = buildHeadToHead((Array.isArray(matches) ? matches : []).filter((m) => linhas.has(m?.side_a) && linhas.has(m?.side_b)), {
+    sideIds: (m, s) => [s === 'a' ? m.side_a : m.side_b],
+    result: (m) => {
+      const winner = matchWinner(m);
+      if (!winner) return null;
+      const soma = (lado) => (m.wo_winner ? 0 : (m.games || []).reduce((n, g) => n + (Number(g?.[lado]) || 0), 0));
+      return { winner, pointsA: soma('a'), pointsB: soma('b') };
+    },
+  });
+  const order = leagueTiebreakOrder(config?.tiebreak_order);
+  const blocos = new Map();
+  rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).forEach((r) => {
+    const k = `${r.withdrawn ? 1 : 0}|${chave(r)}`;
+    if (!blocos.has(k)) blocos.set(k, []);
+    blocos.get(k).push(r);
+  });
+  const ordenados = [...blocos.values()]
+    .sort((x, y) => (x[0].withdrawn - y[0].withdrawn) || (chave(y[0]) - chave(x[0])))
+    .flatMap((bloco) => rankByOfficialCriteria(bloco, { headToHead, idOf: (r) => r.entry_id, order }));
+  return ordenados.map((r, i) => ({ ...r, position: i + 1 }));
 }

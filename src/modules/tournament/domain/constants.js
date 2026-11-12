@@ -5,6 +5,7 @@
  * os rótulos para exibição são em pt-BR e ficam nos mapas *_LABELS.
  */
 import { t, tk } from '@/core/i18n';
+import { LEVEL_BRACKET_LABEL, LEGACY_SKILL_LEVEL_LABEL } from '@/core/domain/levelBrackets.js';
 
 /**
  * Mapa de rótulos traduzido na LEITURA: o catálogo de idioma chega depois do
@@ -257,15 +258,13 @@ export const SKILL_LEVEL = Object.freeze({
   ELITE: 'elite',
 });
 
-export const SKILL_LEVEL_LABELS = rotulos({
-  [SKILL_LEVEL.BEGINNER]: tk('Iniciante (2.0–2.5)'),
-  [SKILL_LEVEL.INTERMEDIATE]: tk('Intermediário (3.0)'),
-  [SKILL_LEVEL.INTERMEDIATE_PLUS]: tk('Intermediário Plus (3.5–4.0)'),
-  [SKILL_LEVEL.ADVANCED]: tk('Avançado (4.0)'),
-  [SKILL_LEVEL.PRO]: tk('PRO (4.5)'),
-  [SKILL_LEVEL.OPEN]: tk('Open (5.0+)'),
-  [SKILL_LEVEL.ELITE]: tk('Elite (Profissional)'),
-});
+/**
+ * O nome da categoria de nível. Desde 2026-11-12 é a lista OFICIAL de faixas
+ * da plataforma (`core/domain/levelBrackets.js` — a mesma da Carreira e da
+ * liga); os níveis antigos que não estão nela (`intermediate_plus`, `elite`)
+ * seguem com o nome de antes. Nada é migrado.
+ */
+export const SKILL_LEVEL_LABELS = rotulos({ ...LEVEL_BRACKET_LABEL, ...LEGACY_SKILL_LEVEL_LABEL });
 
 /** Categoria por gênero (CBP). */
 export const GENDER_CATEGORY = Object.freeze({

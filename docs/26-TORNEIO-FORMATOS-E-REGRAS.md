@@ -170,7 +170,7 @@ Critérios: vitórias · confronto direto · saldo · saldo no confronto direto 
 pontos a favor · pontos sofridos · **aproveitamento (%)** · **saldo por
 partida** · **saldo de games/sets**.
 
-Fonte única em `tiebreak.js` — a mesma regra vale na classificação do grupo, no
+Fonte única em `tiebreak.js` (desde 2026-11-12 em `src/core/domain/`, porque a liga usa a mesma; o caminho do torneio reexporta; o editor da ordem é `v2/components/competition/TiebreakOrderEditor.jsx`, o mesmo da liga) — a mesma regra vale na classificação do grupo, no
 ranking da modalidade e na progressão entre fases.
 
 ---

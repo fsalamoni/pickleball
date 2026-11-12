@@ -142,7 +142,11 @@ function pontosDe(raw) {
     const n = Math.floor(Number(v));
     return Number.isFinite(n) && n >= 0 && n <= 10 ? n : padrao;
   };
-  return { mode: r.mode === 'win_pct' ? 'win_pct' : 'points', win: int(r.win, 3), loss: int(r.loss, 1), wo_loss: int(r.wo_loss, 0) };
+  return {
+    mode: r.mode === 'win_pct' ? 'win_pct' : 'points', win: int(r.win, 3), loss: int(r.loss, 1), wo_loss: int(r.wo_loss, 0),
+    // A ordem de desempate do torneio, escolhida pela organização ([] = a padrão da liga).
+    tiebreak_order: P.tiebreakOrder(r.tiebreak_order),
+  };
 }
 
 /** Campos da liga que a organização edita (lista fechada). */
@@ -337,7 +341,9 @@ async function entryAdd(ctx, actor, data) {
     if (!name) falha('invalid-argument', 'Informe o nome de quem não tem conta.');
     return { uid: null, name, dupr: null, gender: null };
   }));
-  return gravarInscricao(ctx, actor, lg, data, players, { override: data.override === true, by: 'organizer' });
+  // Como no torneio: a organização inscreve mesmo fora da regra da divisão, e a
+  // inscrição fica marcada como exceção (`eligibility.override`).
+  return gravarInscricao(ctx, actor, lg, data, players, { override: true, by: 'organizer' });
 }
 
 async function withdraw(ctx, actor, data) {

@@ -699,7 +699,7 @@ resultado idêntico (mexer num lado só quebra o teste, de propósito):
 | Gamificação: matemática e ids dos primeiros passos | `functions/gamificationCore.js`, `gamification.js` | `src/modules/progression/domain` | `src/modules/progression/domain/serverParity.test.js` |
 | Avisos por e-mail/celular: configuração, escolhas, decisão por canal | `functions/messagingPolicy.js` | `src/modules/messaging/domain/policy.js` | `functions/messagingPolicy.parity.test.js` |
 | Fila de espera: prazo e lugares | `functions/openSlotWaitlist.js` | `src/modules/arenas/domain/waitlist.js` | `functions/openSlotWaitlist.test.js` / `waitlist.test.js` |
-| Ligas: formatos, flags, calendário, divisão, placar | `functions/leaguePolicy.js` | `src/modules/leagues/domain/*` | `functions/leaguePolicy.parity.test.js` |
+| Ligas: formatos, flags, calendário, divisão (faixas oficiais), placar, critérios de desempate | `functions/leaguePolicy.js` | `src/modules/leagues/domain/*` | `functions/leaguePolicy.parity.test.js` |
 
 ## 10. Deploy, vigilância e como testar
 

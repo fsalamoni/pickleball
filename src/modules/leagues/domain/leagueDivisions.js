@@ -1,9 +1,14 @@
 /**
  * As DIVISÕES da liga: quem cabe em cada uma (fonte única do cliente).
  *
- * Três jeitos de dividir, gravados em `divisions.rule.kind`:
+ * Jeitos de dividir, gravados em `divisions.rule.kind`:
  *  - `open`: qualquer um;
- *  - `dupr_range`: faixa de DUPR (a média da dupla, ou o do atleta);
+ *  - `bracket`: uma faixa da lista OFICIAL de faixas da plataforma
+ *    (`core/domain/levelBrackets.js`, a mesma da Carreira e do torneio). A
+ *    numérica confere a média do DUPR da dupla (ou o do atleta); a descritiva
+ *    (Iniciante, PRO, OPEN…) é o nome da divisão e não barra ninguém;
+ *  - `dupr_range`: faixa de DUPR digitada (a da primeira versão; segue
+ *    valendo, mas o seletor novo oferece a lista oficial);
  *  - `dupr_sum`: teto da SOMA da equipe, com teto individual opcional — o
  *    modelo da Minor League Pickleball (`MILP_DIVISIONS`).
  *
@@ -12,12 +17,14 @@
  * a conta na inscrição (`functions/leaguePolicy.js`, paridade).
  */
 import { tk } from '@/core/i18n';
+import { bracketRange, isOfficialBracket, levelBracketText } from '@/core/domain/levelBrackets.js';
 
-export const DIVISION_RULE = Object.freeze({ OPEN: 'open', DUPR_RANGE: 'dupr_range', DUPR_SUM: 'dupr_sum' });
+export const DIVISION_RULE = Object.freeze({ OPEN: 'open', BRACKET: 'bracket', DUPR_RANGE: 'dupr_range', DUPR_SUM: 'dupr_sum' });
 
 export const DIVISION_RULE_LABELS = Object.freeze({
   open: tk('Livre (qualquer nível)'),
-  dupr_range: tk('Faixa de DUPR'),
+  bracket: tk('Faixa de nível (lista oficial)'),
+  dupr_range: tk('Faixa de DUPR personalizada'),
   dupr_sum: tk('Teto da soma do DUPR da equipe'),
 });
 
@@ -67,6 +74,12 @@ export function normalizeDivisionRule(raw = {}) {
     if (min && max && min > max) [min, max] = [max, min];
     return { kind, min, max, allow_unrated: r.allow_unrated !== false };
   }
+  if (kind === DIVISION_RULE.BRACKET) {
+    if (!isOfficialBracket(r.bracket)) return { kind: DIVISION_RULE.OPEN };
+    const out = { kind, bracket: r.bracket, allow_unrated: r.allow_unrated !== false };
+    if (r.bracket === 'other') out.label = String(r.label == null ? '' : r.label).trim().slice(0, 40);
+    return out;
+  }
   if (kind === DIVISION_RULE.DUPR_SUM) {
     return { kind, cap: num(r.cap), individual_cap: num(r.individual_cap), unrated_value: num(r.unrated_value) || 3.0 };
   }
@@ -109,13 +122,16 @@ export function divisionEligibility(division, players) {
   if (genero) return resp(genero);
   const duprs = lista.map((p) => num(p?.dupr));
   const semDupr = duprs.some((d) => d == null);
-  if (rule.kind === DIVISION_RULE.DUPR_RANGE) {
+  const faixa = rule.kind === DIVISION_RULE.BRACKET ? bracketRange(rule.bracket) : null;
+  if (rule.kind === DIVISION_RULE.DUPR_RANGE || faixa) {
+    const min = faixa ? faixa.min : rule.min;
+    const max = faixa ? faixa.max : rule.max;
     const conhecidos = duprs.filter((d) => d != null);
     if (semDupr && !rule.allow_unrated) return resp('missing_dupr');
     if (!conhecidos.length) return resp(null, null, true);
     const media = tres(conhecidos.reduce((a, b) => a + b, 0) / conhecidos.length);
-    if (rule.min && media < rule.min) return resp('below', media, semDupr);
-    if (rule.max && media > rule.max) return resp('above', media, semDupr);
+    if (min && media < min) return resp('below', media, semDupr);
+    if (max && media > max) return resp('above', media, semDupr);
     return resp(null, media, semDupr);
   }
   if (rule.kind === DIVISION_RULE.DUPR_SUM) {
@@ -131,6 +147,7 @@ export function divisionEligibility(division, players) {
 /** Resumo de uma linha da regra ("DUPR 3,500 a 4,000", "Soma até 16,300"). */
 export function describeDivisionRule(division, fmt = (n) => n.toFixed(3)) {
   const r = normalizeDivisionRule(division?.rule);
+  if (r.kind === DIVISION_RULE.BRACKET) return { key: 'bracket', text: levelBracketText(r.bracket, r.label), numeric: !!bracketRange(r.bracket) };
   if (r.kind === DIVISION_RULE.DUPR_RANGE) {
     if (r.min && r.max) return { key: 'range', min: fmt(r.min), max: fmt(r.max) };
     if (r.min) return { key: 'min', min: fmt(r.min) };
