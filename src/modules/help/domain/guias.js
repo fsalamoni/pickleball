@@ -1258,7 +1258,23 @@ const GUIAS_BASE = [
     summary: tk('Nome, data e categoria em 30 segundos; a foto e o resultado, quando quiser.'),
     keywords: ['carreira', 'torneio de fora', 'registrar', 'medalha', 'foto', 'histórico', 'linha do tempo'],
     screens: ['/carreira'],
+    // A ORDEM segue a tela: primeiro o que fica na PÁGINA ("Vários de uma vez"),
+    // depois o diálogo de registro, depois o que a ficha guarda (Foto → Dupla →
+    // Balanço, a ordem das camadas) e, por último, salvar. 🐞 "Vários de uma vez" vinha DEPOIS do passo que abre
+    // o registro: o alvo ficava atrás do diálogo, o cartão do guia saía dele e
+    // tocar em "Próximo" (um clique fora) fechava o formulário com o que a
+    // pessoa tinha digitado. Pelo mesmo motivo os passos da ficha procuram
+    // primeiro uma âncora DENTRO do diálogo aberto (a camada Dupla existe em
+    // toda ficha; o formato, no registro) e só então as abas da página.
     steps: [
+      {
+        id: 'lista',
+        route: '/carreira',
+        goTo: '/carreira',
+        target: ['carreira-lista', 'carreira-registrar'],
+        title: tk('Vários de uma vez'),
+        body: tk('Para os anos passados: uma linha por torneio, com o ano, o nome, a categoria e a medalha, tudo salvo junto. Para um torneio só, siga para o próximo passo.'),
+      },
       {
         id: 'registrar',
         route: '/carreira',
@@ -1274,42 +1290,46 @@ const GUIAS_BASE = [
         route: '/carreira',
         target: 'carreira-registrar-formato',
         title: tk('Nome, data e categoria'),
-        body: tk('Escreva o nome e a data e toque no formato e na categoria. A medalha é opcional. Data futura entra como planejado.'),
-      },
-      {
-        id: 'lista',
-        route: '/carreira',
-        target: ['carreira-lista', 'carreira-registrar'],
-        title: tk('Vários de uma vez'),
-        body: tk('Para os anos passados: uma linha por torneio, com o ano, o nome, a categoria e a medalha, tudo salvo junto.'),
+        // SEM `advanceOn`/`action` e sem pedir para salvar AQUI: ao salvar, o
+        // formulário (e esta âncora) sai da tela e o botão "Completar a ficha"
+        // não tem âncora — o cartão sairia do diálogo e o toque nele fecharia o
+        // registro. Salvar é o ÚLTIMO passo, quando o guia termina.
+        body: tk('Escreva o nome e a data e toque no formato e na categoria. A medalha é opcional. Data futura entra como planejado. Antes de salvar, veja nos próximos passos o que a ficha guarda.'),
       },
       {
         id: 'foto',
         route: '/carreira',
-        target: ['carreira-foto', 'carreira-abas'],
+        target: ['carreira-foto', 'carreira-dupla', 'carreira-registrar-formato', 'carreira-completar-ficha', 'carreira-abas'],
         title: tk('A foto e o resultado'),
-        body: tk('Toque num torneio da linha do tempo para abrir a ficha: lá ficam a colocação, a federação e a foto da medalha ou do pódio. Por padrão só você vê; a dupla, o professor e o perfil público só veem o que você pedir, mandar ou publicar.'),
-      },
-      {
-        id: 'balanco',
-        route: '/carreira',
-        target: ['carreira-balanco', 'carreira-abas'],
-        title: tk('O balanço do torneio'),
-        body: tk('Na ficha de um torneio já jogado, "Fazer o balanço" pergunta como foi e sugere a semana de drills. Ela só entra nos seus treinos se você tocar em "Adicionar".'),
+        body: tk('Na ficha (ela também abre tocando num torneio da linha do tempo) ficam a colocação, a federação e a foto da medalha ou do pódio; no torneio planejado, a foto aparece quando ele começa. Por padrão só você vê; a dupla, o professor e o perfil público só veem o que você pedir, mandar ou publicar.'),
       },
       {
         id: 'dupla',
         route: '/carreira',
-        target: ['carreira-dupla', 'carreira-abas'],
+        target: ['carreira-dupla', 'carreira-registrar-formato', 'carreira-completar-ficha', 'carreira-abas'],
         title: tk('A dupla confirma'),
         body: tk('Escolhida a dupla da lista de usuários, a camada "Dupla" da ficha pede que ela confirme o resultado. Confirmado, o torneio ganha o selo "Confirmado pela dupla".'),
       },
       {
         id: 'whatsapp',
         route: '/carreira',
-        target: ['carreira-convidar-whatsapp', 'carreira-dupla', 'carreira-abas'],
+        target: ['carreira-convidar-whatsapp', 'carreira-dupla', 'carreira-registrar-formato', 'carreira-completar-ficha', 'carreira-abas'],
         title: tk('A dupla sem conta'),
-        body: tk('Dupla digitada só com o nome? "Convidar pelo WhatsApp" manda um link que vale uma vez, por 14 dias. Quem entrar por ele vira a dupla do torneio e confirma.'),
+        body: tk('Dupla digitada só com o nome? "Convidar pelo WhatsApp" gera um link que vale uma vez, por 14 dias: abra o WhatsApp ou copie o link ali mesmo. Quem entrar por ele vira a dupla do torneio e confirma.'),
+      },
+      {
+        id: 'balanco',
+        route: '/carreira',
+        target: ['carreira-balanco', 'carreira-dupla', 'carreira-registrar-formato', 'carreira-completar-ficha', 'carreira-abas'],
+        title: tk('O balanço do torneio'),
+        body: tk('Na ficha de um torneio já jogado, "Fazer o balanço" pergunta como foi e sugere a semana de drills. Ela só entra nos seus treinos se você tocar em "Adicionar".'),
+      },
+      {
+        id: 'salvar',
+        route: '/carreira',
+        target: ['carreira-registrar-formato', 'carreira-completar-ficha', 'carreira-dupla', 'carreira-abas'],
+        title: tk('Salvar e completar a ficha'),
+        body: tk('Agora toque em "Salvar". Depois, "Completar a ficha" abre a ficha do torneio, com a foto, a dupla e o balanço. Ela também abre tocando no torneio na linha do tempo.'),
       },
     ],
   },

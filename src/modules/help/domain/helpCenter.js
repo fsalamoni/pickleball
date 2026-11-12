@@ -1990,7 +1990,7 @@ const ATLETA = {
         ),
         p(tk('Os pódios de fora aparecem na estante de troféus, na aba "Fora da plataforma", com o cartão para compartilhar (com o rodapé "resultado declarado").')),
         link('/carreira', tk('Abrir a Carreira')),
-        tip(tk('Por padrão, só você vê a sua carreira. A dupla que você convida vê a data e o resultado para confirmar; o professor, só o torneio que você mandar; o perfil público, só o que você publicar. As anotações ficam sempre só com você.')),
+        tip(tk('Por padrão, só você vê a sua carreira. A dupla que você convida vê a data e o resultado para confirmar; o professor vê só o torneio que você mandar, mas inteiro, com as anotações, o link e as fotos; o perfil público, só o que você publicar.')),
         warn(tk('O resultado que você digita é declarado: ele nunca entra em ranking, rating nem XP. Evite fotos com o rosto de crianças.')),
       ],
     },
@@ -2049,7 +2049,7 @@ const ATLETA = {
           tk('DENUNCIAR — algo ofensivo, falso ou com dado pessoal: "Denunciar" leva à moderação da plataforma, que decide com motivo e avisa quem perdeu algo.'),
         ),
         link('/carreira', tk('Abrir a Carreira')),
-        warn(tk('A confirmação e a visão da dupla nunca entram em ranking, rating nem XP. Apagar o pedido, retirar a visão ou desfazer a confirmação vale a qualquer hora.')),
+        warn(tk('A confirmação e a visão da dupla nunca entram em ranking, rating nem XP. Apagar o pedido, retirar a visão ou desfazer a confirmação pede um segundo toque e vale a qualquer hora, menos para quem foi denunciado enquanto a denúncia está aberta. Há um limite de pedidos por dia e de pedidos abertos com a mesma pessoa.')),
       ],
     },
     {
@@ -2060,7 +2060,7 @@ const ATLETA = {
       keywords: ['dupla', 'sem conta', 'convite', 'convidar', 'whatsapp', 'link', 'carreira', 'parceiro'],
       guias: ['carreira-registrar'],
       blocks: [
-        p(tk('Na ficha de um torneio de fora já jogado, a dupla digitada só com o nome ganha o botão "Convidar pelo WhatsApp". O WhatsApp abre no seu celular com a mensagem e o link; você escolhe o contato.')),
+        p(tk('Na ficha de um torneio de fora já jogado, a dupla digitada só com o nome ganha o botão "Convidar pelo WhatsApp". A ficha mostra o link na hora, com "Abrir o WhatsApp" (a mensagem já vem pronta e você escolhe o contato) e "Copiar link". O link só aparece naquele momento: mande ou copie antes de fechar a ficha.')),
         list(
           tk('UM USO, 14 DIAS — o link vale uma vez só e vence em 14 dias. Gerar um novo derruba o anterior; "Cancelar o convite" faz ele parar de valer na hora.'),
           tk('QUEM ABRE O LINK — cria a conta (ou entra) e toca em "Sou eu". A conta passa a ser a dupla do torneio e o pedido de confirmação abre em seguida, como em qualquer dupla com conta.'),
@@ -2104,12 +2104,12 @@ const ATLETA = {
       blocks: [
         p(tk('A aba "Próximos" da Carreira junta o seu plano e os torneios que vêm por aí: os da agenda das federações em que você é filiado, os chancelados e os públicos do PickleRush, na sua região. "Pôr no meu plano" cria o torneio planejado já preenchido; nada entra sem o seu toque.')),
         list(
-          tk('PRIORIDADE — Principal, Importante ou Só para jogar. O principal mais próximo ganha a contagem regressiva, aqui e no card "Carreira" do início.'),
-          tk('PRAZO DE INSCRIÇÃO — com o prazo na ficha, chega um aviso 3 dias antes, enquanto você não marcar "Já me inscrevi". Um dia depois do torneio chega o "Como foi?".'),
+          tk('PRIORIDADE — Principal, Importante ou Só para jogar. A contagem regressiva vai para o principal mais próximo (sem nenhum principal, para o próximo torneio do plano), aqui e no card "Carreira" do início.'),
+          tk('PRAZO DE INSCRIÇÃO — com o prazo na ficha, chega um aviso 3 dias antes, enquanto você não marcar "Já me inscrevi". Um dia depois do torneio chega o "Como foi?": na ficha, responda "Joguei" ou "Não fui". O "não fui" fica guardado e sai das contagens de torneios jogados.'),
           tk('META E FOCO — a ficha do planejado guarda a meta do torneio e o foco do treino até lá, sugerido pelo que mais aparece a melhorar nos seus balanços. Depois do torneio, a ficha pergunta se o foco funcionou.'),
           tk('METAS DA TEMPORADA — de resultado (torneios jogados, pódios, federados) ou de processo. Cada número diz de onde conta; deixar uma meta de lado não é falhar.'),
           tk('POSIÇÃO NO RANKING — a oficial vem do ranking das federações daqui; a de outro ranking você anota. As duas nunca se misturam na mesma linha do gráfico.'),
-          tk('MANDAR AO MEU PROFESSOR — na ficha, mostra o torneio e o balanço dele ao professor, enquanto o vínculo estiver ativo. Ele recebe um aviso e encontra o torneio no Centro de Treino, na aba "Alunos", abrindo o seu nome. Terminou o vínculo, o acesso fecha sozinho.'),
+          tk('MANDAR AO MEU PROFESSOR — na ficha, mostra o torneio e o balanço dele ao professor, enquanto o vínculo estiver ativo. O registro vai inteiro: anotações, link e fotos também. Ele recebe um aviso e encontra o torneio no Centro de Treino, na aba "Alunos", abrindo o seu nome. Terminou o vínculo, o acesso fecha sozinho.'),
         ),
         link('/carreira?aba=proximos', tk('Abrir os próximos')),
         warn(tk('Planejar, metas e posições anotadas nunca entram em ranking, rating nem XP.')),

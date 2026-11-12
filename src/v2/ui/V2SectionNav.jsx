@@ -119,7 +119,7 @@ export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = t('Abas da 
             aria-current={active ? 'page' : undefined}
             data-dica={t.dica}
             className={cn(
-              'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:px-3.5 sm:text-sm',
+              'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors coarse:min-h-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:px-3.5 sm:text-sm',
               active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink',
             )}
           >

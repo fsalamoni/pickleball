@@ -17,7 +17,14 @@ const svc = vi.hoisted(() => ({
   saveCareerEvent: vi.fn(),
   saveCareerEventsBatch: vi.fn(),
   deleteCareerEvent: vi.fn(),
+  deleteCareerPhoto: vi.fn(),
   shareCareerWithCoach: vi.fn(),
+  listMyMemberships: vi.fn(),
+  listFederationEvents: vi.fn(),
+}));
+vi.mock('@/modules/federations/services/federationService', () => ({
+  listMyMemberships: (...a) => svc.listMyMemberships(...a),
+  listFederationEvents: (...a) => svc.listFederationEvents(...a),
 }));
 
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
@@ -30,12 +37,13 @@ vi.mock('../services/careerService.js', () => {
     saveCareerEvent: (...a) => svc.saveCareerEvent(...a),
     saveCareerEventsBatch: (...a) => svc.saveCareerEventsBatch(...a),
     deleteCareerEvent: (...a) => svc.deleteCareerEvent(...a),
+    deleteCareerPhoto: (...a) => svc.deleteCareerPhoto(...a),
     shareCareerWithCoach: (...a) => svc.shareCareerWithCoach(...a),
   };
 });
 
 const {
-  careerKeys, useCareerSaveWithDraft, useDeleteCareerEvent, useSaveCareerBatch, useShareCareerWithCoach,
+  careerKeys, useCareerSaveWithDraft, useDeleteCareerEvent, useFederationAgendaForMe, useSaveCareerBatch, useShareCareerWithCoach,
 } = await import('./useCareer.js');
 
 const PRAZO_MS = 8000;
@@ -180,6 +188,22 @@ describe('useCareerSaveWithDraft — reenvio (flush)', () => {
     expect(svc.saveCareerEvent).toHaveBeenCalledTimes(1);
   });
 
+  it('⭐ foto tirada com a ficha na fila: quando o reenvio CHEGA, o arquivo que saiu do registro é apagado', async () => {
+    offline();
+    const a = { path: 'carreira/u1/a.webp', url: 'https://x/a' };
+    const b = { path: 'carreira/u1/b.webp', url: 'https://x/b' };
+    semear([evento({ id: 'u1_a', photos: [b] }), evento({ id: 'u1_b' })]);
+    const { result } = montar(() => useCareerSaveWithDraft());
+    // O servidor (a lista em cache) ainda aponta para as duas.
+    qc.setQueryData(careerKeys.events('u1'), [evento({ id: 'u1_a', photos: [a, b] })]);
+    // Envio que não chegou não apaga nada.
+    svc.saveCareerEvent.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'unavailable' }));
+    await act(async () => { await result.current.flush(); });
+    expect(svc.deleteCareerPhoto).not.toHaveBeenCalled();
+    await act(async () => { await result.current.flush(); });
+    expect(svc.deleteCareerPhoto.mock.calls).toEqual([['carreira/u1/a.webp']]);
+  });
+
   it('corrigir e salvar o recusado tira a marca', async () => {
     offline();
     semear([evento({ id: 'u1_a', refused: true })]);
@@ -255,6 +279,46 @@ describe('useShareCareerWithCoach', () => {
     await act(async () => { await expect(result.current.mutateAsync({ event: { id: 'u1_a' }, coachId: 'prof' })).rejects.toThrow('caiu'); });
     expect(invalida.mock.calls.map((c) => c[0].queryKey)).toContainEqual(['career']);
     expect(svc.shareCareerWithCoach.mock.calls[0][2]).toEqual({ actor: { uid: 'u1', name: 'Ana P.' } });
+  });
+});
+
+describe('useFederationAgendaForMe', () => {
+  let forcar; // re-renderiza a sonda sem mudar nada
+  const esperar = async (cond) => { for (let i = 0; i < 50 && !cond(); i += 1) await act(async () => { await new Promise((r) => setTimeout(r, 5)); }); };
+
+  it('⭐ `events` e `federations` têm a MESMA identidade entre renders (o memo de quem consome vale)', async () => {
+    svc.listMyMemberships.mockResolvedValue([{ federation_id: 'f1', federation_name: 'Fed', status: 'active' }]);
+    svc.listFederationEvents.mockResolvedValue([{ id: 'e1' }]);
+    const vistos = [];
+    const { result } = montar(() => { [, forcar] = React.useReducer((n) => n + 1, 0); const r = useFederationAgendaForMe(); vistos.push(r); return r; });
+    await esperar(() => result.current.events);
+    act(() => { forcar(); });
+    await esperar(() => vistos.filter((v) => v.events).length > 1);
+    const prontos = vistos.filter((v) => v.events);
+    expect(prontos.length).toBeGreaterThan(1);
+    expect(result.current.events).toEqual([{ id: 'e1' }]);
+    expect(result.current.federations).toEqual({ f1: { name: 'Fed', acronym: '' } });
+    expect(new Set(prontos.map((v) => v.events)).size).toBe(1);
+    expect(new Set(prontos.map((v) => v.federations)).size).toBe(1);
+  });
+
+  it('sem filiação: a lista vazia é sempre a mesma; filiações que falharam são ERRO, não carregando', async () => {
+    svc.listMyMemberships.mockResolvedValue([]);
+    const vistos = [];
+    const { result } = montar(() => { [, forcar] = React.useReducer((n) => n + 1, 0); const r = useFederationAgendaForMe(); vistos.push(r); return r; });
+    await esperar(() => result.current.events);
+    act(() => { forcar(); });
+    await esperar(() => vistos.filter((v) => v.events).length > 1);
+    const prontos = vistos.filter((v) => v.events);
+    expect(prontos.length).toBeGreaterThan(1);
+    expect(new Set(prontos.map((v) => v.events)).size).toBe(1);
+    expect(new Set(prontos.map((v) => v.federations)).size).toBe(1);
+    act(() => root.unmount());
+    root = null;
+    svc.listMyMemberships.mockRejectedValue(new Error('caiu'));
+    const { result: falha } = montar(() => useFederationAgendaForMe());
+    await esperar(() => falha.current.isError);
+    expect(falha.current).toMatchObject({ isError: true, isPending: false, events: undefined });
   });
 });
 

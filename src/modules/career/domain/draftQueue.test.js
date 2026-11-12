@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_PENDING, addPending, parsePending, pendingFull, removePending, serializePending } from './draftQueue.js';
+import { MAX_PENDING, addPending, orphanPhotoPaths, parsePending, pendingFull, removePending, serializePending } from './draftQueue.js';
 
 describe('rascunho sem sinal', () => {
+  it('⭐ foto que o registro gravado deixou de apontar: só a da pasta da pessoa, e só a que saiu', () => {
+    const antes = { photos: [{ path: 'carreira/u1/a.webp' }, { path: 'carreira/u1/b.webp' }, { path: 'carreira/outro/c.webp' }, {}] };
+    expect(orphanPhotoPaths(antes, { photos: [{ path: 'carreira/u1/b.webp' }] }, 'u1')).toEqual(['carreira/u1/a.webp']);
+    // Sem o estado anterior (lista que não carregou) nada é apagado.
+    expect(orphanPhotoPaths(undefined, { photos: [] }, 'u1')).toEqual([]);
+    expect(orphanPhotoPaths(antes, antes, 'u1')).toEqual([]);
+  });
   it('⭐ põe, troca pelo id e tira o que foi gravado', () => {
     let f = addPending([], { id: 'u_a', name: 'A' });
     f = addPending(f, { id: 'u_b', name: 'B' });

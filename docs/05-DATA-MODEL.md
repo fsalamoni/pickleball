@@ -1577,8 +1577,9 @@ ativo). A regra confere o prefixo do id e a forma. Zero índice. Ver
 ### `career_events/{uid}_{sufixo}` (NOVO, flag `athlete_career`)
 Torneio de FORA da plataforma registrado pelo atleta (Carreira):
 `uid`, `name`, `organizer`, `city`, `state`, `start_date`, `end_date`,
-`date_precision` (`day|year`), `status` (`played|planned|cancelled`, derivado
-da data), `entries[]` (≤ 6: `format` (`singles|doubles|teams|americano`), `gender`, `age`, `level_bracket` (lista em docs/54 §2.1),
+`date_precision` (`day|year`), `status` (`played|planned|cancelled`:
+`played`/`planned` derivados da data; `cancelled` é a resposta "Não fui" da
+ficha), `entries[]` (≤ 6: `format` (`singles|doubles|teams|americano`), `gender`, `age`, `age_label`, `level_bracket` (lista em docs/54 §2.1),
 `placement`, `placement_n`, `points_declared`, `partner { name, uid }`),
 `federated`, `federation_id`, `federation_name`, `federation_acronym`,
 `stage_tier`, `link` (só `https://`), `photos[]` (≤ 6: `path`, `url`, `kind`
@@ -1586,15 +1587,20 @@ da data), `entries[]` (≤ 6: `format` (`singles|doubles|teams|americano`), `gen
 `partner_uids[]` (PR 3, opcional: as contas citadas como dupla — a exclusão
 de conta acha por aqui), `linked_event { uid, id }` (PR 3, opcional: o
 registro de quem convidou, no "Pôr na minha carreira também"),
-`created_at_ms`, `updated_at_ms`. **Só o dono** lê e escreve (o id começa
-pelo uid); criar e editar exigem a flag na regra (`careerOn()`), ler e apagar
-não. Resultado DECLARADO: nada de ranking, rating nem XP lê esta coleção.
+`created_at_ms`, `updated_at_ms`. **Só o dono** escreve (o id começa
+pelo uid) e, fora a exceção do professor abaixo, só ele lê; criar e editar
+exigem a flag na regra (`careerOn()`), ler e apagar não. Resultado DECLARADO: nada de ranking, rating nem XP lê esta coleção.
 Zero índice (`uid ==`). Entra na exclusão e na exportação. Ver
 `docs/54-CARREIRA-DO-ATLETA.md`. PR 4 (opcionais, só no planejado):
 `registration_deadline`, `registered`, `priority` (`main|important|casual`),
 `aim`, `focus_aspect`, `if_then`, `focus_result` (`yes|partly|no`),
 `shared_coach_id` (o professor a quem a pessoa mandou — com vínculo ATIVO
 ele lê o registro, `coachSees`) e `origin_ref` (`fed:…|tor:…`).
+⚠️ A regra entrega ao professor o DOCUMENTO inteiro do torneio mandado:
+`notes`, `link`, as duplas e `photos[]` também — e `photos[].url` é um link
+de download que quem lê o documento consegue abrir (a regra do Storage segue
+sendo só do dono). A tela do professor mostra menos; a ficha avisa antes de
+mandar (docs/54 §4.12).
 
 ### `career_rank/{uid}_{sufixo}` (NOVO, PR 4, flag `athlete_career`)
 A posição DIGITADA num ranking de fora: `uid`, `federation_id`,
@@ -1619,7 +1625,9 @@ O pedido para a dupla confirmar um torneio de fora: `owner_uid`,
 citadas; o nome não entra), `feedback` (`strengths[]`, `improve[]`, até 3
 ids de `GAME_ASPECTS`; `text_strength`, `text_improve`, `text_drill` ≤ 280),
 `owner_decision` (`pending|use|keep`), `decided_at_ms`, `partner_event_id`,
-`invited_at_ms`, `answered_at_ms`. **Só o servidor grava** (`functions/career.js`);
+`invited_at_ms`, `answered_at_ms`, `feedback_notified_at_ms` (opcional: quando
+o dono foi avisado da visão da dupla — o aviso sai uma vez por pedido).
+**Só o servidor grava** (`functions/career.js`);
 o dono e a dupla citada leem. Zero índice (`owner_uid ==`, `partner_uid ==`; o
 servidor usa `event_id ==`). Entra na exclusão (os dois lados) e na
 exportação. Ver `docs/54-CARREIRA-DO-ATLETA.md` §2.4 e §4.8.
@@ -1628,7 +1636,10 @@ exportação. Ver `docs/54-CARREIRA-DO-ATLETA.md` §2.4 e §4.8.
 A denúncia de um pedido, FORA dele (o denunciado lê o pedido): `doc_id`,
 `event_id`, `owner_uid`, `partner_uid`, `reporter_uid`, `role`, `reason`
 (`offensive|false_claim|personal_data|other`), `note`, `feedback_edited_at_ms`,
-`open`, `created_at_ms`, `moderation` (`{ decision, reason, at_ms }`). Só o
+`open`, `created_at_ms`, `moderation` (`{ decision, reason, at_ms }`) e, opcionais
+(cópia do pedido na hora da denúncia, para a fila do admin seguir legível
+depois de o pedido ser apagado): `owner_name`, `partner_name`, `event_name`,
+`invited_at_ms`. Só o
 servidor grava; lê só quem denunciou (`reporter_uid ==`, para a exportação).
 O servidor usa `open ==` (fila) e `event_id ==`. Entra na exclusão
 (`owner_uid`/`partner_uid`) e na exportação. Registros de `career_events`

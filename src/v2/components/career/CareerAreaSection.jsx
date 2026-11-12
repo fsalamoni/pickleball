@@ -30,9 +30,9 @@ export default function CareerAreaSection() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
-        {r.total > 0
-          ? [tn(r.played, '{n} torneio de fora registrado', '{n} torneios de fora registrados'), r.podiums ? tn(r.podiums, '{n} pódio', '{n} pódios') : '', r.planned ? tn(r.planned, '{n} planejado', '{n} planejados') : ''].filter(Boolean).join(' · ')
-          : t('Registre os torneios que você jogou fora do PickleRush: eles entram na sua linha do tempo, com os daqui.')}
+        {/* Só cancelado ou só plano de torneio daqui: nada a contar, então vale o convite. */}
+        {[r.played ? tn(r.played, '{n} torneio de fora registrado', '{n} torneios de fora registrados') : '', r.podiums ? tn(r.podiums, '{n} pódio', '{n} pódios') : '', r.planned ? tn(r.planned, '{n} planejado', '{n} planejados') : ''].filter(Boolean).join(' · ')
+          || t('Registre os torneios que você jogou fora do PickleRush: eles entram na sua linha do tempo, com os daqui.')}
       </p>
       {r.last && (
         <Link
@@ -54,7 +54,6 @@ export default function CareerAreaSection() {
       )}
       <div className="flex flex-wrap gap-2">
         <V2Button asChild variant="primary" size="sm"><Link to="/carreira?registrar=1"><Plus className="h-4 w-4" /> {t('Registrar torneio')}</Link></V2Button>
-        <V2Button asChild variant="secondary" size="sm"><Link to="/carreira">{t('Abrir a Carreira')}</Link></V2Button>
       </div>
     </div>
   );

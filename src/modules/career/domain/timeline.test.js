@@ -275,3 +275,20 @@ describe('torneio ligado pelo "É este" e torneio de teste', () => {
     expect(tl.total).toBe(0);
   });
 });
+
+describe('item de federação sem o torneio na lista', () => {
+  it('diz a colocação no texto e formata os pontos no idioma', () => {
+    const tl = buildCareerTimeline({
+      today: HOJE,
+      career: [],
+      tournaments: [],
+      trophies: { torneios: [] },
+      gameDayGames: [],
+      federationPoints: [{ id: 'p1', result_id: 'r1', tournament_name: 'Estadual', date: '2025-05-10', points: 1500, position: 2 }],
+    });
+    const item = tl.seasons[0].items[0];
+    expect(item).toMatchObject({ source: 'federacao', position: 2 });
+    expect(item.subtitle).toContain('Vice-campeão');
+    expect(item.subtitle).toContain(`${(1500).toLocaleString('pt-BR')} pontos no ranking oficial`);
+  });
+});

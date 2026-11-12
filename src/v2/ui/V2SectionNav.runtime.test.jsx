@@ -139,6 +139,8 @@ describe('V2SubTabs', () => {
     expect(container.innerHTML).not.toContain('overflow-x-auto');
     expect(container.querySelector('[aria-current="page"]').textContent).toBe('Campanhas');
     await act(async () => { container.querySelector('button').click(); });
+    // No toque, a aba tem 44 px de altura.
+    expect(container.querySelector('button').className).toContain('coarse:min-h-11');
     expect(onSelect).toHaveBeenCalledWith(ABAS[0]);
   });
 });

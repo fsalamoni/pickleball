@@ -46,6 +46,18 @@ export function removePending(fila, ids) {
   return (fila || []).filter((x) => !fora.has(x.id));
 }
 
+/**
+ * Os arquivos que o registro GRAVADO deixou de apontar: a foto tirada com a
+ * ficha na fila fica no Storage de propósito (o documento do servidor ainda
+ * aponta para ela) e só pode ser apagada quando o envio chega. `antes` é o
+ * torneio como o servidor o tinha; só caminhos da pasta da própria pessoa.
+ */
+export function orphanPhotoPaths(antes, gravado, uid) {
+  const ficam = new Set((gravado?.photos || []).map((p) => p?.path));
+  return [...new Set((antes?.photos || []).map((p) => p?.path))]
+    .filter((p) => typeof p === 'string' && p.startsWith(`carreira/${uid}/`) && !ficam.has(p));
+}
+
 /** O texto para guardar; fila vazia apaga a preferência. */
 export function serializePending(fila) {
   return fila && fila.length ? JSON.stringify(fila) : null;

@@ -5,7 +5,7 @@
  * Falha ≠ vazio: com a lista falhando, o card não diz "nada planejado".
  */
 import React from 'react';
-import { CalendarClock, CircleHelp, Medal } from 'lucide-react';
+import { CalendarClock, CircleHelp, Route } from 'lucide-react';
 import { useCareerEvents } from '@/modules/career/hooks/useCareer';
 import { awaitsResult } from '@/modules/career/domain/careerEvent.js';
 import { countdownText, deadlineInfo, mainCountdown, upcomingPlan } from '@/modules/career/domain/careerUpcoming.js';
@@ -19,7 +19,7 @@ const evLink = (id, aba = '') => `/carreira?${aba ? `aba=${aba}&` : ''}evento=${
 export default function HomeCareerCard() {
   const q = useCareerEvents();
   const moldura = (conteudo) => (
-    <HomeSection id="carreira" icon={Medal} title={t('Carreira')} action={{ to: '/carreira?aba=proximos', label: t('Ver os próximos') }}>{conteudo}</HomeSection>
+    <HomeSection id="carreira" icon={Route} title={t('Carreira')} action={{ to: '/carreira?aba=proximos', label: t('Ver os próximos') }}>{conteudo}</HomeSection>
   );
   if (q.isLoading) return moldura(<V2Skeleton lines={3} />);
   if (q.isError) return moldura(<V2ErrorState inline title={t('A sua carreira não carregou')} onRetry={() => q.refetch()} />);
@@ -30,7 +30,7 @@ export default function HomeCareerCard() {
   const plano = upcomingPlan({ events: eventos }).filter((i) => i.event.id !== principal?.event.id).slice(0, 3);
   if (!principal && !comoFoi.length && !plano.length) {
     return moldura(
-      <HomeEmpty icon={Medal} actions={<HomeAction to="/carreira?aba=proximos" primary>{t('Planejar um torneio')}</HomeAction>}>
+      <HomeEmpty icon={Route} actions={<HomeAction to="/carreira?aba=proximos" primary>{t('Planejar um torneio')}</HomeAction>}>
         {t('Ponha no plano os torneios que vêm por aí — aqui e fora do PickleRush.')}
       </HomeEmpty>,
     );

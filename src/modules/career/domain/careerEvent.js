@@ -355,11 +355,13 @@ const LAYER_STEP = Object.freeze({
  * Completude em camadas de um torneio JOGADO: `{ done, total, layers, next }`.
  * `debriefDone` (booleano) diz se o balanço do torneio foi feito
  * (`careerDebriefFor`); sem ele — os balanços não carregaram — a camada sai da
- * conta e do próximo passo, em vez de afirmar que falta. Planejado ou
- * cancelado: `null` — não há o que completar.
+ * conta e do próximo passo, em vez de afirmar que falta. Planejado,
+ * cancelado ("Não fui"), o plano que passou e ainda espera o "Como foi?" e o
+ * plano de um torneio do PickleRush: `null` — não há o que completar (a ficha
+ * nem mostra colocação e foto nesses casos). A régua é `isOutsidePlayed`.
  */
 export function careerCompleteness(event, { debriefDone } = {}) {
-  if (!event || event.status !== CAREER_STATUS.PLAYED) return null;
+  if (!isOutsidePlayed(event)) return null;
   const entries = event.entries || [];
   const precisaDupla = entries.filter((e) => formatHasPartner(e.format));
   const layers = [

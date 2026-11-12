@@ -252,6 +252,46 @@ describe('passoQueAbre — o formulário foi fechado no meio do guia', () => {
   });
 });
 
+describe('🔴 guia carreira-registrar: nenhum passo aponta para trás do diálogo aberto', () => {
+  // O cartão de um alvo FORA do diálogo do Radix é desenhado fora dele, e tocar
+  // em "Próximo" ali é um clique fora: fecha o formulário com o que foi digitado.
+  const g = guiaPorId('carreira-registrar');
+  const ids = g.steps.map((p) => p.id);
+  const abre = ids.indexOf('registrar');
+  // Âncoras que moram DENTRO de um diálogo: o registro rápido e as camadas da ficha.
+  const NO_DIALOGO = ['carreira-registrar-formato', 'carreira-completar-ficha', 'carreira-foto', 'carreira-dupla', 'carreira-convidar-whatsapp', 'carreira-balanco'];
+
+  it('o que fica na página vem antes do passo que abre o registro', () => {
+    expect(ids.indexOf('lista')).toBeLessThan(abre);
+    expect(g.steps[abre].advanceOn).toBe('click');
+  });
+
+  it('depois dele, todo passo tenta o registro e a ficha antes de qualquer âncora da página', () => {
+    for (const p of g.steps.slice(abre + 1)) {
+      const alvos = alvosDoPasso(p);
+      const daPagina = alvos.findIndex((a) => !NO_DIALOGO.includes(a));
+      const dentro = alvos.slice(0, daPagina < 0 ? alvos.length : daPagina);
+      expect(dentro, p.id).toContain('carreira-registrar-formato'); // o registro aberto
+      if (p.id !== 'categoria') expect(dentro, p.id).toContain('carreira-dupla'); // a ficha aberta (a camada existe em toda ficha)
+    }
+  });
+
+  it('os passos da ficha seguem a ordem das camadas: Foto, Dupla (com o convite) e Balanço', () => {
+    expect(ids.slice(abre + 2)).toEqual(['foto', 'dupla', 'whatsapp', 'balanco', 'salvar']);
+  });
+
+  it('salvar é o ÚLTIMO passo: nenhum passo antes dele espera pelo que só existe depois de salvar', () => {
+    // Ao salvar, o formulário (e a âncora do formato) sai da tela, e o botão
+    // "Completar a ficha" não tem âncora: um passo que esperasse ali ficaria
+    // sem alvo, com o cartão fora do diálogo.
+    expect(ids.at(-1)).toBe('salvar');
+    for (const p of g.steps.slice(abre + 1)) {
+      expect(p.advanceOn, p.id).toBeUndefined();
+      expect(p.action, p.id).toBeUndefined();
+    }
+  });
+});
+
 describe('⭐ a gamificação nas dicas', () => {
   const COM_FLAG = { flags: { gamification_v2: true } };
   const daGamificacao = (ctx) => guiasVisiveis(ctx).filter((g) => g.area === GUIA_AREA.GAMIFICACAO).map((g) => g.id);

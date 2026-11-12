@@ -346,9 +346,19 @@ async function publicConsent(ctx, actor, data) {
   if (ok) {
     const evSnap = await ctx.db.collection(EV).doc(texto(d.event_id, 200)).get();
     if (!evSnap.exists) falha('not-found', 'Este torneio não existe mais.');
-    fp = V.consentFingerprint({ id: evSnap.id, ...evSnap.data() }, actor.uid);
+    const ev = { id: evSnap.id, ...evSnap.data() };
+    fp = V.consentFingerprint(ev, actor.uid);
     // Ficha fora do que a tela grava (texto gigante): a impressão não vai para o pedido que os dois leem.
     if (fp.length > 2000) falha('failed-precondition', 'Este registro não pode ir à vitrine como está. Peça a quem registrou para salvá-lo de novo.');
+    // O "sim" vale para o que a dupla VIU (como no `respond`): a tela manda a impressão
+    // e o resumo do pedido que leu; se o registro mudou no meio, ela confere de novo.
+    // Tela antiga (sem os campos) segue como antes.
+    const viu = data.summary && typeof data.summary === 'object' ? data.summary : null;
+    const curto = (v, max) => (typeof v === 'string' || typeof v === 'number' ? texto(v, max) : '');
+    if ((typeof data.fingerprint === 'string' && data.fingerprint !== P.careerFingerprint(ev, P.citedEntryIndexes(ev, actor.uid)))
+      || (viu && [['name', 120], ['city', 80], ['state', 2]].some(([k, max]) => curto(viu[k], max) !== curto(ev[k], max)))) {
+      falha('failed-precondition', 'O registro mudou. Confira de novo antes de permitir.');
+    }
   }
   const batch = ctx.db.batch();
   batch.update(ref, { public_ok_partner: ok, public_ok_at_ms: ctx.now, public_fp: fp });

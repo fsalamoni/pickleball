@@ -428,6 +428,15 @@ Nenhum motor de ranking, rating ou XP lê `career_*`.
 - **Denúncia é do pedido.** A trava "já decidida sobre esta versão da visão"
   compara também `invited_at_ms` (gravado na denúncia): pedido NOVO para a
   mesma pessoa pode ser denunciado mesmo com uma denúncia antiga descartada.
+- **`public_consent` vale para o que a dupla viu** (etapa 3): a tela manda
+  `fingerprint` e `summary` do pedido que leu; se o registro mudou, o servidor
+  recusa com `failed-precondition`. Os dois são opcionais (tela antiga segue
+  como antes).
+- **`moderate` num pedido já decidido** devolve `{ already: true }` com a
+  decisão que vale, sem gravar nem avisar de novo (segundo toque do admin com
+  a fila velha).
+- **Registro apagado leva o balanço**: `careerEventWritten` apaga
+  `training_debriefs/{uid}_externo_{evento}` do próprio dono.
 - **Moderação que fica.** `remove_feedback` deixa a marca em
   `career_partner_reports/{pedido}__owner`: escrever a visão de novo é
   recusado e a denúncia decidida não é reaberta. O aviso "a visão chegou" sai

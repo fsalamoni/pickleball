@@ -1,13 +1,19 @@
 # 54 — Carreira (carreira do atleta)
 
-> Estado: **PR 1 — núcleo, foto e passado** + **PR 2 — balanço, treino e
-> retrospectiva** + **PR 3 — a dupla confirma** + **PR 4 — próximos, metas,
-> ranking e professor** (2026-11-04). Flag
-> `athlete_career` (`FEATURE_FLAG.ATHLETE_CAREER`, padrão **desligada**, só o
-> admin liga; grupo "Carreira do atleta" no painel). O plano completo, com os
-> PRs seguintes, está fora do repositório
+> Estado: **PRs 1 a 7** — núcleo, foto e passado (1) · balanço, treino e
+> retrospectiva (2) · a dupla confirma (3) · próximos, metas, ranking e
+> professor (4) · gamificação (5) · a dupla sem conta (6) · a vitrine pública
+> (7) — mais o **pente fino em três etapas** de 2026-11-11/12 (§4.14 a §4.16).
+> Flag `athlete_career` (`FEATURE_FLAG.ATHLETE_CAREER`, padrão **desligada**, só o
+> admin liga; grupo "Carreira do atleta" no painel). O plano completo
+> está fora do repositório
 > (`/mnt/project-files/carreira/plano-gestao-de-carreira.md`). Este documento
 > descreve **só o que existe no código**.
+>
+> **Numeração.** As seções guardam o número com que nasceram, porque o código e
+> outros documentos as citam (`docs/54 §4.9`, `§4.12`…): por isso existem
+> §4.6a e §4.13a (a dupla sem conta, que por um tempo se chamou §4.13, como a
+> vitrine). Não renumere.
 
 ## 1. O que é
 
@@ -20,10 +26,10 @@ em ranking, rating nem XP (guarda `src/core/guards/carreiraNaoPontua.test.js`).
 | Peça | Onde |
 |---|---|
 | Domínio (puro, com teste) | `src/modules/career/domain/careerEvent.js`, `timeline.js`, `draftQueue.js`, `careerDebrief.js` (a origem do balanço), `seasonRecap.js` (a retrospectiva), `careerPartner.js` (a dupla: citação, impressão, maioridade, visão, selo, pendências), `careerUpcoming.js` (PR 4: descoberta, plano, contagem, prazo, ICS, foco sugerido, pendências do planejado), `careerGoals.js` (as métricas das metas e de onde contam), `careerRank.js` (a posição no ranking) |
-| Servidor (PR 3/4) | `functions/career.js` (callable `career` + gatilho `careerEventWritten` + varredura diária `careerReminders`, PR 4), régua copiada em `functions/careerPolicy.js` (paridade `careerPolicy.parity.test.js`) |
+| Servidor (PR 3/4) | `functions/career.js` (callable `career` + gatilho `careerEventWritten` + varredura diária `careerReminders`, PR 4), régua copiada em `functions/careerPolicy.js` (paridade `careerPolicy.parity.test.js`); PR 5: `functions/careerXp.js`; PR 7: `functions/careerPublic.js` + `careerPublicPolicy.js`. Função a função em `docs/47` §7a |
 | Serviço (I/O) | `src/modules/career/services/careerService.js`, `careerExportService.js` |
-| Hooks (React Query) | `src/modules/career/hooks/useCareer.js` |
-| Página | `src/v2/pages/V2Career.jsx` (lazy, em `<Isolada nome="carreira">`, `V2Page`) |
+| Hooks (React Query) | `src/modules/career/hooks/useCareer.js` (o arquivo leve) e `useCareerTimeline.js` (a linha do tempo) |
+| Páginas | `src/v2/pages/V2Career.jsx` (lazy, em `<Isolada nome="carreira">`, `V2Page`) e `V2CareerInvite.jsx` (o link do convite, §4.13a) |
 | Componentes | `src/v2/components/career/` |
 | Catálogos en/es | `src/modules/career/i18n/locales/` |
 
@@ -41,13 +47,14 @@ gravar (limites em `CAREER_LIMITS`).
 | `name` | string ≤ 120 | obrigatório |
 | `organizer`, `city`, `state` | string | `state` só UF válida |
 | `start_date`, `end_date` | `AAAA-MM-DD` | `date_precision`: `day` ou `year` (modo lista). `normalizeCareerEvent` recusa data que não existe (31/02) e ano fora de 1990 … ano atual + 5; `end_date` inválido, com ano fora da faixa ou antes do início é descartado (sem teto de duração) |
-| `status` | `played` / `planned` / `cancelled` | derivado da data (`deriveCareerStatus`): futura ⇒ planejado; registro NOVO com a data de hoje ⇒ jogado. O que já era **planejado segue planejado até o último dia** (`end_date`, ou o início) — no dia do torneio a tela diz "É hoje", e só no dia seguinte ele vira jogado (a mesma régua do aviso D+1 do servidor); com a colocação já dita vale o início (quem lança o resultado no dia não fica preso em planejado). O gravado é o do dia em que se salvou; a LEITURA recalcula (`withDerivedStatus` em `listCareerEvents` e na ficha). `cancelled` ("não fui") nunca é recalculado |
-| `entries[]` (≤ 6) | objeto | `format` (`singles`/`doubles`/`teams`/`americano`), `gender` (`male`/`female`/`mixed`/`open`), `age`, `level_bracket` (ver abaixo), `level_label` (com `other`), `placement` (`champion`/`runner_up`/`third`/`semis`/`quarters`/`round_of_16`/`groups`/`other`), `placement_n`, `points_declared`, `partner { name, uid }` — só nos formatos com dupla FIXA (`formatHasPartner`: duplas e equipe; simples e americano não têm, porque no americano a dupla troca a cada jogo) |
+| `status` | `played` / `planned` / `cancelled` | derivado da data (`deriveCareerStatus`): futura ⇒ planejado; registro NOVO com a data de hoje ⇒ jogado. O que já era **planejado segue planejado até o último dia** (`end_date`, ou o início) — no dia do torneio a tela diz "É hoje", e só no dia seguinte ele vira jogado (a mesma régua do aviso D+1 do servidor); com a colocação já dita vale o início (quem lança o resultado no dia não fica preso em planejado). O gravado é o do dia em que se salvou; a LEITURA recalcula (`withDerivedStatus` em `listCareerEvents` e na ficha). `cancelled` ("não fui") nunca é recalculado; quem o grava é a ficha, na resposta "Não fui" do "Como foi?" (§4.9 e §4.15), e a mesma ficha o desfaz |
+| `entries[]` (≤ 6) | objeto | `format` (`singles`/`doubles`/`teams`/`americano`), `gender` (`male`/`female`/`mixed`/`open`), `age` e `age_label` (com `other`), `level_bracket` (ver abaixo), `level_label` (com `other`), `placement` (`champion`/`runner_up`/`third`/`semis`/`quarters`/`round_of_16`/`groups`/`other`), `placement_n`, `points_declared`, `partner { name, uid }` — só nos formatos com dupla FIXA (`formatHasPartner`: duplas e equipe; simples e americano não têm, porque no americano a dupla troca a cada jogo) |
 | `federated`, `federation_id`, `federation_name`, `federation_acronym`, `stage_tier` | | federação do diretório (com a flag `federations`) ou texto livre |
 | `link` | `https://…` ≤ 300 | guardado, nunca aberto pela plataforma |
 | `photos[]` (≤ 6) | `{ path, url, kind, alt }` | `kind`: `medal`/`podium`/`draw`/`other`; `alt` é a descrição |
-| `notes` | ≤ 2000 | só o dono lê |
-| `platform_tournament_id` | string \| null | gravado quando a pessoa responde "É este" (ver §4.3) |
+| `notes` | ≤ 2000 | só o dono lê — **menos quando o torneio foi mandado ao professor** (`shared_coach_id`, §2.5): a regra entrega o documento inteiro (§3), e a ficha deixa de dizer "só você vê" |
+| `platform_tournament_id` | string \| null | gravado quando a pessoa responde "É este" (ver §4.4) |
+| `created_at_ms`, `updated_at_ms` | número | |
 
 **Faixa de nível (`level_bracket`).** É a faixa DECLARADA (como o torneio de
 fora chamou a categoria) e nunca alimenta a régua 2.0–8.0. O seletor oferece,
@@ -61,7 +68,6 @@ primeira versão (`2.5`, `3.0`, `3.5`, `4.0`, `4.5`, `5.0+`, `A`, `B`, `C`,
 `D` — `LEGACY_LEVEL_BRACKETS`) saiu do seletor, mas **nada foi migrado**: o
 registro antigo segue aceito ao salvar de novo, a ficha mostra o valor dele
 como opção escolhida e `levelBracketText` o exibe como foi gravado.
-| `created_at_ms`, `updated_at_ms` | número | |
 
 **Zero índice composto**: a única consulta é `where('uid', '==', uid)`, com a
 ordenação em memória. Os valores de enum (formato, gênero, colocação, tipo de
@@ -74,6 +80,11 @@ Só o dono lê, lista e apaga; cria só o dono, arquivo novo (`resource == null`
 (`{ imageMb: 3, videoEnabled: false }`), que reduz e recodifica a imagem — o
 que descarta EXIF/GPS (`docs/20-SEGURANCA-E-PRIVACIDADE/08` item 5). Até 6
 fotos por torneio; cada foto tem descrição (texto alternativo).
+
+"Só o dono lê" é a regra do **Storage**. O `url` gravado em `photos[]` é o
+link de download do arquivo (`getDownloadURL`, com o token dele): quem lê o
+DOCUMENTO do torneio abre a foto. Hoje isso é o dono e, com o torneio mandado,
+o professor de vínculo ativo (§3 e §4.12).
 
 ⚠️ A regra do Storage **não lê o banco**, então a flag `athlete_career` não
 vale ali, e o teto de 6 fotos é do cliente — o mesmo limite do `treino/`. Com
@@ -101,7 +112,9 @@ O pedido para a DUPLA confirmar um torneio de fora. **Só o servidor grava**
 | `summary` | nome, datas, cidade/UF e as categorias citadas (sem anotações nem foto) — o que a dupla lê sem abrir o registro |
 | `status` | `invited` · `confirmed` · `declined` · `reconfirm` (gravados; nunca renomeie) |
 | `fingerprint` | a impressão do que se confirma: datas, precisão e, de cada categoria citada, formato, gênero, idade, faixa e colocação — **o nome NÃO entra**, nem a POSIÇÃO da categoria na ficha (apagar ou reordenar outra categoria não pede nova confirmação) (`careerFingerprint`) |
+| `invited_at_ms`, `answered_at_ms`, `decided_at_ms` | quando o pedido saiu, foi respondido e quando o dono decidiu sobre a visão |
 | `feedback` | a visão da dupla: `strengths[]`/`improve[]` (até 3, ids de `GAME_ASPECTS`), `text_strength`/`text_improve`/`text_drill` (até 280) |
+| `feedback_notified_at_ms` | opcional: o aviso "a visão chegou" já saiu — sai **uma vez por pedido**, mesmo que a dupla retire e escreva de novo, e o campo sobrevive a um novo `invite` do mesmo pedido |
 | `owner_decision` | `pending` · `use` ("Usar no meu treino") · `keep` ("Guardar") |
 | `partner_event_id` | o registro espelhado da dupla ("Pôr na minha carreira também"), conferido pelo gatilho |
 
@@ -109,7 +122,11 @@ A **denúncia não mora no pedido** (que as duas pontas leem): fica em
 `career_partner_reports/{pedido}__{owner|partner}` — `doc_id`, `event_id`,
 `owner_uid`, `partner_uid`, `reporter_uid`, `role`, `reason` (`offensive` ·
 `false_claim` · `personal_data` · `other`), `note`, `feedback_edited_at_ms`
-(a versão da visão denunciada), `open`, `created_at_ms` e `moderation`
+(a versão da visão denunciada), `invited_at_ms` (de QUAL pedido é a denúncia:
+pedido novo para a mesma pessoa pode ser denunciado de novo), `owner_name`,
+`partner_name` e `event_name` (cópias opcionais, para a fila do admin mostrar
+de quem e de que torneio se trata mesmo depois de o pedido ter sido apagado),
+`open`, `created_at_ms` e `moderation`
 (`{ decision, reason, at_ms }`; o uid do admin vai só para a auditoria). Só o
 servidor grava; lê só quem denunciou. Uma denúncia por lado: aberta, ou já
 decidida sobre a mesma versão da visão, não abre outra. Com denúncia aberta a
@@ -267,6 +284,15 @@ match /carreira-publica/{uid}/{fileName} { allow get: if isAuthed(); }
   desenho do diário de treino) deixa ler o registro com `shared_coach_id ==`
   ele enquanto o vínculo `coach_students` estiver ATIVO, e o balanço do
   torneio vai junto (`training_debriefs` também tem `coachSees`/`coachOk`).
+  ⚠️ **A regra entrega o DOCUMENTO INTEIRO**, porque regra do Firestore não
+  recorta campos: com `shared_coach_id`, o professor alcança também `notes`,
+  `link`, as duplas (`entries[].partner`, `partner_uids`) e `photos[]` com o
+  `url` de cada foto (§2.2). A TELA dele (`CoachStudentCareer`, §4.12) mostra
+  menos que isso, mas tela não é controle (princípio 10). Por isso a ficha e a
+  ajuda dizem ao aluno, antes e depois de mandar, que anotações, link e fotos
+  vão junto. Voltar a prometer "só você vê" pede tirar `notes`/`photos` do
+  documento (subdocumento privado + regra + exclusão + exportação): decisão do
+  dono, ainda não tomada.
   Ao gravar, `coachOk()` só aceita mandar a quem é professor ativo da pessoa
   (manter o mesmo vale sempre). Vínculo encerrado ⇒ o acesso fecha sozinho.
   `training_sessions` passou a ler pelo atalho `isOwner` (mesma regra).
@@ -305,8 +331,24 @@ match /carreira-publica/{uid}/{fileName} { allow get: if isAuthed(); }
 `linha-do-tempo` (padrão), `proximos`, `metas` (PR 4) e `conquistas`
 (`CAREER_TAB`; valores são contrato de link). Não há aba vazia
 "em breve". Outros parâmetros: `?evento=<id>` abre a ficha, `?registrar=1`
-abre o registro rápido, `?lista=1` o modo lista. Com a flag desligada,
-`/carreira` redireciona para `/perfil`. O título vem do `V2Layout`
+abre o registro rápido, `?lista=1` o modo lista e `?dupla=<id do pedido>`
+destaca o pedido de confirmação que chegou (é o link do aviso). Abrir empilha
+no histórico (o Voltar do aparelho fecha o diálogo) e fechar SUBSTITUI; a
+ficha aberta a partir do registro rápido toma o lugar dele. `?evento=` e
+`?dupla=` de algo que não existe mais são ditos ("Este torneio não está mais
+na sua carreira.", "Este pedido de confirmação não está mais aberto.") e
+limpos da URL, só com dado fresco (§4.15); com a lista FALHANDO a tela diz que
+a ficha não abriu (`V2ErrorState`).
+
+**Com a flag desligada** `/carreira` não some para quem tem algo guardado
+(`CarreiraDesligada`, em `V2Career.jsx`): a página diz "A Carreira está
+desligada no momento" e mostra só duas listas — **No seu perfil público**
+(cada item com "Tirar do perfil", a ação `unpublish`, que o servidor aceita
+sem a flag) e **Torneios registrados** (cada um com "Excluir" → "Cancelar" /
+"Excluir de vez", no próprio lugar). Nada de registrar nem editar: a regra
+recusaria. Cada lista que falha tem o seu erro com "Tentar de novo", e só com
+as DUAS leituras certas e vazias a página redireciona para `/perfil` (quem não
+tem nada guardado não vê página nenhuma). O título vem do `V2Layout`
 (`PAGE_TITLES`) e o item "Carreira" fica dentro do hub do perfil (não
 há hub novo na barra lateral).
 
@@ -382,6 +424,22 @@ faixa, idade, pontos declarados, federação, etapa, link), **foto**,
 **balanço**. O cartão diz "3 de 4" e o ÚNICO próximo passo; quando o que
 falta é o balanço, o próprio próximo passo o abre.
 
+**A ordem na tela** (é a que o guia `carreira-registrar` segue, §5): o selo e
+o "N de M"; "É este torneio do PickleRush?" (quando há candidato); o bloco
+"Como foi?" (`carreira-como-foi`, só no plano que passou ou em "Não fui");
+nome, datas, organizador e cidade; os campos do planejado (`carreira-plano`,
+só no planejado); **Resultado** (chama-se "Categorias" enquanto não há
+colocação a contar: antes de o torneio começar e em "Não fui"); **Foto**
+(`carreira-foto`; escondida antes de o torneio começar e em "Não fui", a não
+ser que já haja foto); **Dupla** (`carreira-dupla`, sempre presente, com o
+convite `carreira-convidar-whatsapp` dentro); **Balanço** (`carreira-balanco`,
+só torneio jogado e gravado); **Perfil público** (`carreira-vitrine`);
+**Professor** (`carreira-professor`, só em ficha gravada e com professor);
+as anotações; e, preso embaixo, o Salvar. O rótulo das anotações é
+"Anotações (só você vê)" — e passa a "Anotações", com o aviso de que ficam ao
+alcance do professor, quando o torneio tem `shared_coach_id` (o mesmo vale
+para o texto das fotos).
+
 **Camada 4 — Balanço** (PR 2, âncora `carreira-balanco`): só para torneio
 JOGADO (`careerDebriefSource`, `career/domain/careerDebrief.js`). "Fazer o
 balanço" abre o MESMO `DebriefDialog` do Centro de Treino
@@ -413,9 +471,12 @@ pedido".
 "É este torneio do PickleRush?": `matchPlatformTournament` compara o nome
 normalizado e a data com os torneios em que a pessoa jogou; confirmando,
 grava `platform_tournament_id` e o item aparece uma vez só, com selo
-oficial. "Não é" fica no aparelho (`carreira:nao-e`). Excluir pede dois
-toques e apaga as fotos junto. Link `?evento=` com a lista falhando diz
-que a ficha não abriu (`V2ErrorState`), em vez de não fazer nada.
+oficial. "Não é" fica no aparelho (`carreira:nao-e`). **Excluir** abre um
+`ConfirmDialog` ("Excluir este torneio?", com o nome, dizendo que saem as
+fotos e o balanço) e só "Excluir de vez" apaga; fechar com alteração não salva
+("Descartar as alterações?") e "Tirar a foto" perguntam do mesmo jeito. Link
+`?evento=` com a lista falhando diz que a ficha não abriu (`V2ErrorState`),
+em vez de não fazer nada.
 
 ### 4.5 Vários de uma vez (`CareerListMode`)
 
@@ -424,6 +485,15 @@ medalha), até 30, gravadas num lote (`writeBatch`). Pergunta antes "Quantos
 torneios você já jogou fora do PickleRush?" (estimativa no aparelho,
 `carreira:estimativa`, com "Agora não") e mostra "N de ~M registrados" —
 só com a lista carregada (consulta própria, também aberto da aba Conquistas).
+
+As linhas digitadas ficam guardadas no navegador, por pessoa
+(`v2:view:<uid>:carreira:lista`, `CAREER_LIST_PREF`; zero banco), a cada
+mudança, e a chave é apagada quando o lote é salvo ou quando não sobra linha
+com conteúdo: fechar sem querer (ou o "Salvando…" que não voltou) não perde o
+que foi digitado, e cada linha guarda o id dela — tentar de novo regrava as
+mesmas, sem duplicar. As outras chaves da Carreira no navegador:
+`carreira:pendentes` (a fila sem sinal, §4.3), `carreira:estimativa`,
+`carreira:nao-e` (§4.4) e `carreira:linha:dias-de-jogo` (§4.2).
 
 ### 4.6 Conquistas
 
@@ -521,173 +591,6 @@ da linha do tempo já montada (`buildSeasonRecap`, `seasonRecap.js`).
 - Com torneio de fora DECLARADO na temporada, o rodapé diz **"Inclui
   resultado declarado"** (e o texto compartilhado também).
 
-### 4.9 Próximos (`CareerUpcomingTab`, `?aba=proximos`, PR 4)
-
-- **Contagem** do torneio principal mais próximo (`mainCountdown`: o de
-  prioridade Principal; sem ele, o planejado mais próximo). No dia do
-  torneio e durante um torneio de vários dias a contagem é 0 ("É hoje").
-- O torneio daqui só some do plano enquanto o planejado ligado a ele ESTÁ na
-  lista (`upcomingPlan`): plano que já virou jogado não esconde o torneio em
-  andamento.
-- **Meu plano** (âncora `carreira-plano-lista`, `upcomingPlan`): os
-  planejados de fora e os torneios da plataforma em que a pessoa está
-  inscrita, do mais cedo ao mais tarde — prioridade, "Já me inscrevi",
-  selo do prazo (`deadlineInfo`: fecha em N dias / fechou) e "Adicionar à
-  agenda" (`careerEventIcs`, o mesmo `AddToCalendarButton`).
-- **Para pôr no plano** (âncora `carreira-descoberta`, `buildDiscovery`): a
-  agenda das federações em que a pessoa é filiada (só com a flag
-  `federations`, `useFederationAgendaForMe`), os torneios chancelados e os
-  públicos da plataforma (`usePublicTournaments`), na região da pessoa
-  (`useRegionalList` + `RegionBar`/`RegionEmptyHint`). "Pôr no meu plano"
-  cria o planejado já preenchido (`planDraftFrom`, com `origin_ref`) — nada
-  entra sem o toque. Fonte que falhou é dita; o bloco só aparece com os
-  registros carregados (senão ofereceria o que já está no plano), e sem a
-  lista das inscrições o torneio daqui não ganha o botão. O item da agenda
-  da federação abre a aba Agenda dela; filiação cancelada ou recusada não
-  traz agenda.
-- **O plano de um torneio DAQUI** (`origin_ref: 'tor:…'`, `isPlatformPlan`)
-  é só plano: grava **só** `origin_ref`, nunca `platform_tournament_id` (que
-  é o "É este" e daria o selo Oficial a um resultado digitado). Inscrita, a
-  pessoa vê o torneio da plataforma no lugar dele (plano e linha do tempo);
-  passada a data, ele não pergunta "Como foi?" (nem a ficha, nem a pendência,
-  nem o aviso D+1) e sai da linha do tempo — se jogou, vale o oficial.
-- **Na ficha do planejado** (`CareerPlanFields`): contagem, prioridade,
-  prazo, "Já me inscrevi", a meta (`aim`), o foco (`focus_aspect`, com "Usar
-  como foco" sugerido por `suggestedFocus` — o que mais aparece a melhorar
-  nos balanços), "Mais" com o se-então e o ICS. Último dia passado ⇒ "Como
-  foi?" (`CareerHowItWent`, grava `focus_result`).
-- **Avisos do servidor** (`careerReminders`, todo dia às 9h de Brasília, só
-  com a flag): **D-3 do prazo** (planejado, não inscrito; id
-  `carreira_prazo_{evento}_{prazo}`, link `/carreira?aba=proximos&evento=`)
-  e **D+1 do torneio** ("Como foi?", pelo fim — ou pelo início sem fim; id
-  `carreira_d1_{evento}`, link `/carreira?evento=`). Ids determinísticos: o
-  aviso nunca repete. `type: 'career'`, `origin: 'server'`, categoria
-  **Carreira** das preferências (silenciada ⇒ nem push; cópia em
-  `functions/notificationPrefs.js`). O tipo `career` era de "Parcerias de
-  dupla" no PR 3: sem escolha própria gravada, "Carreira" herda "Parcerias
-  de dupla" silenciada (nas duas cópias, com paridade), e a categoria só
-  aparece nas Configurações com a flag.
-- **Mandar ao meu professor**: o balanço do torneio só leva o professor com
-  o vínculo ATIVO (com ele encerrado a regra recusaria criar o balanço);
-  "Deixar de mostrar" vale mesmo com a flag desligada; mandar não apaga o
-  que está sendo editado na ficha.
-
-### 4.10 Metas (`CareerGoalsTab`, `?aba=metas`, PR 4)
-
-Meta de **resultado** (métrica de `seasonGoalMetrics` com alvo; ou "Eu marco
-à mão") ou de **processo** (0/25/50/75/100), com início, prazo (padrão +180
-dias) e o se-então. Cada número diz DE ONDE conta
-(`SEASON_GOAL_METRIC_SOURCE`): torneios jogados e pódios somam os da
-plataforma e os declarados (dia de jogo não entra; o plano sem resposta
-também não; pódio por participação — §4.2); federados, os marcados
-como federados e os que lançaram pontos no ranking oficial. Torneio lançado
-só com o ANO (modo lista) é gravado em 1º de janeiro e pode ficar fora da
-janela da meta: `careerGoalValues` devolve `soAno` (quantos por ano) e
-`yearOnlyInGoalWindow(meta, soAno)` diz quantos a janela da meta cruza, para
-a tela avisar. O rating DUPR só
-aparece com `useDuprMode().official` e conta só com a conta verificada
-(`dupr_verified`). Concluir, "Deixar de lado" (não é falhar), Retomar e
-Excluir. Nada disso entra em XP.
-
-### 4.11 Posição no ranking (`CareerRankPanel`, PR 4)
-
-Na linha do tempo, depois de carregada: um gráfico pequeno por ranking
-(`rankSeries`; posição invertida, 1º em cima), com o selo **Oficial** (do
-`federation_rankings`) ou **Declarado** (`career_rank`) — as duas nunca
-na mesma linha —, a tendência (`rankTrend`), "Ver como tabela" e "Anotar
-posição". Leitura que falhou é dita.
-
-### 4.12 Mandar ao meu professor (PR 4)
-
-Na ficha, `CareerCoachShare` lista os professores com vínculo ativo
-(`useTrainingIdentity().coachLinks`) e grava `shared_coach_id` na hora (e no
-balanço, `saveDebrief(…, { sharedCoachId })`). O professor vê em Centro de
-Treino → Alunos → o aluno (`CoachStudentCareer`, lazy, só com a flag): os
-torneios mandados, categorias, meta, foco e os pontos fortes e a melhorar do
-balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
-
-### 4.13 A vitrine pública (PR 7)
-
-- **Na ficha** (`CareerShowcaseLayer`, seção "Perfil público",
-  `data-dica="carreira-vitrine"`): só para torneio JOGADO e salvo, e só para
-  maiores de 18. Diz antes o que vai e o que nunca vai, escolhe as fotos (com
-  descrição, até 6 na vitrine toda) e chama `publish` / `unpublish` da função
-  `career`. Ficha com mudança não salva não publica ("a vitrine mostra o que
-  está salvo"). Leitura falhando ⇒ "Não deu para saber se este torneio está no
-  seu perfil", nunca "não publicado".
-- **Nos pedidos das duplas** (`CareerPartnerUi`): no pedido confirmado, o
-  interruptor "Meu nome na vitrine de {quem}" (`public_consent`), revogável.
-- **No perfil público** (`/atleta/:uid`, `CareerPublicBlock`, lazy, só com a
-  flag, `data-dica="carreira-publica"`): o bloco "Carreira" com o selo à vista,
-  as **Parcerias** (`showcasePartnerships`: só duplas com nome publicado,
-  quem mais jogou junto primeiro) e as fotos. Sem nada publicado o bloco some;
-  leitura falhando diz "Não carregou a carreira". **Parabenizar** um pódio de
-  fora é o kudo `positive` de sempre (`CongratulateButton`, `contextId =
-  trofeu:ext:{evento}:{categoria}:{colocação}`, `showcaseTrophyContextId`).
-- **O servidor** (`functions/careerPublic.js`): `publish` exige a flag, o dono,
-  maior de 18 (menor recebe a MESMA resposta e nada é gravado), torneio jogado
-  (não planejado, não cancelado, data ≤ hoje, não plano de torneio daqui),
-  fotos da própria pasta e com descrição, e os limites; avisa uma vez as duplas
-  confirmadas que ainda não decidiram. `unpublish` vale mesmo com a flag
-  desligada. Os gatilhos `careerEventWritten` (editou/apagou o torneio) e
-  `careerPartnerWritten` (a dupla confirmou, desfez, permitiu ou retirou)
-  reconstroem ou removem o item — `rebuild` só regrava quando algo mudou e
-  apaga as fotos que saíram. Toda ação grava auditoria
-  (`career_public_published|unpublished|partner_allowed|partner_revoked`).
-
-## 5. Outros lugares
-
-- **Início** (PR 4): card **Carreira** (`HOME_CARD.CARREIRA`, grupo
-  Competir, `requer: 'carreira'`, `HomeCareerCard` lazy): a contagem do
-  principal, "Como foi o {torneio}?" e até 3 do plano com o prazo; falha ≠
-  vazio. A **agenda** do início ganha os planejados sem vínculo com a
-  plataforma (`agendaFromCareerEvents`, "Planejado"; ação quando o prazo
-  fecha em 0–3 dias e a pessoa não se inscreveu). O plano `tor:<id>` de um
-  torneio daqui não se repete ao lado dos jogos dele: quem tira é a junção
-  (`mergeAgenda`, `originRef` do plano × `tournamentId` do jogo), sem depender
-  de quem chama; o parâmetro `torneios` segue como atalho opcional. Ver `docs/31`.
-- **Precisa de você** (PR 4): "Como foi?" dos planejados que passaram e os
-  prazos que fecham em até 3 dias (`careerPlanPending`, itens
-  `carreira:como-foi` e `carreira:prazos`); lista que falhou vai para "ficou
-  de fora".
-
-- **Minha área**: seção `carreira` (grupo "Você", `userAreaSections` com
-  `carreira: flag`), `CareerAreaSection` — contagens, o último registro com o
-  que falta ("N de 4", com os balanços lidos; sem eles a conta não aparece) e
-  os atalhos. "Jogados", "pódios" e o último registro usam só o torneio de
-  fora jogado (`isOutsidePlayed`): o plano de um torneio daqui e o plano sem
-  resposta não entram (`careerAreaSummary`). Ver `docs/41-MINHA-AREA.md`.
-- **Meu desempenho** (`/meu-desempenho`, PR 2): o bloco "Fora da plataforma"
-  (`CareerPerformanceBlock`, lazy, só com a flag; âncora `desempenho-fora`) —
-  torneios, pódios e títulos DECLARADOS (`careerPerformanceSummary`; o ligado
-  por "É este" fica fora da conta porque já está no verificado), à parte dos
-  seis cartões verificados, que não mudam. O interruptor **"Incluir
-  declarados"** (`?declarados=1`, padrão desligado) mostra a soma verificado +
-  declarado em outra cor, com o selo e dizendo "N daqui + M declarados"; o
-  aproveitamento continua só com os jogos daqui — **desvio consciente do
-  plano**, que dizia "soma os declarados ao aproveitamento": o torneio de fora
-  não guarda jogos nem vitórias, então qualquer aproveitamento com ele seria
-  inventado. Lista que falhou é dita. A
-  aba da tela também foi para a URL (`?aba=jogos`; sem `aba`, a estatística)
-  e a rota entrou em `<Isolada nome="meu-desempenho">`.
-- **Exportação de dados** (Configurações): bloco `career` em
-  `dataExport.js`, com as fontes que falharam ditas (`careerExportService`;
-  PR 4: as posições anotadas, `ranks`).
-- **Exclusão de conta**: `career_events` e `career_rank` por `uid` e o prefixo `carreira/`
-  do Storage (`functions/accountDeletion.js`); a guarda
-  `exclusaoCobreColecoes` cobre o prefixo `career_`.
-- **Ajuda**: artigos `carreira-registrar`, `carreira-balanco` (o balanço, o
-  bloco de Meu desempenho e a retrospectiva) e `carreira-selos` (parte
-  Atleta), pistas de rota `/carreira` e `/meu-desempenho` e o guia
-  `carreira-registrar` (âncoras `carreira-registrar`,
-  `carreira-registrar-formato`, `carreira-lista`, `carreira-foto`,
-  `carreira-balanco`, `carreira-abas`) — todos com `flags: ['athlete_career']`.
-  PR 4: artigo e guia `carreira-planejar` (âncoras `carreira-aba-proximos`,
-  `carreira-aba-metas`, `carreira-descoberta`, `carreira-plano-lista`) e o
-  ponto de dica `carreira:descoberta`.
-- **E2E**: `tests/e2e/logado.spec.js`, teste "Carreira" (liga a flag,
-  abre as quatro abas e `/meu-desempenho?declarados=1`).
-
 ### 4.8 A dupla confirma (PR 3)
 
 - **Pedir** (`invite`): só o dono, com a flag, registro jogado (nem futuro
@@ -734,18 +637,157 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
   acrescenta "Aguardando a dupla". Confirmado continua **declarado** para
   pontuação: não entra em ranking, rating, federação nem XP.
 
-### 4.13 A dupla sem conta: "Convidar pelo WhatsApp" (PR 6)
+### 4.9 Próximos (`CareerUpcomingTab`, `?aba=proximos`, PR 4)
+
+- **Contagem** do torneio principal mais próximo (`mainCountdown`: o de
+  prioridade Principal; sem ele, o planejado mais próximo). No dia do
+  torneio e durante um torneio de vários dias a contagem é 0 ("É hoje").
+- O torneio daqui só some do plano enquanto o planejado ligado a ele ESTÁ na
+  lista (`upcomingPlan`): plano que já virou jogado não esconde o torneio em
+  andamento.
+- **Meu plano** (âncora `carreira-plano-lista`, `upcomingPlan`): os
+  planejados de fora e os torneios da plataforma em que a pessoa está
+  inscrita, do mais cedo ao mais tarde — prioridade, "Já me inscrevi",
+  selo do prazo (`deadlineInfo`: fecha em N dias / fechou) e "Adicionar à
+  agenda" (`careerEventIcs`, o mesmo `AddToCalendarButton`).
+- **Para pôr no plano** (âncora `carreira-descoberta`, `buildDiscovery`): a
+  agenda das federações em que a pessoa é filiada (só com a flag
+  `federations`, `useFederationAgendaForMe`), os torneios chancelados e os
+  públicos da plataforma (`usePublicTournaments`), na região da pessoa
+  (`useRegionalList` + `RegionBar`/`RegionEmptyHint`). "Pôr no meu plano"
+  cria o planejado já preenchido (`planDraftFrom`, com `origin_ref`) — nada
+  entra sem o toque. Fonte que falhou é dita; o bloco só aparece com os
+  registros carregados (senão ofereceria o que já está no plano), e sem a
+  lista das inscrições o torneio daqui não ganha o botão. O item da agenda
+  da federação abre a aba Agenda dela; filiação cancelada ou recusada não
+  traz agenda.
+- **O plano de um torneio DAQUI** (`origin_ref: 'tor:…'`, `isPlatformPlan`)
+  é só plano: grava **só** `origin_ref`, nunca `platform_tournament_id` (que
+  é o "É este" e daria o selo Oficial a um resultado digitado). Inscrita, a
+  pessoa vê o torneio da plataforma no lugar dele (plano e linha do tempo);
+  passada a data, ele não pergunta "Como foi?" (nem a ficha, nem a pendência,
+  nem o aviso D+1) e sai da linha do tempo — se jogou, vale o oficial.
+- **Na ficha do planejado** (`CareerPlanFields`): contagem, prioridade,
+  prazo, "Já me inscrevi", a meta (`aim`), o foco (`focus_aspect`, com "Usar
+  como foco" sugerido por `suggestedFocus` — o que mais aparece a melhorar
+  nos balanços), "Mais" com o se-então e o ICS. Último dia passado ⇒ "Como
+  foi?" (`CareerHowItWent`, âncora `carreira-como-foi`): "O torneio de {data}
+  passou. Você jogou?", com **"Joguei"** (vira jogado e abre o resultado) e
+  **"Não fui"** (grava `status: 'cancelled'`); respondido, pergunta do foco
+  (`focus_result`). O plano que passou não salva sem resposta (§4.15).
+- **Avisos do servidor** (`careerReminders`, todo dia às 9h de Brasília, só
+  com a flag): **D-3 do prazo** (planejado, não inscrito; id
+  `carreira_prazo_{evento}_{prazo}`, link `/carreira?aba=proximos&evento=`)
+  e **D+1 do torneio** ("Como foi?", pelo fim — ou pelo início sem fim; id
+  `carreira_d1_{evento}`, link `/carreira?evento=`). Ids determinísticos: o
+  aviso nunca repete. `type: 'career'`, `origin: 'server'`, categoria
+  **Carreira** das preferências (silenciada ⇒ nem push; cópia em
+  `functions/notificationPrefs.js`). O tipo `career` era de "Parcerias de
+  dupla" no PR 3: sem escolha própria gravada, "Carreira" herda "Parcerias
+  de dupla" silenciada (nas duas cópias, com paridade), e a categoria só
+  aparece nas Configurações com a flag.
+- **Mandar ao meu professor**: o balanço do torneio só leva o professor com
+  o vínculo ATIVO (com ele encerrado a regra recusaria criar o balanço);
+  "Deixar de mostrar" vale mesmo com a flag desligada; mandar não apaga o
+  que está sendo editado na ficha.
+
+### 4.10 Metas (`CareerGoalsTab`, `?aba=metas`, PR 4)
+
+Meta de **resultado** (métrica de `seasonGoalMetrics` com alvo; ou "Eu marco
+à mão") ou de **processo** (0/25/50/75/100), com início, prazo (padrão +180
+dias) e o se-então. Cada número diz DE ONDE conta
+(`SEASON_GOAL_METRIC_SOURCE`): torneios jogados e pódios somam os da
+plataforma e os declarados (dia de jogo não entra; o plano sem resposta
+também não; pódio por participação — §4.2); federados, os marcados
+como federados e os que lançaram pontos no ranking oficial. Torneio lançado
+só com o ANO (modo lista) é gravado em 1º de janeiro e pode ficar fora da
+janela da meta: `careerGoalValues` devolve `soAno` (quantos por ano) e
+`yearOnlyInGoalWindow(meta, soAno)` diz quantos a janela da meta cruza, para
+a tela avisar. O rating DUPR só
+aparece com `useDuprMode().official` e conta só com a conta verificada
+(`dupr_verified`). Concluir, "Deixar de lado" (não é falhar), Retomar e
+Excluir. Nada disso entra em XP.
+
+### 4.11 Posição no ranking (`CareerRankPanel`, PR 4)
+
+Na linha do tempo, depois de carregada: um gráfico pequeno por ranking
+(`rankSeries`; posição invertida, 1º em cima), com o selo **Oficial** (do
+`federation_rankings`) ou **Declarado** (`career_rank`) — as duas nunca
+na mesma linha —, a tendência (`rankTrend`), "Ver em tabela" / "Esconder a
+tabela", "Anotar nova posição" em cada série declarada (o formulário abre com
+a federação e o ranking dela) e "Anotar posição" para uma série nova. Leitura
+que falhou é dita.
+
+### 4.12 Mandar ao meu professor (PR 4)
+
+Na ficha, `CareerCoachShare` lista os professores com vínculo ativo
+(`useTrainingIdentity().coachLinks`) e grava `shared_coach_id` na hora (e no
+balanço, `saveDebrief(…, { sharedCoachId })`). O professor vê em Centro de
+Treino → Alunos → o aluno (`CoachStudentCareer`, lazy, só com a flag): os
+torneios mandados, categorias, meta, foco e os pontos fortes e a melhorar do
+balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
+
+O torneio e o balanço dele são gravados num lote só (`shareCareerWithCoach`,
+`writeBatch`), e quando o professor MUDA ele recebe um aviso que leva a
+`/treino?aba=alunos` (o aviso não segura o botão, §4.14).
+
+⚠️ **A tela do professor mostra menos do que a regra entrega.**
+`CoachStudentCareer` exibe só os campos acima, mas a regra (`coachSees`, §3)
+libera o DOCUMENTO inteiro do torneio mandado: as anotações (`notes`), o link,
+as duplas e as fotos (`photos[].url` é um link de download que quem lê o
+documento consegue abrir, §2.2). Por isso a ficha avisa antes de mandar
+("…as anotações, o link e as fotos vão junto") e troca "só você vê" por um
+texto que diz isso enquanto o torneio estiver mandado. "Deixar de mostrar"
+fecha a leitura do documento; o link de uma foto que o professor já tenha
+aberto continua valendo até a foto ser tirada.
+
+### 4.13 A vitrine pública (PR 7)
+
+- **Na ficha** (`CareerShowcaseLayer`, seção "Perfil público",
+  `data-dica="carreira-vitrine"`): só para torneio JOGADO e salvo, e só para
+  maiores de 18. Diz antes o que vai e o que nunca vai, escolhe as fotos (com
+  descrição, até 6 na vitrine toda) e chama `publish` / `unpublish` da função
+  `career`. Ficha com mudança não salva não publica ("a vitrine mostra o que
+  está salvo"). Leitura falhando ⇒ "Não deu para saber se este torneio está no
+  seu perfil", nunca "não publicado".
+- **Nos pedidos das duplas** (`CareerPartnerUi`): no pedido confirmado, o
+  interruptor "Meu nome na vitrine de {quem}" (`public_consent`), revogável.
+- **No perfil público** (`/atleta/:uid`, `CareerPublicBlock`, lazy, só com a
+  flag, `data-dica="carreira-publica"`): o bloco "Carreira" com o selo à vista,
+  as **Parcerias** (`showcasePartnerships`: só duplas com nome publicado,
+  quem mais jogou junto primeiro) e as fotos. Sem nada publicado o bloco some;
+  leitura falhando diz "Não carregou a carreira". **Parabenizar** um pódio de
+  fora é o kudo `positive` de sempre (`CongratulateButton`, `contextId =
+  trofeu:ext:{evento}:{categoria}:{colocação}`, `showcaseTrophyContextId`).
+- **O servidor** (`functions/careerPublic.js`): `publish` exige a flag, o dono,
+  maior de 18 (menor recebe a MESMA resposta e nada é gravado), torneio jogado
+  (não planejado, não cancelado, data ≤ hoje, não plano de torneio daqui),
+  fotos da própria pasta e com descrição, e os limites; avisa uma vez as duplas
+  confirmadas que ainda não decidiram. `unpublish` vale mesmo com a flag
+  desligada. Os gatilhos `careerEventWritten` (editou/apagou o torneio) e
+  `careerPartnerWritten` (a dupla confirmou, desfez, permitiu ou retirou)
+  reconstroem ou removem o item — `rebuild` só regrava quando algo mudou e
+  apaga as fotos que saíram. Toda ação grava auditoria
+  (`career_public_published|unpublished|partner_allowed|partner_revoked`).
+
+### 4.13a A dupla sem conta: "Convidar pelo WhatsApp" (PR 6)
 
 - **Na ficha** (camada Dupla, `NamedPartnerInvites` em `CareerPartnerUi.jsx`):
   cada dupla digitada só com o nome (`namedPartners`, uma por nome) ganha
   "Convidar pelo WhatsApp" (âncora `carreira-convidar-whatsapp`) — só com a
   ficha salva, torneio jogado e o dono maior de 18. A ação `invite_link`
   devolve o token; a tela monta a mensagem com o link
-  `/carreira/convite/:token` e abre `wa.me/?text=…` (sem número), com o
-  link "Abrir o WhatsApp" de reserva se o navegador bloquear a janela.
-  Depois: **"Convite enviado · aguardando"**, até quando vale, "Mandar um
-  link novo" (derruba o anterior) e **"Cancelar o convite"** (`invite_cancel`,
-  o link para de valer na hora). Vencido: "O convite venceu". A lista dos
+  `/carreira/convite/:token`, TENTA abrir `wa.me/?text=…` (sem número; depois
+  da espera pelo servidor o iPhone bloqueia a janela) e, de todo jeito, mostra
+  o bloco do link: "O link só aparece agora: mande ou copie antes de fechar a
+  ficha.", com **"Abrir o WhatsApp"** (uma âncora, que o navegador não
+  bloqueia) e **"Copiar link"**. O token não é guardado: fechada a ficha, o
+  link só volta gerando outro.
+  Depois: o selo **"Link gerado · aguardando a dupla"** (a plataforma sabe que
+  o link foi gerado, não que a mensagem foi enviada), até quando vale,
+  "Mandar um link novo" → "Gerar o link novo" (segundo toque; derruba o
+  anterior) e **"Cancelar o convite"** (`invite_cancel`, um toque só: o link
+  para de valer na hora). Vencido: "O convite venceu". A lista dos
   convites que falhou é dita (`V2ErrorState`), nunca "nenhum convite".
 - **O link** (`/carreira/convite/:token`, `V2CareerInvite`, lazy, em
   `<Isolada>`): sem conta, o `App.jsx` (`MainEntry`) mostra a explicação e
@@ -767,9 +809,13 @@ balanço. Recusa da regra ⇒ "O acesso fechou", nunca "nada mandado".
   Também valem neutros: o torneio que voltou a ter data futura e o pedido que
   a moderação retirou (`remove_link`) — o link não o faz renascer.
 - **Conta recém-criada sem nascimento**: a tela não consulta o servidor (ele
-  trataria como menor); pede "Complete o seu cadastro" e consulta assim que a
-  data chega ao perfil (a data está na chave da consulta). Com a flag
-  desligada, quem não entrou vê "Este link não está disponível agora".
+  trataria como menor); diz "Preencha a sua data de nascimento no cadastro.
+  Assim que salvar, o convite aparece aqui." (e que, completando pelo perfil,
+  é para voltar por este mesmo link), com o botão "Completar o cadastro", e
+  consulta assim que a data chega ao perfil (a data está na chave da
+  consulta). Com a flag desligada, quem não entrou vê "Este link não está
+  disponível agora". A tela diz com qual conta a pessoa entrou ("Você entrou
+  como {nome}.") e oferece "Não é você? Trocar de conta".
 - **Nunca troca uma conta**: dupla que já tem `uid` não está em
   `namedPartners`, então o link é recusado; o dono não aceita o próprio.
 - **Ficha aberta durante o aceite**: salvar a ficha carregada antes do aceite
@@ -853,11 +899,14 @@ texto e as seções anteriores divergirem, vale este):
 - Rascunhos do aparelho aparecem como botões de 44 px que abrem a ficha.
 
 **Dupla, convite e moderação**
-- Apagar pedido, cancelar convite e mandar link novo pedem um segundo toque no
-  próprio lugar (`ConfirmarInline`); a recusa do servidor fica dita no item e
-  num aviso.
-- O link do convite aparece na tela com "Copiar link" (o WhatsApp é uma âncora,
-  não `window.open`).
+- Apagar o pedido, mandar um link novo, "Não foi assim", retirar a visão e
+  desfazer a confirmação pedem um segundo toque no próprio lugar
+  (`ConfirmarInline`); **"Cancelar o convite" é um toque só** (conferido no
+  código na Etapa 3). A recusa do servidor fica dita no item e num aviso.
+- O link do convite aparece na tela com "Abrir o WhatsApp" (âncora) e "Copiar
+  link"; o `window.open` continua só como tentativa (§4.13a).
+- Na linha do tempo o torneio "Não fui" leva o selo **"Não fui"**, o mesmo
+  termo da ficha (Etapa 3).
 - `/carreira/convite/:token`: "Tentar de novo" depois de queda de rede; recusa
   definitiva trava. Se uma tentativa caiu sem resposta e a seguinte é recusada,
   a tela diz que o aceite pode já ter passado e leva à Carreira (o convite é de
@@ -884,6 +933,129 @@ texto e as seções anteriores divergirem, vale este):
   `not_included` dizendo o que fica só com a moderação.
 - Idiomas: todo texto novo em en/es no catálogo da carreira.
 
+### 4.16 Pente fino de 2026-11-11 (Etapa 3: pendências, peças compartilhadas, documentação e guia)
+
+Zero banco e zero regra. Este documento, `docs/05`,
+`docs/48`, o README do módulo e a ajuda foram conferidos contra o código:
+
+- **O guia `carreira-registrar` segue a tela**: "Vários de uma vez" vem ANTES
+  de "Registrar torneio" (os dois estão lado a lado na página, e depois de
+  aberto o registro rápido o botão fica atrás do diálogo); com o formulário
+  ainda aberto, os passos seguintes CONTAM o que a ficha guarda, na ordem das
+  camadas — foto, dupla, convite pelo WhatsApp, balanço —, e **salvar é o
+  último passo**. Nenhum passo espera pela ficha (`advanceOn`): ao salvar, o
+  formulário e a âncora `carreira-registrar-formato` saem da tela e o botão
+  "Completar a ficha" não tem `data-dica` — um passo parado ali ficaria sem
+  alvo, com o cartão fora do diálogo, e o toque nele fecharia o registro.
+  O botão ganhou `data-dica="carreira-completar-ficha"` e os passos o têm
+  como alvo de reserva: quem salva no meio do guia segue com o cartão dentro
+  do diálogo.
+  `help/domain/guias.test.js` trava só isto: a ordem dos passos, que depois do
+  diálogo aberto todo passo tenta primeiro as âncoras de dentro dele, e que
+  nenhum passo antes do último tem `advanceOn`/`action`. O comportamento do
+  cartão na tela não é testado ali.
+- **O que o professor lê** está dito por inteiro (§2.1, §3, §4.12, §6) e na
+  ajuda (`carreira-registrar`, `carreira-planejar`).
+- A ajuda fala dos botões que existem: "Abrir o WhatsApp" / "Copiar link",
+  "Joguei" / "Não fui", o segundo toque para apagar o pedido.
+
+O que mudou no código nesta etapa:
+
+- **Servidor** (`docs/47` §7a): o "sim" da dupla para aparecer na vitrine
+  (`public_consent`) leva a impressão e o resumo do que ela VIU; se o registro
+  mudou, o servidor recusa ("O registro mudou. Confira de novo antes de
+  permitir.") em vez de autorizar outra coisa. Os dois campos são opcionais
+  (cliente antigo segue valendo). `moderate` num pedido já decidido devolve
+  `{ already: true }` em vez de falhar. Registro apagado leva junto o balanço
+  dele (`training_debriefs/{uid}_externo_{evento}`), pelo gatilho.
+- **Foto na fila**: a foto tirada com a ficha esperando conexão é apagada do
+  Storage quando o envio chega (teto: sem a lista em cache o arquivo fica; a
+  limpeza completa pede o servidor e ficou de fora).
+- **Completude**: `careerCompleteness` é `null` para o plano que espera o "Como
+  foi?" e para o plano de torneio do PickleRush (régua `isOutsidePlayed`); o
+  "N de M · Próximo passo" não aponta foto nem resultado nesses casos.
+- **"N de ~M registrados"**: a estimativa é uma só para a linha do tempo e o
+  modo lista.
+- `useFederationAgendaForMe` devolve listas de identidade estável e não fica
+  "carregando" para sempre quando as filiações falham.
+- **Peças compartilhadas** (valem para a plataforma inteira, só no toque ou só
+  com erro): sub-abas (`V2SubTabs`) e o X dos diálogos com alvo de 44 px no
+  ponteiro grosso; `V2Field` liga a mensagem de erro ao campo
+  (`aria-describedby` + `aria-invalid`, id `<htmlFor>-erro`) quando o filho
+  único tem o id do `htmlFor`.
+- Ícone único da Carreira (`Route`) no menu, no card do início e no seletor de
+  cards. Minha área: sem "0 torneios de fora registrados" nem botão repetido.
+- Linha do tempo: pontos oficiais com separador de milhar e a colocação do
+  item de federação no subtítulo (não só no selo visual).
+- O guarda `exclusaoCobreColecoes` passou a ler também o montador da
+  exportação (`athletes/domain/dataExport.js`).
+
+Fica de fora, de propósito: o lembrete do prazo com folga (pede textos novos
+de aviso), apagar no servidor as fotos de um registro apagado (o bucket é
+compartilhado com o outro app) e refazer a vitrine quando o torneio da
+plataforma ligado muda.
+
+## 5. Outros lugares
+
+- **Início** (PR 4): card **Carreira** (`HOME_CARD.CARREIRA`, grupo
+  Competir, `requer: 'carreira'`, `HomeCareerCard` lazy): a contagem do
+  principal, "Como foi o {torneio}?" e até 3 do plano com o prazo; falha ≠
+  vazio. A **agenda** do início ganha os planejados sem vínculo com a
+  plataforma (`agendaFromCareerEvents`, "Planejado"; ação quando o prazo
+  fecha em 0–3 dias e a pessoa não se inscreveu). O plano `tor:<id>` de um
+  torneio daqui não se repete ao lado dos jogos dele: quem tira é a junção
+  (`mergeAgenda`, `originRef` do plano × `tournamentId` do jogo), sem depender
+  de quem chama; o parâmetro `torneios` segue como atalho opcional. Ver `docs/31`.
+- **Precisa de você** (PR 4): "Como foi?" dos planejados que passaram e os
+  prazos que fecham em até 3 dias (`careerPlanPending`, itens
+  `carreira:como-foi` e `carreira:prazos`); lista que falhou vai para "ficou
+  de fora".
+
+- **Minha área**: seção `carreira` (grupo "Você", `userAreaSections` com
+  `carreira: flag`), `CareerAreaSection` — contagens, o último registro com o
+  que falta ("N de 4", com os balanços lidos; sem eles a conta não aparece) e
+  os atalhos. "Jogados", "pódios" e o último registro usam só o torneio de
+  fora jogado (`isOutsidePlayed`): o plano de um torneio daqui e o plano sem
+  resposta não entram (`careerAreaSummary`). Ver `docs/41-MINHA-AREA.md`.
+- **Meu desempenho** (`/meu-desempenho`, PR 2): o bloco "Fora da plataforma"
+  (`CareerPerformanceBlock`, lazy, só com a flag; âncora `desempenho-fora`) —
+  torneios, pódios e títulos DECLARADOS (`careerPerformanceSummary`; o ligado
+  por "É este" fica fora da conta porque já está no verificado), à parte dos
+  seis cartões verificados, que não mudam. O interruptor **"Incluir
+  declarados"** (`?declarados=1`, padrão desligado) mostra a soma verificado +
+  declarado em outra cor, com o selo e dizendo "N daqui + M declarados"; o
+  aproveitamento continua só com os jogos daqui — **desvio consciente do
+  plano**, que dizia "soma os declarados ao aproveitamento": o torneio de fora
+  não guarda jogos nem vitórias, então qualquer aproveitamento com ele seria
+  inventado. Lista que falhou é dita. A
+  aba da tela também foi para a URL (`?aba=jogos`; sem `aba`, a estatística)
+  e a rota entrou em `<Isolada nome="meu-desempenho">`.
+- **Exportação de dados** (Configurações): bloco `career` em
+  `dataExport.js`, com as fontes que falharam ditas (`careerExportService`):
+  sete listas — `events`, `partners`, `partner_reports`, `partner_invites`,
+  `public`, `ranks` e `photos` — e `not_included`, dizendo o que fica só com a
+  moderação.
+- **Exclusão de conta** (`functions/accountDeletion.js`): as seis coleções —
+  `career_events`, `career_rank`, `career_partner`, `career_partner_invites`,
+  `career_partner_reports` e `career_public` — e as pastas `carreira/` e
+  `carreira-publica/` do Storage; a guarda `exclusaoCobreColecoes` cobre o
+  prefixo `career_`.
+- **Ajuda**: artigos `carreira-registrar`, `carreira-balanco` (o balanço, o
+  bloco de Meu desempenho e a retrospectiva) e `carreira-selos` (parte
+  Atleta), pistas de rota `/carreira` e `/meu-desempenho` e o guia
+  `carreira-registrar` (passos, na ordem da tela: `lista`, `registrar`,
+  `categoria`, `foto`, `dupla`, `whatsapp`, `balanco`, `salvar`; âncoras
+  `carreira-lista`, `carreira-registrar`, `carreira-registrar-formato`,
+  `carreira-foto`, `carreira-dupla`, `carreira-convidar-whatsapp`,
+  `carreira-balanco` e `carreira-abas` de reserva — §4.16) — todos com
+  `flags: ['athlete_career']`. PR 3 e PR 6: artigos `carreira-dupla` e
+  `carreira-dupla-sem-conta`.
+  PR 4: artigo e guia `carreira-planejar` (âncoras `carreira-aba-proximos`,
+  `carreira-aba-metas`, `carreira-descoberta`, `carreira-plano-lista`) e o
+  ponto de dica `carreira:descoberta`.
+- **E2E**: `tests/e2e/logado.spec.js`, teste "Carreira" (liga a flag,
+  abre as quatro abas e `/meu-desempenho?declarados=1`).
+
 ## 6. O que não pode regredir
 
 1. **Declarado nunca pontua**: nenhum motor de ranking, rating ou federação
@@ -891,8 +1063,9 @@ texto e as seções anteriores divergirem, vale este):
    por `careerHabits.js`, e a colocação declarada não muda conquista, XP da
    ficha nem placar da temporada (guarda `carreiraNaoPontua.test.js`, por
    leitura do código e por comportamento).
-2. **Só o dono** lê e escreve; a flag vale **na regra** só para criar e
-   editar.
+2. **Só o dono** escreve, e só ele lê — com UMA exceção: o professor com
+   vínculo ativo lê o torneio que o aluno mandou (item 12). A flag vale **na
+   regra** só para criar e editar.
 3. **Fonte que falhou é dita**, nunca vira "você ainda não jogou".
 4. Toda coleção `career_*` nova entra na exclusão **e** na exportação.
 5. Foto só pelo `prepareUpload` (sem EXIF), com descrição, até 6.
@@ -914,6 +1087,9 @@ texto e as seções anteriores divergirem, vale este):
     dividem a linha do gráfico.
 12. **Professor só vê o que foi MANDADO** e só com vínculo ATIVO (regra
     `coachSees`/`coachOk`, provada em `tests/rules/career.rules.test.js`).
+    O que foi mandado é o DOCUMENTO inteiro do torneio (anotações, link,
+    duplas e fotos inclusive, §4.12): nenhum texto da ficha ou da ajuda pode
+    prometer "só você vê" sobre um torneio com `shared_coach_id`.
 13. Os avisos D-3/D+1 são do servidor, com id determinístico (nunca
     repetem), e só com a flag; a categoria Carreira existe nas DUAS cópias
     das preferências.

@@ -505,6 +505,32 @@ describe('pente fino: o que o servidor não pode deixar passar', () => {
     await expect(chamar(k, ADM, { action: 'moderate', docId: `${EV_ID}__zzz`, decision: 'dismiss', reason: 'Nada aqui' })).rejects.toMatchObject({ code: 'not-found' });
   });
 
+  it('⭐ o admin toca duas vezes em "Retirar o pedido inteiro": a segunda devolve a decisão que vale, sem not-found, sem gravar nem avisar de novo', async () => {
+    const k = await confirmado();
+    await chamar(k, BIA, { action: 'report', docId: DOC, reason: 'false_claim' });
+    const decidir = () => chamar(k, ADM, { action: 'moderate', docId: DOC, decision: 'remove_link', reason: 'Não jogaram juntos' });
+    expect(await decidir()).toEqual({ id: DOC, decision: 'remove_link' });
+    expect(doc(k)).toBeUndefined();
+    const antes = k.db.store.docs.size;
+    expect(await decidir()).toEqual({ id: DOC, decision: 'remove_link', already: true });
+    expect(k.db.store.docs.size).toBe(antes);
+  });
+
+  it('apagar o registro leva o balanço do torneio (a aba que fechou no meio o deixava órfão); o de outra pessoa e o de registro vivo ficam', async () => {
+    const BAL = `training_debriefs/ana111_externo_${EV_ID}`;
+    const k = cenario();
+    k.db.store.docs.set(BAL, { uid: 'ana111', status: 'respondido', source: { type: 'externo', ref_id: EV_ID } });
+    await gatilho(k, evento(), evento({ name: 'Copa Sul 2' }));
+    expect(k.db.store.docs.has(BAL)).toBe(true);
+    await gatilho(k, evento(), null);
+    expect(k.db.store.docs.has(BAL)).toBe(false);
+    // `before` forjado (uid que não é o do id do registro) não apaga o balanço de ninguém.
+    const alheio = `training_debriefs/bia222_externo_${EV_ID}`;
+    k.db.store.docs.set(alheio, { uid: 'bia222' });
+    await gatilho(k, evento({ uid: 'bia222' }), null);
+    expect(k.db.store.docs.has(alheio)).toBe(true);
+  });
+
   it('a dupla denunciada também não desfaz a confirmação para sair da fila', async () => {
     const k = await confirmado();
     await chamar(k, ANA, { action: 'report', docId: DOC, reason: 'other' });
