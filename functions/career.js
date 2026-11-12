@@ -24,7 +24,8 @@
  *  - recalcula a IMPRESSÃO do que foi confirmado: mudou data, categoria ou
  *    colocação ⇒ "confirmar de novo" (`reconfirm`) e aviso; mudou só o nome ⇒
  *    só o resumo é atualizado;
- *  - a dupla que saiu do registro perde o pedido; o registro apagado leva os pedidos;
+ *  - a dupla que saiu do registro perde o pedido; o registro apagado leva os pedidos
+ *    e o balanço do torneio (`training_debriefs/{uid}_externo_{evento}`);
  *  - "Pôr na minha carreira também": confere o `linked_event` e liga as duas fichas
  *    (`partner_event_id`); vínculo que não confere é desfeito.
  *
@@ -423,7 +424,13 @@ async function moderate(ctx, actor, data) {
   const r0 = reps.length ? reps[0].data() : null;
   const d = snap.exists ? snap.data()
     : r0 ? { event_id: r0.event_id, owner_uid: r0.owner_uid, partner_uid: r0.partner_uid, summary: { name: r0.event_name || '' }, feedback: null } : null;
-  if (!d) falha('not-found', PEDIDO_SUMIU);
+  if (!d) {
+    // Segundo toque do admin (a fila da tela estava velha): o pedido já saiu e a denúncia
+    // já foi decidida — devolve a decisão que vale, sem gravar nem avisar de novo.
+    const decidida = repSnaps.map(decisaoDe).find(Boolean);
+    if (decidida) return { id, decision: decidida, already: true };
+    falha('not-found', PEDIDO_SUMIU);
+  }
   const decision = DECISOES.includes(data.decision) ? data.decision : '';
   if (!decision) falha('invalid-argument', 'Decisão inválida.');
   const motivo = texto(data.reason, P.PARTNER_LIMITS.reason);
@@ -713,6 +720,13 @@ async function eventWritten(ctx, eventId, before) {
     // Os convites pelo WhatsApp deste registro param de valer (PR 6).
     const convites = await db.collection(INV).where('event_id', '==', eventId).get();
     convites.docs.forEach((doc) => { batch.delete(doc.ref); escritas += 1; });
+    // O balanço do torneio: a tela o apaga depois do registro, e a aba que fecha no
+    // meio o deixava órfão (pesando no foco das semanas). Só o do próprio dono.
+    const dono = before && typeof before.uid === 'string' ? before.uid : '';
+    if (dono && eventId.startsWith(`${dono}_`)) {
+      const bal = await db.collection('training_debriefs').doc(`${dono}_externo_${eventId}`).get();
+      if (bal.exists && bal.data().uid === dono) { batch.delete(bal.ref); escritas += 1; }
+    }
   } else {
     for (const doc of pedidos.docs) {
       const d = doc.data();

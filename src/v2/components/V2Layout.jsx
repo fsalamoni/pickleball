@@ -44,7 +44,7 @@ import {
   ShoppingBag,
   Heart,
   Tag,
-  Milestone,
+  Route as RouteIcon,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -339,7 +339,7 @@ function useV2Nav() {
         children: [
           { to: '/perfil', label: userHubOn ? t('Minha área') : t('Meu perfil'), icon: User },
           trainingOn && { to: '/treino', label: t('Treino'), icon: Dumbbell },
-          careerOn && { to: '/carreira', label: t('Carreira'), icon: Milestone },
+          careerOn && { to: '/carreira', label: t('Carreira'), icon: RouteIcon },
           performanceOn && { to: '/meu-desempenho', label: t('Meu desempenho'), icon: BarChart3 },
           gamificationOn && { to: '/conquistas', label: t('Conquistas'), icon: Award },
           tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },

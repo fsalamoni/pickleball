@@ -59,8 +59,9 @@ function TrofeuCard({ t: trofeu, onOpen, children }) {
         aria-label={t('Abrir o cartão: {lugar} em {evento}', { lugar: trofeu.placeLabel, evento: trofeu.title })}
       >
         <span className="flex items-center gap-3">
+          {/* `tema-claro`: a cor do metal vem em `style` e não troca no modo escuro. */}
           <span
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-black text-ink"
+            className="tema-claro flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-black text-ink"
             style={{ background: metal.cor, boxShadow: `0 0 0 3px #fff, 0 0 0 5px ${metal.cor}` }}
             aria-hidden="true"
           >

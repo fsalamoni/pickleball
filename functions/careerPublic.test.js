@@ -354,4 +354,25 @@ describe('pente fino: selo, cópia e fotos', () => {
     expect(alheio).toEqual(await erro(chamar(k, CAU, { action: 'public_consent', docId: `${EV_ID}__zzz`, ok: true })));
     expect(alheio.code).toBe('not-found');
   });
+
+  it('⭐ "permitir meu nome" vale para o que a dupla VIU: impressão ou resumo velhos ⇒ confere de novo; sem os campos (tela antiga) passa', async () => {
+    const FP = confirmado().fingerprint;
+    const visto = { name: 'Copa Sul', city: 'Curitiba', state: 'PR' };
+    const permitir = (k, extra) => chamar(k, BIA, { action: 'public_consent', docId: PEDIDO, ok: true, ...extra });
+    // O dono trocou a colocação (ou o nome) depois que a tela da dupla carregou.
+    for (const [ev, extra] of [
+      [evento({ entries: [{ format: 'doubles', gender: 'mixed', placement: 'runner_up', partner: { uid: 'bia222', name: 'Bia' } }] }), { fingerprint: FP }],
+      [evento({ name: 'Mundial 2026' }), { fingerprint: FP, summary: visto }],
+      [evento({ city: 'Londrina' }), { summary: visto }],
+    ]) {
+      const k = cenario({ ev, pedido: confirmado() });
+      await expect(permitir(k, extra)).rejects.toMatchObject({ code: 'failed-precondition', message: expect.stringContaining('O registro mudou') });
+      expect(k.db.store.docs.get(`career_partner/${PEDIDO}`).public_ok_partner).toBeUndefined();
+    }
+    const k = cenario({ pedido: confirmado() });
+    expect(await permitir(k, { fingerprint: FP, summary: visto })).toEqual({ id: PEDIDO, ok: true });
+    // Retirar vale sempre, com o que for; a tela antiga não manda nada.
+    expect(await chamar(k, BIA, { action: 'public_consent', docId: PEDIDO, ok: false, fingerprint: 'velha' })).toEqual({ id: PEDIDO, ok: false });
+    expect(await permitir(cenario({ ev: evento({ name: 'Outro' }), pedido: confirmado() }))).toEqual({ id: PEDIDO, ok: true });
+  });
 });

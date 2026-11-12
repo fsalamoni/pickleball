@@ -519,6 +519,12 @@ export function V2SearchInput({ icon: Icon, className, wrapperClassName, ...prop
 const FIELD_CONTROL = 'w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-3 text-sm text-ink transition-all placeholder-gray-400 focus:border-gray-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60';
 
 export function V2Field({ label, htmlFor, hint, error, required, className, children }) {
+  // Com erro e `htmlFor`, a mensagem ganha id (`<htmlFor>-erro`) e o campo de
+  // id igual ao `htmlFor` é ligado a ela — o leitor de tela lê o erro ao focar.
+  const erroId = error && htmlFor ? `${htmlFor}-erro` : undefined;
+  if (erroId && React.isValidElement(children) && children.props.id === htmlFor && !children.props['aria-describedby']) {
+    children = React.cloneElement(children, { 'aria-describedby': erroId, 'aria-invalid': children.props['aria-invalid'] ?? true });
+  }
   return (
     <div className={cn('space-y-2', className)}>
       {label && (
@@ -528,7 +534,7 @@ export function V2Field({ label, htmlFor, hint, error, required, className, chil
       )}
       {children}
       {hint && !error && <p className="text-xs leading-5 text-gray-500">{hint}</p>}
-      {error && <p className="text-xs font-medium text-red-500">{error}</p>}
+      {error && <p id={erroId} className="text-xs font-medium text-red-500">{error}</p>}
     </div>
   );
 }

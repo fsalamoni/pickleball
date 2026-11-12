@@ -16,7 +16,7 @@
  * Organizada por temporada (o ano civil), com o divisor "Hoje": acima o que
  * vem (planejado), abaixo o histórico. PURO.
  */
-import { t, tk } from '@/core/i18n';
+import { fmtNumero, t, tk } from '@/core/i18n';
 import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { toISODate, todayLocal } from '@/modules/training/domain/dates.js';
 import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
@@ -52,6 +52,9 @@ const dia = (v) => {
 };
 const ano = (iso) => Number(String(iso).slice(0, 4));
 
+/** "1.500 pontos no ranking oficial", com o separador do idioma. */
+const pontosOficiais = (n) => t('{n} pontos no ranking oficial', { n: fmtNumero(n) });
+
 const degraus = (lista) => lista.map(Number).filter((n) => n >= 1 && n <= 3).sort();
 
 /**
@@ -69,7 +72,7 @@ function itemDeFora(ev, myTournaments, partners, oficial = null) {
   const pos = positions[0] || null;
   const cats = (ev.entries || []).map((e) => [entryLabel(e), oficial ? '' : placementText(e)].filter(Boolean).join(' — '));
   if (oficial && pos) cats.push(t(PODIUM_PLACE[pos].um));
-  if (oficial?.points) cats.push(t('{n} pontos no ranking oficial', { n: oficial.points }));
+  if (oficial?.points) cats.push(pontosOficiais(oficial.points));
   return {
     id: `fora:${ev.id}`,
     source: TIMELINE_SOURCE.CAREER,
@@ -182,7 +185,7 @@ export function buildCareerTimeline(fontes = {}) {
       upcoming: data > today,
       cancelled: tt.status === 'cancelled',
       title: tt.name || t('Torneio'),
-      subtitle: [podio?.subtitle, pos ? t(PODIUM_PLACE[pos].um) : '', pontos.length ? t('{n} pontos no ranking oficial', { n: pontos.reduce((s, p) => s + (Number(p.points) || 0), 0) }) : ''].filter(Boolean).join(' · '),
+      subtitle: [podio?.subtitle, pos ? t(PODIUM_PLACE[pos].um) : '', pontos.length ? pontosOficiais(pontos.reduce((s, p) => s + (Number(p.points) || 0), 0)) : ''].filter(Boolean).join(' · '),
       where: [tt.city, tt.state].filter(Boolean).join(' · '),
       position: pos,
       positions,
@@ -207,7 +210,8 @@ export function buildCareerTimeline(fontes = {}) {
       upcoming: false,
       cancelled: false,
       title: p.tournament_name || t('Torneio'),
-      subtitle: [p.modality_name, t('{n} pontos no ranking oficial', { n: pontos.reduce((s, x) => s + (Number(x.points) || 0), 0) })].filter(Boolean).join(' · '),
+      // A colocação vai no texto: o selo com o número é só visual (`aria-hidden`).
+      subtitle: [p.modality_name, pos ? t(PODIUM_PLACE[pos].um) : '', pontosOficiais(pontos.reduce((s, x) => s + (Number(x.points) || 0), 0))].filter(Boolean).join(' · '),
       where: '',
       position: pos,
       positions: pos ? [pos] : [],

@@ -18,10 +18,10 @@ import { t } from '@/core/i18n';
 import { officialRankPoints } from '../domain/careerRank.js';
 import { newCareerEventId, normalizeCareerEvent } from '../domain/careerEvent.js';
 import {
-  CAREER_PENDING_PREF, MAX_PENDING, addPending, parsePending, pendingFull, removePending, serializePending,
+  CAREER_PENDING_PREF, MAX_PENDING, addPending, orphanPhotoPaths, parsePending, pendingFull, removePending, serializePending,
 } from '../domain/draftQueue.js';
 import {
-  CareerError, careerAction, deleteCareerEvent, deleteCareerRank, listCareerEvents, listCareerPublic, listCareerRanks,
+  CareerError, careerAction, deleteCareerEvent, deleteCareerPhoto, deleteCareerRank, listCareerEvents, listCareerPublic, listCareerRanks,
   listMyCareerPartnerDocs, listMyCareerPartnerInvites, listStudentCareerShares, saveCareerEvent, saveCareerEventsBatch, saveCareerRank,
   shareCareerWithCoach,
 } from '../services/careerService.js';
@@ -268,16 +268,21 @@ export function useFederationAgendaForMe({ enabled = true } = {}) {
     staleTime: 5 * 60_000,
   });
   const semFiliacao = memb.isSuccess && ids.length === 0;
+  // Identidade estável: quem memoiza por `events`/`federations` (a descoberta, o filtro
+  // por região) não refaz a conta a cada render.
+  const federations = useMemo(() => Object.fromEntries(feds), [feds]);
   return {
     // Filiações que FALHARAM deixam a agenda desligada (pendente para sempre): isso é erro, não carregando.
     isPending: enabled && !memb.isError && (memb.isPending || (!semFiliacao && agenda.isPending)),
     isError: memb.isError || agenda.isError,
     incompleto: Boolean(agenda.data?.incompleto),
-    events: semFiliacao ? [] : (agenda.isSuccess ? agenda.data.events : undefined),
-    federations: Object.fromEntries(feds),
+    events: semFiliacao ? SEM_EVENTOS : (agenda.isSuccess ? agenda.data.events : undefined),
+    federations,
     retry: () => { if (memb.isError) memb.refetch(); if (agenda.isError || agenda.data?.incompleto) agenda.refetch(); },
   };
 }
+
+const SEM_EVENTOS = Object.freeze([]);
 
 function useInvalidar() {
   const qc = useQueryClient();
@@ -380,6 +385,7 @@ export function useCareerSaveWithDraft() {
   const uid = user?.uid || null;
   const online = useOnline();
   const invalidar = useInvalidar();
+  const qc = useQueryClient();
   const [pending, setPending] = useState(() => parsePending(readViewPreference(uid, CAREER_PENDING_PREF)));
   const enviando = useRef(false);
   const [flushing, setFlushing] = useState(false);
@@ -396,6 +402,16 @@ export function useCareerSaveWithDraft() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  /** O torneio como o servidor o tinha (o cache da lista), lido ANTES de enviar. */
+  const doServidor = (id) => (qc.getQueryData(careerKeys.events(uid)) || []).find((x) => x.id === id);
+  /**
+   * A foto tirada com a ficha na fila fica no Storage (o documento do servidor ainda
+   * aponta para ela); quando o envio CHEGA, o arquivo que o registro deixou de apontar sai.
+   * ponytail: sem a lista em cache (página recarregada sem conexão) não há com o que comparar
+   * e o arquivo fica; a saída completa é o gatilho do servidor apagar o que saiu de `photos`.
+   */
+  const limparFotos = (antes, gravado) => orphanPhotoPaths(antes, gravado, uid).forEach((p) => { deleteCareerPhoto(p); });
+
   const flush = useCallback(async () => {
     const aEnviar = (fila) => fila.filter((x) => !x.refused);
     if (!uid || enviando.current) return { enviados: 0, esperando: aEnviar(ler()).length, recusados: [] };
@@ -409,7 +425,10 @@ export function useCareerSaveWithDraft() {
       for (const ev of fila) {
         try {
           // `resend`: o primeiro envio pode ter chegado — relê antes de gravar por cima.
-          if (await comPrazo(saveCareerEvent(uid, ev, { resend: true })) === PRAZO) break;
+          const antes = doServidor(ev.id);
+          const gravado = await comPrazo(saveCareerEvent(uid, ev, { resend: true }));
+          if (gravado === PRAZO) break;
+          limparFotos(antes, gravado);
           sair.push(ev.id);
         } catch (err) {
           // Definitivo: não adianta reenviar, e travaria a fila inteira atrás dele.
@@ -456,6 +475,7 @@ export function useCareerSaveWithDraft() {
       const atual = ler().find((x) => x.id === event.id);
       if (atual && JSON.stringify(atual) === enviado) guardar(removePending(ler(), [event.id]));
     };
+    const antes = doServidor(event.id);
     const envio = saveCareerEvent(uid, event);
     try {
       const gravado = await comPrazo(envio);
@@ -463,11 +483,12 @@ export function useCareerSaveWithDraft() {
         // Sinal ruim com `onLine`: o servidor não confirmou a tempo — fica na fila.
         // O `setDoc` segue vivo no SDK: quando chegar, o rascunho sai da fila (senão o
         // próximo reenvio o regravaria por cima do que mudou depois) e a lista é relida.
-        envio.then(() => { tirarSeMesmo(); invalidar(); }, (err) => { if (erroDefinitivo(err)) tirarSeMesmo(); });
+        envio.then((g) => { limparFotos(antes, g); tirarSeMesmo(); invalidar(); }, (err) => { if (erroDefinitivo(err)) tirarSeMesmo(); });
         if (!guardou) throw naoGuardou();
         return { saved: false, event };
       }
       guardar(removePending(ler(), [event.id]));
+      limparFotos(antes, gravado);
       invalidar();
       return { saved: true, event: gravado };
     } catch (err) {

@@ -155,7 +155,7 @@ export const HOME_CARD_META = Object.freeze({
   [HOME_CARD.CARREIRA]: Object.freeze({
     label: tk('Carreira'),
     description: tk('O torneio principal que vem aí, o prazo de inscrição perto e o "como foi?" depois.'),
-    icon: 'Medal',
+    icon: 'Route',
     group: HOME_CARD_GROUP.COMPETIR,
     focos: [],
     requer: 'carreira',

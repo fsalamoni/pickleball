@@ -28,13 +28,26 @@ export const MEDAL_CHOICES = [
 /**
  * A estimativa guardada: número, `skip` ("Agora não") ou `null` (ainda não perguntou).
  * Mora aqui (e não no modo lista) para a linha do tempo não puxar o diálogo, que é `lazy`.
+ * Quem grava avisa TODAS as telas montadas (a linha do tempo fica atrás do modo lista):
+ * o "N de ~M registrados" não pode desencontrar do que a pessoa acabou de responder.
  */
+const ouvintesDaEstimativa = new Set();
 export function useCareerEstimate() {
   const { user } = useAuth();
   const uid = user?.uid || null;
   const [valor, setValor] = useState(() => readViewPreference(uid, CAREER_ESTIMATE_PREF));
-  useEffect(() => { setValor(readViewPreference(uid, CAREER_ESTIMATE_PREF)); }, [uid]);
-  const gravar = (v) => { writeViewPreference(uid, CAREER_ESTIMATE_PREF, v == null ? null : String(v)); setValor(v == null ? null : String(v)); };
+  useEffect(() => {
+    setValor(readViewPreference(uid, CAREER_ESTIMATE_PREF));
+    const ouvir = (de, v) => { if (de === uid) setValor(v); };
+    ouvintesDaEstimativa.add(ouvir);
+    return () => { ouvintesDaEstimativa.delete(ouvir); };
+  }, [uid]);
+  const gravar = (v) => {
+    const novo = v == null ? null : String(v);
+    writeViewPreference(uid, CAREER_ESTIMATE_PREF, novo);
+    setValor(novo);
+    ouvintesDaEstimativa.forEach((f) => f(uid, novo));
+  };
   return { valor, gravar };
 }
 

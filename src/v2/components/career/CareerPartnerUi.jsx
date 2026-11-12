@@ -503,7 +503,7 @@ function InboxItem({ doc, focado, onMirror }) {
             <V2Toggle id={`vitrine-${doc.id}`} checked={doc.public_ok_partner === true} disabled={acao.isPending}
               label={t('Meu nome na vitrine de {quem}', { quem })}
               hint={t('Se {quem} mostrar este torneio no perfil público, o seu nome e a sua foto aparecem junto. Sem isso, aparece só "com dupla". Você muda quando quiser.', { quem })}
-              onChange={(v) => rodar({ action: 'public_consent', docId: doc.id, ok: v }, v ? t('Seu nome pode aparecer.') : t('Seu nome não aparece mais.'))} />
+              onChange={(v) => rodar({ action: 'public_consent', docId: doc.id, ok: v, fingerprint: doc.fingerprint, summary: doc.summary }, v ? t('Seu nome pode aparecer.') : t('Seu nome não aparece mais.'))} />
           )}
           {!adulto && doc.public_ok_partner !== true && ageOn(userProfile?.birth_date, todayLocal()) === null && (
             <p className="text-xs text-gray-500">{t('Preencha a sua data de nascimento no perfil para decidir se o seu nome aparece na vitrine de {quem}.', { quem })}</p>

@@ -38,7 +38,7 @@ career/
 │   │                   # useShareCareerWithCoach, useStudentCareerShares, useFederationAgendaForMe
 │   │                   # (o serviço das federações só por import() dentro do queryFn)
 │   └── useCareerTimeline.js # useCareerTimeline (torneios, pódios, dias de jogo) — importe DAQUI;
-│                       # useCareer.js ainda o reexporta por compatibilidade, até as telas trocarem
+│                       # useCareer.js NÃO o reexporta (seria ciclo de import)
 └── i18n/locales/       # en.js, es.js
 ```
 
@@ -100,7 +100,14 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
 - Com a flag desligada, `/carreira` vira a página de apagar registros e tirar da
   vitrine (`CarreiraDesligada`, em `V2Career.jsx`).
 - Confirmação no próprio lugar: `ConfirmarInline` (em `CareerPartnerUi.jsx`);
-  em diálogo: o `ConfirmDialog` do projeto.
+  em diálogo: o `ConfirmDialog` do projeto. "Cancelar o convite" é um toque só.
+- O modo lista guarda as linhas no navegador, por pessoa
+  (`v2:view:<uid>:carreira:lista`, `CAREER_LIST_PREF`), até salvar.
+- O guia `carreira-registrar` (`help/domain/guias.js`) segue a ordem da tela e,
+  depois que um diálogo abre, tenta primeiro as âncoras de dentro dele; salvar
+  é o último passo, porque "Completar a ficha" ainda não tem `data-dica`
+  (`guias.test.js` trava a ordem e os alvos; `docs/54` §4.16). Mudou a ordem das camadas da ficha ou um
+  `data-dica="carreira-…"`? Mude o guia junto.
 
 ## O que não pode regredir
 
@@ -108,7 +115,8 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
    lê `career_*`; o XP conta só hábitos (ficha completa, registros, balanços,
    meta de processo) por `careerHabits.js`, e a colocação declarada não muda
    conquista, XP nem temporada (`src/core/guards/carreiraNaoPontua.test.js`).
-2. **Só o dono** lê e escreve `career_events` (o id começa pelo uid); a flag
+2. **Só o dono** escreve `career_events` (o id começa pelo uid) e, fora o
+   professor do item 13, só ele lê; a flag
    vale na regra (`careerOn()`) só para criar e editar — ler e apagar seguem.
 3. **Fonte que falhou é dita**, nunca vira vazio (`timeline.faltou`).
 4. Foto só por `prepareUpload` (sem EXIF), com descrição, até 6.
@@ -130,7 +138,10 @@ fontes `careerEvents`/`careerGoals` dos fatos da gamificação (docs/54 §4.6a).
 11. O seletor de dupla é UM (`PartnerPicker`, o da inscrição de torneio).
 12. Plano, metas e posição anotada nunca pontuam; Oficial e Declarado
     nunca dividem a linha do gráfico; "Pôr no meu plano" nunca grava sozinho.
-13. O professor só lê o que foi MANDADO, com vínculo ATIVO (`coachSees`).
+13. O professor só lê o que foi MANDADO, com vínculo ATIVO (`coachSees`) — e
+    o mandado é o documento INTEIRO do torneio (anotações, link, duplas e o
+    link das fotos): nenhum texto promete "só você vê" num torneio com
+    `shared_coach_id`.
 14. Os avisos D-3/D+1 são do servidor, com id determinístico, e a categoria
     Carreira existe nas duas cópias das preferências.
 15. **Dupla sem conta (PR 6)**: "Convidar pelo WhatsApp" na ficha

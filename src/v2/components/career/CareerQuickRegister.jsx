@@ -169,7 +169,7 @@ export default function CareerQuickRegister({ open, onOpenChange, save, events, 
                 {salvo.entries.length < 6 && (
                   <V2Button type="button" variant="secondary" onClick={() => setOutra(true)}><Plus className="h-4 w-4" /> {t('Outra categoria')}</V2Button>
                 )}
-                {onDetail && salvo.id && <V2Button type="button" variant="secondary" onClick={() => onDetail(salvo)}>{t('Completar a ficha')}</V2Button>}
+                {onDetail && salvo.id && <V2Button type="button" variant="secondary" data-dica="carreira-completar-ficha" onClick={() => onDetail(salvo)}>{t('Completar a ficha')}</V2Button>}
                 {/* O formulário (e o botão que tinha o foco) saiu da tela: o foco vai para a saída. */}
                 <V2Button type="button" variant="primary" autoFocus onClick={() => onOpenChange(false)}>{t('Pronto')}</V2Button>
               </>

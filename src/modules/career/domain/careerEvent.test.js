@@ -24,6 +24,14 @@ describe('status derivado da data local', () => {
     const lido = withDerivedStatus(ev, HOJE);
     expect(lido.status).toBe(CAREER_STATUS.PLAYED);
     expect(careerCompleteness(lido)).not.toBeNull();
+    // Sem saber se jogou ("Como foi?" sem resposta), "Não fui", planejado e o plano de um
+    // torneio daqui: nada de "Próximo passo: foto/colocação" — a ficha nem mostra essas camadas.
+    const semResposta = withDerivedStatus({ ...ev, entries: [{ format: 'singles' }] }, HOJE);
+    expect(awaitsResult(semResposta)).toBe(true);
+    expect(careerCompleteness(semResposta)).toBeNull();
+    expect(careerCompleteness({ ...ev, status: 'cancelled' })).toBeNull();
+    expect(careerCompleteness({ ...ev, start_date: '2027-01-01' })).toBeNull();
+    expect(careerCompleteness(withDerivedStatus({ ...ev, origin_ref: 'tor:t1', entries: [{ format: 'singles' }] }, HOJE))).toBeNull();
     expect(withDerivedStatus({ ...ev, status: 'cancelled' }, HOJE).status).toBe('cancelled');
     expect(withDerivedStatus({ ...ev, start_date: '2027-01-01' }, HOJE).status).toBe('planned');
   });

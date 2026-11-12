@@ -62,7 +62,7 @@ function Item({ item, onOpenEvent }) {
           <V2Badge tone="neutral">{t(FONTE_ROTULO[item.source])}</V2Badge>
           <SealBadge seal={item.seal} awaiting={item.partnerState === 'awaiting'} />
           {item.federated && <V2Badge tone="blue">{item.federation || t('Federado')}</V2Badge>}
-          {item.cancelled && <V2Badge tone="red">{t('Cancelado')}</V2Badge>}
+          {item.cancelled && <V2Badge tone="red">{t('Não fui')}</V2Badge>}
           {/* O plano que passou sem resposta: está na lista, mas fora das contas até a pessoa dizer. */}
           {item.pending && !item.cancelled && <V2Badge tone="amber">{t('Como foi?')}</V2Badge>}
         </span>

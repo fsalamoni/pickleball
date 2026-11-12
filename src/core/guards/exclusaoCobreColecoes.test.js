@@ -324,6 +324,24 @@ describe('a exclusão e a exportação cobrem a Carreira', () => {
       expect(servico + dominio, `o serviço não cita '${col}'`).toContain(`'${col}'`);
     }));
   });
+
+  /**
+   * 🐞 O serviço lia as sete listas e o MONTADOR (`careerBlock`, em `dataExport.js`)
+   * gravava no arquivo só duas: o guarda acima passava em verde e a exportação saía
+   * sem dupla, denúncias, convites, vitrine e ranking. Cada parte que o serviço lê
+   * tem de ser lida pelo montador — e o bloco tem de chegar ao arquivo.
+   */
+  it('⭐ o montador da exportação grava TODA parte que o serviço da carreira lê', async () => {
+    const partes = [...EXPORTA_CARREIRA.matchAll(/^\s*\['(\w+)',\s*tk\(/gm)].map((m) => m[1]);
+    expect(partes.length, 'não achei as partes de collectCareerExport (o formato mudou?)')
+      .toBeGreaterThanOrEqual(Object.keys(CARREIRA_EXPORTADA_POR).length + 1);
+    const { buildDataExport } = await import('@/modules/athletes/domain/dataExport.js');
+    // Cada parte chega com um item reconhecível; o arquivo montado tem de trazer todos.
+    const career = Object.fromEntries(partes.map((p) => [p, p === 'photos' ? [`carreira/u1/${p}.webp`] : [{ id: `marca_${p}` }]]));
+    const texto = JSON.stringify(buildDataExport({ uid: 'u1', profile: {}, career }).career);
+    const faltam = partes.filter((p) => !texto.includes(p === 'photos' ? `carreira/u1/${p}.webp` : `marca_${p}`));
+    expect(faltam, 'parte lida pelo serviço que o montador (careerBlock) não grava no arquivo').toEqual([]);
+  });
 });
 
 /* -------------------------------------------------------- Gamificação -- */

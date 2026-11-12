@@ -44,7 +44,9 @@ export const DialogContent = React.forwardRef(({ className, children, hideClose 
       {children}
       {/* `hideClose`: diálogos obrigatórios (ex.: cadastro no onboarding) sem o X. */}
       {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        // `coarse:`: no toque o alvo cresce para 44 px (16 + 2 × 14) e a margem
+        // negativa mantém o X no mesmo lugar.
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 coarse:-m-3.5 coarse:p-3.5 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <X className="h-4 w-4" />
           <span className="sr-only">{t('Fechar')}</span>
         </DialogPrimitive.Close>

@@ -71,6 +71,16 @@ describe('exclusão de conta × Carreira', () => {
     expect(db.store.docs.has('career_public/bia_1')).toBe(false);
   });
 
+  it('⭐ a denúncia ÓRFÃ (o pedido já foi apagado) sai com a conta de qualquer uma das duas pontas; a de outras pessoas fica', async () => {
+    const { db, ctx } = cenario();
+    // Pedidos que já não existem: ficaram só as denúncias (aberta, decidida e a marca sem denunciante).
+    db.store.docs.set('career_partner_reports/bia_9__ana__partner', { doc_id: 'bia_9__ana', event_id: 'bia_9', owner_uid: 'bia', partner_uid: 'ana', reporter_uid: 'ana', role: 'partner', open: true, note: 'Nunca joguei' });
+    db.store.docs.set('career_partner_reports/ana_9__bia__owner', { doc_id: 'ana_9__bia', event_id: 'ana_9', owner_uid: 'ana', partner_uid: 'bia', reporter_uid: null, role: 'owner', open: false, moderation: { decision: 'remove_feedback' } });
+    db.store.docs.set('career_partner_reports/ana_9__cau__partner', { doc_id: 'ana_9__cau', event_id: 'ana_9', owner_uid: 'ana', partner_uid: 'cau', reporter_uid: 'cau', role: 'partner', open: true });
+    await executeAccountDeletion(ctx, 'bia', { actor: ADMIN, reason: 'pedido da titular', hojeISO: '2026-11-04', FieldValue: FakeFieldValue });
+    expect([...db.store.docs.keys()].filter((p) => p.startsWith('career_partner_reports/'))).toEqual(['career_partner_reports/ana_9__cau__partner']);
+  });
+
   it('o registro que não cita a pessoa não muda', () => {
     expect(patchCareerPartner({ entries: [{ partner: { uid: 'x', name: 'X' } }] }, 'bia')).toBeNull();
     expect(patchCareerPartner(null, 'bia')).toBeNull();
