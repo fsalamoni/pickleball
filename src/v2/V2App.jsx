@@ -38,6 +38,10 @@ const V2Chat = lazy(() => import('@/v2/pages/V2Chat'));
 
 // Páginas nativas v2 de autoria e admin.
 const V2CreateTournament = lazy(() => import('@/v2/pages/V2CreateTournament'));
+// Ligas (flags leagues_*): ao lado dos torneios, módulo próprio (docs/57).
+const V2Leagues = lazy(() => import('@/v2/pages/V2Leagues'));
+const V2CreateLeague = lazy(() => import('@/v2/pages/V2CreateLeague'));
+const V2League = lazy(() => import('@/v2/pages/V2League'));
 const V2JoinTournament = lazy(() => import('@/v2/pages/V2JoinTournament'));
 const V2CreateArena = lazy(() => import('@/v2/pages/V2CreateArena'));
 const V2CreateClub = lazy(() => import('@/v2/pages/V2CreateClub'));
@@ -235,6 +239,10 @@ export default function V2App() {
           <Route path="torneios/:tournamentId/linhas" element={<Isolada nome="controle-de-linhas-torneio"><V2TournamentLineControl /></Isolada>} />
           <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<Isolada nome="modalidade"><V2ModalityPage /></Isolada>} />
           <Route path="torneios/:tournamentId/:tab" element={<Isolada nome="torneio"><V2Tournament /></Isolada>} />
+          <Route path="ligas" element={<Isolada nome="ligas"><V2Leagues /></Isolada>} />
+          <Route path="ligas/criar" element={<Isolada nome="criar-liga"><V2CreateLeague /></Isolada>} />
+          <Route path="ligas/:leagueId" element={<Isolada nome="liga"><V2League /></Isolada>} />
+          <Route path="ligas/:leagueId/:tab" element={<Isolada nome="liga"><V2League /></Isolada>} />
 
           {/* Comunidade */}
           <Route path="atletas" element={<V2Athletes />} />

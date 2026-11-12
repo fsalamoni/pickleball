@@ -210,6 +210,20 @@ organizador. Datas novas nascem como `game_days` (doc
 | Nomear / remover outro admin | ✖ | ✔ | ◐ a regra deixa **qualquer** admin criar, alterar e apagar documentos de `tournament_admins`, sem distinguir `owner` | ✔ | rules (`allow update, delete: isTournamentAdmin`) |
 | Espelhar confronto de equipes em `club_event_games` | ✖ | ✔ | ✔ | ✔ | rules (`source == 'team_confrontation'`) |
 
+### 4.4a Liga (flags `leagues_*`) — detalhe em [`57`](./57-LIGAS.md)
+
+A regra só deixa LER (`leagues/**`, conta logada); toda escrita é a callable
+`leagues`. "Org" = quem gere a liga: a lista `admins`, `Plat` e, pelo
+organizador, `AdmC` do clube, `GesA` da arena ou a equipe `competitions` da federação.
+
+| Ação | Atl | Org | Plat | Onde |
+|---|---|---|---|---|
+| Ver liga, divisões, inscritos e jogos | ✔ (também o rascunho, pelo link; as listas mostram só aberta/andamento/encerrada) | ✔ | ✔ | rules |
+| Criar liga | ◐ só com a flag do grupo ligada e respondendo pelo organizador (si mesmo, clube que administra, arena que gere, perfil de professor, federação com `competitions`) | — | ✔ sem flag | **Cloud Function** `leagues` (`create`) |
+| Editar, divisões, status, gerar rodadas, lançar placar, organização | ✖ | ✔ | ✔ | **Cloud Function** (`podeGerir`) |
+| Inscrever-se | ◐ liga aberta, autoinscrição ligada, vaga, faixa de DUPR e categoria do perfil | ✔ inscreve qualquer um, também por exceção e sem conta | ✔ | **Cloud Function** (`register` / `entry_add`) |
+| Sair da liga | ◐ só a própria inscrição | ✔ | ✔ | **Cloud Function** (`withdraw`) |
+
 ### 4.5 Clube
 
 | Ação | Atl | MemC | AdmC | Criador do clube | Plat | Onde |
@@ -577,6 +591,7 @@ Princípios que seguem daí:
 | Gamificação (inclui as metas do mês ainda sem documento: só o dono lê o ausente) | `gamificationV2.rules.test.js`, `gamification.rules.emulator.mjs` |
 | Treino | `training.rules.test.js` |
 | Mercado | `marketplace.rules.test.js`, `marketplace.functions.test.js` |
+| Ligas (leitura só; nenhuma escrita pelo cliente, nem do admin) | `leagues.rules.test.js` + `functions/leagues.test.js` |
 | Storage | `storage.rules.test.js` |
 | Rodar tudo | `npm run test:rules` (emulador de Firestore + Storage) |
 

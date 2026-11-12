@@ -7,7 +7,8 @@ import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { Link } from 'react-router-dom';
-import { Archive, Calendar, Globe, Hash, MapPin, Plus, Trophy } from 'lucide-react';
+import { Archive, Calendar, Globe, Hash, ListOrdered, MapPin, Plus, Trophy } from 'lucide-react';
+import { useLeaguesVisible } from '@/modules/leagues/hooks/useLeagues';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STATUS,
@@ -67,6 +68,7 @@ export default function V2Tournaments() {
     data: publicTournaments = [], isLoading: loadingPublic, isError: falhouPublicos, refetch: recarregarPublicos,
   } = usePublicTournaments();
   const [tab, setTab] = useState('public');
+  const { visible: ligas } = useLeaguesVisible();
 
   const { ms: agora } = useRelogio(60_000);
   const hoje = hojeLocal(new Date(agora));
@@ -93,7 +95,13 @@ export default function V2Tournaments() {
       <V2PageIntro
         title={t('Torneios')}
         subtitle={t('Descubra eventos abertos e acompanhe os seus.')}
-        action={<V2Button asChild><Link to="/torneios/criar" data-dica="torneios-criar"><Plus className="h-4 w-4" /> {t('Criar torneio')}</Link></V2Button>}
+        action={(
+          <div className="flex flex-wrap gap-2">
+            {/* A liga mora ao lado, no seu próprio módulo (/ligas): só o atalho aqui. */}
+            {ligas && <V2Button asChild variant="ghost"><Link to="/ligas/criar"><ListOrdered className="h-4 w-4" aria-hidden="true" /> {t('Criar liga')}</Link></V2Button>}
+            <V2Button asChild><Link to="/torneios/criar" data-dica="torneios-criar"><Plus className="h-4 w-4" /> {t('Criar torneio')}</Link></V2Button>
+          </div>
+        )}
       />
 
       <div data-dica="torneios-abas" className="mb-4 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">

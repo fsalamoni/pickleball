@@ -668,6 +668,18 @@ federação. Doc: [`52-CLUBE-ASSOCIACAO.md`](./52-CLUBE-ASSOCIACAO.md).
 A exclusão de conta (`functions/accountDeletion.js`) cobre as coleções da
 camada (`club_x`, `club_card_index`).
 
+## 8c. Ligas (flags `leagues_*`)
+
+Lógica em `functions/leagues.js` (testes em `leagues.test.js`), régua do domínio
+copiada em `functions/leaguePolicy.js`. Doc: [`57-LIGAS.md`](./57-LIGAS.md).
+
+| Função | Tipo / gatilho | O que faz | Quem chama |
+|---|---|---|---|
+| `leagues` | callable | a ÚNICA escrita de `leagues/**`: `create` (confere a flag do grupo e se a pessoa responde pelo organizador), `update`, `status`, `division_save`, `division_remove`, `register` (janela, vaga, faixa de DUPR e categoria pelo perfil; avisa a dupla), `withdraw`, `entry_add` (sem conta e por exceção), `schedule` (pontos corridos, método do círculo), `result` (até 5 games ou W.O.), `staff` (até 10); auditoria em `audit_logs` | `/ligas` e `/ligas/:id/gerir` |
+
+A exclusão de conta (`coletarLigas`) mantém a liga e os jogos e troca o nome por
+"Atleta removido" nas inscrições.
+
 ## 9. Motores duplicados e testes de paridade
 
 O pacote de Functions não importa `src/`, então estas regras existem **duas
@@ -687,6 +699,7 @@ resultado idêntico (mexer num lado só quebra o teste, de propósito):
 | Gamificação: matemática e ids dos primeiros passos | `functions/gamificationCore.js`, `gamification.js` | `src/modules/progression/domain` | `src/modules/progression/domain/serverParity.test.js` |
 | Avisos por e-mail/celular: configuração, escolhas, decisão por canal | `functions/messagingPolicy.js` | `src/modules/messaging/domain/policy.js` | `functions/messagingPolicy.parity.test.js` |
 | Fila de espera: prazo e lugares | `functions/openSlotWaitlist.js` | `src/modules/arenas/domain/waitlist.js` | `functions/openSlotWaitlist.test.js` / `waitlist.test.js` |
+| Ligas: formatos, flags, calendário, divisão, placar | `functions/leaguePolicy.js` | `src/modules/leagues/domain/*` | `functions/leaguePolicy.parity.test.js` |
 
 ## 10. Deploy, vigilância e como testar
 

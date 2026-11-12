@@ -139,6 +139,15 @@ export default function V2Settings() {
       } catch (_) {
         carreira = { career: undefined, incomplete: [t('Carreira')] };
       }
+      // Ligas: as ligas por onde a pessoa passou e as inscrições dela. Entra
+      // sempre (com as flags desligadas, o que está gravado continua dela).
+      let ligas = { leagues: undefined, incomplete: [] };
+      try {
+        const { collectLeagueExport } = await import('@/modules/leagues/services/leagueService');
+        ligas = await collectLeagueExport(user?.uid);
+      } catch (_) {
+        ligas = { leagues: undefined, incomplete: [t('Ligas')] };
+      }
       // Gamificação: XP, missões, conquistas, kudos, cartas, avaliações, desafios
       // e duelos (sempre ligada). Cada parte falha sozinha e vai para o aviso.
       let gamificacao = { gamification: undefined, incomplete: [] };
@@ -167,6 +176,7 @@ export default function V2Settings() {
         ...federacoes.incomplete,
         ...clubes.incomplete.map((i) => t(i)),
         ...carreira.incomplete.map((i) => t(i)),
+        ...ligas.incomplete.map((i) => t(i)),
         ...gamificacao.incomplete.map((i) => t(i)),
       ];
       const pkg = buildDataExport({
@@ -181,6 +191,7 @@ export default function V2Settings() {
         clubAssociations: clubes.clubs === undefined ? undefined : { clubs: clubes.clubs },
         messages: mensagens,
         career: carreira.career,
+        leagues: ligas.leagues,
         gamification: gamificacao.gamification,
         incomplete,
       });

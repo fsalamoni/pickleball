@@ -166,6 +166,23 @@ export const FEATURE_FLAG = Object.freeze({
    */
   TOURNAMENT_PERSONAL_VIEW: 'tournament_personal_view',
 
+  /**
+   * LIGAS (`docs/57-LIGAS.md`) — a competição de longa duração: temporada com
+   * rodadas no calendário, divisões, classificação acumulada e playoff
+   * opcional, nos formatos do DUPR (duplas fixas, flexível, escadas, equipes
+   * MiLP). Uma flag por GRUPO de quem cria, para o admin liberar a quem quiser:
+   * atletas, clubes, arenas, professores e federações. Com qualquer uma ligada
+   * a área Ligas aparece para todos (ver e se inscrever); a flag do grupo
+   * decide quem vê o "Criar liga" naquele papel. O admin da plataforma cria
+   * sempre. A liga é um `tournaments` com `competition_type: 'league'`: zero
+   * coleção, zero regra. Desligadas, nada aparece e os torneios não mudam.
+   */
+  LEAGUES_ATHLETES: 'leagues_athletes',
+  LEAGUES_CLUBS: 'leagues_clubs',
+  LEAGUES_ARENAS: 'leagues_arenas',
+  LEAGUES_COACHES: 'leagues_coaches',
+  LEAGUES_FEDERATIONS: 'leagues_federations',
+
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -588,6 +605,26 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW]: {
     label: tk('Torneio — Minha participação e Acompanhar'),
     description: tk('Dentro de cada torneio, quem está inscrito ganha a aba "Minha participação": todos os seus jogos, de todas as categorias, em ordem de dia e horário, com fase, quadra, placar, colocação e o próximo confronto possível na chave. A aba "Acompanhar" mostra o mesmo para outros inscritos escolhidos na lista do torneio. Só usa o que o quadro do torneio já mostra; nada é gravado. Desligada, as duas abas somem.'),
+  },
+  [FEATURE_FLAG.LEAGUES_ATHLETES]: {
+    label: tk('Ligas — atletas criam'),
+    description: tk('Qualquer atleta pode criar uma liga (temporada com rodadas no calendário, divisões e classificação acumulada). Com qualquer flag de ligas ligada, a área Ligas aparece para todos verem e se inscreverem. Desligada, o atleta não vê "Criar liga"; as ligas já criadas seguem funcionando.'),
+  },
+  [FEATURE_FLAG.LEAGUES_CLUBS]: {
+    label: tk('Ligas — clubes criam'),
+    description: tk('Quem administra um clube pode criar ligas em nome do clube, que aparece como organizador. Desligada, a opção some; as ligas já criadas seguem funcionando.'),
+  },
+  [FEATURE_FLAG.LEAGUES_ARENAS]: {
+    label: tk('Ligas — arenas criam'),
+    description: tk('Quem gere uma arena pode criar ligas em nome da arena, que aparece como organizadora. Desligada, a opção some; as ligas já criadas seguem funcionando.'),
+  },
+  [FEATURE_FLAG.LEAGUES_COACHES]: {
+    label: tk('Ligas — professores criam'),
+    description: tk('Professores com perfil na plataforma podem criar ligas como professor (para os alunos ou abertas). Desligada, a opção some; as ligas já criadas seguem funcionando.'),
+  },
+  [FEATURE_FLAG.LEAGUES_FEDERATIONS]: {
+    label: tk('Ligas — federações criam'),
+    description: tk('A equipe de competições de uma federação pode criar ligas em nome da federação. Desligada, a opção some; as ligas já criadas seguem funcionando.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: tk('DUPR oficial (conexão da conta e rating)'),

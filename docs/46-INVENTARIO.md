@@ -12,19 +12,19 @@
 
 | Item | Valor |
 |---|---|
-| Módulos de domínio (`src/modules/`) | 33 |
-| Telas V2 (`src/v2/pages/V2*.jsx`) | 117 |
-| Pastas de componentes V2 (`src/v2/components/`) | 34 |
-| Coleções raiz no `firestore.rules` | 247 |
-| Blocos `match` (raiz + subcoleções) | 276 |
+| Módulos de domínio (`src/modules/`) | 34 |
+| Telas V2 (`src/v2/pages/V2*.jsx`) | 120 |
+| Pastas de componentes V2 (`src/v2/components/`) | 35 |
+| Coleções raiz no `firestore.rules` | 248 |
+| Blocos `match` (raiz + subcoleções) | 277 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 127 |
-| Feature flags ligáveis (`FEATURE_FLAG`) | 11 |
+| Cloud Functions exportadas | 128 |
+| Feature flags ligáveis (`FEATURE_FLAG`) | 16 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 995 |
+| Arquivos de teste (`*.test.js(x)`) | 999 |
 | Workflows do GitHub Actions | 8 |
-| Documentos/pastas em `docs/` | 62 |
+| Documentos/pastas em `docs/` | 63 |
 
 ## 2. Stack (de `package.json`)
 
@@ -52,6 +52,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `games` | 21 | 5 | 12 | 1 | · | 2 | sim |
 | `help` | 7 | 1 | · | · | · | 2 | sim |
 | `home` | 7 | 1 | 2 | · | · | 2 | sim |
+| `leagues` | 6 | 1 | 1 | · | · | 2 | sim |
 | `legal` | 3 | 1 | 2 | · | · | 2 | sim |
 | `leveling` | 1 | · | · | · | · | · | sim |
 | `linecall` | 27 | 10 | 7 | · | · | 2 | sim |
@@ -89,11 +90,12 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `circuits` | 0 | — | — |
 | `clubs` | 6 | `arenas`, `games`, `help`, `home`, `progression`, `training` | `arenas`, `athletes`, `federations`, `games`, `tournament` |
 | `coaches` | 4 | `home`, `progression`, `promo`, `training` | `arenas`, `athletes`, `leveling`, `marketplace`, `promo`, `rating`, `sharing`, `training` |
-| `federations` | 3 | `clubs`, `promo`, `tournament` | `arenas`, `marketplace`, `tournament` |
+| `federations` | 4 | `clubs`, `leagues`, `promo`, `tournament` | `arenas`, `marketplace`, `tournament` |
 | `feed` | 0 | — | — |
 | `games` | 10 | `arenas`, `athletes`, `career`, `clubs`, `home`, `performance`, `progression`, `rating`, `social`, `training` | `analytics`, `arenas`, `athletes`, `clubs`, `leveling`, `performance`, `rating`, `tournament` |
 | `help` | 0 | — | `clubs`, `progression` |
 | `home` | 2 | `tournament`, `training` | `arenas`, `athletes`, `clubs`, `coaches`, `games`, `tournament` |
+| `leagues` | 0 | — | `federations` |
 | `legal` | 0 | — | — |
 | `leveling` | 5 | `admin`, `coaches`, `games`, `rating`, `tournament` | — |
 | `linecall` | 0 | — | `tournament` |
@@ -113,7 +115,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `training` | 3 | `career`, `coaches`, `marketplace` | `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `tournament` |
 | `trophies` | 1 | `career` | `athletes`, `tournament` |
 
-Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`, `dicas`, `federations`, `feed`, `games`, `gamification`, `home`, `i18n`, `idioma`, `legal`, `leveling`, `linecall`, `marketplace`, `notifications`, `onboarding`, `people`, `performance`, `profile`, `promo`, `rating`, `region`, `search`, `settings`, `theme`, `tournament`, `training`, `trophies`, `tutorial`, `userArea`.
+Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`, `dicas`, `federations`, `feed`, `games`, `gamification`, `home`, `i18n`, `idioma`, `leagues`, `legal`, `leveling`, `linecall`, `marketplace`, `notifications`, `onboarding`, `people`, `performance`, `profile`, `promo`, `rating`, `region`, `search`, `settings`, `theme`, `tournament`, `training`, `trophies`, `tutorial`, `userArea`.
 
 ## 4. Rotas
 
@@ -144,7 +146,7 @@ Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`,
 | `/boloes/:tournamentId` | → redireciona para `/torneios/:tournamentId` |
 | `/*` | `MainEntry` |
 
-### Aplicativo (`src/v2/V2App.jsx`) — dentro do `V2Layout`, exige login (126)
+### Aplicativo (`src/v2/V2App.jsx`) — dentro do `V2Layout`, exige login (130)
 
 | Caminho | Tela |
 |---|---|
@@ -196,6 +198,10 @@ Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`,
 | `torneios/:tournamentId/linhas` | `V2TournamentLineControl` |
 | `torneios/:tournamentId/modalidades/:modalityId` | `V2ModalityPage` |
 | `torneios/:tournamentId/:tab` | `V2Tournament` |
+| `ligas` | `V2Leagues` |
+| `ligas/criar` | `V2CreateLeague` |
+| `ligas/:leagueId` | `V2League` |
+| `ligas/:leagueId/:tab` | `V2League` |
 | `atletas` | `V2Athletes` |
 | `buscar` | `V2Search` |
 | `atleta/:uid` | `V2AthleteProfile` |
@@ -279,7 +285,7 @@ Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`,
 
 Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e relações: [`05-DATA-MODEL.md`](./05-DATA-MODEL.md).
 
-`platform_settings` · `player_ratings` · `player_skill_ratings` · `skill_rating_history` · `doubles_rankings` · `club_internal_ratings` · `club_internal_ratings_ext` · `club_internal_doubles_ratings` · `club_internal_doubles_ratings_ext` · `rating_history` · `player_goals` · `career_events` · `career_rank` · `career_partner` · `career_partner_reports` · `career_partner_invites` · `career_public` · `tournament_photos` · `follows` · `open_games` · `legal_consents` · `push_tokens` · `game_days` · `affiliate_links` · `arenas` · `arena_managers` · `arena_bookings` · `arena_reviews` · `arena_favorites` · `booking_waitlist` · `arena_courts` · `arena_court_schedules` · `arena_settings` · `arena_module_states` · `arena_open_slots` · `arena_waitlist` · `arena_members` · `arena_packages` · `arena_wallets` · `arena_subscriptions` · `arena_products` · `arena_sales` · `arena_payments` · `users` · `tournaments` · `tournament_line_courts` · `tournament_admins` · `tournament_modalities` · `tournament_registrations` · `provisional_claims` · `tournament_announcements` · `tournament_matches` · `tournament_groups` · `tournament_rankings` · `tournament_courts` · `notifications` · `platform_secrets` · `message_outbox` · `message_suppressions` · `phone_verifications` · `message_reports` · `admin_access_logs` · `audit_logs` · `athlete_profiles` · `dupr_links` · `dupr_link_tokens` · `dupr_ids` · `dupr_pilot_players` · `dupr_pilot_matches` · `dupr_submissions` · `clubs` · `club_invite_codes` · `club_code_joins` · `club_members` · `club_join_requests` · `club_member_invites` · `club_events` · `event_invites` · `club_event_games` · `club_event_rsvps` · `club_posts` · `club_forum_threads` · `conversations` · `arena_matches` · `arena_coaches` · `arena_classes` · `arena_class_bookings` · `arena_internal_tournaments` · `arena_ladders` · `arena_coupons` · `arena_campaigns` · `arena_nps_responses` · `arena_referrals` · `arena_checklists` · `arena_maintenance_orders` · `arena_devices` · `arena_networks` · `arena_network_memberships` · `arena_tier_configs` · `circuits` · `circuit_admins` · `circuit_tournaments` · `circuit_results` · `arena_unavailabilities` · `coaches` · `coach_favorites` · `coach_arenas` · `coach_availability` · `coach_lessons` · `coach_busy_slots` · `coach_waitlist` · `coach_student_notes` · `coach_students` · `coach_level_validations` · `coach_clinics` · `coach_clinic_signups` · `coach_packages` · `coach_package_sales` · `coach_content` · `coach_products` · `arena_inventory_products` · `arena_inventory_entries` · `arena_inventory_exits` · `catalog_products` · `arena_market_reports` · `dupr_export_log` · `user_progression_v2` · `user_missions` · `user_achievements_v2` · `user_streak_meta` · `user_referral_codes` · `user_referrals` · `user_kudos` · `user_kudos_index` · `user_rivals` · `crews` · `crew_members` · `mentorships` · `season_rankings` · `promo_coupons` · `promo_campaigns` · `promo_settings` · `user_gamification_prefs` · `user_xp_grants` · `gamification_moderation` · `gamification_flags` · `gamification_metrics` · `gamification_integrity` · `hall_of_fame` · `match_reviews` · `user_reputation` · `user_reputation_private` · `partner_letters` · `partner_letter_authors` · `gamification_challenges` · `challenge_entries` · `duels` · `gamification_rewards` · `reward_claims` · `gamification_goals` · `training_items` · `training_shares` · `training_sessions` · `training_plans` · `training_meta` · `training_debriefs` · `training_questions` · `training_reports` · `market_sellers` · `market_listings` · `market_questions` · `market_favorites` · `market_saved_searches` · `market_addresses` · `market_follows` · `market_carts` · `market_coupons` · `market_gift_cards` · `market_offers` · `market_orders` · `market_reviews` · `market_disputes` · `market_reports` · `federations` · `federation_staff` · `federation_admin_grants` · `federation_plans` · `federation_members` · `federation_documents_submitted` · `federation_transfers` · `federation_imports` · `federation_invites` · `federation_courses` · `federation_course_enrollments` · `federation_tournament_reports` · `federation_final_invites` · `federation_callups` · `federation_callup_members` · `federation_grants` · `federation_grant_applications` · `federation_credentials` · `federation_incidents` · `federation_sanctions` · `federation_reports` · `federation_coach_licenses` · `federation_coach_badges` · `federation_safeguarding` · `federation_news` · `federation_docs` · `federation_events` · `federation_budgets` · `federation_account_reports` · `federation_ledger` · `federation_sponsor_contracts` · `federation_assets` · `federation_certificates` · `federation_incentive_projects` · `federation_adapted_classifications` · `federation_ambassadors` · `federation_club_seals` · `federation_insurance_certificates` · `federation_host_bids` · `federation_host_entries` · `federation_host_scores` · `federation_cups` · `federation_cup_teams` · `federation_equipment` · `federation_national_links` · `federation_dues` · `federation_repasses` · `federation_referees` · `federation_assignments` · `federation_comments` · `federation_comment_reports` · `federation_elections` · `federation_candidacies` · `federation_election_voters` · `federation_election_endorsements` · `federation_ballots` · `federation_followers` · `federation_charges` · `federation_card_index` · `federation_affiliations` · `federation_results` · `federation_points` · `federation_rankings` · `club_x`
+`platform_settings` · `player_ratings` · `player_skill_ratings` · `skill_rating_history` · `doubles_rankings` · `club_internal_ratings` · `club_internal_ratings_ext` · `club_internal_doubles_ratings` · `club_internal_doubles_ratings_ext` · `rating_history` · `player_goals` · `career_events` · `career_rank` · `career_partner` · `career_partner_reports` · `career_partner_invites` · `career_public` · `tournament_photos` · `follows` · `open_games` · `legal_consents` · `push_tokens` · `game_days` · `affiliate_links` · `arenas` · `arena_managers` · `arena_bookings` · `arena_reviews` · `arena_favorites` · `booking_waitlist` · `arena_courts` · `arena_court_schedules` · `arena_settings` · `arena_module_states` · `arena_open_slots` · `arena_waitlist` · `arena_members` · `arena_packages` · `arena_wallets` · `arena_subscriptions` · `arena_products` · `arena_sales` · `arena_payments` · `users` · `tournaments` · `tournament_line_courts` · `tournament_admins` · `tournament_modalities` · `tournament_registrations` · `provisional_claims` · `tournament_announcements` · `tournament_matches` · `tournament_groups` · `tournament_rankings` · `tournament_courts` · `notifications` · `platform_secrets` · `message_outbox` · `message_suppressions` · `phone_verifications` · `message_reports` · `admin_access_logs` · `audit_logs` · `athlete_profiles` · `dupr_links` · `dupr_link_tokens` · `dupr_ids` · `dupr_pilot_players` · `dupr_pilot_matches` · `dupr_submissions` · `clubs` · `club_invite_codes` · `club_code_joins` · `club_members` · `club_join_requests` · `club_member_invites` · `club_events` · `event_invites` · `club_event_games` · `club_event_rsvps` · `club_posts` · `club_forum_threads` · `conversations` · `arena_matches` · `arena_coaches` · `arena_classes` · `arena_class_bookings` · `arena_internal_tournaments` · `arena_ladders` · `arena_coupons` · `arena_campaigns` · `arena_nps_responses` · `arena_referrals` · `arena_checklists` · `arena_maintenance_orders` · `arena_devices` · `arena_networks` · `arena_network_memberships` · `arena_tier_configs` · `circuits` · `circuit_admins` · `circuit_tournaments` · `circuit_results` · `arena_unavailabilities` · `coaches` · `coach_favorites` · `coach_arenas` · `coach_availability` · `coach_lessons` · `coach_busy_slots` · `coach_waitlist` · `coach_student_notes` · `coach_students` · `coach_level_validations` · `coach_clinics` · `coach_clinic_signups` · `coach_packages` · `coach_package_sales` · `coach_content` · `coach_products` · `arena_inventory_products` · `arena_inventory_entries` · `arena_inventory_exits` · `catalog_products` · `arena_market_reports` · `dupr_export_log` · `user_progression_v2` · `user_missions` · `user_achievements_v2` · `user_streak_meta` · `user_referral_codes` · `user_referrals` · `user_kudos` · `user_kudos_index` · `user_rivals` · `crews` · `crew_members` · `mentorships` · `season_rankings` · `promo_coupons` · `promo_campaigns` · `promo_settings` · `user_gamification_prefs` · `user_xp_grants` · `gamification_moderation` · `gamification_flags` · `gamification_metrics` · `gamification_integrity` · `hall_of_fame` · `match_reviews` · `user_reputation` · `user_reputation_private` · `partner_letters` · `partner_letter_authors` · `gamification_challenges` · `challenge_entries` · `duels` · `gamification_rewards` · `reward_claims` · `gamification_goals` · `training_items` · `training_shares` · `training_sessions` · `training_plans` · `training_meta` · `training_debriefs` · `training_questions` · `training_reports` · `market_sellers` · `market_listings` · `market_questions` · `market_favorites` · `market_saved_searches` · `market_addresses` · `market_follows` · `market_carts` · `market_coupons` · `market_gift_cards` · `market_offers` · `market_orders` · `market_reviews` · `market_disputes` · `market_reports` · `federations` · `federation_staff` · `federation_admin_grants` · `federation_plans` · `federation_members` · `federation_documents_submitted` · `federation_transfers` · `federation_imports` · `federation_invites` · `federation_courses` · `federation_course_enrollments` · `federation_tournament_reports` · `federation_final_invites` · `federation_callups` · `federation_callup_members` · `federation_grants` · `federation_grant_applications` · `federation_credentials` · `federation_incidents` · `federation_sanctions` · `federation_reports` · `federation_coach_licenses` · `federation_coach_badges` · `federation_safeguarding` · `federation_news` · `federation_docs` · `federation_events` · `federation_budgets` · `federation_account_reports` · `federation_ledger` · `federation_sponsor_contracts` · `federation_assets` · `federation_certificates` · `federation_incentive_projects` · `federation_adapted_classifications` · `federation_ambassadors` · `federation_club_seals` · `federation_insurance_certificates` · `federation_host_bids` · `federation_host_entries` · `federation_host_scores` · `federation_cups` · `federation_cup_teams` · `federation_equipment` · `federation_national_links` · `federation_dues` · `federation_repasses` · `federation_referees` · `federation_assignments` · `federation_comments` · `federation_comment_reports` · `federation_elections` · `federation_candidacies` · `federation_election_voters` · `federation_election_endorsements` · `federation_ballots` · `federation_followers` · `federation_charges` · `federation_card_index` · `federation_affiliations` · `federation_results` · `federation_points` · `leagues` · `federation_rankings` · `club_x`
 
 **Subcoleções com regra própria (29):** `game_days/…/participants` · `game_days/…/games` · `game_days/…/line_courts` · `game_days/…/line_cams` · `game_days/…/line_calls` · `game_days/…/line_invites` · `game_days/…/line_calib` · `tournament_line_courts/…/line_cams` · `tournament_line_courts/…/line_calls` · `tournament_line_courts/…/line_invites` · `tournament_line_courts/…/line_calib` · `tournament_registrations/…/private` · `club_events/…/dates` · `club_events/…/date_rsvps` · `club_events/…/messages` · `club_events/…/participants` · `club_events/…/games` · `club_forum_threads/…/comments` · `club_forum_threads/…/poll_votes` · `conversations/…/messages` · `training_sessions/…/comments` · `training_questions/…/messages` · `market_sellers/…/private` · `market_coupons/…/market_coupon_uses` · `market_orders/…/events` · `market_orders/…/private` · `federations/…/private` · `federation_members/…/private` · `federation_referees/…/private`
 
@@ -441,6 +447,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `clubAssociationVerify` | chamável (callable) |  |
 | `clubAssociationSweep` | agendada | `every day 05:20` |
 | `career` | federationCallable |  |
+| `leagues` | federationCallable |  |
 | `careerEventWritten` | gatilho Firestore | `career_events/{id}` |
 | `careerPartnerWritten` | gatilho Firestore | `career_partner/{id}` |
 | `careerDebriefWritten` | gatilho Firestore | `training_debriefs/{id}` |
@@ -449,7 +456,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 
 ## 8. Feature flags
 
-**Ligáveis pelo admin (`FEATURE_FLAG`, padrão desligado):** `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`, `marketplace`, `federations`, `club_association`, `multi_language`, `external_messaging`, `line_control`, `athlete_career`, `tournament_personal_view`.
+**Ligáveis pelo admin (`FEATURE_FLAG`, padrão desligado):** `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`, `marketplace`, `federations`, `club_association`, `multi_language`, `external_messaging`, `line_control`, `athlete_career`, `tournament_personal_view`, `leagues_athletes`, `leagues_clubs`, `leagues_arenas`, `leagues_coaches`, `leagues_federations`.
 
 **Incorporadas (`PERMANENT_FEATURE`, sempre ligadas, 33):** `dupr_match_export`, `action_home`, `smart_matchmaking`, `post_game_flow`, `push_notifications`, `arena_ops_kpis`, `arena_unified_checkout`, `arena_dynamic_pricing`, `arena_member_crm`, `coach_public_discovery`, `coach_booking_pay`, `coach_student_progress`, `coach_level_rating_seed`, `gamification_v2`, `play_smart_rotation`, `play_groups`, `gameday_americano_live`, `help_center`, `arena_game_day`, `arena_modules`, `personalized_home`, `home_cards`, `platform_marketing`, `coach_marketing`, `dark_mode`, `guided_tips`, `essential_profile`, `my_region`, `notifications_center`, `tournament_americano_etapas`, `user_hub`, `training_center`, `game_debrief`.
 
@@ -493,4 +500,4 @@ Workflows:
 
 ## 11. Documentos em `docs/`
 
-`00-INDEX.md` · `01-AI-CONTEXT.md` · `02-STANDARDS.md` · `03-WORKFLOW.md` · `04-ARCHITECTURE.md` · `05-DATA-MODEL.md` · `06-MODULES.md` · `07-DESIGN-STANDARD.md` · `08-ARENA-ROADMAP.md` · `09-UX-ANALYSIS` · `10-ARENA-V3` · `11-REFERENCE` · `12-TEAM-TOURNAMENTS.md` · `13-NIVEL-UNIFICADO.md` · `14-DIA-DE-JOGO-TELAO.md` · `15-DIA-DE-JOGO-PERMISSOES.md` · `16-DIA-DE-JOGO-RODIZIO.md` · `17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` · `18-RANKINGS.md` · `19-TUTORIAIS.md` · `20-SEGURANCA-E-PRIVACIDADE` · `21-CENTRAL-DE-AJUDA.md` · `22-DIA-DE-JOGO-DA-ARENA.md` · `23-ARENA-CALENDARIO-E-RESERVA.md` · `24-MODULOS-DE-ARENA` · `25-DIA-DE-JOGO-COMO-MODULO.md` · `26-TORNEIO-FORMATOS-E-REGRAS.md` · `27-FALHA-NAO-E-VAZIO.md` · `28-ERRO-NAO-DERRUBA-O-APP.md` · `29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` · `30-MODO-ESCURO.md` · `31-INICIO-SOB-MEDIDA.md` · `32-DICAS-GUIADAS.md` · `33-CADASTRO-ESSENCIAL.md` · `34-MINHA-REGIAO.md` · `35-JOGAR-ENTRAR-E-SAIR.md` · `36-NOTIFICACOES.md` · `37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` · `38-GAMIFICACAO-V2.md` · `39-PLAY-GRUPOS.md` · `40-CENTRO-DE-TREINO.md` · `40a-AVALIACAO-100-DRILLS.md` · `41-MINHA-AREA.md` · `42-BALANCO-DO-JOGO.md` · `43-TROFEUS-E-CARTOES.md` · `44-IDIOMAS.md` · `45-MOLDURA-DAS-PAGINAS.md` · `46-INVENTARIO.md` · `47-BACKEND-CLOUD-FUNCTIONS.md` · `48-PERMISSOES-POR-PERFIL.md` · `49-AVISOS-POR-EMAIL-E-CELULAR.md` · `50-FEDERACAO.md` · `51-DUPR.md` · `52-CLUBE-ASSOCIACAO.md` · `53-CONTROLE-DE-LINHAS.md` · `54-CARREIRA-DO-ATLETA.md` · `55-TORNEIO-MINHA-PARTICIPACAO.md` · `56-TORNEIO-RASCUNHO-E-PRAZOS.md` · `AUDIT-2026-09-28.md` · `FUTURO` · `HISTORICO-POR-ONDA.md` · `PUSH-ATIVACAO.md`
+`00-INDEX.md` · `01-AI-CONTEXT.md` · `02-STANDARDS.md` · `03-WORKFLOW.md` · `04-ARCHITECTURE.md` · `05-DATA-MODEL.md` · `06-MODULES.md` · `07-DESIGN-STANDARD.md` · `08-ARENA-ROADMAP.md` · `09-UX-ANALYSIS` · `10-ARENA-V3` · `11-REFERENCE` · `12-TEAM-TOURNAMENTS.md` · `13-NIVEL-UNIFICADO.md` · `14-DIA-DE-JOGO-TELAO.md` · `15-DIA-DE-JOGO-PERMISSOES.md` · `16-DIA-DE-JOGO-RODIZIO.md` · `17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` · `18-RANKINGS.md` · `19-TUTORIAIS.md` · `20-SEGURANCA-E-PRIVACIDADE` · `21-CENTRAL-DE-AJUDA.md` · `22-DIA-DE-JOGO-DA-ARENA.md` · `23-ARENA-CALENDARIO-E-RESERVA.md` · `24-MODULOS-DE-ARENA` · `25-DIA-DE-JOGO-COMO-MODULO.md` · `26-TORNEIO-FORMATOS-E-REGRAS.md` · `27-FALHA-NAO-E-VAZIO.md` · `28-ERRO-NAO-DERRUBA-O-APP.md` · `29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` · `30-MODO-ESCURO.md` · `31-INICIO-SOB-MEDIDA.md` · `32-DICAS-GUIADAS.md` · `33-CADASTRO-ESSENCIAL.md` · `34-MINHA-REGIAO.md` · `35-JOGAR-ENTRAR-E-SAIR.md` · `36-NOTIFICACOES.md` · `37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` · `38-GAMIFICACAO-V2.md` · `39-PLAY-GRUPOS.md` · `40-CENTRO-DE-TREINO.md` · `40a-AVALIACAO-100-DRILLS.md` · `41-MINHA-AREA.md` · `42-BALANCO-DO-JOGO.md` · `43-TROFEUS-E-CARTOES.md` · `44-IDIOMAS.md` · `45-MOLDURA-DAS-PAGINAS.md` · `46-INVENTARIO.md` · `47-BACKEND-CLOUD-FUNCTIONS.md` · `48-PERMISSOES-POR-PERFIL.md` · `49-AVISOS-POR-EMAIL-E-CELULAR.md` · `50-FEDERACAO.md` · `51-DUPR.md` · `52-CLUBE-ASSOCIACAO.md` · `53-CONTROLE-DE-LINHAS.md` · `54-CARREIRA-DO-ATLETA.md` · `55-TORNEIO-MINHA-PARTICIPACAO.md` · `56-TORNEIO-RASCUNHO-E-PRAZOS.md` · `57-LIGAS.md` · `AUDIT-2026-09-28.md` · `FUTURO` · `HISTORICO-POR-ONDA.md` · `PUSH-ATIVACAO.md`

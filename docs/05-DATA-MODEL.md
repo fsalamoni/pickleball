@@ -237,6 +237,26 @@ do servidor. Não dependa dela.
 ### `tournament_courts/{id}`
 Quadras do torneio para agendamento (slots, descanso mínimo).
 
+## Ligas (2026-11-12, flags `leagues_*`)
+
+Módulo próprio, ao lado do torneio — nenhum campo novo em `tournaments`.
+Leitura de quem tem conta, **escrita só pela função `leagues`**; zero índice.
+Ver `docs/57-LIGAS.md` §4.
+
+### `leagues/{id}`
+`name`, `description`, `city`, `state`, `location`, `format`, `entry_type`,
+`organizer {type, id, name}`, `status` (`draft`|`open`|`running`|`finished`|`cancelled`),
+`season {cadence, start_date, dates[], time, round_window_days, legs, skip_dates[]}`,
+`standings {mode, win, loss, wo_loss}`, `visibility` (`public`|`unlisted`),
+`self_registration`, `admins[]`, `member_uids[]`, `ever_uids[]`, `entries_count`,
+`creator_uid`, `created_at`, `updated_at`.
+
+### `leagues/{id}/divisions/{id}` · `…/entries/{id}` · `…/matches/{id}` (subcoleções)
+Divisão: `name`, `order`, `gender`, `rule {kind, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries`.
+Inscrição: `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`|`withdrawn`), `override` — **nenhum contato**.
+Jogo: `division_id`, `phase`, `round`, `side_a`, `side_b`, `games[{a,b}]`, `wo_winner`, `status`, `scheduled_date`, `recorded_by`.
+Classificação e datas das rodadas são derivadas, nunca gravadas.
+
 ## Clubes e comunidade
 
 ### `clubs/{id}`

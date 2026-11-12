@@ -167,7 +167,7 @@ function careerBlock(c = {}) {
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, career, gamification, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, federations, clubAssociations, messages, career, leagues, gamification, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -205,6 +205,8 @@ export function buildDataExport({
   }
   // Carreira (`collectCareerExport`): cada lista é só o que a regra deixa a pessoa ler.
   if (career !== undefined) out.career = careerBlock(career || {});
+  // Ligas (`collectLeagueExport`): cada liga por onde passou e as suas inscrições.
+  if (leagues !== undefined) out.leagues = limpo(lista(leagues));
   return out;
 }
 

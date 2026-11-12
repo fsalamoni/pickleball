@@ -71,6 +71,8 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 
 **Torneio:** [`12` equipes](./12-TEAM-TOURNAMENTS.md) · [`26` formatos e regras](./26-TORNEIO-FORMATOS-E-REGRAS.md) · [`37` etapas, turnos e check-in](./37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md) · [`55` Minha participação e Acompanhar](./55-TORNEIO-MINHA-PARTICIPACAO.md) · [`56` rascunho, publicação e prazos](./56-TORNEIO-RASCUNHO-E-PRAZOS.md) · [`43` troféus e cartões](./43-TROFEUS-E-CARTOES.md).
 
+**Liga (ao lado do torneio, sem misturar):** [`57` ligas](./57-LIGAS.md) — temporada com rodadas no calendário, divisões por DUPR e classificação; cinco flags `leagues_*`.
+
 **Arena:** [`08` roadmap](./08-ARENA-ROADMAP.md) · [`23` calendário e reserva](./23-ARENA-CALENDARIO-E-RESERVA.md) · [`24-MODULOS-DE-ARENA/`](./24-MODULOS-DE-ARENA/00-INDEX.md) (matchmaking, membros, marketing, operações, aulas, PDV, chegada/totem, integração) · [`10-ARENA-V3/`](./10-ARENA-V3/00-INDEX.md) (histórico e referência do V3).
 
 **Atleta e comunidade:** [`29` início e divulgação](./29-INICIO-PERSONALIZADO-E-DIVULGACAO.md) · [`31` início sob medida](./31-INICIO-SOB-MEDIDA.md) · [`34` minha região](./34-MINHA-REGIAO.md) · [`33` cadastro essencial](./33-CADASTRO-ESSENCIAL.md) · [`36` notificações](./36-NOTIFICACOES.md) · [`49` avisos por e-mail, WhatsApp, SMS e push](./49-AVISOS-POR-EMAIL-E-CELULAR.md) · [`50` federações](./50-FEDERACAO.md) · [`52` clube como associação](./52-CLUBE-ASSOCIACAO.md) · [`51` DUPR](./51-DUPR.md) · [`38` gamificação V2](./38-GAMIFICACAO-V2.md) · [`41` Minha área](./41-MINHA-AREA.md) · [`54` Carreira](./54-CARREIRA-DO-ATLETA.md).
@@ -113,6 +115,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Aviso novo, canal de envio (e-mail/WhatsApp/SMS/push), provedor | `49-AVISOS-POR-EMAIL-E-CELULAR.md` (+ paridade `messagingPolicy`, `npm run i18n:avisos`) |
 | Regra de ranking/rating | `18-RANKINGS.md` (+ paridade cliente × servidor) |
 | Carreira (torneios de fora, linha do tempo, fotos da carreira) | `54-CARREIRA-DO-ATLETA.md` + `src/modules/career/README.md`; coleção `career_*` nova também na exclusão e na exportação (`exclusaoCobreColecoes`), e nada de ranking/XP lê `career_*` (`carreiraNaoPontua`) |
+| Liga (formato, divisão, rodada, placar, quem cria) | `57-LIGAS.md` + `src/modules/leagues/README.md`; a regra do domínio nos DOIS lados (`functions/leaguePolicy.js`, paridade); coleção nova debaixo de `leagues/` também na exclusão (`coletarLigas`) e na exportação |
 | Padrão de código, fluxo de trabalho, deploy | `02-STANDARDS.md` / `03-WORKFLOW.md` e `CLAUDE.md` |
 | Fronteira entre camadas ou módulos (imports) | `04-ARCHITECTURE.md` §1.1a; o guarda `fronteirasDeModulos` reprova o que cruzar |
 | Entrega que vale registrar como história | uma entrada em `HISTORICO-POR-ONDA.md` |

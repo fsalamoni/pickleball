@@ -2108,6 +2108,13 @@ exports.career = federationCallable('career', (ctx, actor, data) => (Object.hasO
   ? careerPublic.careerPublic({ ...ctx, bucket: careerCtx().bucket }, actor, data)
   : career.career(ctx, actor, data)), { timeoutSeconds: 120, memory: '512MiB' });
 
+// =====================================================================
+// LIGAS (flags `leagues_*`, docs/57-LIGAS.md): módulo próprio, ao lado do
+// torneio. A árvore `leagues/**` só é escrita por aqui — ver `functions/leagues.js`.
+// =====================================================================
+const leagueModule = require('./leagues');
+exports.leagues = federationCallable('leagues', leagueModule.leagues, { timeoutSeconds: 120 });
+
 /** O torneio de fora mudou: impressão ("confirmar de novo"), pedidos órfãos e o vínculo das duas fichas. */
 exports.careerEventWritten = onDocumentWritten(
   { document: 'career_events/{id}', database: DATABASE_ID, region: REGION },
