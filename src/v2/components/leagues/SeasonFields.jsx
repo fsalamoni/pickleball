@@ -43,7 +43,7 @@ function DateList({ id, label, hint, dates, onChange }) {
   );
 }
 
-export default function SeasonFields({ value, onChange, idPrefix = 'temporada' }) {
+export default function SeasonFields({ value, onChange, idPrefix = 'temporada', ladder = false }) {
   const s = value || {};
   const set = (patch) => onChange({ ...s, ...patch });
   const id = (k) => `${idPrefix}-${k}`;
@@ -53,7 +53,7 @@ export default function SeasonFields({ value, onChange, idPrefix = 'temporada' }
   return (
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <V2Field label={t('Rodadas')} htmlFor={id('cadencia')}>
+        <V2Field label={ladder ? t('Sessões') : t('Rodadas')} htmlFor={id('cadencia')}>
           <V2Select
             id={id('cadencia')}
             value={s.cadence || SEASON_CADENCE.WEEKLY}
@@ -62,17 +62,17 @@ export default function SeasonFields({ value, onChange, idPrefix = 'temporada' }
           />
         </V2Field>
         {!custom && (
-          <V2Field label={t('Primeira rodada')} htmlFor={id('inicio')}>
+          <V2Field label={ladder ? t('Primeira sessão') : t('Primeira rodada')} htmlFor={id('inicio')}>
             <V2Input id={id('inicio')} type="date" value={s.start_date || ''} onChange={(e) => set({ start_date: e.target.value || null })} />
           </V2Field>
         )}
       </div>
 
       {custom && (
-        <DateList id={id('datas')} label={t('Datas das rodadas')} hint={t('Uma rodada por data, na ordem.')} dates={s.custom_dates} onChange={(v) => set({ custom_dates: v })} />
+        <DateList id={id('datas')} label={ladder ? t('Datas das sessões') : t('Datas das rodadas')} hint={ladder ? t('Uma sessão por data, na ordem.') : t('Uma rodada por data, na ordem.')} dates={s.custom_dates} onChange={(v) => set({ custom_dates: v })} />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={ladder ? 'grid gap-4 sm:grid-cols-2' : 'grid gap-4 sm:grid-cols-3'}>
         <V2Field label={t('Horário')} htmlFor={id('hora')} hint={t('Opcional.')}>
           <V2Input id={id('hora')} type="time" value={s.play_time || ''} onChange={(e) => set({ play_time: e.target.value })} />
         </V2Field>
@@ -86,26 +86,28 @@ export default function SeasonFields({ value, onChange, idPrefix = 'temporada' }
             rotulo={t('Prazo de cada rodada (dias)')}
           />
         </V2Field>
-        <V2Field label={t('Turnos')} htmlFor={id('turnos')}>
-          <V2Select
-            id={id('turnos')}
-            value={String(s.legs || 1)}
-            onChange={(e) => set({ legs: Number(e.target.value) })}
-            options={[{ value: '1', label: t('Turno único (cada um enfrenta todos uma vez)') }, { value: '2', label: t('Ida e volta') }]}
-          />
-        </V2Field>
+        {!ladder && (
+          <V2Field label={t('Turnos')} htmlFor={id('turnos')}>
+            <V2Select
+              id={id('turnos')}
+              value={String(s.legs || 1)}
+              onChange={(e) => set({ legs: Number(e.target.value) })}
+              options={[{ value: '1', label: t('Turno único (cada um enfrenta todos uma vez)') }, { value: '2', label: t('Ida e volta') }]}
+            />
+          </V2Field>
+        )}
       </div>
 
-      <DateList id={id('pular')} label={t('Datas sem rodada')} hint={t('Feriados e pausas: a rodada passa para a data seguinte.')} dates={s.skip_dates} onChange={(v) => set({ skip_dates: v })} />
+      <DateList id={id('pular')} label={ladder ? t('Datas sem sessão') : t('Datas sem rodada')} hint={ladder ? t('Feriados e pausas: a sessão passa para a data seguinte.') : t('Feriados e pausas: a rodada passa para a data seguinte.')} dates={s.skip_dates} onChange={(v) => set({ skip_dates: v })} />
 
       <div className="rounded-2xl border border-gray-100 bg-paper p-4">
         <p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-gray-500">
-          <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> {t('As primeiras rodadas')}
+          <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> {ladder ? t('As primeiras sessões') : t('As primeiras rodadas')}
         </p>
         <ol className="mt-2 flex flex-wrap gap-2 text-sm">
           {previa.map((r) => (
             <li key={r.round} className="rounded-full bg-paper-pure px-3 py-1 font-semibold text-ink shadow-sm">
-              {t('Rodada {n}', { n: r.round })}: {r.date ? shortDate(r.date) : t('a definir')}
+              {ladder ? t('Sessão {n}', { n: r.round }) : t('Rodada {n}', { n: r.round })}: {r.date ? shortDate(r.date) : t('a definir')}
             </li>
           ))}
         </ol>

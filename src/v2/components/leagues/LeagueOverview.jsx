@@ -10,13 +10,17 @@ import { formatMeta } from '@/modules/leagues/domain/leagueFormats';
 import { currentRound, normalizeSeason, roundCalendar } from '@/modules/leagues/domain/leagueSeason';
 import { STANDINGS_MODE_LABELS } from '@/modules/leagues/domain/leagueResults';
 import { hojeLocal } from '@/modules/home/domain/freshness';
+import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
 import LeagueRegister from './LeagueRegister';
 import { divisionSummary, entryNoun, shortDate } from './leagueUi';
 
 export default function LeagueOverview({ league, divisions, entries, matches, onGo }) {
   const meta = formatMeta(league.format);
   const season = normalizeSeason(league.season);
-  const rodadas = useMemo(() => Math.max(0, ...(matches.data || []).map((m) => m.round || 0)), [matches.data]);
+  const escada = isLadderFormat(league.format);
+  // Na escada o calendário é de SESSÕES (`session`); `round` é a volta dentro da quadra.
+  const rodadas = useMemo(() => Math.max(0, ...(matches.data || []).map((m) => (escada ? m.session : m.round) || 0)), [matches.data, escada]);
+  const rotulo = (n) => (escada ? t('Sessão {n}', { n }) : t('Rodada {n}', { n }));
   const calendario = useMemo(() => roundCalendar(season, rodadas || 5), [season, rodadas]);
   const agora = rodadas ? currentRound(calendario, hojeLocal()) : null;
   const ativosPorDiv = useMemo(() => {
@@ -55,7 +59,7 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
               ))}
             </ul>
           )}
-          <V2Button type="button" variant="ghost" size="sm" onClick={() => onGo('classificacao')}>{t('Ver a classificação')}</V2Button>
+          <V2Button type="button" variant="ghost" size="sm" onClick={() => onGo('classificacao')}>{escada ? t('Ver a escada') : t('Ver a classificação')}</V2Button>
         </V2Surface>
 
         {league.description && (
@@ -71,16 +75,18 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
           <p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-gray-500"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> {t('Temporada')}</p>
           {agora ? (
             <p className="font-display text-xl font-bold text-ink">
-              {t('Rodada {n}', { n: agora.round })}{agora.date ? ` · ${shortDate(agora.date)}` : ''}
+              {rotulo(agora.round)}{agora.date ? ` · ${shortDate(agora.date)}` : ''}
               {agora.deadline && <span className="block text-sm font-normal text-gray-500">{t('Prazo até {data}', { data: shortDate(agora.deadline) })}</span>}
             </p>
           ) : (
-            <p className="text-sm text-gray-500">{rodadas ? t('As rodadas desta temporada já passaram.') : t('As rodadas aparecem quando a organização gerar o calendário.')}</p>
+            <p className="text-sm text-gray-500">{escada
+              ? (rodadas ? t('As sessões previstas já passaram.') : t('A organização monta as quadras de cada sessão com quem vier.'))
+              : (rodadas ? t('As rodadas desta temporada já passaram.') : t('As rodadas aparecem quando a organização gerar o calendário.'))}</p>
           )}
           <ol className="space-y-1 text-sm">
             {calendario.slice(0, 8).map((r) => (
               <li key={r.round} className="flex justify-between gap-2 text-gray-600">
-                <span>{t('Rodada {n}', { n: r.round })}</span>
+                <span>{rotulo(r.round)}</span>
                 <span className="font-semibold text-ink">{r.date ? shortDate(r.date) : t('a definir')}</span>
               </li>
             ))}
@@ -91,8 +97,12 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
         <V2Surface className="space-y-3">
           <p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-gray-500"><Info className="h-3.5 w-3.5" aria-hidden="true" /> {t('Como funciona')}</p>
           {meta && <p className="text-sm leading-6 text-gray-600">{t(meta.how)}</p>}
-          <p className="text-sm leading-6 text-gray-600">{t(STANDINGS_MODE_LABELS[pts.mode === 'win_pct' ? 'win_pct' : 'points'])}</p>
-          {pts.mode !== 'win_pct' && (
+          {escada ? (
+            <p className="text-sm leading-6 text-gray-600">{t('A classificação é a posição na escada: a cada sessão o 1º de cada quadra sobe e o último desce.')}</p>
+          ) : (
+            <p className="text-sm leading-6 text-gray-600">{t(STANDINGS_MODE_LABELS[pts.mode === 'win_pct' ? 'win_pct' : 'points'])}</p>
+          )}
+          {!escada && pts.mode !== 'win_pct' && (
             <p className="text-sm text-gray-600">{t('Vitória {v} · derrota {d} · W.O. {w}', { v: pts.win ?? 3, d: pts.loss ?? 1, w: pts.wo_loss ?? 0 })}</p>
           )}
           <p className="text-xs leading-5 text-gray-500">{t('Os jogos da liga ainda não contam no ranking da plataforma nem no DUPR.')}</p>

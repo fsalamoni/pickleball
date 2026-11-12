@@ -675,7 +675,7 @@ copiada em `functions/leaguePolicy.js`. Doc: [`57-LIGAS.md`](./57-LIGAS.md).
 
 | Função | Tipo / gatilho | O que faz | Quem chama |
 |---|---|---|---|
-| `leagues` | callable | a ÚNICA escrita de `leagues/**`: `create` (confere a flag do grupo e se a pessoa responde pelo organizador), `update`, `status`, `division_save`, `division_remove`, `register` (janela, vaga, faixa de DUPR e categoria pelo perfil; avisa a dupla), `withdraw`, `entry_add` (sem conta e por exceção), `schedule` (pontos corridos, método do círculo), `result` (até 5 games ou W.O.), `staff` (até 10); auditoria em `audit_logs` | `/ligas` e `/ligas/:id/gerir` |
+| `leagues` | callable | a ÚNICA escrita de `leagues/**`: `create` (confere a flag do grupo e se a pessoa responde pelo organizador), `update`, `status`, `division_save`, `division_remove`, `register` (janela, vaga, faixa de DUPR e categoria pelo perfil; avisa a dupla), `withdraw`, `entry_add` (sem conta e por exceção), `schedule` (pontos corridos, método do círculo), `session` (escada: as quadras da próxima sessão com quem veio, régua em `functions/leagueLadder.js` com paridade `leagueLadder.parity.test.js`; avisa os atletas), `result` (até 5 games ou W.O.), `staff` (até 10); auditoria em `audit_logs` | `/ligas` e `/ligas/:id/gerir` |
 
 A exclusão de conta (`coletarLigas`) mantém a liga e os jogos e troca o nome por
 "Atleta removido" nas inscrições.

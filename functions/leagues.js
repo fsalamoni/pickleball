@@ -10,9 +10,10 @@
  *
  * Chamada `leagues` (ações): `create`, `update`, `status`, `division_save`,
  * `division_remove`, `register`, `withdraw`, `entry_add`, `schedule`,
- * `result`, `staff`.
+ * `result`, `staff` e, nas escadas, `session` (a próxima sessão).
  */
 const P = require('./leaguePolicy.js');
+const LD = require('./leagueLadder.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const { FederationError, staffPerms } = require('./federations.js');
 
@@ -354,7 +355,10 @@ async function withdraw(ctx, actor, data) {
   const minha = (e.data().player_uids || []).includes(actor.uid);
   if (!minha) await exigeGerir(ctx, actor, lg);
   const jogos = await sub(ctx, lg.id, 'matches').where('division_id', '==', e.data().division_id).get();
-  const temJogo = jogos.docs.some((j) => j.data().side_a === e.id || j.data().side_b === e.id);
+  const temJogo = jogos.docs.some((j) => {
+    const m = j.data();
+    return m.side_a === e.id || m.side_b === e.id || [...(m.team_a || []), ...(m.team_b || [])].includes(e.id);
+  });
   const batch = ctx.db.batch();
   // Sem jogo marcado, a inscrição sai; com jogo, ela fica como desistência
   // (os placares já lançados continuam valendo para os adversários).
@@ -372,6 +376,7 @@ async function schedule(ctx, actor, data) {
   const lg = await liga(ctx, data.leagueId);
   await exigeGerir(ctx, actor, lg);
   if (['finished', 'cancelled', 'draft'].includes(lg.status)) falha('failed-precondition', 'Abra a liga antes de gerar as rodadas.');
+  if (LD.isLadderFormat(lg.format)) falha('failed-precondition', 'Na escada, os jogos saem sessão a sessão.');
   const divisionId = texto(data.divisionId, 128);
   const [entries, jogos] = await Promise.all([
     sub(ctx, lg.id, 'entries').where('division_id', '==', divisionId).where('status', '==', 'active').get(),
@@ -429,6 +434,78 @@ async function result(ctx, actor, data) {
   return { ok: true };
 }
 
+/**
+ * ESCADA: gera a próxima sessão da divisão com quem veio (`present`). A escada
+ * é refeita dos jogos (`leagueLadder.js`), os presentes entram na ordem dela e
+ * são cortados em quadras. Sessão aberta sem nenhum placar é REFEITA (outra
+ * lista de presença); com placar, só depois de fechada.
+ */
+async function session(ctx, actor, data) {
+  const lg = await liga(ctx, data.leagueId);
+  await exigeGerir(ctx, actor, lg);
+  if (!LD.isLadderFormat(lg.format)) falha('failed-precondition', 'Só a escada joga por sessão.');
+  if (['finished', 'cancelled', 'draft'].includes(lg.status)) falha('failed-precondition', 'Abra a liga antes de gerar uma sessão.');
+  const divisionId = texto(data.divisionId, 128);
+  const div = await sub(ctx, lg.id, 'divisions').doc(divisionId).get();
+  if (!div.exists) falha('not-found', 'Divisão não encontrada.');
+  const [entries, jogos] = await Promise.all([
+    sub(ctx, lg.id, 'entries').where('division_id', '==', divisionId).get(),
+    sub(ctx, lg.id, 'matches').where('division_id', '==', divisionId).get(),
+  ]);
+  const inscricoes = entries.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const todos = jogos.docs.map((d) => ({ id: d.id, ref: d.ref, ...d.data() }));
+  const sessoes = [...new Set(todos.filter((m) => m.phase === 'ladder').map((m) => m.session))].sort((a, b) => a - b);
+  const ultima = sessoes[sessoes.length - 1];
+  const daUltima = todos.filter((m) => m.phase === 'ladder' && m.session === ultima);
+  const fechada = daUltima.length > 0 && daUltima.every((m) => LD.matchWinner(m) != null);
+  const comPlacar = daUltima.some((m) => m.status === 'done');
+  if (ultima != null && !fechada && comPlacar) falha('failed-precondition', `Lance todos os placares da sessão ${ultima} antes de gerar a próxima.`);
+  const refazer = ultima != null && !fechada;
+  const numero = refazer ? ultima : (ultima || 0) + 1;
+  const base = refazer ? todos.filter((m) => !(m.phase === 'ladder' && m.session === ultima)) : todos;
+  const escada = LD.computeLadder(inscricoes, base, lg.standings).order;
+  const ativos = new Set(inscricoes.filter((e) => e.status === 'active').map((e) => e.id));
+  const pedidos = Array.isArray(data.present) ? new Set(data.present.map((x) => texto(x, 128))) : ativos;
+  const presentes = escada.filter((id) => ativos.has(id) && pedidos.has(id));
+  const g = LD.buildSessionGroups(lg.format, presentes);
+  if (!g.ok) {
+    falha('failed-precondition', g.error === 'too_few'
+      ? 'Poucos presentes para formar uma quadra.'
+      : `Com ${presentes.length} presentes as quadras não fecham: marque mais ou menos presentes.`);
+  }
+  const novos = LD.sessionMatches(lg.format, g.groups);
+  const escritas = [
+    ...(refazer ? daUltima.map((m) => (b) => b.delete(m.ref)) : []),
+    ...novos.map((m) => (b) => b.set(sub(ctx, lg.id, 'matches').doc(), {
+      division_id: divisionId, phase: 'ladder', session: numero, group: m.group, round: m.round,
+      team_a: m.team_a, team_b: m.team_b, side_a: null, side_b: null,
+      games: [], wo_winner: null, status: 'scheduled', scheduled_date: null, court: '',
+      created_at: ts(ctx), updated_at: ts(ctx),
+    })),
+  ];
+  for (let i = 0; i < escritas.length; i += LOTE) {
+    const batch = ctx.db.batch();
+    escritas.slice(i, i + LOTE).forEach((w) => w(batch));
+    await batch.commit();
+  }
+  const fim = ctx.db.batch();
+  if (lg.status === 'open' && data.start === true) fim.update(ref(ctx, lg.id), { status: 'running', updated_at: ts(ctx) });
+  const porId = new Map(inscricoes.map((e) => [e.id, e]));
+  const link = `/ligas/${lg.id}/rodadas`;
+  g.groups.forEach((ids, q) => ids.forEach((id) => (porId.get(id).player_uids || []).forEach((uid) => {
+    if (uid !== actor.uid) {
+      aviso(ctx, fim, uid, {
+        title: tx('Sessão {n} da liga', { n: numero }),
+        message: tx('Na liga {liga}, você joga na quadra {q}.', { liga: lg.name, q: q + 1 }),
+        link,
+      });
+    }
+  })));
+  auditoria(ctx, fim, actor, 'league_session', { league_id: lg.id, division_id: divisionId, session: numero, redo: refazer, present: presentes.length });
+  await fim.commit();
+  return { session: numero, groups: g.groups.length, matches: novos.length, redo: refazer };
+}
+
 async function staff(ctx, actor, data) {
   const lg = await liga(ctx, data.leagueId);
   await exigeGerir(ctx, actor, lg);
@@ -454,7 +531,7 @@ async function staff(ctx, actor, data) {
 
 const ACOES = {
   create, update, status, division_save: divisionSave, division_remove: divisionRemove,
-  register, withdraw, entry_add: entryAdd, schedule, result, staff,
+  register, withdraw, entry_add: entryAdd, schedule, session, result, staff,
 };
 
 /** Despacho pela chave PRÓPRIA (`'constructor'` não é ação — docs/47 §1.1). */

@@ -23,6 +23,8 @@ import { ELIGIBILITY_REASON_LABELS, divisionEligibility } from '@/modules/league
 import DivisionFields, { emptyDivision } from './DivisionFields';
 import SeasonFields from './SeasonFields';
 import PointsFields from './PointsFields';
+import LeagueSessionPanel from './LeagueSessionPanel';
+import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
 import { LeagueStatusBadge, divisionSummary, entryNoun, personUid } from './leagueUi';
 
 const SECOES = [
@@ -54,7 +56,7 @@ export default function LeagueManage(props) {
   return (
     <div className="space-y-5">
       <V2SubTabs
-        tabs={SECOES.map((s) => ({ ...s, label: t(s.label) }))}
+        tabs={SECOES.map((s) => ({ ...s, label: s.value === 'rodadas' && isLadderFormat(props.league.format) ? t('Sessões') : t(s.label) }))}
         activeValue={secao}
         onSelect={(s) => setParams((p) => { p.set('secao', s.value); return p; }, { replace: true })}
         ariaLabel={t('Seções da gestão da liga')}
@@ -65,7 +67,7 @@ export default function LeagueManage(props) {
       {secao === 'temporada' && <Temporada {...props} />}
       {secao === 'divisoes' && <Divisoes {...props} />}
       {secao === 'inscricoes' && <Inscricoes {...props} />}
-      {secao === 'rodadas' && <Rodadas {...props} />}
+      {secao === 'rodadas' && (isLadderFormat(props.league.format) ? <Sessoes {...props} /> : <Rodadas {...props} />)}
       {secao === 'equipe' && <Equipe {...props} />}
     </div>
   );
@@ -152,8 +154,8 @@ function Temporada({ league }) {
   const [standings, setStandings] = useState(() => ({ mode: 'points', win: 3, loss: 1, wo_loss: 0, ...(league.standings || {}) }));
   return (
     <V2Surface className="space-y-6">
-      <SeasonFields value={season} onChange={setSeason} idPrefix="g-temporada" />
-      <PointsFields value={standings} onChange={setStandings} idPrefix="g-pontos" />
+      <SeasonFields value={season} onChange={setSeason} idPrefix="g-temporada" ladder={isLadderFormat(league.format)} />
+      <PointsFields value={standings} onChange={setStandings} idPrefix="g-pontos" ladder={isLadderFormat(league.format)} />
       <p className="text-xs leading-5 text-gray-500">{t('Mudar a pontuação recalcula a tabela na hora. Mudar o calendário muda as datas das rodadas, não os jogos.')}</p>
       <V2Button type="button" disabled={pending} onClick={() => salvar({ action: 'update', leagueId: league.id, patch: { season, standings } }, t('Temporada salva.'))}>{t('Salvar')}</V2Button>
     </V2Surface>
@@ -308,6 +310,11 @@ function Inscricoes({ league, divisions, entries }) {
       </V2Surface>
     </div>
   );
+}
+
+function Sessoes(props) {
+  const { salvar, pending } = useSalvar();
+  return <LeagueSessionPanel {...props} salvar={salvar} pending={pending} />;
 }
 
 function Rodadas({ league, divisions, entries, matches }) {

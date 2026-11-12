@@ -254,7 +254,7 @@ Ver `docs/57-LIGAS.md` §4.
 ### `leagues/{id}/divisions/{id}` · `…/entries/{id}` · `…/matches/{id}` (subcoleções)
 Divisão: `name`, `order`, `gender`, `rule {kind (`open`|`bracket`|`dupr_range`|`dupr_sum`), bracket (lista oficial, `core/domain/levelBrackets.js`), label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries`.
 Inscrição: `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`|`withdrawn`), `override` (o servidor marca quando a organização inscreve fora da regra) — **nenhum contato**.
-Jogo: `division_id`, `phase`, `round`, `side_a`, `side_b`, `games[{a,b}]`, `wo_winner`, `status`, `scheduled_date`, `recorded_by`.
+Jogo: `division_id`, `phase`, `round`, `side_a`, `side_b`, `games[{a,b}]`, `wo_winner`, `status`, `scheduled_date`, `recorded_by`. Na escada (`phase: 'ladder'`) também `session`, `group` (quadra) e `team_a[]`/`team_b[]`, com `side_a`/`side_b` nulos; a posição na escada é derivada (`computeLadder`).
 Classificação e datas das rodadas são derivadas, nunca gravadas.
 
 ## Clubes e comunidade

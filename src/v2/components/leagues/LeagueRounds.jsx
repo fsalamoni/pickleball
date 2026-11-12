@@ -90,25 +90,31 @@ export default function LeagueRounds({ league, divisions, entries, matches, canM
   );
 }
 
+/** O nome de um lado do jogo: a inscrição ou, na escada individual, a dupla da vez. */
+export function sideName(match, side, nome) {
+  const time = match?.[`team_${side}`];
+  return Array.isArray(time) ? time.map(nome).join(' / ') : nome(match?.[`side_${side}`]);
+}
+
 function placarTexto(m) {
   if (m.wo_winner) return t('W.O.');
   return (m.games || []).map((g) => `${g.a}–${g.b}`).join(' · ');
 }
 
-function MatchRow({ league, match, nome, meu, editavel }) {
+export function MatchRow({ league, match, nome, meu, editavel }) {
   const [editando, setEditando] = useState(false);
   const venc = matchWinner(match);
-  const lado = (side, id) => (
-    <span className={cn('min-w-0 flex-1 truncate', side === 'b' && 'text-right', venc === side ? 'font-bold text-ink' : 'text-gray-600')}>{nome(id)}</span>
+  const lado = (side) => (
+    <span className={cn('min-w-0 flex-1 truncate', side === 'b' && 'text-right', venc === side ? 'font-bold text-ink' : 'text-gray-600')}>{sideName(match, side, nome)}</span>
   );
   return (
     <li className={cn('rounded-2xl border p-3', meu ? 'border-acid bg-acid/5' : 'border-gray-100')}>
       <div className="flex items-center gap-3">
-        {lado('a', match.side_a)}
+        {lado('a')}
         <span className="shrink-0 text-center text-sm tabular-nums">
           {venc ? <span className="font-bold text-ink">{placarTexto(match)}</span> : <V2Badge tone="neutral">{t('A jogar')}</V2Badge>}
         </span>
-        {lado('b', match.side_b)}
+        {lado('b')}
         {editavel && !editando && (
           <V2Button type="button" size="icon" variant="subtle" onClick={() => setEditando(true)} aria-label={venc ? t('Corrigir o placar') : t('Lançar o placar')}>
             <Pencil className="h-4 w-4" aria-hidden="true" />
@@ -149,8 +155,8 @@ function ResultEditor({ league, match, nome, onDone }) {
           onChange={(e) => setWo(e.target.value)}
           options={[
             { value: '', label: t('Jogo disputado') },
-            { value: 'a', label: t('W.O.: vence {nome}', { nome: nome(match.side_a) }) },
-            { value: 'b', label: t('W.O.: vence {nome}', { nome: nome(match.side_b) }) },
+            { value: 'a', label: t('W.O.: vence {nome}', { nome: sideName(match, 'a', nome) }) },
+            { value: 'b', label: t('W.O.: vence {nome}', { nome: sideName(match, 'b', nome) }) },
           ]}
         />
       </V2Field>
@@ -159,9 +165,9 @@ function ResultEditor({ league, match, nome, onDone }) {
           {games.map((g, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="w-16 shrink-0 text-xs font-bold text-gray-500">{t('Game {n}', { n: i + 1 })}</span>
-              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.a} onChange={(e) => setGame(i, 'a', e.target.value)} className="w-20 text-center" aria-label={t('Game {n}: {nome}', { n: i + 1, nome: nome(match.side_a) })} />
+              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.a} onChange={(e) => setGame(i, 'a', e.target.value)} className="w-20 text-center" aria-label={t('Game {n}: {nome}', { n: i + 1, nome: sideName(match, 'a', nome) })} />
               <span aria-hidden="true">–</span>
-              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.b} onChange={(e) => setGame(i, 'b', e.target.value)} className="w-20 text-center" aria-label={t('Game {n}: {nome}', { n: i + 1, nome: nome(match.side_b) })} />
+              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.b} onChange={(e) => setGame(i, 'b', e.target.value)} className="w-20 text-center" aria-label={t('Game {n}: {nome}', { n: i + 1, nome: sideName(match, 'b', nome) })} />
               {games.length > 1 && (
                 <V2Button type="button" size="icon" variant="subtle" onClick={() => setGames((gs) => gs.filter((_, j) => j !== i))} aria-label={t('Tirar o game {n}', { n: i + 1 })}>
                   <Trash2 className="h-4 w-4" aria-hidden="true" />

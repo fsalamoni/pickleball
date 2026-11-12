@@ -24,6 +24,8 @@ import LeaguesGate from '@/v2/components/leagues/LeaguesGate';
 import LeagueOverview from '@/v2/components/leagues/LeagueOverview';
 import LeagueStandings from '@/v2/components/leagues/LeagueStandings';
 import LeagueRounds from '@/v2/components/leagues/LeagueRounds';
+import LeagueLadder, { LeagueSessions } from '@/v2/components/leagues/LeagueLadder';
+import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
 import LeagueEntries from '@/v2/components/leagues/LeagueEntries';
 import LeagueManage from '@/v2/components/leagues/LeagueManage';
 import { LeagueStatusBadge, entryNoun, shortDate } from '@/v2/components/leagues/leagueUi';
@@ -35,6 +37,8 @@ const ABAS = [
   { value: 'inscritos', label: tk('Inscritos'), icon: Users },
 ];
 const GERIR = { value: 'gerir', label: tk('Gerir'), icon: Settings };
+// Na escada as abas são as mesmas, com o nome do que mostram (os links seguem).
+const ROTULO_ESCADA = { classificacao: tk('Escada'), rodadas: tk('Sessões') };
 
 export default function V2League() {
   return <LeaguesGate><Liga /></LeaguesGate>;
@@ -55,7 +59,8 @@ function Liga() {
   const gere = canManageLeague(liga.data, {
     uid: user?.uid, isPlatformAdmin, clubs: clubs.data, arenas: arenas.data, federationRoles: papeis.data,
   });
-  const abas = useMemo(() => (gere ? [...ABAS, GERIR] : ABAS).map((a) => ({ ...a, label: t(a.label) })), [gere]);
+  const escada = isLadderFormat(liga.data?.format);
+  const abas = useMemo(() => (gere ? [...ABAS, GERIR] : ABAS).map((a) => ({ ...a, label: t((escada && ROTULO_ESCADA[a.value]) || a.label) })), [gere, escada]);
   const aba = abas.some((a) => a.value === tab) ? tab : 'visao';
 
   if (liga.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-48 rounded-4xl" /><V2Skeleton className="h-64" /></V2Page>;
@@ -121,8 +126,8 @@ function Liga() {
       />
 
       {aba === 'visao' && <LeagueOverview {...dados} onGo={(v) => navigate(`/ligas/${leagueId}/${v}`)} />}
-      {aba === 'classificacao' && <LeagueStandings {...dados} />}
-      {aba === 'rodadas' && <LeagueRounds {...dados} />}
+      {aba === 'classificacao' && (escada ? <LeagueLadder {...dados} /> : <LeagueStandings {...dados} />)}
+      {aba === 'rodadas' && (escada ? <LeagueSessions {...dados} /> : <LeagueRounds {...dados} />)}
       {aba === 'inscritos' && <LeagueEntries {...dados} />}
       {aba === 'gerir' && gere && <LeagueManage {...dados} />}
 
