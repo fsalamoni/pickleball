@@ -17,9 +17,9 @@ import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
-import { LEAGUE_STATUS_NEXT, formatMeta } from '@/modules/leagues/domain/leagueFormats';
+import { LEAGUE_STATUS_NEXT, formatMeta, isTeamFormat } from '@/modules/leagues/domain/leagueFormats';
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason';
-import { ELIGIBILITY_REASON_LABELS, divisionEligibility } from '@/modules/leagues/domain/leagueDivisions';
+import { ELIGIBILITY_REASON_LABELS, divisionEligibility, teamCompositionError } from '@/modules/leagues/domain/leagueDivisions';
 import DivisionFields, { emptyDivision } from './DivisionFields';
 import SeasonFields from './SeasonFields';
 import PointsFields from './PointsFields';
@@ -166,7 +166,8 @@ function Divisoes({ league, divisions, entries }) {
   const { salvar, pending } = useSalvar();
   const [editando, setEditando] = useState(null); // id, 'nova' ou null
   const [rascunho, setRascunho] = useState(null);
-  const duplas = formatMeta(league.format)?.players === 2;
+  const equipes = isTeamFormat(league.format);
+  const duplas = formatMeta(league.format)?.players === 2 || equipes;
   if (divisions.isError || entries.isError) return <V2Surface><V2ErrorState inline title={t('Não carregaram as divisões')} onRetry={() => { divisions.refetch(); entries.refetch(); }} /></V2Surface>;
   if (!divisions.isSuccess || !entries.isSuccess) return <V2Skeleton className="h-40" />;
   const divs = divisions.data || [];
@@ -184,7 +185,7 @@ function Divisoes({ league, divisions, entries }) {
         <V2Surface key={d.id} className="space-y-3">
           {editando === d.id ? (
             <>
-              <DivisionFields idPrefix={`g-div-${d.id}`} value={rascunho} onChange={setRascunho} pairs={duplas} />
+              <DivisionFields idPrefix={`g-div-${d.id}`} value={rascunho} onChange={setRascunho} pairs={duplas} teams={equipes} />
               {conta(d.id) > 0 && <p className="text-xs text-amber-700">{t('Mudar a regra não tira quem já está inscrito.')}</p>}
               <div className="flex gap-2">
                 <V2Button type="button" size="sm" disabled={pending} onClick={gravar}>{t('Salvar')}</V2Button>
@@ -212,7 +213,7 @@ function Divisoes({ league, divisions, entries }) {
       ))}
       {editando === 'nova' ? (
         <V2Surface className="space-y-3">
-          <DivisionFields idPrefix="g-div-nova" value={rascunho} onChange={setRascunho} pairs={duplas} />
+          <DivisionFields idPrefix="g-div-nova" value={rascunho} onChange={setRascunho} pairs={duplas} teams={equipes} />
           <div className="flex gap-2">
             <V2Button type="button" size="sm" disabled={pending} onClick={gravar}>{t('Criar divisão')}</V2Button>
             <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditando(null)}>{t('Cancelar')}</V2Button>
@@ -228,6 +229,8 @@ function Divisoes({ league, divisions, entries }) {
 function Inscricoes({ league, divisions, entries }) {
   const { salvar, pending } = useSalvar();
   const n = formatMeta(league.format)?.players || 1;
+  const equipe = isTeamFormat(league.format);
+  const [nomeEquipe, setNomeEquipe] = useState('');
   const [divisionId, setDivisionId] = useState('');
   const [comConta, setComConta] = useState([]);
   const [semConta, setSemConta] = useState('');
@@ -242,25 +245,33 @@ function Inscricoes({ league, divisions, entries }) {
   const fechada = ['finished', 'cancelled'].includes(league.status);
   // Como no torneio: a organização vê o que não cabe na divisão como AVISO e
   // pode inscrever assim mesmo — a inscrição fica marcada como exceção.
-  const previa = div && players.length === n ? divisionEligibility(div, [
+  const jogadoresDaPrevia = [
     ...comConta.map((p) => ({ dupr: Number(p?.dupr_rating) || null, gender: p?.competition_gender || p?.gender || null })),
     ...nomesSemConta.map(() => ({ dupr: null, gender: null })),
-  ].slice(0, n)) : null;
+  ].slice(0, n);
+  const elig = div && players.length === n ? divisionEligibility(div, jogadoresDaPrevia) : null;
+  const montagem = players.length === n ? teamCompositionError(league.format, jogadoresDaPrevia) : null;
+  const previa = elig && !elig.ok ? elig : (montagem ? { ok: false, reason: montagem } : elig);
   const temSemConta = nomesSemConta.length > 0 && players.length === n;
 
   async function inscrever() {
-    const r = await salvar({ action: 'entry_add', leagueId: league.id, divisionId: div.id, players }, t('Inscrição feita.'));
-    if (r) { setComConta([]); setSemConta(''); }
+    const r = await salvar({ action: 'entry_add', leagueId: league.id, divisionId: div.id, players, ...(equipe ? { name: nomeEquipe.trim() } : {}) }, t('Inscrição feita.'));
+    if (r) { setComConta([]); setSemConta(''); setNomeEquipe(''); }
   }
 
   return (
     <div className="space-y-6">
       {!fechada && div && (
         <V2Surface className="space-y-4">
-          <V2SectionHeader eyebrow={t('Inscrever pela organização')} title={n === 2 ? t('Uma dupla') : t('Um atleta')} description={t('Escolha quem tem conta ou escreva o nome de quem ainda não tem.')} />
+          <V2SectionHeader eyebrow={t('Inscrever pela organização')} title={equipe ? t('Uma equipe') : n === 2 ? t('Uma dupla') : t('Um atleta')} description={t('Escolha quem tem conta ou escreva o nome de quem ainda não tem.')} />
           <V2Field label={t('Divisão')} htmlFor="g-insc-div">
             <V2Select id="g-insc-div" value={div.id} onChange={(e) => setDivisionId(e.target.value)} options={divs.map((d) => ({ value: d.id, label: `${d.name} · ${divisionSummary(d)}` }))} />
           </V2Field>
+          {equipe && (
+            <V2Field label={t('Nome da equipe')} htmlFor="g-insc-equipe" hint={t('Em branco, usamos os primeiros nomes.')}>
+              <V2Input id="g-insc-equipe" value={nomeEquipe} maxLength={60} onChange={(e) => setNomeEquipe(e.target.value)} />
+            </V2Field>
+          )}
           <PersonPicker id="g-insc-pessoas" multiple max={n} rotulo={t('Atletas com conta')} selecionados={comConta} onChange={setComConta} diretorio="todos" />
           {comConta.length < n && (
             <V2Field label={t('Sem conta (um nome por linha)')} htmlFor="g-insc-sem">

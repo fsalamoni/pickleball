@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   LEAGUE_ORGANIZER, LEAGUE_FLAG_BY_ORGANIZER, leaguesVisible, groupCanCreate, leagueOrganizerOptions, canManageLeague,
 } from './leagueAccess.js';
-import { LEAGUE_FORMAT, LEAGUE_FORMAT_META, formatAvailable, canMoveStatus, isLeaguePublic } from './leagueFormats.js';
+import { LEAGUE_FORMAT, LEAGUE_FORMAT_META, formatAvailable, canMoveStatus, isLeaguePublic, resultRules, isTeamFormat } from './leagueFormats.js';
 import { normalizeSeason, roundCalendar, roundsFor, addMonths, isIsoDate, currentRound } from './leagueSeason.js';
-import { divisionEligibility, normalizeDivisionRule, MILP_DIVISIONS } from './leagueDivisions.js';
+import { divisionEligibility, normalizeDivisionRule, MILP_DIVISIONS, teamCompositionError } from './leagueDivisions.js';
 import { validateResult, matchWinner, computeLeagueStandings, leagueTiebreakOrder, LEAGUE_DEFAULT_TIEBREAK_ORDER } from './leagueResults.js';
 
 const tudo = Object.fromEntries(Object.values(LEAGUE_FLAG_BY_ORGANIZER).map((k) => [k, true]));
@@ -56,10 +56,28 @@ describe('quem vê e quem cria liga', () => {
 });
 
 describe('formatos e situação', () => {
-  it('todo formato tem metadados; escadas e equipes ainda não são escolhíveis', () => {
+  it('todo formato tem metadados e é escolhível; equipe tem um jogo por linha', () => {
     Object.values(LEAGUE_FORMAT).forEach((f) => expect(LEAGUE_FORMAT_META[f]).toBeTruthy());
     expect(formatAvailable(LEAGUE_FORMAT.DIVISIONAL_PAIRS)).toBe(true);
-    expect(formatAvailable(LEAGUE_FORMAT.TEAM_MILP)).toBe(false);
+    expect(formatAvailable(LEAGUE_FORMAT.TEAM_MILP)).toBe(true);
+    expect(formatAvailable('x')).toBe(false);
+    expect(resultRules(LEAGUE_FORMAT.TEAM_MILP)).toEqual({ lines: 4, dreambreaker: true });
+    expect(resultRules(LEAGUE_FORMAT.TEAM_MILP_V3)).toEqual({ lines: 3, dreambreaker: false });
+    expect(resultRules(LEAGUE_FORMAT.DIVISIONAL_PAIRS)).toEqual({ lines: 0, dreambreaker: false });
+    expect(isTeamFormat(LEAGUE_FORMAT.TEAM_V4)).toBe(true);
+    expect(isTeamFormat(LEAGUE_FORMAT.LADDER_PAIRS)).toBe(false);
+  });
+
+  it('montagem da equipe: MiLP 2+2, v4 mesma categoria, v3 livre', () => {
+    const m = (...gs) => gs.map((gender) => ({ gender }));
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_MILP, m('male', 'female', 'female', 'male'))).toBeNull();
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_MILP, m('male', 'male', 'male', 'female'))).toBe('team_mix');
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_MILP, m('male', null, 'female', 'female'))).toBe('gender_unknown');
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_V4, m('female', 'female', 'female', 'female'))).toBeNull();
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_V4, m('female', 'female', 'male', 'female'))).toBe('team_same');
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_MILP_V3, m(null, 'male', 'female'))).toBeNull();
+    expect(teamCompositionError(LEAGUE_FORMAT.TEAM_MILP_V3, m('male', 'female'))).toBe('team_size');
+    expect(teamCompositionError(LEAGUE_FORMAT.DIVISIONAL_PAIRS, m('male'))).toBeNull();
   });
 
   it('as transições seguem a ordem natural e cancelada não volta', () => {
@@ -157,6 +175,16 @@ describe('placar e classificação', () => {
     expect(validateResult({ games: [{ a: 11, b: 11 }] }).error).toBe('tie_game');
     expect(validateResult({ games: [{ a: 11, b: 7 }, { a: 5, b: 11 }] }).error).toBe('draw');
     expect(validateResult({ games: [{ a: -1, b: 7 }] }).error).toBe('invalid');
+    // Confronto de equipe: os jogos exatos e o DreamBreaker no 2 a 2.
+    const regras = { lines: 4, dreambreaker: true };
+    const dois = [{ a: 21, b: 9 }, { a: 9, b: 21 }, { a: 21, b: 19 }, { a: 19, b: 21 }];
+    expect(validateResult({ games: dois.slice(0, 3) }, regras).error).toBe('lines');
+    expect(validateResult({ games: dois }, regras).error).toBe('needs_db');
+    expect(validateResult({ games: dois, dreambreaker: { a: 20, b: 20 } }, regras).error).toBe('db_tie');
+    expect(validateResult({ games: dois, dreambreaker: { a: 15, b: 21 } }, regras)).toMatchObject({ ok: true, winner: 'b', dreambreaker: { a: 15, b: 21 } });
+    expect(matchWinner({ games: dois, dreambreaker: { a: 15, b: 21 } })).toBe('b');
+    expect(matchWinner({ games: dois })).toBeNull();
+    expect(validateResult({ games: [...dois.slice(0, 3), { a: 21, b: 1 }], dreambreaker: { a: 1, b: 21 } }, regras)).toMatchObject({ winner: 'a', dreambreaker: null });
     expect(validateResult({})).toMatchObject({ ok: false, error: 'empty' });
     expect(validateResult({ wo_winner: 'b' })).toMatchObject({ ok: true, winner: 'b', games: [] });
     expect(matchWinner({ games: [] })).toBeNull();

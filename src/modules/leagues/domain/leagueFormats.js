@@ -6,8 +6,11 @@
  * servidor está em `functions/leaguePolicy.js` (teste de paridade).
  *
  * `available: false` = o formato aparece no assistente como "em breve" e não
- * pode ser escolhido: as equipes chegam na entrega seguinte. As escadas jogam
- * por SESSÃO e a posição é derivada (`leagueLadder.js`).
+ * pode ser escolhido. As escadas jogam por SESSÃO e a posição é derivada
+ * (`leagueLadder.js`). Nas EQUIPES o confronto tem `lines` jogos de duplas
+ * (um game cada) e, com `dreambreaker`, o empate é decidido no DreamBreaker;
+ * `composition` diz como a equipe é montada (`two_two`: 2 homens e 2
+ * mulheres; `same`: todos da mesma categoria; `any`: livre).
  */
 import { tk } from '@/core/i18n';
 
@@ -64,28 +67,55 @@ export const LEAGUE_FORMAT_META = Object.freeze({
     how: tk('Em cada sessão os presentes são divididos em quadras de 4 ou 5 pela posição na escada, e cada quadra joga um Americano (cada um forma dupla com cada outro uma vez). O 1º de cada quadra sobe para a de cima e o último desce. Quem falta fica no mesmo lugar.'),
   },
   [LEAGUE_FORMAT.TEAM_MILP]: {
-    family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 4, available: false,
+    family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 4, available: true,
+    composition: 'two_two', dreambreaker: true,
+    lines: [
+      { key: 'wd', label: tk('Duplas femininas') },
+      { key: 'md', label: tk('Duplas masculinas') },
+      { key: 'mx1', label: tk('Mista 1') },
+      { key: 'mx2', label: tk('Mista 2') },
+    ],
     label: tk('Equipes 4×4 mista (estilo MiLP)'),
     summary: tk('Equipes de 2 homens e 2 mulheres. Feminina, masculina e duas mistas até 21. Em 2 a 2, DreamBreaker.'),
-    how: tk('Divisão pela soma do DUPR da equipe (12 a 22).'),
+    how: tk('Cada confronto entre equipes tem quatro jogos de duplas (feminina, masculina e duas mistas), um game cada. Vence a equipe que ganhar mais jogos; em 2 a 2, o DreamBreaker decide. Divisão pela soma do DUPR da equipe.'),
   },
   [LEAGUE_FORMAT.TEAM_MILP_V3]: {
-    family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 3, available: false,
+    family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 3, available: true,
+    composition: 'any', dreambreaker: false,
+    lines: [
+      { key: 'ab', label: tk('Dupla A + B') },
+      { key: 'bc', label: tk('Dupla B + C') },
+      { key: 'ac', label: tk('Dupla A + C') },
+    ],
     label: tk('Equipes 3×3 (estilo MiLP v3)'),
     summary: tk('Equipes de 3. Três duplas (A+B, B+C, A+C): cada atleta joga duas vezes, sem repetir o parceiro.'),
-    how: tk('Divisão pela soma do DUPR da equipe (9 a 15).'),
+    how: tk('Cada confronto entre equipes tem três jogos de duplas (A+B, B+C e A+C), um game cada. Vence a equipe que ganhar dois. Divisão pela soma do DUPR da equipe.'),
   },
   [LEAGUE_FORMAT.TEAM_V4]: {
-    family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 4, available: false,
+    family: 'teams', entry: LEAGUE_ENTRY.TEAM, players: 4, available: true,
+    composition: 'same', dreambreaker: true,
+    lines: [
+      { key: 'd12', label: tk('Dupla 1 + 2') },
+      { key: 'd34', label: tk('Dupla 3 + 4') },
+      { key: 'd13', label: tk('Dupla 1 + 3') },
+      { key: 'd24', label: tk('Dupla 2 + 4') },
+    ],
     label: tk('Equipes 4×4 do mesmo gênero'),
     summary: tk('Equipes de 4 atletas do mesmo gênero. Quatro duplas com parceiros diferentes e DreamBreaker em 2 a 2.'),
-    how: tk('Divisão pela soma do DUPR da equipe.'),
+    how: tk('Cada confronto entre equipes tem quatro jogos de duplas com parceiros diferentes, um game cada. Vence a equipe que ganhar mais jogos; em 2 a 2, o DreamBreaker decide. Divisão pela soma do DUPR da equipe.'),
   },
 });
 
 export const formatMeta = (format) => LEAGUE_FORMAT_META[format] || null;
 export const formatAvailable = (format) => formatMeta(format)?.available === true;
 export const playersPerEntry = (format) => formatMeta(format)?.players || 0;
+export const isTeamFormat = (format) => formatMeta(format)?.entry === LEAGUE_ENTRY.TEAM;
+
+/** Como o placar do confronto é conferido: `lines` jogos exatos e o DreamBreaker no empate. */
+export function resultRules(format) {
+  const m = formatMeta(format);
+  return { lines: m?.lines?.length || 0, dreambreaker: m?.dreambreaker === true };
+}
 
 /** Situação da liga. Gravado em `leagues.status`. */
 export const LEAGUE_STATUS = Object.freeze({

@@ -15,8 +15,8 @@ o desempate (`core/domain/tiebreak.js`), os grupos e o rodízio do Americano
 |---|---|---|
 | `domain/` | `leagueFlags.js` | as 5 flags (uma por grupo de quem cria) e `leaguesVisible` |
 | | `leagueAccess.js` | `groupCanCreate`, `leagueOrganizerOptions`, `canManageLeague` (espelho do `podeGerir` do servidor) |
-| | `leagueFormats.js` | formatos (DUPR/MiLP), status e transições, pontos padrão |
-| | `leagueDivisions.js` | regra da divisão (livre, faixa da lista oficial, faixa de DUPR antiga, teto da soma), gênero, `divisionEligibility` |
+| | `leagueFormats.js` | formatos (DUPR/MiLP), status e transições, pontos padrão; nas equipes `lines`, `dreambreaker`, `composition` e `resultRules` |
+| | `leagueDivisions.js` | regra da divisão (livre, faixa da lista oficial, faixa de DUPR antiga, teto da soma), gênero, `divisionEligibility`, `teamCompositionError` (montagem da equipe) |
 | | `leagueSeason.js` | calendário (`normalizeSeason`, `roundsFor`, `roundCalendar`, `currentRound`) |
 | | `leagueResults.js` | `validateResult`, `matchWinner`, `computeLeagueStandings` (desempate configurável pela regra do núcleo, `LEAGUE_DEFAULT_TIEBREAK_ORDER`) |
 | | `leagueLadder.js` | a ESCADA (King of the Court e duplas): `computeLadder` (derivada dos jogos), `buildSessionGroups`, `nextSessionState`, `ladderNearestFits` — cópia em `functions/leagueLadder.js` com paridade |
@@ -46,3 +46,8 @@ componentes em `src/v2/components/leagues/`.
    falta fica no lugar; sessão com placar só dá lugar à próxima depois de
    fechada. As quadras da sessão saem da MESMA conta no cliente (prévia) e no
    servidor (`buildSessionGroups`), travada pela paridade.
+8. **Equipes**: o confronto tem um game por linha do formato (`lines`) e o
+   DreamBreaker só existe no empate (`resultRules` + `validateResult`, nos dois
+   lados); a montagem (2+2 na MiLP, mesma categoria na v4) sai do PERFIL e
+   categoria desconhecida não vira palpite. Ids de `lines` e `composition`
+   são contrato.

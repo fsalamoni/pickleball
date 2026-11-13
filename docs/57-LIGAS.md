@@ -54,11 +54,13 @@ com paridade). **Disponíveis no PR 1:**
 | `divisional_singles` — Simples por divisão | atleta | pontos corridos em simples |
 | `ladder_individual` — Escada individual (King of the Court) | atleta | por SESSÃO: quadras de 4 ou 5 pela posição, um Americano em cada; o 1º sobe e o último desce (§10) |
 | `ladder_pairs` — Escada de duplas | dupla fixa | por SESSÃO: grupos de 3 a 5 duplas pela posição, todos contra todos no grupo; a 1ª sobe e a última desce (§10) |
+| `team_milp` — Equipes 4×4 mista (MiLP) | equipe de 2 homens e 2 mulheres | pontos corridos entre equipes; o confronto tem 4 jogos (feminina, masculina, mista 1, mista 2), um game cada; em 2 a 2, DreamBreaker (§11) |
+| `team_milp_v3` — Equipes 3×3 (MiLP v3) | equipe de 3 | idem, com 3 jogos (A+B, B+C, A+C); não empata (§11) |
+| `team_v4_gendered` — Equipes 4×4 do mesmo gênero | equipe de 4 da mesma categoria | idem, com 4 jogos de parceiros diferentes e DreamBreaker em 2 a 2 (§11) |
 
-**Desenhados e marcados "Em breve"** (aparecem no passo 2 da criação, desabilitados):
-equipes 4×4 mista com DreamBreaker (MiLP), equipes 3×3 (MiLP v3) e equipes 4×4 do mesmo
-gênero (v4). As divisões por soma do DUPR da equipe (MiLP: 12–22, v3: 9–15) já
-estão no domínio (`MILP_DIVISIONS`, regra `dupr_sum`).
+O mecanismo de "Em breve" (`available: false`) continua no domínio, mas hoje todo
+formato é escolhível. As divisões das equipes usam a soma do DUPR (`dupr_sum`),
+com o modelo da MiLP pronto em `MILP_DIVISIONS` (botão "Divisões da MiLP" no passo 4).
 
 Os ids de formato, de status, de regra de divisão e de gênero são **gravados**:
 nunca renomeie.
@@ -73,7 +75,7 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 | `leagues/{id}` | `name`, `description`, `city`, `state`, `location`, `format`, `entry_type`, `organizer {type,id,name}`, `status` (`draft`→`open`→`running`→`finished`, ou `cancelled`), `season`, `standings`, `visibility` (`public`/`unlisted`), `self_registration`, `admins[]`, `member_uids[]`, `ever_uids[]`, `entries_count` |
 | `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, bracket, label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
 | `…/entries/{id}` | `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`/`withdrawn`), `override`, `added_by` |
-| `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by` |
+| `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by`; nas equipes `games` tem um item por jogo do confronto, na ordem de `lines`, e `dreambreaker {a,b}` (opcional) decide o empate |
 | `…/matches/{id}` na escada | `phase: 'ladder'`, `session` (nº da sessão), `group` (quadra, a partir de 0), `round` (a volta DENTRO da quadra), `team_a[]`/`team_b[]` (ids de inscrição; na escada individual, a dupla da vez), `side_a`/`side_b` nulos; `scheduled_date` nulo (a data sai do calendário da sessão) |
 
 - **Classificação e datas das rodadas são DERIVADAS**, nunca gravadas:
@@ -104,12 +106,12 @@ chave própria. Ações:
 | `update` | quem gere | campos da lista fechada (`camposDaLiga`) |
 | `status` | quem gere | a transição (`LEAGUE_STATUS_NEXT`); `open → draft` só sem inscritos |
 | `division_save` / `division_remove` | quem gere | remover só divisão sem inscritos |
-| `register` | o atleta | liga aberta, `self_registration`, divisão não lotada, faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso |
+| `register` | o atleta | liga aberta, `self_registration`, divisão não lotada, faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso. Equipe: `teammateUids` (os outros `players − 1`) e a montagem do formato (`teamCompositionError`: 2+2 na MiLP, mesma categoria na v4) |
 | `withdraw` | o próprio atleta ou quem gere | sem jogo gerado ⇒ apaga; com jogo ⇒ `withdrawn` (os placares seguem valendo para os adversários) |
 | `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **fora da regra da divisão**: como no torneio, a organização vê o motivo como aviso e inscreve assim mesmo — o servidor marca `override: true` sozinho quando não cabe (§9.3) |
 | `session` | quem gere | só escada: gera a próxima sessão com quem veio (`present`, ids de inscrição ativos; ausente = todos), na ordem da escada; número que não fecha é recusado; sessão sem nenhum placar é REFEITA, com algum placar só depois de fechada; avisa cada atleta da quadra; com a liga aberta, começa a temporada |
 | `schedule` | quem gere | gera os jogos da divisão em pontos corridos (recusado na escada) (`roundRobin`, método do círculo; folga quando é ímpar); refazer só sem placar lançado; com a liga aberta, começa a temporada |
-| `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; `clear` apaga |
+| `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; nas equipes (`resultRules`) exatamente um game por jogo do confronto e, no empate, o `dreambreaker`; `clear` apaga |
 | `staff` | quem gere | até 10 organizadores; o criador não sai |
 
 **Quem gere** (`podeGerir`, espelhado no cliente por `canManageLeague`): a lista
@@ -145,8 +147,7 @@ são contrato de link.
 
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- **Próximos PRs**: equipes MiLP/v3/v4 com DreamBreaker; playoff no fim da
-  temporada.
+- **Próximo PR**: playoff no fim da temporada.
 - **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
 - Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
   contagem não é transacional) — anotado no código.
@@ -234,3 +235,31 @@ importa de lá (`etapaGroupSizes`) — a liga não importa nada do torneio.
   das sessões já geradas.
 - Na escada não há pontos por vitória nem turnos: a Temporada mostra só o
   calendário de sessões e o desempate da quadra.
+
+## 11. Equipes (MiLP 4×4 mista, v3 e v4)
+
+Os três formatos de equipe jogam como os de duplas por divisão — pontos corridos
+na divisão (ação `schedule`), rodadas no calendário —, mas quem se enfrenta são
+EQUIPES, e o jogo da rodada é um CONFRONTO de vários jogos de duplas.
+
+- **Inscrição**: quem inscreve escolhe os companheiros (`PersonPicker`, a lista da
+  plataforma) e dá o nome da equipe. A montagem é conferida pela categoria do
+  PERFIL (`teamCompositionError`, cópia no servidor com paridade): na MiLP 2
+  homens e 2 mulheres; na v4 todos da mesma categoria; na v3 livre. Categoria
+  desconhecida não vira palpite (`gender_unknown`). A organização inscreve fora
+  da montagem como no torneio — aviso na tela e `eligibility.override`.
+- **Divisão**: soma do DUPR da equipe (`dupr_sum`, teto da soma, teto individual e o
+  valor de quem não tem DUPR), com as divisões da MiLP prontas (`milpDivisions`).
+  A faixa oficial (`bracket`) também vale, pela média da equipe.
+- **Confronto**: `lines` de `LEAGUE_FORMAT_META` — MiLP: duplas femininas,
+  duplas masculinas, mista 1 e mista 2; v3: A+B, B+C, A+C; v4: 1+2, 3+4, 1+3,
+  2+4. Um game por jogo (a MiLP joga até 21). Vence quem ganhar mais jogos; em 2 a
+  2 (MiLP e v4) decide o **DreamBreaker** — simples em rodízio, todos da equipe
+  jogam, troca a cada 4 pontos, até 21. O placar do DreamBreaker é gravado em
+  `dreambreaker` e só vale no empate (fora dele o servidor grava `null`).
+- **Tabela**: por aproveitamento por padrão (como a MiLP; a organização troca no
+  passo 3). Vitória e derrota contam o CONFRONTO; "games" são os jogos ganhos do
+  confronto e os pontos somam os jogos — o DreamBreaker decide quem venceu, mas
+  não entra no saldo.
+- Quem jogou cada linha (a escalação) **não** é gravado: a tabela não depende
+  dela, e ela passa a importar quando os jogos de liga forem ao DUPR (§8).

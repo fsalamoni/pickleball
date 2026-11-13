@@ -34,9 +34,11 @@ export function divisionSummary(division) {
   return `${g}${divisionRuleText(division)}`;
 }
 
-/** Quem se inscreve: "dupla" ou "atleta". */
+/** Quem se inscreve: "equipe", "dupla" ou "atleta". */
 export const entryNoun = (format, plural = false) => {
-  const duplas = formatMeta(format)?.players === 2;
+  const meta = formatMeta(format);
+  if (meta?.entry === 'team') return plural ? t('equipes') : t('equipe');
+  const duplas = meta?.players === 2;
   if (plural) return duplas ? t('duplas') : t('atletas');
   return duplas ? t('dupla') : t('atleta');
 };

@@ -21,10 +21,10 @@ import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useFederation, useMyFederationRoles } from '@/modules/federations/hooks/useFederations';
 import { useLeagueAction, useLeaguesVisible } from '@/modules/leagues/hooks/useLeagues';
 import { LEAGUE_FLAG_BY_ORGANIZER, LEAGUE_ORGANIZER, LEAGUE_ORGANIZER_LABELS, leagueOrganizerOptions } from '@/modules/leagues/domain/leagueAccess';
-import { LEAGUE_FORMAT, LEAGUE_FORMAT_FAMILY, LEAGUE_FORMAT_META, formatMeta } from '@/modules/leagues/domain/leagueFormats';
+import { LEAGUE_FORMAT, LEAGUE_FORMAT_FAMILY, LEAGUE_FORMAT_META, formatMeta, isTeamFormat } from '@/modules/leagues/domain/leagueFormats';
 import { STANDINGS_MODE_LABELS } from '@/modules/leagues/domain/leagueResults';
 import LeaguesGate from '@/v2/components/leagues/LeaguesGate';
-import DivisionFields, { suggestedDivisions, emptyDivision } from '@/v2/components/leagues/DivisionFields';
+import DivisionFields, { suggestedDivisions, emptyDivision, milpDivisions } from '@/v2/components/leagues/DivisionFields';
 import SeasonFields from '@/v2/components/leagues/SeasonFields';
 import PointsFields from '@/v2/components/leagues/PointsFields';
 import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
@@ -81,7 +81,14 @@ function Criar() {
   const [divisoes, setDivisoes] = useState([emptyDivision(1)]);
   const [dados, setDados] = useState({ name: '', description: '', city: profile?.city || '', state: profile?.state || '', location: '', visibility: 'public', self_registration: true });
   const duplas = formatMeta(format)?.players === 2;
+  const equipes = isTeamFormat(format);
   const ladder = isLadderFormat(format);
+
+  // Equipe joga como a MiLP: a tabela por aproveitamento (a organização troca no passo 3).
+  function escolherFormato(id) {
+    setFormat(id);
+    if (isTeamFormat(id) && !isTeamFormat(format)) setStandings((s) => ({ ...s, mode: 'win_pct' }));
+  }
 
   const problema = (() => {
     if (passo === 0 && !org) return t('Escolha em nome de quem a liga é criada.');
@@ -196,7 +203,7 @@ function Criar() {
                         key={id}
                         aria-pressed={ativo}
                         disabled={!m.available}
-                        onClick={() => setFormat(id)}
+                        onClick={() => escolherFormato(id)}
                         className={cn(
                           'rounded-3xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
                           ativo ? 'border-ink bg-ink/5' : 'border-gray-100 hover:border-ink/40',
@@ -233,6 +240,11 @@ function Criar() {
               description={t('Cada divisão é uma tabela própria: quem entra nela só enfrenta quem está nela. Separe por nível (DUPR) e por categoria.')}
             />
             <div className="flex flex-wrap gap-2">
+              {equipes && (
+                <V2Button type="button" variant="ghost" size="sm" onClick={() => setDivisoes(milpDivisions(formatMeta(format)?.players))}>
+                  {t('Divisões da MiLP (teto da soma do DUPR)')}
+                </V2Button>
+              )}
               <V2Button type="button" variant="ghost" size="sm" onClick={() => setDivisoes(suggestedDivisions())}>
                 {t('Uma divisão por faixa de DUPR')}
               </V2Button>
@@ -247,7 +259,7 @@ function Criar() {
                     </V2Button>
                   )}
                 </div>
-                <DivisionFields idPrefix={`div-${i}`} value={d} pairs={duplas} onChange={(nova) => setDivisoes((ds) => ds.map((x, j) => (j === i ? nova : x)))} />
+                <DivisionFields idPrefix={`div-${i}`} value={d} pairs={duplas || equipes} teams={equipes} onChange={(nova) => setDivisoes((ds) => ds.map((x, j) => (j === i ? nova : x)))} />
               </div>
             ))}
             {divisoes.length < 12 && (

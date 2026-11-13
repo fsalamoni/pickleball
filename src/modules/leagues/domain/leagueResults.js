@@ -40,6 +40,9 @@ export const RESULT_ERROR_LABELS = Object.freeze({
   invalid: tk('Placar inválido: use números de 0 a 99.'),
   tie_game: tk('Um game não pode terminar empatado.'),
   draw: tk('Os dois lados venceram o mesmo número de games: falta um game para decidir.'),
+  lines: tk('Informe o placar de todos os jogos do confronto.'),
+  needs_db: tk('Empate nos jogos: informe o placar do DreamBreaker.'),
+  db_tie: tk('O DreamBreaker não pode terminar empatado.'),
 });
 
 const placar = (v) => {
@@ -48,17 +51,20 @@ const placar = (v) => {
 };
 
 /**
- * Confere o placar enviado.
- * @returns {{ ok: boolean, error: string|null, games: Array<{a:number,b:number}>, wo_winner: 'a'|'b'|null, winner: 'a'|'b'|null }}
+ * Confere o placar enviado. Nas EQUIPES (`rules` de `resultRules`) o
+ * confronto tem exatamente `lines` jogos e, com `dreambreaker`, o empate nos
+ * jogos é decidido pelo placar do DreamBreaker (`input.dreambreaker`).
+ * @returns {{ ok: boolean, error: string|null, games: Array<{a:number,b:number}>, wo_winner: 'a'|'b'|null, winner: 'a'|'b'|null, dreambreaker: {a:number,b:number}|null }}
  */
-export function validateResult(input = {}) {
-  const falha = (error) => ({ ok: false, error, games: [], wo_winner: null, winner: null });
+export function validateResult(input = {}, rules = {}) {
+  const falha = (error) => ({ ok: false, error, games: [], wo_winner: null, winner: null, dreambreaker: null });
   if (input.wo_winner === 'a' || input.wo_winner === 'b') {
-    return { ok: true, error: null, games: [], wo_winner: input.wo_winner, winner: input.wo_winner };
+    return { ok: true, error: null, games: [], wo_winner: input.wo_winner, winner: input.wo_winner, dreambreaker: null };
   }
   const brutos = Array.isArray(input.games) ? input.games : [];
   if (!brutos.length) return falha('empty');
   if (brutos.length > MAX_GAMES) return falha('too_many');
+  if (rules?.lines && brutos.length !== rules.lines) return falha('lines');
   const games = [];
   for (const g of brutos) {
     const a = placar(g?.a);
@@ -69,15 +75,22 @@ export function validateResult(input = {}) {
   }
   const ga = games.filter((g) => g.a > g.b).length;
   const gb = games.length - ga;
-  if (ga === gb) return falha('draw');
-  return { ok: true, error: null, games, wo_winner: null, winner: ga > gb ? 'a' : 'b' };
+  if (ga === gb) {
+    if (!rules?.dreambreaker) return falha('draw');
+    const a = placar(input.dreambreaker?.a);
+    const b = placar(input.dreambreaker?.b);
+    if (a == null || b == null) return falha('needs_db');
+    if (a === b) return falha('db_tie');
+    return { ok: true, error: null, games, wo_winner: null, winner: a > b ? 'a' : 'b', dreambreaker: { a, b } };
+  }
+  return { ok: true, error: null, games, wo_winner: null, winner: ga > gb ? 'a' : 'b', dreambreaker: null };
 }
 
-/** Quem venceu o jogo gravado (`null` = sem resultado). */
+/** Quem venceu o jogo gravado (`null` = sem resultado). O DreamBreaker gravado decide o empate. */
 export function matchWinner(match) {
   if (!match) return null;
   if (match.wo_winner === 'a' || match.wo_winner === 'b') return match.wo_winner;
-  const r = validateResult({ games: match.games });
+  const r = validateResult({ games: match.games, dreambreaker: match.dreambreaker }, { dreambreaker: Boolean(match.dreambreaker) });
   return r.ok ? r.winner : null;
 }
 
