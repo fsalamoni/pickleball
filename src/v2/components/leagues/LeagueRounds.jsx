@@ -3,7 +3,8 @@
  * (do calendário da temporada), os jogos com o placar e quem folga. Quem
  * organiza lança o placar ali mesmo (até 5 games, ou W.O.). Nas EQUIPES o
  * jogo é o confronto: um game por linha (feminina, masculina, mistas…) e, no
- * empate, o DreamBreaker.
+ * empate, o DreamBreaker. Na liga FLEXÍVEL quem joga lança o placar e o outro
+ * lado confirma ou contesta (a organização segue podendo lançar e corrigir).
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -81,7 +82,7 @@ export default function LeagueRounds({ league, divisions, entries, matches, canM
               </p>
             </div>
             <ul className="space-y-2">
-              {jogos.map((m) => <MatchRow key={m.id} league={league} match={m} nome={nome} meu={meus.has(m.side_a) || meus.has(m.side_b)} editavel={editavel} />)}
+              {jogos.map((m) => <MatchRow key={m.id} league={league} match={m} nome={nome} meu={meus.has(m.side_a) || meus.has(m.side_b)} meuLado={ladoMeu(meus, m)} editavel={editavel} />)}
             </ul>
             {!soMeus && r.folga.length > 0 && (
               <p className="text-xs text-gray-500">{t('Folga: {nomes}', { nomes: r.folga.map((e) => e.name).join(', ') })}</p>
@@ -92,6 +93,9 @@ export default function LeagueRounds({ league, divisions, entries, matches, canM
     </div>
   );
 }
+
+/** De que lado do jogo eu estou (`null` = não jogo). */
+export const ladoMeu = (meus, m) => (meus.has(m.side_a) ? 'a' : meus.has(m.side_b) ? 'b' : null);
 
 /** O nome de um lado do jogo: a inscrição ou, na escada individual, a dupla da vez. */
 export function sideName(match, side, nome) {
@@ -115,10 +119,22 @@ function placarTexto(m, linhas) {
   return (m.games || []).map((g) => `${g.a}–${g.b}`).join(' · ');
 }
 
-export function MatchRow({ league, match, nome, meu, editavel }) {
+export function MatchRow({ league, match, nome, meu, meuLado = null, editavel }) {
   const [editando, setEditando] = useState(false);
   const venc = matchWinner(match);
   const linhas = linhasDoJogo(league, match);
+  // Liga flexível: quem joga lança; o outro lado confirma ou contesta.
+  const autoLanca = Boolean(formatMeta(league?.format)?.self_report) && league?.status === 'running'
+    && match.phase === 'season' && !venc && Boolean(meuLado);
+  const lancado = !venc && match.status === 'reported' ? match.report : null;
+  const contestado = !venc && match.status === 'disputed' ? match.dispute : null;
+  const possoLancar = autoLanca && (!lancado || lancado.side === meuLado);
+  const possoConfirmar = autoLanca && Boolean(lancado) && lancado.side !== meuLado;
+  const modo = editavel ? 'result' : possoLancar ? 'report' : null;
+  const situacao = venc ? <span className="font-bold text-ink">{placarTexto(match, linhas)}</span>
+    : lancado ? <V2Badge tone="amber">{t('A confirmar')}</V2Badge>
+      : contestado ? <V2Badge tone="red">{t('Contestado')}</V2Badge>
+        : <V2Badge tone="neutral">{t('A jogar')}</V2Badge>;
   const lado = (side) => (
     <span className={cn('min-w-0 flex-1 truncate', side === 'b' && 'text-right', venc === side ? 'font-bold text-ink' : 'text-gray-600')}>{sideName(match, side, nome)}</span>
   );
@@ -127,10 +143,10 @@ export function MatchRow({ league, match, nome, meu, editavel }) {
       <div className="flex items-center gap-3">
         {lado('a')}
         <span className="shrink-0 text-center text-sm tabular-nums">
-          {venc ? <span className="font-bold text-ink">{placarTexto(match, linhas)}</span> : <V2Badge tone="neutral">{t('A jogar')}</V2Badge>}
+          {situacao}
         </span>
         {lado('b')}
-        {editavel && !editando && (
+        {modo && !editando && (
           <V2Button type="button" size="icon" variant="subtle" onClick={() => setEditando(true)} aria-label={venc ? t('Corrigir o placar') : t('Lançar o placar')}>
             <Pencil className="h-4 w-4" aria-hidden="true" />
           </V2Button>
@@ -152,21 +168,65 @@ export function MatchRow({ league, match, nome, meu, editavel }) {
           )}
         </ul>
       )}
-      {editando && <ResultEditor league={league} match={match} nome={nome} linhas={linhas} onDone={() => setEditando(false)} />}
+      {!editando && (lancado || contestado) && (
+        <div className="mt-2 space-y-2 text-xs text-gray-500">
+          {lancado && <p>{t('Lançado por {nome}: {placar}', { nome: sideName(match, lancado.side, nome), placar: placarTexto(lancado, linhas) })}</p>}
+          {contestado && <p className="text-red-600">{t('Contestado: {motivo}', { motivo: contestado.reason })}</p>}
+          {possoConfirmar && <ConfirmBox league={league} match={match} />}
+        </div>
+      )}
+      {editando && <ResultEditor league={league} match={match} nome={nome} linhas={linhas} modo={modo} onDone={() => setEditando(false)} />}
     </li>
+  );
+}
+
+/** O outro lado confirma o placar lançado ou contesta, dizendo o que está errado. */
+function ConfirmBox({ league, match }) {
+  const acao = useLeagueAction();
+  const [contestando, setContestando] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const enviar = async (payload, ok) => {
+    try {
+      await acao.mutateAsync({ action: 'confirm', leagueId: league.id, matchId: match.id, ...payload });
+      toast.success(ok);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+  if (contestando) {
+    return (
+      <div className="space-y-2">
+        <V2Field label={t('O que está errado?')} htmlFor={`motivo-${match.id}`}>
+          <V2Input id={`motivo-${match.id}`} value={motivo} maxLength={300} onChange={(e) => setMotivo(e.target.value)} placeholder={t('Ex.: foi 11 a 8 no segundo game')} />
+        </V2Field>
+        <div className="flex flex-wrap gap-2">
+          <V2Button type="button" size="sm" variant="danger" disabled={motivo.trim().length < 3 || acao.isPending} onClick={() => enviar({ reason: motivo.trim() }, t('Contestação enviada à organização.'))}>{t('Enviar contestação')}</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => setContestando(false)}>{t('Cancelar')}</V2Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      <V2Button type="button" size="sm" disabled={acao.isPending} onClick={() => enviar({ accept: true }, t('Placar confirmado.'))}>{t('Confirmar o placar')}</V2Button>
+      <V2Button type="button" size="sm" variant="ghost" onClick={() => setContestando(true)}>{t('Contestar')}</V2Button>
+    </div>
   );
 }
 
 const paraTexto = (g) => ({ a: g?.a == null ? '' : String(g.a), b: g?.b == null ? '' : String(g.b) });
 const paraNumero = (v) => (v === '' ? undefined : Number(v));
 
-function ResultEditor({ league, match, nome, linhas, onDone }) {
+function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) {
   const acao = useLeagueAction();
+  const lancar = modo === 'report';
+  // Sem placar gravado, parte do que um dos lados lançou (a organização decide em cima dele).
+  const base = match.games?.length ? match : (match.report || match);
   const [games, setGames] = useState(() => {
-    if (linhas) return linhas.map((_, i) => paraTexto(match.games?.[i]));
-    return match.games?.length ? match.games.map(paraTexto) : [{ a: '', b: '' }];
+    if (linhas) return linhas.map((_, i) => paraTexto(base.games?.[i]));
+    return base.games?.length ? base.games.map(paraTexto) : [{ a: '', b: '' }];
   });
-  const [db, setDb] = useState(() => paraTexto(match.dreambreaker));
+  const [db, setDb] = useState(() => paraTexto(base.dreambreaker));
   const [wo, setWo] = useState(match.wo_winner || '');
   const [data, setData] = useState(match.scheduled_date || '');
   const regras = linhas ? resultRules(league.format) : {};
@@ -185,8 +245,8 @@ function ResultEditor({ league, match, nome, linhas, onDone }) {
     try {
       await acao.mutateAsync(clear
         ? { action: 'result', leagueId: league.id, matchId: match.id, clear: true }
-        : { action: 'result', leagueId: league.id, matchId: match.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, played_date: data || undefined });
-      toast.success(clear ? t('Placar apagado.') : t('Placar lançado.'));
+        : { action: lancar ? 'report' : 'result', leagueId: league.id, matchId: match.id, games: r.games, wo_winner: lancar ? undefined : r.wo_winner, dreambreaker: r.dreambreaker, played_date: data || undefined });
+      toast.success(clear ? t('Placar apagado.') : lancar ? t('Placar enviado: o outro lado confirma.') : t('Placar lançado.'));
       onDone();
     } catch (err) {
       toast.error(err.message);
@@ -195,7 +255,8 @@ function ResultEditor({ league, match, nome, linhas, onDone }) {
 
   return (
     <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
-      <V2Field label={t('Resultado')} htmlFor={`wo-${match.id}`}>
+      {lancar && <p className="text-xs text-gray-500">{t('O outro lado confirma o placar. W.O. só a organização lança.')}</p>}
+      {!lancar && <V2Field label={t('Resultado')} htmlFor={`wo-${match.id}`}>
         <V2Select
           id={`wo-${match.id}`}
           value={wo}
@@ -206,7 +267,7 @@ function ResultEditor({ league, match, nome, linhas, onDone }) {
             { value: 'b', label: t('W.O.: vence {nome}', { nome: sideName(match, 'b', nome) }) },
           ]}
         />
-      </V2Field>
+      </V2Field>}
       {!wo && (
         <div className="space-y-2">
           {games.map((g, i) => (
@@ -247,7 +308,7 @@ function ResultEditor({ league, match, nome, linhas, onDone }) {
       <div className="flex flex-wrap gap-2">
         <V2Button type="button" size="sm" onClick={() => salvar(false)} disabled={!r.ok || acao.isPending}>{t('Salvar placar')}</V2Button>
         <V2Button type="button" size="sm" variant="ghost" onClick={onDone}>{t('Cancelar')}</V2Button>
-        {matchWinner(match) && <V2Button type="button" size="sm" variant="danger" onClick={() => salvar(true)} disabled={acao.isPending}>{t('Apagar placar')}</V2Button>}
+        {!lancar && matchWinner(match) && <V2Button type="button" size="sm" variant="danger" onClick={() => salvar(true)} disabled={acao.isPending}>{t('Apagar placar')}</V2Button>}
       </div>
     </div>
   );

@@ -1777,18 +1777,19 @@ const ATLETA = {
       flags: ['leagues_athletes', 'leagues_clubs', 'leagues_arenas', 'leagues_coaches', 'leagues_federations'],
       title: tk('Ligas: uma temporada de jogos, rodada a rodada'),
       summary: tk('Liga é diferente de torneio: dura semanas ou meses, com rodadas no calendário e classificação por pontos.'),
-      keywords: ['liga', 'ligas', 'temporada', 'rodada', 'divisão', 'pontos corridos', 'classificação', 'criar liga', 'liga flexível', 'dupr'],
+      keywords: ['liga', 'ligas', 'temporada', 'rodada', 'divisão', 'pontos corridos', 'classificação', 'criar liga', 'liga flexível', 'playoff', 'confirmar placar', 'dupr'],
       blocks: [
         p(tk('O torneio acontece num fim de semana. A liga é uma temporada: cada divisão joga em pontos corridos, uma rodada por data, e a classificação se atualiza a cada placar. Os dois ficam lado a lado — "Criar liga" ou "Criar torneio".')),
         steps(
           tk('Em Ligas → "Criar liga", escolha em nome de quem ela é (você, um clube, uma arena, o seu perfil de professor ou uma federação — o que estiver liberado para você).'),
-          tk('Escolha o formato (duplas por divisão, liga flexível ou simples por divisão), o calendário (toda semana, a cada 2 semanas, todo mês ou datas escolhidas) e a pontuação.'),
+          tk('Escolha o formato (duplas por divisão, liga flexível, simples, escadas ou equipes da MiLP), o calendário (toda semana, a cada 2 semanas, todo mês ou datas escolhidas) e a pontuação. Dá para ligar o playoff no fim da temporada.'),
           tk('Monte as divisões: cada uma é uma tabela própria, separada por nível (DUPR) e por categoria. Há um conjunto sugerido por DUPR.'),
           tk('A liga nasce como rascunho. Em Gerir → Situação, abra as inscrições; depois, em Rodadas, gere os jogos de cada divisão.'),
         ),
         list(
           tk('ENTRAR — na página da liga, escolha a divisão e a dupla. Quem está fora da faixa de nível ou da categoria não entra sozinho; a organização pode inscrever por exceção.'),
-          tk('PLACAR — quem gere a liga lança o placar de cada jogo (até 5 games) ou o W.O. Desempate: vitórias, confronto direto, saldo de games, saldo de pontos e pontos feitos.'),
+          tk('PLACAR — quem gere a liga lança o placar de cada jogo (até 5 games) ou o W.O. Na liga flexível, quem joga lança e o outro lado confirma; se houver contestação, a organização decide. Desempate: vitórias, confronto direto, saldo de games, saldo de pontos e pontos feitos.'),
+          tk('PLAYOFF — com ele ligado, os 2, 4 ou 8 primeiros de cada divisão disputam um mata-mata no fim da temporada (aba Playoff). A chave sai da tabela e cada fase sai quando a anterior termina.'),
           tk('SAIR — quem sai depois das rodadas geradas fica como desistência: os placares já lançados continuam valendo para os adversários.'),
         ),
         link('/ligas', tk('Abrir as ligas')),

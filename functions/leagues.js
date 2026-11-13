@@ -10,7 +10,8 @@
  *
  * Chamada `leagues` (ações): `create`, `update`, `status`, `division_save`,
  * `division_remove`, `register`, `withdraw`, `entry_add`, `schedule`,
- * `result`, `staff`, `playoff` (a chave e as fases do mata-mata do fim da
+ * `result`, `report`/`confirm` (na liga flexível, quem joga lança e o outro
+ * lado confirma ou contesta), `staff`, `playoff` (a chave e as fases do mata-mata do fim da
  * temporada) e, nas escadas, `session` (a próxima sessão).
  */
 const P = require('./leaguePolicy.js');
@@ -434,7 +435,7 @@ async function result(ctx, actor, data) {
   if (data.clear === true) {
     const b = ctx.db.batch();
     await desfazFasesSeguintes(ctx, lg, jogo, b);
-    b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, status: 'scheduled', recorded_by: null, recorded_at: null, updated_at: ts(ctx) });
+    b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, status: 'scheduled', recorded_by: null, recorded_at: null, report: null, dispute: null, updated_at: ts(ctx) });
     auditoria(ctx, b, actor, 'league_result_cleared', { league_id: lg.id, match_id: jogo.id });
     await b.commit();
     return { ok: true };
@@ -443,12 +444,103 @@ async function result(ctx, actor, data) {
   const regras = jogo.data().phase === 'ladder' ? {} : P.resultRules(lg.format);
   const r = P.validateResult({ games: data.games, wo_winner: data.wo_winner, dreambreaker: data.dreambreaker }, regras);
   if (!r.ok) falha('invalid-argument', `Placar inválido (${r.error}).`);
-  const patch = { games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, status: 'done', recorded_by: actor.uid, recorded_at: ts(ctx), updated_at: ts(ctx) };
+  const patch = { games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, status: 'done', recorded_by: actor.uid, recorded_at: ts(ctx), report: null, dispute: null, updated_at: ts(ctx) };
   if (P.isIsoDate(data.played_date)) patch.scheduled_date = data.played_date;
   const b = ctx.db.batch();
   await desfazFasesSeguintes(ctx, lg, jogo, b);
   b.update(jogo.ref, patch);
   auditoria(ctx, b, actor, 'league_result', { league_id: lg.id, match_id: jogo.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker });
+  await b.commit();
+  return { ok: true };
+}
+
+/**
+ * LIGA FLEXÍVEL: o lado do jogo de quem chama (`'a'`, `'b'` ou `null`),
+ * pelas inscrições — só quem está na dupla lança ou confirma.
+ */
+async function ladoDe(ctx, lg, j, uid) {
+  const [ea, eb] = await Promise.all([j.side_a, j.side_b].map((id) => (id ? sub(ctx, lg.id, 'entries').doc(id).get() : null)));
+  if (ea && ea.exists && (ea.data().player_uids || []).includes(uid)) return 'a';
+  if (eb && eb.exists && (eb.data().player_uids || []).includes(uid)) return 'b';
+  return null;
+}
+
+async function jogoAutoLancado(ctx, actor, data) {
+  const lg = await liga(ctx, data.leagueId);
+  if (!(P.FORMATS[lg.format] || {}).self_report) falha('failed-precondition', 'Nesta liga, quem lança o placar é a organização.');
+  if (lg.status !== 'running') falha('failed-precondition', 'A liga não está em andamento.');
+  const jogo = await sub(ctx, lg.id, 'matches').doc(texto(data.matchId, 128)).get();
+  if (!jogo.exists) falha('not-found', 'Jogo não encontrado.');
+  const j = jogo.data();
+  if (j.phase !== 'season') falha('failed-precondition', 'No playoff, quem lança o placar é a organização.');
+  if (PO.matchWinner(j)) falha('failed-precondition', 'Este jogo já tem placar: fale com a organização para corrigir.');
+  const lado = await ladoDe(ctx, lg, j, actor.uid);
+  if (!lado) falha('permission-denied', 'Só quem joga este jogo lança ou confirma o placar.');
+  return { lg, jogo, j, lado };
+}
+
+async function avisaLado(ctx, batch, lg, j, side, msg) {
+  const e = await sub(ctx, lg.id, 'entries').doc(j[`side_${side}`]).get();
+  (e.exists ? e.data().player_uids || [] : []).forEach((uid) => aviso(ctx, batch, uid, msg));
+}
+
+/**
+ * LIGA FLEXÍVEL: um lado lança o placar (`report`, nunca W.O. — esse é da
+ * organização). O jogo fica "a confirmar" e o outro lado é avisado. Quem lançou
+ * pode corrigir enquanto o outro não responde; depois de contestado, qualquer
+ * lado lança de novo.
+ */
+async function report(ctx, actor, data) {
+  const { lg, jogo, j, lado } = await jogoAutoLancado(ctx, actor, data);
+  if (j.status === 'reported' && j.report && j.report.side !== lado) falha('failed-precondition', 'O outro lado já lançou o placar: confirme ou conteste.');
+  const r = P.validateResult({ games: data.games, dreambreaker: data.dreambreaker }, P.resultRules(lg.format));
+  if (!r.ok) falha('invalid-argument', `Placar inválido (${r.error}).`);
+  const b = ctx.db.batch();
+  b.update(jogo.ref, {
+    status: 'reported', dispute: null,
+    report: { games: r.games, dreambreaker: r.dreambreaker, side: lado, by: actor.uid, played_date: P.isIsoDate(data.played_date) ? data.played_date : null, at: ts(ctx) },
+    updated_at: ts(ctx),
+  });
+  await avisaLado(ctx, b, lg, j, lado === 'a' ? 'b' : 'a', {
+    title: tx('Confirme o placar'),
+    message: tx('O outro lado lançou o placar do seu jogo na liga {liga}. Confirme ou conteste.', { liga: lg.name }),
+    link: `/ligas/${lg.id}/rodadas`,
+  });
+  auditoria(ctx, b, actor, 'league_result_reported', { league_id: lg.id, match_id: jogo.id, games: r.games, side: lado });
+  await b.commit();
+  return { ok: true };
+}
+
+/**
+ * LIGA FLEXÍVEL: o OUTRO lado confirma (o placar vale, como se a organização o
+ * lançasse) ou contesta com o motivo (a organização é avisada e decide pelo
+ * `result`, que sempre vence).
+ */
+async function confirm(ctx, actor, data) {
+  const { lg, jogo, j, lado } = await jogoAutoLancado(ctx, actor, data);
+  if (j.status !== 'reported' || !j.report) falha('failed-precondition', 'Não há placar a confirmar neste jogo.');
+  if (j.report.side === lado) falha('failed-precondition', 'Quem confirma é o outro lado do jogo.');
+  const b = ctx.db.batch();
+  if (data.accept === true) {
+    b.update(jogo.ref, {
+      games: j.report.games, dreambreaker: j.report.dreambreaker || null, wo_winner: null, status: 'done',
+      ...(j.report.played_date ? { scheduled_date: j.report.played_date } : {}),
+      recorded_by: j.report.by, confirmed_by: actor.uid, recorded_at: ts(ctx), report: null, dispute: null, updated_at: ts(ctx),
+    });
+    aviso(ctx, b, j.report.by, { title: tx('Placar confirmado'), message: tx('O placar que você lançou na liga {liga} foi confirmado.', { liga: lg.name }), link: `/ligas/${lg.id}/classificacao` });
+    auditoria(ctx, b, actor, 'league_result_confirmed', { league_id: lg.id, match_id: jogo.id, games: j.report.games });
+  } else {
+    const motivo = texto(data.reason, 300);
+    if (motivo.length < 3) falha('invalid-argument', 'Diga o que está errado no placar.');
+    b.update(jogo.ref, { status: 'disputed', dispute: { by: actor.uid, side: lado, reason: motivo, at: ts(ctx) }, updated_at: ts(ctx) });
+    const gestores = new Set([...(lg.admins || []), j.report.by]);
+    gestores.forEach((uid) => aviso(ctx, b, uid, {
+      title: tx('Placar contestado'),
+      message: tx('Um placar da liga {liga} foi contestado: {motivo}', { liga: lg.name, motivo }),
+      link: `/ligas/${lg.id}/rodadas`,
+    }));
+    auditoria(ctx, b, actor, 'league_result_disputed', { league_id: lg.id, match_id: jogo.id, reason: motivo });
+  }
   await b.commit();
   return { ok: true };
 }
@@ -631,7 +723,7 @@ async function staff(ctx, actor, data) {
 
 const ACOES = {
   create, update, status, division_save: divisionSave, division_remove: divisionRemove,
-  register, withdraw, entry_add: entryAdd, schedule, session, result, staff, playoff,
+  register, withdraw, entry_add: entryAdd, schedule, session, result, report, confirm, staff, playoff,
 };
 
 /** Despacho pela chave PRÓPRIA (`'constructor'` não é ação — docs/47 §1.1). */

@@ -50,7 +50,7 @@ com paridade). **Disponíveis no PR 1:**
 | Formato | Inscrição | Como joga |
 |---|---|---|
 | `divisional_pairs` — Duplas por divisão (padrão DUPR) | dupla fixa | pontos corridos dentro da divisão, uma rodada por data |
-| `flex_pairs` — Liga flexível (DUPR Flex) | dupla fixa | idem, mas cada rodada tem prazo e as duplas combinam dia e local |
+| `flex_pairs` — Liga flexível (DUPR Flex) | dupla fixa | idem, mas cada rodada tem prazo, as duplas combinam dia e local e quem joga lança o placar, que o outro lado confirma (§13) |
 | `divisional_singles` — Simples por divisão | atleta | pontos corridos em simples |
 | `ladder_individual` — Escada individual (King of the Court) | atleta | por SESSÃO: quadras de 4 ou 5 pela posição, um Americano em cada; o 1º sobe e o último desce (§10) |
 | `ladder_pairs` — Escada de duplas | dupla fixa | por SESSÃO: grupos de 3 a 5 duplas pela posição, todos contra todos no grupo; a 1ª sobe e a última desce (§10) |
@@ -76,6 +76,7 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 | `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, bracket, label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
 | `…/entries/{id}` | `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`/`withdrawn`), `override`, `added_by` |
 | `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by`; nas equipes `games` tem um item por jogo do confronto, na ordem de `lines`, e `dreambreaker {a,b}` (opcional) decide o empate |
+| `…/matches/{id}` na liga flexível | também `status: 'reported'` (lançado, a confirmar) ou `'disputed'` (contestado), `report {games, dreambreaker, side, by, played_date, at}`, `dispute {by, side, reason, at}` e, confirmado, `confirmed_by` (o `recorded_by` é quem lançou); `report`/`dispute` voltam a `null` quando o placar vale (§13) |
 | `…/matches/{id}` no playoff | `phase: 'playoff'`, `round` (1 = primeira fase), `slot` (posição na fase), `third` (a disputa do 3º lugar), `seed_a`/`seed_b` (as cabeças, só na 1ª fase); o resto como na temporada (§12) |
 | `…/matches/{id}` na escada | `phase: 'ladder'`, `session` (nº da sessão), `group` (quadra, a partir de 0), `round` (a volta DENTRO da quadra), `team_a[]`/`team_b[]` (ids de inscrição; na escada individual, a dupla da vez), `side_a`/`side_b` nulos; `scheduled_date` nulo (a data sai do calendário da sessão) |
 
@@ -113,6 +114,8 @@ chave própria. Ações:
 | `session` | quem gere | só escada: gera a próxima sessão com quem veio (`present`, ids de inscrição ativos; ausente = todos), na ordem da escada; número que não fecha é recusado; sessão sem nenhum placar é REFEITA, com algum placar só depois de fechada; avisa cada atleta da quadra; com a liga aberta, começa a temporada |
 | `schedule` | quem gere | gera os jogos da divisão em pontos corridos (recusado na escada) (`roundRobin`, método do círculo; folga quando é ímpar); refazer só sem placar lançado; com a liga aberta, começa a temporada |
 | `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; nas equipes (`resultRules`) exatamente um game por jogo do confronto e, no empate, o `dreambreaker`; `clear` apaga. No playoff, mudar ou apagar o placar APAGA a fase seguinte ainda sem placar (ela sai de novo) e é recusado se ela já tiver placar |
+| `report` | quem joga | só na liga flexível (`self_report`), liga em andamento, jogo da temporada sem placar: um lado lança (`validateResult` do formato, nunca W.O.); quem lançou corrige enquanto o outro não responde; avisa o outro lado |
+| `confirm` | quem joga | o OUTRO lado: `accept: true` vale o placar (como se a organização lançasse); senão `reason` (3–300 letras) contesta e avisa a organização e quem lançou. O `result` da organização sempre vence |
 | `playoff` | quem gere | liga em andamento, fora da escada, `season.playoff.enabled`: sem chave, monta a 1ª fase com `seeds` (inscrições ATIVAS da divisão na ordem da tabela que a tela mostra); com a fase fechada, gera a próxima (e a disputa do 3º lugar junto da final); `reseed` refaz a chave enquanto nenhum jogo dela tem placar; avisa os atletas da fase (§12) |
 | `staff` | quem gere | até 10 organizadores; o criador não sai |
 
@@ -123,7 +126,7 @@ lista `admins`.
 
 Grava `audit_logs` na criação, na troca de status, ao gerar rodadas, ao lançar
 ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
-`league_schedule`, `league_session`, `league_playoff` (com as cabeças na 1ª fase), `league_result`, `league_result_cleared`, `league_staff`).
+`league_schedule`, `league_session`, `league_playoff` (com as cabeças na 1ª fase), `league_result_reported`, `league_result_confirmed`, `league_result_disputed`, `league_result`, `league_result_cleared`, `league_staff`).
 
 ## 6. Telas
 
@@ -149,7 +152,7 @@ são contrato de link.
 
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- **Próximo PR**: liga Flex — o atleta lança o placar e o adversário confirma.
+- **Ainda não**: confirmação automática do placar lançado depois de um prazo e a pendência "confirme o placar" na Minha área (hoje o aviso leva ao jogo).
 - **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
 - Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
   contagem não é transacional) — anotado no código.
@@ -290,3 +293,21 @@ com ele ligado.
   tabela" só enquanto nenhum jogo do playoff tem placar.
 - Nas **equipes** o jogo do playoff é o confronto de sempre (as linhas e o
   DreamBreaker do formato). A classificação da temporada não conta o playoff.
+
+## 13. Liga flexível: quem joga lança, o outro lado confirma
+
+Na `flex_pairs` (`self_report: true` no formato, cópia no servidor com paridade)
+as duplas combinam dia e local, e o placar é delas:
+
+1. Um lado lança (`report`): o jogo fica **A confirmar** e o outro lado é avisado.
+   Quem lançou pode corrigir enquanto o outro não responde. W.O. não — esse é da
+   organização.
+2. O outro lado **confirma** (o placar vale e entra na tabela) ou **contesta**
+   dizendo o que está errado (o jogo fica **Contestado**, a organização e quem
+   lançou são avisados). Contestado, qualquer lado lança de novo.
+3. A organização sempre pode lançar ou corrigir pelo `result`, que vence e limpa
+   o lançado e a contestação.
+
+Só quem está numa das inscrições do jogo lança ou confirma (o servidor confere
+pelas inscrições, nunca pela tela). Placar a confirmar não conta na tabela. No
+playoff o placar é sempre da organização.
