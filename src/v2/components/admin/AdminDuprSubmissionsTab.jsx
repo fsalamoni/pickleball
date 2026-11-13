@@ -27,7 +27,7 @@ const STATUS = {
   deleted: { tone: 'neutral', label: tk('Apagada no DUPR') },
 };
 const ORDEM = ['held', 'awaiting_approval', 'queued', 'failed', 'sent', 'deleted'];
-const ORIGEM = { tournament: tk('Torneio'), game_day: tk('Dia de jogo'), club_event: tk('Evento de clube') };
+const ORIGEM = { tournament: tk('Torneio'), game_day: tk('Dia de jogo'), club_event: tk('Evento de clube'), league: tk('Liga') };
 const hora = (ms) => (ms ? fmtData(new Date(ms), { dateStyle: 'short', timeStyle: 'short' }) : '');
 const placar = (games) => (games || []).map((g) => `${g.a}–${g.b}`).join(', ');
 

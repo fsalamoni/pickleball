@@ -116,6 +116,57 @@ export const formatAvailable = (format) => formatMeta(format)?.available === tru
 export const playersPerEntry = (format) => formatMeta(format)?.players || 0;
 export const isTeamFormat = (format) => formatMeta(format)?.entry === LEAGUE_ENTRY.TEAM;
 
+/**
+ * O grupo do DUPR de cada formato (os do TORNEIO, `docs/57-LIGAS.md` §14):
+ * equipes são confrontos de equipe, a escada individual é um Americano e o
+ * resto são duplas/simples fixas. Cópia no servidor (`functions/leagueRanking.js`).
+ */
+export function leagueDuprBucket(format) {
+  if (isTeamFormat(format)) return 'tournament_team';
+  if (format === LEAGUE_FORMAT.LADDER_INDIVIDUAL) return 'tournament_rotation';
+  return 'tournament_fixed';
+}
+
+/** As posições (na ordem da inscrição) de cada linha das equipes 3×3 e 4×4 do mesmo gênero. */
+const POSICOES_DA_LINHA = Object.freeze({
+  ab: [0, 1], bc: [1, 2], ac: [0, 2], d12: [0, 1], d34: [2, 3], d13: [0, 2], d24: [1, 3],
+});
+
+/**
+ * A escalação SUGERIDA de um lado em cada linha do confronto: a dupla que a
+ * linha pede pela ordem da equipe (A+B, 1+3…) e, na MiLP, as duas mulheres, os
+ * dois homens e as mistas 1ª+1º e 2ª+2º. `null` quando não dá para saber (atleta
+ * sem conta, gênero desconhecido). A organização troca antes de salvar.
+ *
+ * @param {string} format
+ * @param {Array<{ uid?: string|null, gender?: string|null }>} players
+ * @returns {Array<string[]|null>} uma dupla (uids) por linha
+ */
+export function suggestedLineup(format, players) {
+  const linhas = formatMeta(format)?.lines || [];
+  const ps = Array.isArray(players) ? players : [];
+  const mulheres = ps.filter((p) => p?.gender === 'female');
+  const homens = ps.filter((p) => p?.gender === 'male');
+  const dupla = (x, y) => (x?.uid && y?.uid && x.uid !== y.uid ? [x.uid, y.uid] : null);
+  return linhas.map((l) => {
+    if (POSICOES_DA_LINHA[l.key]) return dupla(ps[POSICOES_DA_LINHA[l.key][0]], ps[POSICOES_DA_LINHA[l.key][1]]);
+    if (mulheres.length !== 2 || homens.length !== 2) return null;
+    if (l.key === 'wd') return dupla(mulheres[0], mulheres[1]);
+    if (l.key === 'md') return dupla(homens[0], homens[1]);
+    if (l.key === 'mx1') return dupla(mulheres[0], homens[0]);
+    if (l.key === 'mx2') return dupla(mulheres[1], homens[1]);
+    return null;
+  });
+}
+
+/** As duplas possíveis de uma equipe (só quem tem conta), para escolher a escalação. */
+export function teamPairs(players) {
+  const ps = (Array.isArray(players) ? players : []).filter((p) => p?.uid);
+  const out = [];
+  ps.forEach((x, i) => ps.slice(i + 1).forEach((y) => out.push([x.uid, y.uid])));
+  return out;
+}
+
 /** Como o placar do confronto é conferido: `lines` jogos exatos e o DreamBreaker no empate. */
 export function resultRules(format) {
   const m = formatMeta(format);

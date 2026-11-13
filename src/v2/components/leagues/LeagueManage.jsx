@@ -17,7 +17,8 @@ import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
-import { LEAGUE_STATUS_NEXT, formatMeta, isTeamFormat } from '@/modules/leagues/domain/leagueFormats';
+import { LEAGUE_STATUS_NEXT, formatMeta, isTeamFormat, leagueDuprBucket } from '@/modules/leagues/domain/leagueFormats';
+import DuprSubmitChoice from '@/v2/components/rating/DuprSubmitChoice';
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason';
 import { ELIGIBILITY_REASON_LABELS, divisionEligibility, teamCompositionError } from '@/modules/leagues/domain/leagueDivisions';
 import DivisionFields, { emptyDivision } from './DivisionFields';
@@ -128,6 +129,7 @@ function Dados({ league }) {
   const [f, setF] = useState({
     name: league.name || '', description: league.description || '', city: league.city || '', state: league.state || '',
     location: league.location || '', visibility: league.visibility || 'public', self_registration: league.self_registration !== false,
+    dupr_submit: typeof league.dupr_submit === 'boolean' ? league.dupr_submit : null,
   });
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   return (
@@ -142,6 +144,7 @@ function Dados({ league }) {
       <div className="space-y-4 rounded-2xl bg-paper p-4">
         <V2Toggle id="g-lista" checked={f.visibility === 'public'} onChange={(v) => set({ visibility: v ? 'public' : 'unlisted' })} label={t('Aparecer na lista de ligas')} hint={t('Desligado, só quem tem o link encontra a liga.')} />
         <V2Toggle id="g-auto" checked={f.self_registration} onChange={(v) => set({ self_registration: v })} label={t('Os atletas se inscrevem sozinhos')} hint={t('Desligado, só a organização inscreve.')} />
+        <DuprSubmitChoice id="g-dupr" bucket={leagueDuprBucket(league.format)} value={f.dupr_submit} onChange={(v) => set({ dupr_submit: v })} />
       </div>
       <V2Button type="button" disabled={pending} onClick={() => salvar({ action: 'update', leagueId: league.id, patch: f }, t('Dados salvos.'))}>{t('Salvar')}</V2Button>
     </V2Surface>

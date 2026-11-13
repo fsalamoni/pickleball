@@ -150,8 +150,11 @@ são contrato de link.
 
 ## 8. Ainda não (decisões e próximos PRs)
 
-- **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
-  vão ao DUPR — decisão do dono pendente. A tela diz isso.
+- **Ranking e DUPR**: decidido pelo dono em 2026-11-13 — os jogos de liga contam
+  e vão ao DUPR com as regras dos torneios (§14).
+- **Unificar contas** (Painel admin → Cadastros → Contas excluídas) ainda não
+  move os jogos de liga: a conta excluída sai do ranking, e os jogos da liga dela
+  seguem valendo para os adversários.
 
 ## 9. Padrões compartilhados com o torneio (2026-11-12)
 
@@ -262,8 +265,15 @@ EQUIPES, e o jogo da rodada é um CONFRONTO de vários jogos de duplas.
   passo 3). Vitória e derrota contam o CONFRONTO; "games" são os jogos ganhos do
   confronto e os pontos somam os jogos — o DreamBreaker decide quem venceu, mas
   não entra no saldo.
-- Quem jogou cada linha (a escalação) **não** é gravado: a tabela não depende
-  dela, e ela passa a importar quando os jogos de liga forem ao DUPR (§8).
+- **Escalação** (`matches.lineups`, opcional): quem jogou cada linha,
+  `[{ a: [uid, uid], b: [uid, uid] } | null]`, uma posição por linha. A tabela
+  não depende dela; o ranking e o DUPR sim (§14): linha sem escalação conta só na
+  tabela da liga. Só a organização a grava, junto com o placar (`result`), e o
+  servidor confere que cada dupla são dois atletas DA equipe daquele lado (com
+  conta). A tela sugere pela ordem da equipe (A+B, 1+3…) e, na MiLP, pela
+  categoria do perfil (as duas mulheres, os dois homens, as mistas 1ª+1º e
+  2ª+2º — `suggestedLineup`); atleta sem conta ou categoria desconhecida deixam
+  a linha em branco. W.O. e placar apagado gravam `null`.
 
 ## 12. Playoff (o mata-mata do fim da temporada)
 
@@ -325,3 +335,43 @@ playoff o placar é sempre da organização.
    inscrição aberta (`homeLeagueRows`), com "{n} placares para confirmar" em
    destaque. A ajuda é o artigo `ligas` da Central de Ajuda (com as pistas
    `/ligas`, `/ligas/*` e `/ligas/*/*`).
+
+## 14. Ranking e DUPR (2026-11-13)
+
+Decisão do dono: **a liga vai ao ranking e ao DUPR com as mesmas regras dos
+torneios**. Nada do torneio mudou — a liga entra como uma FONTE a mais, lida pelo
+servidor (`functions/leagueRanking.js`), sem coleção, índice nem regra nova.
+
+| Regra | Torneio | Liga |
+|---|---|---|
+| Quando vale | do lançamento do placar | idem: `matches.status == 'done'`; placar a confirmar (`reported`/`disputed`) não |
+| O que fica de fora | rascunho, cancelado, privado, arquivado | rascunho e cancelada (`LEAGUE_RANKING_STATUSES` = aberta, em andamento, encerrada); cancelar TIRA o que já contou (o recálculo é integral) |
+| Atleta sem conta | a partida sai para todos | idem (`sem_conta`) |
+| W.O. | conta no ranking sem pontos, não vai ao DUPR | idem |
+| Equipes | cada jogo de duplas do confronto | cada LINHA com escalação (`sem_escalacao` sem ela); o DreamBreaker não vai |
+| Grupo do DUPR | fixo / equipes / Americano | `leagueDuprBucket`: equipes → `tournament_team`, escada individual → `tournament_rotation`, o resto → `tournament_fixed` (cópia no cliente com paridade) |
+
+- **Ranking**: `loadLeagueGames` lê as ligas que valem e, de cada uma, as
+  inscrições, os jogos decididos e as divisões — consultas por liga, nunca
+  `collectionGroup` (pediria índice). `normalizeMatches` soma os jogos com
+  `source: 'league'`; o relatório do recálculo ganha `liga: { lidas, usadas,
+  por_motivo }` (sem conta, sem escalação, sem vencedor), que o painel admin
+  mostra (`describeRankingExclusions`). A escada individual entra pela dupla da
+  vez (`team_a`/`team_b`).
+- **Gatilhos**: `recomputeRankingOnLeagueMatch` (jogo de liga, só quando muda
+  um resultado que vale — `leagueMatchChanged`) e
+  `recomputeRankingOnLeagueChange` (liga que muda de elegibilidade). A
+  recuperação (`catchUpPlatformRankings`) conta os jogos decididos e a
+  assinatura das ligas (`league_matches`, `league_hash` na impressão).
+- **DUPR**: o envio automático (`duprSubmitWorker`) gera um candidato por jogo
+  (por linha nas equipes): identificador `pr:lg:{liga}_{jogo}[_{linha}]`
+  (`DUPR_ID_KIND.LEAGUE_MATCH = 'lg'`), `origin: 'league'`, `playType:
+  'TOURNAMENT'`, carência do torneio, evento = nome da liga, chave = divisão,
+  data = o dia do jogo (`scheduled_date`) ou o do lançamento. Quem cria a liga
+  escolhe enviar quando a política deixa (`leagues.dupr_submit`, em Gerir →
+  Dados, o mesmo `DuprSubmitChoice` do torneio); `null` = o padrão. As
+  partidas ficam no livro `dupr_submissions` como as de torneio, e o
+  organizador (`organizer_uid` = `creator_uid`) as vê.
+- **Tela**: a visão geral diz que os jogos contam; o editor de placar das
+  equipes pede a escalação de cada linha e avisa que linha sem escalação conta só
+  na tabela.

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   LEAGUE_ORGANIZER, LEAGUE_FLAG_BY_ORGANIZER, leaguesVisible, groupCanCreate, leagueOrganizerOptions, canManageLeague,
 } from './leagueAccess.js';
-import { LEAGUE_FORMAT, LEAGUE_FORMAT_META, formatAvailable, canMoveStatus, isLeaguePublic, resultRules, isTeamFormat } from './leagueFormats.js';
+import { LEAGUE_FORMAT, LEAGUE_FORMAT_META, formatAvailable, canMoveStatus, isLeaguePublic, resultRules, isTeamFormat, suggestedLineup, teamPairs } from './leagueFormats.js';
 import { normalizeSeason, roundCalendar, roundsFor, addMonths, isIsoDate, currentRound } from './leagueSeason.js';
 import { divisionEligibility, normalizeDivisionRule, MILP_DIVISIONS, teamCompositionError } from './leagueDivisions.js';
 import { validateResult, matchWinner, computeLeagueStandings, leagueTiebreakOrder, LEAGUE_DEFAULT_TIEBREAK_ORDER } from './leagueResults.js';
@@ -248,5 +248,22 @@ describe('placar e classificação', () => {
     ], { mode: 'win_pct' });
     expect(rows.map((r) => r.entry_id)).toEqual(['a', 'c', 'b']);
     expect(rows[0].win_pct).toBe(0.5);
+  });
+});
+
+describe('escalação das equipes', () => {
+  const p = (uid, gender) => ({ uid, name: uid, gender });
+  it('MiLP: as duas mulheres, os dois homens e as mistas 1ª+1º e 2ª+2º', () => {
+    const time = [p('ana', 'female'), p('caio', 'male'), p('bia', 'female'), p('davi', 'male')];
+    expect(suggestedLineup(LEAGUE_FORMAT.TEAM_MILP, time)).toEqual([['ana', 'bia'], ['caio', 'davi'], ['ana', 'caio'], ['bia', 'davi']]);
+    expect(suggestedLineup(LEAGUE_FORMAT.TEAM_MILP, [...time.slice(0, 3), p('rui', null)])).toEqual([null, null, null, null]);
+  });
+  it('3×3 e 4×4 pela ordem da equipe; atleta sem conta deixa a linha em branco', () => {
+    expect(suggestedLineup(LEAGUE_FORMAT.TEAM_MILP_V3, [p('a'), p('b'), p('c')])).toEqual([['a', 'b'], ['b', 'c'], ['a', 'c']]);
+    expect(suggestedLineup(LEAGUE_FORMAT.TEAM_V4, [p('a'), p('b'), { name: 'Rui' }, p('d')])).toEqual([['a', 'b'], null, null, ['b', 'd']]);
+    expect(suggestedLineup('divisional_pairs', [p('a'), p('b')])).toEqual([]);
+  });
+  it('as duplas possíveis só com quem tem conta', () => {
+    expect(teamPairs([p('a'), p('b'), { name: 'Rui' }, p('c')])).toEqual([['a', 'b'], ['a', 'c'], ['b', 'c']]);
   });
 });

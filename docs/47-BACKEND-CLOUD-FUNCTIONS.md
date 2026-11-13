@@ -80,9 +80,11 @@ servidor é o único escritor** (nem o admin da plataforma escreve pelo cliente)
 | `recomputeRankingOnTournamentMatch` | `tournament_matches/{matchId}` (written) | `mudouResultado(antes, depois, CAMPOS_PARTIDA_TORNEIO)` | `platformRankings.js` |
 | `recomputeRankingOnTournamentRegistration` | `tournament_registrations/{registrationId}` (written) | `mudouResultado(..., CAMPOS_INSCRICAO)` — trocar o uid por trás da inscrição muda de quem é o jogo | `platformRankings.js` |
 | `recomputeRankingOnClubEventGame` | `club_event_games/{gameId}` (written) | `mudouResultado(..., CAMPOS_JOGO_EVENTO)` — é por aqui que a **publicação do dia de jogo** chega ao ranking | `platformRankings.js` |
+| `recomputeRankingOnLeagueMatch` | `leagues/{leagueId}/matches/{matchId}` (written) | `leagueMatchChanged` — um lado é `done` e mudou um campo de resultado (`CAMPOS_JOGO_LIGA`, inclusive a escalação) | `index.js` + `leagueRanking.js` |
+| `recomputeRankingOnLeagueChange` | `leagues/{leagueId}` (written) | muda a elegibilidade (`isLeagueRankingEligible` antes ou depois: rascunho/cancelada ⇄ valendo) | `index.js` + `leagueRanking.js` |
 | `catchUpPlatformRankings` | agendada, `every 30 minutes` | compara a **impressão** da última passada com o banco; só recalcula se faltou | `rankingCatchUp.js` |
 
-Os quatro gatilhos têm `timeoutSeconds: 540`, `memory: 512MiB`, e chamam
+Os seis gatilhos têm `timeoutSeconds: 540`, `memory: 512MiB`, e chamam
 `requestRankingRecompute` (erro vira log, retorna `{ ran: false, reason: 'error' }`).
 Quem chama: ninguém diretamente — são eventos do banco; a "autorização" é a
 regra de quem escreveu o documento de origem.
@@ -115,7 +117,8 @@ Gatilho não tem fila: resultado escrito enquanto a função não existe se perd
 (incidente de 2026-09-22). A cada 30 min a função lê `platform_settings/ranking_worker.last_result.fingerprint`
 e a impressão atual — duas contagens (`count()` de `tournament_matches`
 finalizadas e de `club_event_games` finalizados) + hash SHA-1 da assinatura dos
-torneios (`computeSignature`) — e só pede recálculo se diferirem ou se não
+torneios (`computeSignature`) + os jogos decididos das ligas que valem e o hash
+da assinatura delas (`league_matches`, `league_hash` — `leagueSignature`) — e só pede recálculo se diferirem ou se não
 houver impressão. Em dia, **não grava nada**. Limite assumido: editar o
 placar de um jogo já publicado não muda contagem nem assinatura; se acontecer
 com as funções fora do ar, só entra na próxima passada.
@@ -259,7 +262,7 @@ Código em `functions/duprClient.js` (API) e `functions/dupr.js` (regra). Doc: [
 | Função | Gatilho | O que faz |
 |---|---|---|
 | `duprIntegration` | callable, quem está logado | Vale só para o público da política (`platform_settings/dupr_policy.audience`: `admins` = piloto, padrão; `all`), conferido por `liberadaPara`. Ações `pilot_*` (só admin, sem depender da flag; partidas só no UAT): `pilot_player_save|refresh|remove|invite`, `pilot_match_send|delete`, `pilot_sso_config`, `pilot_player_sso` (autoriza a conta de teste pelo login do DUPR) — `functions/duprPilot.js`, escreve só `dupr_pilot_*` e `audit_logs`. Ações `submissions_*` (só admin): `submissions_run` (passada agora), `submissions_approve|retry|remove|unblock` — `functions/duprSubmissions.js`, escreve `dupr_submissions` e `audit_logs` (timeout 300 s). `config` (flag, credenciais, endereço do login), `link` (confirma a pessoa pelo DUPR, exige `BASIC_L1`, reserva o ID, assina o rating e grava `dupr_links` + selo), `unlink`, `status` (renova assinaturas em 24 h). Audita em `audit_logs` |
-| `duprSubmitWorker` | agendada, a cada 15 min (São Paulo), 540 s, 512 MiB | Envio automático: com a flag `dupr_official_sync` ligada e a política fora de *Desligado*, lê as partidas decididas (`tournament_matches`, `club_event_games`), decide pela política e cria/atualiza/apaga no DUPR, até 60 chamadas por passada, com lease em `platform_settings/dupr_submissions`. Grava `dupr_submissions` + `audit_logs`. Testes: `duprSubmissions.test.js` |
+| `duprSubmitWorker` | agendada, a cada 15 min (São Paulo), 540 s, 512 MiB | Envio automático: com a flag `dupr_official_sync` ligada e a política fora de *Desligado*, lê as partidas decididas (`tournament_matches`, `club_event_games` e os jogos das ligas, `loadLeagueGames`), decide pela política e cria/atualiza/apaga no DUPR, até 60 chamadas por passada, com lease em `platform_settings/dupr_submissions`. Grava `dupr_submissions` + `audit_logs`. Testes: `duprSubmissions.test.js` |
 | `duprWebhook` | HTTP público, `/api/dupr/webhook?k=…` (`firebase.json`) | Eventos `RATING`/`RATING_SEED` do DUPR; o token da URL separa o DUPR de qualquer outro chamador; responde 200 depressa. Grava `ratings` em `dupr_links/{uid}` e, só quando o rating muda, um ponto em `rating_points` (série ≤ 120, `proximosPontosDupr` — Carreira, `docs/54`) |
 
 

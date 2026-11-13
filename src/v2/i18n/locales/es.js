@@ -655,4 +655,8 @@ export default {
   "Do clube": "Del club",
   "Da plataforma": "De la plataforma",
   "convidado": "invitado",
+  "Torneio e liga — simples e duplas (grupos, chave, pontos corridos, suíço, escada de duplas)": "Torneo y liga — individuales y dobles (grupos, llave, todos contra todos, suizo, escalera de dobles)",
+  "Torneio e liga — equipes": "Torneo y liga — equipos",
+  "Torneio — Americano e Mexicano (por modalidade) e liga em escada individual": "Torneo — Americano y Mexicano (por modalidad) y liga en escalera individual",
+  "Liga": "Liga",
 };

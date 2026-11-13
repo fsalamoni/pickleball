@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 248 |
 | Blocos `match` (raiz + subcoleções) | 277 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 129 |
+| Cloud Functions exportadas | 131 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 16 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 1011 |
+| Arquivos de teste (`*.test.js(x)`) | 1012 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 63 |
 
@@ -329,6 +329,8 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `recomputeRankingOnTournamentMatch` | gatilho Firestore | `tournament_matches/{matchId}` |
 | `recomputeRankingOnTournamentRegistration` | gatilho Firestore | `tournament_registrations/{registrationId}` |
 | `recomputeRankingOnClubEventGame` | gatilho Firestore | `club_event_games/{gameId}` |
+| `recomputeRankingOnLeagueMatch` | gatilho Firestore | `leagues/{leagueId}/matches/{matchId}` |
+| `recomputeRankingOnLeagueChange` | gatilho Firestore | `leagues/{leagueId}` |
 | `catchUpPlatformRankings` | agendada | `every 30 minutes` |
 | `advanceOpenSlotWaitlist` | agendada | `every 10 minutes` |
 | `promoteOpenSlotWaitlistOnSlot` | gatilho Firestore | `arena_open_slots/{slotId}` |

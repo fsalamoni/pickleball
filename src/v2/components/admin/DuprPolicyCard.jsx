@@ -8,9 +8,9 @@ import { V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Toggl
 import { t, tk } from '@/core/i18n';
 
 const BUCKET_LABEL = {
-  [DUPR_BUCKET.TOURNAMENT_FIXED]: tk('Torneio — simples e duplas (grupos, chave, pontos corridos, suíço)'),
-  [DUPR_BUCKET.TOURNAMENT_TEAM]: tk('Torneio — equipes'),
-  [DUPR_BUCKET.TOURNAMENT_ROTATION]: tk('Torneio — Americano e Mexicano (por modalidade)'),
+  [DUPR_BUCKET.TOURNAMENT_FIXED]: tk('Torneio e liga — simples e duplas (grupos, chave, pontos corridos, suíço, escada de duplas)'),
+  [DUPR_BUCKET.TOURNAMENT_TEAM]: tk('Torneio e liga — equipes'),
+  [DUPR_BUCKET.TOURNAMENT_ROTATION]: tk('Torneio — Americano e Mexicano (por modalidade) e liga em escada individual'),
   [DUPR_BUCKET.GAME_DAY_ROTATION]: tk('Dia de jogo e jogo aberto com placar (Americano, Americano aprimorado, Mexicano, Rei da Quadra)'),
 };
 const LEVEL_OPTIONS = [

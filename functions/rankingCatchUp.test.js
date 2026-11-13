@@ -71,6 +71,12 @@ describe('precisaRecuperar', () => {
     expect(precisaRecuperar(impressao({ assinatura: 't1:1' }), impressao())).toBe(true);
   });
 
+  it('jogo de liga decidido, ou liga cancelada, sem passada recupera', () => {
+    expect(precisaRecuperar(impressao({ jogosLiga: 3 }), impressao({ jogosLiga: 4 }))).toBe(true);
+    expect(precisaRecuperar(impressao({ assinaturaLigas: 'L1:running' }), impressao({ assinaturaLigas: 'L1:cancelled' }))).toBe(true);
+    expect(precisaRecuperar(impressao({ jogosLiga: 4, assinaturaLigas: 'L1:running' }), impressao({ jogosLiga: 4, assinaturaLigas: 'L1:running' }))).toBe(false);
+  });
+
   it('⭐ em dia, NÃO recupera', () => {
     expect(precisaRecuperar(impressao(), impressao())).toBe(false);
   });

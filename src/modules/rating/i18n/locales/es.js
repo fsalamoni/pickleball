@@ -41,4 +41,7 @@ export default {
     'El ID DUPR tiene solo letras y números, sin espacios ni puntos (ej.: 5931502152 o DDQ0KL).',
   'Serve de ponto de partida no ranking de nível da plataforma. Se ficar vazio, usamos o seu nivelamento.':
     'Sirve de punto de partida en el ranking de nivel de la plataforma. Si queda vacío, usamos tu nivelación.',
+  "jogo(s) de liga com atleta SEM CONTA na inscrição.": "partido(s) de liga con jugador SIN CUENTA en la inscripción.",
+  "linha(s) de confronto de equipe da liga sem escalação (quem jogou). Contam só na tabela da liga.": "línea(s) de enfrentamiento por equipos de la liga sin alineación (quién jugó). Cuentan solo en la tabla de la liga.",
+  "jogo(s) de liga sem vencedor.": "partido(s) de liga sin ganador.",
 };

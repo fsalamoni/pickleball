@@ -33,6 +33,7 @@ const {
   CAMPOS_PARTIDA_TORNEIO, CAMPOS_INSCRICAO, CAMPOS_JOGO_EVENTO,
 } = require('./platformRankings');
 const { recuperarSeFaltou } = require('./rankingCatchUp');
+const { isLeagueRankingEligible, leagueMatchChanged } = require('./leagueRanking');
 const { recomputeClubInternalRankings } = require('./clubRanking');
 const { recomputeSeasonRanking } = require('./seasonRanking');
 const notificationPrefs = require('./notificationPrefs');
@@ -135,6 +136,24 @@ exports.recomputeRankingOnClubEventGame = onDocumentWritten(
   async (event) => {
     if (!mudouResultado(antes(event), depois(event), CAMPOS_JOGO_EVENTO)) return;
     await pedirRecalculo('club-event-game', { gameId: event.params.gameId });
+  },
+);
+
+// (3b) Resultado de LIGA (docs/57 §14): conta com as mesmas regras do torneio.
+exports.recomputeRankingOnLeagueMatch = onDocumentWritten(
+  { ...GATILHO_RANKING, document: 'leagues/{leagueId}/matches/{matchId}' },
+  async (event) => {
+    if (!leagueMatchChanged(antes(event), depois(event))) return;
+    await pedirRecalculo('league-match', { leagueId: event.params.leagueId, matchId: event.params.matchId });
+  },
+);
+
+// (3c) A liga entrou ou saiu do ranking (cancelar tira o que já contou).
+exports.recomputeRankingOnLeagueChange = onDocumentWritten(
+  { ...GATILHO_RANKING, document: 'leagues/{leagueId}' },
+  async (event) => {
+    if (isLeagueRankingEligible(antes(event)) === isLeagueRankingEligible(depois(event))) return;
+    await pedirRecalculo('league-change', { leagueId: event.params.leagueId });
   },
 );
 
