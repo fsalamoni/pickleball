@@ -100,6 +100,19 @@ describe('inscrição', () => {
     await expect(chama(db, ANA, { action: 'register', leagueId, divisionId, partnerUid: 'cau' })).rejects.toThrow(/acima da faixa/);
   });
 
+  it('a vaga é conferida na transação: divisão completa recusa e a contagem fecha', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaAberta(db);
+    const divPath = `leagues/${leagueId}/divisions/${divisionId}`;
+    db.store.docs.set(divPath, { ...db.store.docs.get(divPath), max_entries: 1 });
+    await chama(db, BIA, { action: 'register', leagueId, divisionId, partnerUid: 'duda' });
+    await expect(chama(db, ANA, { action: 'register', leagueId, divisionId, partnerUid: 'edu' })).rejects.toThrow(/completa/);
+    const lg = db.store.docs.get(`leagues/${leagueId}`);
+    expect(lg.entries_count).toBe(1);
+    expect(lg.member_uids).toEqual(expect.arrayContaining(['ana', 'bia', 'duda']));
+    expect(lg.member_uids).not.toContain('edu');
+  });
+
   it('a organização inscreve quem não tem conta e, como no torneio, fora da faixa vira exceção marcada', async () => {
     const db = banco();
     const { leagueId, divisionId } = await ligaAberta(db);

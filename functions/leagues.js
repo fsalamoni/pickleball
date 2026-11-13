@@ -281,16 +281,26 @@ const MOTIVO = {
 
 /**
  * Grava a inscrição depois de conferir vaga, repetição e faixa da divisão.
- * ponytail: a vaga é conferida fora de transação; duas inscrições no mesmo
- * instante podem passar do limite por uma. Transação se isso aparecer.
+ * Numa transação: a divisão, a liga e as inscrições ativas são lidas e a
+ * inscrição gravada juntas, então duas pessoas disputando a última vaga no
+ * mesmo instante não passam do limite (a segunda é refeita e recebe "completa").
  */
-async function gravarInscricao(ctx, actor, lg, data, players, { override = false, by = 'self' } = {}) {
-  const div = await sub(ctx, lg.id, 'divisions').doc(texto(data.divisionId, 128)).get();
+async function gravarInscricao(ctx, actor, lgAntes, data, players, { override = false, by = 'self' } = {}) {
+  const divRef = sub(ctx, lgAntes.id, 'divisions').doc(texto(data.divisionId, 128));
+  return ctx.db.runTransaction(async (trn) => {
+    const div = await trn.get(divRef);
+    const ligaSnap = await trn.get(ref(ctx, lgAntes.id));
+    const todosAtivos = await trn.get(sub(ctx, lgAntes.id, 'entries').where('status', '==', 'active'));
+    return gravarNaTransacao(ctx, trn, actor, { ...lgAntes, ...(ligaSnap.data() || {}), id: lgAntes.id }, data, players, { div, todosAtivos, override, by });
+  });
+}
+
+function gravarNaTransacao(ctx, trn, actor, lg, data, players, { div, todosAtivos, override, by }) {
   if (!div.exists) falha('not-found', 'Divisão não encontrada.');
-  const ativos = await sub(ctx, lg.id, 'entries').where('division_id', '==', div.id).where('status', '==', 'active').get();
+  const ativos = todosAtivos.docs.filter((e) => e.data().division_id === div.id);
   const max = div.data().max_entries || MAX_ENTRIES;
-  if (ativos.size >= max) falha('resource-exhausted', 'A divisão está completa.');
-  const jaEstao = new Set(ativos.docs.flatMap((e) => e.data().player_uids || []));
+  if (ativos.length >= max) falha('resource-exhausted', 'A divisão está completa.');
+  const jaEstao = new Set(ativos.flatMap((e) => e.data().player_uids || []));
   const repetido = players.find((p) => p.uid && jaEstao.has(p.uid));
   if (repetido) falha('already-exists', `${repetido.name} já está inscrito nesta divisão.`);
   const elig = P.divisionEligibility(div.data(), players);
@@ -303,24 +313,25 @@ async function gravarInscricao(ctx, actor, lg, data, players, { override = false
   if (new Set(uids).size !== uids.length) falha('invalid-argument', 'O mesmo atleta aparece duas vezes.');
   const entryRef = sub(ctx, lg.id, 'entries').doc();
   const nome = texto(data.name, 60) || players.map((p) => p.name.split(' ')[0]).join(' / ');
-  const batch = ctx.db.batch();
-  batch.set(entryRef, {
+  trn.set(entryRef, {
     division_id: div.id, name: nome, auto_name: !texto(data.name, 60), players, player_uids: uids, status: 'active',
     eligibility: { value: elig.value, unrated: elig.unrated, override: !elig.ok || Boolean(montagem) },
     created_by: actor.uid, added_by: by, created_at: ts(ctx),
   });
-  const m = await membros(ctx, lg.id, lg, uids);
+  // Quem é membro: a organização + todo atleta com inscrição ativa (as lidas
+  // aqui) + os de agora — a mesma conta de `membros`, sem nova leitura.
+  const membrosUids = new Set([...(lg.admins || []), ...uids]);
+  todosAtivos.docs.forEach((e) => (e.data().player_uids || []).forEach((u) => u && membrosUids.add(u)));
   // `ever_uids`: todo atleta que já passou pela liga (a exclusão de conta acha
   // a liga por ele mesmo depois de a pessoa desistir).
   const ever = [...new Set([...(lg.ever_uids || []), ...uids])];
-  batch.update(ref(ctx, lg.id), { member_uids: m.member_uids, ever_uids: ever, entries_count: m.entries_count + 1, updated_at: ts(ctx) });
+  trn.update(ref(ctx, lg.id), { member_uids: [...membrosUids], ever_uids: ever, entries_count: todosAtivos.size + 1, updated_at: ts(ctx) });
   const link = `/ligas/${lg.id}`;
-  players.filter((p) => p.uid && p.uid !== actor.uid).forEach((p) => aviso(ctx, batch, p.uid, {
+  players.filter((p) => p.uid && p.uid !== actor.uid).forEach((p) => aviso(ctx, trn, p.uid, {
     title: tx('Você entrou numa liga'),
     message: tx('Você foi inscrito na liga {liga}, divisão {divisao}.', { liga: lg.name, divisao: div.data().name }),
     link,
   }));
-  await batch.commit();
   return { entryId: entryRef.id };
 }
 

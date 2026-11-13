@@ -108,7 +108,7 @@ chave própria. Ações:
 | `update` | quem gere | campos da lista fechada (`camposDaLiga`) |
 | `status` | quem gere | a transição (`LEAGUE_STATUS_NEXT`); `open → draft` só sem inscritos |
 | `division_save` / `division_remove` | quem gere | remover só divisão sem inscritos |
-| `register` | o atleta | liga aberta, `self_registration`, divisão não lotada, faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso. Equipe: `teammateUids` (os outros `players − 1`) e a montagem do formato (`teamCompositionError`: 2+2 na MiLP, mesma categoria na v4) |
+| `register` | o atleta | liga aberta, `self_registration`, divisão não lotada (vaga, repetição e contagem conferidas e gravadas numa TRANSAÇÃO — duas pessoas na última vaga não passam do limite), faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso. Equipe: `teammateUids` (os outros `players − 1`) e a montagem do formato (`teamCompositionError`: 2+2 na MiLP, mesma categoria na v4) |
 | `withdraw` | o próprio atleta ou quem gere | sem jogo gerado ⇒ apaga; com jogo ⇒ `withdrawn` (os placares seguem valendo para os adversários) |
 | `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **fora da regra da divisão**: como no torneio, a organização vê o motivo como aviso e inscreve assim mesmo — o servidor marca `override: true` sozinho quando não cabe (§9.3) |
 | `session` | quem gere | só escada: gera a próxima sessão com quem veio (`present`, ids de inscrição ativos; ausente = todos), na ordem da escada; número que não fecha é recusado; sessão sem nenhum placar é REFEITA, com algum placar só depois de fechada; avisa cada atleta da quadra; com a liga aberta, começa a temporada |
@@ -152,8 +152,6 @@ são contrato de link.
 
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
-  contagem não é transacional) — anotado no código.
 
 ## 9. Padrões compartilhados com o torneio (2026-11-12)
 
