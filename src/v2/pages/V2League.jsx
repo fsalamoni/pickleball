@@ -1,12 +1,13 @@
 /**
  * /ligas/:leagueId(/:tab) — a página da LIGA. Abas: Visão geral,
- * Classificação, Rodadas, Inscritos e, para quem organiza, Gerir.
+ * Classificação, Rodadas, Playoff (quando a temporada tem), Inscritos e, para
+ * quem organiza, Gerir.
  * A classificação é derivada dos jogos (nada gravado); toda escrita passa
  * pela função `leagues` no servidor.
  */
 import React, { useMemo } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, Eye, ListOrdered, MapPin, Settings, Swords, Trophy, Users } from 'lucide-react';
+import { CalendarDays, Eye, ListOrdered, MapPin, Medal, Settings, Swords, Trophy, Users } from 'lucide-react';
 import { t, tk } from '@/core/i18n';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
@@ -24,6 +25,7 @@ import LeaguesGate from '@/v2/components/leagues/LeaguesGate';
 import LeagueOverview from '@/v2/components/leagues/LeagueOverview';
 import LeagueStandings from '@/v2/components/leagues/LeagueStandings';
 import LeagueRounds from '@/v2/components/leagues/LeagueRounds';
+import LeaguePlayoff from '@/v2/components/leagues/LeaguePlayoff';
 import LeagueLadder, { LeagueSessions } from '@/v2/components/leagues/LeagueLadder';
 import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
 import LeagueEntries from '@/v2/components/leagues/LeagueEntries';
@@ -37,6 +39,7 @@ const ABAS = [
   { value: 'inscritos', label: tk('Inscritos'), icon: Users },
 ];
 const GERIR = { value: 'gerir', label: tk('Gerir'), icon: Settings };
+const PLAYOFF = { value: 'playoff', label: tk('Playoff'), icon: Medal };
 // Na escada as abas são as mesmas, com o nome do que mostram (os links seguem).
 const ROTULO_ESCADA = { classificacao: tk('Escada'), rodadas: tk('Sessões') };
 
@@ -60,7 +63,11 @@ function Liga() {
     uid: user?.uid, isPlatformAdmin, clubs: clubs.data, arenas: arenas.data, federationRoles: papeis.data,
   });
   const escada = isLadderFormat(liga.data?.format);
-  const abas = useMemo(() => (gere ? [...ABAS, GERIR] : ABAS).map((a) => ({ ...a, label: t((escada && ROTULO_ESCADA[a.value]) || a.label) })), [gere, escada]);
+  const comPlayoff = !escada && normalizeSeason(liga.data?.season).playoff.enabled;
+  const abas = useMemo(() => {
+    const base = comPlayoff ? [...ABAS.slice(0, 3), PLAYOFF, ...ABAS.slice(3)] : ABAS;
+    return (gere ? [...base, GERIR] : base).map((a) => ({ ...a, label: t((escada && ROTULO_ESCADA[a.value]) || a.label) }));
+  }, [gere, escada, comPlayoff]);
   const aba = abas.some((a) => a.value === tab) ? tab : 'visao';
 
   if (liga.isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-48 rounded-4xl" /><V2Skeleton className="h-64" /></V2Page>;
@@ -128,6 +135,7 @@ function Liga() {
       {aba === 'visao' && <LeagueOverview {...dados} onGo={(v) => navigate(`/ligas/${leagueId}/${v}`)} />}
       {aba === 'classificacao' && (escada ? <LeagueLadder {...dados} /> : <LeagueStandings {...dados} />)}
       {aba === 'rodadas' && (escada ? <LeagueSessions {...dados} /> : <LeagueRounds {...dados} />)}
+      {aba === 'playoff' && <LeaguePlayoff {...dados} />}
       {aba === 'inscritos' && <LeagueEntries {...dados} />}
       {aba === 'gerir' && gere && <LeagueManage {...dados} />}
 

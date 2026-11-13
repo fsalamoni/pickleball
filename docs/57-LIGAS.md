@@ -76,6 +76,7 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 | `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, bracket, label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
 | `…/entries/{id}` | `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`/`withdrawn`), `override`, `added_by` |
 | `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by`; nas equipes `games` tem um item por jogo do confronto, na ordem de `lines`, e `dreambreaker {a,b}` (opcional) decide o empate |
+| `…/matches/{id}` no playoff | `phase: 'playoff'`, `round` (1 = primeira fase), `slot` (posição na fase), `third` (a disputa do 3º lugar), `seed_a`/`seed_b` (as cabeças, só na 1ª fase); o resto como na temporada (§12) |
 | `…/matches/{id}` na escada | `phase: 'ladder'`, `session` (nº da sessão), `group` (quadra, a partir de 0), `round` (a volta DENTRO da quadra), `team_a[]`/`team_b[]` (ids de inscrição; na escada individual, a dupla da vez), `side_a`/`side_b` nulos; `scheduled_date` nulo (a data sai do calendário da sessão) |
 
 - **Classificação e datas das rodadas são DERIVADAS**, nunca gravadas:
@@ -111,7 +112,8 @@ chave própria. Ações:
 | `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **fora da regra da divisão**: como no torneio, a organização vê o motivo como aviso e inscreve assim mesmo — o servidor marca `override: true` sozinho quando não cabe (§9.3) |
 | `session` | quem gere | só escada: gera a próxima sessão com quem veio (`present`, ids de inscrição ativos; ausente = todos), na ordem da escada; número que não fecha é recusado; sessão sem nenhum placar é REFEITA, com algum placar só depois de fechada; avisa cada atleta da quadra; com a liga aberta, começa a temporada |
 | `schedule` | quem gere | gera os jogos da divisão em pontos corridos (recusado na escada) (`roundRobin`, método do círculo; folga quando é ímpar); refazer só sem placar lançado; com a liga aberta, começa a temporada |
-| `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; nas equipes (`resultRules`) exatamente um game por jogo do confronto e, no empate, o `dreambreaker`; `clear` apaga |
+| `result` | quem gere | `validateResult`: até 5 games, 0–99, sem empate, ou W.O.; nas equipes (`resultRules`) exatamente um game por jogo do confronto e, no empate, o `dreambreaker`; `clear` apaga. No playoff, mudar ou apagar o placar APAGA a fase seguinte ainda sem placar (ela sai de novo) e é recusado se ela já tiver placar |
+| `playoff` | quem gere | liga em andamento, fora da escada, `season.playoff.enabled`: sem chave, monta a 1ª fase com `seeds` (inscrições ATIVAS da divisão na ordem da tabela que a tela mostra); com a fase fechada, gera a próxima (e a disputa do 3º lugar junto da final); `reseed` refaz a chave enquanto nenhum jogo dela tem placar; avisa os atletas da fase (§12) |
 | `staff` | quem gere | até 10 organizadores; o criador não sai |
 
 **Quem gere** (`podeGerir`, espelhado no cliente por `canManageLeague`): a lista
@@ -121,7 +123,7 @@ lista `admins`.
 
 Grava `audit_logs` na criação, na troca de status, ao gerar rodadas, ao lançar
 ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
-`league_schedule`, `league_session`, `league_result`, `league_result_cleared`, `league_staff`).
+`league_schedule`, `league_session`, `league_playoff` (com as cabeças na 1ª fase), `league_result`, `league_result_cleared`, `league_staff`).
 
 ## 6. Telas
 
@@ -129,7 +131,7 @@ ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
 |---|---|
 | `/ligas` | `V2Leagues` — "Abertas a todos" e "Minhas ligas"; "Criar liga" e "Criar torneio" |
 | `/ligas/criar` | `V2CreateLeague` — 5 passos: organizador, formato, temporada e pontuação (com a ordem do desempate), divisões ("Uma divisão por faixa de DUPR" monta as cinco faixas numéricas da lista oficial), dados |
-| `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `inscritos` e, para quem gere, `gerir` (`?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe`). Na escada as abas se chamam **Escada** (`LeagueLadder`) e **Sessões** (`LeagueSessions`), e Gerir → Sessões é a chamada (`LeagueSessionPanel`) — os valores de aba são os mesmos |
+| `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `playoff` (só com o playoff ligado, `LeaguePlayoff`), `inscritos` e, para quem gere, `gerir` (`?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe`). Na escada as abas se chamam **Escada** (`LeagueLadder`) e **Sessões** (`LeagueSessions`), e Gerir → Sessões é a chamada (`LeagueSessionPanel`) — os valores de aba são os mesmos |
 
 Componentes em `src/v2/components/leagues/`. Sem nenhuma flag ligada, as rotas
 redirecionam para `/torneios` (`LeaguesGate`). Os valores de aba e de `?secao=`
@@ -147,7 +149,7 @@ são contrato de link.
 
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- **Próximo PR**: playoff no fim da temporada.
+- **Próximo PR**: liga Flex — o atleta lança o placar e o adversário confirma.
 - **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
 - Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
   contagem não é transacional) — anotado no código.
@@ -263,3 +265,28 @@ EQUIPES, e o jogo da rodada é um CONFRONTO de vários jogos de duplas.
   não entra no saldo.
 - Quem jogou cada linha (a escalação) **não** é gravado: a tabela não depende
   dela, e ela passa a importar quando os jogos de liga forem ao DUPR (§8).
+
+## 12. Playoff (o mata-mata do fim da temporada)
+
+Ligado em **Temporada** (`season.playoff`: `enabled`, `size` 2 | 4 | 8,
+`third_place`), em qualquer formato menos a escada. A aba **Playoff** aparece
+com ele ligado.
+
+- **A chave** sai da classificação da temporada (`computeLeagueStandings`, sem
+  quem desistiu): os N primeiros, cortados ao que a divisão permite
+  (`playoffSize`: 6 inscritos num playoff de 8 viram 4). Cruzamento clássico
+  (`playoffFirstRound`): 1 × último, e a 1ª e a 2ª cabeça só se cruzam na final.
+  A tela mostra a tabela e manda a ordem; o servidor confere que são inscrições
+  ATIVAS da divisão, e quem organiza responde por ela (vai para a auditoria).
+  Jogo da temporada sem placar não segura a chave — a tela avisa quantos faltam.
+- **Fase a fase**: a próxima fase nasce dos vencedores quando a atual fecha
+  (`playoffState`: `none` → `playing` → `ready` → `done`), com a disputa do
+  3º lugar junto da final (chave de 4 ou 8). Campeão, vice e 3º são DERIVADOS
+  dos placares — nada é gravado além dos jogos. A conta tem cópia no servidor
+  (`functions/leaguePlayoff.js`, paridade `leaguePlayoff.parity.test.js`).
+- **Corrigir um placar** de uma fase já seguida: com a fase seguinte sem placar,
+  ela é apagada e sai de novo com os vencedores certos; com placar, a correção é
+  recusada (apague antes o placar da fase seguinte). "Refazer a chave pela
+  tabela" só enquanto nenhum jogo do playoff tem placar.
+- Nas **equipes** o jogo do playoff é o confronto de sempre (as linhas e o
+  DreamBreaker do formato). A classificação da temporada não conta o playoff.

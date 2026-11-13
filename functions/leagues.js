@@ -10,10 +10,12 @@
  *
  * Chamada `leagues` (ações): `create`, `update`, `status`, `division_save`,
  * `division_remove`, `register`, `withdraw`, `entry_add`, `schedule`,
- * `result`, `staff` e, nas escadas, `session` (a próxima sessão).
+ * `result`, `staff`, `playoff` (a chave e as fases do mata-mata do fim da
+ * temporada) e, nas escadas, `session` (a próxima sessão).
  */
 const P = require('./leaguePolicy.js');
 const LD = require('./leagueLadder.js');
+const PO = require('./leaguePlayoff.js');
 const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 const { FederationError, staffPerms } = require('./federations.js');
 
@@ -431,6 +433,7 @@ async function result(ctx, actor, data) {
   if (!jogo.exists) falha('not-found', 'Jogo não encontrado.');
   if (data.clear === true) {
     const b = ctx.db.batch();
+    await desfazFasesSeguintes(ctx, lg, jogo, b);
     b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, status: 'scheduled', recorded_by: null, recorded_at: null, updated_at: ts(ctx) });
     auditoria(ctx, b, actor, 'league_result_cleared', { league_id: lg.id, match_id: jogo.id });
     await b.commit();
@@ -443,10 +446,92 @@ async function result(ctx, actor, data) {
   const patch = { games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, status: 'done', recorded_by: actor.uid, recorded_at: ts(ctx), updated_at: ts(ctx) };
   if (P.isIsoDate(data.played_date)) patch.scheduled_date = data.played_date;
   const b = ctx.db.batch();
+  await desfazFasesSeguintes(ctx, lg, jogo, b);
   b.update(jogo.ref, patch);
   auditoria(ctx, b, actor, 'league_result', { league_id: lg.id, match_id: jogo.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker });
   await b.commit();
   return { ok: true };
+}
+
+/**
+ * PLAYOFF: mudar o placar de uma fase muda quem avança. A fase seguinte ainda
+ * sem placar é APAGADA (sai de novo, com os vencedores certos); com placar,
+ * a mudança é recusada — apague antes o placar da fase seguinte.
+ */
+async function desfazFasesSeguintes(ctx, lg, jogo, batch) {
+  const j = jogo.data();
+  if (j.phase !== 'playoff') return;
+  const doPlayoff = await sub(ctx, lg.id, 'matches').where('division_id', '==', j.division_id).where('phase', '==', 'playoff').get();
+  const depois = doPlayoff.docs.filter((d) => (Number(d.data().round) || 0) > (Number(j.round) || 0));
+  if (depois.some((d) => PO.matchWinner(d.data()))) {
+    falha('failed-precondition', 'A fase seguinte do playoff já tem placar: apague-o antes de mudar este.');
+  }
+  depois.forEach((d) => batch.delete(d.ref));
+}
+
+/**
+ * PLAYOFF (mata-mata do fim da temporada), divisão a divisão. Sem chave: monta
+ * a 1ª fase com `seeds` (as inscrições ATIVAS da divisão na ordem da tabela —
+ * a tela manda a classificação que mostra; quem organiza responde por ela e a
+ * ordem vai para a auditoria). Com a fase fechada: gera a próxima com os
+ * vencedores (e a disputa do 3º lugar antes da final, se ligada). `reseed`
+ * refaz a chave enquanto nenhum jogo dela tem placar.
+ */
+async function playoff(ctx, actor, data) {
+  const lg = await liga(ctx, data.leagueId);
+  await exigeGerir(ctx, actor, lg);
+  if (lg.status !== 'running') falha('failed-precondition', 'O playoff é da liga em andamento.');
+  if (LD.isLadderFormat(lg.format)) falha('failed-precondition', 'A escada não tem playoff.');
+  const season = P.normalizeSeason(lg.season);
+  if (!season.playoff.enabled) falha('failed-precondition', 'Ligue o playoff na temporada antes.');
+  const divisionId = texto(data.divisionId, 128);
+  const [entries, jogos] = await Promise.all([
+    sub(ctx, lg.id, 'entries').where('division_id', '==', divisionId).where('status', '==', 'active').get(),
+    sub(ctx, lg.id, 'matches').where('division_id', '==', divisionId).where('phase', '==', 'playoff').get(),
+  ]);
+  const atuais = jogos.docs.map((d) => ({ ...d.data(), ref: d.ref }));
+  let novos;
+  let apagar = [];
+  if (!atuais.length || data.reseed === true) {
+    if (atuais.some((m) => PO.matchWinner(m))) falha('failed-precondition', 'O playoff já tem placar: a chave não é refeita.');
+    const ativos = new Set(entries.docs.map((d) => d.id));
+    const seeds = [...new Set((Array.isArray(data.seeds) ? data.seeds : []).map((s) => texto(s, 128)))];
+    if (seeds.some((s) => !ativos.has(s))) falha('invalid-argument', 'A chave tem uma inscrição que não está ativa nesta divisão.');
+    novos = PO.playoffFirstRound(seeds, season.playoff.size);
+    if (!novos.length) falha('failed-precondition', 'O playoff precisa de pelo menos 2 inscrições.');
+    apagar = atuais;
+  } else {
+    const st = PO.playoffState(atuais, { thirdPlace: season.playoff.third_place });
+    if (st.stage === 'playing') falha('failed-precondition', 'Termine os jogos desta fase antes de gerar a próxima.');
+    if (st.stage === 'done') falha('failed-precondition', 'O playoff desta divisão já terminou.');
+    novos = st.next;
+  }
+  const b = ctx.db.batch();
+  apagar.forEach((m) => b.delete(m.ref));
+  novos.forEach((m) => b.set(sub(ctx, lg.id, 'matches').doc(), {
+    division_id: divisionId, phase: 'playoff', round: m.round, slot: m.slot, third: m.third === true,
+    ...(m.seed_a ? { seed_a: m.seed_a, seed_b: m.seed_b } : {}),
+    side_a: m.side_a, side_b: m.side_b, games: [], wo_winner: null, dreambreaker: null,
+    status: 'scheduled', scheduled_date: null, court: '', created_at: ts(ctx), updated_at: ts(ctx),
+  }));
+  const porId = new Map(entries.docs.map((d) => [d.id, d.data()]));
+  const link = `/ligas/${lg.id}/playoff`;
+  const avisados = new Set();
+  novos.flatMap((m) => [m.side_a, m.side_b]).flatMap((id) => porId.get(id)?.player_uids || []).forEach((uid) => {
+    if (avisados.has(uid)) return;
+    avisados.add(uid);
+    aviso(ctx, b, uid, {
+      title: tx('Você está no playoff'),
+      message: tx('Saiu o seu próximo jogo do playoff da liga {liga}.', { liga: lg.name }),
+      link,
+    });
+  });
+  auditoria(ctx, b, actor, 'league_playoff', {
+    league_id: lg.id, division_id: divisionId, round: novos[0].round, matches: novos.length,
+    ...(novos[0].round === 1 ? { seeds: novos.flatMap((m) => [m.side_a, m.side_b]) } : {}),
+  });
+  await b.commit();
+  return { matches: novos.length, round: novos[0].round };
 }
 
 /**
@@ -546,7 +631,7 @@ async function staff(ctx, actor, data) {
 
 const ACOES = {
   create, update, status, division_save: divisionSave, division_remove: divisionRemove,
-  register, withdraw, entry_add: entryAdd, schedule, session, result, staff,
+  register, withdraw, entry_add: entryAdd, schedule, session, result, staff, playoff,
 };
 
 /** Despacho pela chave PRÓPRIA (`'constructor'` não é ação — docs/47 §1.1). */

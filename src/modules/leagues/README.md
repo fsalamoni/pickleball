@@ -20,6 +20,7 @@ o desempate (`core/domain/tiebreak.js`), os grupos e o rodízio do Americano
 | | `leagueSeason.js` | calendário (`normalizeSeason`, `roundsFor`, `roundCalendar`, `currentRound`) |
 | | `leagueResults.js` | `validateResult`, `matchWinner`, `computeLeagueStandings` (desempate configurável pela regra do núcleo, `LEAGUE_DEFAULT_TIEBREAK_ORDER`) |
 | | `leagueLadder.js` | a ESCADA (King of the Court e duplas): `computeLadder` (derivada dos jogos), `buildSessionGroups`, `nextSessionState`, `ladderNearestFits` — cópia em `functions/leagueLadder.js` com paridade |
+| | `leaguePlayoff.js` | o PLAYOFF: `playoffSize`, `playoffFirstRound` (cruzamento pelas cabeças), `playoffState` (quem avança, campeão, 3º lugar — derivado), `playoffRoundLabel` — cópia em `functions/leaguePlayoff.js` com paridade |
 | `services/` | `leagueService.js` | leituras (`leagues/**`) e `leagueAction` (callable `leagues`); `collectLeagueExport` |
 | `hooks/` | `useLeagues.js` | React Query (`leagueKeys`), `useLeaguesVisible`, `useLeagueAction` |
 | `i18n/` | `locales/{en,es}.js` | traduções |
@@ -51,3 +52,7 @@ componentes em `src/v2/components/leagues/`.
    lados); a montagem (2+2 na MiLP, mesma categoria na v4) sai do PERFIL e
    categoria desconhecida não vira palpite. Ids de `lines` e `composition`
    são contrato.
+9. **O playoff é derivado**: só os jogos são gravados (`phase: 'playoff'`); a
+   chave vem da tabela da temporada e cada fase dos vencedores da anterior, pela
+   MESMA conta nos dois lados. Corrigir o placar de uma fase apaga a seguinte sem
+   placar e é recusado se ela já tiver placar.
