@@ -34,6 +34,25 @@ describe('describeFunctionsHealth', () => {
     expect(r.deploy).toMatchObject({ ok: false, erro: 'Error: Changing from an HTTPS function', ultimoOkMs: AGORA - 86400e3 });
   });
 
+  it('deploy que saiu em parte diz quais funções ficaram, e o erro vem sem os códigos de cor', () => {
+    const r = describeFunctionsHealth({
+      deploy: { at: ts(AGORA), ok: false, error: '\u001b[33m⚠  functions:\u001b[39m Request to x had HTTP Error: 429', failed: ['tournamentScheduleWorker', 7] },
+    }, AGORA);
+    expect(r.estado).toBe('atencao');
+    expect(r.deploy.falhas).toEqual(['tournamentScheduleWorker']);
+    expect(r.deploy.erro).toBe('⚠  functions: Request to x had HTTP Error: 429');
+    // Registro antigo (sem `failed`) e deploy bom: lista vazia.
+    expect(describeFunctionsHealth({ deploy: { at: ts(AGORA), ok: false, error: 'x' } }, AGORA).deploy.falhas).toEqual([]);
+    expect(describeFunctionsHealth({ deploy: { at: ts(AGORA), ok: true, failed: ['a'] } }, AGORA).deploy.falhas).toEqual([]);
+  });
+
+  it('função antiga que sobra no ar é dita, sem virar alarme', () => {
+    const r = describeFunctionsHealth({ check: { at: ts(AGORA), expected: 131, published: 131, extra: ['velhaUm', 'velhaDois'] } }, AGORA);
+    expect(r.conferencia.sobrando).toEqual(['velhaUm', 'velhaDois']);
+    expect(r.estado).toBe('ok');
+    expect(describeFunctionsHealth({ check: { at: ts(AGORA), expected: 1, published: 1 } }, AGORA).conferencia.sobrando).toEqual([]);
+  });
+
   it('conferência velha quer dizer que a vigilância parou', () => {
     const r = describeFunctionsHealth({ check: { at: ts(AGORA - CONFERENCIA_VELHA_MS - 1), expected: 1, published: 1 } }, AGORA);
     expect(r.conferencia.velha).toBe(true);

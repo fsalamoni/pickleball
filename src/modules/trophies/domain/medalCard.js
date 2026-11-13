@@ -132,7 +132,7 @@ export function buildSeasonCard(input = {}) {
   const year = Number(input.year) || new Date().getFullYear();
   const n = (v) => Math.max(0, Number(v) || 0);
   const stats = {
-    tournaments: n(input.tournaments), gold: n(input.gold), silver: n(input.silver), bronze: n(input.bronze),
+    tournaments: n(input.tournaments), leagues: n(input.leagues), gold: n(input.gold), silver: n(input.silver), bronze: n(input.bronze),
   };
   const partner = input.partner?.name
     ? { name: String(input.partner.name).trim(), together: n(input.partner.together), medals: n(input.partner.medals) }
@@ -140,7 +140,7 @@ export function buildSeasonCard(input = {}) {
   const declared = input.declared === true;
   const shareText = [
     `🏆 ${t('Minha temporada {ano} no pickleball', { ano: year })}`,
-    `${tn(stats.tournaments, '{n} torneio', '{n} torneios')} ·🥇${stats.gold} 🥈${stats.silver} 🥉${stats.bronze}`,
+    `${[tn(stats.tournaments, '{n} torneio', '{n} torneios'), stats.leagues ? tn(stats.leagues, '{n} liga', '{n} ligas') : ''].filter(Boolean).join(' · ')} ·🥇${stats.gold} 🥈${stats.silver} 🥉${stats.bronze}`,
     partner ? t('Parceria da temporada: {nome}', { nome: partner.name }) : '',
     // Há torneio de fora na conta: quem recebe sabe que parte foi declarada.
     declared ? t('Inclui resultado declarado') : '',

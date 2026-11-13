@@ -5,7 +5,7 @@ import { getMyTournamentHistory } from '@/modules/tournament/services/participat
 import { buildPlayerStats } from '@/modules/performance/domain/playerStats';
 import { foldGameDayGamesIntoStats } from '@/modules/games/domain/myGames';
 import { publishedGameDayGamesQuery } from '@/modules/games/hooks/usePublishedGameDayGames';
-import { leagueGamesQuery } from '@/modules/leagues/hooks/useLeagues';
+import { fetchLeagueGames } from '@/modules/leagues/hooks/useLeagues';
 
 /**
  * Agrega tudo que a página rica do atleta precisa: perfil público, rating
@@ -32,7 +32,7 @@ export function useAthleteProfile(uid) {
         getPlayerRating(uid),
         getMyTournamentHistory(uid),
         qc.fetchQuery(publishedGameDayGamesQuery(uid)),
-        qc.fetchQuery(leagueGamesQuery(uid)),
+        fetchLeagueGames(qc, uid),
       ]);
       // ⚠️ Falha não é vazio (docs/27-FALHA-NAO-E-VAZIO.md). O perfil que não
       // carregou virava `null` e a página afirmava "Atleta não encontrado — o

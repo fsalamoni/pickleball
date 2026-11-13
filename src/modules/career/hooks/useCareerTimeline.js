@@ -12,6 +12,7 @@ import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreferen
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useTrophies } from '@/modules/trophies/hooks/useTrophies';
 import { usePublishedGameDayGames } from '@/modules/games/hooks/usePublishedGameDayGames';
+import { useLeagueActivityOf } from '@/modules/leagues/hooks/useLeagues';
 import { buildCareerTimeline } from '../domain/timeline.js';
 import { careerKeys, useCareerEvents, useCareerPartners } from './useCareer.js';
 
@@ -52,7 +53,9 @@ export function useCareerTimeline({ enabled = true } = {}) {
   const gamesQ = usePublishedGameDayGames(uid, enabled && includeGameDays);
   const pointsQ = useOfficialPoints(uid, enabled);
   const partnersQ = useCareerPartners({ enabled });
-  const qs = [careerQ, tournamentsQ, trophiesQ, ...(includeGameDays ? [gamesQ] : []), pointsQ, partnersQ];
+  // As ligas em que a pessoa jogou: a MESMA consulta de Meu desempenho (cache compartilhado).
+  const leaguesQ = useLeagueActivityOf(uid, enabled);
+  const qs = [careerQ, tournamentsQ, trophiesQ, ...(includeGameDays ? [gamesQ] : []), pointsQ, partnersQ, leaguesQ];
   const pending = qs.some((q) => q.isPending);
   const ok = (q) => (q.isSuccess ? q.data : undefined);
   const timeline = useMemo(() => (pending ? null : buildCareerTimeline({
@@ -63,8 +66,9 @@ export function useCareerTimeline({ enabled = true } = {}) {
     gameDayGames: includeGameDays ? ok(gamesQ) : undefined,
     federationPoints: ok(pointsQ),
     partners: ok(partnersQ),
+    leagues: leaguesQ.isSuccess ? leaguesQ.data.seasons : undefined,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [pending, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, includeGameDays, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess, partnersQ.data, partnersQ.isSuccess]);
+  })), [pending, leaguesQ.data, leaguesQ.isSuccess, careerQ.data, careerQ.isSuccess, tournamentsQ.data, tournamentsQ.isSuccess, trophiesQ.data, trophiesQ.isSuccess, includeGameDays, gamesQ.data, gamesQ.isSuccess, pointsQ.data, pointsQ.isSuccess, partnersQ.data, partnersQ.isSuccess]);
   const retry = () => qs.filter((q) => q.isError).forEach((q) => q.refetch());
   return {
     timeline,
@@ -85,6 +89,10 @@ export function useCareerTimeline({ enabled = true } = {}) {
     partners: partnersQ.isSuccess ? partnersQ.data : undefined,
     // Os lançamentos oficiais: de que federações sair a posição oficial no ranking.
     federationPoints: pointsQ.isSuccess ? pointsQ.data : undefined,
+    // Os jogos de liga que ainda vêm (aba Próximos). `undefined` = não carregou.
+    leagueUpcoming: leaguesQ.isSuccess ? leaguesQ.data.upcoming : undefined,
+    leaguesError: leaguesQ.isError,
+    retryLeagues: () => leaguesQ.refetch(),
     partnersError: partnersQ.isError,
     retryPartners: () => partnersQ.refetch(),
   };

@@ -11,7 +11,10 @@
  *      mostra em Sistema → Diagnóstico → "Funções no ar";
  *   3. o e2e sobe o emulador de FUNÇÕES e roda o ciclo da filiação.
  */
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { describe, it, expect } from 'vitest';
 
@@ -43,6 +46,47 @@ describe('funções no ar', () => {
     const falha = montar(['deploy', 'falhou', 'Error: Changing from an HTTPS function'], agora).deploy;
     expect(falha).toMatchObject({ ok: false, error: 'Error: Changing from an HTTPS function' });
     expect(falha).not.toHaveProperty('last_ok_at'); // no merge, o anterior fica
+  });
+
+  // 🐞 #423: UMA função de 131 falhou (IAM, passageiro) e o painel disse que o
+  // deploy inteiro tinha falhado, mostrando um aviso de cota com códigos de cor.
+  it('o script tenta de novo SÓ as funções que a CLI listou como falhas', () => {
+    const SCRIPT = readFileSync('scripts/functions-deploy.sh', 'utf8');
+    expect(SCRIPT).toMatch(/for TENTATIVA in 1 2 3/);
+    expect(SCRIPT).toMatch(/\[ -z "\$FALHAS" \] && break/); // sem lista, não repete (e nunca `--only` vazio)
+    expect(SCRIPT).toMatch(/echo "FUNCOES_COM_FALHA=\$FALHAS"/);
+    const log = [
+      '\u001b[32m\u001b[1m✔ \u001b[22m\u001b[39m functions[picklerush:leagues(southamerica-east1)] Successful update operation.',
+      'Functions deploy had errors with the following functions:',
+      '\tpicklerush:tournamentScheduleWorker(southamerica-east1)',
+      '',
+      'Unable to set the invoker for the IAM policy on the following functions:',
+      '\tpicklerush:tournamentScheduleWorker(southamerica-east1)',
+      '\tpicklerush:leagueAutoConfirmWorker(southamerica-east1)',
+      '\toutro:naoENossa(us-central1)',
+    ].join('\n');
+    const falhas = (entrada) => execFileSync('bash', ['scripts/functions-deploy-falhas.sh', 'picklerush'], { input: entrada, encoding: 'utf8' }).trim();
+    expect(falhas(log)).toBe('leagueAutoConfirmWorker,tournamentScheduleWorker');
+    expect(falhas('Error: Changing from an HTTPS function to a background triggered function is not allowed')).toBe('');
+  });
+
+  it('o deploy grava a ÚLTIMA linha de erro, sem cor, e quais funções ficaram', () => {
+    expect(DEPLOY).toMatch(/LIMPO=\$\(echo "\$OUT" \| sed 's\/\\x1b/);
+    expect(DEPLOY).toMatch(/grep -E "\^Error:" \| tail -1/);
+    expect(DEPLOY).toMatch(/functions-health\.cjs deploy falhou "[^"]+" "\$FALHAS"/);
+    const agora = new Date('2026-11-13T15:00:00Z');
+    const parte = montar(['deploy', 'falhou', '\u001b[1m\u001b[31mError:\u001b[39m\u001b[22m There was an error deploying functions', 'tournamentScheduleWorker, x;rm'], agora).deploy;
+    expect(parte).toMatchObject({ ok: false, error: 'Error: There was an error deploying functions', failed: ['tournamentScheduleWorker'] });
+    expect(montar(['deploy', 'falhou', 'Error: x'], agora).deploy.failed).toEqual([]);
+    expect(montar(['deploy', 'ok'], agora).deploy.failed).toEqual([]);
+  });
+
+  it('a conferência conta só as ESPERADAS no ar e separa as que sobram', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'funcoes-'));
+    const arq = (nome, linhas) => { const p = join(dir, nome); writeFileSync(p, linhas.join('\n')); return p; };
+    const r = montar(['check', arq('e', ['a', 'b', 'c']), arq('p', ['a', 'b', 'velha1', 'velha2']), arq('f', ['c']), arq('s', []), arq('x', ['velha1', 'velha2'])], new Date()).check;
+    expect(r).toMatchObject({ expected: 3, published: 2, missing: ['c'], extra: ['velha1', 'velha2'] });
+    expect(VIGIA).toMatch(/comm -23 - esperadas\.txt > sobrando\.txt/);
   });
 
   it('a conferência conta as listas e corta as longas', () => {

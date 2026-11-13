@@ -11,11 +11,22 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import { getMyUpcomingMatches, getMyFinishedMatches } from '@/modules/tournament/services/upcomingService';
 import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
-import { useMyLeagueGames } from '@/modules/leagues/hooks/useLeagues';
+import { useMyLeagueActivity } from '@/modules/leagues/hooks/useLeagues';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { t, tn, fmtData } from '@/core/i18n';
+
+// Listas vazias de identidade estável (um `[]` novo a cada render desfaria os `useMemo`).
+const VAZIO = [];
+
+/** O dia de um jogo de liga ("14 de nov.") com a hora combinada, ou "Data a combinar". */
+function leagueWhen(j) {
+  const ms = j.date ? instanteDoDiaEmMs(j.date) : NaN;
+  if (!Number.isFinite(ms)) return t('Data a combinar');
+  return [fmtData(new Date(ms), { day: '2-digit', month: 'short' }), j.time].filter(Boolean).join(' · ');
+}
 
 function formatDateTime(ms) {
   if (!ms) return '';
@@ -81,7 +92,10 @@ export default function MyGamesPanel() {
     staleTime: 30_000,
   });
   const { data: gameDayGames = [], isLoading: loadingGd } = useMyGameDayGames();
-  const { data: leagueGames = [], isLoading: loadingLigas, isError: falhouLigas, refetch: recarregarLigas } = useMyLeagueGames();
+  // Uma leitura só para a liga: os jogos decididos (histórico) e os que ainda vêm (próximos).
+  const { data: liga, isLoading: loadingLigas, isError: falhouLigas, refetch: recarregarLigas } = useMyLeagueActivity();
+  const leagueGames = liga?.games || VAZIO;
+  const leagueUpcoming = liga?.upcoming || VAZIO;
 
   // Histórico unificado: torneios + dias de jogo + ligas (todos os jogos, sempre).
   const mergedHistory = useMemo(() => {
@@ -120,14 +134,29 @@ export default function MyGamesPanel() {
     return { wins, losses: mergedHistory.length - wins, total: mergedHistory.length };
   }, [mergedHistory]);
 
+  // Próximos: os jogos agendados nos torneios e os jogos de liga sem placar,
+  // do mais próximo ao mais distante; o jogo de liga ainda sem data fica por último.
+  const proximos = useMemo(() => {
+    const tour = upcoming.map((m) => ({
+      key: m.matchId, at: Number(m.scheduledAt) || null, title: m.tournamentName, to: `/torneios/${m.tournamentId}`,
+      partner: m.partner, opponent: m.opponent, when: formatDateTime(m.scheduledAt), court: m.court, icon: Trophy, badge: t('Agendado'),
+    }));
+    const lg = leagueUpcoming.map((j) => ({
+      key: j.id, at: j.date ? instanteDoDiaEmMs(j.date) : null, title: [j.leagueName, j.round ? t('Rodada {n}', { n: j.round }) : ''].filter(Boolean).join(' · '),
+      to: `/ligas/${j.leagueId}`, partner: j.partner, team: j.team, opponent: j.opponent, when: leagueWhen(j), court: '', icon: ListOrdered,
+      badge: j.date ? t('Agendado') : t('A combinar'),
+    }));
+    return [...tour, ...lg].sort((a, b) => (a.at ?? Infinity) - (b.at ?? Infinity));
+  }, [upcoming, leagueUpcoming]);
+
   const isUpcoming = tab === 'proximos';
-  const loading = isUpcoming ? loadingUp : (loadingHist || loadingGd || loadingLigas);
+  const loading = isUpcoming ? (loadingUp || loadingLigas) : (loadingHist || loadingGd || loadingLigas);
   // Liga que não carregou não vira "nenhum jogo de liga": é dita, com a saída.
   const avisoLigas = falhouLigas ? (
     <V2ErrorState
       inline
       title={t('Os jogos de liga não carregaram')}
-      description={t('Eles continuam registrados — o histórico abaixo está sem eles.')}
+      description={t('Eles continuam registrados — a lista abaixo está sem eles.')}
       onRetry={() => recarregarLigas()}
     />
   ) : null;
@@ -146,7 +175,7 @@ export default function MyGamesPanel() {
         <button type="button" onClick={() => setTab('proximos')}
           className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
             isUpcoming ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
-          <CalendarClock className="h-4 w-4" /> {t('Próximos ({n})', { n: upcoming.length })}
+          <CalendarClock className="h-4 w-4" /> {t('Próximos ({n})', { n: proximos.length })}
         </button>
         <button type="button" onClick={() => setTab('historico')}
           className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
@@ -168,28 +197,37 @@ export default function MyGamesPanel() {
               onRetry={() => recarregarAgendados()}
             />
           </V2Surface>
-        ) : upcoming.length === 0 ? (
-          <V2Surface>
+        ) : proximos.length === 0 ? (
+          // Com a liga sem carregar, "nenhum jogo agendado" não é afirmado: o aviso diz o que faltou.
+          avisoLigas ? <V2Surface>{avisoLigas}</V2Surface> : <V2Surface>
             <V2EmptyState icon={CalendarClock} title={t('Nenhum jogo agendado')}
-              description={t('Quando você tiver jogos marcados nos torneios, eles aparecem aqui.')}
+              description={t('Quando você tiver jogos marcados nos torneios ou nas ligas, eles aparecem aqui.')}
               action={<V2Button asChild><Link to="/torneios">{t('Ver torneios')}</Link></V2Button>} />
           </V2Surface>
         ) : (
           <div className="space-y-3">
-            {upcoming.map((m) => (
-              <V2Surface key={m.matchId} className="flex flex-wrap items-center justify-between gap-3">
+            {avisoLigas}
+            {proximos.map((m) => (
+              <V2Surface key={m.key} className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Trophy className="h-3.5 w-3.5" />
-                    <Link to={`/torneios/${m.tournamentId}`} className="hover:underline">{m.tournamentName}</Link>
+                    <m.icon aria-hidden="true" className="h-3.5 w-3.5" />
+                    <Link to={m.to} className="hover:underline">{m.title}</Link>
                   </div>
-                  <MatchupLine partner={m.partner} opponent={m.opponent} />
+                  {/* Nas equipes o meu lado é a equipe, não "Você / parceiro". */}
+                  {m.team ? (
+                    <div className="mt-1 font-bold text-ink">
+                      <span>{m.team}</span>
+                      <span className="mx-1.5 font-normal text-gray-500">{t('vs')}</span>
+                      <span>{m.opponent}</span>
+                    </div>
+                  ) : <MatchupLine partner={m.partner} opponent={m.opponent} />}
                   <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {formatDateTime(m.scheduledAt)}</span>
+                    <span className="flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {m.when}</span>
                     {m.court && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {m.court}</span>}
                   </div>
                 </div>
-                <V2Badge tone="amber">{t('Agendado')}</V2Badge>
+                <V2Badge tone="amber">{m.badge}</V2Badge>
               </V2Surface>
             ))}
           </div>

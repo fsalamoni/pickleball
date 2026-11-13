@@ -371,6 +371,22 @@ carreira começa aqui" só aparece quando nada falhou (`docs/27`). Só a aba
 aberta consulta: as cinco leituras levam `enabled` (por isso
 `useMyTournaments` aceita `{ enabled }`, padrão `true`).
 
+**Ligas (2026-11-13).** A liga em que a pessoa jogou entra na linha do tempo
+como uma sexta fonte, opcional (`fontes.leagues`, as participações de
+`leagueSeasonsOfPlayer`, lidas por `useLeagueActivityOf` — a mesma consulta
+de Meu desempenho, docs/57 §14.3). Um item por inscrição (divisão), origem
+`liga` (`TIMELINE_SOURCE.LEAGUE`, selo Oficial, link para `/ligas/:id`):
+encerrada, fica na data do último placar, com o pódio da divisão (o troféu da
+estante, docs/43) e a campanha ("5 vitórias em 6 jogos"); em andamento, fica
+na data de começo com "Em andamento" e sem pódio; a que ainda vai começar
+fica acima do "Hoje"; quem saiu aparece com "Saiu da liga" e sem pódio. Liga
+**não é torneio**: o resumo da temporada tem a conta dela (`leagues`, "2
+torneios · 1 liga · 2 pódios"), o pódio dela é pódio, e a retrospectiva diz
+"N ligas" ao lado dos torneios. Rascunho e cancelada não entram. Liga que não
+carregou é dita ("as ligas" / "os pódios das ligas" em `faltou`). O filtro
+`?origem=plataforma` mantém a liga; nada é gravado e a liga nunca conta
+XP de Carreira (o XP dela é o dos jogos, como em torneio).
+
 - Filtros na URL (`podios=1`, `federados=1`, `origem=fora|plataforma`).
 - "O que vem" (planejados), a divisória "Hoje" e uma seção por temporada —
   as temporadas fechadas nascem recolhidas.
@@ -638,6 +654,12 @@ da linha do tempo já montada (`buildSeasonRecap`, `seasonRecap.js`).
   pontuação: não entra em ranking, rating, federação nem XP.
 
 ### 4.9 Próximos (`CareerUpcomingTab`, `?aba=proximos`, PR 4)
+
+- **Jogos das suas ligas** (2026-11-13, âncora `carreira-jogos-de-liga`): os
+  jogos de liga sem placar (`leagueUpcomingOfPlayer`), do mais próximo ao mais
+  distante, com adversário, rodada e data (a marcada no jogo ou a da rodada;
+  sem nenhuma, "Data a combinar"), até 8, cada um levando à liga. A seção só
+  aparece para quem tem jogo de liga por vir; a leitura que falhou é dita.
 
 - **Contagem** do torneio principal mais próximo (`mainCountdown`: o de
   prioridade Principal; sem ele, o planejado mais próximo). No dia do

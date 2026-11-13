@@ -1,7 +1,7 @@
 /**
  * trophyService — busca o que a coleção de troféus precisa. Nada é gravado.
  *
- * Só torneio tem troféu (dia de jogo não tem medalha — docs/43 §1). A lista
+ * Torneio e liga têm troféu (dia de jogo não tem medalha — docs/43 §1). A lista
  * que falhar chega como `undefined` e a estante diz o que ficou de fora —
  * nunca "nenhum troféu" por uma queda de rede (docs/27-FALHA-NAO-E-VAZIO.md).
  */
@@ -11,7 +11,8 @@ import { getTournament } from '@/modules/tournament/services/tournamentService.j
 import { getModality } from '@/modules/tournament/services/modalityService.js';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService.js';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants.js';
-import { tournamentTrophies } from '../domain/trophies.js';
+import { listLeaguePodiumSourcesOf } from '@/modules/leagues/services/leagueService.js';
+import { leagueTrophies, tournamentTrophies } from '../domain/trophies.js';
 
 const uniq = (xs) => Array.from(new Set(xs.filter(Boolean)));
 
@@ -43,13 +44,18 @@ export async function listTournamentTrophies(uid) {
 
 /**
  * A coleção inteira. A lista que falhou chega `undefined` (a estante diz).
- * @returns {Promise<{ torneios?: object[], perfil: object|null }>}
+ * @returns {Promise<{ torneios?: object[], ligas?: object[], perfil: object|null }>}
  */
 export async function listMyTrophies(uid) {
-  if (!uid) return { torneios: [], perfil: null };
-  const [perfil, tr] = await Promise.allSettled([getAthlete(uid), listTournamentTrophies(uid)]);
+  if (!uid) return { torneios: [], ligas: [], perfil: null };
+  const [perfil, tr, lg] = await Promise.allSettled([
+    getAthlete(uid),
+    listTournamentTrophies(uid),
+    listLeaguePodiumSourcesOf(uid).then((fontes) => leagueTrophies(uid, fontes)),
+  ]);
   return {
     torneios: tr.status === 'fulfilled' ? tr.value : undefined,
+    ligas: lg.status === 'fulfilled' ? lg.value : undefined,
     perfil: perfil.status === 'fulfilled' ? perfil.value : null,
   };
 }

@@ -2,7 +2,7 @@
  * A LINHA DO TEMPO da carreira (aba `linha-do-tempo`, docs/54 §4.5): o que
  * vem acima do "Hoje", o histórico abaixo, por temporada (o ano civil), com
  * as temporadas fechadas recolhidas. Fontes: os torneios da plataforma,
- * pontos de federação e os torneios de fora (dia de jogo só com "Incluir dias
+ * as ligas, pontos de federação e os torneios de fora (dia de jogo só com "Incluir dias
  * de jogo", e sem medalha — dia de jogo não é torneio) — cada uma falhando
  * sozinha, e a que falhou é DITA (nunca "você ainda não jogou").
  *
@@ -35,6 +35,7 @@ const FONTE_ROTULO = Object.freeze({
   [TIMELINE_SOURCE.TOURNAMENT]: tk('Torneio'),
   [TIMELINE_SOURCE.GAME_DAY]: tk('Dia de jogo'),
   [TIMELINE_SOURCE.FEDERATION]: tk('Federação'),
+  [TIMELINE_SOURCE.LEAGUE]: tk('Liga'),
 });
 
 const FOCO = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
@@ -80,7 +81,7 @@ function Item({ item, onOpenEvent }) {
 function Resumo({ s }) {
   return (
     <span className="text-xs font-normal text-gray-500">
-      {[tn(s.tournaments, '{n} torneio', '{n} torneios'), tn(s.podiums, '{n} pódio', '{n} pódios')].join(' · ')}
+      {[tn(s.tournaments, '{n} torneio', '{n} torneios'), s.leagues > 0 ? tn(s.leagues, '{n} liga', '{n} ligas') : '', tn(s.podiums, '{n} pódio', '{n} pódios')].filter(Boolean).join(' · ')}
       {s.gameDays > 0 && ` · ${tn(s.gameDays, '{n} dia de jogo', '{n} dias de jogo')}`}
       {s.gold + s.silver + s.bronze > 0 && ` · 🥇${s.gold} 🥈${s.silver} 🥉${s.bronze}`}
     </span>

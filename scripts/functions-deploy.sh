@@ -32,5 +32,24 @@ if [ -z "$FUNCS" ]; then
   exit 0
 fi
 
-echo "Publicando (codebase ${CODEBASE}): $FUNCS"
-firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1
+# 🐞 No deploy do #423 UMA função de 131 falhou ("Unable to set the invoker for
+# the IAM policy", passageiro) e o deploy inteiro foi dado como perdido. A CLI
+# lista as que falharam ("<TAB>picklerush:nome(região)"): só ELAS são tentadas
+# de novo, até duas vezes. Erro sem essa lista é do deploy inteiro (credencial,
+# build, troca de tipo de gatilho) e repetir não ajuda.
+LOG=$(mktemp)
+FALHAS=""
+for TENTATIVA in 1 2 3; do
+  echo "Publicando (codebase ${CODEBASE}, tentativa ${TENTATIVA}): $FUNCS"
+  firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1 | tee "$LOG"
+  RC=${PIPESTATUS[0]}
+  [ "$RC" -eq 0 ] && exit 0
+  FALHAS=$(bash scripts/functions-deploy-falhas.sh "$CODEBASE" < "$LOG")
+  [ -z "$FALHAS" ] && break
+  # Nunca vazio aqui: `--only` vazio voltaria a significar "tudo".
+  FUNCS=$(echo "$FALHAS" | sed "s/[^,]*/functions:${CODEBASE}:&/g")
+  [ "$TENTATIVA" -lt 3 ] && { echo "Não subiram: $FALHAS. Nova tentativa em 60 s, só com elas."; sleep 60; }
+done
+# Quem chama (o deploy) lê esta linha para dizer QUAIS ficaram para trás.
+[ -n "$FALHAS" ] && echo "FUNCOES_COM_FALHA=$FALHAS"
+exit "$RC"

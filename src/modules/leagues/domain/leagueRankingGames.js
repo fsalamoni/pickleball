@@ -38,7 +38,7 @@ export const isLeagueRankingEligible = (lg) => Boolean(lg && LEAGUE_RANKING_STAT
 const placar = (g) => ({ a: Math.trunc(Number(g && g.a) || 0), b: Math.trunc(Number(g && g.b) || 0) });
 
 /** As inscrições de cada lado (escada: `team_a`/`team_b`; o resto: `side_a`/`side_b`). */
-function inscricoesDosLados(m) {
+export function matchSideEntries(m) {
   if (Array.isArray(m.team_a) || Array.isArray(m.team_b)) return [m.team_a || [], m.team_b || []];
   return [[m.side_a].filter(Boolean), [m.side_b].filter(Boolean)];
 }
@@ -75,7 +75,7 @@ function vencedorDosGames(games) {
 export function leagueMatchGames(league, m, entryById) {
   const out = { jogos: [], fora: [] };
   if (!m || m.status !== 'done') return out;
-  const [idsA, idsB] = inscricoesDosLados(m);
+  const [idsA, idsB] = matchSideEntries(m);
   const linhas = m.phase === 'ladder' ? 0 : resultRules(league && league.format).lines;
 
   if (linhas) {
@@ -191,7 +191,7 @@ export function leagueGamesOfPlayer(uid, league, entries, matches) {
     });
     // Jogo decidido com atleta sem conta: é meu jogo, mas o ranking não conta.
     if (r.fora.includes(LEAGUE_FORA.SEM_CONTA)) {
-      const [idsA, idsB] = inscricoesDosLados(m);
+      const [idsA, idsB] = matchSideEntries(m);
       const wo = m.wo_winner === 'a' || m.wo_winner === 'b';
       const games = wo ? [] : (Array.isArray(m.games) ? m.games : []).map(placar);
       empurra(m, m.id, atletasDoLado(idsA, entryById), atletasDoLado(idsB, entryById), {

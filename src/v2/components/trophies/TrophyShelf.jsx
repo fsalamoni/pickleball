@@ -1,6 +1,6 @@
 /**
- * A ESTANTE de troféus de uma pessoa: os pódios de TORNEIO (e, na própria
- * estante, os de fora, declarados), com as contagens por metal. Dia de jogo
+ * A ESTANTE de troféus de uma pessoa: os pódios de TORNEIO e de LIGA (e, na
+ * própria estante, os de fora, declarados), com as contagens por metal. Dia de jogo
  * não é torneio e não tem medalha (docs/43 §1). Cada troféu abre o cartão (compartilhar, baixar,
  * imprimir). Na Minha área é a própria estante; no perfil público, a de quem
  * se visita — e ali os outros parabenizam.
@@ -9,7 +9,7 @@
  */
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Medal, Trophy, Share2, Route } from 'lucide-react';
+import { ListOrdered, Medal, Trophy, Share2, Route } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -116,7 +116,9 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
   }
 
   const ehFora = aba === ABA_FORA && carreiraOn;
-  const lista = ehFora ? fora : grupo.torneios;
+  // A aba Ligas só existe para quem tem pódio de liga.
+  const ehLiga = !ehFora && aba === TROPHY_KIND.LEAGUE && grupo.ligas.length > 0;
+  const lista = ehFora ? fora : ehLiga ? grupo.ligas : grupo.torneios;
   const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0 && fora.length === 0 && !foraQ.isError && ligadosSemConferir === 0;
   const quem = mine ? t('Você') : (nome || t('Esta pessoa'));
   const recolhido = compacto && !(expandido && !mine);
@@ -140,9 +142,14 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
         <>
           <Contagem contagem={ehFora ? foraConta : grupo.contagem} />
           <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('Tipo de conquista')}>
-            <V2FilterChip role="tab" aria-selected={!ehFora} active={!ehFora} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
-              <Trophy className="mr-1.5 h-3.5 w-3.5" /> {t('Torneios')} ({grupo.contagem.total})
+            <V2FilterChip role="tab" aria-selected={!ehFora && !ehLiga} active={!ehFora && !ehLiga} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
+              <Trophy className="mr-1.5 h-3.5 w-3.5" /> {t('Torneios')} ({grupo.torneios.length})
             </V2FilterChip>
+            {grupo.ligas.length > 0 && (
+              <V2FilterChip role="tab" aria-selected={ehLiga} active={ehLiga} onClick={() => setAba(TROPHY_KIND.LEAGUE)}>
+                <ListOrdered className="mr-1.5 h-3.5 w-3.5" /> {t('Ligas')} ({grupo.ligas.length})
+              </V2FilterChip>
+            )}
             {carreiraOn && (
               <V2FilterChip role="tab" aria-selected={ehFora} active={ehFora} onClick={() => setAba(ABA_FORA)}>
                 <Route className="mr-1.5 h-3.5 w-3.5" /> {t('Fora da plataforma')} ({foraQ.isError ? '—' : foraConta.total})
@@ -184,13 +191,14 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
                       className="w-full"
                       contextId={trophyContextId(tr)}
                       toUids={[uid]}
-                      scope="tournament"
+                      // O parabéns pelo pódio de liga é um kudo comum: a lista de escopos não tem "liga".
+                      scope={tr.kind === TROPHY_KIND.LEAGUE ? 'universal' : 'tournament'}
                       eventTitle={`${tr.title} · ${tr.subtitle}`}
                       placeLabel={tr.placeLabel}
                     />
                   )}
                   {tr.link && (
-                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === ABA_FORA ? t('Abrir a ficha') : t('Ver o torneio')}</Link></V2Button>
+                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === ABA_FORA ? t('Abrir a ficha') : tr.kind === TROPHY_KIND.LEAGUE ? t('Ver a liga') : t('Ver o torneio')}</Link></V2Button>
                   )}
                 </TrofeuCard>
               ))}
@@ -216,8 +224,8 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
             onOpenChange={(v) => { if (!v) setAberto(null); }}
             places={[{ position: aberto.position, label: aberto.placeLabel, entries: [{ label: aberto.people.map((p) => p.name).join(' / '), people: aberto.people }] }]}
             event={{ title: aberto.title, subtitle: aberto.subtitle, date: aberto.date, dateLabel: aberto.dateLabel || null, city: aberto.city, state: aberto.state, kind: aberto.kind, declared: aberto.declared === true }}
-            // O de fora não tem página pública: o cartão sai sem link nem QR.
-            link={aberto.kind === ABA_FORA ? null : aberto.publicLink || aberto.link}
+            // O de fora e o de liga não têm página pública: o cartão sai sem link nem QR.
+            link={aberto.kind === ABA_FORA || aberto.kind === TROPHY_KIND.LEAGUE ? null : aberto.publicLink || aberto.link}
             initialPosition={aberto.position}
           />
         </Suspense>

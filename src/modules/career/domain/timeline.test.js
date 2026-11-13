@@ -292,3 +292,53 @@ describe('item de federação sem o torneio na lista', () => {
     expect(item.subtitle).toContain(`${(1500).toLocaleString('pt-BR')} pontos no ranking oficial`);
   });
 });
+
+describe('a liga na linha do tempo', () => {
+  const base = { today: HOJE, career: [], tournaments: [], gameDayGames: [], federationPoints: [] };
+  const liga = (extra = {}) => ({
+    id: 'l1:e1', leagueId: 'l1', divisionId: 'd1', name: 'Liga de Outono', divisionName: 'Ouro', status: 'finished', withdrawn: false,
+    startDate: '2026-08-01', endedAt: new Date(2026, 9, 20, 12).getTime(), joinedAt: null, city: 'Porto Alegre', state: 'RS', wins: 5, losses: 1, ...extra,
+  });
+  const podio = { leagueId: 'l1', divisionId: 'd1', position: 1, placeLabel: 'Campeões' };
+
+  it('⭐ a liga encerrada entra na data do fim, com o pódio da divisão e a campanha', () => {
+    const tl = buildCareerTimeline({ ...base, leagues: [liga()], trophies: { torneios: [], ligas: [podio] } });
+    expect(tl.faltou).toEqual([]);
+    const [item] = tl.seasons[0].items;
+    expect(item).toMatchObject({
+      id: 'liga:l1:e1', source: 'liga', date: '2026-10-20', title: 'Liga de Outono', position: 1, positions: [1], seal: 'official', link: '/ligas/l1',
+      where: 'Porto Alegre · RS', upcoming: false,
+    });
+    expect(item.subtitle).toBe('Ouro · Campeões · 5 vitórias em 6 jogos');
+    // Liga não é torneio: tem a conta dela, e o pódio dela é pódio.
+    expect(tl.seasons[0].summary).toMatchObject({ events: 1, tournaments: 0, leagues: 1, podiums: 1, gold: 1 });
+  });
+
+  it('em andamento fica no histórico pela data de começo, sem pódio; a que ainda vai começar fica acima do "Hoje"', () => {
+    const tl = buildCareerTimeline({
+      ...base, trophies: { torneios: [], ligas: [] },
+      leagues: [liga({ status: 'running', endedAt: null }), liga({ id: 'l2:e9', leagueId: 'l2', name: 'Liga de Verão', status: 'open', endedAt: null, startDate: '2026-12-01', wins: 0, losses: 0 })],
+    });
+    expect(tl.upcoming.map((i) => i.title)).toEqual(['Liga de Verão']);
+    expect(tl.seasons[0].items[0]).toMatchObject({ date: '2026-08-01', position: null });
+    expect(tl.seasons[0].items[0].subtitle).toContain('Em andamento');
+  });
+
+  it('quem saiu da liga não leva o pódio da divisão', () => {
+    const tl = buildCareerTimeline({ ...base, leagues: [liga({ withdrawn: true })], trophies: { torneios: [], ligas: [podio] } });
+    expect(tl.seasons[0].items[0]).toMatchObject({ position: null });
+    expect(tl.seasons[0].items[0].subtitle).toContain('Saiu da liga');
+  });
+
+  it('🔴 a liga que não carregou é dita; quem não lê ligas não vê aviso', () => {
+    expect(buildCareerTimeline({ ...base, trophies: { torneios: [], ligas: [] }, leagues: undefined }).faltou).toEqual(['as ligas']);
+    expect(buildCareerTimeline({ ...base, trophies: { torneios: [], ligas: undefined }, leagues: [] }).faltou).toEqual(['os pódios das ligas']);
+    expect(buildCareerTimeline({ ...base, trophies: { torneios: [] } }).faltou).toEqual([]);
+  });
+
+  it('o filtro "da plataforma" mantém a liga; "de fora" a tira', () => {
+    const tl = buildCareerTimeline({ ...base, leagues: [liga()], trophies: { torneios: [], ligas: [podio] } });
+    expect(filterTimeline(tl, { origem: 'plataforma' }).seasons).toHaveLength(1);
+    expect(filterTimeline(tl, { origem: 'fora' }).seasons).toHaveLength(0);
+  });
+});

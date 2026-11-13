@@ -22,13 +22,17 @@ function emMs(valor) {
 
 const lista = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
 
+/** Registro antigo pode ter os códigos de cor do terminal no erro. */
+// eslint-disable-next-line no-control-regex
+const semCor = (texto) => String(texto).replace(/\x1b\[[0-9;]*m/g, '').trim();
+
 /**
  * @param {object|null} doc documento `platform_settings/functions_health` (ou null)
  * @param {number} agoraMs
  * @returns {{
  *   estado: 'ok'|'atencao'|'sem_registro',
- *   conferencia: null | { ms: number, velha: boolean, esperadas: number, publicadas: number, faltando: string[], semRotulo: string[], runUrl: string|null },
- *   deploy: null | { ms: number, ok: boolean, erro: string|null, ultimoOkMs: number, commit: string|null, runUrl: string|null },
+ *   conferencia: null | { ms: number, velha: boolean, esperadas: number, publicadas: number, faltando: string[], semRotulo: string[], sobrando: string[], runUrl: string|null },
+ *   deploy: null | { ms: number, ok: boolean, erro: string|null, falhas: string[], ultimoOkMs: number, commit: string|null, runUrl: string|null },
  * }}
  */
 export function describeFunctionsHealth(doc, agoraMs) {
@@ -41,12 +45,16 @@ export function describeFunctionsHealth(doc, agoraMs) {
     publicadas: Number(c.published) || 0,
     faltando: lista(c.missing),
     semRotulo: lista(c.unlabeled),
+    // Funções nossas que o código não exporta mais e seguem publicadas.
+    sobrando: lista(c.extra),
     runUrl: c.run_url || null,
   } : null;
   const deploy = d && emMs(d.at) ? {
     ms: emMs(d.at),
     ok: d.ok === true,
-    erro: d.ok === true ? null : (d.error ? String(d.error) : null),
+    erro: d.ok === true ? null : (d.error ? semCor(d.error) : null),
+    // Vazio numa falha = o deploy inteiro não saiu; com nomes = só elas ficaram.
+    falhas: d.ok === true ? [] : lista(d.failed),
     ultimoOkMs: emMs(d.last_ok_at),
     commit: d.commit || null,
     runUrl: d.run_url || null,

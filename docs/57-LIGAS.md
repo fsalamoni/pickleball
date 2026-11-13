@@ -157,10 +157,9 @@ são contrato de link.
   na liga (§14.1).
 - **Os números do atleta** (perfil, Meu desempenho, confronto direto,
   gamificação): resolvido em 2026-11-13 — os jogos de liga entram (§14.2).
-- **Fora, de propósito, até haver decisão de produto**: a liga na linha do
-  tempo da Carreira, medalha/troféu de campeão de liga (a estante é de torneio)
-  e os jogos de liga MARCADOS na lista "Próximos" de Meus jogos (a agenda da
-  liga está na própria liga e no card "Ligas" do início).
+- **Carreira, troféu e "Próximos"**: decidido pelo dono em 2026-11-13 — a liga
+  entra na linha do tempo da Carreira, os três primeiros de cada divisão levam
+  troféu e os jogos de liga sem placar aparecem em "Próximos" (§14.3).
 
 ## 9. Padrões compartilhados com o torneio (2026-11-12)
 
@@ -410,8 +409,9 @@ devolve isso à conta que fica:
 🐞 O ranking contava os jogos de liga e o próprio atleta não os via: perfil
 com "0 jogos", Meu desempenho sem eles, confronto direto vazio — o mesmo
 defeito do dia de jogo em docs/18 §10.1. Agora há UMA leitura,
-`listLeagueGamesOf(uid)` (`leagueService.js`; consulta `leagueGamesQuery`, a
-mesma chave em toda tela), e UMA régua, `leagues/domain/leagueRankingGames.js`:
+`listLeagueActivityOf(uid)` (`leagueService.js`; consulta `leagueActivityQuery`,
+a mesma chave em toda tela — os jogos decididos são a parte `games`, lida por
+`useLeagueGamesOf`/`fetchLeagueGames`), e UMA régua, `leagues/domain/leagueRankingGames.js`:
 
 - `leagueMatchGames` é CÓPIA da função do servidor, com paridade
   (`leagueRankingGames.test.js` roda as duas sobre os mesmos jogos);
@@ -435,3 +435,34 @@ mesma chave em toda tela), e UMA régua, `leagues/domain/leagueRankingGames.js`:
   histórico está sem os jogos de liga, e o confronto direto marca `incompleto`.
 - A avaliação pós-jogo não vale para jogo de liga (`matchKey: null`): o servidor
   só confere a chave de torneio e de dia de jogo publicado.
+
+### 14.3 A liga na Carreira, na estante e em "Próximos" (2026-11-13)
+
+Pedido do dono: a liga entra na linha do tempo da Carreira, dá troféu aos três
+primeiros e marca os jogos em "Próximos". Tudo DERIVADO do que a liga já
+guarda — zero coleção, zero campo, zero índice, zero regra.
+
+**Uma leitura para a vida da pessoa na liga.** `listLeagueActivityOf(uid)`
+(consulta `leagueActivityQuery`, chave `['leagues','activity-of',uid]`)
+devolve `{ games, upcoming, seasons }` com as mesmas leituras de §14.2 mais as
+divisões. Cada tela recorta a sua parte (`useLeagueGamesOf` com `select`,
+`fetchLeagueGames` para `qc.fetchQuery`, `useMyLeagueActivity`): Meu
+desempenho, perfil, confronto direto, gamificação, "Próximos" e a Carreira
+dividem UM pedido.
+
+| O quê | Regra (`leagues/domain/`) | Onde aparece |
+|---|---|---|
+| **Próximos** | `leagueUpcomingOfPlayer` (`leagueActivity.js`): jogo `scheduled` sem vencedor, de liga aberta ou em andamento, das inscrições ATIVAS da pessoa; jogo contra quem saiu fica de fora. Data = `scheduled_date` do jogo ou a da RODADA no calendário (`roundCalendar`); playoff e escada sem data ficam "a combinar", por último | Meu desempenho → Meus jogos → **Próximos** (junto com os de torneio, pela data) e Carreira → **Próximos** → "Jogos das suas ligas" |
+| **Participação** | `leagueSeasonsOfPlayer`: uma por inscrição (divisão), com começo, fim (o último placar, quando a liga encerrou) e a campanha; rascunho e cancelada não entram; quem saiu sem jogar não tem história | Carreira → linha do tempo (origem `liga`, docs/54 §4.2) |
+| **Pódio** | `leagueDivisionPodium` (`leaguePodium.js`): só liga ENCERRADA — playoff concluído (final + 3º lugar), ou a tabela, ou o topo da escada; quem saiu não sobe | Estante de troféus, aba **Ligas** (docs/43 §2), o degrau na linha do tempo e a medalha no resumo da temporada |
+
+- O troféu é da inscrição inteira (dupla ou equipe) e a conta é conferida pelo
+  uid do atleta na inscrição. `listLeaguePodiumSourcesOf` lê só ligas
+  encerradas e só as divisões em que a pessoa jogou.
+- Nas equipes, em "Próximos" o lado da pessoa é a EQUIPE (a escalação só
+  existe depois do jogo).
+- **Falha não é vazio**: a liga que não carregou é dita em "Próximos" (nunca
+  "nenhum jogo agendado"), na estante ("Ficou de fora: as ligas") e na linha do
+  tempo (`faltou`).
+- O torneio não importa nada disso e a liga não importa nada do torneio: quem
+  junta os dois é o módulo de troféus, a Carreira e as telas.

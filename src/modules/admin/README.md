@@ -69,6 +69,10 @@ vigilância (a cada 30 min) e o deploy gravam por `scripts/functions-health.cjs`
 quantas funções o código exporta × quantas estão publicadas, os nomes que
 faltam, e se o último deploy das funções deu certo (com a linha do erro e
 quando deu certo pela última vez). Do #315 ao #321 esse deploy falhou calado.
+Desde 2026-11-13 o cartão separa "saiu em parte" (o deploy publicou quase
+tudo: lista as funções que ficaram na versão anterior, `deploy.failed`) de
+"falhou", conta em "publicadas" só as funções esperadas e lista à parte as
+funções antigas que seguem no ar (`check.extra`).
 Sem conferência há mais de 90 min, o cartão diz que a vigilância parou;
 leitura que falha é dita, nunca "tudo publicado". Guarda em
 `src/core/guards/funcoesNoAr.test.js`.
