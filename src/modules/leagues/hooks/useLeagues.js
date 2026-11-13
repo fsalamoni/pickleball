@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import {
-  getLeague, leagueAction, listDivisions, listEntries, listMatches, listMyLeagues, listPublicLeagues,
+  getLeague, leagueAction, listDivisions, listEntries, listLeagueGamesOf, listMatches, listMyLeagues, listPublicLeagues,
 } from '../services/leagueService.js';
 import { leaguesVisible } from '../domain/leagueFlags.js';
 
@@ -19,6 +19,7 @@ export const leagueKeys = Object.freeze({
   divisions: (id) => ['leagues', 'one', id, 'divisions'],
   entries: (id) => ['leagues', 'one', id, 'entries'],
   matches: (id) => ['leagues', 'one', id, 'matches'],
+  gamesOf: (uid) => ['leagues', 'games-of', uid],
 });
 
 /** A área Ligas aparece para esta pessoa? `loading` enquanto as flags carregam. */
@@ -44,6 +45,21 @@ export const useLeagueDivisions = (id) => useQuery({ queryKey: leagueKeys.divisi
 export const useLeagueEntries = (id) => useQuery({ queryKey: leagueKeys.entries(id), queryFn: () => listEntries(id), enabled: Boolean(id) });
 export const useLeagueMatches = (id) => useQuery({ queryKey: leagueKeys.matches(id), queryFn: () => listMatches(id), enabled: Boolean(id) });
 
+/**
+ * Os jogos de liga de uma pessoa — a MESMA consulta em Meu desempenho, no
+ * perfil, no confronto direto e na gamificação (uma chave, um pedido).
+ */
+export const leagueGamesQuery = (uid) => ({
+  queryKey: leagueKeys.gamesOf(uid), queryFn: () => listLeagueGamesOf(uid), staleTime: 60_000,
+});
+
+export const useLeagueGamesOf = (uid, enabled = true) => useQuery({ ...leagueGamesQuery(uid), enabled: Boolean(uid) && enabled });
+
+export function useMyLeagueGames({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useLeagueGamesOf(user?.uid, enabled);
+}
+
 /** Uma ação da liga no servidor; ao terminar, relê a liga e as listas. */
 export function useLeagueAction() {
   const qc = useQueryClient();
@@ -53,6 +69,7 @@ export function useLeagueAction() {
       if (vars?.leagueId) qc.invalidateQueries({ queryKey: leagueKeys.one(vars.leagueId) });
       qc.invalidateQueries({ queryKey: ['leagues', 'public'] });
       qc.invalidateQueries({ queryKey: ['leagues', 'mine'] });
+      qc.invalidateQueries({ queryKey: ['leagues', 'games-of'] });
     },
   });
 }

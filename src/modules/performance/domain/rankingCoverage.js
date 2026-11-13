@@ -1,7 +1,8 @@
 /**
  * POR QUE alguns dos meus jogos não estão no ranking — a resposta para
  * "joguei 30 e o ranking mostra 12". Pura: recebe o histórico de torneios
- * (`buildParticipationHistory`) e os jogos de dia de jogo (`domain/myGames`).
+ * (`buildParticipationHistory`), os jogos de dia de jogo (`domain/myGames`) e
+ * os de liga (`leagues/domain/leagueRankingGames`).
  *
  * "Meu desempenho" conta TODOS os jogos da pessoa, sempre. O ranking conta só
  * os que dá para atribuir a gente de verdade:
@@ -9,7 +10,9 @@
  *  - torneio público e fora do rascunho (`isTournamentRankingEligible`);
  *  - partida em que TODOS têm conta (uma inscrição só com o nome digitado tira
  *    a partida inteira — de todo mundo);
- *  - dia de jogo PUBLICADO por quem organiza, também sem convidado sem conta.
+ *  - dia de jogo PUBLICADO por quem organiza, também sem convidado sem conta;
+ *  - liga aberta, em andamento ou encerrada (rascunho e cancelada não contam),
+ *    também sem atleta sem conta.
  *
  * Sem esta explicação a diferença parece defeito, e a pessoa não tem como agir.
  */
@@ -17,18 +20,20 @@
 import { isTournamentRankingEligible } from '@/modules/tournament/domain/rankingEligibility.js';
 import { registrationSlotsWithoutAccount } from '@/modules/tournament/domain/registrationAccounts.js';
 import { OUT_OF_RANKING_REASON } from '@/modules/games/domain/myGames.js';
+import { LEAGUE_OUT_REASON } from '@/modules/leagues/domain/leagueRankingGames.js';
 import { t } from '@/core/i18n';
 
 /**
- * @param {{ history?: Array, gameDayGames?: Array }} args
+ * @param {{ history?: Array, gameDayGames?: Array, leagueGames?: Array }} args
  * @returns {{
  *   totalFora: number,
  *   torneio: { semConta: number, torneioFora: number },
  *   diaDeJogo: { naoPublicado: number, convidado: number, pendente: number },
+ *   liga: { semConta: number, ligaFora: number },
  *   dias: Array<{ id: string, label: string, jogos: number, motivo: string }>,
  * }}
  */
-export function rankingCoverageSummary({ history = [], gameDayGames = [] } = {}) {
+export function rankingCoverageSummary({ history = [], gameDayGames = [], leagueGames = [] } = {}) {
   const torneio = { semConta: 0, torneioFora: 0 };
   (Array.isArray(history) ? history : []).forEach((grupo) => {
     const elegivel = isTournamentRankingEligible(grupo?.tournament);
@@ -57,7 +62,14 @@ export function rankingCoverageSummary({ history = [], gameDayGames = [] } = {})
   const dias = Array.from(porDia.values())
     .sort((a, b) => b.jogos - a.jogos || a.label.localeCompare(b.label, 'pt-BR'))
     .slice(0, 5);
+  const liga = { semConta: 0, ligaFora: 0 };
+  (Array.isArray(leagueGames) ? leagueGames : []).forEach((g) => {
+    if (!g || g.ranked) return;
+    if (g.outReason === LEAGUE_OUT_REASON.NO_ACCOUNT) liga.semConta += 1;
+    else liga.ligaFora += 1;
+  });
   const totalFora = torneio.semConta + torneio.torneioFora
-    + diaDeJogo.naoPublicado + diaDeJogo.convidado + diaDeJogo.pendente;
-  return { totalFora, torneio, diaDeJogo, dias };
+    + diaDeJogo.naoPublicado + diaDeJogo.convidado + diaDeJogo.pendente
+    + liga.semConta + liga.ligaFora;
+  return { totalFora, torneio, diaDeJogo, liga, dias };
 }

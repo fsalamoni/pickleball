@@ -40,8 +40,23 @@ describe('rankingCoverageSummary — por que um jogo meu não está no ranking',
     ]);
   });
 
+  it('ligas: jogo com atleta sem conta e jogo de liga cancelada, cada um com o seu motivo', () => {
+    const r = rankingCoverageSummary({
+      leagueGames: [
+        { ranked: true },
+        { ranked: false, outReason: 'liga_sem_conta' },
+        { ranked: false, outReason: 'liga_fora' },
+        { ranked: false, outReason: 'liga_fora' },
+      ],
+    });
+    expect(r.liga).toEqual({ semConta: 1, ligaFora: 2 });
+    expect(r.totalFora).toBe(3);
+    expect(r.dias).toEqual([]);
+  });
+
   it('entradas vazias não quebram', () => {
     expect(rankingCoverageSummary().totalFora).toBe(0);
-    expect(rankingCoverageSummary({ history: null, gameDayGames: null }).totalFora).toBe(0);
+    expect(rankingCoverageSummary({ history: null, gameDayGames: null, leagueGames: null }).totalFora).toBe(0);
+    expect(rankingCoverageSummary().liga).toEqual({ semConta: 0, ligaFora: 0 });
   });
 });

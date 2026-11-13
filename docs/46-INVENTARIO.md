@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 16 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 1012 |
+| Arquivos de teste (`*.test.js(x)`) | 1013 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 63 |
 
@@ -52,7 +52,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `games` | 21 | 5 | 12 | 1 | · | 2 | sim |
 | `help` | 7 | 1 | · | · | · | 2 | sim |
 | `home` | 7 | 1 | 2 | · | · | 2 | sim |
-| `leagues` | 9 | 1 | 1 | · | · | 2 | sim |
+| `leagues` | 10 | 1 | 1 | · | · | 2 | sim |
 | `legal` | 3 | 1 | 2 | · | · | 2 | sim |
 | `leveling` | 1 | · | · | · | · | · | sim |
 | `linecall` | 27 | 10 | 7 | · | · | 2 | sim |
@@ -84,7 +84,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `admin` | 2 | `messaging`, `tournament` | `athletes`, `leveling`, `rating`, `tournament` |
 | `analytics` | 2 | `games`, `tournament` | — |
 | `arenas` | 8 | `clubs`, `coaches`, `federations`, `games`, `home`, `marketplace`, `promo`, `tournament` | `athletes`, `clubs`, `games`, `rating`, `sharing`, `tournament` |
-| `athletes` | 12 | `admin`, `arenas`, `chat`, `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `search`, `tournament`, `trophies` | `games`, `performance`, `rating`, `tournament` |
+| `athletes` | 12 | `admin`, `arenas`, `chat`, `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `search`, `tournament`, `trophies` | `games`, `leagues`, `performance`, `rating`, `tournament` |
 | `career` | 1 | `progression` | `games`, `progression`, `tournament`, `training`, `trophies` |
 | `chat` | 0 | — | `athletes` |
 | `circuits` | 0 | — | — |
@@ -95,7 +95,7 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `games` | 10 | `arenas`, `athletes`, `career`, `clubs`, `home`, `performance`, `progression`, `rating`, `social`, `training` | `analytics`, `arenas`, `athletes`, `clubs`, `performance`, `rating`, `tournament` |
 | `help` | 0 | — | `clubs`, `progression` |
 | `home` | 2 | `tournament`, `training` | `arenas`, `athletes`, `clubs`, `coaches`, `games`, `tournament` |
-| `leagues` | 0 | — | `federations` |
+| `leagues` | 4 | `athletes`, `performance`, `progression`, `rating` | `federations` |
 | `legal` | 0 | — | — |
 | `leveling` | 4 | `admin`, `coaches`, `rating`, `tournament` | — |
 | `linecall` | 0 | — | `tournament` |
@@ -104,10 +104,10 @@ o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
 | `moderation` | 0 | — | — |
 | `notifications` | 1 | `messaging` | — |
 | `partners` | 0 | — | — |
-| `performance` | 3 | `athletes`, `games`, `progression` | `games`, `tournament` |
-| `progression` | 4 | `achievements`, `career`, `help`, `training` | `achievements`, `athletes`, `career`, `clubs`, `coaches`, `games`, `performance`, `rating` |
+| `performance` | 3 | `athletes`, `games`, `progression` | `games`, `leagues`, `tournament` |
+| `progression` | 4 | `achievements`, `career`, `help`, `training` | `achievements`, `athletes`, `career`, `clubs`, `coaches`, `games`, `leagues`, `performance`, `rating` |
 | `promo` | 1 | `coaches` | `arenas`, `coaches`, `federations` |
-| `rating` | 8 | `admin`, `arenas`, `athletes`, `coaches`, `games`, `progression`, `tournament`, `training` | `athletes`, `games`, `leveling`, `tournament` |
+| `rating` | 8 | `admin`, `arenas`, `athletes`, `coaches`, `games`, `progression`, `tournament`, `training` | `athletes`, `games`, `leagues`, `leveling`, `tournament` |
 | `search` | 0 | — | `athletes` |
 | `sharing` | 2 | `arenas`, `coaches` | — |
 | `social` | 0 | — | `games`, `tournament` |

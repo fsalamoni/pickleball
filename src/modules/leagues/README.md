@@ -21,8 +21,9 @@ o desempate (`core/domain/tiebreak.js`), os grupos e o rodízio do Americano
 | | `leagueResults.js` | `validateResult`, `matchWinner`, `computeLeagueStandings` (desempate configurável pela regra do núcleo, `LEAGUE_DEFAULT_TIEBREAK_ORDER`) |
 | | `leagueLadder.js` | a ESCADA (King of the Court e duplas): `computeLadder` (derivada dos jogos), `buildSessionGroups`, `nextSessionState`, `ladderNearestFits` — cópia em `functions/leagueLadder.js` com paridade |
 | | `leaguePlayoff.js` | o PLAYOFF: `playoffSize`, `playoffFirstRound` (cruzamento pelas cabeças), `playoffState` (quem avança, campeão, 3º lugar — derivado), `playoffRoundLabel` — cópia em `functions/leaguePlayoff.js` com paridade |
-| `services/` | `leagueService.js` | leituras (`leagues/**`) e `leagueAction` (callable `leagues`); `collectLeagueExport` |
-| `hooks/` | `useLeagues.js` | React Query (`leagueKeys`), `useLeaguesVisible`, `useLeagueAction` |
+| | `leagueRankingGames.js` | o que o ranking conta, na tela: `leagueMatchGames` (cópia de `functions/leagueRanking.js`, paridade no teste ao lado) e `leagueGamesOfPlayer` (os jogos de liga de uma pessoa, no formato de `games/domain/myGames.js`) |
+| `services/` | `leagueService.js` | leituras (`leagues/**`) e `leagueAction` (callable `leagues`); `collectLeagueExport`; `listLeagueGamesOf` (os jogos de liga de uma pessoa, lidos pelas inscrições dela) |
+| `hooks/` | `useLeagues.js` | React Query (`leagueKeys`), `useLeaguesVisible`, `useLeagueAction`; `leagueGamesQuery`/`useLeagueGamesOf`/`useMyLeagueGames` |
 | `i18n/` | `locales/{en,es}.js` | traduções |
 
 Telas em `src/v2/pages/V2Leagues.jsx`, `V2CreateLeague.jsx`, `V2League.jsx` e
@@ -70,3 +71,13 @@ componentes em `src/v2/components/leagues/`.
     sem atleta sem conta, W.O. só no ranking. Nas equipes cada linha só conta
     com a escalação (`matches.lineups`, gravada só pela organização no
     `result`, conferida contra as inscrições). Nunca grave ranking pelo cliente.
+12. **Os jogos de liga nos números do atleta** (docs/57 §14.2): perfil, Meu
+    desempenho, confronto direto e gamificação leem por UMA consulta
+    (`leagueGamesQuery`) e UMA régua (`leagueRankingGames.js`, com paridade
+    contra o servidor — mexer num lado só quebra o teste). Meu desempenho mostra
+    todos os jogos decididos; o perfil e o confronto direto, só os que o ranking
+    conta (`ranked`). Leitura que falha FALHA a consulta: nunca `.catch(() => [])`.
+13. **Unificar contas leva a liga** (docs/57 §14.1): inscrições, escalações e
+    `ever_uids`/`member_uids` passam à conta que fica
+    (`functions/accountMerge.js`); organizar não é transferido. Campo novo com
+    uid na liga entra na exclusão E na unificação.

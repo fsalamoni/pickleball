@@ -180,11 +180,12 @@ function StatsPanel() {
 function RankingCoverageCard({ coverage, played }) {
   const { data: rating } = useMyPlayerRating();
   if (!coverage || coverage.totalFora === 0) return null;
-  const { torneio, diaDeJogo, dias } = coverage;
+  const { torneio, diaDeJogo, liga, dias } = coverage;
   const linhas = [
     [diaDeJogo.naoPublicado, t('de dias de jogo que quem organiza ainda não publicou no ranking.')],
-    [diaDeJogo.convidado + torneio.semConta, t('com alguém sem conta na plataforma na partida (inscrito ou inserido só pelo nome) — a partida sai do ranking para todos.')],
+    [diaDeJogo.convidado + torneio.semConta + liga.semConta, t('com alguém sem conta na plataforma na partida (inscrito ou inserido só pelo nome) — a partida sai do ranking para todos.')],
     [torneio.torneioFora, t('de torneios em rascunho, privados ou cancelados — esses não contam para ninguém.')],
+    [liga.ligaFora, t('de ligas em rascunho ou canceladas — essas não contam para ninguém.')],
     [diaDeJogo.pendente, t('publicados, mas ainda não atualizados no ranking — quem organiza toca em “Atualizar publicação”.')],
   ].filter(([n]) => n > 0);
   const motivoDoDia = (m) => (m === OUT_OF_RANKING_REASON.NOT_PUBLISHED ? t('não publicado')
@@ -199,7 +200,7 @@ function RankingCoverageCard({ coverage, played }) {
             {t('{fora} de {total} jogo(s) seus não estão no ranking', { fora: coverage.totalFora, total: played })}
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            {t('Aqui contam todos os seus jogos. O ranking e o rating só contam partidas em que todos têm conta, de torneios públicos e de dias de jogo publicados.')}
+            {t('Aqui contam todos os seus jogos. O ranking e o rating só contam partidas em que todos têm conta, de torneios públicos, de ligas e de dias de jogo publicados.')}
             {rating ? ` ${t('Hoje o ranking tem {n} jogo(s) seus.', { n: rating.games })}` : ''}
           </p>
           <ul className="mt-3 space-y-1.5 text-sm text-gray-700">

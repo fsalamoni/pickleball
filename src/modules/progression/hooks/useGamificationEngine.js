@@ -62,7 +62,9 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
 
   const { config, isModuleOn } = useGamificationConfig();
   const statsQ = usePlayerStats();
-  const { stats, history, gameDayGames } = statsQ;
+  const { stats, history, gameDayGames, leagueGames } = statsQ;
+  // Jogo de liga é jogo: entra na sequência e nos adversários como o de dia de jogo.
+  const jogosSoltos = useMemo(() => [...(gameDayGames || []), ...(leagueGames || [])], [gameDayGames, leagueGames]);
   const { data: matchDates = [] } = usePlayerMatchDates(uid, on);
   const { data: ratingHistory = [] } = useRatingHistory(uid, on);
   const { data: ranking = [] } = useNationalRanking();
@@ -73,7 +75,7 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
   const { progression, isLoading: progressionLoading } = useUserProgressionV2(uid, on);
   const { unlocked: persisted, unlockedIds: persistedIds, isLoading: achievementsLoading } = useUserAchievementsV2(uid, on);
 
-  const dates = useMemo(() => extractActivityDates({ history, gameDayGames }), [history, gameDayGames]);
+  const dates = useMemo(() => extractActivityDates({ history, gameDayGames: jogosSoltos }), [history, jogosSoltos]);
   const allGameDates = useMemo(() => [...matchDates, ...dates.gameDayDates], [matchDates, dates.gameDayDates]);
   // A sequência: a conta é a do domínio (`weekStreak.js`), com as férias da pessoa.
   const streakMeta = useStreakMetaV2(uid, on);
@@ -87,8 +89,8 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
   }, [ranking, uid]);
   const h2h = qc.getQueryData(PLAYER_RECORDS_KEY(uid));
   const opponents = useMemo(
-    () => countUniqueOpponents({ h2hRecords: h2h, gameDayGames }),
-    [h2h, gameDayGames],
+    () => countUniqueOpponents({ h2hRecords: h2h, gameDayGames: jogosSoltos }),
+    [h2h, jogosSoltos],
   );
 
   // ===== conquistas (com os fatos) =====

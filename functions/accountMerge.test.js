@@ -17,7 +17,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   analyzeMerge, executeMerge, validateMergeRequest,
-  mergeMirrorGame, mergeGameSides, mergeRegistration, trocarNaLista, mergeLadder,
+  mergeMirrorGame, mergeGameSides, mergeRegistration, trocarNaLista, mergeLadder, mergeLeagueEntry, mergeLeagueLineups,
   REMOVED_ATHLETE,
 } = require('./accountMerge.js');
 const { createFakeDb, createFakeAuth, FakeFieldValue } = require('../tests/fakes/fakeFirestore.cjs');
@@ -198,5 +198,65 @@ describe('a execução', () => {
     const { report } = await analyzeMerge(ctx, ANTIGA, NOVA);
     expect(report.total).toBe(0);
     expect(report.podeUnificar).toBe(false);
+  });
+});
+
+describe('ligas', () => {
+  // Como a exclusão deixa: fora das listas da liga, com o uid nas inscrições.
+  const liga = (extra = {}) => ({
+    'leagues/l1': { name: 'Liga de Inverno', status: 'running', format: 'team_milp', admins: ['org'], member_uids: ['org', 'u2'], ever_uids: ['org', 'u2'] },
+    'leagues/l1/entries/e1': {
+      division_id: 'dv1', status: 'active', auto_name: true, name: `${REMOVED_ATHLETE} / Bia / Caio / Duda`,
+      player_uids: [ANTIGA, 'u2', 'u3', 'u4'],
+      players: [{ uid: ANTIGA, name: REMOVED_ATHLETE, gender: null }, { uid: 'u2', name: 'Bia Lima', gender: 'female' }, { uid: 'u3', name: 'Caio Reis', gender: 'male' }, { uid: 'u4', name: 'Duda Paz', gender: 'female' }],
+    },
+    'leagues/l1/entries/e2': { division_id: 'dv1', status: 'active', name: 'Rivais', player_uids: ['u5', 'u6', 'u7', 'u8'], players: [] },
+    'leagues/l1/matches/m1': {
+      division_id: 'dv1', side_a: 'e1', side_b: 'e2', status: 'done',
+      lineups: [{ a: [ANTIGA, 'u2'], b: ['u5', 'u6'] }, null, { a: ['u3', 'u4'], b: ['u7', 'u8'] }, null],
+    },
+    'leagues/l2': { name: 'Outra liga', status: 'running', member_uids: ['x'], ever_uids: ['x'] },
+    'leagues/l2/entries/e9': { division_id: 'dv9', status: 'active', player_uids: ['x', 'y'], players: [] },
+    ...extra,
+  });
+
+  it('⭐ a inscrição, a escalação e a lista da liga passam à conta que fica', async () => {
+    const { db, ctx } = cenario({ ...liga(), [`users/${NOVA}`]: { uid: NOVA, platform_name: 'Leonardo Silva', email: 'leo@x.com', competition_gender: 'masculina' } });
+    const res = await executeMerge(ctx, { fromUid: ANTIGA, intoUid: NOVA, reason: 'segunda conta', actor: ADMIN, FieldValue: FakeFieldValue });
+    expect(res.status).toBe('merged');
+    const doc = (p) => db.store.docs.get(p);
+    expect(doc('leagues/l1/entries/e1').player_uids).toEqual([NOVA, 'u2', 'u3', 'u4']);
+    expect(doc('leagues/l1/entries/e1').players[0]).toEqual({ uid: NOVA, name: 'Leonardo Silva', gender: 'male' });
+    expect(doc('leagues/l1/entries/e1').name).toBe('Leonardo / Bia / Caio / Duda');
+    expect(doc('leagues/l1/matches/m1').lineups).toEqual([{ a: [NOVA, 'u2'], b: ['u5', 'u6'] }, null, { a: ['u3', 'u4'], b: ['u7', 'u8'] }, null]);
+    expect(doc('leagues/l1').member_uids).toEqual(['org', 'u2', NOVA]);
+    expect(doc('leagues/l1').ever_uids).toEqual(['org', 'u2', NOVA]);
+    expect(doc('leagues/l1').admins).toEqual(['org']); // organizar não é transferido
+    // a inscrição adversária e a outra liga ficaram intactas
+    expect(doc('leagues/l1/entries/e2').player_uids).toEqual(['u5', 'u6', 'u7', 'u8']);
+    expect(doc('leagues/l2').ever_uids).toEqual(['x']);
+    const porItem = Object.fromEntries(res.report.itens.map((i) => [i.label, i.count]));
+    expect(porItem).toMatchObject({ 'Inscrições em liga': 1, 'Escalações em liga': 1, 'Ligas (quem participa)': 1 });
+    // idempotente
+    expect((await analyzeMerge(ctx, ANTIGA, NOVA)).report.total).toBe(0);
+  });
+
+  it('⭐ as duas contas na mesma divisão BLOQUEIAM', async () => {
+    const { db, ctx } = cenario(liga({
+      'leagues/l1/entries/e3': { division_id: 'dv1', status: 'active', player_uids: [NOVA, 'z1', 'z2', 'z3'], players: [] },
+    }));
+    const antes = JSON.stringify([...db.store.docs]);
+    const res = await executeMerge(ctx, { fromUid: ANTIGA, intoUid: NOVA, reason: 'segunda conta', actor: ADMIN, FieldValue: FakeFieldValue });
+    expect(res.status).toBe('blocked');
+    expect(res.report.conflitos.map((c) => c.path)).toContain('leagues/l1/entries/e1');
+    expect(JSON.stringify([...db.store.docs])).toBe(antes);
+  });
+
+  it('quem já tinha desistido volta ao histórico; nome que não é o pseudônimo fica', () => {
+    const { patch, conflict } = mergeLeagueEntry({ status: 'withdrawn', player_uids: [ANTIGA], players: [{ uid: ANTIGA, name: 'Leo Antigo' }], name: 'Leo', auto_name: false }, ANTIGA, NOVA, { name: 'Leonardo Silva' });
+    expect(conflict).toBeNull();
+    expect(patch).toEqual({ player_uids: [NOVA], players: [{ uid: NOVA, name: 'Leo Antigo' }] });
+    expect(mergeLeagueLineups({ lineups: [{ a: ['u1', 'u2'], b: ['u3', 'u4'] }] }, ANTIGA, NOVA)).toBeNull();
+    expect(mergeLeagueEntry({ player_uids: [ANTIGA, NOVA], players: [] }, ANTIGA, NOVA, {}).conflict).toMatch(/mesma inscrição/);
   });
 });

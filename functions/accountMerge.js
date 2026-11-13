@@ -25,6 +25,7 @@
  * | eventos de clube (legado): participantes e jogos | idem |
  * | inscrições de torneio (+ o rótulo nos grupos) | o jogador, o titular e o rótulo |
  * | torneios internos e ladder de arena | elenco e classificação |
+ * | ligas: inscrições, escalações das equipes e quem participa | o atleta, o nome da inscrição e as listas da liga |
  * | validações de nível (como aluno) | o aluno |
  *
  * Fica de fora, de propósito: o que é POSSE ou PODER (torneio, clube, dia de
@@ -86,9 +87,16 @@ function validateMergeRequest(data = {}) {
  * @param {object} user documento `users/{uid}` (ou o perfil público)
  */
 function identidadeDe(user) {
+  // A categoria em que joga, como a inscrição de liga a guarda (`generoDe`
+  // em leagues.js): "outro" não vira palpite.
+  const g = texto(user && (user.competition_gender || user.gender));
+  let gender = null;
+  if (/^(male|masculin)/i.test(g)) gender = 'male';
+  else if (/^(female|feminin)/i.test(g)) gender = 'female';
   return {
     name: texto(user && (user.platform_name || user.full_name || user.display_name)) || 'Atleta',
     photo: texto(user && (user.photo_url || user.photoURL)) || null,
+    gender,
   };
 }
 
@@ -270,6 +278,45 @@ function mergeLadder(l, from, into, ident) {
       ? { ...r, user_id: into, name: nomeTrocavel(r.name) ? ident.name : r.name }
       : r)),
   };
+}
+
+/**
+ * Inscrição de LIGA: o atleta em `players[]` e em `player_uids` (é por ela que
+ * o ranking acha quem jogou). O nome automático ("Ana / Leo") é refeito, e a
+ * categoria que a exclusão limpou volta do perfil da conta que fica.
+ * @returns {{ patch: object|null, conflict: string|null }}
+ */
+function mergeLeagueEntry(e, from, into, ident) {
+  const uids = Array.isArray(e.player_uids) ? e.player_uids : [];
+  if (!uids.includes(from)) return { patch: null, conflict: null };
+  if (uids.includes(into)) return { patch: null, conflict: 'As duas contas estão na mesma inscrição de liga.' };
+  const players = (Array.isArray(e.players) ? e.players : []).map((p) => {
+    if (!p || p.uid !== from) return p;
+    const c = { ...p, uid: into };
+    if (nomeTrocavel(c.name)) c.name = ident.name;
+    if ('gender' in c && c.gender == null && ident.gender) c.gender = ident.gender;
+    return c;
+  });
+  const patch = { player_uids: uids.map((u) => (u === from ? into : u)), players };
+  if (e.auto_name) {
+    patch.name = players
+      .map((p) => (p && p.name === REMOVED_ATHLETE ? p.name : String((p && p.name) || '').split(' ')[0]))
+      .join(' / ');
+  }
+  return { patch, conflict: null };
+}
+
+/**
+ * Escalação das equipes (`matches.lineups`): quem jogou cada linha do
+ * confronto — é ela que leva a linha ao ranking e ao DUPR.
+ * @returns {object|null} o patch, ou `null` quando a conta antiga não jogou
+ */
+function mergeLeagueLineups(m, from, into) {
+  if (!Array.isArray(m.lineups)) return null;
+  let mudou = false;
+  const troca = (lado) => (Array.isArray(lado) ? lado.map((u) => { if (u !== from) return u; mudou = true; return into; }) : lado);
+  const lineups = m.lineups.map((l) => (l && typeof l === 'object' ? { ...l, a: troca(l.a), b: troca(l.b) } : l));
+  return mudou ? { lineups } : null;
 }
 
 /* ------------------------------------------------- leitura ------------- */
@@ -467,7 +514,60 @@ async function analyzeMerge(ctx, fromUid, intoUid) {
     });
   }
 
-  // 6) Validações de nível (como aluno).
+  // 6) Ligas. A exclusão tira a conta das listas da liga (`ever_uids`) e
+  // deixa o uid nas inscrições, então a liga é achada pelas inscrições.
+  // ponytail: percorre todas as ligas (uma consulta por liga); se passarem de
+  // centenas, criar o índice de grupo de coleção em entries.player_uids.
+  const ligas = await db.collection('leagues').limit(QUERY_LIMIT + 1).get();
+  truncado = truncado || ligas.size > QUERY_LIMIT;
+  for (const lg of ligas.docs.slice(0, QUERY_LIMIT)) {
+    // eslint-disable-next-line no-await-in-loop
+    const [deFrom, deInto] = await Promise.all([
+      lg.ref.collection('entries').where('player_uids', 'array-contains', fromUid).limit(QUERY_LIMIT).get(),
+      lg.ref.collection('entries').where('player_uids', 'array-contains', intoUid).limit(QUERY_LIMIT).get(),
+    ]);
+    if (deFrom.empty) continue;
+    // As duas na mesma divisão jogaram uma contra a outra (ou jogariam).
+    const divisoesInto = new Set(deInto.docs.filter((e) => e.data().status !== 'withdrawn').map((e) => e.data().division_id));
+    let ativa = false;
+    let conflitou = false;
+    for (const e of deFrom.docs) {
+      const dados = e.data();
+      const { patch, conflict } = mergeLeagueEntry(dados, fromUid, intoUid, ident);
+      const mesmaDivisao = dados.status !== 'withdrawn' && divisoesInto.has(dados.division_id);
+      if (conflict || mesmaDivisao) {
+        conflitos.push({ path: e.ref.path, motivo: conflict || 'As duas contas estão inscritas na mesma divisão da liga.' });
+        conflitou = true;
+        continue;
+      }
+      if (!patch) continue;
+      atualizar(e.ref, patch, 'Inscrições em liga');
+      if (dados.status !== 'withdrawn') ativa = true;
+      // Só equipe tem escalação (dupla e simples jogam inteiras).
+      if ((dados.player_uids || []).length <= 2) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const [ladoA, ladoB] = await Promise.all([
+        lg.ref.collection('matches').where('side_a', '==', e.id).limit(QUERY_LIMIT).get(),
+        lg.ref.collection('matches').where('side_b', '==', e.id).limit(QUERY_LIMIT).get(),
+      ]);
+      [...ladoA.docs, ...ladoB.docs].forEach((m) => {
+        const p = mergeLeagueLineups(m.data(), fromUid, intoUid);
+        if (p) atualizar(m.ref, p, 'Escalações em liga');
+      });
+    }
+    if (conflitou) continue;
+    // Quem participa (a liga volta a aparecer em "Minhas ligas"). Organizar não é transferido.
+    const d = lg.data();
+    const com = (lista) => (Array.isArray(lista) && lista.includes(intoUid) ? null : [...(Array.isArray(lista) ? lista : []), intoUid]);
+    const pai = {};
+    const ever = com(d.ever_uids);
+    if (ever) pai.ever_uids = ever;
+    const membrosDaLiga = ativa ? com(d.member_uids) : null;
+    if (membrosDaLiga) pai.member_uids = membrosDaLiga;
+    if (Object.keys(pai).length > 0) atualizar(lg.ref, pai, 'Ligas (quem participa)');
+  }
+
+  // 7) Validações de nível (como aluno).
   const validacoes = await consultar(db, 'coach_level_validations', 'student_id', '==', fromUid);
   truncado = truncado || validacoes.truncated;
   validacoes.docs.forEach((d) => {
@@ -578,6 +678,8 @@ module.exports = {
   mergeRegistration,
   mergeInternalTournament,
   mergeLadder,
+  mergeLeagueEntry,
+  mergeLeagueLineups,
   consolidar,
   analyzeMerge,
   executeMerge,
