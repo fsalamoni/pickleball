@@ -240,6 +240,17 @@ export function userAreaPending(fontes = {}) {
     });
   }
 
+  // Ligas (flags `leagues_*`): placares da liga flexível que o outro lado lançou
+  // e esperam a minha confirmação. `myLeaguePending` (undefined = não carregou).
+  const ligas = numero(fontes.ligas?.count);
+  if (ligas) {
+    itens.push({
+      id: 'ligas:confirmar', count: ligas,
+      to: fontes.ligas.leagueId ? `/ligas/${encodeURIComponent(fontes.ligas.leagueId)}/rodadas` : '/ligas',
+      label: tn(ligas, '{n} placar de liga para confirmar', '{n} placares de liga para confirmar'),
+    });
+  }
+
   // tn com literais (o guarda de idiomas lê as chaves daqui).
   const rotulo = {
     vendas: (n) => tn(n, '{n} venda no Mercado esperando você', '{n} vendas no Mercado esperando você'),

@@ -249,12 +249,13 @@ Ver `docs/57-LIGAS.md` §4.
 `season {cadence, start_date, dates[], time, round_window_days, legs, skip_dates[]}`,
 `standings {mode, win, loss, wo_loss, tiebreak_order[]}`, `visibility` (`public`|`unlisted`),
 `self_registration`, `admins[]`, `member_uids[]`, `ever_uids[]`, `entries_count`,
+`pending_confirm { uid: n }` (liga flexível: placares que cada conta tem a confirmar, só o servidor refaz),
 `creator_uid`, `created_at`, `updated_at`.
 
 ### `leagues/{id}/divisions/{id}` · `…/entries/{id}` · `…/matches/{id}` (subcoleções)
 Divisão: `name`, `order`, `gender`, `rule {kind (`open`|`bracket`|`dupr_range`|`dupr_sum`), bracket (lista oficial, `core/domain/levelBrackets.js`), label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries`.
 Inscrição: `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]` (1, 2 ou, nas equipes, 3–4), `player_uids[]`, `status` (`active`|`withdrawn`), `override` (o servidor marca quando a organização inscreve fora da regra ou da montagem da equipe) — **nenhum contato**.
-Jogo: `division_id`, `phase`, `round`, `side_a`, `side_b`, `games[{a,b}]`, `wo_winner`, `status`, `scheduled_date`, `recorded_by`, `dreambreaker {a,b}` (só nas equipes, só no empate; senão `null`). Nas equipes `games` é um game por jogo do confronto, na ordem de `lines` do formato. Na liga flexível o jogo passa por `status: 'reported'|'disputed'` com `report {games, dreambreaker, side, by, played_date, at}` e `dispute {by, side, reason, at}`; confirmado, `confirmed_by`. No playoff (`phase: 'playoff'`) também `slot`, `third` (disputa do 3º lugar) e, na 1ª fase, `seed_a`/`seed_b`; campeão e quem avança são derivados (`playoffState`). Na escada (`phase: 'ladder'`) também `session`, `group` (quadra) e `team_a[]`/`team_b[]`, com `side_a`/`side_b` nulos; a posição na escada é derivada (`computeLadder`).
+Jogo: `division_id`, `phase`, `round`, `side_a`, `side_b`, `games[{a,b}]`, `wo_winner`, `status`, `scheduled_date`, `recorded_by`, `dreambreaker {a,b}` (só nas equipes, só no empate; senão `null`). Nas equipes `games` é um game por jogo do confronto, na ordem de `lines` do formato. Na liga flexível o jogo passa por `status: 'reported'|'disputed'` com `report {games, dreambreaker, side, by, played_date, at, at_ms, confirm_uids[]}` e `dispute {by, side, reason, at}`; confirmado, `confirmed_by` (nulo com `auto_confirmed: true` quando valeu pelo prazo de 72 h). No playoff (`phase: 'playoff'`) também `slot`, `third` (disputa do 3º lugar) e, na 1ª fase, `seed_a`/`seed_b`; campeão e quem avança são derivados (`playoffState`). Na escada (`phase: 'ladder'`) também `session`, `group` (quadra) e `team_a[]`/`team_b[]`, com `side_a`/`side_b` nulos; a posição na escada é derivada (`computeLadder`).
 Classificação e datas das rodadas são derivadas, nunca gravadas.
 
 ## Clubes e comunidade

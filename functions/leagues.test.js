@@ -316,6 +316,32 @@ describe('liga flexível: quem joga lança e o outro lado confirma', () => {
     await expect(chama(db, BIA, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 2 }] })).rejects.toThrow(/já tem placar/);
   });
 
+  it('conta o que cada um tem a confirmar e, sem resposta no prazo, o placar vale', async () => {
+    const { db, leagueId, matchId, jogoPath } = await flex();
+    const liga = () => db.store.docs.get(`leagues/${leagueId}`);
+    await chama(db, BIA, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 7 }] });
+    expect(liga().pending_confirm).toEqual({ cau: 1, edu: 1 });
+    const { runAutoConfirm } = require('./leagues');
+    expect(await runAutoConfirm({ ...ctx(db), now: NOW + 71 * 3600e3 })).toBe(0);
+    expect(await runAutoConfirm({ ...ctx(db), now: NOW + 72 * 3600e3 })).toBe(1);
+    expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'done', games: [{ a: 11, b: 7 }], recorded_by: 'bia', confirmed_by: null, auto_confirmed: true, report: null });
+    expect(liga().pending_confirm).toEqual({});
+    expect(avisos(db, 'cau', 'Placar valeu')).toHaveLength(1);
+    expect(avisos(db, 'bia', 'Placar valeu')).toHaveLength(1);
+  });
+
+  it('contestado ou corrigido pela organização sai das pendências', async () => {
+    const { db, leagueId, matchId } = await flex();
+    const liga = () => db.store.docs.get(`leagues/${leagueId}`);
+    await chama(db, BIA, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 7 }] });
+    await chama(db, CAU, { action: 'confirm', leagueId, matchId, reason: 'Foi 11 a 5' });
+    expect(liga().pending_confirm).toEqual({});
+    await chama(db, CAU, { action: 'report', leagueId, matchId, games: [{ a: 5, b: 11 }] });
+    expect(liga().pending_confirm).toEqual({ bia: 1, duda: 1 });
+    await chama(db, ANA, { action: 'result', leagueId, matchId, games: [{ a: 11, b: 5 }] });
+    expect(liga().pending_confirm).toEqual({});
+  });
+
   it('fora da liga flexível o placar é da organização', async () => {
     const db = banco();
     const { leagueId, divisionId } = await ligaAberta(db);

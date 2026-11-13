@@ -59,4 +59,7 @@ componentes em `src/v2/components/leagues/`.
 10. **Liga flexível**: quem joga lança (`report`) e o OUTRO lado confirma ou
     contesta (`confirm`); o servidor confere o lado pelas inscrições do jogo, o
     placar a confirmar não conta na tabela e o `result` da organização sempre
-    vence. `self_report` mora no formato (paridade).
+    vence. `self_report` mora no formato (paridade). Sem resposta em
+    `AUTO_CONFIRM_HOURS` (72 h) o placar vale pela varredura
+    `leagueAutoConfirmWorker`, e `pending_confirm` (só o servidor refaz) alimenta
+    a faixa "Precisa de você" da Minha área (`myLeaguePending`).
