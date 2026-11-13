@@ -97,7 +97,7 @@ export default function V2AthleteProfile() {
     );
   }
 
-  const { rating, history = [], gameDayGames = [], stats, historicoFalhou } = data;
+  const { rating, history = [], gameDayGames = [], leagueGames = [], stats, historicoFalhou } = data;
   const location = [athlete.city, athlete.state].filter(Boolean).join(' / ');
   const clubs = clubNames(athlete);
   const formats = Object.entries(stats?.byFormat || {});
@@ -262,7 +262,8 @@ export default function V2AthleteProfile() {
         <Suspense fallback={null}><CareerPublicBlock uid={uid} nome={athlete?.name || ''} /></Suspense>
       )}
 
-      {gameDayGames.length > 0 && <RecentGameDayGames games={gameDayGames} />}
+      {gameDayGames.length > 0 && <RecentGames title={t('Jogos recentes em dias de jogo')} games={gameDayGames} />}
+      {leagueGames.length > 0 && <RecentGames title={t('Jogos recentes em ligas')} games={leagueGames} />}
 
       {history.length > 0 && (
         <V2Surface className="mt-8">
@@ -291,16 +292,16 @@ function formatGameDate(ms) {
 }
 
 /**
- * Os últimos jogos de dia de jogo publicados no ranking — os que o ranking
- * conta. Sem eles, quem só joga em dia de jogo tinha um perfil sem nenhum
- * jogo à vista.
+ * Os últimos jogos de dia de jogo publicados no ranking e os de liga — os que
+ * o ranking conta. Sem eles, quem só joga em dia de jogo ou em liga tinha um
+ * perfil sem nenhum jogo à vista.
  */
-function RecentGameDayGames({ games }) {
+function RecentGames({ title, games }) {
   const lista = games.slice(0, 8);
   return (
     <V2Surface className="mt-8">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-lg font-bold text-ink">{t('Jogos recentes em dias de jogo')}</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
         <span className="text-xs text-gray-500">{tn(games.length, '{n} jogo no ranking', '{n} jogos no ranking')}</span>
       </div>
       <div className="space-y-2">
@@ -313,7 +314,7 @@ function RecentGameDayGames({ games }) {
               <p className="truncate text-xs text-gray-500">{[g.label, formatGameDate(g.at)].filter(Boolean).join(' · ')}</p>
             </div>
             <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold tabular-nums ${g.won ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-              {g.won ? 'V' : 'D'} {g.myScore}–{g.oppScore}
+              {g.won ? 'V' : 'D'} {g.walkover ? 'W.O.' : `${g.myScore}–${g.oppScore}`}
             </span>
           </div>
         ))}

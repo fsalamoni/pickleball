@@ -449,4 +449,10 @@ export default {
   "W.O.": "Walkover",
   "W.O. vale": "Walkover is worth",
   "W.O.: vence {nome}": "Walkover: {nome} wins",
+  "Os jogos de liga não carregaram": "League games didn't load",
+  "Eles continuam registrados — o histórico abaixo está sem eles.": "They are still on record — the history below doesn't include them.",
+  "Seus jogos finalizados (torneios, ligas e dias de jogo) aparecerão aqui com placar e resultado.": "Your finished games (tournaments, leagues and game days) will show up here with score and result.",
+  "Jogos recentes em ligas": "Recent league games",
+  "de ligas em rascunho ou canceladas — essas não contam para ninguém.": "from draft or canceled leagues — these don't count for anyone.",
+  "Aqui contam todos os seus jogos. O ranking e o rating só contam partidas em que todos têm conta, de torneios públicos, de ligas e de dias de jogo publicados.": "All your games count here. The ranking and rating only count matches where everyone has an account, from public tournaments, leagues and published game days.",
 };

@@ -8,6 +8,7 @@ import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firesto
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/core/config/firebase';
 import { t, tk } from '@/core/i18n';
+import { leagueGamesOfPlayer } from '../domain/leagueRankingGames.js';
 
 export const LEAGUES = 'leagues';
 
@@ -100,4 +101,44 @@ export async function collectLeagueExport(uid) {
   } catch (_) {
     return { leagues: undefined, incomplete: [tk('Ligas')] };
   }
+}
+
+/** O Firestore aceita até 30 valores em `in` / `array-contains-any`. */
+const EM_LOTES = 30;
+const lotes = (ids) => Array.from({ length: Math.ceil(ids.length / EM_LOTES) }, (_, i) => ids.slice(i * EM_LOTES, (i + 1) * EM_LOTES));
+
+/**
+ * Os jogos de liga de UMA pessoa (de qualquer pessoa: a liga é de leitura de
+ * conta logada), no formato de "Meu desempenho", do perfil e do confronto
+ * direto. Lê só as divisões e os jogos das inscrições dela — nunca a liga
+ * inteira. Qualquer leitura que falhe FALHA a consulta: jogo de liga que não
+ * carregou não vira "nenhum jogo".
+ *
+ * @param {string} uid
+ * @returns {Promise<Array<object>>} jogos, do mais novo ao mais antigo
+ */
+export async function listLeagueGamesOf(uid) {
+  exigeDb();
+  if (!uid) return [];
+  const ligas = lista(await getDocs(query(collection(db, LEAGUES), where('ever_uids', 'array-contains', uid))));
+  const porLiga = await Promise.all(ligas.map(async (lg) => {
+    const sub = (nome, ...filtros) => getDocs(query(collection(db, LEAGUES, lg.id, nome), ...filtros)).then(lista);
+    const minhas = await sub('entries', where('player_uids', 'array-contains', uid));
+    if (!minhas.length) return [];
+    const ids = minhas.map((e) => e.id);
+    const divisoes = [...new Set(minhas.map((e) => e.division_id).filter(Boolean))];
+    const [inscricoes, ...jogos] = await Promise.all([
+      Promise.all(lotes(divisoes).map((d) => sub('entries', where('division_id', 'in', d)))),
+      // Duplas, simples e equipes guardam o lado; a escada guarda a quadra.
+      ...lotes(ids).flatMap((l) => [
+        sub('matches', where('side_a', 'in', l)),
+        sub('matches', where('side_b', 'in', l)),
+        sub('matches', where('team_a', 'array-contains-any', l)),
+        sub('matches', where('team_b', 'array-contains-any', l)),
+      ]),
+    ]);
+    const unicos = [...new Map(jogos.flat().map((m) => [m.id, m])).values()];
+    return leagueGamesOfPlayer(uid, lg, inscricoes.flat(), unicos);
+  }));
+  return porLiga.flat().sort((a, b) => b.at - a.at);
 }

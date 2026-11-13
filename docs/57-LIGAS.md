@@ -152,9 +152,15 @@ são contrato de link.
 
 - **Ranking e DUPR**: decidido pelo dono em 2026-11-13 — os jogos de liga contam
   e vão ao DUPR com as regras dos torneios (§14).
-- **Unificar contas** (Painel admin → Cadastros → Contas excluídas) ainda não
-  move os jogos de liga: a conta excluída sai do ranking, e os jogos da liga dela
-  seguem valendo para os adversários.
+- **Unificar contas** (Painel admin → Cadastros → Contas excluídas): resolvido
+  em 2026-11-13 — a unificação leva as inscrições, as escalações e a presença
+  na liga (§14.1).
+- **Os números do atleta** (perfil, Meu desempenho, confronto direto,
+  gamificação): resolvido em 2026-11-13 — os jogos de liga entram (§14.2).
+- **Fora, de propósito, até haver decisão de produto**: a liga na linha do
+  tempo da Carreira, medalha/troféu de campeão de liga (a estante é de torneio)
+  e os jogos de liga MARCADOS na lista "Próximos" de Meus jogos (a agenda da
+  liga está na própria liga e no card "Ligas" do início).
 
 ## 9. Padrões compartilhados com o torneio (2026-11-12)
 
@@ -375,3 +381,57 @@ servidor (`functions/leagueRanking.js`), sem coleção, índice nem regra nova.
 - **Tela**: a visão geral diz que os jogos contam; o editor de placar das
   equipes pede a escalação de cada linha e avisa que linha sem escalação conta só
   na tabela.
+
+### 14.1 Unificar contas leva a liga (2026-11-13)
+
+A exclusão de conta tira a pessoa das listas da liga e deixa o uid nas
+inscrições e nas escalações (é o histórico dos adversários). A unificação
+(`adminMergeAccountHistory`, `functions/accountMerge.js`, passo "Ligas")
+devolve isso à conta que fica:
+
+| Onde | O que muda |
+|---|---|
+| `leagues/{id}/entries` | `player_uids` e `players[]` (uid; "Atleta removido" volta a ser o nome; a categoria que a exclusão limpou volta do perfil); o nome automático da inscrição é refeito |
+| `leagues/{id}/matches.lineups` (só equipes) | o uid em cada linha — é a escalação que leva a linha ao ranking e ao DUPR |
+| `leagues/{id}` | `ever_uids` e, com inscrição ativa, `member_uids` (a liga volta a "Minhas ligas") |
+
+- **Conflito bloqueia**: as duas contas na mesma inscrição, ou com inscrição
+  ativa na mesma divisão (jogaram, ou jogariam, uma contra a outra).
+- **Organizar não é transferido** (`admins`, `creator_uid`), como no torneio.
+- A liga é achada pelas INSCRIÇÕES (a exclusão tirou a conta de `ever_uids`):
+  a unificação percorre as ligas, uma consulta por liga — sem índice novo. Se as
+  ligas passarem de centenas, o caminho é o índice de grupo de coleção em
+  `entries.player_uids`.
+- Placar a confirmar (`pending_confirm`, `report.confirm_uids`) não é migrado:
+  a conta excluída não confirma, e o placar vale sozinho em 72 h (§13).
+
+### 14.2 Os jogos de liga nos números do atleta (2026-11-13)
+
+🐞 O ranking contava os jogos de liga e o próprio atleta não os via: perfil
+com "0 jogos", Meu desempenho sem eles, confronto direto vazio — o mesmo
+defeito do dia de jogo em docs/18 §10.1. Agora há UMA leitura,
+`listLeagueGamesOf(uid)` (`leagueService.js`; consulta `leagueGamesQuery`, a
+mesma chave em toda tela), e UMA régua, `leagues/domain/leagueRankingGames.js`:
+
+- `leagueMatchGames` é CÓPIA da função do servidor, com paridade
+  (`leagueRankingGames.test.js` roda as duas sobre os mesmos jogos);
+- `leagueGamesOfPlayer` devolve os jogos da pessoa no formato dos jogos de
+  dia de jogo (`games/domain/myGames.js`), com `source: 'league'`, `leagueId`,
+  `ranked` e `outReason` (`liga_sem_conta`, `liga_fora`).
+
+| Onde | O que entra |
+|---|---|
+| Meu desempenho (`usePlayerStats`) e "Meus jogos" | TODOS os jogos decididos, inclusive os fora do ranking (marcados, com o motivo no card "não estão no ranking") |
+| Perfil do atleta (`useAthleteProfile`), confronto direto (`useHeadToHead`) | só os que o ranking conta (`ranked`); o perfil ganha "Jogos recentes em ligas" |
+| Gamificação (`useGamificationEngine`, `useGameRecords`) | datas de jogo (sequência), adversários e os registros com `source: 'league'` |
+
+- Nas equipes só existe "meu jogo" na linha COM escalação: sem ela ninguém sabe
+  quem jogou. W.O. conta como jogo, sem placar.
+- A leitura é por inscrição da pessoa (`ever_uids` → `entries.player_uids` →
+  divisões e jogos dessas inscrições), nunca a liga inteira; zero índice
+  (uma igualdade ou um `in`/`array-contains-any` por consulta).
+- **Falha não é vazio**: a leitura que falha FALHA a consulta — o perfil mostra
+  "—", Meu desempenho o erro com "Tentar de novo", "Meus jogos" diz que o
+  histórico está sem os jogos de liga, e o confronto direto marca `incompleto`.
+- A avaliação pós-jogo não vale para jogo de liga (`matchKey: null`): o servidor
+  só confere a chave de torneio e de dia de jogo publicado.

@@ -449,4 +449,10 @@ export default {
   "W.O.": "W.O.",
   "W.O. vale": "W.O. vale",
   "W.O.: vence {nome}": "W.O.: gana {nome}",
+  "Os jogos de liga não carregaram": "Los partidos de liga no cargaron",
+  "Eles continuam registrados — o histórico abaixo está sem eles.": "Siguen registrados — el historial de abajo no los incluye.",
+  "Seus jogos finalizados (torneios, ligas e dias de jogo) aparecerão aqui com placar e resultado.": "Tus partidos finalizados (torneos, ligas y días de juego) aparecerán aquí con marcador y resultado.",
+  "Jogos recentes em ligas": "Partidos recientes en ligas",
+  "de ligas em rascunho ou canceladas — essas não contam para ninguém.": "de ligas en borrador o canceladas — esas no cuentan para nadie.",
+  "Aqui contam todos os seus jogos. O ranking e o rating só contam partidas em que todos têm conta, de torneios públicos, de ligas e de dias de jogo publicados.": "Aquí cuentan todos tus partidos. El ranking y el rating solo cuentan partidos en los que todos tienen cuenta, de torneos públicos, de ligas y de días de juego publicados.",
 };

@@ -402,6 +402,10 @@ jogo" e o confronto direto passou a incluí-los (por PESSOA, não por dupla: no
 dia de jogo as duplas giram). Com uma das fontes falhando, os números ficam
 "—", nunca um total pela metade.
 
+Em 2026-11-13 o mesmo foi feito para a **liga** (os jogos dela contam no
+ranking desde o PR #422): perfil, Meu desempenho, confronto direto e
+gamificação somam os jogos de liga — `docs/57-LIGAS.md` §14.2.
+
 ### 10.2 🐞 A partida com alguém sem conta sumia para TODOS — sem ninguém saber
 
 O ranking só conta partida em que **todos** têm conta (regra de integridade:
@@ -458,7 +462,8 @@ oficial no contato privado, apagando a prova. Zero coleção, índice ou regra.
 "Meu desempenho" sempre contou todos os jogos; o ranking, não — e a diferença
 parecia defeito. `rankingCoverageSummary` (`performance/domain/rankingCoverage.js`)
 classifica: dia de jogo **não publicado**, partida com **alguém sem conta**,
-**torneio** em rascunho/privado/cancelado e publicação **desatualizada** — com
+**torneio** em rascunho/privado/cancelado, **liga** em rascunho ou cancelada
+(e jogo de liga com atleta sem conta) e publicação **desatualizada** — com
 os dias de jogo para abrir. Em "Meus jogos", cada jogo fora do ranking leva a
 marca *"fora do ranking"*. A fonte dos dias de jogo passou a resolver o atleta
 como a publicação resolve (`resolveSlotUid`): o jogo de quem SAIU do dia depois

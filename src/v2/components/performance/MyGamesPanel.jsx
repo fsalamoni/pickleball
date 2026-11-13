@@ -6,11 +6,12 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle, Dices, Swords, TrendingUp } from 'lucide-react';
+import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle, Dices, ListOrdered, Swords, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import { getMyUpcomingMatches, getMyFinishedMatches } from '@/modules/tournament/services/upcomingService';
 import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
+import { useMyLeagueGames } from '@/modules/leagues/hooks/useLeagues';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
@@ -80,8 +81,9 @@ export default function MyGamesPanel() {
     staleTime: 30_000,
   });
   const { data: gameDayGames = [], isLoading: loadingGd } = useMyGameDayGames();
+  const { data: leagueGames = [], isLoading: loadingLigas, isError: falhouLigas, refetch: recarregarLigas } = useMyLeagueGames();
 
-  // Histórico unificado: torneios + dias de jogo (todos os jogos, sempre).
+  // Histórico unificado: torneios + dias de jogo + ligas (todos os jogos, sempre).
   const mergedHistory = useMemo(() => {
     const tour = history.map((m) => ({
       key: m.matchId,
@@ -94,13 +96,13 @@ export default function MyGamesPanel() {
       oppScore: m.oppScore,
       won: m.won,
       walkover: m.walkover,
-      isGameDay: false,
+      icon: Trophy,
     }));
-    const gd = gameDayGames.map((g) => ({
+    const gd = [...gameDayGames, ...leagueGames].map((g) => ({
       key: g.id,
       at: g.at,
       title: g.label,
-      to: g.gameDayId ? `/dia-de-jogo/${g.gameDayId}` : '/dia-de-jogo',
+      to: g.leagueId ? `/ligas/${g.leagueId}` : (g.gameDayId ? `/dia-de-jogo/${g.gameDayId}` : '/dia-de-jogo'),
       foraDoRanking: g.ranked === false,
       partner: g.partner || '',
       opponent: g.opponent,
@@ -108,10 +110,10 @@ export default function MyGamesPanel() {
       oppScore: g.oppScore,
       won: g.won,
       walkover: g.walkover,
-      isGameDay: true,
+      icon: g.leagueId ? ListOrdered : Dices,
     }));
     return [...tour, ...gd].sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
-  }, [history, gameDayGames]);
+  }, [history, gameDayGames, leagueGames]);
 
   const record = useMemo(() => {
     const wins = mergedHistory.filter((m) => m.won).length;
@@ -119,7 +121,16 @@ export default function MyGamesPanel() {
   }, [mergedHistory]);
 
   const isUpcoming = tab === 'proximos';
-  const loading = isUpcoming ? loadingUp : (loadingHist || loadingGd);
+  const loading = isUpcoming ? loadingUp : (loadingHist || loadingGd || loadingLigas);
+  // Liga que não carregou não vira "nenhum jogo de liga": é dita, com a saída.
+  const avisoLigas = falhouLigas ? (
+    <V2ErrorState
+      inline
+      title={t('Os jogos de liga não carregaram')}
+      description={t('Eles continuam registrados — o histórico abaixo está sem eles.')}
+      onRetry={() => recarregarLigas()}
+    />
+  ) : null;
 
   return (
     <div>
@@ -192,18 +203,19 @@ export default function MyGamesPanel() {
           />
         </V2Surface>
       ) : mergedHistory.length === 0 ? (
-        <V2Surface>
+        avisoLigas ? <V2Surface>{avisoLigas}</V2Surface> : <V2Surface>
           <V2EmptyState icon={History} title={t('Sem histórico ainda')}
-            description={t('Seus jogos finalizados (torneios e dias de jogo) aparecerão aqui com placar e resultado.')} />
+            description={t('Seus jogos finalizados (torneios, ligas e dias de jogo) aparecerão aqui com placar e resultado.')} />
         </V2Surface>
       ) : (
         <div className="space-y-3">
           {postGameOn && <PostGameStrip />}
+          {avisoLigas}
           {mergedHistory.map((m) => (
             <V2Surface key={m.key} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  {m.isGameDay ? <Dices className="h-3.5 w-3.5" /> : <Trophy className="h-3.5 w-3.5" />}
+                  <m.icon aria-hidden="true" className="h-3.5 w-3.5" />
                   <Link to={m.to} className="hover:underline">{m.title}</Link>
                 </div>
                 <MatchupLine partner={m.partner} opponent={m.opponent} />

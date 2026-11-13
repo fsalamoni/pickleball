@@ -401,9 +401,10 @@ A unificação roda na função `adminMergeAccountHistory`
 | eventos de clube (datas legadas): participantes e jogos | idem |
 | inscrições de torneio (+ rótulo nos grupos) | jogador, titular, rótulo |
 | torneios internos e ladder de arena | elenco, classificação (ladder com as duas: soma) |
+| ligas: inscrições, escalações das equipes, `ever_uids`/`member_uids` (2026-11-13) | o atleta, o nome automático da inscrição e a presença na liga; as duas contas na mesma inscrição ou divisão **bloqueiam** (`docs/57-LIGAS.md` §14.1) |
 | validações de nível (como aluno) | o aluno |
 
-**Fica de fora, de propósito**: posse e poder (torneio, clube, dia de jogo que
+**Fica de fora, de propósito**: posse e poder (torneio, clube, liga, dia de jogo que
 a conta criou), o financeiro (reservas, carteira, compras — retidos pela
 arena) e o social (conversas, fórum). Unificar números não transfere
 propriedade. Nome que NÃO é o pseudônimo é mantido (o que a pessoa digitou
