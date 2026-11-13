@@ -34,9 +34,18 @@ export function useHomeCardsContext() {
   const federacao = useFeatureFlag(FEATURE_FLAG.FEDERATIONS);
   const associacaoClube = useFeatureFlag(FEATURE_FLAG.CLUB_ASSOCIATION);
   const carreira = useFeatureFlag(FEATURE_FLAG.ATHLETE_CAREER);
+  // Ligas: qualquer uma das cinco flags `leagues_*` (ou o admin da plataforma),
+  // a mesma conta de `leaguesVisible`.
+  const { isPlatformAdmin } = useAuth();
+  const ligasAtletas = useFeatureFlag(FEATURE_FLAG.LEAGUES_ATHLETES);
+  const ligasClubes = useFeatureFlag(FEATURE_FLAG.LEAGUES_CLUBS);
+  const ligasArenas = useFeatureFlag(FEATURE_FLAG.LEAGUES_ARENAS);
+  const ligasProfessores = useFeatureFlag(FEATURE_FLAG.LEAGUES_COACHES);
+  const ligasFederacoes = useFeatureFlag(FEATURE_FLAG.LEAGUES_FEDERATIONS);
+  const ligas = Boolean(isPlatformAdmin || ligasAtletas || ligasClubes || ligasArenas || ligasProfessores || ligasFederacoes);
   return useMemo(
-    () => ({ evolucao, treino, mercado, federacao, associacaoClube, carreira }),
-    [evolucao, treino, mercado, federacao, associacaoClube, carreira],
+    () => ({ evolucao, treino, mercado, federacao, associacaoClube, carreira, ligas }),
+    [evolucao, treino, mercado, federacao, associacaoClube, carreira, ligas],
   );
 }
 

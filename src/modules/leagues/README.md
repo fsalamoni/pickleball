@@ -62,4 +62,5 @@ componentes em `src/v2/components/leagues/`.
     vence. `self_report` mora no formato (paridade). Sem resposta em
     `AUTO_CONFIRM_HOURS` (72 h) o placar vale pela varredura
     `leagueAutoConfirmWorker`, e `pending_confirm` (só o servidor refaz) alimenta
-    a faixa "Precisa de você" da Minha área (`myLeaguePending`).
+    a faixa "Precisa de você" da Minha área (`myLeaguePending`) e o card "Ligas"
+    do início (`HomeLeaguesCard`, `homeLeagueRows`).

@@ -48,6 +48,7 @@ export const HOME_CARD = Object.freeze({
   FEDERACAO: 'federacao',
   ASSOCIACAO_CLUBE: 'associacao_clube',
   CARREIRA: 'carreira',
+  LIGAS: 'ligas',
 });
 
 /** ⭐ O que todo mundo vê sem ter escolhido — nesta ordem. */
@@ -160,6 +161,14 @@ export const HOME_CARD_META = Object.freeze({
     focos: [],
     requer: 'carreira',
   }),
+  [HOME_CARD.LIGAS]: Object.freeze({
+    label: tk('Ligas'),
+    description: tk('As ligas em que você joga ou que organiza e os placares que esperam a sua confirmação.'),
+    icon: 'ListOrdered',
+    group: HOME_CARD_GROUP.COMPETIR,
+    focos: [],
+    requer: 'ligas',
+  }),
   [HOME_CARD.TORNEIOS]: Object.freeze({
     label: tk('Torneios'),
     description: tk('Os torneios em que você está e os com inscrição aberta perto de você.'),
@@ -266,7 +275,7 @@ export function isDefaultHomeCards(lista) {
 /**
  * O card pode aparecer agora? Depende da funcionalidade de que ele precisa.
  * @param {string} id
- * @param {{ evolucao?: boolean, treino?: boolean, mercado?: boolean, federacao?: boolean, associacaoClube?: boolean }} [ctx] o que está ligado
+ * @param {{ evolucao?: boolean, treino?: boolean, mercado?: boolean, federacao?: boolean, associacaoClube?: boolean, carreira?: boolean, ligas?: boolean }} [ctx] o que está ligado
  */
 export function homeCardAvailable(id, ctx = {}) {
   const meta = HOME_CARD_META[id];

@@ -152,7 +152,6 @@ são contrato de link.
 
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
 - Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
   contagem não é transacional) — anotado no código.
 
@@ -323,3 +322,8 @@ playoff o placar é sempre da organização.
    lançamento). A faixa "Precisa de você" soma as ligas em andamento
    (`myLeaguePending`) e leva à aba Rodadas (ou a `/ligas` com várias). Só
    uids: nenhum dado pessoal no documento público.
+6. **Início.** O card "Ligas" (`ligas`, escolhido pela pessoa em Personalizar,
+   `HomeLeaguesCard`) mostra até 3 das minhas ligas em andamento ou com
+   inscrição aberta (`homeLeagueRows`), com "{n} placares para confirmar" em
+   destaque. A ajuda é o artigo `ligas` da Central de Ajuda (com as pistas
+   `/ligas`, `/ligas/*` e `/ligas/*/*`).
