@@ -70,6 +70,30 @@ describe('funções no ar', () => {
     expect(falhas('Error: Changing from an HTTPS function to a background triggered function is not allowed')).toBe('');
   });
 
+  // 🐞 #424: a CLI saiu com código 0 sem "Deploy complete!" e sem confirmar 7
+  // de 131 funções (cota, "Waiting to retry..."). O passo ficou verde.
+  it('código 0 não basta: função pedida sem linha de confirmação é tentada de novo', () => {
+    const SCRIPT = readFileSync('scripts/functions-deploy.sh', 'utf8');
+    expect(SCRIPT).toMatch(/functions-deploy-falhas\.sh "\$CODEBASE" "\$PEDIDAS"/);
+    expect(SCRIPT).toMatch(/\[ -z "\$FALHAS" \] && exit 0/); // só sai "ok" com todas confirmadas
+    expect(SCRIPT).not.toMatch(/\[ "\$RC" -eq 0 \] && exit 0/);
+    const semConfirmar = (pedidas, entrada) => execFileSync('bash', ['scripts/functions-deploy-falhas.sh', 'picklerush', pedidas], { input: entrada, encoding: 'utf8' }).trim();
+    const log = [
+      'i  functions: updating Node.js 22 (2nd Gen) function picklerush:leagues(southamerica-east1)...',
+      'i  functions: updating Node.js 22 (2nd Gen) function picklerush:clubDocs(southamerica-east1)...',
+      'i  functions: updating Node.js 22 (2nd Gen) function picklerush:adminDeleteAccounts(southamerica-east1)...',
+      '⚠  functions: Got "Quota Exceeded" error while trying to update projects/p/locations/southamerica-east1/functions/clubDocs. Waiting to retry...',
+      '\u001b[32m\u001b[1m✔ \u001b[22m\u001b[39m functions[picklerush:leagues(southamerica-east1)] Successful update operation.',
+      '✔  functions[picklerush:career(southamerica-east1)] Skipped (No changes detected)',
+      '✔  functions[picklerush:novaFuncao(southamerica-east1)] Successful create operation.',
+    ].join('\n');
+    expect(semConfirmar('leagues,clubDocs,adminDeleteAccounts,career,novaFuncao', log)).toBe('adminDeleteAccounts,clubDocs');
+    expect(semConfirmar('leagues,career,novaFuncao', log)).toBe('');
+    // Nenhuma linha de confirmação no log inteiro: o formato da CLI mudou, e
+    // sem como conferir vale o código de saída (nunca 131 "falhas" inventadas).
+    expect(semConfirmar('leagues,clubDocs', '✔  Deploy complete!')).toBe('');
+  });
+
   it('o deploy grava a ÚLTIMA linha de erro, sem cor, e quais funções ficaram', () => {
     expect(DEPLOY).toMatch(/LIMPO=\$\(echo "\$OUT" \| sed 's\/\\x1b/);
     expect(DEPLOY).toMatch(/grep -E "\^Error:" \| tail -1/);
