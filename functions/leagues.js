@@ -281,16 +281,26 @@ const MOTIVO = {
 
 /**
  * Grava a inscrição depois de conferir vaga, repetição e faixa da divisão.
- * ponytail: a vaga é conferida fora de transação; duas inscrições no mesmo
- * instante podem passar do limite por uma. Transação se isso aparecer.
+ * Numa transação: a divisão, a liga e as inscrições ativas são lidas e a
+ * inscrição gravada juntas, então duas pessoas disputando a última vaga no
+ * mesmo instante não passam do limite (a segunda é refeita e recebe "completa").
  */
-async function gravarInscricao(ctx, actor, lg, data, players, { override = false, by = 'self' } = {}) {
-  const div = await sub(ctx, lg.id, 'divisions').doc(texto(data.divisionId, 128)).get();
+async function gravarInscricao(ctx, actor, lgAntes, data, players, { override = false, by = 'self' } = {}) {
+  const divRef = sub(ctx, lgAntes.id, 'divisions').doc(texto(data.divisionId, 128));
+  return ctx.db.runTransaction(async (trn) => {
+    const div = await trn.get(divRef);
+    const ligaSnap = await trn.get(ref(ctx, lgAntes.id));
+    const todosAtivos = await trn.get(sub(ctx, lgAntes.id, 'entries').where('status', '==', 'active'));
+    return gravarNaTransacao(ctx, trn, actor, { ...lgAntes, ...(ligaSnap.data() || {}), id: lgAntes.id }, data, players, { div, todosAtivos, override, by });
+  });
+}
+
+function gravarNaTransacao(ctx, trn, actor, lg, data, players, { div, todosAtivos, override, by }) {
   if (!div.exists) falha('not-found', 'Divisão não encontrada.');
-  const ativos = await sub(ctx, lg.id, 'entries').where('division_id', '==', div.id).where('status', '==', 'active').get();
+  const ativos = todosAtivos.docs.filter((e) => e.data().division_id === div.id);
   const max = div.data().max_entries || MAX_ENTRIES;
-  if (ativos.size >= max) falha('resource-exhausted', 'A divisão está completa.');
-  const jaEstao = new Set(ativos.docs.flatMap((e) => e.data().player_uids || []));
+  if (ativos.length >= max) falha('resource-exhausted', 'A divisão está completa.');
+  const jaEstao = new Set(ativos.flatMap((e) => e.data().player_uids || []));
   const repetido = players.find((p) => p.uid && jaEstao.has(p.uid));
   if (repetido) falha('already-exists', `${repetido.name} já está inscrito nesta divisão.`);
   const elig = P.divisionEligibility(div.data(), players);
@@ -303,24 +313,25 @@ async function gravarInscricao(ctx, actor, lg, data, players, { override = false
   if (new Set(uids).size !== uids.length) falha('invalid-argument', 'O mesmo atleta aparece duas vezes.');
   const entryRef = sub(ctx, lg.id, 'entries').doc();
   const nome = texto(data.name, 60) || players.map((p) => p.name.split(' ')[0]).join(' / ');
-  const batch = ctx.db.batch();
-  batch.set(entryRef, {
+  trn.set(entryRef, {
     division_id: div.id, name: nome, auto_name: !texto(data.name, 60), players, player_uids: uids, status: 'active',
     eligibility: { value: elig.value, unrated: elig.unrated, override: !elig.ok || Boolean(montagem) },
     created_by: actor.uid, added_by: by, created_at: ts(ctx),
   });
-  const m = await membros(ctx, lg.id, lg, uids);
+  // Quem é membro: a organização + todo atleta com inscrição ativa (as lidas
+  // aqui) + os de agora — a mesma conta de `membros`, sem nova leitura.
+  const membrosUids = new Set([...(lg.admins || []), ...uids]);
+  todosAtivos.docs.forEach((e) => (e.data().player_uids || []).forEach((u) => u && membrosUids.add(u)));
   // `ever_uids`: todo atleta que já passou pela liga (a exclusão de conta acha
   // a liga por ele mesmo depois de a pessoa desistir).
   const ever = [...new Set([...(lg.ever_uids || []), ...uids])];
-  batch.update(ref(ctx, lg.id), { member_uids: m.member_uids, ever_uids: ever, entries_count: m.entries_count + 1, updated_at: ts(ctx) });
+  trn.update(ref(ctx, lg.id), { member_uids: [...membrosUids], ever_uids: ever, entries_count: todosAtivos.size + 1, updated_at: ts(ctx) });
   const link = `/ligas/${lg.id}`;
-  players.filter((p) => p.uid && p.uid !== actor.uid).forEach((p) => aviso(ctx, batch, p.uid, {
+  players.filter((p) => p.uid && p.uid !== actor.uid).forEach((p) => aviso(ctx, trn, p.uid, {
     title: tx('Você entrou numa liga'),
     message: tx('Você foi inscrito na liga {liga}, divisão {divisao}.', { liga: lg.name, divisao: div.data().name }),
     link,
   }));
-  await batch.commit();
   return { entryId: entryRef.id };
 }
 
@@ -436,6 +447,7 @@ async function result(ctx, actor, data) {
     const b = ctx.db.batch();
     await desfazFasesSeguintes(ctx, lg, jogo, b);
     b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, status: 'scheduled', recorded_by: null, recorded_at: null, report: null, dispute: null, updated_at: ts(ctx) });
+    if (jogo.data().status === 'reported') await recontaPendencias(ctx, lg, b, { fora: [jogo.id] });
     auditoria(ctx, b, actor, 'league_result_cleared', { league_id: lg.id, match_id: jogo.id });
     await b.commit();
     return { ok: true };
@@ -449,6 +461,7 @@ async function result(ctx, actor, data) {
   const b = ctx.db.batch();
   await desfazFasesSeguintes(ctx, lg, jogo, b);
   b.update(jogo.ref, patch);
+  if (jogo.data().status === 'reported') await recontaPendencias(ctx, lg, b, { fora: [jogo.id] });
   auditoria(ctx, b, actor, 'league_result', { league_id: lg.id, match_id: jogo.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker });
   await b.commit();
   return { ok: true };
@@ -479,6 +492,28 @@ async function jogoAutoLancado(ctx, actor, data) {
   return { lg, jogo, j, lado };
 }
 
+/** Os uids de um lado do jogo (pela inscrição). */
+async function uidsDoLado(ctx, lg, j, side) {
+  const e = await sub(ctx, lg.id, 'entries').doc(j[`side_${side}`]).get();
+  return e.exists ? e.data().player_uids || [] : [];
+}
+
+/**
+ * `pending_confirm` da liga: quantos placares cada conta tem a confirmar
+ * (é o que a Minha área mostra). Refeito a cada mudança — os jogos "a
+ * confirmar" do banco, sem os que esta operação mexe (`fora`), mais os que
+ * ela deixa a confirmar (`novos`: listas de uids).
+ */
+async function recontaPendencias(ctx, lg, batch, { fora = [], novos = [] } = {}) {
+  if (!(P.FORMATS[lg.format] || {}).self_report) return;
+  const tirar = new Set(fora);
+  const snap = await sub(ctx, lg.id, 'matches').where('status', '==', 'reported').get();
+  const listas = snap.docs.filter((d) => !tirar.has(d.id)).map((d) => (d.data().report || {}).confirm_uids || []).concat(novos);
+  const mapa = {};
+  listas.forEach((uids) => uids.forEach((u) => { mapa[u] = (mapa[u] || 0) + 1; }));
+  batch.update(ref(ctx, lg.id), { pending_confirm: mapa });
+}
+
 async function avisaLado(ctx, batch, lg, j, side, msg) {
   const e = await sub(ctx, lg.id, 'entries').doc(j[`side_${side}`]).get();
   (e.exists ? e.data().player_uids || [] : []).forEach((uid) => aviso(ctx, batch, uid, msg));
@@ -495,15 +530,18 @@ async function report(ctx, actor, data) {
   if (j.status === 'reported' && j.report && j.report.side !== lado) falha('failed-precondition', 'O outro lado já lançou o placar: confirme ou conteste.');
   const r = P.validateResult({ games: data.games, dreambreaker: data.dreambreaker }, P.resultRules(lg.format));
   if (!r.ok) falha('invalid-argument', `Placar inválido (${r.error}).`);
+  const outro = lado === 'a' ? 'b' : 'a';
+  const confirmam = await uidsDoLado(ctx, lg, j, outro);
   const b = ctx.db.batch();
   b.update(jogo.ref, {
     status: 'reported', dispute: null,
-    report: { games: r.games, dreambreaker: r.dreambreaker, side: lado, by: actor.uid, played_date: P.isIsoDate(data.played_date) ? data.played_date : null, at: ts(ctx) },
+    report: { games: r.games, dreambreaker: r.dreambreaker, side: lado, by: actor.uid, played_date: P.isIsoDate(data.played_date) ? data.played_date : null, at: ts(ctx), at_ms: ctx.now, confirm_uids: confirmam },
     updated_at: ts(ctx),
   });
-  await avisaLado(ctx, b, lg, j, lado === 'a' ? 'b' : 'a', {
+  await recontaPendencias(ctx, lg, b, { fora: [jogo.id], novos: [confirmam] });
+  await avisaLado(ctx, b, lg, j, outro, {
     title: tx('Confirme o placar'),
-    message: tx('O outro lado lançou o placar do seu jogo na liga {liga}. Confirme ou conteste.', { liga: lg.name }),
+    message: tx('O outro lado lançou o placar do seu jogo na liga {liga}. Confirme ou conteste; sem resposta em {n} horas, ele vale.', { liga: lg.name, n: P.AUTO_CONFIRM_HOURS }),
     link: `/ligas/${lg.id}/rodadas`,
   });
   auditoria(ctx, b, actor, 'league_result_reported', { league_id: lg.id, match_id: jogo.id, games: r.games, side: lado });
@@ -516,17 +554,23 @@ async function report(ctx, actor, data) {
  * lançasse) ou contesta com o motivo (a organização é avisada e decide pelo
  * `result`, que sempre vence).
  */
+/** O placar lançado passa a valer (confirmado pelo outro lado ou pelo prazo: `por` nulo). */
+function valeOLancado(ctx, b, lg, jogo, j, por) {
+  b.update(jogo.ref, {
+    games: j.report.games, dreambreaker: j.report.dreambreaker || null, wo_winner: null, status: 'done',
+    ...(j.report.played_date ? { scheduled_date: j.report.played_date } : {}),
+    recorded_by: j.report.by, confirmed_by: por, auto_confirmed: !por, recorded_at: ts(ctx), report: null, dispute: null, updated_at: ts(ctx),
+  });
+}
+
 async function confirm(ctx, actor, data) {
   const { lg, jogo, j, lado } = await jogoAutoLancado(ctx, actor, data);
   if (j.status !== 'reported' || !j.report) falha('failed-precondition', 'Não há placar a confirmar neste jogo.');
   if (j.report.side === lado) falha('failed-precondition', 'Quem confirma é o outro lado do jogo.');
   const b = ctx.db.batch();
+  await recontaPendencias(ctx, lg, b, { fora: [jogo.id] });
   if (data.accept === true) {
-    b.update(jogo.ref, {
-      games: j.report.games, dreambreaker: j.report.dreambreaker || null, wo_winner: null, status: 'done',
-      ...(j.report.played_date ? { scheduled_date: j.report.played_date } : {}),
-      recorded_by: j.report.by, confirmed_by: actor.uid, recorded_at: ts(ctx), report: null, dispute: null, updated_at: ts(ctx),
-    });
+    valeOLancado(ctx, b, lg, jogo, j, actor.uid);
     aviso(ctx, b, j.report.by, { title: tx('Placar confirmado'), message: tx('O placar que você lançou na liga {liga} foi confirmado.', { liga: lg.name }), link: `/ligas/${lg.id}/classificacao` });
     auditoria(ctx, b, actor, 'league_result_confirmed', { league_id: lg.id, match_id: jogo.id, games: j.report.games });
   } else {
@@ -733,4 +777,42 @@ async function leagues(ctx, actor, data = {}) {
   return fn(ctx, actor, data);
 }
 
-module.exports = { leagues, ACOES, COL, MAX_ENTRIES, MAX_DIVISIONS };
+/**
+ * Varredura (`leagueAutoConfirmWorker`): na liga flexível em andamento, o
+ * placar lançado sem resposta em `AUTO_CONFIRM_HOURS` passa a valer — como se
+ * o outro lado confirmasse. Os dois lados são avisados. Devolve quantos valeram.
+ */
+async function runAutoConfirm(ctx) {
+  const limite = ctx.now - P.AUTO_CONFIRM_HOURS * 3600 * 1000;
+  const ligas = await ctx.db.collection(COL).where('status', '==', 'running').get();
+  let total = 0;
+  for (const l of ligas.docs) {
+    const lg = { id: l.id, ...l.data() };
+    if (!(P.FORMATS[lg.format] || {}).self_report) continue;
+    const snap = await sub(ctx, lg.id, 'matches').where('status', '==', 'reported').get();
+    const vencidos = snap.docs.filter((d) => {
+      const r = d.data().report;
+      return r && Number.isFinite(r.at_ms) && r.at_ms <= limite;
+    }).slice(0, 100);
+    if (!vencidos.length) continue;
+    const b = ctx.db.batch();
+    for (const d of vencidos) {
+      const j = d.data();
+      valeOLancado(ctx, b, lg, d, j, null);
+      const msg = {
+        title: tx('Placar valeu'),
+        message: tx('Sem resposta em {n} horas, o placar lançado do seu jogo na liga {liga} passou a valer.', { n: P.AUTO_CONFIRM_HOURS, liga: lg.name }),
+        link: `/ligas/${lg.id}/classificacao`,
+      };
+      aviso(ctx, b, j.report.by, msg);
+      (j.report.confirm_uids || []).forEach((u) => aviso(ctx, b, u, msg));
+      auditoria(ctx, b, { uid: 'system', name: 'Sistema' }, 'league_result_auto_confirmed', { league_id: lg.id, match_id: d.id, games: j.report.games });
+    }
+    await recontaPendencias(ctx, lg, b, { fora: vencidos.map((d) => d.id) });
+    await b.commit();
+    total += vencidos.length;
+  }
+  return total;
+}
+
+module.exports = { leagues, runAutoConfirm, ACOES, COL, MAX_ENTRIES, MAX_DIVISIONS };

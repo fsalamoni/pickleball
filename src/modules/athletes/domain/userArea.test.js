@@ -126,3 +126,12 @@ describe('userAreaPending — Carreira (a dupla)', () => {
     ]);
   });
 });
+
+describe('userAreaPending — Ligas', () => {
+  it('placares a confirmar levam à liga (ou à lista, quando são várias); desconhecido não vira item', () => {
+    expect(userAreaPending({ ligas: { count: 2, leagueId: 'l1' } }).map((i) => [i.id, i.count, i.to])).toEqual([['ligas:confirmar', 2, '/ligas/l1/rodadas']]);
+    expect(userAreaPending({ ligas: { count: 3, leagueId: null } })[0].to).toBe('/ligas');
+    expect(userAreaPending({ ligas: undefined })).toEqual([]);
+    expect(userAreaPending({ ligas: { count: 0, leagueId: null } })).toEqual([]);
+  });
+});

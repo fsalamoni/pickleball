@@ -16,7 +16,7 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Sele
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
 import { normalizeSeason, roundCalendar } from '@/modules/leagues/domain/leagueSeason';
 import { MAX_GAMES, RESULT_ERROR_LABELS, matchWinner, validateResult } from '@/modules/leagues/domain/leagueResults';
-import { formatMeta, resultRules } from '@/modules/leagues/domain/leagueFormats';
+import { AUTO_CONFIRM_HOURS, formatMeta, resultRules } from '@/modules/leagues/domain/leagueFormats';
 import { DivisionChips } from './LeagueStandings';
 import { shortDate } from './leagueUi';
 
@@ -207,9 +207,12 @@ function ConfirmBox({ league, match }) {
     );
   }
   return (
-    <div className="flex flex-wrap gap-2">
-      <V2Button type="button" size="sm" disabled={acao.isPending} onClick={() => enviar({ accept: true }, t('Placar confirmado.'))}>{t('Confirmar o placar')}</V2Button>
-      <V2Button type="button" size="sm" variant="ghost" onClick={() => setContestando(true)}>{t('Contestar')}</V2Button>
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <V2Button type="button" size="sm" disabled={acao.isPending} onClick={() => enviar({ accept: true }, t('Placar confirmado.'))}>{t('Confirmar o placar')}</V2Button>
+        <V2Button type="button" size="sm" variant="ghost" onClick={() => setContestando(true)}>{t('Contestar')}</V2Button>
+      </div>
+      <p className="text-xs text-gray-500">{t('Sem resposta em {n} horas, o placar lançado vale.', { n: AUTO_CONFIRM_HOURS })}</p>
     </div>
   );
 }
@@ -255,7 +258,7 @@ function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) 
 
   return (
     <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
-      {lancar && <p className="text-xs text-gray-500">{t('O outro lado confirma o placar. W.O. só a organização lança.')}</p>}
+      {lancar && <p className="text-xs text-gray-500">{t('O outro lado confirma o placar (sem resposta em {n} horas, ele vale). W.O. só a organização lança.', { n: AUTO_CONFIRM_HOURS })}</p>}
       {!lancar && <V2Field label={t('Resultado')} htmlFor={`wo-${match.id}`}>
         <V2Select
           id={`wo-${match.id}`}

@@ -342,6 +342,7 @@ passa do teto de 400 deixa a exclusão **parcial**.
 
 | Função | Gatilho | O que faz | Escreve |
 |---|---|---|---|
+| `leagueAutoConfirmWorker` | agendada, a cada 60 min (`America/Sao_Paulo`) | na liga flexível em andamento, o placar lançado há `AUTO_CONFIRM_HOURS` (72 h) sem resposta passa a valer (`runAutoConfirm` em `functions/leagues.js`); avisa os dois lados, refaz `pending_confirm` e grava a auditoria `league_result_auto_confirmed` | `leagues/{id}/matches`, `leagues/{id}.pending_confirm`, `notifications`, `audit_logs` |
 | `tournamentScheduleWorker` | agendada, a cada 5 min (`America/Sao_Paulo`) | vira `published → registrations_open` e `registrations_open → registrations_closed` pelas datas (`registration_opens_ms`/`registration_closes_ms`); não toca o resto | `tournaments` (`status`, `schedule_change`, `schedule_changed_ms`, `updated_at`) |
 | `tournamentScheduleNotify` | `onDocumentUpdated tournaments/{id}` (só com mudança de status) | torneio **público** que abre: aviso `tournament_open` à comunidade, uma vez (`registrations_open_notified` gravado antes); virada pela data: aviso ao criador e aos `tournament_admins` | `notifications` (`origin: 'server'`), `tournaments.registrations_open_notified` |
 

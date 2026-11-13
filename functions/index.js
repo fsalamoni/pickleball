@@ -2114,6 +2114,18 @@ exports.career = federationCallable('career', (ctx, actor, data) => (Object.hasO
 // =====================================================================
 const leagueModule = require('./leagues');
 exports.leagues = federationCallable('leagues', leagueModule.leagues, { timeoutSeconds: 120 });
+// Liga flexível: o placar lançado sem resposta no prazo passa a valer sozinho.
+exports.leagueAutoConfirmWorker = onSchedule(
+  { schedule: 'every 60 minutes', timeZone: 'America/Sao_Paulo', region: REGION },
+  async () => {
+    try {
+      const n = await leagueModule.runAutoConfirm(fedCtx());
+      if (n) logger.info('leagueAutoConfirmWorker', { n });
+    } catch (err) {
+      logger.error('leagueAutoConfirmWorker falhou', err);
+    }
+  },
+);
 
 /** O torneio de fora mudou: impressão ("confirmar de novo"), pedidos órfãos e o vínculo das duas fichas. */
 exports.careerEventWritten = onDocumentWritten(

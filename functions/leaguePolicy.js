@@ -254,7 +254,11 @@ function roundRobin(ids, legs = 1) {
   return [...ida, ...ida.map((m) => ({ side_a: m.side_b, side_b: m.side_a, round: m.round + (n - 1) }))];
 }
 
+/** Liga flexível: placar lançado sem resposta vale sozinho depois deste prazo. */
+const AUTO_CONFIRM_HOURS = 72;
+
 module.exports = {
+  AUTO_CONFIRM_HOURS,
   FORMATS, ORGANIZER_FLAG, STATUS_NEXT, canMoveStatus,
   isIsoDate, normalizeSeason, normalizeDivisionRule, divisionEligibility, validateResult, roundRobin,
   resultRules, teamCompositionError,

@@ -76,7 +76,7 @@ isAuthed()`) e **nenhuma escrita** pelo cliente.
 | `…/divisions/{id}` | `name`, `order`, `gender`, `rule {kind, bracket, label, min, max, allow_unrated, cap, individual_cap, unrated_value}`, `max_entries` |
 | `…/entries/{id}` | `division_id`, `name`, `auto_name`, `players[{uid?, name, dupr?, gender?}]`, `player_uids[]`, `status` (`active`/`withdrawn`), `override`, `added_by` |
 | `…/matches/{id}` | `division_id`, `phase: 'season'`, `round`, `side_a`, `side_b` (ids de inscrição), `games[{a,b}]`, `wo_winner`, `played_date`, `recorded_by`; nas equipes `games` tem um item por jogo do confronto, na ordem de `lines`, e `dreambreaker {a,b}` (opcional) decide o empate |
-| `…/matches/{id}` na liga flexível | também `status: 'reported'` (lançado, a confirmar) ou `'disputed'` (contestado), `report {games, dreambreaker, side, by, played_date, at}`, `dispute {by, side, reason, at}` e, confirmado, `confirmed_by` (o `recorded_by` é quem lançou); `report`/`dispute` voltam a `null` quando o placar vale (§13) |
+| `…/matches/{id}` na liga flexível | também `status: 'reported'` (lançado, a confirmar) ou `'disputed'` (contestado), `report {games, dreambreaker, side, by, played_date, at, at_ms, confirm_uids[]}`, `dispute {by, side, reason, at}` e, confirmado, `confirmed_by` (nulo com `auto_confirmed: true` quando valeu pelo prazo) (o `recorded_by` é quem lançou); `report`/`dispute` voltam a `null` quando o placar vale (§13) |
 | `…/matches/{id}` no playoff | `phase: 'playoff'`, `round` (1 = primeira fase), `slot` (posição na fase), `third` (a disputa do 3º lugar), `seed_a`/`seed_b` (as cabeças, só na 1ª fase); o resto como na temporada (§12) |
 | `…/matches/{id}` na escada | `phase: 'ladder'`, `session` (nº da sessão), `group` (quadra, a partir de 0), `round` (a volta DENTRO da quadra), `team_a[]`/`team_b[]` (ids de inscrição; na escada individual, a dupla da vez), `side_a`/`side_b` nulos; `scheduled_date` nulo (a data sai do calendário da sessão) |
 
@@ -108,7 +108,7 @@ chave própria. Ações:
 | `update` | quem gere | campos da lista fechada (`camposDaLiga`) |
 | `status` | quem gere | a transição (`LEAGUE_STATUS_NEXT`); `open → draft` só sem inscritos |
 | `division_save` / `division_remove` | quem gere | remover só divisão sem inscritos |
-| `register` | o atleta | liga aberta, `self_registration`, divisão não lotada, faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso. Equipe: `teammateUids` (os outros `players − 1`) e a montagem do formato (`teamCompositionError`: 2+2 na MiLP, mesma categoria na v4) |
+| `register` | o atleta | liga aberta, `self_registration`, divisão não lotada (vaga, repetição e contagem conferidas e gravadas numa TRANSAÇÃO — duas pessoas na última vaga não passam do limite), faixa de DUPR e categoria pelo PERFIL (`divisionEligibility`), ninguém duas vezes na divisão; a dupla recebe um aviso. Equipe: `teammateUids` (os outros `players − 1`) e a montagem do formato (`teamCompositionError`: 2+2 na MiLP, mesma categoria na v4) |
 | `withdraw` | o próprio atleta ou quem gere | sem jogo gerado ⇒ apaga; com jogo ⇒ `withdrawn` (os placares seguem valendo para os adversários) |
 | `entry_add` | quem gere | pode inscrever sem conta (só o nome) e **fora da regra da divisão**: como no torneio, a organização vê o motivo como aviso e inscreve assim mesmo — o servidor marca `override: true` sozinho quando não cabe (§9.3) |
 | `session` | quem gere | só escada: gera a próxima sessão com quem veio (`present`, ids de inscrição ativos; ausente = todos), na ordem da escada; número que não fecha é recusado; sessão sem nenhum placar é REFEITA, com algum placar só depois de fechada; avisa cada atleta da quadra; com a liga aberta, começa a temporada |
@@ -152,10 +152,6 @@ são contrato de link.
 
 - **Ranking e DUPR**: os jogos de liga **não** contam no ranking da plataforma nem
   vão ao DUPR — decisão do dono pendente. A tela diz isso.
-- **Ainda não**: confirmação automática do placar lançado depois de um prazo e a pendência "confirme o placar" na Minha área (hoje o aviso leva ao jogo).
-- **PR 3**: na liga flexível, o próprio atleta lança e o adversário confirma.
-- Corrida de vagas: duas inscrições simultâneas na última vaga podem passar (a
-  contagem não é transacional) — anotado no código.
 
 ## 9. Padrões compartilhados com o torneio (2026-11-12)
 
@@ -311,3 +307,21 @@ as duplas combinam dia e local, e o placar é delas:
 Só quem está numa das inscrições do jogo lança ou confirma (o servidor confere
 pelas inscrições, nunca pela tela). Placar a confirmar não conta na tabela. No
 playoff o placar é sempre da organização.
+
+4. **Sem resposta no prazo, o placar vale.** A varredura
+   `leagueAutoConfirmWorker` (a cada hora) confirma o placar lançado há
+   `AUTO_CONFIRM_HOURS` (72 h, cópia no servidor com paridade) sem resposta,
+   como se o outro lado confirmasse (`confirmed_by: null`, `auto_confirmed: true`),
+   e avisa os dois lados. O prazo é dito no aviso e na tela.
+5. **Minha área.** A liga guarda `pending_confirm { uid: n }` — quantos placares
+   cada conta tem a confirmar —, refeito pelo servidor a cada lançamento,
+   confirmação, contestação, correção da organização e confirmação pelo prazo
+   (a partir de `report.confirm_uids`, os uids do outro lado no momento do
+   lançamento). A faixa "Precisa de você" soma as ligas em andamento
+   (`myLeaguePending`) e leva à aba Rodadas (ou a `/ligas` com várias). Só
+   uids: nenhum dado pessoal no documento público.
+6. **Início.** O card "Ligas" (`ligas`, escolhido pela pessoa em Personalizar,
+   `HomeLeaguesCard`) mostra até 3 das minhas ligas em andamento ou com
+   inscrição aberta (`homeLeagueRows`), com "{n} placares para confirmar" em
+   destaque. A ajuda é o artigo `ligas` da Central de Ajuda (com as pistas
+   `/ligas`, `/ligas/*` e `/ligas/*/*`).

@@ -95,6 +95,7 @@ const HomeFederationCard = lazy(() => import('@/v2/components/federations/HomeFe
 // Sob demanda: só quem escolheu o card da associação do clube (com a flag ligada).
 const HomeClubAssociationCard = lazy(() => import('@/v2/components/clubs/association/HomeClubAssociationCard'));
 const HomeCareerCard = lazy(() => import('@/v2/components/career/HomeCareerCard'));
+const HomeLeaguesCard = lazy(() => import('@/v2/components/leagues/HomeLeaguesCard'));
 
 // O balanço do jogo: só quem ligou para si, e só com jogo esperando.
 const HomeDebriefPrompt = lazy(() => import('@/v2/components/training/debrief/HomeDebriefPrompt'));
@@ -267,6 +268,12 @@ export default function V2PersonalHome() {
         return (
           <Suspense fallback={<V2Skeleton className="h-56 rounded-4xl" />}>
             <HomeCareerCard />
+          </Suspense>
+        );
+      case HOME_CARD.LIGAS:
+        return (
+          <Suspense fallback={<V2Skeleton className="h-56 rounded-4xl" />}>
+            <HomeLeaguesCard />
           </Suspense>
         );
       default:

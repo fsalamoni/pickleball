@@ -21,7 +21,9 @@ Centro de Treino (`docs/40-CENTRO-DE-TREINO.md`) entra por aqui.
 2. **Precisa de você** (`userAreaPending`) — pedidos de reserva das arenas que
    a pessoa gere, pedidos de aula esperando resposta, convites de clube e de
    evento ainda não respondidos, dúvidas de treino esperando por ela e treinos
-   recebidos não lidos, e — com a flag `marketplace` — o **Mercado**
+   recebidos não lidos, os placares da liga flexível que o outro lado lançou e
+   esperam a confirmação (`myLeaguePending`, com alguma flag `leagues_*`), e —
+   com a flag `marketplace` — o **Mercado**
    (`marketPendingCounts`): vendas esperando o vendedor (`placed`,
    `payment_review`, `paid`, `ready`, a mesma conta do Resumo de
    `/mercado/vender`) → `?aba=vendas`; ofertas `pending` não vencidas →

@@ -108,6 +108,9 @@ export const LEAGUE_FORMAT_META = Object.freeze({
   },
 });
 
+/** Liga flexível: placar lançado sem resposta vale sozinho depois deste prazo (cópia no servidor). */
+export const AUTO_CONFIRM_HOURS = 72;
+
 export const formatMeta = (format) => LEAGUE_FORMAT_META[format] || null;
 export const formatAvailable = (format) => formatMeta(format)?.available === true;
 export const playersPerEntry = (format) => formatMeta(format)?.players || 0;

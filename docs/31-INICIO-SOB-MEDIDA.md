@@ -90,6 +90,7 @@ cards novos cobrem o que ficava fora delas:
 | Suas aulas (professor) | `professor` | |
 | Carreira | `carreira` | só com a flag `athlete_career` (`requer: 'carreira'`, `HomeCareerCard` lazy): a contagem do torneio principal, "Como foi?" e o plano com o prazo — `docs/54-CARREIRA-DO-ATLETA.md` §5 |
 | Federação | `federacao` | só com a flag `federations` (`requer: 'federacao'`): filiações (pagar/renovar primeiro) e a última notícia — `docs/50-FEDERACAO.md` §6.7 |
+| Ligas | `ligas` | com qualquer flag `leagues_*` (ou o admin da plataforma; `requer: 'ligas'`, `HomeLeaguesCard` lazy): até 3 das minhas ligas em andamento ou com inscrição aberta (`homeLeagueRows`), a que tem placar a confirmar primeiro e levando à aba Rodadas; lista que falhou é dita — `docs/57-LIGAS.md` §13 |
 | Associação do clube | `associacao_clube` | só com a flag `club_association` (`requer: 'associacaoClube'`): a filiação nos clubes, o que pede a pessoa (votar, responder, pagar, renovar) no topo — `docs/52-CLUBE-ASSOCIACAO.md` §5.15 |
 
 **Promoções e destaques NÃO são card** (desde 2026-10-11, a pedido do dono):

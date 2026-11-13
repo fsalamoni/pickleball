@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 248 |
 | Blocos `match` (raiz + subcoleções) | 277 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 128 |
+| Cloud Functions exportadas | 129 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 16 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 1010 |
+| Arquivos de teste (`*.test.js(x)`) | 1011 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 63 |
 
@@ -52,7 +52,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `games` | 21 | 5 | 12 | 1 | · | 2 | sim |
 | `help` | 7 | 1 | · | · | · | 2 | sim |
 | `home` | 7 | 1 | 2 | · | · | 2 | sim |
-| `leagues` | 8 | 1 | 1 | · | · | 2 | sim |
+| `leagues` | 9 | 1 | 1 | · | · | 2 | sim |
 | `legal` | 3 | 1 | 2 | · | · | 2 | sim |
 | `leveling` | 1 | · | · | · | · | · | sim |
 | `linecall` | 27 | 10 | 7 | · | · | 2 | sim |
@@ -448,6 +448,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `clubAssociationSweep` | agendada | `every day 05:20` |
 | `career` | federationCallable |  |
 | `leagues` | federationCallable |  |
+| `leagueAutoConfirmWorker` | agendada | `every 60 minutes` |
 | `careerEventWritten` | gatilho Firestore | `career_events/{id}` |
 | `careerPartnerWritten` | gatilho Firestore | `career_partner/{id}` |
 | `careerDebriefWritten` | gatilho Firestore | `training_debriefs/{id}` |

@@ -82,7 +82,7 @@ describe('flags', () => {
   it('o início sob medida vale sempre, e o contexto oferece todos os cards (funcionalidades permanentes)', () => {
     montar(<Flags />);
     expect(vistos.on).toBe(true);
-    expect(vistos.ctx).toEqual({ evolucao: true, treino: true, mercado: false, federacao: false, associacaoClube: false, carreira: false });
+    expect(vistos.ctx).toEqual({ evolucao: true, treino: true, mercado: false, federacao: false, associacaoClube: false, carreira: false, ligas: false });
     estado.flags = { marketplace: true };
     montar(<Flags />);
     expect(vistos.ctx.mercado).toBe(true);
@@ -92,6 +92,10 @@ describe('flags', () => {
     estado.flags = { club_association: true };
     montar(<Flags />);
     expect(vistos.ctx.associacaoClube).toBe(true);
+    // Ligas: qualquer uma das cinco flags `leagues_*`.
+    estado.flags = { leagues_clubs: true };
+    montar(<Flags />);
+    expect(vistos.ctx.ligas).toBe(true);
     estado.flags = {};
   });
 });

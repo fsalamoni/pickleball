@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
-import { LEAGUE_FORMAT_META, LEAGUE_STATUS_NEXT, resultRules } from '@/modules/leagues/domain/leagueFormats.js';
+import { AUTO_CONFIRM_HOURS, LEAGUE_FORMAT_META, LEAGUE_STATUS_NEXT, resultRules } from '@/modules/leagues/domain/leagueFormats.js';
 import { LEAGUE_FLAG_BY_ORGANIZER } from '@/modules/leagues/domain/leagueAccess.js';
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason.js';
 import { normalizeDivisionRule, divisionEligibility, teamCompositionError, DIVISION_GENDER } from '@/modules/leagues/domain/leagueDivisions.js';
@@ -25,6 +25,7 @@ describe('paridade das ligas', () => {
         ...(m.lines ? { lines: m.lines.length, dreambreaker: m.dreambreaker, composition: m.composition } : {}),
       }]));
     expect(s.FORMATS).toEqual(cliente);
+    expect(s.AUTO_CONFIRM_HOURS).toBe(AUTO_CONFIRM_HOURS);
     Object.keys(LEAGUE_FORMAT_META).concat(['x']).forEach((f) => expect(s.resultRules(f)).toEqual(resultRules(f)));
   });
 
