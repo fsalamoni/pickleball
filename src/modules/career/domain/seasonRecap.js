@@ -82,6 +82,8 @@ export function buildSeasonRecap({ season, faltou = [], career = [], trophies = 
     year: season.year,
     // Só torneios: o dia de jogo não é torneio e não entra na retrospectiva.
     tournaments: s.tournaments || 0,
+    // Liga não é torneio: vai ao lado, e as medalhas dela estão na conta.
+    leagues: s.leagues || 0,
     gold: s.gold || 0,
     silver: s.silver || 0,
     bronze: s.bronze || 0,

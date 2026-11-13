@@ -8,6 +8,8 @@ import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firesto
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/core/config/firebase';
 import { t, tk } from '@/core/i18n';
+import { leagueSeasonsOfPlayer, leagueUpcomingOfPlayer } from '../domain/leagueActivity.js';
+import { LEAGUE_STATUS } from '../domain/leagueFormats.js';
 import { leagueGamesOfPlayer } from '../domain/leagueRankingGames.js';
 
 export const LEAGUES = 'leagues';
@@ -107,27 +109,34 @@ export async function collectLeagueExport(uid) {
 const EM_LOTES = 30;
 const lotes = (ids) => Array.from({ length: Math.ceil(ids.length / EM_LOTES) }, (_, i) => ids.slice(i * EM_LOTES, (i + 1) * EM_LOTES));
 
+const subDe = (leagueId) => (nome, ...filtros) => getDocs(query(collection(db, LEAGUES, leagueId, nome), ...filtros)).then(lista);
+
 /**
- * Os jogos de liga de UMA pessoa (de qualquer pessoa: a liga é de leitura de
- * conta logada), no formato de "Meu desempenho", do perfil e do confronto
- * direto. Lê só as divisões e os jogos das inscrições dela — nunca a liga
- * inteira. Qualquer leitura que falhe FALHA a consulta: jogo de liga que não
- * carregou não vira "nenhum jogo".
+ * A liga na vida de UMA pessoa (de qualquer pessoa: a liga é de leitura de
+ * conta logada), numa leitura só:
+ *   - `games`: os jogos decididos, no formato de "Meu desempenho", do perfil e
+ *     do confronto direto, do mais novo ao mais antigo;
+ *   - `upcoming`: os jogos que ela ainda vai jogar ("Próximos");
+ *   - `seasons`: a participação dela em cada liga (linha do tempo da Carreira).
+ * Lê só as divisões e os jogos das inscrições dela — nunca a liga inteira.
+ * Qualquer leitura que falhe FALHA a consulta: jogo de liga que não carregou
+ * não vira "nenhum jogo".
  *
  * @param {string} uid
- * @returns {Promise<Array<object>>} jogos, do mais novo ao mais antigo
+ * @returns {Promise<{ games: object[], upcoming: object[], seasons: object[] }>}
  */
-export async function listLeagueGamesOf(uid) {
+export async function listLeagueActivityOf(uid) {
   exigeDb();
-  if (!uid) return [];
+  if (!uid) return { games: [], upcoming: [], seasons: [] };
   const ligas = lista(await getDocs(query(collection(db, LEAGUES), where('ever_uids', 'array-contains', uid))));
   const porLiga = await Promise.all(ligas.map(async (lg) => {
-    const sub = (nome, ...filtros) => getDocs(query(collection(db, LEAGUES, lg.id, nome), ...filtros)).then(lista);
+    const sub = subDe(lg.id);
     const minhas = await sub('entries', where('player_uids', 'array-contains', uid));
-    if (!minhas.length) return [];
+    if (!minhas.length) return null;
     const ids = minhas.map((e) => e.id);
     const divisoes = [...new Set(minhas.map((e) => e.division_id).filter(Boolean))];
-    const [inscricoes, ...jogos] = await Promise.all([
+    const [todasDivisoes, inscricoes, ...jogos] = await Promise.all([
+      sub('divisions'),
       Promise.all(lotes(divisoes).map((d) => sub('entries', where('division_id', 'in', d)))),
       // Duplas, simples e equipes guardam o lado; a escada guarda a quadra.
       ...lotes(ids).flatMap((l) => [
@@ -138,7 +147,52 @@ export async function listLeagueGamesOf(uid) {
       ]),
     ]);
     const unicos = [...new Map(jogos.flat().map((m) => [m.id, m])).values()];
-    return leagueGamesOfPlayer(uid, lg, inscricoes.flat(), unicos);
+    const entries = inscricoes.flat();
+    return {
+      games: leagueGamesOfPlayer(uid, lg, entries, unicos),
+      upcoming: leagueUpcomingOfPlayer(uid, lg, entries, unicos),
+      seasons: leagueSeasonsOfPlayer(uid, lg, todasDivisoes, entries, unicos),
+    };
   }));
-  return porLiga.flat().sort((a, b) => b.at - a.at);
+  const feitas = porLiga.filter(Boolean);
+  return {
+    games: feitas.flatMap((l) => l.games).sort((a, b) => b.at - a.at),
+    upcoming: feitas.flatMap((l) => l.upcoming).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')),
+    seasons: feitas.flatMap((l) => l.seasons),
+  };
+}
+
+/**
+ * O que o PÓDIO das ligas de uma pessoa precisa: de cada divisão em que ela
+ * jogou numa liga ENCERRADA, todas as inscrições e todos os jogos (o pódio é
+ * da divisão inteira, não só dos jogos dela). Liga em andamento não é lida.
+ *
+ * @param {string} uid
+ * @returns {Promise<Array<{ league: object, division: object, entries: object[], matches: object[] }>>}
+ */
+export async function listLeaguePodiumSourcesOf(uid) {
+  exigeDb();
+  if (!uid) return [];
+  const ligas = lista(await getDocs(query(collection(db, LEAGUES), where('ever_uids', 'array-contains', uid))))
+    .filter((lg) => lg.status === LEAGUE_STATUS.FINISHED);
+  const porLiga = await Promise.all(ligas.map(async (lg) => {
+    const sub = subDe(lg.id);
+    const minhas = await sub('entries', where('player_uids', 'array-contains', uid));
+    const divisoes = [...new Set(minhas.map((e) => e.division_id).filter(Boolean))];
+    if (!divisoes.length) return [];
+    const [todasDivisoes, inscricoes, jogos] = await Promise.all([
+      sub('divisions'),
+      Promise.all(lotes(divisoes).map((d) => sub('entries', where('division_id', 'in', d)))),
+      Promise.all(lotes(divisoes).map((d) => sub('matches', where('division_id', 'in', d)))),
+    ]);
+    const nomes = new Map(todasDivisoes.map((d) => [d.id, d]));
+    return divisoes.map((id) => ({
+      league: lg,
+      // Liga de uma divisão só: o nome dela não acrescenta nada ao troféu.
+      division: { id, name: todasDivisoes.length > 1 ? (nomes.get(id)?.name || '') : '' },
+      entries: inscricoes.flat().filter((e) => e.division_id === id),
+      matches: jogos.flat().filter((m) => m.division_id === id),
+    }));
+  }));
+  return porLiga.flat();
 }

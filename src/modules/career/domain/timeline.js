@@ -4,7 +4,9 @@
  * Junta o que já existe: os torneios da plataforma em que a pessoa jogou
  * (`listMyTournaments` com `is_player`), os pódios desses torneios (a estante,
  * `listMyTrophies`), os pontos lançados no ranking oficial das federações e os
- * torneios de fora (`career_events`).
+ * torneios de fora (`career_events`). As LIGAS em que ela jogou entram como
+ * uma fonte opcional (`leagues`, uma participação por divisão), com o pódio da
+ * estante (`trophies.ligas`).
  *
  * ⭐ A linha do tempo é de TORNEIOS (daqui ou de fora, federados ou não). Dia
  * de jogo não é torneio, ainda que tenha ranking do dia: só entra quando a
@@ -29,7 +31,7 @@ import { partnerSealFor } from './careerPartner.js';
 
 /** Origem de um item. `fora` = declarado pela pessoa. Valor de `?origem=` (contrato). */
 export const TIMELINE_SOURCE = Object.freeze({
-  CAREER: 'fora', TOURNAMENT: 'torneio', GAME_DAY: 'dia_de_jogo', FEDERATION: 'federacao',
+  CAREER: 'fora', TOURNAMENT: 'torneio', GAME_DAY: 'dia_de_jogo', FEDERATION: 'federacao', LEAGUE: 'liga',
 });
 /** O filtro de origem da tela: da plataforma (tudo que não foi digitado) × de fora. */
 export const ORIGIN_FILTER = Object.freeze({ PLATFORM: 'plataforma', OUTSIDE: 'fora' });
@@ -102,8 +104,10 @@ function itemDeFora(ev, myTournaments, partners, oficial = null) {
  * @param {{
  *   career?: object[], tournaments?: object[], trophies?: { torneios?: object[] },
  *   gameDayGames?: object[], federationPoints?: object[], today?: string, includeGameDays?: boolean,
+ *   leagues?: object[],
  * }} fontes cada uma `undefined` quando a leitura falhou (ou ainda não chegou).
  *   `gameDayGames` só conta com `includeGameDays` (a escolha da pessoa).
+ *   `leagues` (as participações de `leagueSeasonsOfPlayer`) é opcional: só quem a lê passa a chave.
  * @returns {{ upcoming: object[], seasons: Array<{ year: number, items: object[], summary: object, closed: boolean }>, faltou: string[], total: number }}
  */
 export function buildCareerTimeline(fontes = {}) {
@@ -118,6 +122,10 @@ export function buildCareerTimeline(fontes = {}) {
   // As confirmações das duplas são opcionais (só quem as lê passa a chave): pedidas e
   // sem resposta, o selo "Confirmado pela dupla" não pode virar "Declarado" calado.
   if ('partners' in fontes && fontes.partners === undefined) faltou.push(t('as confirmações das duplas'));
+  // As ligas também são opcionais. Sem a lista, ou sem os pódios delas, a linha do
+  // tempo sai com menos do que a pessoa jogou — e diz.
+  if ('leagues' in fontes && fontes.leagues === undefined) faltou.push(t('as ligas'));
+  else if ('leagues' in fontes && fontes.trophies && fontes.trophies.ligas === undefined) faltou.push(t('os pódios das ligas'));
   const myTournaments = fontes.tournaments;
   const itens = [];
 
@@ -222,6 +230,41 @@ export function buildCareerTimeline(fontes = {}) {
     });
   });
 
+  // Ligas: uma participação por divisão. A data é a do FIM quando a liga
+  // encerrou (é quando o resultado existe); antes disso, a do começo.
+  const podiosLiga = new Map((fontes.trophies?.ligas || []).map((tr) => [`${tr.leagueId}:${tr.divisionId}`, tr]));
+  (fontes.leagues || []).forEach((lg) => {
+    const encerrada = lg.status === 'finished';
+    const data = (encerrada && lg.endedAt ? toISODate(new Date(lg.endedAt)) : null)
+      || lg.startDate || (lg.joinedAt ? toISODate(new Date(lg.joinedAt)) : null);
+    if (!data) return;
+    const podio = encerrada && !lg.withdrawn ? podiosLiga.get(`${lg.leagueId}:${lg.divisionId}`) : null;
+    const pos = podio?.position || null;
+    const jogos = lg.wins + lg.losses;
+    itens.push({
+      id: `liga:${lg.id}`,
+      source: TIMELINE_SOURCE.LEAGUE,
+      date: data,
+      datePrecision: 'day',
+      upcoming: !encerrada && data > today,
+      cancelled: false,
+      title: lg.name || t('Liga'),
+      subtitle: [
+        lg.divisionName,
+        lg.withdrawn ? t('Saiu da liga') : (encerrada ? '' : t('Em andamento')),
+        pos ? podio.placeLabel : '',
+        jogos > 0 ? t('{v} vitórias em {n} jogos', { v: lg.wins, n: jogos }) : '',
+      ].filter(Boolean).join(' · '),
+      where: [lg.city, lg.state].filter(Boolean).join(' · '),
+      position: pos,
+      positions: pos ? [pos] : [],
+      federated: false,
+      federation: '',
+      seal: SEAL.OFFICIAL,
+      link: `/ligas/${lg.leagueId}`,
+    });
+  });
+
   // Dias de jogo publicados — SÓ quando a pessoa pediu. Um item por dia (os
   // jogos daquele dia juntos), sem medalha nem pódio: dia de jogo não é torneio.
   const porDia = new Map();
@@ -270,20 +313,23 @@ export function buildCareerTimeline(fontes = {}) {
 }
 
 /**
- * O resumo da temporada: quantos torneios, pódios e medalhas. Cancelado não
- * conta, e o dia de jogo (quando a pessoa o incluiu) também não: ele aparece
- * na lista, mas não é torneio — `gameDays` só diz quantos estão à vista.
+ * O resumo da temporada: quantos torneios, ligas, pódios e medalhas. Cancelado
+ * não conta, e o dia de jogo (quando a pessoa o incluiu) também não: ele aparece
+ * na lista, mas não é torneio — `gameDays` só diz quantos estão à vista. Liga
+ * não é torneio: tem a conta dela (`leagues`), e o pódio dela é pódio.
  */
 export function seasonSummary(items) {
   const valendo = (items || []).filter((i) => !i.cancelled);
   const dias = valendo.filter((i) => i.source === TIMELINE_SOURCE.GAME_DAY);
   // O plano que passou sem resposta (`pending`) aparece na lista, mas não é torneio jogado.
-  const torneios = valendo.filter((i) => i.source !== TIMELINE_SOURCE.GAME_DAY && !i.pending);
-  const podios = torneios.flatMap(itemPodiums);
+  const disputas = valendo.filter((i) => i.source !== TIMELINE_SOURCE.GAME_DAY && !i.pending);
+  const ligas = disputas.filter((i) => i.source === TIMELINE_SOURCE.LEAGUE);
+  const podios = disputas.flatMap(itemPodiums);
   const conta = (p) => podios.filter((x) => x === p).length;
   return {
-    events: torneios.length,
-    tournaments: torneios.length,
+    events: disputas.length,
+    tournaments: disputas.length - ligas.length,
+    leagues: ligas.length,
     gameDays: dias.length,
     podiums: podios.length,
     gold: conta(1), silver: conta(2), bronze: conta(3),

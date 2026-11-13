@@ -1234,4 +1234,9 @@ export default {
   "Último acesso": "Último ingreso",
   "Último acesso mais recente": "Ingreso más reciente",
   "último acesso em {data}": "último ingreso el {data}",
+  "O código não as tem mais; o deploy nunca apaga função, então elas continuam publicadas na versão antiga até alguém apagá-las no console do Firebase.": "El código ya no las tiene; el deploy nunca borra una función, así que siguen publicadas en la versión antigua hasta que alguien las borre en la consola de Firebase.",
+  "saiu em parte": "salió en parte",
+  "Elas seguem no ar na versão anterior; todas as outras subiram. O próximo deploy tenta de novo.": "Siguen en línea en la versión anterior; todas las demás se actualizaron. El próximo deploy lo intenta de nuevo.",
+  "{n} funções antigas seguem no ar:": ["{n} función antigua sigue en línea:","{n} funciones antiguas siguen en línea:"],
+  "{n} funções não foram atualizadas, depois de três tentativas:": ["{n} función no se actualizó, después de tres intentos:","{n} funciones no se actualizaron, después de tres intentos:"],
 };

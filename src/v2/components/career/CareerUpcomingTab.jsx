@@ -5,13 +5,14 @@
  *    torneios da plataforma em que a pessoa está inscrita;
  *  - a DESCOBERTA: a agenda das federações em que é filiada, os chancelados e
  *    os torneios públicos da plataforma, filtrados pela Minha região. "Pôr no
- *    meu plano" cria o planejado já preenchido.
+ *    meu plano" cria o planejado já preenchido;
+ *  - os JOGOS DAS LIGAS em que a pessoa joga e que ainda não têm placar.
  * Cada fonte falha sozinha e a tela diz qual — nunca "não há torneio".
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarClock, Plus } from 'lucide-react';
+import { CalendarClock, ListOrdered, Plus } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useRegionalList } from '@/core/lib/useMyRegion';
@@ -181,6 +182,42 @@ function Descoberta({ events, myTournaments, save, onOpenEvent }) {
   );
 }
 
+/** Quantos jogos de liga a aba mostra antes de mandar à liga. */
+const JOGOS_DE_LIGA = 8;
+
+/**
+ * Os jogos de liga que ainda vêm, do mais próximo ao mais distante (sem data
+ * por último). A seção só existe para quem joga liga; a leitura que falhou é dita.
+ */
+function JogosDeLiga({ jogos, erro, onRetry }) {
+  if (erro) return <V2ErrorState inline title={t('Os jogos das suas ligas não carregaram')} description={t('Eles continuam lá — a conexão é que falhou.')} onRetry={onRetry} />;
+  if (!jogos?.length) return null;
+  return (
+    <section className="space-y-3" data-dica="carreira-jogos-de-liga">
+      <h2 className="font-display text-lg font-bold text-ink">{t('Jogos das suas ligas')}</h2>
+      <ul className="space-y-2">
+        {jogos.slice(0, JOGOS_DE_LIGA).map((j) => (
+          <li key={j.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 p-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <ListOrdered className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="font-semibold text-ink">{t('Contra {nome}', { nome: j.opponent })}</p>
+                <p className="text-sm text-gray-500">
+                  {[j.leagueName, j.team, j.round ? t('Rodada {n}', { n: j.round }) : '', j.date ? [careerDateLabel(j.date), j.time].filter(Boolean).join(' ') : t('Data a combinar')].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+            </div>
+            <V2Button asChild size="sm" variant="ghost"><Link to={`/ligas/${j.leagueId}`}>{t('Abrir')}</Link></V2Button>
+          </li>
+        ))}
+      </ul>
+      {jogos.length > JOGOS_DE_LIGA && (
+        <p className="text-sm text-gray-500">{tn(jogos.length - JOGOS_DE_LIGA, 'E mais {n} jogo: abra a liga para ver.', 'E mais {n} jogos: abra a liga para ver.')}</p>
+      )}
+    </section>
+  );
+}
+
 /** @param {{ data: object, save: Function, onOpenEvent: (id: string, ev?: object) => void, onRegister: Function }} props */
 export default function CareerUpcomingTab({ data, save, onOpenEvent, onRegister }) {
   if (data.isPending) return <V2Skeleton lines={4} />;
@@ -222,6 +259,8 @@ export default function CareerUpcomingTab({ data, save, onOpenEvent, onRegister 
           />
         )}
       </section>
+
+      <JogosDeLiga jogos={data.leagueUpcoming} erro={data.leaguesError} onRetry={data.retryLeagues} />
 
       {/* Sem o plano carregado, "Pôr no meu plano" poderia duplicar o que já está lá. */}
       {events !== undefined && <Descoberta events={events} myTournaments={myTournaments} save={save} onOpenEvent={onOpenEvent} />}

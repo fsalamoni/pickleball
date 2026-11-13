@@ -101,7 +101,11 @@ jobs:
   # que o Vitest não vê: tela que quebra ao montar de verdade, rota que leva ao
   # nada, regra do banco que recusa quem acabou de entrar. Ver docs/03-WORKFLOW.md §10.
   e2e:
-    runs-on: ubuntu-latest
+    # Imagem FIXA (não ubuntu-latest): o rótulo "latest" passou a cair no
+    # Ubuntu 26.04 e o Playwright 1.59 recusa instalar o Chromium nele
+    # ("does not support chromium on ubuntu26.04-x64", PR #424). Volte a
+    # "latest" só junto com um Playwright que suporte a imagem nova.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
@@ -121,7 +125,7 @@ jobs:
         run: npm ci
         timeout-minutes: 8
 
-      # Sem --with-deps: a imagem ubuntu-latest já traz as bibliotecas do
+      # Sem --with-deps: a imagem do GitHub já traz as bibliotecas do
       # Chromium, e o --with-deps só acrescentava fontes (CJK, unifont) pelo
       # espelho do apt, que em 2026-10-22 baixou a 30 kB/s e estourou 10 min
       # duas vezes antes de qualquer teste. Biblioteca faltando falha alto no

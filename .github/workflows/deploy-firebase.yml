@@ -14,7 +14,11 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Imagem FIXA (não ubuntu-latest): o rótulo "latest" passou a cair no
+    # Ubuntu 26.04 e o Playwright 1.59 recusa instalar o Chromium nele
+    # ("does not support chromium on ubuntu26.04-x64", PR #424). Volte a
+    # "latest" só junto com um Playwright que suporte a imagem nova.
+    runs-on: ubuntu-24.04
     # Rede de segurança contra travamento (CLI do Firebase/rede). Um deploy
     # normal termina bem antes disso; 30min evita run preso por horas.
     timeout-minutes: 30
@@ -300,12 +304,28 @@ jobs:
           # 🐞 Do #315 ao #321 este passo falhou calado (ele é não fatal) e as
           # funções novas não subiram. A falha agora vai em destaque no resumo
           # do deploy e no painel admin (Sistema → Diagnóstico → "Funções no ar").
-          ERRO=$(echo "$OUT" | grep -m1 -E "^Error:|Error:" | cut -c1-400)
-          node scripts/functions-health.cjs deploy falhou "${ERRO:-veja o log do passo}"
+          # 🐞 No #423 o painel mostrou um AVISO de cota (a primeira linha com
+          # "Error:", ainda com os códigos de cor) como se fosse o erro, e disse
+          # que as funções seguiam na versão antiga quando 130 de 131 tinham
+          # subido. O erro é a ÚLTIMA linha que começa com "Error:", sem cor; e
+          # o script diz quais funções ficaram (FUNCOES_COM_FALHA), já depois
+          # de tentar de novo só com elas.
+          LIMPO=$(echo "$OUT" | sed 's/\x1b\[[0-9;]*m//g')
+          FALHAS=$(echo "$LIMPO" | grep -E "^FUNCOES_COM_FALHA=" | tail -1 | cut -d= -f2)
+          ERRO=$(echo "$LIMPO" | grep -E "^Error:" | tail -1 | cut -c1-300)
+          MOTIVO=$(echo "$LIMPO" | grep -E "^Unable to " | tail -1 | cut -c1-200)
+          ERRO="${ERRO}${MOTIVO:+ · $MOTIVO}"
+          node scripts/functions-health.cjs deploy falhou "${ERRO:-veja o log do passo}" "$FALHAS"
           {
-            echo "## ⚠️ As Cloud Functions NÃO foram publicadas"
-            echo ""
-            echo "Site e regras saíram; as funções seguem na versão anterior até o próximo deploy que der certo."
+            if [ -n "$FALHAS" ]; then
+              echo "## ⚠️ Algumas Cloud Functions não foram atualizadas"
+              echo ""
+              echo "Ficaram na versão anterior, depois de três tentativas: \`$FALHAS\`. As outras subiram; site e regras saíram."
+            else
+              echo "## ⚠️ As Cloud Functions NÃO foram publicadas"
+              echo ""
+              echo "Site e regras saíram; as funções seguem na versão anterior até o próximo deploy que der certo."
+            fi
             echo ""
             echo '```'
             echo "${ERRO:-Sem linha de erro reconhecível: veja o log do passo Deploy Cloud Functions.}"

@@ -3,7 +3,7 @@ import { getPlayerH2HRecords } from '../services/headToHeadService.js';
 import { buildHeadToHead, topRivals } from '../domain/headToHead.js';
 import { publishedGameDayGamesQuery } from '@/modules/games/hooks/usePublishedGameDayGames';
 import { gameDayGamesToH2HRecords } from '@/modules/games/domain/myGames';
-import { leagueGamesQuery } from '@/modules/leagues/hooks/useLeagues';
+import { fetchLeagueGames } from '@/modules/leagues/hooks/useLeagues';
 
 /**
  * Confrontos diretos de um atleta, já agregados. Só busca quando habilitado.
@@ -35,7 +35,7 @@ export function useHeadToHead(uid, enabled = true) {
           staleTime: 60_000,
         }),
         qc.fetchQuery(publishedGameDayGamesQuery(uid)),
-        qc.fetchQuery(leagueGamesQuery(uid)),
+        fetchLeagueGames(qc, uid),
       ]);
       // O torneio é a base: se ele falha, a consulta falha (falha não é vazio).
       if (torneios.status === 'rejected') throw torneios.reason;

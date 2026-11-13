@@ -68,6 +68,16 @@ jobs:
           jq -r --arg r "$FUNCTIONS_REGION" --arg c "$CODEBASE" \
             '.result[] | select(.region == $r and (.codebase // "default") != $c) | .id' lista.json \
             | sort -u | comm -12 - esperadas.txt > sem_rotulo.txt
+          # Funções NOSSAS (rótulo do codebase próprio) que o código não exporta
+          # mais: o deploy por nome nunca apaga, então elas seguem no ar na
+          # versão antiga. Só são ditas (aqui e no painel); apagar é decisão do
+          # dono. 🐞 Sem esta lista o painel dizia "133 de 131 publicadas".
+          jq -r --arg r "$FUNCTIONS_REGION" --arg c "$CODEBASE" \
+            '.result[] | select(.region == $r and (.codebase // "default") == $c) | .id' lista.json \
+            | sort -u | comm -23 - esperadas.txt > sobrando.txt
+          if [ -s sobrando.txt ]; then
+            echo "::notice title=Funções antigas no ar::$(paste -sd, sobrando.txt) — o código não as exporta mais; seguem publicadas na versão antiga."
+          fi
           echo "Esperadas: $(wc -l < esperadas.txt) · publicadas na região: $(wc -l < publicadas.txt)"
           if [ -s sem_rotulo.txt ]; then
             echo "::warning title=Funções sem o codebase próprio::$(paste -sd, sem_rotulo.txt) — serão reetiquetadas no próximo deploy."
@@ -88,7 +98,7 @@ jobs:
       # republicação falhar. Nunca falha o job.
       - name: Registrar a conferência no painel
         if: steps.conferir.outcome == 'success'
-        run: node scripts/functions-health.cjs check esperadas.txt publicadas.txt faltando.txt sem_rotulo.txt
+        run: node scripts/functions-health.cjs check esperadas.txt publicadas.txt faltando.txt sem_rotulo.txt sobrando.txt
 
       - name: Publicar de novo o que sumiu
         if: steps.conferir.outputs.faltando == 'true' || steps.conferir.outputs.sem_rotulo == 'true'

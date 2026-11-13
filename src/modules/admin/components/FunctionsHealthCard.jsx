@@ -63,6 +63,12 @@ export default function FunctionsHealthCard() {
             </p>
           )}
           {c.semRotulo.length > 0 && <p>{t('Sem o codebase próprio (reetiquetadas no próximo deploy):')} <span className="font-mono">{c.semRotulo.join(', ')}</span></p>}
+          {c.sobrando.length > 0 && (
+            <p>
+              {tn(c.sobrando.length, '{n} função antiga segue no ar:', '{n} funções antigas seguem no ar:')} <span className="font-mono">{c.sobrando.join(', ')}</span>
+              {'. '}{t('O código não as tem mais; o deploy nunca apaga função, então elas continuam publicadas na versão antiga até alguém apagá-las no console do Firebase.')}
+            </p>
+          )}
         </div>
       )}
 
@@ -70,17 +76,24 @@ export default function FunctionsHealthCard() {
         <div className="mt-2 space-y-1 text-xs leading-5 text-gray-600">
           <p>
             <strong className="text-ink">{t('Último deploy das funções:')}</strong> {formatarMomento(d.ms)}
-            {' · '}{d.ok ? t('deu certo') : <span className="font-semibold text-amber-700">{t('falhou')}</span>}
+            {' · '}{d.ok ? t('deu certo') : <span className="font-semibold text-amber-700">{d.falhas.length > 0 ? t('saiu em parte') : t('falhou')}</span>}
             {d.commit ? <span className="font-mono"> · {d.commit}</span> : null}
             {' '}<Link href={d.runUrl}>{t('ver execução')}</Link>
           </p>
           {!d.ok && (
             <>
               {d.erro && <p className="break-words font-mono text-[11px] text-amber-800">{d.erro}</p>}
-              <p>
-                {d.ultimoOkMs ? t('O último que deu certo foi em {quando}; as funções seguem nessa versão.', { quando: formatarMomento(d.ultimoOkMs) }) : t('As funções seguem na versão anterior.')}
-                {' '}{t('O site e as regras não dependem disso.')}
-              </p>
+              {d.falhas.length > 0 ? (
+                <p>
+                  {tn(d.falhas.length, '{n} função não foi atualizada, depois de três tentativas:', '{n} funções não foram atualizadas, depois de três tentativas:')} <span className="font-mono">{d.falhas.join(', ')}</span>
+                  {'. '}{t('Elas seguem no ar na versão anterior; todas as outras subiram. O próximo deploy tenta de novo.')}
+                </p>
+              ) : (
+                <p>
+                  {d.ultimoOkMs ? t('O último que deu certo foi em {quando}; as funções seguem nessa versão.', { quando: formatarMomento(d.ultimoOkMs) }) : t('As funções seguem na versão anterior.')}
+                  {' '}{t('O site e as regras não dependem disso.')}
+                </p>
+              )}
             </>
           )}
         </div>

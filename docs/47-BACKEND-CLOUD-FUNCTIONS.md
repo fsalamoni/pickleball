@@ -754,6 +754,24 @@ publicadas"** com o erro no resumo da execução. O painel admin mostra em
 **Sistema → Diagnóstico → "Funções no ar"** (`FunctionsHealthCard`, domínio
 `admin/domain/functionsHealth.js`).
 
+🐞 No deploy do #423 (2026-11-13) 130 de 131 funções subiram e o painel dizia
+"falhou · as funções seguem na versão anterior", com um aviso de cota (429) de
+outra função, cheio de códigos de cor do terminal, como se fosse o erro; e
+"133 de 131 funções publicadas". Três correções:
+
+1. `scripts/functions-deploy.sh` **tenta de novo só as funções que falharam**
+   (até três tentativas, 60 s entre elas; os nomes saem do log por
+   `scripts/functions-deploy-falhas.sh`). Sobrando alguma, o script imprime
+   `FUNCOES_COM_FALHA=…`.
+2. O workflow grava a ÚLTIMA linha `Error:` (mais a última `Unable to …`),
+   sem as cores, e os nomes em `deploy.failed`. O painel passa a dizer **"saiu
+   em parte"** com as funções que ficaram na versão anterior — "falhou" fica
+   para quando nada foi publicado.
+3. `check.published` conta só as funções ESPERADAS que estão no ar; as do
+   nosso codebase que o código não exporta mais vão em `check.extra` e o
+   cartão as lista como "funções antigas no ar" (o deploy nunca apaga função;
+   apagar é decisão do dono, no console).
+
 ### 10.3 Vigilância (`functions-watchdog.yml`)
 
 Agenda `7,37 * * * *` (a cada 30 min) + `workflow_dispatch`, `timeout-minutes: 20`,
@@ -764,7 +782,8 @@ account do secret `FIREBASE_SERVICE_ACCOUNT` e:
    `firebase functions:list --json` na região `southamerica-east1`;
 2. grava a conferência em `platform_settings/functions_health.check`
    (`node scripts/functions-health.cjs check …`: esperadas, publicadas, os
-   nomes que faltam e os sem rótulo, hora e link da execução) — é o que o
+   nomes que faltam, os sem rótulo e os que sobram — `extra`, funções do nosso
+   codebase que o código não exporta mais —, hora e link da execução) — é o que o
    cartão "Funções no ar" mostra; sem conferência há mais de 90 min, o cartão
    diz que a vigilância parou;
 3. se faltar alguma — ou se alguma nossa não tiver o rótulo do codebase —

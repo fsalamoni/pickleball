@@ -536,6 +536,13 @@ dependências das funções são instaladas pelo script se faltarem. Os ajudante
 dos emuladores (semear documento, ler, criar conta) moram em
 `tests/e2e/emulador.js`.
 
+**Imagem do runner fixa.** O job `e2e` (`ci.yml`) e o job `deploy`
+(`deploy-firebase.yml`, por causa do passo "Conferir o site no ar") rodam em
+`ubuntu-24.04`, não em `ubuntu-latest`: em 2026-11-13 o rótulo "latest"
+passou a cair no Ubuntu 26.04 e o Playwright 1.59 recusa instalar o Chromium
+nele (`Playwright does not support chromium on ubuntu26.04-x64`). Voltar a
+"latest" só junto com um Playwright que suporte a imagem nova.
+
 | Arquivo | O que prova |
 |---|---|
 | `public-routes.spec.js` | o site abre, `/login` tem o formulário, rota fechada leva ao login. Também roda no **site no ar** depois de cada deploy |
@@ -729,6 +736,13 @@ que não está no código local como "removida" e a APAGA.
    Recusa codebase ausente ou `default`; lista vazia não publica nada (`--only`
    vazio voltaria a ser "tudo"). Não usa `--force`: se a CLI algum dia detectar
    remoção inesperada, o deploy falha em vez de confirmar apagamento.
+   **Tenta de novo só o que falhou** (2026-11-13): com 130 funções, uma falha
+   passageira numa delas (cota da API, "Unable to set the invoker for the IAM
+   policy") fazia o deploy inteiro sair como falho com as outras 130 no ar. O
+   script lê do log quais não subiram (`scripts/functions-deploy-falhas.sh`),
+   espera 60 s e publica SÓ elas, até três tentativas; se ainda sobrar alguma,
+   imprime `FUNCOES_COM_FALHA=a,b` e sai com erro — o workflow grava os nomes
+   e o painel diz "saiu em parte", com as funções que ficaram na versão anterior.
 3. **Vigilância** — `.github/workflows/functions-watchdog.yml`, a cada 30 min:
    lista as funções do projeto, confere se TODAS as nossas existem em
    `southamerica-east1` e se carregam o rótulo `picklerush`. Faltou alguma?

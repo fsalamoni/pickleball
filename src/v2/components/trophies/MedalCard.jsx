@@ -75,7 +75,7 @@ function Temporada({ s }) {
       {/* Só torneios: dia de jogo não é torneio e não entra na retrospectiva. */}
       <div>
         <p className="font-display font-black leading-none tabular-nums text-white" style={numero}>{s.tournaments}</p>
-        <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{s.tournaments === 1 ? t('torneio') : t('torneios')}</p>
+        <p className="font-semibold uppercase tracking-widest text-white/70" style={{ fontSize: F.micro, marginTop: '0.4em' }}>{s.tournaments === 1 ? t('torneio') : t('torneios')}{s.leagues > 0 ? ` · ${tn(s.leagues, '{n} liga', '{n} ligas')}` : ''}</p>
       </div>
       <ul className="flex" style={{ gap: '4cqw' }} aria-label={t('Medalhas')}>
         {[[1, s.gold], [2, s.silver], [3, s.bronze]].map(([p, n]) => (

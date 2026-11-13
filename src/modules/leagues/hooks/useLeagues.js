@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import {
-  getLeague, leagueAction, listDivisions, listEntries, listLeagueGamesOf, listMatches, listMyLeagues, listPublicLeagues,
+  getLeague, leagueAction, listDivisions, listEntries, listLeagueActivityOf, listMatches, listMyLeagues, listPublicLeagues,
 } from '../services/leagueService.js';
 import { leaguesVisible } from '../domain/leagueFlags.js';
 
@@ -19,7 +19,7 @@ export const leagueKeys = Object.freeze({
   divisions: (id) => ['leagues', 'one', id, 'divisions'],
   entries: (id) => ['leagues', 'one', id, 'entries'],
   matches: (id) => ['leagues', 'one', id, 'matches'],
-  gamesOf: (uid) => ['leagues', 'games-of', uid],
+  activityOf: (uid) => ['leagues', 'activity-of', uid],
 });
 
 /** A área Ligas aparece para esta pessoa? `loading` enquanto as flags carregam. */
@@ -46,18 +46,34 @@ export const useLeagueEntries = (id) => useQuery({ queryKey: leagueKeys.entries(
 export const useLeagueMatches = (id) => useQuery({ queryKey: leagueKeys.matches(id), queryFn: () => listMatches(id), enabled: Boolean(id) });
 
 /**
- * Os jogos de liga de uma pessoa — a MESMA consulta em Meu desempenho, no
- * perfil, no confronto direto e na gamificação (uma chave, um pedido).
+ * A liga na vida de uma pessoa — `{ games, upcoming, seasons }`, a MESMA
+ * consulta em Meu desempenho, no perfil, no confronto direto, na gamificação,
+ * em "Próximos" e na Carreira (uma chave, um pedido). Cada hook recorta a sua
+ * parte com `select`.
  */
-export const leagueGamesQuery = (uid) => ({
-  queryKey: leagueKeys.gamesOf(uid), queryFn: () => listLeagueGamesOf(uid), staleTime: 60_000,
+export const leagueActivityQuery = (uid) => ({
+  queryKey: leagueKeys.activityOf(uid), queryFn: () => listLeagueActivityOf(uid), staleTime: 60_000,
 });
 
-export const useLeagueGamesOf = (uid, enabled = true) => useQuery({ ...leagueGamesQuery(uid), enabled: Boolean(uid) && enabled });
+const soJogos = (a) => a.games;
+
+/** Para `qc.fetchQuery` (que ignora `select`): os jogos decididos, do mesmo cache. */
+export const fetchLeagueGames = (qc, uid) => qc.fetchQuery(leagueActivityQuery(uid)).then(soJogos);
+
+export const useLeagueActivityOf = (uid, enabled = true) => useQuery({ ...leagueActivityQuery(uid), enabled: Boolean(uid) && enabled });
+
+/** Os jogos de liga DECIDIDOS de uma pessoa (o formato de `games/domain/myGames.js`). */
+export const useLeagueGamesOf = (uid, enabled = true) => useQuery({ ...leagueActivityQuery(uid), select: soJogos, enabled: Boolean(uid) && enabled });
 
 export function useMyLeagueGames({ enabled = true } = {}) {
   const { user } = useAuth();
   return useLeagueGamesOf(user?.uid, enabled);
+}
+
+/** `{ games, upcoming, seasons }` de quem está logado. */
+export function useMyLeagueActivity({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useLeagueActivityOf(user?.uid, enabled);
 }
 
 /** Uma ação da liga no servidor; ao terminar, relê a liga e as listas. */
@@ -69,7 +85,9 @@ export function useLeagueAction() {
       if (vars?.leagueId) qc.invalidateQueries({ queryKey: leagueKeys.one(vars.leagueId) });
       qc.invalidateQueries({ queryKey: ['leagues', 'public'] });
       qc.invalidateQueries({ queryKey: ['leagues', 'mine'] });
-      qc.invalidateQueries({ queryKey: ['leagues', 'games-of'] });
+      qc.invalidateQueries({ queryKey: ['leagues', 'activity-of'] });
+      // O pódio da liga sai dos jogos: encerrar, reabrir ou corrigir placar muda a estante.
+      qc.invalidateQueries({ queryKey: ['trophies'] });
     },
   });
 }

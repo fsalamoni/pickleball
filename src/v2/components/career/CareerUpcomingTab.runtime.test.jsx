@@ -107,3 +107,28 @@ describe('CareerUpcomingTab — o plano', () => {
     expect(sel.getAttribute('aria-busy')).toBe('false');
   });
 });
+
+describe('CareerUpcomingTab — jogos das ligas', () => {
+  const jogo = (id, extra = {}) => ({ id, leagueId: 'l1', leagueName: 'Liga de Outono', round: 2, date: FUTURO, time: '19:30', team: '', partner: 'Ana', opponent: 'Bia / Caio', ...extra });
+  const comLiga = (extra) => act(() => {
+    raiz.render(<MemoryRouter><CareerUpcomingTab data={{ isPending: false, events: [], myTournaments: MEUS, retry: vi.fn(), ...extra }} save={save} onOpenEvent={vi.fn()} onRegister={vi.fn()} /></MemoryRouter>);
+  });
+
+  it('⭐ mostra os jogos sem placar, com a rodada, e leva à liga; sem data diz "a combinar"', () => {
+    montar([]);
+    comLiga({ leagueUpcoming: [jogo('a'), jogo('b', { date: null, round: null })] });
+    expect(el.textContent).toContain('Jogos das suas ligas');
+    expect(el.textContent).toContain('Contra Bia / Caio');
+    expect(el.textContent).toContain('Rodada 2');
+    expect(el.textContent).toContain('Data a combinar');
+    expect(el.querySelector('a[href="/ligas/l1"]')).not.toBeNull();
+  });
+
+  it('quem não joga liga não vê a seção; a leitura que falhou é dita', () => {
+    montar([]);
+    comLiga({ leagueUpcoming: [] });
+    expect(el.textContent).not.toContain('Jogos das suas ligas');
+    comLiga({ leagueUpcoming: undefined, leaguesError: true, retryLeagues: vi.fn() });
+    expect(el.textContent).toContain('Os jogos das suas ligas não carregaram');
+  });
+});

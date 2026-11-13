@@ -43,7 +43,7 @@ function render(props) {
 
 describe('TrophyShelf', () => {
   it('⭐ torneios da plataforma falharam: o pódio ligado fica de fora e a falha é dita', () => {
-    Object.assign(estado, { trofeus: ok({ torneios: [] }), fora: ok([trofeu('a'), trofeu('b', { platformTournamentId: 't1' })]), meus: falhou() });
+    Object.assign(estado, { trofeus: ok({ torneios: [], ligas: [] }), fora: ok([trofeu('a'), trofeu('b', { platformTournamentId: 't1' })]), meus: falhou() });
     const out = render();
     expect(out.textContent).toContain('Open a');
     expect(out.textContent).not.toContain('Open b');
@@ -51,7 +51,7 @@ describe('TrophyShelf', () => {
   });
 
   it('só o ligado e a conferência falhou: não afirma "estante vazia"', () => {
-    Object.assign(estado, { trofeus: ok({ torneios: [] }), fora: ok([trofeu('b', { platformTournamentId: 't1' })]), meus: falhou() });
+    Object.assign(estado, { trofeus: ok({ torneios: [], ligas: [] }), fora: ok([trofeu('b', { platformTournamentId: 't1' })]), meus: falhou() });
     const out = render();
     expect(out.textContent).not.toContain('estante ainda está vazia');
     expect(out.textContent).not.toContain('ainda não registrou');
@@ -59,19 +59,19 @@ describe('TrophyShelf', () => {
   });
 
   it('enquanto os torneios da plataforma carregam, a estante espera', () => {
-    Object.assign(estado, { trofeus: ok({ torneios: [] }), fora: ok([trofeu('b', { platformTournamentId: 't1' })]), meus: { isPending: true } });
+    Object.assign(estado, { trofeus: ok({ torneios: [], ligas: [] }), fora: ok([trofeu('b', { platformTournamentId: 't1' })]), meus: { isPending: true } });
     expect(render().textContent).not.toContain('Open b');
   });
 
   it('vazio com a Carreira ligada: oferece registrar um torneio de fora', () => {
-    Object.assign(estado, { trofeus: ok({ torneios: [] }), fora: ok([]), meus: ok([]) });
+    Object.assign(estado, { trofeus: ok({ torneios: [], ligas: [] }), fora: ok([]), meus: ok([]) });
     const link = render().querySelector('a[href="/carreira?registrar=1"]');
     expect(link?.textContent).toContain('Registrar torneio de fora');
   });
 
   it('⭐ "Ver todos" na estante de outra pessoa abre no lugar (não leva à minha)', () => {
     const torneios = [1, 2, 3, 4, 5, 6].map((n) => trofeu(`t${n}`, { kind: 'torneio', declared: false }));
-    Object.assign(estado, { trofeus: ok({ torneios }), fora: ok([]), meus: ok([]) });
+    Object.assign(estado, { trofeus: ok({ torneios, ligas: [] }), fora: ok([]), meus: ok([]) });
     const out = render({ uid: 'outra', mine: false, compacto: true });
     expect(out.querySelector('a[href="/perfil?secao=trofeus"]')).toBeNull();
     expect(out.querySelectorAll('li').length).toBe(4);
@@ -80,5 +80,31 @@ describe('TrophyShelf', () => {
     act(() => botao.click());
     expect(out.querySelectorAll('li').length).toBe(6);
     expect(out.querySelector('button[aria-expanded="true"]')).not.toBeNull();
+  });
+});
+
+describe('TrophyShelf — ligas', () => {
+  const daLiga = trofeu('liga', { kind: 'liga', declared: false, title: 'Liga de Outono', subtitle: 'Ouro', leagueId: 'l1', divisionId: 'd1', link: '/ligas/l1' });
+
+  it('⭐ o pódio de liga tem aba própria, soma nas medalhas e leva à liga', () => {
+    Object.assign(estado, { trofeus: ok({ torneios: [trofeu('t1', { kind: 'torneio', declared: false })], ligas: [daLiga] }), fora: ok([]), meus: ok([]) });
+    const out = render({ abaInicial: 'liga' });
+    const aba = [...out.querySelectorAll('[role="tab"]')].find((b) => b.textContent.includes('Ligas (1)'));
+    expect(aba?.getAttribute('aria-selected')).toBe('true');
+    expect(out.textContent).toContain('Liga de Outono');
+    expect(out.textContent).not.toContain('Open t1');
+    expect(out.querySelector('a[href="/ligas/l1"]')?.textContent).toContain('Ver a liga');
+    // Ouro do torneio + ouro da liga.
+    expect(out.querySelector('[aria-label="Medalhas por metal"]').textContent).toContain('2');
+  });
+
+  it('sem pódio de liga a aba não existe; ligas que não carregaram são ditas', () => {
+    Object.assign(estado, { trofeus: ok({ torneios: [trofeu('t1', { kind: 'torneio', declared: false })], ligas: [] }), fora: ok([]), meus: ok([]) });
+    expect(render({ abaInicial: 'liga' }).textContent).not.toContain('Ligas (');
+    act(() => root.unmount());
+    Object.assign(estado, { trofeus: ok({ torneios: [], ligas: undefined }), fora: ok([]), meus: ok([]) });
+    const out = render({ abaInicial: 'torneio' });
+    expect(out.textContent).toContain('Ficou de fora: as ligas');
+    expect(out.textContent).not.toContain('estante ainda está vazia');
   });
 });

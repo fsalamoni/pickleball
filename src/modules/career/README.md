@@ -12,7 +12,7 @@ career/
 │   │                   # "É este?" (matchPlatformTournament), selo, modo lista, "repetir",
 │   │                   # formatos (com o Americano) e formatHasPartner, faixas de nível
 │   │                   # (LEVEL_BRACKETS + as antigas aceitas, LEGACY_LEVEL_BRACKETS)
-│   ├── timeline.js     # buildCareerTimeline (5 fontes, cada uma falha sozinha), temporadas,
+│   ├── timeline.js     # buildCareerTimeline (5 fontes + as ligas, cada uma falha sozinha), temporadas,
 │   │                   # filtros da URL, troféus de fora, abas (CAREER_TAB), resumo da Minha área
 │   ├── draftQueue.js   # a fila do aparelho para quando não há sinal
 │   ├── careerDebrief.js # torneio de fora → origem `externo` do balanço (sem importar debrief.js)
@@ -37,7 +37,7 @@ career/
 │   │                   # PR 4: useCareerRanks, useOfficialRanks, useSaveCareerRank, useDeleteCareerRank,
 │   │                   # useShareCareerWithCoach, useStudentCareerShares, useFederationAgendaForMe
 │   │                   # (o serviço das federações só por import() dentro do queryFn)
-│   └── useCareerTimeline.js # useCareerTimeline (torneios, pódios, dias de jogo) — importe DAQUI;
+│   └── useCareerTimeline.js # useCareerTimeline (torneios, pódios, dias de jogo, ligas) — importe DAQUI;
 │                       # useCareer.js NÃO o reexporta (seria ciclo de import)
 └── i18n/locales/       # en.js, es.js
 ```

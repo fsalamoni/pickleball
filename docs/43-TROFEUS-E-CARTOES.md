@@ -17,7 +17,7 @@
 | Onde | O quê |
 |---|---|
 | Gestão do torneio → Resultados · aba Jogos do atleta · `/p/:id` (público) | **Pódio** de cada categoria ENCERRADA: os três degraus, "Cartão" por degrau, "Cartão do pódio" e **Parabenizar** |
-| Minha área → **Troféus** (`/perfil?secao=trofeus`) | A estante da pessoa: Torneios × Dias de jogo, contagem por metal, cada troféu abre o cartão |
+| Minha área → **Troféus** (`/perfil?secao=trofeus`) | A estante da pessoa: Torneios e, para quem tem pódio de liga, **Ligas**; contagem por metal (as duas juntas), cada troféu abre o cartão |
 | Perfil público do atleta (`/atletas/:uid`) | A mesma estante, compacta, com **Parabenizar** em cada troféu |
 | Carreira → **Conquistas** e a própria estante, aba **Fora da plataforma** (flag `athlete_career`, só na estante da PRÓPRIA pessoa) | Os pódios dos torneios de fora que ela registrou (`careerTrophies`), com o selo **Declarado** e o cartão com o rodapé **"Resultado declarado"** (`event.declared`, também no texto de compartilhar), sem link público. Nunca contam em ranking, rating nem XP — ver `docs/54-CARREIRA-DO-ATLETA.md` |
 
@@ -48,7 +48,21 @@ ganhou.
   (inscrições da pessoa × torneios ENCERRADOS e não arquivados, conferindo a
   CONTA na inscrição). **Só torneio dá troféu**: dia de jogo não é torneio —
   mesmo com ranking do dia, não tem medalha, pódio nem cartão de campeão
-  (pedido do dono, 2026-11-05; `TROPHY_KIND` tem só `torneio`).
+  (pedido do dono, 2026-11-05; `TROPHY_KIND` tem `torneio` e `liga`, nunca dia de jogo).
+- **Troféus de LIGA** (2026-11-13) — os três primeiros de cada DIVISÃO de uma
+  liga ENCERRADA levam troféu, a dupla ou a equipe inteira. O pódio é da
+  própria liga, `leagues/domain/leaguePodium.js` (`leagueDivisionPodium`):
+  com playoff CONCLUÍDO, campeão e vice são os da final e o 3º é o do jogo de
+  3º lugar (sem esse jogo, o melhor da tabela entre os que não chegaram à
+  final); playoff começado e não terminado não tem pódio; sem playoff, os três
+  primeiros da tabela (`computeLeagueStandings`) entre quem jogou e não saiu;
+  na escada, os três do topo (`computeLadder`) depois de uma sessão completa.
+  `leagueTrophies(uid, fontes)` confere a CONTA na inscrição; a leitura é
+  `listLeaguePodiumSourcesOf` (só ligas encerradas, só as divisões em que a
+  pessoa jogou, uma igualdade ou um `in` por consulta — zero índice). Nada é
+  gravado: reabrir a liga ou corrigir um placar muda a estante sozinho
+  (`useLeagueAction` invalida `['trophies']`). A liga não tem página pública:
+  o cartão sai sem link nem QR.
   `groupTrophies` conta por metal e diz o que **ficou de fora** quando
   uma fonte falhou (nunca zero). Serviço em `trophyService.js`
   (`Promise.allSettled`), hooks em `useTrophies.js`.
@@ -98,4 +112,9 @@ digitava um nome de campeão). O cartão só nasce do pódio REAL.
 3. Logo da arena no cartão só com `isAllowedImageUrl`.
 4. Foto de outro domínio que derruba a captura ⇒ o cartão sai sem fotos, e
    a pessoa é avisada (nunca "falhou" sem imagem nenhuma).
-5. Fonte de troféus que falhou é dita; a estante não afirma vazio.
+5. Fonte de troféus que falhou é dita; a estante não afirma vazio (torneios e
+   ligas falham cada um sozinho: `faltou` diz qual).
+6. Liga só tem troféu ENCERRADA, e quem saiu (`withdrawn`) não sobe ao pódio.
+   O parabéns do troféu de liga é um kudo de escopo `universal` com
+   `contextId` `trofeu:liga:{liga}:{divisão}:{posição}` (a lista de escopos
+   do kudo não tem "liga"; o formato do id é gravado — não renomeie).
