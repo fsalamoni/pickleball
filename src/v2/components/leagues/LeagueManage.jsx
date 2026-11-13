@@ -342,8 +342,8 @@ function Rodadas({ league, divisions, entries, matches }) {
       {bloqueada && <p className="rounded-2xl bg-paper p-4 text-sm text-gray-500">{league.status === 'draft' ? t('Abra as inscrições antes de gerar as rodadas.') : t('A liga está encerrada.')}</p>}
       {(divisions.data || []).map((d) => {
         const n = (entries.data || []).filter((e) => e.division_id === d.id && e.status === 'active').length;
-        const ms = (matches.data || []).filter((m) => m.division_id === d.id);
-        const comPlacar = ms.some((m) => m.status === 'done');
+        const ms = (matches.data || []).filter((m) => m.division_id === d.id && m.phase !== 'playoff');
+        const comPlacar = (matches.data || []).some((m) => m.division_id === d.id && m.status === 'done');
         const chave = `div:${d.id}`;
         const gerar = () => salvar({ action: 'schedule', leagueId: league.id, divisionId: d.id, start: league.status === 'open' }, t('Rodadas geradas.')).then(() => setConfirmar(null));
         return (

@@ -2,13 +2,20 @@
  * A TEMPORADA da liga: quando começa, de quanto em quanto tempo há rodada,
  * as datas sem jogo, o prazo de cada rodada e os turnos. Embaixo, a prévia
  * das primeiras datas — calculada pela mesma conta do calendário da liga.
+ * Fora da escada, o PLAYOFF do fim da temporada (os N primeiros, mata-mata).
  */
 import React, { useMemo, useState } from 'react';
 import { CalendarDays, Plus, X } from 'lucide-react';
-import { t } from '@/core/i18n';
+import { t, tk } from '@/core/i18n';
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { SEASON_CADENCE, SEASON_CADENCE_LABELS, isIsoDate, roundCalendar } from '@/modules/leagues/domain/leagueSeason';
+
+const TAMANHOS = [
+  { value: '2', label: tk('Os 2 primeiros: só a final') },
+  { value: '4', label: tk('Os 4 primeiros: semifinal e final') },
+  { value: '8', label: tk('Os 8 primeiros: quartas, semifinal e final') },
+];
 import { shortDate } from './leagueUi';
 
 function DateList({ id, label, hint, dates, onChange }) {
@@ -99,6 +106,36 @@ export default function SeasonFields({ value, onChange, idPrefix = 'temporada', 
       </div>
 
       <DateList id={id('pular')} label={ladder ? t('Datas sem sessão') : t('Datas sem rodada')} hint={ladder ? t('Feriados e pausas: a sessão passa para a data seguinte.') : t('Feriados e pausas: a rodada passa para a data seguinte.')} dates={s.skip_dates} onChange={(v) => set({ skip_dates: v })} />
+
+      {!ladder && (
+        <div className="space-y-3 rounded-2xl border border-gray-100 p-4">
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" checked={s.playoff?.enabled === true} onChange={(e) => set({ playoff: { size: 4, ...s.playoff, enabled: e.target.checked } })} className="mt-0.5 h-4 w-4 accent-ink" />
+            <span>
+              <span className="font-semibold text-ink">{t('Playoff no fim da temporada')}</span>
+              <span className="block text-xs text-gray-500">{t('Os primeiros de cada divisão disputam um mata-mata pelo título.')}</span>
+            </span>
+          </label>
+          {s.playoff?.enabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <V2Field label={t('Quem entra')} htmlFor={id('playoff')}>
+                <V2Select
+                  id={id('playoff')}
+                  value={String(s.playoff?.size || 4)}
+                  onChange={(e) => set({ playoff: { ...s.playoff, size: Number(e.target.value) } })}
+                  options={TAMANHOS.map((o) => ({ value: o.value, label: t(o.label) }))}
+                />
+              </V2Field>
+              {Number(s.playoff?.size || 4) >= 4 && (
+                <label className="flex items-center gap-2 self-end pb-3 text-sm text-gray-600">
+                  <input type="checkbox" checked={s.playoff?.third_place === true} onChange={(e) => set({ playoff: { ...s.playoff, third_place: e.target.checked } })} className="h-4 w-4 accent-ink" />
+                  {t('Disputa do 3º lugar')}
+                </label>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-2xl border border-gray-100 bg-paper p-4">
         <p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-gray-500">

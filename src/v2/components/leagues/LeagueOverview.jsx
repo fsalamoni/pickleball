@@ -19,7 +19,7 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
   const season = normalizeSeason(league.season);
   const escada = isLadderFormat(league.format);
   // Na escada o calendário é de SESSÕES (`session`); `round` é a volta dentro da quadra.
-  const rodadas = useMemo(() => Math.max(0, ...(matches.data || []).map((m) => (escada ? m.session : m.round) || 0)), [matches.data, escada]);
+  const rodadas = useMemo(() => Math.max(0, ...(matches.data || []).filter((m) => m.phase !== 'playoff').map((m) => (escada ? m.session : m.round) || 0)), [matches.data, escada]);
   const rotulo = (n) => (escada ? t('Sessão {n}', { n }) : t('Rodada {n}', { n }));
   const calendario = useMemo(() => roundCalendar(season, rodadas || 5), [season, rodadas]);
   const agora = rodadas ? currentRound(calendario, hojeLocal()) : null;

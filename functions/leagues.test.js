@@ -226,3 +226,58 @@ describe('rodadas e placar', () => {
     expect(db.store.docs.get(`leagues/${leagueId}`).member_uids).not.toContain('bia');
   });
 });
+
+describe('playoff', () => {
+  async function comPlayoff() {
+    const db = banco();
+    const { leagueId } = await chama(db, ANA, { ...base, season: { start_date: '2026-12-01', playoff: { enabled: true, size: 4, third_place: true } } });
+    await chama(db, ANA, { action: 'status', leagueId, to: 'open' });
+    const [[divPath]] = docs(db, `leagues/${leagueId}/divisions/`);
+    const divisionId = divPath.split('/').pop();
+    for (const n of ['A', 'B', 'C', 'D', 'E']) {
+      await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ name: `${n}1` }, { name: `${n}2` }] });
+    }
+    await chama(db, ANA, { action: 'schedule', leagueId, divisionId, start: true });
+    const ids = docs(db, `leagues/${leagueId}/entries/`).map(([p]) => p.split('/').pop());
+    return { db, leagueId, divisionId, ids };
+  }
+  const doPlayoff = (db, leagueId) => docs(db, `leagues/${leagueId}/matches/`).filter(([, m]) => m.phase === 'playoff');
+  const placar = (db, leagueId, m, games) => chama(db, ANA, { action: 'result', leagueId, matchId: m[0].split('/').pop(), games });
+
+  it('monta a chave pela tabela, avança fase a fase e desfaz a seguinte quando o placar muda', async () => {
+    const { db, leagueId, divisionId, ids } = await comPlayoff();
+    await expect(chama(db, BIA, { action: 'playoff', leagueId, divisionId, seeds: ids })).rejects.toThrow(/Só quem organiza/);
+    await expect(chama(db, ANA, { action: 'playoff', leagueId, divisionId, seeds: [...ids, 'outra'] })).rejects.toThrow(/não está ativa/);
+    const r = await chama(db, ANA, { action: 'playoff', leagueId, divisionId, seeds: ids });
+    expect(r).toEqual({ matches: 2, round: 1 });
+    const semis = doPlayoff(db, leagueId).sort((x, y) => x[1].slot - y[1].slot);
+    expect(semis.map(([, m]) => [m.side_a, m.side_b])).toEqual([[ids[0], ids[3]], [ids[1], ids[2]]]);
+    await expect(chama(db, ANA, { action: 'playoff', leagueId, divisionId })).rejects.toThrow(/Termine os jogos/);
+    await placar(db, leagueId, semis[0], [{ a: 11, b: 5 }]);
+    await placar(db, leagueId, semis[1], [{ a: 4, b: 11 }]);
+    await chama(db, ANA, { action: 'playoff', leagueId, divisionId });
+    const fase2 = doPlayoff(db, leagueId).filter(([, m]) => m.round === 2);
+    expect(fase2.map(([, m]) => [m.third, m.side_a, m.side_b]).sort()).toEqual([[false, ids[0], ids[2]], [true, ids[3], ids[1]]]);
+    // Mudar a semifinal com a final sem placar: a fase 2 sai de novo.
+    await placar(db, leagueId, semis[1], [{ a: 11, b: 4 }]);
+    expect(doPlayoff(db, leagueId).filter(([, m]) => m.round === 2)).toHaveLength(0);
+    await chama(db, ANA, { action: 'playoff', leagueId, divisionId });
+    const final = doPlayoff(db, leagueId).find(([, m]) => m.round === 2 && !m.third);
+    expect(final[1].side_b).toBe(ids[1]);
+    await placar(db, leagueId, final, [{ a: 11, b: 9 }]);
+    await expect(placar(db, leagueId, semis[0], [{ a: 2, b: 11 }])).rejects.toThrow(/fase seguinte do playoff já tem placar/);
+    const terceiro = doPlayoff(db, leagueId).find(([, m]) => m.third);
+    await placar(db, leagueId, terceiro, [{ a: 11, b: 7 }]);
+    await expect(chama(db, ANA, { action: 'playoff', leagueId, divisionId })).rejects.toThrow(/já terminou/);
+    await expect(chama(db, ANA, { action: 'playoff', leagueId, divisionId, reseed: true, seeds: ids })).rejects.toThrow(/não é refeita/);
+  });
+
+  it('só com o playoff ligado na temporada', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaAberta(db);
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ name: 'Mia' }, { name: 'Nina' }] });
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ name: 'Lia' }, { name: 'Gal' }] });
+    await chama(db, ANA, { action: 'schedule', leagueId, divisionId, start: true });
+    await expect(chama(db, ANA, { action: 'playoff', leagueId, divisionId, seeds: [] })).rejects.toThrow(/Ligue o playoff/);
+  });
+});

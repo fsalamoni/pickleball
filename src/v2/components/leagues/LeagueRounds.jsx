@@ -30,7 +30,7 @@ export default function LeagueRounds({ league, divisions, entries, matches, canM
 
   const rodadas = useMemo(() => {
     if (!div) return [];
-    const ms = (matches.data || []).filter((m) => m.division_id === div.id);
+    const ms = (matches.data || []).filter((m) => m.division_id === div.id && m.phase !== 'playoff');
     const total = Math.max(0, ...ms.map((m) => m.round || 0));
     const cal = roundCalendar(normalizeSeason(league.season), total);
     const ativos = (entries.data || []).filter((e) => e.division_id === div.id && e.status === 'active');
