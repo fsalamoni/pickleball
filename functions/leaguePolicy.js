@@ -8,7 +8,7 @@
 
 const FORMATS = Object.freeze({
   divisional_pairs: { entry: 'pair', players: 2, available: true },
-  flex_pairs: { entry: 'pair', players: 2, available: true },
+  flex_pairs: { entry: 'pair', players: 2, available: true, self_report: true },
   divisional_singles: { entry: 'single', players: 1, available: true },
   ladder_pairs: { entry: 'pair', players: 2, available: true },
   ladder_individual: { entry: 'individual', players: 1, available: true },

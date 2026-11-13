@@ -21,6 +21,7 @@ describe('paridade das ligas', () => {
     const cliente = Object.fromEntries(Object.entries(LEAGUE_FORMAT_META)
       .map(([id, m]) => [id, {
         entry: m.entry, players: m.players, available: m.available,
+        ...(m.self_report ? { self_report: true } : {}),
         ...(m.lines ? { lines: m.lines.length, dreambreaker: m.dreambreaker, composition: m.composition } : {}),
       }]));
     expect(s.FORMATS).toEqual(cliente);

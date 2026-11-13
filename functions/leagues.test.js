@@ -281,3 +281,48 @@ describe('playoff', () => {
     await expect(chama(db, ANA, { action: 'playoff', leagueId, divisionId, seeds: [] })).rejects.toThrow(/Ligue o playoff/);
   });
 });
+
+describe('liga flexível: quem joga lança e o outro lado confirma', () => {
+  async function flex() {
+    const db = banco();
+    const { leagueId } = await chama(db, ANA, { ...base, format: 'flex_pairs' });
+    await chama(db, ANA, { action: 'status', leagueId, to: 'open' });
+    const [[divPath]] = docs(db, `leagues/${leagueId}/divisions/`);
+    const divisionId = divPath.split('/').pop();
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'bia' }, { uid: 'duda' }] });
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'cau' }, { uid: 'edu' }] });
+    await chama(db, ANA, { action: 'schedule', leagueId, divisionId, start: true });
+    const [[jogoPath]] = docs(db, `leagues/${leagueId}/matches/`);
+    return { db, leagueId, matchId: jogoPath.split('/').pop(), jogoPath };
+  }
+  const avisos = (db, uid, titulo) => docs(db, 'notifications/').filter(([, n]) => n.user_id === uid && JSON.stringify(n).includes(titulo));
+  const EDU = { uid: 'edu', name: 'Edu' };
+
+  it('lança, contesta, lança de novo e confirma', async () => {
+    const { db, leagueId, matchId, jogoPath } = await flex();
+    await expect(chama(db, ANA, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 7 }] })).rejects.toThrow(/Só quem joga/);
+    await chama(db, BIA, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 7 }] });
+    expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'reported', games: [], report: { side: 'a', by: 'bia', games: [{ a: 11, b: 7 }] } });
+    expect(avisos(db, 'cau', 'Confirme o placar')).toHaveLength(1);
+    await expect(chama(db, CAU, { action: 'report', leagueId, matchId, games: [{ a: 7, b: 11 }] })).rejects.toThrow(/outro lado já lançou/);
+    await expect(chama(db, DUDA, { action: 'confirm', leagueId, matchId, accept: true })).rejects.toThrow(/outro lado do jogo/);
+    await expect(chama(db, CAU, { action: 'confirm', leagueId, matchId, reason: 'x' })).rejects.toThrow(/Diga o que está errado/);
+    await chama(db, CAU, { action: 'confirm', leagueId, matchId, reason: 'Foi 11 a 5' });
+    expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'disputed', dispute: { by: 'cau', reason: 'Foi 11 a 5' } });
+    expect(avisos(db, 'ana', 'Placar contestado')).toHaveLength(1);
+    await chama(db, EDU, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 5 }] });
+    await chama(db, BIA, { action: 'confirm', leagueId, matchId, accept: true });
+    expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'done', games: [{ a: 11, b: 5 }], recorded_by: 'edu', confirmed_by: 'bia', report: null });
+    await expect(chama(db, BIA, { action: 'report', leagueId, matchId, games: [{ a: 11, b: 2 }] })).rejects.toThrow(/já tem placar/);
+  });
+
+  it('fora da liga flexível o placar é da organização', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaAberta(db);
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'bia' }, { uid: 'duda' }] });
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, players: [{ uid: 'cau' }, { uid: 'edu' }] });
+    await chama(db, ANA, { action: 'schedule', leagueId, divisionId, start: true });
+    const [[jogoPath]] = docs(db, `leagues/${leagueId}/matches/`);
+    await expect(chama(db, BIA, { action: 'report', leagueId, matchId: jogoPath.split('/').pop(), games: [{ a: 11, b: 7 }] })).rejects.toThrow(/quem lança o placar é a organização/);
+  });
+});

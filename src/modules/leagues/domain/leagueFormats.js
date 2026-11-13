@@ -10,7 +10,9 @@
  * (`leagueLadder.js`). Nas EQUIPES o confronto tem `lines` jogos de duplas
  * (um game cada) e, com `dreambreaker`, o empate é decidido no DreamBreaker;
  * `composition` diz como a equipe é montada (`two_two`: 2 homens e 2
- * mulheres; `same`: todos da mesma categoria; `any`: livre).
+ * mulheres; `same`: todos da mesma categoria; `any`: livre). Com
+ * `self_report` (a liga flexível) quem joga lança o placar e o outro lado
+ * confirma; contestado, a organização decide.
  */
 import { tk } from '@/core/i18n';
 
@@ -43,10 +45,10 @@ export const LEAGUE_FORMAT_META = Object.freeze({
     how: tk('Pontos corridos dentro da divisão: cada dupla enfrenta todas as outras, uma rodada por data.'),
   },
   [LEAGUE_FORMAT.FLEX_PAIRS]: {
-    family: 'pairs', entry: LEAGUE_ENTRY.PAIR, players: 2, available: true,
+    family: 'pairs', entry: LEAGUE_ENTRY.PAIR, players: 2, available: true, self_report: true,
     label: tk('Liga flexível'),
     summary: tk('Divisões de 5 a 8 duplas. Em cada rodada as duplas combinam o dia e o local dentro do prazo.'),
-    how: tk('Cada rodada tem um prazo. As duplas combinam onde e quando jogar, e a organização lança o placar até o fim do prazo.'),
+    how: tk('Cada rodada tem um prazo. As duplas combinam onde e quando jogar; uma delas lança o placar e a outra confirma. Se houver contestação, a organização decide.'),
   },
   [LEAGUE_FORMAT.DIVISIONAL_SINGLES]: {
     family: 'individual', entry: LEAGUE_ENTRY.SINGLE, players: 1, available: true,

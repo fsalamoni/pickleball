@@ -56,3 +56,7 @@ componentes em `src/v2/components/leagues/`.
    chave vem da tabela da temporada e cada fase dos vencedores da anterior, pela
    MESMA conta nos dois lados. Corrigir o placar de uma fase apaga a seguinte sem
    placar e é recusado se ela já tiver placar.
+10. **Liga flexível**: quem joga lança (`report`) e o OUTRO lado confirma ou
+    contesta (`confirm`); o servidor confere o lado pelas inscrições do jogo, o
+    placar a confirmar não conta na tabela e o `result` da organização sempre
+    vence. `self_report` mora no formato (paridade).
