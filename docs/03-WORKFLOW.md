@@ -536,6 +536,13 @@ dependências das funções são instaladas pelo script se faltarem. Os ajudante
 dos emuladores (semear documento, ler, criar conta) moram em
 `tests/e2e/emulador.js`.
 
+**Imagem do runner fixa.** O job `e2e` (`ci.yml`) e o job `deploy`
+(`deploy-firebase.yml`, por causa do passo "Conferir o site no ar") rodam em
+`ubuntu-24.04`, não em `ubuntu-latest`: em 2026-11-13 o rótulo "latest"
+passou a cair no Ubuntu 26.04 e o Playwright 1.59 recusa instalar o Chromium
+nele (`Playwright does not support chromium on ubuntu26.04-x64`). Voltar a
+"latest" só junto com um Playwright que suporte a imagem nova.
+
 | Arquivo | O que prova |
 |---|---|
 | `public-routes.spec.js` | o site abre, `/login` tem o formulário, rota fechada leva ao login. Também roda no **site no ar** depois de cada deploy |

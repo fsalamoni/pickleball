@@ -14,7 +14,11 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Imagem FIXA (não ubuntu-latest): o rótulo "latest" passou a cair no
+    # Ubuntu 26.04 e o Playwright 1.59 recusa instalar o Chromium nele
+    # ("does not support chromium on ubuntu26.04-x64", PR #424). Volte a
+    # "latest" só junto com um Playwright que suporte a imagem nova.
+    runs-on: ubuntu-24.04
     # Rede de segurança contra travamento (CLI do Firebase/rede). Um deploy
     # normal termina bem antes disso; 30min evita run preso por horas.
     timeout-minutes: 30
