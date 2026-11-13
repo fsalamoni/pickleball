@@ -37,19 +37,36 @@ fi
 # lista as que falharam ("<TAB>picklerush:nome(região)"): só ELAS são tentadas
 # de novo, até duas vezes. Erro sem essa lista é do deploy inteiro (credencial,
 # build, troca de tipo de gatilho) e repetir não ajuda.
+#
+# 🐞 No deploy do #424 a CLI saiu com código 0 SEM "Deploy complete!" e sem
+# confirmar 7 das 131 funções (as últimas da fila, depois de um aviso de cota
+# "Waiting to retry..."): o passo ficou verde e o painel disse "ok". Código 0
+# não basta: cada função pedida tem de ter a sua linha de confirmação, e as
+# que ficaram sem ela são tentadas de novo como as que falharam.
 LOG=$(mktemp)
 FALHAS=""
+SEM_CONFIRMAR=""
 for TENTATIVA in 1 2 3; do
   echo "Publicando (codebase ${CODEBASE}, tentativa ${TENTATIVA}): $FUNCS"
   firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1 | tee "$LOG"
   RC=${PIPESTATUS[0]}
-  [ "$RC" -eq 0 ] && exit 0
-  FALHAS=$(bash scripts/functions-deploy-falhas.sh "$CODEBASE" < "$LOG")
-  [ -z "$FALHAS" ] && break
+  if [ "$RC" -eq 0 ]; then
+    PEDIDAS=$(echo "$FUNCS" | sed "s/functions:${CODEBASE}://g")
+    FALHAS=$(bash scripts/functions-deploy-falhas.sh "$CODEBASE" "$PEDIDAS" < "$LOG")
+    [ -z "$FALHAS" ] && exit 0
+    RC=1
+    SEM_CONFIRMAR="$FALHAS"
+  else
+    SEM_CONFIRMAR=""
+    FALHAS=$(bash scripts/functions-deploy-falhas.sh "$CODEBASE" < "$LOG")
+    [ -z "$FALHAS" ] && break
+  fi
   # Nunca vazio aqui: `--only` vazio voltaria a significar "tudo".
   FUNCS=$(echo "$FALHAS" | sed "s/[^,]*/functions:${CODEBASE}:&/g")
   [ "$TENTATIVA" -lt 3 ] && { echo "Não subiram: $FALHAS. Nova tentativa em 60 s, só com elas."; sleep 60; }
 done
-# Quem chama (o deploy) lê esta linha para dizer QUAIS ficaram para trás.
+# Quem chama (o deploy) lê estas linhas: o motivo (a última "Error:") e QUAIS
+# ficaram para trás.
+[ -n "$SEM_CONFIRMAR" ] && echo "Error: a CLI do Firebase terminou sem confirmar a atualização destas funções."
 [ -n "$FALHAS" ] && echo "FUNCOES_COM_FALHA=$FALHAS"
 exit "$RC"

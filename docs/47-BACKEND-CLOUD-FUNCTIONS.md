@@ -761,7 +761,12 @@ outra função, cheio de códigos de cor do terminal, como se fosse o erro; e
 
 1. `scripts/functions-deploy.sh` **tenta de novo só as funções que falharam**
    (até três tentativas, 60 s entre elas; os nomes saem do log por
-   `scripts/functions-deploy-falhas.sh`). Sobrando alguma, o script imprime
+   `scripts/functions-deploy-falhas.sh`). **Código de saída 0 não basta**:
+   o mesmo script, chamado com a lista das funções pedidas, devolve as que
+   ficaram sem a linha de confirmação ("Successful create/update operation"
+   ou "Skipped"), e elas são tentadas de novo — no deploy do #424 a CLI
+   terminou com 0, sem "Deploy complete!", deixando 7 de 131 sem confirmar
+   depois de um aviso de cota. Sobrando alguma, o script imprime
    `FUNCOES_COM_FALHA=…`.
 2. O workflow grava a ÚLTIMA linha `Error:` (mais a última `Unable to …`),
    sem as cores, e os nomes em `deploy.failed`. O painel passa a dizer **"saiu

@@ -740,7 +740,10 @@ que não está no código local como "removida" e a APAGA.
    passageira numa delas (cota da API, "Unable to set the invoker for the IAM
    policy") fazia o deploy inteiro sair como falho com as outras 130 no ar. O
    script lê do log quais não subiram (`scripts/functions-deploy-falhas.sh`),
-   espera 60 s e publica SÓ elas, até três tentativas; se ainda sobrar alguma,
+   espera 60 s e publica SÓ elas, até três tentativas (e código de saída 0
+   não basta: função pedida que ficou sem a linha "Successful … operation" no
+   log conta como falha — no deploy do #424 a CLI saiu com 0 sem confirmar 7
+   de 131); se ainda sobrar alguma,
    imprime `FUNCOES_COM_FALHA=a,b` e sai com erro — o workflow grava os nomes
    e o painel diz "saiu em parte", com as funções que ficaram na versão anterior.
 3. **Vigilância** — `.github/workflows/functions-watchdog.yml`, a cada 30 min:
