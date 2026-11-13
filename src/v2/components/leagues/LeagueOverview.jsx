@@ -105,7 +105,7 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
           {!escada && pts.mode !== 'win_pct' && (
             <p className="text-sm text-gray-600">{t('Vitória {v} · derrota {d} · W.O. {w}', { v: pts.win ?? 3, d: pts.loss ?? 1, w: pts.wo_loss ?? 0 })}</p>
           )}
-          <p className="text-xs leading-5 text-gray-500">{t('Os jogos da liga ainda não contam no ranking da plataforma nem no DUPR.')}</p>
+          <p className="text-xs leading-5 text-gray-500">{t('Os jogos da liga contam no ranking da plataforma e vão ao DUPR com as regras dos torneios: valem do lançamento do placar, e só quando todos os atletas têm conta.')}</p>
         </V2Surface>
       </div>
     </div>

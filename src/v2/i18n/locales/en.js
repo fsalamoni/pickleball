@@ -655,4 +655,8 @@ export default {
   "Do clube": "From the club",
   "Da plataforma": "From the platform",
   "convidado": "invited",
+  "Torneio e liga — simples e duplas (grupos, chave, pontos corridos, suíço, escada de duplas)": "Tournament and league — singles and doubles (groups, bracket, round robin, Swiss, doubles ladder)",
+  "Torneio e liga — equipes": "Tournament and league — teams",
+  "Torneio — Americano e Mexicano (por modalidade) e liga em escada individual": "Tournament — Americano and Mexicano (per division) and individual ladder league",
+  "Liga": "League",
 };

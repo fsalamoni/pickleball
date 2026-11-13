@@ -126,7 +126,7 @@ export default function LeaguePlayoff({ league, divisions, entries, matches, can
               <h3 className="font-display text-lg font-bold text-ink">{t(playoffRoundLabel(f.round, quadro.total))}</h3>
               {f.jogos.length ? (
                 <ul className="space-y-2">
-                  {f.jogos.map((m) => <MatchRow key={m.id} league={league} match={m} nome={nome} meu={meus.has(m.side_a) || meus.has(m.side_b)} editavel={editavel} />)}
+                  {f.jogos.map((m) => <MatchRow key={m.id} league={league} match={m} nome={nome} porId={porId} meu={meus.has(m.side_a) || meus.has(m.side_b)} editavel={editavel} />)}
                 </ul>
               ) : (
                 <p className="text-sm text-gray-500">{t('Sai quando a fase anterior terminar.')}</p>
@@ -134,7 +134,7 @@ export default function LeaguePlayoff({ league, divisions, entries, matches, can
               {f.round === quadro.total && quadro.terceiro && (
                 <div className="space-y-2 border-t border-gray-100 pt-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Disputa do 3º lugar')}</p>
-                  <ul><MatchRow league={league} match={quadro.terceiro} nome={nome} meu={meus.has(quadro.terceiro.side_a) || meus.has(quadro.terceiro.side_b)} editavel={editavel} /></ul>
+                  <ul><MatchRow league={league} match={quadro.terceiro} nome={nome} porId={porId} meu={meus.has(quadro.terceiro.side_a) || meus.has(quadro.terceiro.side_b)} editavel={editavel} /></ul>
                 </div>
               )}
             </V2Surface>

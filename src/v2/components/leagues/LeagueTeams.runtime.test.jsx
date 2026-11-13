@@ -65,4 +65,37 @@ describe('confronto de equipes', () => {
     await act(async () => { salvar().click(); });
     expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ action: 'result', dreambreaker: { a: 21, b: 17 } }));
   });
+
+  it('a escalação de cada linha vem sugerida, pode ser trocada e aparece no placar', async () => {
+    const p = (uid, gender) => ({ uid, name: uid.toUpperCase(), gender });
+    const porId = new Map([
+      ['ea', { id: 'ea', players: [p('ana', 'female'), p('caio', 'male'), p('bia', 'female'), p('davi', 'male')] }],
+      ['eb', { id: 'eb', players: [p('eva', 'female'), p('fred', 'male'), { uid: null, name: 'Rui', gender: 'male' }, p('gil', 'female')] }],
+    ]);
+    const c = await render(<MatchRow league={league} match={{ ...feito, games: [], dreambreaker: null, status: 'scheduled' }} nome={nome} porId={porId} meu={false} editavel />);
+    await act(async () => { c.querySelector('button[aria-label="Lançar o placar"]').click(); });
+    const selects = () => [...c.querySelectorAll('select[aria-label^="Quem jogou"]')];
+    expect(selects()).toHaveLength(8);
+    expect(selects()[0].value).toBe('ana|bia');
+    expect(selects()[1].value).toBe('eva|gil');
+    // O homem sem conta deixa em branco as linhas dele na equipe B.
+    expect(selects()[3].value).toBe('');
+    expect(selects()[5].value).toBe('eva|fred');
+    expect(c.textContent).toContain('Linha sem escalação conta só na tabela da liga');
+    await act(async () => {
+      const s = selects()[4];
+      s.value = '';
+      s.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const campos = [...c.querySelectorAll('input[type="number"]')];
+    const placar = [21, 15, 21, 18, 21, 19, 12, 21];
+    await act(async () => { campos.forEach((i, k) => digita(i, String(placar[k]))); });
+    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Salvar placar').click(); });
+    const enviado = mutateAsync.mock.calls[0][0];
+    expect(enviado.lineups).toEqual([{ a: ['ana', 'bia'], b: ['eva', 'gil'] }, null, null, null]);
+
+    act(() => root.unmount()); el.remove();
+    const d = await render(<MatchRow league={league} match={{ ...feito, lineups: enviado.lineups }} nome={nome} porId={porId} meu={false} editavel={false} />);
+    expect(d.textContent).toContain('ANA + BIA × EVA + GIL');
+  });
 });

@@ -108,6 +108,8 @@ export function describeRankingExclusions(worker) {
   const d = ex.dia_de_jogo || {};
   const pt = tor.por_motivo || {};
   const pd = d.por_motivo || {};
+  const lg = ex.liga || {};
+  const pl = lg.por_motivo || {};
   const foraDoTorneio = tor.torneio_fora || {};
 
   const linhas = [];
@@ -122,6 +124,9 @@ export function describeRankingExclusions(worker) {
   add('sem_vencedor_torneio', pt.sem_vencedor, t('partida(s) de torneio encerrada(s) sem vencedor.'));
   add('jogo_incompleto', pd.jogo_incompleto, t('jogo(s) de dia de jogo publicados com atleta sem conta.'));
   add('sem_vencedor_dia', pd.sem_vencedor, t('jogo(s) de dia de jogo sem vencedor.'));
+  add('liga_sem_conta', pl.sem_conta, t('jogo(s) de liga com atleta SEM CONTA na inscrição.'));
+  add('liga_sem_escalacao', pl.sem_escalacao, t('linha(s) de confronto de equipe da liga sem escalação (quem jogou). Contam só na tabela da liga.'));
+  add('liga_sem_vencedor', pl.sem_vencedor, t('jogo(s) de liga sem vencedor.'));
 
   const torneios = (Array.isArray(ex.torneios) ? ex.torneios : []).map((x) => ({
     id: x?.id || null,
@@ -135,7 +140,7 @@ export function describeRankingExclusions(worker) {
   }));
 
   return {
-    usadas: n(tor.usadas) + n(d.usadas),
+    usadas: n(tor.usadas) + n(d.usadas) + n(lg.usadas),
     fora: linhas.reduce((s, l) => s + l.quantidade, 0),
     linhas,
     torneios,

@@ -15,7 +15,11 @@
  *   enviada → atualizada (placar mudou) | excluída (partida anulada/despublicada)
  *   falhou → nova tentativa com espera crescente (até 6), depois só o admin
  *
- * O `identifier` (`pr:tm:<id>` / `pr:gd:<id>`) é único: reenviar não duplica.
+ * Os jogos de LIGA entram com as regras do torneio (`leagueRanking.js`): os
+ * grupos do torneio, a carência, `leagues.dupr_submit` como escolha de quem
+ * cria e, nas equipes, uma partida por linha com a escalação lançada.
+ *
+ * O `identifier` (`pr:tm:<id>` / `pr:gd:<id>` / `pr:lg:<liga>_<jogo>[_<linha>]`) é único: reenviar não duplica.
  * Partida já enviada não sai do DUPR por mudança de política nem por alguém
  * desconectar a conta — só quando ela deixa de existir como resultado (placar
  * apagado, dia despublicado, torneio cancelado/arquivado/privado) ou quando o
@@ -33,6 +37,7 @@ const {
 } = require('./duprPolicy');
 const { duprMatchPayload } = require('./duprPilot');
 const { isEligible } = require('./ranking');
+const { loadLeagueGames, leagueDuprBucket } = require('./leagueRanking');
 
 const COL = 'dupr_submissions';
 const MIN = 60 * 1000;
@@ -96,8 +101,27 @@ const escolha = (v) => (typeof v === 'boolean' ? v : null);
  * W.O., de torneio fora do ranking ou chancelado não vira candidata. Cada uma
  * sai com o que a política e o envio precisam.
  */
-function buildCandidates({ tournamentMatches = [], clubEventMatches = [], regById = new Map(), tournamentById = new Map(), modalityById = new Map(), gameDayById = new Map() }) {
+function buildCandidates({ tournamentMatches = [], clubEventMatches = [], regById = new Map(), tournamentById = new Map(), modalityById = new Map(), gameDayById = new Map(), leagueGames = [] }) {
   const out = [];
+  // Ligas: os jogos já vêm resolvidos (`loadLeagueGames`); W.O. não vai ao DUPR.
+  leagueGames.forEach((j) => {
+    if (j.wo) return;
+    const lg = j.league || {};
+    const at = j.at || 0;
+    out.push({
+      identifier: duprIdentifier(DUPR_ID_KIND.LEAGUE_MATCH, `${lg.id}_${j.key}`),
+      ref: `leagues/${lg.id}/matches/${j.match_id}`,
+      origin: 'league',
+      bucket: leagueDuprBucket(lg.format),
+      creatorChoice: escolha(lg.dupr_submit),
+      sideA: j.side_a, sideB: j.side_b, semConta: false,
+      games: j.games, winner: j.winner,
+      at, date: j.played_date || dataSP(at), event: texto(lg.name) || 'Liga', bracket: texto(j.division_name),
+      location: local(lg.location, lg.city, lg.state), playType: 'TOURNAMENT', grace: true,
+      tournament_id: null, modality_id: null, game_day_id: null, league_id: lg.id,
+      organizer_uid: lg.creator_uid || null,
+    });
+  });
   tournamentMatches.forEach((m) => {
     if (m.team_confrontation || m.status === 'walkover') return;
     if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
@@ -215,7 +239,7 @@ function reconcile(existing, c, entry, { now, graceMs }) {
   const base = {
     identifier: c.identifier, ref: c.ref, origin: c.origin, bucket: c.bucket, event: c.event, date: c.date,
     tournament_id: c.tournament_id || null, modality_id: c.modality_id || null, game_day_id: c.game_day_id || null,
-    organizer_uid: c.organizer_uid || null, uids: [...c.sideA, ...c.sideB], side_a: c.sideA, side_b: c.sideB,
+    league_id: c.league_id || null, organizer_uid: c.organizer_uid || null, uids: [...c.sideA, ...c.sideB], side_a: c.sideA, side_b: c.sideB,
     games: c.games, decision: entry.decision.reason,
   };
   if (entry.kind === 'skip') {
@@ -358,7 +382,8 @@ async function passada(ctx, getClient, policy, force) {
     lerPorId(db, 'tournament_modalities', tms.map((m) => m.modality_id)),
     lerPorId(db, 'game_days', cegs.filter((m) => m.source === 'athlete_game_day').map((m) => m.event_id)),
   ]);
-  let candidatos = buildCandidates({ tournamentMatches: tms, clubEventMatches: cegs, regById, tournamentById, modalityById, gameDayById });
+  const ligas = await loadLeagueGames(db);
+  let candidatos = buildCandidates({ tournamentMatches: tms, clubEventMatches: cegs, regById, tournamentById, modalityById, gameDayById, leagueGames: ligas.games });
 
   if (policy.audience === DUPR_AUDIENCE.ADMINS) {
     const adm = await db.collection('users').where('role', '==', 'platform_admin').get();

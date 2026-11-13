@@ -194,16 +194,22 @@ livro, um documento por partida em `dupr_submissions/{identifier}`
   passada faz até 60 chamadas ao DUPR; o resto fica para a próxima.
 * **O que lê**: as mesmas partidas decididas do ranking — `tournament_matches`
   (torneio elegível, como em `isEligible`) e `club_event_games` (dias de jogo
-  publicados e confrontos de equipe). W.O. e partida sem vencedor ficam de fora.
+  publicados e confrontos de equipe) — e, desde 2026-11-13, os jogos decididos das
+  **ligas** (`loadLeagueGames`, `functions/leagueRanking.js`; identificador
+  `pr:lg:{liga}_{jogo}[_{linha}]`, `origin: 'league'`, tratados como torneio:
+  `playType: 'TOURNAMENT'` e carência; nas equipes só a linha com escalação;
+  grupo por `leagueDuprBucket` — `docs/57-LIGAS.md` §14). W.O. e partida sem
+  vencedor ficam de fora.
   Torneio **chancelado por federação** também: quem envia é a federação (planilha
   DUPR). Partida nova só entra se foi decidida nos últimos 30 dias; histórico
   antigo vai pela exportação CSV.
 * **Quem decide**: `duprSubmissionDecision` (política + grupo + escolha de quem
-  criou, em `tournament_modalities.dupr_submit` / `game_days.dupr_submit`). No
+  criou, em `tournament_modalities.dupr_submit` / `game_days.dupr_submit` /
+  `leagues.dupr_submit`). No
   piloto (`audience: admins`) só entram partidas com algum admin da plataforma.
 * **A escolha de quem cria** é a caixa *Enviar os resultados ao DUPR*
   (`DuprSubmitChoice`), no cartão de configurações do dia de jogo (as três
-  origens) e no formulário da modalidade do torneio. Ela só aparece quando a regra
+  origens), no formulário da modalidade do torneio e em Gerir → Dados da liga. Ela só aparece quando a regra
   do grupo é *quem cria escolhe*; nos grupos *sempre*/*nunca* vira uma linha que
   diz a regra, e some sem o DUPR valendo para quem vê, sem a política carregada
   ou com o envio desligado. Sem escolha (`null`) vale o padrão do admin.
@@ -215,7 +221,7 @@ livro, um documento por partida em `dupr_submissions/{identifier}`
   no máximo 6; recusa 4xx do DUPR não se repete sozinha) e `deleted`.
 * **Placar mudou** depois de enviado → `update` no DUPR (o hash do corpo muda).
   **Resultado deixou de existir** (placar apagado, dia despublicado, torneio
-  cancelado/arquivado/privado) → `delete` no DUPR. Mudança de política ou alguém
+  cancelado/arquivado/privado, liga cancelada, linha sem escalação) → `delete` no DUPR. Mudança de política ou alguém
   desconectar a conta **não** apaga o que já foi enviado.
 * **Ações do admin** (`submissions_approve|retry|remove|unblock`, só
   `platform_admin`): aprovar, tentar de novo, **Apagar no DUPR / Não enviar**

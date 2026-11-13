@@ -5,6 +5,8 @@
  * jogo é o confronto: um game por linha (feminina, masculina, mistas…) e, no
  * empate, o DreamBreaker. Na liga FLEXÍVEL quem joga lança o placar e o outro
  * lado confirma ou contesta (a organização segue podendo lançar e corrigir).
+ * Nas equipes a organização diz QUEM jogou cada linha: é a escalação que leva
+ * a linha ao ranking e ao DUPR (sem ela, a linha conta só na tabela da liga).
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,7 +18,7 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Sele
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
 import { normalizeSeason, roundCalendar } from '@/modules/leagues/domain/leagueSeason';
 import { MAX_GAMES, RESULT_ERROR_LABELS, matchWinner, validateResult } from '@/modules/leagues/domain/leagueResults';
-import { AUTO_CONFIRM_HOURS, formatMeta, resultRules } from '@/modules/leagues/domain/leagueFormats';
+import { AUTO_CONFIRM_HOURS, formatMeta, resultRules, suggestedLineup, teamPairs } from '@/modules/leagues/domain/leagueFormats';
 import { DivisionChips } from './LeagueStandings';
 import { shortDate } from './leagueUi';
 
@@ -82,7 +84,7 @@ export default function LeagueRounds({ league, divisions, entries, matches, canM
               </p>
             </div>
             <ul className="space-y-2">
-              {jogos.map((m) => <MatchRow key={m.id} league={league} match={m} nome={nome} meu={meus.has(m.side_a) || meus.has(m.side_b)} meuLado={ladoMeu(meus, m)} editavel={editavel} />)}
+              {jogos.map((m) => <MatchRow key={m.id} league={league} match={m} nome={nome} porId={porId} meu={meus.has(m.side_a) || meus.has(m.side_b)} meuLado={ladoMeu(meus, m)} editavel={editavel} />)}
             </ul>
             {!soMeus && r.folga.length > 0 && (
               <p className="text-xs text-gray-500">{t('Folga: {nomes}', { nomes: r.folga.map((e) => e.name).join(', ') })}</p>
@@ -119,7 +121,18 @@ function placarTexto(m, linhas) {
   return (m.games || []).map((g) => `${g.a}–${g.b}`).join(' · ');
 }
 
-export function MatchRow({ league, match, nome, meu, meuLado = null, editavel }) {
+/** Os atletas de cada lado do jogo (pelas inscrições) e o nome de cada conta. */
+function atletasDoJogo(match, porId) {
+  const lado = (s) => porId?.get(match?.[`side_${s}`])?.players || [];
+  const a = lado('a');
+  const b = lado('b');
+  const nomes = new Map([...a, ...b].filter((p) => p?.uid).map((p) => [p.uid, p.name || t('Atleta')]));
+  return { a, b, nomeDe: (uid) => nomes.get(uid) || t('Atleta') };
+}
+
+const duplaTexto = (uids, nomeDe) => (uids || []).map(nomeDe).join(' + ');
+
+export function MatchRow({ league, match, nome, porId, meu, meuLado = null, editavel }) {
   const [editando, setEditando] = useState(false);
   const venc = matchWinner(match);
   const linhas = linhasDoJogo(league, match);
@@ -135,6 +148,7 @@ export function MatchRow({ league, match, nome, meu, meuLado = null, editavel })
     : lancado ? <V2Badge tone="amber">{t('A confirmar')}</V2Badge>
       : contestado ? <V2Badge tone="red">{t('Contestado')}</V2Badge>
         : <V2Badge tone="neutral">{t('A jogar')}</V2Badge>;
+  const { nomeDe } = atletasDoJogo(match, porId);
   const lado = (side) => (
     <span className={cn('min-w-0 flex-1 truncate', side === 'b' && 'text-right', venc === side ? 'font-bold text-ink' : 'text-gray-600')}>{sideName(match, side, nome)}</span>
   );
@@ -155,9 +169,14 @@ export function MatchRow({ league, match, nome, meu, meuLado = null, editavel })
       {linhas && venc && !match.wo_winner && !editando && (
         <ul className="mt-2 grid gap-x-4 gap-y-1 text-xs text-gray-500 sm:grid-cols-2">
           {linhas.map((l, i) => match.games?.[i] && (
-            <li key={l.key} className="flex justify-between gap-2">
-              <span className="truncate">{t(l.label)}</span>
-              <span className="tabular-nums">{match.games[i].a}–{match.games[i].b}</span>
+            <li key={l.key} className="min-w-0">
+              <div className="flex justify-between gap-2">
+                <span className="truncate">{t(l.label)}</span>
+                <span className="tabular-nums">{match.games[i].a}–{match.games[i].b}</span>
+              </div>
+              {match.lineups?.[i] && (
+                <p className="truncate">{t('{a} × {b}', { a: duplaTexto(match.lineups[i].a, nomeDe), b: duplaTexto(match.lineups[i].b, nomeDe) })}</p>
+              )}
             </li>
           ))}
           {match.dreambreaker && (
@@ -175,7 +194,7 @@ export function MatchRow({ league, match, nome, meu, meuLado = null, editavel })
           {possoConfirmar && <ConfirmBox league={league} match={match} />}
         </div>
       )}
-      {editando && <ResultEditor league={league} match={match} nome={nome} linhas={linhas} modo={modo} onDone={() => setEditando(false)} />}
+      {editando && <ResultEditor league={league} match={match} nome={nome} porId={porId} linhas={linhas} modo={modo} onDone={() => setEditando(false)} />}
     </li>
   );
 }
@@ -220,7 +239,10 @@ function ConfirmBox({ league, match }) {
 const paraTexto = (g) => ({ a: g?.a == null ? '' : String(g.a), b: g?.b == null ? '' : String(g.b) });
 const paraNumero = (v) => (v === '' ? undefined : Number(v));
 
-function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) {
+const duplaValor = (uids) => (Array.isArray(uids) && uids.length === 2 ? uids.join('|') : '');
+const duplaDoValor = (v) => (v ? v.split('|') : null);
+
+function ResultEditor({ league, match, nome, porId, linhas, modo = 'result', onDone }) {
   const acao = useLeagueAction();
   const lancar = modo === 'report';
   // Sem placar gravado, parte do que um dos lados lançou (a organização decide em cima dele).
@@ -232,6 +254,25 @@ function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) 
   const [db, setDb] = useState(() => paraTexto(base.dreambreaker));
   const [wo, setWo] = useState(match.wo_winner || '');
   const [data, setData] = useState(match.scheduled_date || '');
+  // Equipes: quem jogou cada linha. Parte do que está gravado ou da ordem da equipe.
+  const atletas = atletasDoJogo(match, porId);
+  const pedeEscalacao = Boolean(linhas) && !lancar;
+  const [escalacao, setEscalacao] = useState(() => {
+    if (!linhas) return [];
+    const sa = suggestedLineup(league.format, atletas.a);
+    const sb = suggestedLineup(league.format, atletas.b);
+    return linhas.map((_, i) => ({
+      a: duplaValor(match.lineups?.[i]?.a || (match.lineups ? null : sa[i])),
+      b: duplaValor(match.lineups?.[i]?.b || (match.lineups ? null : sb[i])),
+    }));
+  });
+  const opcoes = (side) => [
+    { value: '', label: t('Não informada') },
+    ...teamPairs(atletas[side]).map((d) => ({ value: duplaValor(d), label: duplaTexto(d, atletas.nomeDe) })),
+  ];
+  const setLinha = (i, side, v) => setEscalacao((es) => es.map((e, j) => (j === i ? { ...e, [side]: v } : e)));
+  const lineups = pedeEscalacao ? escalacao.map((e) => (e.a && e.b ? { a: duplaDoValor(e.a), b: duplaDoValor(e.b) } : null)) : null;
+  const semEscalacao = pedeEscalacao && lineups.some((l) => !l);
   const regras = linhas ? resultRules(league.format) : {};
   const r = validateResult({
     // Na equipe, linha meio preenchida conta como "falta jogo" (e não "placar inválido").
@@ -248,7 +289,10 @@ function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) 
     try {
       await acao.mutateAsync(clear
         ? { action: 'result', leagueId: league.id, matchId: match.id, clear: true }
-        : { action: lancar ? 'report' : 'result', leagueId: league.id, matchId: match.id, games: r.games, wo_winner: lancar ? undefined : r.wo_winner, dreambreaker: r.dreambreaker, played_date: data || undefined });
+        : {
+          action: lancar ? 'report' : 'result', leagueId: league.id, matchId: match.id, games: r.games, wo_winner: lancar ? undefined : r.wo_winner, dreambreaker: r.dreambreaker, played_date: data || undefined,
+          ...(pedeEscalacao && !r.wo_winner ? { lineups: lineups.some(Boolean) ? lineups : null } : {}),
+        });
       toast.success(clear ? t('Placar apagado.') : lancar ? t('Placar enviado: o outro lado confirma.') : t('Placar lançado.'));
       onDone();
     } catch (err) {
@@ -274,7 +318,8 @@ function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) 
       {!wo && (
         <div className="space-y-2">
           {games.map((g, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="space-y-2">
+            <div className="flex items-center gap-2">
               <span className={cn('shrink-0 text-xs font-bold leading-tight text-gray-500', linhas ? 'w-24 sm:w-32' : 'w-16')}>{rotulo(i)}</span>
               <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.a} onChange={(e) => setGame(i, 'a', e.target.value)} className="w-20 text-center" aria-label={t('{jogo}: {nome}', { jogo: rotulo(i), nome: sideName(match, 'a', nome) })} />
               <span aria-hidden="true">–</span>
@@ -285,7 +330,22 @@ function ResultEditor({ league, match, nome, linhas, modo = 'result', onDone }) 
                 </V2Button>
               )}
             </div>
+            {pedeEscalacao && (
+              <div className="grid gap-2 sm:grid-cols-2 sm:pl-32">
+                {['a', 'b'].map((side) => (
+                  <V2Select
+                    key={side}
+                    value={escalacao[i]?.[side] || ''}
+                    onChange={(e) => setLinha(i, side, e.target.value)}
+                    options={opcoes(side)}
+                    aria-label={t('Quem jogou {jogo} por {nome}', { jogo: rotulo(i), nome: sideName(match, side, nome) })}
+                  />
+                ))}
+              </div>
+            )}
+            </div>
           ))}
+          {semEscalacao && <p className="text-xs leading-5 text-gray-500">{t('Linha sem escalação conta só na tabela da liga: para ir ao ranking e ao DUPR, diga quem jogou.')}</p>}
           {pedeDb && (
             <div className="space-y-2 rounded-2xl bg-paper p-3">
               <div className="flex items-center gap-2">

@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
-import { AUTO_CONFIRM_HOURS, LEAGUE_FORMAT_META, LEAGUE_STATUS_NEXT, resultRules } from '@/modules/leagues/domain/leagueFormats.js';
+import { AUTO_CONFIRM_HOURS, LEAGUE_FORMAT_META, LEAGUE_STATUS_NEXT, leagueDuprBucket, resultRules } from '@/modules/leagues/domain/leagueFormats.js';
 import { LEAGUE_FLAG_BY_ORGANIZER } from '@/modules/leagues/domain/leagueAccess.js';
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason.js';
 import { normalizeDivisionRule, divisionEligibility, teamCompositionError, DIVISION_GENDER } from '@/modules/leagues/domain/leagueDivisions.js';
@@ -95,6 +95,11 @@ describe('paridade das ligas', () => {
       expect(s.normalizeDivisionRule(d.rule)).toEqual(normalizeDivisionRule(d.rule));
       elencos.forEach((e) => expect(s.divisionEligibility(d, e)).toEqual(divisionEligibility(d, e)));
     });
+  });
+
+  it('o grupo do DUPR de cada formato igual', () => {
+    const { leagueDuprBucket: doServidor } = require('./leagueRanking.js');
+    Object.keys(LEAGUE_FORMAT_META).forEach((f) => expect(leagueDuprBucket(f)).toBe(doServidor(f)));
   });
 
   it('placar validado igual', () => {

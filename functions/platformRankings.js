@@ -50,6 +50,7 @@ const {
 const { computeDuprRatings, seedFromProfile } = require('./engines/dupr');
 const { computeDoublesRanking } = require('./engines/doubles');
 const { impressaoDosResultados } = require('./rankingCatchUp');
+const { loadLeagueGames } = require('./leagueRanking');
 
 /* --------------------------------------------------------------- constantes */
 
@@ -123,6 +124,8 @@ function relatorioVazio() {
   return {
     torneio: { lidas: 0, usadas: 0, por_motivo: {}, torneio_fora: {} },
     dia_de_jogo: { lidas: 0, usadas: 0, por_motivo: {} },
+    /** Jogos de LIGA (`leagueRanking.js`): os decididos lidos, os usados e por quê. */
+    liga: { lidas: 0, usadas: 0, por_motivo: {} },
     /** W.O. e jogo sem placar: contam no ELO e no de duplas, não no 2.0–8.0. */
     sem_placar: 0,
     /** Torneios com partidas fora, os que mais perdem primeiro (até 10). */
@@ -149,11 +152,12 @@ function somar(mapa, chave) {
  * @param {Set} p.eligibleTournamentIds torneios públicos e encerrados
  * @param {Map} [p.tournamentById] torneios por id (só para o relatório)
  * @param {object} [p.report] relatório a preencher
+ * @param {{ games: Array, fora: string[], lidos: number }} [p.league] jogos de liga já resolvidos (`loadLeagueGames`)
  * @returns {Array<object>}
  */
 function normalizeMatches({
   tournamentMatches, clubEventMatches, regById, eligibleTournamentIds,
-  tournamentById = null, report = null,
+  tournamentById = null, report = null, league = null,
 }) {
   const out = [];
   const porTorneio = new Map();
@@ -247,6 +251,33 @@ function normalizeMatches({
       at: toMillis(m.result_recorded_at) || toMillis(m.created_at) || Date.now(),
     });
   });
+
+  // Ligas: as MESMAS regras do torneio, já aplicadas em `leagueRanking.js`.
+  if (league) {
+    if (report) {
+      report.liga.lidas += league.lidos || 0;
+      (league.fora || []).forEach((motivo) => somar(report.liga.por_motivo, motivo));
+    }
+    (league.games || []).forEach((j) => {
+      const pontosA = j.games.reduce((s, g) => s + g.a, 0);
+      const pontosB = j.games.reduce((s, g) => s + g.b, 0);
+      if (report) {
+        report.liga.usadas += 1;
+        if (pontosA + pontosB <= 0) report.sem_placar += 1;
+      }
+      out.push({
+        side_a: j.side_a,
+        side_b: j.side_b,
+        winner: j.winner,
+        points_a: pontosA,
+        points_b: pontosB,
+        tournament_id: null,
+        league_id: j.league.id,
+        source: 'league',
+        at: j.at || Date.now(),
+      });
+    });
+  }
 
   if (report) {
     report.torneios = Array.from(porTorneio.values())
@@ -415,6 +446,7 @@ async function recomputeAllPlatformRankings(db) {
     db.collection('athlete_profiles').get(),
     db.collection('tournaments').get(),
   ]);
+  const ligas = await loadLeagueGames(db);
 
   const tournaments = tournamentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const eligibleTournamentIds = new Set(tournaments.filter(isEligible).map((t) => t.id));
@@ -432,6 +464,7 @@ async function recomputeAllPlatformRankings(db) {
     eligibleTournamentIds,
     tournamentById,
     report: foraDoRanking,
+    league: ligas,
   });
 
   // 2) Sementes — cada motor tem a sua escala.
@@ -601,6 +634,8 @@ async function recomputeAllPlatformRankings(db) {
       partidasTorneio: tournamentMatchesSnap.size,
       jogosEvento: clubEventGamesSnap.size,
       assinatura: ratingSignature,
+      jogosLiga: ligas.lidos,
+      assinaturaLigas: ligas.signature,
     }),
     matchesUsed: matches.length,
     // POR QUE o que não entrou não entrou — o painel do admin explica.

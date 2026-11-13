@@ -32,6 +32,7 @@
 const { createHash } = require('node:crypto');
 
 const { computeSignature, FINISHED_STATUSES } = require('./ranking');
+const { LEAGUE_RANKING_STATUSES, leagueSignature } = require('./leagueRanking');
 
 /** Status do espelho de dia de jogo que conta para o ranking. */
 const STATUS_JOGO_PUBLICADO = 'finished';
@@ -43,14 +44,19 @@ const STATUS_JOGO_PUBLICADO = 'finished';
  * A assinatura dos torneios vai como hash: com cem torneios ela passa de 5 kB,
  * e o que importa é só saber se mudou.
  *
- * @param {{ partidasTorneio: number, jogosEvento: number, assinatura: string }} p
- * @returns {{ tournament_matches: number, club_event_games: number, signature_hash: string }}
+ * Ligas: a contagem dos jogos `done` das ligas que valem e a assinatura delas
+ * (id + situação) — cancelar uma liga muda o ranking sem mudar contagem nenhuma.
+ *
+ * @param {{ partidasTorneio: number, jogosEvento: number, assinatura: string, jogosLiga?: number, assinaturaLigas?: string }} p
+ * @returns {{ tournament_matches: number, club_event_games: number, signature_hash: string, league_matches: number, league_hash: string }}
  */
-function impressaoDosResultados({ partidasTorneio, jogosEvento, assinatura }) {
+function impressaoDosResultados({ partidasTorneio, jogosEvento, assinatura, jogosLiga = 0, assinaturaLigas = '' }) {
   return {
     tournament_matches: Number(partidasTorneio) || 0,
     club_event_games: Number(jogosEvento) || 0,
     signature_hash: createHash('sha1').update(String(assinatura || '')).digest('hex'),
+    league_matches: Number(jogosLiga) || 0,
+    league_hash: createHash('sha1').update(String(assinaturaLigas || '')).digest('hex'),
   };
 }
 
@@ -67,7 +73,9 @@ function precisaRecuperar(anterior, atual) {
   if (!anterior || typeof anterior !== 'object') return true;
   return anterior.tournament_matches !== atual.tournament_matches
     || anterior.club_event_games !== atual.club_event_games
-    || anterior.signature_hash !== atual.signature_hash;
+    || anterior.signature_hash !== atual.signature_hash
+    || anterior.league_matches !== atual.league_matches
+    || anterior.league_hash !== atual.league_hash;
 }
 
 /**
@@ -75,15 +83,19 @@ function precisaRecuperar(anterior, atual) {
  * @param {import('firebase-admin/firestore').Firestore} db
  */
 async function lerImpressaoAtual(db) {
-  const [partidas, jogos, torneios] = await Promise.all([
+  const [partidas, jogos, torneios, ligas] = await Promise.all([
     db.collection('tournament_matches').where('status', 'in', FINISHED_STATUSES).count().get(),
     db.collection('club_event_games').where('status', '==', STATUS_JOGO_PUBLICADO).count().get(),
     db.collection('tournaments').get(),
+    db.collection('leagues').where('status', 'in', LEAGUE_RANKING_STATUSES).get(),
   ]);
+  const contagens = await Promise.all(ligas.docs.map((d) => d.ref.collection('matches').where('status', '==', 'done').count().get()));
   return impressaoDosResultados({
     partidasTorneio: partidas.data().count,
     jogosEvento: jogos.data().count,
     assinatura: computeSignature(torneios.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    jogosLiga: contagens.reduce((s, c) => s + c.data().count, 0),
+    assinaturaLigas: leagueSignature(ligas.docs.map((d) => ({ id: d.id, status: d.data().status }))),
   });
 }
 

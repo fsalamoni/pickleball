@@ -168,6 +168,8 @@ function camposDaLiga(d) {
   if ('standings' in d) out.standings = pontosDe(d.standings);
   if ('visibility' in d) out.visibility = d.visibility === 'unlisted' ? 'unlisted' : 'public';
   if ('self_registration' in d) out.self_registration = d.self_registration !== false;
+  // Enviar ao DUPR, quando a política deixa a escolha com quem cria (`null` = o padrão).
+  if ('dupr_submit' in d) out.dupr_submit = typeof d.dupr_submit === 'boolean' ? d.dupr_submit : null;
   return out;
 }
 
@@ -446,7 +448,7 @@ async function result(ctx, actor, data) {
   if (data.clear === true) {
     const b = ctx.db.batch();
     await desfazFasesSeguintes(ctx, lg, jogo, b);
-    b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, status: 'scheduled', recorded_by: null, recorded_at: null, report: null, dispute: null, updated_at: ts(ctx) });
+    b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, lineups: null, status: 'scheduled', recorded_by: null, recorded_at: null, report: null, dispute: null, updated_at: ts(ctx) });
     if (jogo.data().status === 'reported') await recontaPendencias(ctx, lg, b, { fora: [jogo.id] });
     auditoria(ctx, b, actor, 'league_result_cleared', { league_id: lg.id, match_id: jogo.id });
     await b.commit();
@@ -457,6 +459,8 @@ async function result(ctx, actor, data) {
   const r = P.validateResult({ games: data.games, wo_winner: data.wo_winner, dreambreaker: data.dreambreaker }, regras);
   if (!r.ok) falha('invalid-argument', `Placar inválido (${r.error}).`);
   const patch = { games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, status: 'done', recorded_by: actor.uid, recorded_at: ts(ctx), report: null, dispute: null, updated_at: ts(ctx) };
+  // Equipes: quem jogou cada linha (é o que leva a linha ao ranking e ao DUPR).
+  if (regras.lines) patch.lineups = r.wo_winner ? null : await escalacoes(ctx, lg, jogo.data(), data.lineups, regras.lines);
   if (P.isIsoDate(data.played_date)) patch.scheduled_date = data.played_date;
   const b = ctx.db.batch();
   await desfazFasesSeguintes(ctx, lg, jogo, b);
@@ -465,6 +469,28 @@ async function result(ctx, actor, data) {
   auditoria(ctx, b, actor, 'league_result', { league_id: lg.id, match_id: jogo.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker });
   await b.commit();
   return { ok: true };
+}
+
+/**
+ * A escalação de cada linha do confronto de equipe: `null` (não informada)
+ * ou `{ a: [uid, uid], b: [uid, uid] }` com atletas DA equipe de cada lado.
+ * Linha sem escalação conta na tabela da liga, não no ranking nem no DUPR.
+ */
+async function escalacoes(ctx, lg, j, raw, linhas) {
+  if (raw == null) return null;
+  if (!Array.isArray(raw) || raw.length !== linhas) falha('invalid-argument', 'Escalação inválida.');
+  const [ea, eb] = await Promise.all([j.side_a, j.side_b].map((id) => (id ? sub(ctx, lg.id, 'entries').doc(id).get() : null)));
+  const daEquipe = (e) => new Set(e && e.exists ? e.data().player_uids || [] : []);
+  const A = daEquipe(ea);
+  const B = daEquipe(eb);
+  const dupla = (lista, equipe) => Array.isArray(lista) && lista.length === 2 && lista[0] !== lista[1]
+    && lista.every((u) => typeof u === 'string' && equipe.has(u));
+  const out = raw.map((l) => {
+    if (l == null) return null;
+    if (!dupla(l.a, A) || !dupla(l.b, B)) falha('invalid-argument', 'Na escalação, cada linha leva dois atletas de cada equipe.');
+    return { a: l.a.slice(), b: l.b.slice() };
+  });
+  return out.some(Boolean) ? out : null;
 }
 
 /**

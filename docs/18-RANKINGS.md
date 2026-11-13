@@ -15,7 +15,10 @@
 | **Duplas** | `doubles_rankings` | `/ranking/duplas` |
 
 Os três saem **dos mesmos jogos**: `tournament_matches` (torneios públicos e
-encerrados) + `club_event_games` (dias de jogo e eventos de clube publicados).
+encerrados) + `club_event_games` (dias de jogo e eventos de clube publicados) +
+os jogos decididos das **ligas** (desde 2026-11-13, com as regras do torneio:
+`functions/leagueRanking.js`, `docs/57-LIGAS.md` §14 — nas equipes, só a linha
+com escalação).
 
 **Simples × duplas (Onda CF).** O que decide para onde vai um jogo é o número
 de atletas de cada lado, nos três motores, sem campo nenhum a conferir:
@@ -66,6 +69,8 @@ Tudo passa por **gatilhos do Firestore** (`functions/index.js`):
 | `recomputeRankingOnTournamentMatch` | escreve em `tournament_matches/{id}` | os três |
 | `recomputeRankingOnTournamentRegistration` | muda o uid por trás de uma inscrição | os três |
 | `recomputeRankingOnTournamentChange` | `tournaments/{id}` muda de elegibilidade | os três |
+| `recomputeRankingOnLeagueMatch` | um jogo de liga ganha, perde ou muda um resultado que vale (`leagueMatchChanged`) | os três |
+| `recomputeRankingOnLeagueChange` | `leagues/{id}` muda de elegibilidade (rascunho/cancelada ⇄ valendo) | os três |
 | `catchUpPlatformRankings` (agendada, 30 min) | entrou resultado **sem** passada correspondente | os três |
 
 ### A recuperação agendada: o gatilho que não disparou

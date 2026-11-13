@@ -15,7 +15,7 @@ o desempate (`core/domain/tiebreak.js`), os grupos e o rodízio do Americano
 |---|---|---|
 | `domain/` | `leagueFlags.js` | as 5 flags (uma por grupo de quem cria) e `leaguesVisible` |
 | | `leagueAccess.js` | `groupCanCreate`, `leagueOrganizerOptions`, `canManageLeague` (espelho do `podeGerir` do servidor) |
-| | `leagueFormats.js` | formatos (DUPR/MiLP), status e transições, pontos padrão; nas equipes `lines`, `dreambreaker`, `composition` e `resultRules` |
+| | `leagueFormats.js` | formatos (DUPR/MiLP), status e transições, pontos padrão; nas equipes `lines`, `dreambreaker`, `composition` e `resultRules`; `leagueDuprBucket` (grupo do DUPR, paridade com `functions/leagueRanking.js`), `suggestedLineup` e `teamPairs` (a escalação das equipes) |
 | | `leagueDivisions.js` | regra da divisão (livre, faixa da lista oficial, faixa de DUPR antiga, teto da soma), gênero, `divisionEligibility`, `teamCompositionError` (montagem da equipe) |
 | | `leagueSeason.js` | calendário (`normalizeSeason`, `roundsFor`, `roundCalendar`, `currentRound`) |
 | | `leagueResults.js` | `validateResult`, `matchWinner`, `computeLeagueStandings` (desempate configurável pela regra do núcleo, `LEAGUE_DEFAULT_TIEBREAK_ORDER`) |
@@ -64,3 +64,9 @@ componentes em `src/v2/components/leagues/`.
     `leagueAutoConfirmWorker`, e `pending_confirm` (só o servidor refaz) alimenta
     a faixa "Precisa de você" da Minha área (`myLeaguePending`) e o card "Ligas"
     do início (`HomeLeaguesCard`, `homeLeagueRows`).
+11. **Ranking e DUPR com as regras do torneio** (docs/57 §14): quem lê é o
+    SERVIDOR (`functions/leagueRanking.js`, usado pelo recálculo e pelo envio
+    ao DUPR); vale o jogo `done` de liga fora do rascunho e do cancelamento,
+    sem atleta sem conta, W.O. só no ranking. Nas equipes cada linha só conta
+    com a escalação (`matches.lineups`, gravada só pela organização no
+    `result`, conferida contra as inscrições). Nunca grave ranking pelo cliente.

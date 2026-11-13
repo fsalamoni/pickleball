@@ -196,6 +196,27 @@ describe('equipes (MiLP)', () => {
     await chama(db, ANA, { action: 'result', leagueId, matchId, clear: true });
     expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'scheduled', dreambreaker: null, games: [] });
   });
+
+  it('a escalação de cada linha só aceita dois atletas da própria equipe', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaMilp(db);
+    await chama(db, ANA, { action: 'register', leagueId, divisionId, name: 'A', teammateUids: ['bia', 'edu', 'fred'] });
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, name: 'B', players: [{ uid: 'duda' }, { uid: 'cau' }, { name: 'Rui' }, { name: 'Téo' }] });
+    await chama(db, ANA, { action: 'schedule', leagueId, divisionId, start: true });
+    const [[jogoPath, jogo]] = docs(db, `leagues/${leagueId}/matches/`);
+    const matchId = jogoPath.split('/').pop();
+    const ladoA = db.store.docs.get(`leagues/${leagueId}/entries/${jogo.side_a}`).name === 'A';
+    const da = (aqui, la) => (ladoA ? { a: aqui, b: la } : { a: la, b: aqui });
+    const games = [{ a: 21, b: 15 }, { a: 21, b: 18 }, { a: 21, b: 19 }, { a: 12, b: 21 }];
+    const errada = [da(['ana', 'cau'], ['duda', 'cau']), null, null, null];
+    await expect(chama(db, ANA, { action: 'result', leagueId, matchId, games, lineups: errada })).rejects.toThrow(/dois atletas de cada equipe/);
+    await expect(chama(db, ANA, { action: 'result', leagueId, matchId, games, lineups: [null] })).rejects.toThrow(/Escalação inválida/);
+    const certa = [da(['ana', 'bia'], ['duda', 'cau']), null, null, null];
+    await chama(db, ANA, { action: 'result', leagueId, matchId, games, lineups: certa });
+    expect(db.store.docs.get(jogoPath).lineups).toEqual(certa);
+    await chama(db, ANA, { action: 'result', leagueId, matchId, games });
+    expect(db.store.docs.get(jogoPath).lineups).toBeNull();
+  });
 });
 
 describe('rodadas e placar', () => {
