@@ -12,10 +12,29 @@ const FORMATS = Object.freeze({
   divisional_singles: { entry: 'single', players: 1, available: true },
   ladder_pairs: { entry: 'pair', players: 2, available: true },
   ladder_individual: { entry: 'individual', players: 1, available: true },
-  team_milp: { entry: 'team', players: 4, available: false },
-  team_milp_v3: { entry: 'team', players: 3, available: false },
-  team_v4_gendered: { entry: 'team', players: 4, available: false },
+  team_milp: { entry: 'team', players: 4, available: true, lines: 4, dreambreaker: true, composition: 'two_two' },
+  team_milp_v3: { entry: 'team', players: 3, available: true, lines: 3, dreambreaker: false, composition: 'any' },
+  team_v4_gendered: { entry: 'team', players: 4, available: true, lines: 4, dreambreaker: true, composition: 'same' },
 });
+
+/** Como o placar do confronto é conferido (as equipes têm `lines` jogos e o DreamBreaker). */
+function resultRules(format) {
+  const f = FORMATS[format] || {};
+  return { lines: f.lines || 0, dreambreaker: f.dreambreaker === true };
+}
+
+/** A equipe está montada como o formato pede? Motivo ou `null`. */
+function teamCompositionError(format, players) {
+  const f = FORMATS[format];
+  if (!f || !f.composition) return null;
+  const lista = Array.isArray(players) ? players : [];
+  if (lista.length !== f.players) return 'team_size';
+  if (f.composition === 'any') return null;
+  const gs = lista.map((p) => (p && p.gender) || null);
+  if (gs.some((g) => g !== 'male' && g !== 'female')) return 'gender_unknown';
+  if (f.composition === 'two_two') return gs.filter((g) => g === 'male').length * 2 === gs.length ? null : 'team_mix';
+  return gs.every((g) => g === gs[0]) ? null : 'team_same';
+}
 
 const ORGANIZER_FLAG = Object.freeze({
   athlete: 'leagues_athletes',
@@ -178,14 +197,15 @@ const placar = (v) => {
   return Number.isInteger(n) && n >= 0 && n <= MAX_SCORE ? n : null;
 };
 
-function validateResult(input = {}) {
-  const falha = (error) => ({ ok: false, error, games: [], wo_winner: null, winner: null });
+function validateResult(input = {}, rules = {}) {
+  const falha = (error) => ({ ok: false, error, games: [], wo_winner: null, winner: null, dreambreaker: null });
   if (input.wo_winner === 'a' || input.wo_winner === 'b') {
-    return { ok: true, error: null, games: [], wo_winner: input.wo_winner, winner: input.wo_winner };
+    return { ok: true, error: null, games: [], wo_winner: input.wo_winner, winner: input.wo_winner, dreambreaker: null };
   }
   const brutos = Array.isArray(input.games) ? input.games : [];
   if (!brutos.length) return falha('empty');
   if (brutos.length > MAX_GAMES) return falha('too_many');
+  if (rules && rules.lines && brutos.length !== rules.lines) return falha('lines');
   const games = [];
   for (const g of brutos) {
     const a = placar(g && g.a);
@@ -196,8 +216,16 @@ function validateResult(input = {}) {
   }
   const ga = games.filter((g) => g.a > g.b).length;
   const gb = games.length - ga;
-  if (ga === gb) return falha('draw');
-  return { ok: true, error: null, games, wo_winner: null, winner: ga > gb ? 'a' : 'b' };
+  if (ga === gb) {
+    if (!(rules && rules.dreambreaker)) return falha('draw');
+    const db = input.dreambreaker || {};
+    const a = placar(db.a);
+    const b = placar(db.b);
+    if (a == null || b == null) return falha('needs_db');
+    if (a === b) return falha('db_tie');
+    return { ok: true, error: null, games, wo_winner: null, winner: a > b ? 'a' : 'b', dreambreaker: { a, b } };
+  }
+  return { ok: true, error: null, games, wo_winner: null, winner: ga > gb ? 'a' : 'b', dreambreaker: null };
 }
 
 /* ------------------------------------------------------------- rodadas -- */
@@ -229,5 +257,6 @@ function roundRobin(ids, legs = 1) {
 module.exports = {
   FORMATS, ORGANIZER_FLAG, STATUS_NEXT, canMoveStatus,
   isIsoDate, normalizeSeason, normalizeDivisionRule, divisionEligibility, validateResult, roundRobin,
+  resultRules, teamCompositionError,
   GENDERS, MAX_GAMES, LEVEL_BRACKETS, BRACKET_RANGE, TIEBREAK_KEYS, tiebreakOrder,
 };

@@ -271,6 +271,9 @@ const MOTIVO = {
   over_individual_cap: 'Um atleta passa do teto individual da divisão.',
   gender: 'A categoria dos atletas não combina com a divisão.',
   gender_unknown: 'Falta a categoria (masculina ou feminina) no perfil de um atleta.',
+  team_size: 'A equipe não tem o número de atletas do formato.',
+  team_mix: 'A equipe precisa de 2 homens e 2 mulheres.',
+  team_same: 'Todos os atletas da equipe precisam ser da mesma categoria.',
 };
 
 /**
@@ -289,6 +292,10 @@ async function gravarInscricao(ctx, actor, lg, data, players, { override = false
   if (repetido) falha('already-exists', `${repetido.name} já está inscrito nesta divisão.`);
   const elig = P.divisionEligibility(div.data(), players);
   if (!elig.ok && !override) falha('failed-precondition', MOTIVO[elig.reason] || 'Esta inscrição não cabe na divisão.');
+  // Equipe: 2 homens e 2 mulheres (MiLP), todos da mesma categoria (v4) ou livre.
+  // Como a regra da divisão, a organização inscreve fora dela e fica exceção.
+  const montagem = P.teamCompositionError(lg.format, players);
+  if (montagem && !override) falha('failed-precondition', MOTIVO[montagem]);
   const uids = players.map((p) => p.uid).filter(Boolean);
   if (new Set(uids).size !== uids.length) falha('invalid-argument', 'O mesmo atleta aparece duas vezes.');
   const entryRef = sub(ctx, lg.id, 'entries').doc();
@@ -296,7 +303,7 @@ async function gravarInscricao(ctx, actor, lg, data, players, { override = false
   const batch = ctx.db.batch();
   batch.set(entryRef, {
     division_id: div.id, name: nome, auto_name: !texto(data.name, 60), players, player_uids: uids, status: 'active',
-    eligibility: { value: elig.value, unrated: elig.unrated, override: !elig.ok },
+    eligibility: { value: elig.value, unrated: elig.unrated, override: !elig.ok || Boolean(montagem) },
     created_by: actor.uid, added_by: by, created_at: ts(ctx),
   });
   const m = await membros(ctx, lg.id, lg, uids);
@@ -320,7 +327,13 @@ async function register(ctx, actor, data) {
   if (lg.self_registration === false) falha('failed-precondition', 'Nesta liga, quem inscreve é a organização.');
   const fmt = P.FORMATS[lg.format] || {};
   const uids = [actor.uid];
-  if (fmt.players === 2) {
+  if (fmt.entry === 'team') {
+    // A equipe: quem inscreve + os companheiros (o formato diz quantos).
+    const outros = [...new Set((Array.isArray(data.teammateUids) ? data.teammateUids : []).map((u) => texto(u, 128)))]
+      .filter((u) => u && u !== actor.uid);
+    if (outros.length !== fmt.players - 1) falha('invalid-argument', `Escolha ${fmt.players - 1} companheiros de equipe.`);
+    uids.push(...outros);
+  } else if (fmt.players === 2) {
     const parceiro = texto(data.partnerUid, 128);
     if (!parceiro || parceiro === actor.uid) falha('invalid-argument', 'Escolha a sua dupla.');
     uids.push(parceiro);
@@ -418,18 +431,20 @@ async function result(ctx, actor, data) {
   if (!jogo.exists) falha('not-found', 'Jogo não encontrado.');
   if (data.clear === true) {
     const b = ctx.db.batch();
-    b.update(jogo.ref, { games: [], wo_winner: null, status: 'scheduled', recorded_by: null, recorded_at: null, updated_at: ts(ctx) });
+    b.update(jogo.ref, { games: [], wo_winner: null, dreambreaker: null, status: 'scheduled', recorded_by: null, recorded_at: null, updated_at: ts(ctx) });
     auditoria(ctx, b, actor, 'league_result_cleared', { league_id: lg.id, match_id: jogo.id });
     await b.commit();
     return { ok: true };
   }
-  const r = P.validateResult({ games: data.games, wo_winner: data.wo_winner });
+  // Na escada o jogo é de duplas comum; nas equipes, o confronto (`lines` jogos e o DreamBreaker).
+  const regras = jogo.data().phase === 'ladder' ? {} : P.resultRules(lg.format);
+  const r = P.validateResult({ games: data.games, wo_winner: data.wo_winner, dreambreaker: data.dreambreaker }, regras);
   if (!r.ok) falha('invalid-argument', `Placar inválido (${r.error}).`);
-  const patch = { games: r.games, wo_winner: r.wo_winner, status: 'done', recorded_by: actor.uid, recorded_at: ts(ctx), updated_at: ts(ctx) };
+  const patch = { games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, status: 'done', recorded_by: actor.uid, recorded_at: ts(ctx), updated_at: ts(ctx) };
   if (P.isIsoDate(data.played_date)) patch.scheduled_date = data.played_date;
   const b = ctx.db.batch();
   b.update(jogo.ref, patch);
-  auditoria(ctx, b, actor, 'league_result', { league_id: lg.id, match_id: jogo.id, games: r.games, wo_winner: r.wo_winner });
+  auditoria(ctx, b, actor, 'league_result', { league_id: lg.id, match_id: jogo.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker });
   await b.commit();
   return { ok: true };
 }

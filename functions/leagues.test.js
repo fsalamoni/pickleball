@@ -26,6 +26,8 @@ function banco(flags = { leagues_athletes: true }) {
     'users/cau': { platform_name: 'Cau Reis', dupr_rating: 5.2, competition_gender: 'male' },
     'users/duda': { platform_name: 'Duda Melo', competition_gender: 'female' },
     'users/adm': { platform_name: 'Admin' },
+    'users/edu': { platform_name: 'Edu Dias', dupr_rating: 3.5, competition_gender: 'male' },
+    'users/fred': { platform_name: 'Fred Paz', dupr_rating: 3.9, gender: 'masculino' },
     'clubs/c1': { name: 'Clube Sol' },
     'club_members/c1_ana': { role: 'admin' },
     'club_members/c1_bia': { role: 'member' },
@@ -68,9 +70,9 @@ describe('criar liga', () => {
     expect(lg).toMatchObject({ status: 'draft', organizer: { type: 'club', id: 'c1', name: 'Clube Sol' }, admins: ['ana'] });
   });
 
-  it('formato "em breve" e liga sem divisão são recusados', async () => {
+  it('formato desconhecido e liga sem divisão são recusados', async () => {
     const db = banco();
-    await expect(chama(db, ANA, { ...base, format: 'team_milp' })).rejects.toThrow(/indisponível/);
+    await expect(chama(db, ANA, { ...base, format: 'team_xyz' })).rejects.toThrow(/indisponível/);
     await expect(chama(db, ANA, { ...base, divisions: [] })).rejects.toThrow(/pelo menos uma divisão/);
   });
 
@@ -130,6 +132,56 @@ describe('inscrição', () => {
     const db = banco();
     const { leagueId } = await chama(db, ANA, { ...base, standings: { mode: 'points', tiebreak_order: ['balance', 'x', 'balance', 'head_to_head'] } });
     expect(db.store.docs.get(`leagues/${leagueId}`).standings.tiebreak_order).toEqual(['balance', 'head_to_head']);
+  });
+});
+
+describe('equipes (MiLP)', () => {
+  const milp = {
+    ...base, format: 'team_milp', standings: { mode: 'win_pct' },
+    divisions: [{ name: 'DUPR 16', rule: { kind: 'dupr_sum', cap: 16.3, individual_cap: 4.6, unrated_value: 4 } }],
+  };
+  async function ligaMilp(db) {
+    const { leagueId } = await chama(db, ANA, milp);
+    await chama(db, ANA, { action: 'status', leagueId, to: 'open' });
+    const [[divPath]] = docs(db, `leagues/${leagueId}/divisions/`);
+    return { leagueId, divisionId: divPath.split('/').pop() };
+  }
+
+  it('a equipe entra com os companheiros, 2 homens e 2 mulheres, dentro da soma', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaMilp(db);
+    await expect(chama(db, ANA, { action: 'register', leagueId, divisionId, teammateUids: ['bia', 'edu'] })).rejects.toThrow(/3 companheiros/);
+    await expect(chama(db, ANA, { action: 'register', leagueId, divisionId, teammateUids: ['bia', 'duda', 'edu'] })).rejects.toThrow(/2 homens e 2 mulheres/);
+    await expect(chama(db, ANA, { action: 'register', leagueId, divisionId, teammateUids: ['bia', 'cau', 'edu'] })).rejects.toThrow(/teto individual/);
+    const { entryId } = await chama(db, ANA, { action: 'register', leagueId, divisionId, name: 'Os Dinks', teammateUids: ['bia', 'edu', 'fred'] });
+    const e = db.store.docs.get(`leagues/${leagueId}/entries/${entryId}`);
+    expect(e).toMatchObject({ name: 'Os Dinks', player_uids: ['ana', 'bia', 'edu', 'fred'], eligibility: { value: 15.3, override: false } });
+  });
+
+  it('a organização inscreve fora da montagem e fica exceção', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaMilp(db);
+    const { entryId } = await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, name: 'Mistas', players: [{ uid: 'ana' }, { uid: 'bia' }, { uid: 'duda' }, { name: 'Zé' }] });
+    expect(db.store.docs.get(`leagues/${leagueId}/entries/${entryId}`).eligibility.override).toBe(true);
+  });
+
+  it('o confronto tem os quatro jogos e o DreamBreaker decide o 2 a 2', async () => {
+    const db = banco();
+    const { leagueId, divisionId } = await ligaMilp(db);
+    await chama(db, ANA, { action: 'register', leagueId, divisionId, name: 'A', teammateUids: ['bia', 'edu', 'fred'] });
+    await chama(db, ANA, { action: 'entry_add', leagueId, divisionId, name: 'B', players: [{ name: 'Lia' }, { name: 'Mia' }, { name: 'Rui' }, { name: 'Téo' }] });
+    await chama(db, ANA, { action: 'schedule', leagueId, divisionId, start: true });
+    const [[jogoPath]] = docs(db, `leagues/${leagueId}/matches/`);
+    const matchId = jogoPath.split('/').pop();
+    const dois = [{ a: 21, b: 15 }, { a: 18, b: 21 }, { a: 21, b: 19 }, { a: 12, b: 21 }];
+    await expect(chama(db, ANA, { action: 'result', leagueId, matchId, games: dois.slice(0, 3) })).rejects.toThrow(/lines/);
+    await expect(chama(db, ANA, { action: 'result', leagueId, matchId, games: dois })).rejects.toThrow(/needs_db/);
+    await chama(db, ANA, { action: 'result', leagueId, matchId, games: dois, dreambreaker: { a: 21, b: 17 } });
+    expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'done', dreambreaker: { a: 21, b: 17 } });
+    await chama(db, ANA, { action: 'result', leagueId, matchId, games: [...dois.slice(0, 3), { a: 21, b: 4 }], dreambreaker: { a: 3, b: 21 } });
+    expect(db.store.docs.get(jogoPath).dreambreaker).toBeNull();
+    await chama(db, ANA, { action: 'result', leagueId, matchId, clear: true });
+    expect(db.store.docs.get(jogoPath)).toMatchObject({ status: 'scheduled', dreambreaker: null, games: [] });
   });
 });
 

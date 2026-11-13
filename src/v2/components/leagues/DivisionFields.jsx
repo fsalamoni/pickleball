@@ -14,7 +14,7 @@ import { t, fmtNumero } from '@/core/i18n';
 import { V2Field, V2Input, V2Select, V2Toggle } from '@/v2/ui/primitives';
 import { V2NumberInput } from '@/v2/ui/V2NumberInput';
 import { bracketRange, levelBracketOptions, levelBracketText } from '@/core/domain/levelBrackets';
-import { DIVISION_GENDER_LABELS, DIVISION_RULE, DIVISION_RULE_LABELS } from '@/modules/leagues/domain/leagueDivisions';
+import { DIVISION_GENDER_LABELS, DIVISION_RULE, DIVISION_RULE_LABELS, MILP_DIVISIONS } from '@/modules/leagues/domain/leagueDivisions';
 
 /** As faixas numéricas da lista oficial, uma divisão cada (o organizador ajusta depois). */
 const SUGERIDAS = ['2.000-2.999', '3.000-3.499', '3.500-3.999', '4.000-4.499', '4.500+'];
@@ -23,7 +23,18 @@ export const suggestedDivisions = () => SUGERIDAS.map((bracket) => ({
   name: levelBracketText(bracket), gender: 'open', rule: { kind: DIVISION_RULE.BRACKET, bracket, allow_unrated: true }, max_entries: 0,
 }));
 
+/** As divisões da MiLP (teto da soma do DUPR), para equipes de 4 ou de 3. */
+export const milpDivisions = (players = 4) => MILP_DIVISIONS[players === 3 ? 'three' : 'four'].map((d) => ({
+  name: d.name, gender: 'open', max_entries: 0,
+  rule: { kind: DIVISION_RULE.DUPR_SUM, cap: d.cap, individual_cap: d.individual_cap, unrated_value: d.unrated_value },
+}));
+
 export const emptyDivision = (n = 1) => ({ name: t('Divisão {n}', { n }), gender: 'open', rule: { kind: 'open' }, max_entries: 0 });
+
+const media = (teams, pairs) => {
+  if (teams) return t('Vale a média do DUPR da equipe.');
+  return pairs ? t('Vale a média do DUPR da dupla.') : t('Vale o DUPR do atleta.');
+};
 
 const tres = (n) => fmtNumero(n, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
@@ -83,7 +94,7 @@ export default function DivisionFields({ value, onChange, idPrefix, pairs = true
                 {faixa.max != null
                   ? t('Entra quem tem DUPR de {min} a {max}.', { min: tres(faixa.min), max: tres(faixa.max) })
                   : t('Entra quem tem DUPR a partir de {min}.', { min: tres(faixa.min) })}
-                {' '}{pairs ? t('Vale a média do DUPR da dupla.') : t('Vale o DUPR do atleta.')}
+                {' '}{media(teams, pairs)}
               </p>
               <V2Toggle
                 id={id('sem-dupr')}
@@ -110,7 +121,7 @@ export default function DivisionFields({ value, onChange, idPrefix, pairs = true
             </V2Field>
           </div>
           <p className="text-xs leading-5 text-gray-500">
-            {pairs ? t('Vale a média do DUPR da dupla.') : t('Vale o DUPR do atleta.')}
+            {media(teams, pairs)}
           </p>
           <V2Toggle
             id={id('sem-dupr')}

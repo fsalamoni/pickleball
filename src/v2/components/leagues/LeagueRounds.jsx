@@ -1,7 +1,9 @@
 /**
  * As RODADAS da liga, divisão a divisão: cada rodada com a data e o prazo
  * (do calendário da temporada), os jogos com o placar e quem folga. Quem
- * organiza lança o placar ali mesmo (até 5 games, ou W.O.).
+ * organiza lança o placar ali mesmo (até 5 games, ou W.O.). Nas EQUIPES o
+ * jogo é o confronto: um game por linha (feminina, masculina, mistas…) e, no
+ * empate, o DreamBreaker.
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -13,6 +15,7 @@ import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Sele
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
 import { normalizeSeason, roundCalendar } from '@/modules/leagues/domain/leagueSeason';
 import { MAX_GAMES, RESULT_ERROR_LABELS, matchWinner, validateResult } from '@/modules/leagues/domain/leagueResults';
+import { formatMeta, resultRules } from '@/modules/leagues/domain/leagueFormats';
 import { DivisionChips } from './LeagueStandings';
 import { shortDate } from './leagueUi';
 
@@ -96,14 +99,26 @@ export function sideName(match, side, nome) {
   return Array.isArray(time) ? time.map(nome).join(' / ') : nome(match?.[`side_${side}`]);
 }
 
-function placarTexto(m) {
+/** As linhas do confronto de equipe (`null` fora das equipes e na escada). */
+function linhasDoJogo(league, match) {
+  if (match?.phase === 'ladder') return null;
+  return resultRules(league?.format).lines ? formatMeta(league.format).lines : null;
+}
+
+function placarTexto(m, linhas) {
   if (m.wo_winner) return t('W.O.');
+  if (linhas) {
+    const ga = (m.games || []).filter((g) => g.a > g.b).length;
+    const db = m.dreambreaker ? ` · ${t('DB {a}–{b}', { a: m.dreambreaker.a, b: m.dreambreaker.b })}` : '';
+    return `${ga}–${(m.games || []).length - ga}${db}`;
+  }
   return (m.games || []).map((g) => `${g.a}–${g.b}`).join(' · ');
 }
 
 export function MatchRow({ league, match, nome, meu, editavel }) {
   const [editando, setEditando] = useState(false);
   const venc = matchWinner(match);
+  const linhas = linhasDoJogo(league, match);
   const lado = (side) => (
     <span className={cn('min-w-0 flex-1 truncate', side === 'b' && 'text-right', venc === side ? 'font-bold text-ink' : 'text-gray-600')}>{sideName(match, side, nome)}</span>
   );
@@ -112,7 +127,7 @@ export function MatchRow({ league, match, nome, meu, editavel }) {
       <div className="flex items-center gap-3">
         {lado('a')}
         <span className="shrink-0 text-center text-sm tabular-nums">
-          {venc ? <span className="font-bold text-ink">{placarTexto(match)}</span> : <V2Badge tone="neutral">{t('A jogar')}</V2Badge>}
+          {venc ? <span className="font-bold text-ink">{placarTexto(match, linhas)}</span> : <V2Badge tone="neutral">{t('A jogar')}</V2Badge>}
         </span>
         {lado('b')}
         {editavel && !editando && (
@@ -121,24 +136,56 @@ export function MatchRow({ league, match, nome, meu, editavel }) {
           </V2Button>
         )}
       </div>
-      {editando && <ResultEditor league={league} match={match} nome={nome} onDone={() => setEditando(false)} />}
+      {linhas && venc && !match.wo_winner && !editando && (
+        <ul className="mt-2 grid gap-x-4 gap-y-1 text-xs text-gray-500 sm:grid-cols-2">
+          {linhas.map((l, i) => match.games?.[i] && (
+            <li key={l.key} className="flex justify-between gap-2">
+              <span className="truncate">{t(l.label)}</span>
+              <span className="tabular-nums">{match.games[i].a}–{match.games[i].b}</span>
+            </li>
+          ))}
+          {match.dreambreaker && (
+            <li className="flex justify-between gap-2 font-semibold text-gray-600">
+              <span>{t('DreamBreaker')}</span>
+              <span className="tabular-nums">{match.dreambreaker.a}–{match.dreambreaker.b}</span>
+            </li>
+          )}
+        </ul>
+      )}
+      {editando && <ResultEditor league={league} match={match} nome={nome} linhas={linhas} onDone={() => setEditando(false)} />}
     </li>
   );
 }
 
-function ResultEditor({ league, match, nome, onDone }) {
+const paraTexto = (g) => ({ a: g?.a == null ? '' : String(g.a), b: g?.b == null ? '' : String(g.b) });
+const paraNumero = (v) => (v === '' ? undefined : Number(v));
+
+function ResultEditor({ league, match, nome, linhas, onDone }) {
   const acao = useLeagueAction();
-  const [games, setGames] = useState(() => (match.games?.length ? match.games.map((g) => ({ a: String(g.a), b: String(g.b) })) : [{ a: '', b: '' }]));
+  const [games, setGames] = useState(() => {
+    if (linhas) return linhas.map((_, i) => paraTexto(match.games?.[i]));
+    return match.games?.length ? match.games.map(paraTexto) : [{ a: '', b: '' }];
+  });
+  const [db, setDb] = useState(() => paraTexto(match.dreambreaker));
   const [wo, setWo] = useState(match.wo_winner || '');
   const [data, setData] = useState(match.scheduled_date || '');
-  const r = validateResult({ games: games.map((g) => ({ a: g.a === '' ? undefined : Number(g.a), b: g.b === '' ? undefined : Number(g.b) })), wo_winner: wo || null });
+  const regras = linhas ? resultRules(league.format) : {};
+  const r = validateResult({
+    // Na equipe, linha meio preenchida conta como "falta jogo" (e não "placar inválido").
+    games: (linhas ? games.filter((g) => g.a !== '' && g.b !== '') : games).map((g) => ({ a: paraNumero(g.a), b: paraNumero(g.b) })),
+    wo_winner: wo || null,
+    dreambreaker: { a: paraNumero(db.a), b: paraNumero(db.b) },
+  }, regras);
   const setGame = (i, k, v) => setGames((gs) => gs.map((g, j) => (j === i ? { ...g, [k]: v } : g)));
+  // O DreamBreaker só aparece quando os jogos do confronto empataram.
+  const pedeDb = regras.dreambreaker && (r.error === 'needs_db' || r.error === 'db_tie' || Boolean(r.dreambreaker));
+  const rotulo = (i) => (linhas ? t(linhas[i].label) : t('Game {n}', { n: i + 1 }));
 
   async function salvar(clear = false) {
     try {
       await acao.mutateAsync(clear
         ? { action: 'result', leagueId: league.id, matchId: match.id, clear: true }
-        : { action: 'result', leagueId: league.id, matchId: match.id, games: r.games, wo_winner: r.wo_winner, played_date: data || undefined });
+        : { action: 'result', leagueId: league.id, matchId: match.id, games: r.games, wo_winner: r.wo_winner, dreambreaker: r.dreambreaker, played_date: data || undefined });
       toast.success(clear ? t('Placar apagado.') : t('Placar lançado.'));
       onDone();
     } catch (err) {
@@ -164,18 +211,29 @@ function ResultEditor({ league, match, nome, onDone }) {
         <div className="space-y-2">
           {games.map((g, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="w-16 shrink-0 text-xs font-bold text-gray-500">{t('Game {n}', { n: i + 1 })}</span>
-              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.a} onChange={(e) => setGame(i, 'a', e.target.value)} className="w-20 text-center" aria-label={t('Game {n}: {nome}', { n: i + 1, nome: sideName(match, 'a', nome) })} />
+              <span className={cn('shrink-0 text-xs font-bold leading-tight text-gray-500', linhas ? 'w-24 sm:w-32' : 'w-16')}>{rotulo(i)}</span>
+              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.a} onChange={(e) => setGame(i, 'a', e.target.value)} className="w-20 text-center" aria-label={t('{jogo}: {nome}', { jogo: rotulo(i), nome: sideName(match, 'a', nome) })} />
               <span aria-hidden="true">–</span>
-              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.b} onChange={(e) => setGame(i, 'b', e.target.value)} className="w-20 text-center" aria-label={t('Game {n}: {nome}', { n: i + 1, nome: sideName(match, 'b', nome) })} />
-              {games.length > 1 && (
+              <V2Input type="number" inputMode="numeric" min={0} max={99} value={g.b} onChange={(e) => setGame(i, 'b', e.target.value)} className="w-20 text-center" aria-label={t('{jogo}: {nome}', { jogo: rotulo(i), nome: sideName(match, 'b', nome) })} />
+              {!linhas && games.length > 1 && (
                 <V2Button type="button" size="icon" variant="subtle" onClick={() => setGames((gs) => gs.filter((_, j) => j !== i))} aria-label={t('Tirar o game {n}', { n: i + 1 })}>
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </V2Button>
               )}
             </div>
           ))}
-          {games.length < MAX_GAMES && (
+          {pedeDb && (
+            <div className="space-y-2 rounded-2xl bg-paper p-3">
+              <div className="flex items-center gap-2">
+                <span className="w-24 shrink-0 text-xs font-bold leading-tight text-ink sm:w-32">{t('DreamBreaker')}</span>
+                <V2Input type="number" inputMode="numeric" min={0} max={99} value={db.a} onChange={(e) => setDb((x) => ({ ...x, a: e.target.value }))} className="w-20 text-center" aria-label={t('DreamBreaker: {nome}', { nome: sideName(match, 'a', nome) })} />
+                <span aria-hidden="true">–</span>
+                <V2Input type="number" inputMode="numeric" min={0} max={99} value={db.b} onChange={(e) => setDb((x) => ({ ...x, b: e.target.value }))} className="w-20 text-center" aria-label={t('DreamBreaker: {nome}', { nome: sideName(match, 'b', nome) })} />
+              </div>
+              <p className="text-xs leading-5 text-gray-500">{t('Empate nos jogos: decide o DreamBreaker, simples em rodízio (todos da equipe jogam, trocando a cada 4 pontos), até 21.')}</p>
+            </div>
+          )}
+          {!linhas && games.length < MAX_GAMES && (
             <V2Button type="button" size="sm" variant="ghost" onClick={() => setGames((gs) => [...gs, { a: '', b: '' }])}>
               <Plus className="h-4 w-4" aria-hidden="true" /> {t('Mais um game')}
             </V2Button>

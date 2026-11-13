@@ -1,7 +1,8 @@
 /**
  * Entrar e sair da liga, do lado do ATLETA: as minhas inscrições (com
  * "Sair da liga") e, com as inscrições abertas, o formulário — divisão,
- * dupla (pelo seletor de pessoas da plataforma) e nome opcional. A prévia de
+ * dupla ou companheiros de equipe (pelo seletor de pessoas da plataforma) e
+ * nome opcional. A prévia de
  * "cabe na divisão" usa o que está nos perfis; quem decide é o servidor.
  */
 import React, { useMemo, useState } from 'react';
@@ -13,7 +14,7 @@ import { V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface } from
 import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
 import { formatMeta } from '@/modules/leagues/domain/leagueFormats';
-import { ELIGIBILITY_REASON_LABELS, divisionEligibility } from '@/modules/leagues/domain/leagueDivisions';
+import { ELIGIBILITY_REASON_LABELS, divisionEligibility, teamCompositionError } from '@/modules/leagues/domain/leagueDivisions';
 import { divisionSummary, personUid } from './leagueUi';
 
 const perfilParaJogador = (p) => ({
@@ -24,7 +25,10 @@ const perfilParaJogador = (p) => ({
 export default function LeagueRegister({ league, divisions, entries }) {
   const { user, profile } = useAuth();
   const acao = useLeagueAction();
-  const duplas = formatMeta(league.format)?.players === 2;
+  const meta = formatMeta(league.format);
+  const equipe = meta?.entry === 'team';
+  const duplas = !equipe && meta?.players === 2;
+  const faltam = equipe ? meta.players - 1 : duplas ? 1 : 0;
   const divs = divisions.data || [];
   const ativos = useMemo(() => (entries.data || []).filter((e) => e.status === 'active'), [entries.data]);
   const minhas = ativos.filter((e) => (e.player_uids || []).includes(user?.uid));
@@ -39,8 +43,11 @@ export default function LeagueRegister({ league, divisions, entries }) {
     ativos.filter((e) => e.division_id === div?.id).forEach((e) => (e.player_uids || []).forEach((u) => m.set(u, t('Já está nesta divisão'))));
     return m;
   }, [ativos, div]);
-  const jogadores = [perfilParaJogador(profile), ...(duplas ? parceiro.map(perfilParaJogador) : [])];
-  const previa = div && (!duplas || parceiro.length) ? divisionEligibility(div, jogadores) : null;
+  const jogadores = [perfilParaJogador(profile), ...parceiro.slice(0, faltam).map(perfilParaJogador)];
+  const completo = parceiro.length === faltam;
+  const elig = div && completo ? divisionEligibility(div, jogadores) : null;
+  const montagem = completo ? teamCompositionError(league.format, jogadores) : null;
+  const previa = elig && !elig.ok ? elig : (montagem ? { ok: false, reason: montagem } : elig);
   const cheia = div && div.max_entries > 0 && ativos.filter((e) => e.division_id === div.id).length >= div.max_entries;
   const jaNaDivisao = div && minhas.some((e) => e.division_id === div.id);
 
@@ -49,6 +56,7 @@ export default function LeagueRegister({ league, divisions, entries }) {
       await acao.mutateAsync({
         action: 'register', leagueId: league.id, divisionId: div.id, name: nome.trim(),
         ...(duplas ? { partnerUid: personUid(parceiro[0]) } : {}),
+        ...(equipe ? { teammateUids: parceiro.map(personUid) } : {}),
       });
       toast.success(t('Inscrição feita. Boa temporada!'));
       setParceiro([]); setNome('');
@@ -97,7 +105,9 @@ export default function LeagueRegister({ league, divisions, entries }) {
           <V2SectionHeader
             eyebrow={t('Inscrições abertas')}
             title={minhas.length ? t('Entrar em outra divisão') : t('Entrar na liga')}
-            description={duplas ? t('Escolha a divisão e a sua dupla. A dupla recebe um aviso.') : t('Escolha a divisão do seu nível.')}
+            description={equipe
+              ? t('Escolha a divisão e os {n} companheiros de equipe. Cada um recebe um aviso.', { n: faltam })
+              : duplas ? t('Escolha a divisão e a sua dupla. A dupla recebe um aviso.') : t('Escolha a divisão do seu nível.')}
           />
           <V2Field label={t('Divisão')} htmlFor="liga-insc-div">
             <V2Select
@@ -117,7 +127,24 @@ export default function LeagueRegister({ league, divisions, entries }) {
               excluir={ocupados}
             />
           )}
-          <V2Field label={t('Nome da inscrição')} htmlFor="liga-insc-nome" hint={t('Opcional. Em branco, usamos os primeiros nomes.')}>
+          {equipe && (
+            <PersonPicker
+              id="liga-insc-equipe"
+              multiple
+              max={faltam}
+              rotulo={t('Seus companheiros de equipe')}
+              selecionados={parceiro}
+              onChange={setParceiro}
+              ocultar={[user?.uid]}
+              excluir={ocupados}
+            />
+          )}
+          {equipe && meta.composition !== 'any' && (
+            <p className="text-xs leading-5 text-gray-500">
+              {meta.composition === 'two_two' ? t('A equipe é de 2 homens e 2 mulheres (pela categoria do perfil).') : t('Todos da equipe jogam na mesma categoria (pela categoria do perfil).')}
+            </p>
+          )}
+          <V2Field label={equipe ? t('Nome da equipe') : t('Nome da inscrição')} htmlFor="liga-insc-nome" hint={t('Opcional. Em branco, usamos os primeiros nomes.')}>
             <V2Input id="liga-insc-nome" value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} />
           </V2Field>
           {previa && !previa.ok && (
@@ -130,7 +157,7 @@ export default function LeagueRegister({ league, divisions, entries }) {
           <V2Button
             type="button"
             onClick={inscrever}
-            disabled={acao.isPending || cheia || jaNaDivisao || (duplas && !parceiro.length) || (previa && !previa.ok)}
+            disabled={acao.isPending || cheia || jaNaDivisao || !completo || (previa && !previa.ok)}
           >
             <UserPlus className="h-4 w-4" aria-hidden="true" /> {acao.isPending ? t('Inscrevendo…') : t('Inscrever')}
           </V2Button>

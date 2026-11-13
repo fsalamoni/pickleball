@@ -18,6 +18,7 @@
  */
 import { tk } from '@/core/i18n';
 import { bracketRange, isOfficialBracket, levelBracketText } from '@/core/domain/levelBrackets.js';
+import { formatMeta } from './leagueFormats.js';
 
 export const DIVISION_RULE = Object.freeze({ OPEN: 'open', BRACKET: 'bracket', DUPR_RANGE: 'dupr_range', DUPR_SUM: 'dupr_sum' });
 
@@ -95,7 +96,32 @@ export const ELIGIBILITY_REASON_LABELS = Object.freeze({
   over_individual_cap: tk('Um atleta passa do teto individual da divisão.'),
   gender: tk('A categoria dos atletas não combina com a divisão.'),
   gender_unknown: tk('Falta a categoria (masculina ou feminina) no perfil de um atleta.'),
+  team_size: tk('A equipe não tem o número de atletas do formato.'),
+  team_mix: tk('A equipe precisa de 2 homens e 2 mulheres.'),
+  team_same: tk('Todos os atletas da equipe precisam ser da mesma categoria.'),
 });
+
+/**
+ * A equipe está montada como o formato pede? (`composition` de
+ * `LEAGUE_FORMAT_META`). Devolve o motivo ou `null`. Fora das equipes, `null`.
+ *
+ * @param {string} format
+ * @param {Array<{ gender?: string|null }>} players
+ */
+export function teamCompositionError(format, players) {
+  const meta = formatMeta(format);
+  if (!meta?.composition) return null;
+  const lista = Array.isArray(players) ? players : [];
+  if (lista.length !== meta.players) return 'team_size';
+  if (meta.composition === 'any') return null;
+  const gs = lista.map((p) => p?.gender || null);
+  if (gs.some((g) => g !== 'male' && g !== 'female')) return 'gender_unknown';
+  if (meta.composition === 'two_two') {
+    const homens = gs.filter((g) => g === 'male').length;
+    return homens * 2 === gs.length ? null : 'team_mix';
+  }
+  return gs.every((g) => g === gs[0]) ? null : 'team_same';
+}
 
 function confereGenero(gender, players) {
   if (!gender || gender === DIVISION_GENDER.OPEN) return null;

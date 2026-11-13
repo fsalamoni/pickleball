@@ -5,10 +5,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
-import { LEAGUE_FORMAT_META, LEAGUE_STATUS_NEXT } from '@/modules/leagues/domain/leagueFormats.js';
+import { LEAGUE_FORMAT_META, LEAGUE_STATUS_NEXT, resultRules } from '@/modules/leagues/domain/leagueFormats.js';
 import { LEAGUE_FLAG_BY_ORGANIZER } from '@/modules/leagues/domain/leagueAccess.js';
 import { normalizeSeason, roundsFor } from '@/modules/leagues/domain/leagueSeason.js';
-import { normalizeDivisionRule, divisionEligibility, DIVISION_GENDER } from '@/modules/leagues/domain/leagueDivisions.js';
+import { normalizeDivisionRule, divisionEligibility, teamCompositionError, DIVISION_GENDER } from '@/modules/leagues/domain/leagueDivisions.js';
 import { validateResult, MAX_GAMES } from '@/modules/leagues/domain/leagueResults.js';
 import { LEVEL_BRACKETS, LEVEL_BRACKET_RANGE, isOfficialBracket } from '@/core/domain/levelBrackets.js';
 import { TIEBREAK_CRITERIA, normalizeTiebreakOrder } from '@/core/domain/tiebreak.js';
@@ -19,8 +19,26 @@ const s = require('./leaguePolicy.js');
 describe('paridade das ligas', () => {
   it('formatos: inscrição, atletas e disponibilidade iguais', () => {
     const cliente = Object.fromEntries(Object.entries(LEAGUE_FORMAT_META)
-      .map(([id, m]) => [id, { entry: m.entry, players: m.players, available: m.available }]));
+      .map(([id, m]) => [id, {
+        entry: m.entry, players: m.players, available: m.available,
+        ...(m.lines ? { lines: m.lines.length, dreambreaker: m.dreambreaker, composition: m.composition } : {}),
+      }]));
     expect(s.FORMATS).toEqual(cliente);
+    Object.keys(LEAGUE_FORMAT_META).concat(['x']).forEach((f) => expect(s.resultRules(f)).toEqual(resultRules(f)));
+  });
+
+  it('montagem da equipe igual', () => {
+    const elencos = [
+      [{ gender: 'male' }, { gender: 'male' }, { gender: 'female' }, { gender: 'female' }],
+      [{ gender: 'male' }, { gender: 'male' }, { gender: 'male' }, { gender: 'female' }],
+      [{ gender: 'female' }, { gender: 'female' }, { gender: 'female' }, { gender: 'female' }],
+      [{ gender: 'female' }, { gender: null }, { gender: 'female' }, { gender: 'female' }],
+      [{ gender: 'male' }, { gender: 'female' }, { gender: null }],
+      [{ gender: 'male' }],
+    ];
+    Object.keys(LEAGUE_FORMAT_META).forEach((f) => elencos.forEach((e) => {
+      expect(s.teamCompositionError(f, e)).toBe(teamCompositionError(f, e));
+    }));
   });
 
   it('flag por grupo, situações, gêneros e limite de games', () => {
@@ -85,6 +103,16 @@ describe('paridade das ligas', () => {
       { games: Array.from({ length: 6 }, () => ({ a: 11, b: 0 })) },
     ];
     casos.forEach((c) => expect(s.validateResult(c)).toEqual(validateResult(c)));
+    const equipe = [
+      { games: [{ a: 21, b: 5 }, { a: 3, b: 21 }, { a: 21, b: 19 }] },
+      { games: [{ a: 21, b: 5 }, { a: 3, b: 21 }, { a: 21, b: 19 }, { a: 15, b: 21 }] },
+      { games: [{ a: 21, b: 5 }, { a: 3, b: 21 }, { a: 21, b: 19 }, { a: 15, b: 21 }], dreambreaker: { a: 21, b: 18 } },
+      { games: [{ a: 21, b: 5 }, { a: 3, b: 21 }, { a: 21, b: 19 }, { a: 15, b: 21 }], dreambreaker: { a: 20, b: 20 } },
+      { games: [{ a: 21, b: 5 }, { a: 21, b: 3 }, { a: 21, b: 19 }, { a: 15, b: 21 }], dreambreaker: { a: 1, b: 21 } },
+    ];
+    [{ lines: 4, dreambreaker: true }, { lines: 3 }, {}].forEach((r) => equipe.forEach((c) => {
+      expect(s.validateResult(c, r)).toEqual(validateResult(c, r));
+    }));
   });
 
   it('pontos corridos: todos se enfrentam uma vez por turno, sem jogo duplicado na rodada', () => {
