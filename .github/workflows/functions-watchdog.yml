@@ -71,7 +71,8 @@ jobs:
           # Funções NOSSAS (rótulo do codebase próprio) que o código não exporta
           # mais: o deploy por nome nunca apaga, então elas seguem no ar na
           # versão antiga. Só são ditas (aqui e no painel); apagar é decisão do
-          # dono. 🐞 Sem esta lista o painel dizia "133 de 131 publicadas".
+          # dono (com o OK dele, o nome entra em functions-apagar-aposentadas.sh).
+          # 🐞 Sem esta lista o painel dizia "133 de 131 publicadas".
           jq -r --arg r "$FUNCTIONS_REGION" --arg c "$CODEBASE" \
             '.result[] | select(.region == $r and (.codebase // "default") == $c) | .id' lista.json \
             | sort -u | comm -23 - esperadas.txt > sobrando.txt
@@ -89,6 +90,14 @@ jobs:
           else
             echo "Todas as funções do PickleRush estão no ar."
           fi
+
+      # Funções aposentadas que o dono mandou tirar de produção: lista FECHADA
+      # de nomes no script, e só sai a que está em sobrando.txt (nossa região,
+      # nosso codebase, fora do código). Antes do registro, para o painel já
+      # mostrar a conta certa. Nunca falha o job.
+      - name: Apagar funções aposentadas (lista fechada)
+        if: steps.conferir.outcome == 'success'
+        run: bash scripts/functions-apagar-aposentadas.sh esperadas.txt sobrando.txt publicadas.txt
 
       - name: Dependências das funções
         run: npm --prefix functions ci --no-audit --no-fund

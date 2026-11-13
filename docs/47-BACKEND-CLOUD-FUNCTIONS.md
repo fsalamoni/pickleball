@@ -728,7 +728,9 @@ leem). Para aposentar uma função, não basta tirar a exportação (a versão a
 continua rodando): apague a tarefa `firebase-schedule-<nome>-<região>` no
 Cloud Scheduler (ou a função no Cloud Run) e só então tire a exportação — foi
 o caminho de `expireStaleNotifications` (aposentada em 2026-10-10, tarefa
-apagada e exportação removida em 2026-11-05).
+apagada e exportação removida em 2026-11-05). A função que sobra publicada
+sem código sai pela lista de aposentadas da vigilância (§10.3), com o OK do
+dono.
 
 Guarda: `src/core/guards/deployFunctions.test.js` (codebase próprio; nenhum
 workflow faz deploy amplo; deploy e vigilância usam o mesmo script) e
@@ -775,9 +777,21 @@ outra função, cheio de códigos de cor do terminal, como se fosse o erro; e
 3. `check.published` conta só as funções ESPERADAS que estão no ar; as do
    nosso codebase que o código não exporta mais vão em `check.extra` e o
    cartão as lista como "funções antigas no ar" (o deploy nunca apaga função;
-   apagar é decisão do dono, no console).
+   apagar é decisão do dono — ver "Funções aposentadas" em §10.3).
 
 ### 10.3 Vigilância (`functions-watchdog.yml`)
+
+**Funções aposentadas.** Depois da conferência e antes do registro, a
+vigilância roda `scripts/functions-apagar-aposentadas.sh`, que tira de
+produção as funções de uma **lista fechada de nomes**, cada um com o OK do
+dono anotado no script (2026-11-13: `expireStaleNotifications` e
+`federationDocumentsSync`, as duas já paradas). O projeto é compartilhado com
+outro app, então a função só sai quando: está na lista, o código não a
+exporta, e ela aparece em `sobrando.txt` (nossa região, rótulo do nosso
+codebase); o comando é `firebase functions:delete <nome> --region …`, nunca
+amplo. Rodar de novo não faz nada; o que não deu para apagar vira aviso. O
+deploy nunca apaga função. Para tirar outra função antiga do ar: pedir o OK do
+dono e acrescentar o nome à lista.
 
 Agenda `7,37 * * * *` (a cada 30 min) + `workflow_dispatch`, `timeout-minutes: 20`,
 `concurrency: functions-watchdog`. Instala `firebase-tools@13`, usa a service

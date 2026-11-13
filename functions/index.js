@@ -12,7 +12,8 @@
  * default), por isso o gatilho e o cliente admin apontam para ela.
  *
  * Arena V3 (2026-07-21): automações adicionadas para sprints 1, 5, 6, 7.
- *  - expireStaleNotifications (sprint 1): aposentada em 2026-10-10; saiu do código em 2026-11-05.
+ *  - expireStaleNotifications (sprint 1): aposentada em 2026-10-10; saiu do código em 2026-11-05
+ *    e de produção pela lista de scripts/functions-apagar-aposentadas.sh (OK do dono, 2026-11-13).
  *  - refreshLadderWeekly (sprint 5): agrega ladder de arenas ativas.
  *  - aggregateNpsDaily (sprint 6): consolida NPS por arena.
  *  - autoCloseChecklists (sprint 7): fecha checklists opening/closing do dia.
