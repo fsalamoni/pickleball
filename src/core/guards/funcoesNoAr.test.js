@@ -128,29 +128,102 @@ describe('funções no ar', () => {
 
     const dir = mkdtempSync(join(tmpdir(), 'aposentadas-'));
     const arq = (nome, linhas) => { const p = join(dir, nome); writeFileSync(p, linhas.length ? `${linhas.join('\n')}\n` : ''); return p; };
-    // CLI falsa: anota o que foi pedido e dá certo.
-    writeFileSync(join(dir, 'firebase'), `#!/bin/bash\necho "$@" >> "${join(dir, 'chamadas')}"\n`, { mode: 0o755 });
-    const rodar = (esperadas, sobrando, publicadas) => {
-      writeFileSync(join(dir, 'chamadas'), '');
+    // CLI falsa: anota o pedido e responde como a de verdade, SEMPRE com código
+    // 0 (🐞 a de verdade sai com 0 mesmo sem apagar). "node" falso: anota a
+    // chamada ao caminho direto e dá certo ou errado conforme o arquivo.
+    const COR = '\\x1b[32m';
+    writeFileSync(join(dir, 'firebase'), [
+      '#!/bin/bash',
+      `echo "$@" >> "${join(dir, 'chamadas')}"`,
+      `case "$(cat "${join(dir, 'modo')}")" in`,
+      `  ok) printf '${COR}functions[picklerush:%s(southamerica-east1)]\\x1b[39m Successful delete operation.\\n' "$2" ;;`,
+      `  sem-tarefa) echo "Request to https://cloudscheduler.googleapis.com/v1/projects/p/locations/southamerica-east1/jobs/firebase-schedule-$2-southamerica-east1 had HTTP Error: 404, Job not found." ;;`,
+      '  *) echo "Functions deploy had errors with the following functions:" ;;',
+      'esac',
+      'exit 0',
+      '',
+    ].join('\n'), { mode: 0o755 });
+    writeFileSync(join(dir, 'node'), `#!/bin/bash\necho "$@" >> "${join(dir, 'direto')}"\nexit "$(cat "${join(dir, 'direto-rc')}")"\n`, { mode: 0o755 });
+    const rodar = (esperadas, sobrando, publicadas, modo = 'ok', diretoRc = 0) => {
+      for (const n of ['chamadas', 'direto']) writeFileSync(join(dir, n), '');
+      writeFileSync(join(dir, 'modo'), modo);
+      writeFileSync(join(dir, 'direto-rc'), String(diretoRc));
       const e = arq('e', esperadas); const s = arq('s', sobrando); const p = arq('p', publicadas);
-      execFileSync('bash', ['scripts/functions-apagar-aposentadas.sh', e, s, p], {
+      const saida = execFileSync('bash', ['scripts/functions-apagar-aposentadas.sh', e, s, p], {
         encoding: 'utf8',
         env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, FIREBASE_PROJECT_ID: 'proj', FUNCTIONS_REGION: 'southamerica-east1' },
       });
-      const ler = (f) => readFileSync(f, 'utf8').split('\n').filter(Boolean);
-      return { chamadas: ler(join(dir, 'chamadas')), sobrando: ler(s), publicadas: ler(p) };
+      const ler = (arquivo) => readFileSync(arquivo, 'utf8').split('\n').filter(Boolean);
+      return { saida, chamadas: ler(join(dir, 'chamadas')), direto: ler(join(dir, 'direto')), sobrando: ler(s), publicadas: ler(p) };
     };
 
     // Sobra no ar e saiu do código: apaga SÓ ela, pelo nome e pela região; a
     // outra que sobra (fora da lista) fica.
     const a = rodar(['leagues'], ['expireStaleNotifications', 'outraAntiga'], ['expireStaleNotifications', 'leagues', 'outraAntiga']);
     expect(a.chamadas).toEqual(['functions:delete expireStaleNotifications --region southamerica-east1 --project proj --force']);
+    expect(a.direto).toEqual([]);
     expect(a.sobrando).toEqual(['outraAntiga']);
     expect(a.publicadas).toEqual(['leagues', 'outraAntiga']);
+    expect(a.saida).toMatch(/expireStaleNotifications saiu de produção/);
     // Voltou ao código: não apaga, mesmo que apareça como sobrando.
     expect(rodar(['federationDocumentsSync'], ['federationDocumentsSync'], ['federationDocumentsSync']).chamadas).toEqual([]);
     // Não sobra no ar (já saiu, ou não é do nosso codebase): nada a fazer.
     expect(rodar(['leagues'], [], ['leagues']).chamadas).toEqual([]);
+
+    // 🐞 2026-11-14: a CLI saiu com 0 sem apagar e o script disse "saiu de
+    // produção". Sem a linha de confirmação da função, ela NÃO saiu.
+    const b = rodar([], ['federationDocumentsSync'], ['federationDocumentsSync'], 'erro');
+    expect(b.direto).toEqual([]);
+    expect(b.sobrando).toEqual(['federationDocumentsSync']);
+    expect(b.publicadas).toEqual(['federationDocumentsSync']);
+    expect(b.saida).toMatch(/federationDocumentsSync segue publicada/);
+    expect(b.saida).not.toMatch(/saiu de produção/);
+    // Função agendada sem a tarefa (404 do Cloud Scheduler): a CLI desiste, e
+    // só então a função sai direto pela API — pelo nome.
+    const c = rodar([], ['expireStaleNotifications'], ['expireStaleNotifications'], 'sem-tarefa');
+    expect(c.direto).toEqual(['scripts/functions-apagar-direto.cjs expireStaleNotifications']);
+    expect(c.sobrando).toEqual([]);
+    // O caminho direto também pode falhar: aí ela segue listada.
+    const d = rodar([], ['expireStaleNotifications'], ['expireStaleNotifications'], 'sem-tarefa', 1);
+    expect(d.sobrando).toEqual(['expireStaleNotifications']);
+    expect(d.saida).not.toMatch(/saiu de produção/);
+    // O caminho direto precisa do firebase-admin: roda depois das dependências.
+    expect(VIGIA.indexOf('npm --prefix functions ci')).toBeLessThan(VIGIA.indexOf('functions-apagar-aposentadas.sh esperadas.txt'));
+  });
+
+  it('o caminho direto apaga uma função só, pelo nome, e recusa a de outro codebase', async () => {
+    const { apagar } = require('../../../scripts/functions-apagar-direto.cjs');
+    const base = { projeto: 'p', regiao: 'southamerica-east1', espera: 0 };
+    const resp = (status, corpo = {}) => ({ status, json: async () => corpo });
+    const falsa = (roteiro) => {
+      const pedidos = [];
+      const api = async (caminho, init = {}) => { pedidos.push(`${init.method || 'GET'} ${caminho}`); return roteiro(caminho, init.method || 'GET', pedidos.length); };
+      return { api, pedidos };
+    };
+    const FN = 'projects/p/locations/southamerica-east1/functions/expireStaleNotifications';
+
+    // Nossa (ou sem rótulo): pede para apagar e espera a operação terminar.
+    const ok = falsa((caminho, metodo) => {
+      if (metodo === 'DELETE') return resp(200, { name: 'projects/p/locations/southamerica-east1/operations/op1', done: false });
+      if (caminho.includes('/operations/')) return resp(200, { done: true });
+      return resp(200, { labels: { 'firebase-functions-codebase': 'picklerush' } });
+    });
+    expect(await apagar({ ...base, api: ok.api, nome: 'expireStaleNotifications' })).toBe('apagada');
+    expect(ok.pedidos).toEqual([`GET ${FN}`, `DELETE ${FN}`, 'GET projects/p/locations/southamerica-east1/operations/op1']);
+
+    // Do outro app (o projeto é compartilhado): recusa sem pedir para apagar.
+    const alheia = falsa(() => resp(200, { labels: { 'firebase-functions-codebase': 'default' } }));
+    await expect(apagar({ ...base, api: alheia.api, nome: 'expireStaleNotifications' })).rejects.toThrow(/não apago/);
+    expect(alheia.pedidos).toEqual([`GET ${FN}`]);
+
+    // Já não existe: nada a fazer. Operação com erro: falha. Nome estranho: nem pergunta.
+    const sumiu = falsa(() => resp(404));
+    expect(await apagar({ ...base, api: sumiu.api, nome: 'expireStaleNotifications' })).toBe('ja-nao-existe');
+    const falhou = falsa((caminho, metodo) => (metodo === 'DELETE' ? resp(200, { done: true, error: { message: 'negado' } }) : resp(200, {})));
+    await expect(apagar({ ...base, api: falhou.api, nome: 'expireStaleNotifications' })).rejects.toThrow(/negado/);
+    const estranho = falsa(() => resp(200));
+    await expect(apagar({ ...base, api: estranho.api, nome: '../outra' })).rejects.toThrow(/inválido/);
+    expect(estranho.pedidos).toEqual([]);
   });
 
   it('a conferência conta as listas e corta as longas', () => {

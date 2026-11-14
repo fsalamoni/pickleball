@@ -790,7 +790,19 @@ outro app, então a função só sai quando: está na lista, o código não a
 exporta, e ela aparece em `sobrando.txt` (nossa região, rótulo do nosso
 codebase); o comando é `firebase functions:delete <nome> --region …`, nunca
 amplo. Rodar de novo não faz nada; o que não deu para apagar vira aviso. O
-deploy nunca apaga função. Para tirar outra função antiga do ar: pedir o OK do
+deploy nunca apaga função.
+
+⚠️ **O código de saída do `functions:delete` não diz se apagou** — a CLI
+imprime o erro e sai com 0. O script só dá a função como apagada com a linha
+`functions[…:<nome>(<região>)] Successful delete operation`. 🐞 Na primeira
+execução (2026-11-14) `federationDocumentsSync` saiu e
+`expireStaleNotifications` não: numa função **agendada** a CLI apaga antes a
+tarefa do Cloud Scheduler, e como a tarefa já tinha sido apagada (404) ela
+desistiu da função — e o script anunciou que tinha saído. Nesse caso, e só
+nesse (o 404 da tarefa daquele nome no log), a função sai direto pela API do
+Cloud Functions (`scripts/functions-apagar-direto.cjs`: uma função, pelo
+nome, e recusa a que tiver rótulo de outro codebase). Por usar o
+`firebase-admin`, o passo roda depois de "Dependências das funções". Para tirar outra função antiga do ar: pedir o OK do
 dono e acrescentar o nome à lista.
 
 Agenda `7,37 * * * *` (a cada 30 min) + `workflow_dispatch`, `timeout-minutes: 20`,
