@@ -2377,3 +2377,23 @@ No dia de jogo, o cartão do controle de linhas era uma superfície sempre abert
 ## Varredura geral (2026-11-05)
 
 Depois dos PRs 3–7 da Minha carreira. O pacote inicial caiu de 438,6 para 389,4 kB gzip: o login importava de forma estática o serviço de inscrições de torneio e, com ele, o domínio inteiro do torneio (agora `import()`; teto do `build:budget` em 400 kB e guarda `pacoteInicial.test.js`). A regra de `circuits` passou a exigir `created_by` = quem cria. O GitHub Pages deixou de publicar uma cópia completa do app (sem os cabeçalhos de segurança) e passou a só redirecionar para `picklerush.web.app`. Dependências sem quebra atualizadas; o que fica, por prioridade, está em `docs/20-SEGURANCA-E-PRIVACIDADE/22-VARREDURA-2026-11-05.md`.
+
+## Os irmãos do desempate único e da liga no desenho do torneio (2026-11-14)
+
+Pedido do dono: "ver todos os irmãos de documentações, dicas, idiomas e tudo
+mais" dos PRs #428 (ordem de desempate do torneio) e #429 (liga no desenho do
+torneio). O que a varredura achou e corrigiu:
+
+- O guia de formatos e o Americano em etapas ainda mandavam trocar o
+  desempate "na fase"; a ajuda da liga não dizia onde se troca a ordem.
+- A visão geral do torneio guardava cópias locais das peças que a liga usa
+  de `competition/` — o desenho podia divergir de novo. Agora são as mesmas
+  (com `CriteriaCard`), e um guarda reprova a cópia.
+- Os nomes dos critérios de desempate apareciam em português em inglês e
+  espanhol nas telas do torneio (`describeTiebreakOrder` não traduzia).
+- A página pública e a impressão mostravam a tabela sem dizer a ordem que a
+  classificou.
+- As telas da liga tinham âncoras de dica sem nenhum guia nem ponto, e a
+  ordem de desempate do torneio não tinha guia.
+
+Zero banco, zero regra, nada migrado.

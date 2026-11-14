@@ -2,8 +2,9 @@
  * As peças da VISÃO GERAL de uma competição (torneio e liga): o cartão
  * escuro do panorama (`SummaryTile`, `InfoSurface`), o cartão do critério de
  * classificação (`RankingRule`) e a barra de ocupação das vagas. O desenho é
- * o da visão geral do torneio — a liga usa as mesmas peças para as duas
- * telas parecerem uma só família. Nada aqui consulta o banco.
+ * o da visão geral do torneio — o torneio e a liga usam AS MESMAS peças
+ * (nenhum dos dois guarda cópia local), para as duas telas serem uma só
+ * família. Nada aqui consulta o banco.
  */
 import React from 'react';
 import { t } from '@/core/i18n';
@@ -27,6 +28,21 @@ export function RankingRule({ order, title, description }) {
       <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{order}</div>
       <div className="mt-2 font-display text-lg font-bold text-white">{title}</div>
       {description && <p className="mt-1 text-sm leading-6 text-white/60">{description}</p>}
+    </div>
+  );
+}
+
+/**
+ * O cartão escuro "Critério de classificação" — a moldura é a mesma no torneio
+ * e na liga; o conteúdo (a ordem que vale) vem de quem chama, já resolvido.
+ */
+export function CriteriaCard({ title, description, dica, children }) {
+  return (
+    <div className="rounded-4xl bg-ink p-6 text-white shadow-organic sm:p-8" data-dica={dica}>
+      <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{t('Critério de classificação')}</div>
+      <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">{title}</h3>
+      {description && <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">{description}</p>}
+      {children}
     </div>
   );
 }

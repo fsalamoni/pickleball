@@ -50,6 +50,9 @@ import { formatInstant } from './RegistrationSchedule';
 import { describeTiebreakOrder } from '@/core/domain/tiebreak';
 import { tournamentTiebreakSummary } from '@/modules/tournament/domain/tournamentTiebreak';
 import { t, fmtData } from '@/core/i18n';
+import {
+  CapacityBar, CriteriaCard, InfoSurface, RankingRule, SummaryTile, ruleOrder,
+} from '@/v2/components/competition/CompetitionOverview';
 
 function formatDate(value) {
   if (!value) return null;
@@ -71,29 +74,6 @@ function formatBRL(cents) {
   return `R$ ${value.toFixed(2).replace('.', ',')}`;
 }
 
-function InfoSurface({ icon: Icon, title, description }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-      <div className="flex items-center gap-2 text-sm font-bold text-white">
-        <Icon className="h-4 w-4 text-acid" /> {title}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
-    </div>
-  );
-}
-
-function RankingRule({ order, title, description }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-      <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{order}</div>
-      <div className="mt-2 font-display text-lg font-bold text-white">{title}</div>
-      <p className="mt-1 text-sm leading-6 text-white/60">{description}</p>
-    </div>
-  );
-}
-
-const doisDigitos = (n) => String(n).padStart(2, '0');
-
 /**
  * O critério de classificação que VALE no torneio — a mesma ordem que a tabela,
  * o avanço de fase e o pódio usam (`tournamentTiebreak.js`). Antes este cartão
@@ -106,9 +86,7 @@ function TiebreakCard({ tournament, modalities, modalitiesFailed }) {
   // e sem as modalidades não dá para afirmar qual vale.
   const incerto = modalitiesFailed && resumo.source !== 'tournament';
   return (
-    <div className="rounded-4xl bg-ink p-6 text-white shadow-organic sm:p-8">
-      <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{t('Critério de classificação')}</div>
-      <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">{t('Como o ranking é calculado.')}</h3>
+    <CriteriaCard title={t('Como o ranking é calculado.')} dica="torneio-criterio">
       {incerto ? (
         <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base" role="status">
           {t('Não deu para carregar as modalidades agora, então não dá para mostrar a ordem de desempate deste torneio. Recarregue a página para tentar de novo.')}
@@ -121,7 +99,7 @@ function TiebreakCard({ tournament, modalities, modalitiesFailed }) {
           <ol className="mt-6 space-y-3">
             {describeTiebreakOrder(resumo.order).map((c) => (
               <li key={c.key}>
-                <RankingRule order={doisDigitos(c.position)} title={c.label} description={c.help} />
+                <RankingRule order={ruleOrder(c.position - 1)} title={c.label} description={c.help} />
               </li>
             ))}
           </ol>
@@ -153,22 +131,7 @@ function TiebreakCard({ tournament, modalities, modalitiesFailed }) {
           {t('Modalidades de equipes seguem os critérios do formato de equipes: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.')}
         </p>
       )}
-    </div>
-  );
-}
-
-function SummaryTile({ icon: Icon, label, value, description }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-2xs font-bold uppercase tracking-widest text-white/50">{label}</div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acid text-ink">
-          <Icon className="h-4.5 w-4.5" />
-        </div>
-      </div>
-      <div className="mt-3 font-display text-xl font-bold text-white">{value}</div>
-      <p className="mt-1 text-xs leading-5 text-white/60">{description}</p>
-    </div>
+    </CriteriaCard>
   );
 }
 
@@ -384,7 +347,6 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   const modalityHref = `/torneios/${tournament.id}/modalidades/${modality.id}`;
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const pendingRegistrations = Math.max(occupied - confirmed, 0);
-  const barTone = slotsFull ? 'bg-amber-500' : (pct ?? 0) >= 80 ? 'bg-amber-400' : 'bg-acid';
 
   return (
     <div
@@ -443,22 +405,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
           </div>
           <div className="mt-3">
             {pct !== null ? (
-              <>
-                <div className="mb-1 flex items-center justify-between text-2xs text-gray-500">
-                  <span>{slotsFull ? t('Capacidade esgotada') : t('Leitura atual da ocupação')}</span>
-                  <span>{pct}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                  <div
-                    className={cn('h-full transition-all duration-300', barTone)}
-                    style={{ width: `${pct}%` }}
-                    role="progressbar"
-                    aria-valuenow={confirmed}
-                    aria-valuemin={0}
-                    aria-valuemax={modality.max_entries}
-                  />
-                </div>
-              </>
+              <CapacityBar value={confirmed} max={modality.max_entries} full={slotsFull} />
             ) : (
               <div className="rounded-2xl border border-dashed border-acid/40 bg-acid/10 px-3 py-2 text-2xs text-ink">
                 {t('Vagas abertas sem limite definido para esta modalidade.')}

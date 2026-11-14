@@ -103,7 +103,7 @@ export default function V2FormatsGuide() {
 
         <V2ContentSection icon={Scale} title={t('Como a classificação é calculada')}>
           <p>
-            {t('A ordem padrão é a do regulamento (USA Pickleball 15.B.4). O admin do torneio pode trocá-la inteira nas regras avançadas da fase.')}
+            {t('A ordem padrão é a do regulamento (USA Pickleball 15.B.4). O organizador pode trocá-la inteira nas regras gerais do torneio (Gestão → Geral → Classificação e desempate), e a ordem escolhida vale para todas as modalidades e fases.')}
           </p>
           <ol className="mt-2 space-y-1.5">
             {describeTiebreakOrder([]).map((c) => (

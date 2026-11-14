@@ -190,6 +190,17 @@ com a ordem oficial gravada; a cópia de torneio leva a ordem (ou, se a origem
 tinha ordens diferentes por fase, não grava nenhuma e as fases copiadas seguem
 com as suas).
 
+A **página pública** (`/p/:id`) e a **impressão** (`/torneios/:id/imprimir`)
+também dizem, embaixo da classificação, a ordem que a classificou
+(`v2/components/tournament/TiebreakCaption.jsx`, sobre
+`effectiveTiebreakOrder`): uma linha quando todas as fases seguem a mesma
+ordem, uma por fase no torneio antigo que ainda diverge — no papel, a regra
+tem de ir junto com a tabela. Os nomes dos critérios saem traduzidos
+(`describeTiebreakOrder` passa por `t()`). O guia de formatos
+(`/torneios/formatos`) e o texto do Americano em etapas mandam o organizador
+à aba Geral, não mais à fase. Nas dicas, o guia "Escolher a ordem de
+desempate do torneio" (`desempate-do-torneio`) leva da aba Geral à capa.
+
 ---
 
 ## 4. Quem passa de fase

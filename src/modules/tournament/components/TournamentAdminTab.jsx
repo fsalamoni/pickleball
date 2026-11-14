@@ -353,7 +353,7 @@ export default function TournamentAdminTab({ tournament }) {
                   />
                 )
               )}
-              <Button onClick={handleSave} disabled={updateMutation.isPending || (lifecycleOn && isLocked)}>
+              <Button onClick={handleSave} disabled={updateMutation.isPending || (lifecycleOn && isLocked)} data-dica="torneio-salvar">
                 <Save className="w-4 h-4 mr-1" />
                 {updateMutation.isPending ? t('Salvando…') : t('Salvar alterações')}
               </Button>

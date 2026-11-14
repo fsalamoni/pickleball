@@ -13,7 +13,9 @@
 > editada na aba Geral. Toda conta (tabela, avanço, pódio) pergunta a
 > `effectiveTiebreakOrder(tournament, phase)` (`domain/tournamentTiebreak.js`) e
 > toda tela que a mostra usa `tournamentTiebreakSummary`. Nunca leia
-> `phase.tiebreak_order` direto (guarda em `torneioRegras.test.js`).
+> `phase.tiebreak_order` direto (guarda em `torneioRegras.test.js`). A página
+> pública e a impressão escrevem a ordem embaixo da classificação
+> (`v2/components/tournament/TiebreakCaption.jsx`).
 
 
 > **Pilar principal da plataforma.** Torneios de ponta a ponta: criação,

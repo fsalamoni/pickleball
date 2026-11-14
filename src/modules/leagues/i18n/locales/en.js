@@ -254,7 +254,7 @@ export default {
   "Mista 1": "Mixed 1",
   "Mista 2": "Mixed 2",
   "Montar a chave": "Build the bracket",
-  "Mudar a pontuação recalcula a tabela na hora. Mudar o calendário muda as datas das rodadas, não os jogos.": "Changing the scoring recalculates the table right away. Changing the calendar changes the round dates, not the matches.",
+  "Mudar a pontuação ou a ordem de desempate recalcula a tabela na hora, em todas as divisões. Mudar o calendário muda as datas das rodadas, não os jogos.": "Changing the scoring or the tiebreak order recalculates the table right away, in every division. Changing the calendar changes the round dates, not the matches.",
   "Mudar a regra não tira quem já está inscrito.": "Changing the rule doesn't remove existing entries.",
   "Na escada, a classificação é a posição: o 1º de cada quadra sobe e o último desce a cada sessão. Não há pontos por vitória.": "On a ladder, standings are the position: the 1st on each court moves up and the last moves down each session. There are no points per win.",
   "Na liga {liga}, você joga na quadra {q}.": "In the league {liga}, you play on court {q}.",

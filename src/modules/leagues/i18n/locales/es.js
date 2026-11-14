@@ -254,7 +254,7 @@ export default {
   "Mista 1": "Mixto 1",
   "Mista 2": "Mixto 2",
   "Montar a chave": "Armar el cuadro",
-  "Mudar a pontuação recalcula a tabela na hora. Mudar o calendário muda as datas das rodadas, não os jogos.": "Cambiar la puntuación recalcula la tabla al instante. Cambiar el calendario cambia las fechas de las rondas, no los partidos.",
+  "Mudar a pontuação ou a ordem de desempate recalcula a tabela na hora, em todas as divisões. Mudar o calendário muda as datas das rodadas, não os jogos.": "Cambiar la puntuación o el orden de desempate recalcula la tabla en el acto, en todas las divisiones. Cambiar el calendario cambia las fechas de las rondas, no los partidos.",
   "Mudar a regra não tira quem já está inscrito.": "Cambiar la regla no saca a quien ya está inscrito.",
   "Na escada, a classificação é a posição: o 1º de cada quadra sobe e o último desce a cada sessão. Não há pontos por vitória.": "En la escalera, la clasificación es la posición: el 1.º de cada cancha sube y el último baja en cada sesión. No hay puntos por victoria.",
   "Na liga {liga}, você joga na quadra {q}.": "En la liga {liga}, juegas en la cancha {q}.",

@@ -303,15 +303,23 @@ export function normalizeTiebreakOrder(ordem) {
   return semRepetir.length > 0 ? semRepetir : [...DEFAULT_TIEBREAK_ORDER];
 }
 
-/** Descreve a ordem em texto, para a tela mostrar como a classificação saiu. */
+/**
+ * Descreve a ordem em texto, para a tela mostrar como a classificação saiu.
+ * `label` e `help` já saem TRADUZIDOS (no idioma de quem vê) — as constantes
+ * guardam só a chave (`tk`), e quem desenhava `c.label` cru mostrava o
+ * português em inglês e espanhol.
+ */
 export function describeTiebreakOrder(ordem) {
   const porChave = new Map(TIEBREAK_CRITERIA.map((c) => [c.key, c]));
-  return normalizeTiebreakOrder(ordem).map((k, i) => ({
-    position: i + 1,
-    key: k,
-    label: porChave.get(k)?.label || k,
-    help: porChave.get(k)?.help || '',
-  }));
+  return normalizeTiebreakOrder(ordem).map((k, i) => {
+    const c = porChave.get(k);
+    return {
+      position: i + 1,
+      key: k,
+      label: c ? t(c.label) : k,
+      help: c?.help ? t(c.help) : '',
+    };
+  });
 }
 
 /** Agrupa em blocos por valor DECRESCENTE da chave (maior primeiro). */

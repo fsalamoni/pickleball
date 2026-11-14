@@ -15,7 +15,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { describeTiebreakOrder } from '@/core/domain/tiebreak';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import {
-  CapacityBar, InfoSurface, RankingRule, SummaryTile, ruleOrder,
+  CapacityBar, CriteriaCard, InfoSurface, RankingRule, SummaryTile, ruleOrder,
 } from '@/v2/components/competition/CompetitionOverview';
 import { formatMeta } from '@/modules/leagues/domain/leagueFormats';
 import { currentRound, normalizeSeason, roundCalendar } from '@/modules/leagues/domain/leagueSeason';
@@ -109,14 +109,13 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
           )}
         </V2Surface>
 
-        <div className="rounded-4xl bg-ink p-6 text-white shadow-organic sm:p-8">
-          <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{t('Critério de classificação')}</div>
-          <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">{escada ? t('Como a escada anda.') : t('Como a tabela é calculada.')}</h3>
-          <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
-            {escada
-              ? t('Dentro de cada quadra da sessão, a ordem segue os critérios abaixo. Vale para todas as divisões da liga.')
-              : t('A mesma regra vale em todas as divisões da liga, e é a que a tabela usa.')}
-          </p>
+        <CriteriaCard
+          dica="liga-criterio"
+          title={escada ? t('Como a escada anda.') : t('Como a tabela é calculada.')}
+          description={escada
+            ? t('Dentro de cada quadra da sessão, a ordem segue os critérios abaixo. Vale para todas as divisões da liga.')
+            : t('A mesma regra vale em todas as divisões da liga, e é a que a tabela usa.')}
+        >
           <div className="mt-6 space-y-3">
             <RankingRule order={ruleOrder(0)} title={primeira.title} description={primeira.description} />
             {criterios.map((c, i) => (
@@ -126,7 +125,7 @@ export default function LeagueOverview({ league, divisions, entries, matches, on
           <p className="mt-5 text-xs leading-5 text-white/50">
             {t('Os jogos da liga contam no ranking da plataforma e vão ao DUPR com as regras dos torneios: valem do lançamento do placar, e só quando todos os atletas têm conta.')}
           </p>
-        </div>
+        </CriteriaCard>
       </section>
 
       <section className="space-y-4">

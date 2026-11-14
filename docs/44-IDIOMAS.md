@@ -16,6 +16,10 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 2. A chave é o texto exato: mudou o texto no código, mude a chave nos catálogos (`src/core/guards/i18nCatalogos.test.js` reprova o `t('…')` sem tradução e catálogos fora de paridade).
 3. Conteúdo escrito por pessoas não é traduzido.
 4. Cada pasta `locales/` precisa de TODOS os idiomas do registro.
+5. Rótulo que mora numa constante do núcleo e é MOSTRADO por várias telas se
+   traduz na função que o entrega, não em cada tela: `describeTiebreakOrder`
+   devolve `label`/`help` já por `t()` (antes as telas do torneio mostravam
+   os critérios de desempate em português em qualquer idioma).
 
 ## Avisos e push no idioma da pessoa
 - Quem cria o aviso não sabe o idioma de quem recebe. Por isso o aviso marca o texto com `tx('Texto pt {nome}', { nome })` (de `@/core/i18n`; no servidor, `functions/avisoI18n.js`) em `title`/`message`.

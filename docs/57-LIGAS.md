@@ -482,7 +482,7 @@ módulos importa do outro):
 | `CompetitionAdminHeader` + `CompetitionAdminHub` | o cabeçalho compacto da gestão e a faixa "Hub administrativo" | `V2TournamentAdmin` | `V2LeagueAdmin` |
 | `CompetitionCard` | o cartão da lista | `V2Tournaments` | `V2Leagues` |
 | `CompetitionCreateHero` + `CompetitionStepper` + `CompetitionWizardFooter` | a coluna com a prévia, os passos e Cancelar/Voltar/Avançar/Criar da criação | `V2CreateTournament` | `V2CreateLeague` |
-| `CompetitionOverview` (`SummaryTile`, `InfoSurface`, `RankingRule`, `CapacityBar`) | as peças da visão geral | (o desenho de `V2OverviewBlock`) | `LeagueOverview` |
+| `CompetitionOverview` (`SummaryTile`, `InfoSurface`, `RankingRule`, `CapacityBar`, `CriteriaCard`) | as peças da visão geral e o cartão escuro "Critério de classificação" | `V2OverviewBlock` | `LeagueOverview` |
 
 O que mudou na liga para ficar igual:
 
@@ -509,3 +509,20 @@ Diferenças que ficam de propósito: a liga não tem taxa de inscrição, códig
 de acesso nem página de modalidade; o critério da escada é "posição na escada"
 antes dos desempates. Guarda de comportamento:
 `src/v2/components/leagues/LeagueOverview.runtime.test.jsx`.
+
+### 15.1 Os irmãos (2026-11-14)
+
+- **As mesmas peças, de verdade**: a visão geral do torneio deixou as cópias
+  locais (`InfoSurface`, `RankingRule`, `SummaryTile`, a barra de vagas) e
+  monta as de `competition/`; o cartão do critério é `CriteriaCard` nas duas.
+  `src/core/guards/competicaoMesmasPecas.test.js` reprova peça de
+  `competition/` redeclarada em outro lugar.
+- **Dicas da liga**: guias `inscrever-em-liga`, `criar-liga` e
+  `desempate-da-liga` e pontos nas telas `/ligas`, `/ligas/:id`,
+  `/ligas/:id/gerenciar` e `/ligas/nova`, todos atrás das cinco flags
+  `leagues_*`. Âncoras novas: `liga-aba-<seção>` (barra de seções da gestão),
+  `liga-temporada-salvar`, `criar-liga-<passo>`, `criar-liga-avancar`,
+  `criar-liga-criar` — são contrato (docs/32 §8).
+- **Ajuda**: o artigo das ligas ganhou o item DESEMPATE (onde se troca a
+  ordem e onde ela aparece).
+- Os nomes dos critérios do editor saem traduzidos em inglês e espanhol.

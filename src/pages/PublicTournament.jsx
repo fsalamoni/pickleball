@@ -26,6 +26,7 @@ import TournamentGallery from '@/modules/tournament/components/TournamentGallery
 import { V2ErrorState } from '@/v2/ui/primitives';
 import BrandMark from '@/v2/ui/BrandMark';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
+import TiebreakCaption from '@/v2/components/tournament/TiebreakCaption';
 import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { t, fmtData } from '@/core/i18n';
@@ -477,6 +478,12 @@ function PublicModalityBlock({ tournament, modality }) {
                 ))}
               </div>
             ))}
+            <TiebreakCaption
+              tournament={tournament}
+              modality={modality}
+              stageIndexes={rankingPhases.map((p) => p.stageIndex)}
+              className="space-y-1 text-xs leading-5 text-gray-500"
+            />
           </div>
         )}
 
