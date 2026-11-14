@@ -77,7 +77,7 @@ export function leagueOrganizerOptions({
 }
 
 /**
- * Esta pessoa gere a liga? Mostra a aba "Gerir". O servidor (`podeGerir`)
+ * Esta pessoa gere a liga? Abre a gestão (`/ligas/:id/gerenciar`). O servidor (`podeGerir`)
  * confere de novo: lista de organizadores da liga, admin da plataforma ou
  * quem responde por quem organiza (admin do clube, gestor da arena, o próprio
  * professor/atleta, a equipe de competições da federação).

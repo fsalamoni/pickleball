@@ -49,7 +49,7 @@ const PORTAS = {
 
 /** h1 com tipografia própria, de propósito. */
 const TITULO_PROPRIO = {
-  'V2TournamentAdmin.jsx': [1, 'barra fixa e compacta do console do torneio'],
+  'CompetitionHero.jsx': [1, 'barra fixa e compacta da gestão do torneio e da liga'],
   'V2MarketOrder.jsx': [1, 'recibo para imprimir'],
 };
 

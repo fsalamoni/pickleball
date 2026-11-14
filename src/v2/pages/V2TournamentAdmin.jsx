@@ -12,7 +12,8 @@
 
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Camera, Eye, ShieldCheck } from 'lucide-react';
+import { Camera, Eye } from 'lucide-react';
+import { CompetitionAdminHeader } from '@/v2/components/competition/CompetitionHero';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
@@ -20,7 +21,7 @@ import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants'
 import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdminPanel';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
-import { V2Badge, V2Button, V2Skeleton, V2BackLink, V2Page } from '@/v2/ui/primitives';
+import { V2Button, V2Skeleton, V2BackLink, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 export default function V2TournamentAdmin() {
@@ -48,30 +49,23 @@ export default function V2TournamentAdmin() {
   return (
     <V2Page>
       {/* Cabeçalho compacto e objetivo — sem hero/vitrine. */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-paper-pure p-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-gray-500">
-            <ShieldCheck className="h-3.5 w-3.5" /> {t('Gestão do torneio')}
-          </div>
-          <h1 className="mt-0.5 truncate font-display text-xl font-bold text-ink">{tournament.name}</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {tournament.status && (
-            <V2Badge tone="neutral">{TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}</V2Badge>
-          )}
-          {/* O tutorial abre sozinho na primeira vez que alguém entra na gestão
-              de um torneio, e fica aqui para rever quando quiser. */}
-          <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} dica="torneio-como-funciona" />
-          {linhasOn && (
-            <V2Button asChild size="sm" variant="ghost">
-              <Link to={`/torneios/${tournamentId}/linhas`}><Camera className="h-4 w-4" /> {t('Controle de linhas')}</Link>
-            </V2Button>
-          )}
+      <CompetitionAdminHeader
+        kicker={t('Gestão do torneio')}
+        title={tournament.name}
+        status={tournament.status ? (TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status) : null}
+      >
+        {/* O tutorial abre sozinho na primeira vez que alguém entra na gestão
+            de um torneio, e fica aqui para rever quando quiser. */}
+        <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} dica="torneio-como-funciona" />
+        {linhasOn && (
           <V2Button asChild size="sm" variant="ghost">
-            <Link to={`/torneios/${tournamentId}`} data-dica="torneio-pagina-publica"><Eye className="h-4 w-4" /> {t('Ver página pública')}</Link>
+            <Link to={`/torneios/${tournamentId}/linhas`}><Camera className="h-4 w-4" /> {t('Controle de linhas')}</Link>
           </V2Button>
-        </div>
-      </div>
+        )}
+        <V2Button asChild size="sm" variant="ghost">
+          <Link to={`/torneios/${tournamentId}`} data-dica="torneio-pagina-publica"><Eye className="h-4 w-4" /> {t('Ver página pública')}</Link>
+        </V2Button>
+      </CompetitionAdminHeader>
 
       <V2BackLink to="/perfil/torneios" className="mb-4">{t('Meus torneios')}</V2BackLink>
 

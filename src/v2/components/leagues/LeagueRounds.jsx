@@ -68,7 +68,7 @@ export default function LeagueRounds({ league, divisions, entries, matches, canM
           <V2EmptyState
             icon={Swords}
             title={t('As rodadas ainda não foram geradas')}
-            description={canManage ? t('Em Gerir → Rodadas, gere o calendário de cada divisão quando as inscrições fecharem.') : t('A organização gera os jogos quando as inscrições fecharem.')}
+            description={canManage ? t('Em "Gerenciar liga" → Rodadas, gere o calendário de cada divisão quando as inscrições fecharem.') : t('A organização gera os jogos quando as inscrições fecharem.')}
           />
         </V2Surface>
       ) : rodadas.map((r) => {
