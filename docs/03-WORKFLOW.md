@@ -753,8 +753,16 @@ que não está no código local como "removida" e a APAGA.
    repositório recebe o e-mail do GitHub). Ela não toca no banco; e os
    resultados publicados enquanto as funções estiveram fora são recuperados
    pelo `catchUpPlatformRankings` (`docs/18-RANKINGS.md` §3).
+4. **Função antiga no ar** — o deploy por nome nunca apaga função: a que sai
+   do código segue publicada e a vigilância a lista ("Funções antigas no ar").
+   Tirar de produção é decisão do dono: com o OK dele, o nome entra na lista
+   fechada de `scripts/functions-apagar-aposentadas.sh`, que a vigilância roda.
+   Só sai a função que está na lista, fora do código, na nossa região e com o
+   rótulo do nosso codebase, pelo nome (`firebase functions:delete <nome>
+   --region …`). **Nunca** um apagar amplo, e nunca no deploy
+   (`docs/47-BACKEND-CLOUD-FUNCTIONS.md` §10.3).
 
-Guarda: `src/core/guards/deployFunctions.test.js`.
+Guardas: `src/core/guards/deployFunctions.test.js` e `funcoesNoAr.test.js`.
 
 **O que continua fora do alcance deste repositório** (projeto compartilhado):
 1. **O outro app pode apagar à mão** (`firebase functions:delete`) ou com uma

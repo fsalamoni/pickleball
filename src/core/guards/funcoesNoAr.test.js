@@ -113,6 +113,46 @@ describe('funções no ar', () => {
     expect(VIGIA).toMatch(/comm -23 - esperadas\.txt > sobrando\.txt/);
   });
 
+  // Decisão do dono (2026-11-13): as duas funções antigas saem de produção. O
+  // projeto é compartilhado com outro app, então apagar é por lista fechada.
+  it('função aposentada só é apagada pelo nome, se sobra no ar e saiu do código', () => {
+    const SCRIPT = readFileSync('scripts/functions-apagar-aposentadas.sh', 'utf8');
+    expect(SCRIPT).toMatch(/^APOSENTADAS="expireStaleNotifications federationDocumentsSync"$/m);
+    const apagar = SCRIPT.split('\n').filter((l) => /firebase functions:delete/.test(l) && !/^\s*#/.test(l));
+    expect(apagar).toHaveLength(1);
+    expect(apagar[0]).toMatch(/functions:delete "\$NOME" --region "\$FUNCTIONS_REGION" --project "\$FIREBASE_PROJECT_ID"/);
+    expect(VIGIA).toMatch(/bash scripts\/functions-apagar-aposentadas\.sh esperadas\.txt sobrando\.txt publicadas\.txt/);
+    // Só a vigilância apaga; o deploy, nunca.
+    expect(readFileSync('.github/workflows/deploy-firebase.yml', 'utf8')).not.toMatch(/functions:delete|functions-apagar-aposentadas/);
+    expect(readFileSync('scripts/functions-deploy.sh', 'utf8')).not.toMatch(/functions:delete/);
+
+    const dir = mkdtempSync(join(tmpdir(), 'aposentadas-'));
+    const arq = (nome, linhas) => { const p = join(dir, nome); writeFileSync(p, linhas.length ? `${linhas.join('\n')}\n` : ''); return p; };
+    // CLI falsa: anota o que foi pedido e dá certo.
+    writeFileSync(join(dir, 'firebase'), `#!/bin/bash\necho "$@" >> "${join(dir, 'chamadas')}"\n`, { mode: 0o755 });
+    const rodar = (esperadas, sobrando, publicadas) => {
+      writeFileSync(join(dir, 'chamadas'), '');
+      const e = arq('e', esperadas); const s = arq('s', sobrando); const p = arq('p', publicadas);
+      execFileSync('bash', ['scripts/functions-apagar-aposentadas.sh', e, s, p], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, FIREBASE_PROJECT_ID: 'proj', FUNCTIONS_REGION: 'southamerica-east1' },
+      });
+      const ler = (f) => readFileSync(f, 'utf8').split('\n').filter(Boolean);
+      return { chamadas: ler(join(dir, 'chamadas')), sobrando: ler(s), publicadas: ler(p) };
+    };
+
+    // Sobra no ar e saiu do código: apaga SÓ ela, pelo nome e pela região; a
+    // outra que sobra (fora da lista) fica.
+    const a = rodar(['leagues'], ['expireStaleNotifications', 'outraAntiga'], ['expireStaleNotifications', 'leagues', 'outraAntiga']);
+    expect(a.chamadas).toEqual(['functions:delete expireStaleNotifications --region southamerica-east1 --project proj --force']);
+    expect(a.sobrando).toEqual(['outraAntiga']);
+    expect(a.publicadas).toEqual(['leagues', 'outraAntiga']);
+    // Voltou ao código: não apaga, mesmo que apareça como sobrando.
+    expect(rodar(['federationDocumentsSync'], ['federationDocumentsSync'], ['federationDocumentsSync']).chamadas).toEqual([]);
+    // Não sobra no ar (já saiu, ou não é do nosso codebase): nada a fazer.
+    expect(rodar(['leagues'], [], ['leagues']).chamadas).toEqual([]);
+  });
+
   it('a conferência conta as listas e corta as longas', () => {
     const r = montar(['check', 'nao-existe-1', 'nao-existe-2', 'nao-existe-3', 'nao-existe-4'], new Date());
     expect(r.check).toMatchObject({ expected: 0, published: 0, missing: [], unlabeled: [] });
