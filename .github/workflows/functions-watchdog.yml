@@ -91,16 +91,17 @@ jobs:
             echo "Todas as funções do PickleRush estão no ar."
           fi
 
+      - name: Dependências das funções
+        run: npm --prefix functions ci --no-audit --no-fund
+
       # Funções aposentadas que o dono mandou tirar de produção: lista FECHADA
       # de nomes no script, e só sai a que está em sobrando.txt (nossa região,
       # nosso codebase, fora do código). Antes do registro, para o painel já
-      # mostrar a conta certa. Nunca falha o job.
+      # mostrar a conta certa, e depois das dependências (o caminho direto
+      # pela API usa o firebase-admin). Nunca falha o job.
       - name: Apagar funções aposentadas (lista fechada)
         if: steps.conferir.outcome == 'success'
         run: bash scripts/functions-apagar-aposentadas.sh esperadas.txt sobrando.txt publicadas.txt
-
-      - name: Dependências das funções
-        run: npm --prefix functions ci --no-audit --no-fund
 
       # O painel admin (Sistema → Diagnóstico → "Funções no ar") lê este
       # registro. Gravado antes de tentar republicar, para valer mesmo se a

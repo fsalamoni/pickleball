@@ -760,7 +760,10 @@ que não está no código local como "removida" e a APAGA.
    Só sai a função que está na lista, fora do código, na nossa região e com o
    rótulo do nosso codebase, pelo nome (`firebase functions:delete <nome>
    --region …`). **Nunca** um apagar amplo, e nunca no deploy
-   (`docs/47-BACKEND-CLOUD-FUNCTIONS.md` §10.3).
+   (`docs/47-BACKEND-CLOUD-FUNCTIONS.md` §10.3). O `functions:delete` sai
+   com código 0 mesmo sem apagar: vale só a linha "Successful delete
+   operation" da função. Função agendada cuja tarefa já não existe a CLI não
+   apaga; essa sai direto pela API (`scripts/functions-apagar-direto.cjs`).
 
 Guardas: `src/core/guards/deployFunctions.test.js` e `funcoesNoAr.test.js`.
 
