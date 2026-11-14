@@ -310,6 +310,7 @@ function PhaseSection({
             o sorteio acontece aqui: sem este resumo, quem organiza clica sem
             eco nenhum do que configurou. Ver `domain/phaseRules.js`. */}
         <PhaseRulesSummary
+          tournament={tournament}
           phase={phase}
           isFirst={isFirst}
           isLast={isLast}

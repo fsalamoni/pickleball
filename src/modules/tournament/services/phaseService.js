@@ -43,6 +43,7 @@ import { normalizePhases, BRACKET_FORMATS } from '../domain/phases.js';
 import { drawGroups } from '../domain/grouping.js';
 import { buildPhaseDraw } from '../domain/phaseDraw.js';
 import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
+import { effectiveTiebreakOrder } from '../domain/tournamentTiebreak.js';
 import { phaseDrawIssues, previewPhaseAdvance } from '../domain/phaseAdvancePreview.js';
 import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
@@ -515,8 +516,8 @@ export async function advanceToNextPhase(params, actor) {
       name: g.name,
       ranked: rankEntrantsInGroup(entrants, groupMatches, scoringConfig, {
         teamConfig: modality.team_config || null,
-        // A ordem dos critérios é a que o organizador configurou nesta fase.
-        tiebreakOrder: prevPhase.tiebreak_order,
+        // A ordem dos critérios é a do TORNEIO (regras gerais), a mesma da tabela.
+        tiebreakOrder: effectiveTiebreakOrder(tournament, prevPhase),
       }),
       // O índice de confronto direto do grupo acompanha a classificação: é o
       // que permite o método "descartar o jogo contra o último" comparar

@@ -12,6 +12,7 @@ import {
 import { hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
 import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { describeFormat, describeStage } from '@/modules/tournament/domain/formatExplain';
+import TiebreakCriteriaList from '@/v2/components/tournament/TiebreakCriteriaList';
 import StageExplanation from './StageExplanation';
 import { t } from '@/core/i18n';
 
@@ -182,12 +183,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
         <h4 className="font-semibold text-ink flex items-center gap-2">
           <Trophy className="w-4 h-4 text-green-600" /> {t('Critério de classificação')}
         </h4>
-        <p>{t('A classificação é feita pelo número de vitórias. Em caso de empate valem, nesta ordem:')}</p>
-        <ol className="list-decimal pl-5 space-y-1">
-          <li><strong>{t('Saldo de pontos')}</strong> {t('— diferença entre pontos a favor e pontos sofridos.')}</li>
-          <li><strong>{t('Maior número de pontos marcados')}</strong> {t('(a favor).')}</li>
-          <li><strong>{t('Menor número de pontos sofridos')}</strong>.</li>
-        </ol>
+        <TiebreakCriteriaList tournament={tournament} modality={modality} />
       </section>
 
       {modality.notes && (

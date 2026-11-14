@@ -16,6 +16,7 @@
 import { buildRanking } from './ranking.js';
 import { resolveStageScoringConfig } from './scoring.js';
 import { normalizePhases } from './phases.js';
+import { effectiveTiebreakOrder } from './tournamentTiebreak.js';
 import { isMatchDecided, matchLoserIds, matchWinnerIds } from './progression.js';
 import { MATCH_STATUS, TOURNAMENT_STAGE_TYPE, rotulos } from './constants.js';
 import { isModalityComplete } from './tournamentCompletion.js';
@@ -108,7 +109,8 @@ export function modalityPlacement({ modality = null, tournament = null, matches 
 
   const participantes = [...new Set(naUltima.flatMap((m) => [...idsDoLado(m, 'a'), ...idsDoLado(m, 'b')]))];
   const config = (m) => resolveStageScoringConfig(modality, tournament, m.stage_index ?? 0);
-  buildRanking(naUltima, participantes, config)
+  // A ordem de desempate do torneio — a mesma da tabela que a tela mostra.
+  buildRanking(naUltima, participantes, config, { tiebreakOrder: effectiveTiebreakOrder(tournament, fases[ultimaFase]) })
     .filter((r) => Number(r.played) > 0)
     .forEach((r) => coloca([String(r.participant_id)], Number(r.position)));
   return saida;

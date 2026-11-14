@@ -414,6 +414,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
           </div>
           {multiPhaseEnabled ? (
             <PhasesEditor
+              tournament={tournament}
               format={form.format}
               phases={form.phases}
               onChange={(phases) => set('phases', phases)}

@@ -8,6 +8,12 @@
 > repescagem), `groupPlan.js` (em quantos grupos dividir N inscritos) e
 > `directEntry.js` (quem pula fases e entra direto mais à frente).
 > Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`.
+>
+> **A ordem de desempate é do TORNEIO** (2026-11-14): `tournaments.tiebreak_order`,
+> editada na aba Geral. Toda conta (tabela, avanço, pódio) pergunta a
+> `effectiveTiebreakOrder(tournament, phase)` (`domain/tournamentTiebreak.js`) e
+> toda tela que a mostra usa `tournamentTiebreakSummary`. Nunca leia
+> `phase.tiebreak_order` direto (guarda em `torneioRegras.test.js`).
 
 
 > **Pilar principal da plataforma.** Torneios de ponta a ponta: criação,

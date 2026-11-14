@@ -498,8 +498,6 @@ describe('⭐ a varredura na plataforma inteira', () => {
       'fotos: "nenhuma foto ainda" não induz ação nenhuma nem arrisca dado'],
     ['src/modules/tournament/components/TournamentGallery.jsx',
       'fotos: mesmo caso do V2Gallery (página pública do torneio)'],
-    ['src/modules/tournament/components/TournamentAdminTab.jsx',
-      'a frase é um toast DEPOIS de uma busca explícita por e-mail, não um estado vazio de tela'],
     ['src/v2/pages/V2JoinTournament.jsx',
       'toast após o envio de um código: a pessoa acabou de agir e o erro real tem catch próprio'],
     ['src/v2/pages/V2LegalDocument.jsx',

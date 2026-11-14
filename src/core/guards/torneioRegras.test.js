@@ -253,11 +253,63 @@ describe('⭐ o que a ajuda ensina bate com a regra do código', () => {
       .not.toMatch(/torneios PÚBLICOS e ENCERRADOS/);
   });
 
+  it('⭐ a ajuda diz que a ordem de desempate é do torneio, não da fase', () => {
+    expect(ler(AJUDA)).toMatch(/ordem dos critérios de desempate se troca UMA vez, nas regras gerais/);
+  });
+
   it('⭐ a ajuda cobre o número incomum de inscritos', () => {
     const src = ler(AJUDA);
     expect(src).toContain('inscritos-numero-incomum');
     ['repescagem', 'aproveitamento', 'cabeças'].forEach((termo) => {
       expect(src.toLowerCase(), `a ajuda não fala de ${termo}`).toContain(termo.toLowerCase());
     });
+  });
+});
+
+describe('⭐ a ordem de desempate é UMA para o torneio inteiro (2026-11-14)', () => {
+  // A ordem se define nas regras gerais (`tournaments.tiebreak_order`) e vale
+  // para toda modalidade e fase — a tabela, o avanço, a prévia, o pódio e o
+  // que a tela explica. Antes ela morava em cada fase e a capa mostrava um
+  // texto fixo, sem confronto direto, que não batia com nada.
+  const QUEM_CLASSIFICA = [
+    'src/modules/tournament/services/rankingService.js',
+    'src/modules/tournament/services/phaseService.js',
+    'src/modules/tournament/components/NextPhasePreview.jsx',
+    'src/modules/tournament/domain/podium.js',
+    'src/modules/tournament/components/PhaseRulesSummary.jsx',
+  ];
+  QUEM_CLASSIFICA.forEach((caminho) => {
+    it(`⭐ ${caminho.split('/').pop()} pega a ordem por effectiveTiebreakOrder`, () => {
+      const src = semComentarios(ler(caminho));
+      expect(src).toContain('effectiveTiebreakOrder');
+      expect(src, 'voltou a ler a ordem direto da fase').not.toMatch(/tiebreakOrder:\s*\w+\.tiebreak_order/);
+    });
+  });
+
+  it('⭐ a fase não edita mais a ordem — só mostra', () => {
+    const src = semComentarios(ler('src/modules/tournament/components/PhaseAdvancedRules.jsx'));
+    expect(src).not.toContain('TiebreakOrderEditor');
+    expect(src).not.toMatch(/tiebreak_order:\s*v/);
+  });
+
+  it('⭐ a ordem se edita nas regras gerais', () => {
+    const src = semComentarios(ler('src/modules/tournament/components/TournamentAdminTab.jsx'));
+    expect(src).toContain('TiebreakOrderEditor');
+    expect(src).toContain('tiebreak_order');
+  });
+
+  it('⭐ capa, ranking e informações da modalidade mostram a ordem que vale', () => {
+    [
+      'src/v2/components/tournament/V2OverviewBlock.jsx',
+      'src/v2/components/tournament/V2RankingBlock.jsx',
+      'src/v2/components/tournament/TiebreakCriteriaList.jsx',
+    ].forEach((caminho) => {
+      const src = semComentarios(ler(caminho));
+      expect(src, caminho).toContain('tournamentTiebreakSummary');
+      expect(src, `${caminho} voltou à lista fixa sem confronto direto`)
+        .not.toMatch(/Empates são resolvidos primeiro pelo saldo|Menor número de pontos sofridos/);
+    });
+    ['src/v2/components/tournament/V2ModalityInfoContent.jsx', 'src/modules/tournament/components/ModalityInfoContent.jsx']
+      .forEach((caminho) => expect(semComentarios(ler(caminho)), caminho).toContain('<TiebreakCriteriaList'));
   });
 });

@@ -34,7 +34,7 @@ import {
   PHASE_BRACKET_SEEDING_LABELS,
 } from './constants.js';
 import { supportsGroups, normalizePhase, BRACKET_FORMATS } from './phases.js';
-import { describeTiebreakOrder, DEFAULT_TIEBREAK_ORDER } from './tiebreak.js';
+import { describeTiebreakOrder, DEFAULT_TIEBREAK_ORDER, normalizeTiebreakOrder } from './tiebreak.js';
 import { CROSS_GROUP_METHOD, CROSS_GROUP_METHOD_LABELS } from './crossGroup.js';
 import { DIRECT_ENTRY_MODE, DIRECT_ENTRY_MODE_LABELS, normalizeDirectEntry } from './directEntry.js';
 import { t, tn } from '@/core/i18n';
@@ -54,13 +54,20 @@ function ordinal(n) {
  * Traduz a configuração de UMA fase nas linhas que a tela mostra.
  *
  * @param {object} rawPhase fase como está gravada (ou já normalizada)
- * @param {{ isFirst?: boolean, isLast?: boolean, groupCount?: number }} [ctx]
+ * @param {{ isFirst?: boolean, isLast?: boolean, groupCount?: number, tiebreakOrder?: string[] }} [ctx]
+ *   `tiebreakOrder` = a ordem do torneio (`effectiveTiebreakOrder`)
  * @returns {{ rows: Array<{key:string,label:string,value:string,help:string,changed:boolean}>, changedCount: number }}
  */
 export function describePhaseRules(rawPhase, ctx = {}) {
   const isFirst = ctx.isFirst !== false;
   const isLast = Boolean(ctx.isLast);
   const phase = normalizePhase(rawPhase || {}, { isFirst });
+  // A ordem de desempate é do TORNEIO (`tournamentTiebreak.js`): quem chama
+  // passa a ordem que vale; sem ela, a da fase (torneio antigo) ou a oficial.
+  const ordemVigente = normalizeTiebreakOrder(
+    ctx.tiebreakOrder?.length ? ctx.tiebreakOrder : phase.tiebreak_order,
+  );
+  const desempateMudou = ordemVigente.join('|') !== DEFAULT_TIEBREAK_ORDER.join('|');
   const agrupada = supportsGroups(phase.type);
   const éChave = BRACKET_FORMATS.has(phase.type);
 
@@ -93,9 +100,8 @@ export function describePhaseRules(rawPhase, ctx = {}) {
       volta ? t('No returno, os mesmos parceiros e adversários, com os lados trocados.') : t('O padrão do Americano.'),
       volta,
     );
-    const ordem = describeTiebreakOrder(phase.tiebreak_order);
-    const mudou = phase.tiebreak_order.length > 0
-      && phase.tiebreak_order.join('|') !== DEFAULT_TIEBREAK_ORDER.join('|');
+    const ordem = describeTiebreakOrder(ordemVigente);
+    const mudou = desempateMudou;
     add(
       'desempate',
       t('Classificação'),
@@ -190,15 +196,14 @@ export function describePhaseRules(rawPhase, ctx = {}) {
 
   // ------------------------------------------------------------- desempate
   if (agrupada) {
-    const ordem = describeTiebreakOrder(phase.tiebreak_order);
-    const mudou = phase.tiebreak_order.length > 0
-      && phase.tiebreak_order.join('|') !== DEFAULT_TIEBREAK_ORDER.join('|');
+    const ordem = describeTiebreakOrder(ordemVigente);
+    const mudou = desempateMudou;
     add(
       'desempate',
       t('Desempate dentro do grupo'),
       ordem.map((c) => c.label).join(' → '),
       mudou
-        ? t('Ordem escolhida por você. Critério que não se aplica (quem não se enfrentou, por exemplo) é PULADO, nunca inventado.')
+        ? t('Ordem escolhida nas regras gerais do torneio, a mesma para todas as modalidades. Critério que não se aplica (quem não se enfrentou, por exemplo) é PULADO, nunca inventado.')
         : t('A ordem do regulamento (USA Pickleball 15.B.4). O confronto direto vem logo depois das vitórias — é a reclamação nº 1 de quadra, "mas eu ganhei dele".'),
       mudou,
     );

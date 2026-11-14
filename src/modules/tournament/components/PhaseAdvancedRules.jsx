@@ -15,7 +15,8 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import TiebreakOrderEditor from '@/v2/components/competition/TiebreakOrderEditor';
+import { describeTiebreakOrder } from '@/core/domain/tiebreak';
+import { effectiveTiebreakOrder, hasTournamentTiebreak } from '@/modules/tournament/domain/tournamentTiebreak';
 import {
   CROSS_GROUP_METHOD, CROSS_GROUP_METHOD_LABELS, CROSS_GROUP_METHOD_HELP,
 } from '@/modules/tournament/domain/crossGroup';
@@ -49,7 +50,7 @@ const formatNumberList = (lista) => (Array.isArray(lista) ? lista.join(', ') : '
  * }} props
  */
 export default function PhaseAdvancedRules({
-  phase, index, isFirst, isLast, grouped, unit = 'atletas', onChange,
+  tournament = null, phase, index, isFirst, isLast, grouped, unit = 'atletas', onChange,
 }) {
   // Americano em etapas: uma tabela só (sem grupos que classifiquem nem
   // repescagem), mas a ordem de desempate é dele.
@@ -60,7 +61,6 @@ export default function PhaseAdvancedRules({
   const ativos = [
     (phase.custom_group_sizes || []).length > 0 && t('tamanhos manuais'),
     (phase.qualifiers_by_group || []).length > 0 && t('classificados por grupo'),
-    (phase.tiebreak_order || []).length > 0 && t('desempate próprio'),
     phase.cross_group_method && phase.cross_group_method !== CROSS_GROUP_METHOD.RATE && t('comparação própria'),
     direct.mode !== DIRECT_ENTRY_MODE.NONE && t('entrada direta'),
     Number(phase.wildcard_from_position) > 0 && t('repescagem fixa'),
@@ -100,13 +100,27 @@ export default function PhaseAdvancedRules({
             </div>
           )}
 
+          {/* A ordem de desempate é UMA para o torneio inteiro e se define nas
+              regras gerais (aba Geral). Aqui ela só aparece, para quem configura
+              a fase saber como a tabela vai sair. */}
           {(grouped || phase.type === 'round_robin' || tabelaUnica) && (
-            <TiebreakOrderEditor
-              className="md:col-span-2"
-              label={t('Ordem dos critérios de desempate (dentro do grupo)')}
-              value={phase.tiebreak_order}
-              onChange={(v) => onChange({ tiebreak_order: v })}
-            />
+            <div className="md:col-span-2 rounded-md border border-gray-200 bg-paper-pure p-2.5">
+              <Label className="text-xs">{t('Ordem dos critérios de desempate')}</Label>
+              {unit === 'equipes' ? (
+                <Help>{t('Critérios de desempate: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.')}</Help>
+              ) : (
+                <>
+                  <p className="mt-1 text-xs font-semibold text-ink">
+                    {describeTiebreakOrder(effectiveTiebreakOrder(tournament, phase)).map((c) => c.label).join(' → ')}
+                  </p>
+                  <Help>
+                    {!hasTournamentTiebreak(tournament) && (phase.tiebreak_order || []).length > 0
+                      ? t('Esta fase ainda usa a ordem que tinha antes de a regra passar a ser única no torneio. Ao salvar a ordem nas regras gerais (aba Geral), ela passa a valer aqui também.')
+                      : t('É a mesma para todas as modalidades e fases do torneio. Para mudar, use as regras gerais do torneio (aba Geral → Classificação e desempate).')}
+                  </Help>
+                </>
+              )}
+            </div>
           )}
 
           {/* ---------------- quem passa ---------------- */}

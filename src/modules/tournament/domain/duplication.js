@@ -57,6 +57,12 @@ export function duplicatedTournamentFields(source = {}, options = {}) {
     registration_opens_ms: source.registration_opens_ms ?? null,
     registration_closes_ms: source.registration_closes_ms ?? null,
     payment_deadline_ms: source.payment_deadline_ms ?? null,
+    // A ordem de desempate do torneio. `options.tiebreakOrder` é a que vale
+    // na origem (`tournamentTiebreakSummary`); `null` = a origem é um torneio
+    // antigo com ordens diferentes por fase — a cópia herda as fases como estão.
+    tiebreak_order: options.tiebreakOrder === undefined
+      ? (Array.isArray(source.tiebreak_order) && source.tiebreak_order.length ? [...source.tiebreak_order] : null)
+      : options.tiebreakOrder,
   };
 }
 

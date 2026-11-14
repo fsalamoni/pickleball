@@ -173,7 +173,7 @@ function phaseIssues(phase, index, phases, format) {
  * a divisão em grupos, a classificação para a próxima fase e como alimenta a
  * fase seguinte. Cada opção traz uma explicação e avisos do que falta preencher.
  */
-export default function PhasesEditor({ phases, format, onChange, unit = 'atletas' }) {
+export default function PhasesEditor({ phases, format, onChange, unit = 'atletas', tournament = null }) {
   const DIVISION_HELP = divisionHelp(unit);
   // Americano em etapas: só se OFERECE com a flag. A fase que já está nele
   // continua com ele no seletor (flag tira a opção de escolher, não a de manter).
@@ -562,10 +562,12 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
               )}
 
               {/* CONTROLE TOTAL: tamanhos manuais, classificados por grupo,
-                  ordem dos critérios de desempate, comparação entre grupos e
-                  entrada direta (pular fases). Fechado por padrão — quem só
-                  quer "4 grupos, passam 2" não precisa ver nada disso. */}
+                  comparação entre grupos e entrada direta (pular fases). A
+                  ordem de desempate é do TORNEIO (aba Geral): aqui só aparece.
+                  Fechado por padrão — quem só quer "4 grupos, passam 2" não
+                  precisa ver nada disso. */}
               <PhaseAdvancedRules
+                tournament={tournament}
                 phase={phase}
                 index={index}
                 isFirst={isFirst}

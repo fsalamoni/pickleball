@@ -30,6 +30,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { logger } from '@/core/lib/logger';
 import { createTournament } from './tournamentService.js';
 import { createModality } from './modalityService.js';
+import { tournamentTiebreakSummary } from '../domain/tournamentTiebreak.js';
 import {
   duplicatedTournamentFields,
   duplicatedModalityFields,
@@ -53,6 +54,16 @@ const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por ba
  *   modalidades selecionadas, cada uma com suas inscrições já carregadas
  * @returns {Promise<{ tournamentId: string, modalityCount: number, registrationCount: number }>}
  */
+/**
+ * A ordem de desempate que a cópia leva: a que vale na origem; `null` quando a
+ * origem é um torneio antigo cujas fases usam ordens diferentes (a cópia herda
+ * as fases como estão, e o organizador unifica nas regras gerais).
+ */
+function tiebreakDaOrigem(source, modalities) {
+  const resumo = tournamentTiebreakSummary(source, (modalities || []).map((e) => e?.modality).filter(Boolean));
+  return resumo.uniform ? resumo.order : null;
+}
+
 export async function duplicateTournament(actor, params) {
   if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const { source, copyDefinitions = true, name, modalities = [] } = params || {};
@@ -61,7 +72,7 @@ export async function duplicateTournament(actor, params) {
   // 1) Novo torneio + owner (o commit interno habilita o ator como admin).
   const tournamentId = await createTournament(
     actor,
-    duplicatedTournamentFields(source, { copyDefinitions, name }),
+    duplicatedTournamentFields(source, { copyDefinitions, name, tiebreakOrder: tiebreakDaOrigem(source, modalities) }),
   );
 
   // 2) Modalidades selecionadas (createModality normaliza a configuração).
