@@ -47,6 +47,8 @@ import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { isPaymentOpen, registrationBlockReason } from '@/modules/tournament/domain/registrationWindow';
 import { formatInstant } from './RegistrationSchedule';
+import { describeTiebreakOrder } from '@/core/domain/tiebreak';
+import { tournamentTiebreakSummary } from '@/modules/tournament/domain/tournamentTiebreak';
 import { t, fmtData } from '@/core/i18n';
 
 function formatDate(value) {
@@ -90,6 +92,71 @@ function RankingRule({ order, title, description }) {
   );
 }
 
+const doisDigitos = (n) => String(n).padStart(2, '0');
+
+/**
+ * O critério de classificação que VALE no torneio — a mesma ordem que a tabela,
+ * o avanço de fase e o pódio usam (`tournamentTiebreak.js`). Antes este cartão
+ * era texto fixo (vitórias → saldo → pontos) e não batia com o que o
+ * organizador configurava, nem com o confronto direto que a plataforma aplica.
+ */
+function TiebreakCard({ tournament, modalities, modalitiesFailed }) {
+  const resumo = tournamentTiebreakSummary(tournament, modalities);
+  // Torneio antigo sem a ordem nas regras gerais: a ordem pode estar nas fases,
+  // e sem as modalidades não dá para afirmar qual vale.
+  const incerto = modalitiesFailed && resumo.source !== 'tournament';
+  return (
+    <div className="rounded-4xl bg-ink p-6 text-white shadow-organic sm:p-8">
+      <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{t('Critério de classificação')}</div>
+      <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">{t('Como o ranking é calculado.')}</h3>
+      {incerto ? (
+        <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base" role="status">
+          {t('Não deu para carregar as modalidades agora, então não dá para mostrar a ordem de desempate deste torneio. Recarregue a página para tentar de novo.')}
+        </p>
+      ) : resumo.uniform ? (
+        <>
+          <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
+            {t('A mesma ordem vale em todas as modalidades do torneio. Quando um critério separa os empatados, os que continuam empatados são comparados de novo, só entre eles.')}
+          </p>
+          <ol className="mt-6 space-y-3">
+            {describeTiebreakOrder(resumo.order).map((c) => (
+              <li key={c.key}>
+                <RankingRule order={doisDigitos(c.position)} title={c.label} description={c.help} />
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
+            {t('Neste torneio, cada modalidade segue a ordem de desempate escolhida para ela:')}
+          </p>
+          <div className="mt-6 space-y-3">
+            {resumo.variants.map((v) => (
+              <div key={v.order.join('|')} className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                <div className="font-display text-sm font-bold text-white">
+                  {[...new Set(v.where.map((w) => w.modalityName || t('Modalidade')))].join(', ')}
+                </div>
+                <p className="mt-1 text-sm leading-6 text-white/60">
+                  {describeTiebreakOrder(v.order).map((c) => c.label).join(' → ')}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <p className="mt-4 text-xs leading-5 text-white/50">
+        {t('Nas chaves (mata-mata), passa quem vence o jogo. Critério que não se aplica, como o confronto direto entre quem não se enfrentou, é pulado.')}
+      </p>
+      {resumo.hasTeamModality && (
+        <p className="mt-2 text-xs leading-5 text-white/50">
+          {t('Modalidades de equipes seguem os critérios do formato de equipes: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.')}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function SummaryTile({ icon: Icon, label, value, description }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
@@ -107,7 +174,7 @@ function SummaryTile({ icon: Icon, label, value, description }) {
 
 export function V2TournamentOverview({ tournament, isAdmin }) {
   const { user } = useAuth();
-  const { data: modalities = [] } = useModalities(tournament.id);
+  const { data: modalities = [], isError: modalitiesFailed } = useModalities(tournament.id);
   const { data: registrations = [] } = useRegistrationsByTournament(tournament.id);
   const [infoModalityId, setInfoModalityId] = useState(null);
   const [registerModalityId, setRegisterModalityId] = useState(null);
@@ -172,18 +239,8 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
           )}
         </V2Surface>
 
-        <div className="rounded-4xl bg-ink p-6 text-white shadow-organic sm:p-8">
-          <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{t('Critério de classificação')}</div>
-          <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">{t('Como o ranking é calculado.')}</h3>
-          <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
-            {t('A plataforma usa o mesmo critério em todas as modalidades do torneio.')}
-          </p>
-          <div className="mt-6 space-y-3">
-            <RankingRule order="01" title={t('Vitórias')} description={t('A posição inicial no ranking sempre parte do número de vitórias.')} />
-            <RankingRule order="02" title={t('Saldo de pontos')} description={t('Empates são resolvidos primeiro pelo saldo entre pontos marcados e sofridos.')} />
-            <RankingRule order="03" title={t('Pontos marcados e sofridos')} description={t('Se o empate persistir, valem maior pontuação a favor e, por fim, menor pontuação contra.')} />
-          </div>
-        </div>
+        <TiebreakCard tournament={tournament} modalities={modalities} modalitiesFailed={modalitiesFailed} />
+
       </section>
 
       <section className="space-y-4">

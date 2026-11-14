@@ -1890,7 +1890,7 @@ const ATLETA = {
           tk('ENTRADA DIRETA — os N melhores cabeças (ou uma lista escolhida a dedo) podem pular as primeiras fases e entrar mais à frente. É o modelo de qualificatória: os favoritos esperam, os demais disputam as vagas.'),
         ),
         p(tk('O desempate dentro do grupo segue o regulamento: vitórias, CONFRONTO DIRETO, saldo, saldo no confronto direto, pontos a favor e pontos sofridos. Empate de três ou mais é resolvido numa mini-tabela só entre os empatados.')),
-        p(tk('E nada disso é obrigatório: em cada fase, o bloco "Regras avançadas" deixa você trocar a ordem dos critérios, o método de comparação entre grupos, quantos passam em cada grupo e de qual colocação sai a repescagem.')),
+        p(tk('E nada disso é obrigatório: a ordem dos critérios de desempate se troca UMA vez, nas regras gerais do torneio (Gestão → Geral → Classificação e desempate), e vale para todas as modalidades. Em cada fase, o bloco "Regras avançadas" deixa você trocar o método de comparação entre grupos, quantos passam em cada grupo e de qual colocação sai a repescagem.')),
         link('/torneios/guia', tk('Guia dos formatos de chave')),
         tip(tk('Quem organiza não precisa decorar nada disso: cada controle tem a explicação ao lado, e a fase mostra na tela de sorteio quais regras estão em vigor.')),
       ],

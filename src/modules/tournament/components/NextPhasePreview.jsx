@@ -4,6 +4,7 @@ import { ArrowDownToLine, AlertTriangle, SkipForward, LifeBuoy } from 'lucide-re
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { rankEntrantsInGroup } from '@/modules/tournament/domain/phaseProgression';
+import { effectiveTiebreakOrder } from '@/modules/tournament/domain/tournamentTiebreak';
 import { headToHeadFromMatches } from '@/modules/tournament/domain/ranking';
 import { planDirectEntries } from '@/modules/tournament/domain/directEntry';
 import { registrationsToEntrants } from '@/modules/tournament/domain/registrationEntrant';
@@ -98,7 +99,7 @@ export default function NextPhasePreview({
         name: g.name,
         ranked: rankEntrantsInGroup(g.entrants, groupMatches, scoringConfig, {
           teamConfig: modality.team_config || null,
-          tiebreakOrder: prevPhase.tiebreak_order,
+          tiebreakOrder: effectiveTiebreakOrder(tournament, prevPhase),
         }),
         headToHead: headToHeadFromMatches(groupMatches, scoringConfig),
       };

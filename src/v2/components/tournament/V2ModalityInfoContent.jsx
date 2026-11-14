@@ -12,6 +12,7 @@ import {
 import { hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
 import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { describeFormat, describeStage } from '@/modules/tournament/domain/formatExplain';
+import TiebreakCriteriaList from './TiebreakCriteriaList';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import { V2Badge } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
@@ -164,12 +165,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
         <h4 className="flex items-center gap-2 font-display font-bold text-ink">
           <Trophy className="h-4 w-4 text-ink" /> {t('Critério de classificação')}
         </h4>
-        <p>{t('A classificação é feita pelo número de vitórias. Em caso de empate valem, nesta ordem:')}</p>
-        <ol className="list-decimal space-y-1 pl-5">
-          <li><strong className="text-ink">{t('Saldo de pontos')}</strong> {t('— diferença entre pontos a favor e pontos sofridos.')}</li>
-          <li><strong className="text-ink">{t('Maior número de pontos marcados')}</strong> {t('(a favor).')}</li>
-          <li><strong className="text-ink">{t('Menor número de pontos sofridos')}</strong>.</li>
-        </ol>
+        <TiebreakCriteriaList tournament={tournament} modality={modality} strongClassName="text-ink" />
       </section>
 
       {modality.notes && (

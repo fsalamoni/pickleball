@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import TiebreakOrderEditor from '@/v2/components/competition/TiebreakOrderEditor';
+import { describeTiebreakOrder, normalizeTiebreakOrder } from '@/core/domain/tiebreak';
+import { hasTournamentTiebreak, tournamentTiebreakSummary } from '@/modules/tournament/domain/tournamentTiebreak';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +37,7 @@ import {
   Ban,
   Wallet,
   EyeOff,
+  ListOrdered,
 } from 'lucide-react';
 import {
   useTournamentAdmins,
@@ -45,6 +49,7 @@ import {
   useArchiveTournament,
   useUnarchiveTournament,
   usePublishTournament,
+  useModalities,
 } from '@/modules/tournament/hooks/useTournament';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
@@ -84,6 +89,10 @@ function buildFormState(tournament) {
     payment_pix_name: tournament?.payment_pix_name || '',
     payment_pix_city: tournament?.payment_pix_city || '',
     payment_instructions: tournament?.payment_instructions || '',
+    // A ordem de desempate do torneio inteiro. `null` = ainda não definida
+    // aqui (torneio antigo): nada é gravado até o organizador mexer, para que
+    // salvar o nome não troque, de tabela, a ordem que as fases já usavam.
+    tiebreak_order: hasTournamentTiebreak(tournament) ? tournament.tiebreak_order : null,
   };
 }
 
@@ -130,6 +139,8 @@ export default function TournamentAdminTab({ tournament }) {
   const encerramentoPassou = fechaMs != null && fechaMs <= Date.now();
   const [email, setEmail] = useState('');
   const [form, setForm] = useState(() => buildFormState(tournament));
+  const { data: modalities = [], isError: modalitiesError } = useModalities(tournament.id);
+  const desempate = useMemo(() => tournamentTiebreakSummary(tournament, modalities), [tournament, modalities]);
   const duplicationOn = true;
   const templatesOn = true;
   const [duplicateOpen, setDuplicateOpen] = useState(false);
@@ -242,6 +253,9 @@ export default function TournamentAdminTab({ tournament }) {
           ruleset: form.ruleset,
           win_by_two: tournament?.scoring?.win_by_two ?? true,
         },
+        // Gravada sempre explícita (nunca vazia): com ela, as ordens antigas
+        // das fases deixam de valer (`tournamentTiebreak.js`).
+        ...(form.tiebreak_order !== null ? { tiebreak_order: normalizeTiebreakOrder(form.tiebreak_order) } : {}),
       });
       toast.success(t('Parâmetros do torneio atualizados.'));
     } catch (err) {
@@ -430,6 +444,47 @@ export default function TournamentAdminTab({ tournament }) {
                 <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800">
                   {t('Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.')}
                 </div>
+              </div>
+            </PlatformFormSection>
+
+            <PlatformFormSection
+              icon={ListOrdered}
+              title={t('Classificação e desempate')}
+              description={t('Uma ordem só, para todas as modalidades e fases do torneio: grupos, pontos corridos, americano e o pódio saem dela. Salve para valer.')}
+            >
+              <div data-dica="torneio-desempate" className="space-y-4">
+                {modalitiesError && (
+                  <p className="rounded-[1rem] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+                    {t('Não deu para conferir as modalidades agora, então não sabemos se alguma fase ainda usa uma ordem antiga. A ordem salva aqui vale para todas do mesmo jeito.')}
+                  </p>
+                )}
+                {form.tiebreak_order === null && !desempate.uniform && (
+                  <div className="rounded-[1rem] border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900" role="status">
+                    <p className="font-semibold">{t('Hoje as modalidades usam ordens diferentes, escolhidas fase a fase antes de a regra passar a ser única:')}</p>
+                    <ul className="mt-2 space-y-1">
+                      {desempate.variants.map((v) => (
+                        <li key={v.order.join('|')}>
+                          <strong>{v.where.map((w) => t('{nome} (fase {n})', { nome: w.modalityName || t('Modalidade'), n: w.stageIndex + 1 })).join(', ')}</strong>
+                          {': '}{describeTiebreakOrder(v.order).map((c) => c.label).join(' → ')}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2">{t('Enquanto você não salvar uma ordem aqui, cada uma segue com a sua. Ao salvar, a ordem abaixo passa a valer para todas, e a classificação de quem já jogou pode mudar.')}</p>
+                  </div>
+                )}
+                <TiebreakOrderEditor
+                  label={t('Ordem dos critérios de desempate')}
+                  value={form.tiebreak_order ?? desempate.order}
+                  onChange={(v) => set('tiebreak_order', v)}
+                />
+                <p className="text-xs leading-5 text-gray-500">
+                  {t('Mudar a ordem com jogos já lançados muda a classificação na hora, em todas as modalidades. A comparação entre grupos de tamanhos diferentes continua nas regras avançadas de cada fase.')}
+                </p>
+                {desempate.hasTeamModality && (
+                  <p className="text-xs leading-5 text-gray-500">
+                    {t('Modalidades de equipes seguem os critérios do formato de equipes: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.')}
+                  </p>
+                )}
               </div>
             </PlatformFormSection>
 

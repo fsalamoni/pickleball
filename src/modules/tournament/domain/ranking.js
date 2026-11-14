@@ -141,7 +141,7 @@ export function headToHeadFromMatches(matches, scoringConfig) {
  * regulamento manda — logo depois das vitórias.
  *
  * @param {Array<object>} standings
- * @param {{ matches?: Array<object>|null, scoringConfig?: any }} [options]
+ * @param {{ matches?: Array<object>|null, scoringConfig?: any, order?: string[]|null }} [options]
  */
 export function rankStandings(standings, options = {}) {
   const headToHead = options.matches
@@ -150,12 +150,14 @@ export function rankStandings(standings, options = {}) {
   const sorted = rankByOfficialCriteria(standings || [], {
     headToHead,
     idOf: (r) => String(r?.participant_id ?? r?.id ?? ''),
+    // A ordem do torneio (regras gerais — `tournamentTiebreak.js`); ausente ⇒ a oficial.
+    order: options.order || null,
   });
   return sorted.map((s, i) => ({ ...s, position: i + 1 }));
 }
 
-export function buildRanking(matches, participantIds, scoringConfig) {
+export function buildRanking(matches, participantIds, scoringConfig, options = {}) {
   const standings = buildStandings(matches, participantIds, scoringConfig);
   // Os jogos estão em mãos: o confronto direto entra na conta.
-  return rankStandings(standings, { matches, scoringConfig });
+  return rankStandings(standings, { matches, scoringConfig, order: options.tiebreakOrder || null });
 }

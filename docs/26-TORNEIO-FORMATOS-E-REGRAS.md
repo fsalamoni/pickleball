@@ -173,6 +173,23 @@ partida** · **saldo de games/sets**.
 Fonte única em `tiebreak.js` (desde 2026-11-12 em `src/core/domain/`, porque a liga usa a mesma; o caminho do torneio reexporta; o editor da ordem é `v2/components/competition/TiebreakOrderEditor.jsx`, o mesmo da liga) — a mesma regra vale na classificação do grupo, no
 ranking da modalidade e na progressão entre fases.
 
+**A ORDEM é do TORNEIO, não da fase** (2026-11-14, pedido do dono): uma só, em
+Gestão → Geral → **Classificação e desempate** (`tournaments.tiebreak_order`),
+vale em todas as modalidades e fases — grupos, pontos corridos, americano, a
+tabela, o avanço de fase e o pódio. Quem resolve é `effectiveTiebreakOrder`
+(`domain/tournamentTiebreak.js`): ordem do torneio → a gravada na fase
+(torneio antigo) → a oficial. **Nada foi migrado**: torneio antigo segue com a
+ordem que cada fase tinha até o organizador salvar a do torneio; se as fases
+divergem, a aba Geral e a capa dizem isso modalidade a modalidade
+(`tournamentTiebreakSummary`). A capa, a aba de classificação e as informações
+da modalidade mostram a ordem REAL (antes a capa tinha um texto fixo —
+vitórias → saldo → pontos — que nem era a ordem oficial). Modalidade de
+equipes segue os critérios do formato de equipes; o mata-mata não usa
+desempate. A **comparação entre grupos** continua por fase. Torneio novo nasce
+com a ordem oficial gravada; a cópia de torneio leva a ordem (ou, se a origem
+tinha ordens diferentes por fase, não grava nenhuma e as fases copiadas seguem
+com as suas).
+
 ---
 
 ## 4. Quem passa de fase
@@ -332,7 +349,7 @@ existir.
 | Critério (geral / por gênero) | editor de formato | geral |
 | **Repescagem (vagas)** | editor de formato | 0 |
 | **Repescagem (de qual colocação)** | editor → regras avançadas | automático |
-| **Ordem dos critérios de desempate** | editor → regras avançadas | oficial |
+| **Ordem dos critérios de desempate** | **aba Geral do torneio** (uma para todas as modalidades) | oficial |
 | **Comparação entre grupos** | editor → regras avançadas | aproveitamento |
 | Alimentação da próxima fase | editor de formato | juntar todos |
 | Formar duplas com os classificados | editor de formato | não |
@@ -386,7 +403,7 @@ Campos novos, todos opcionais:
 | `qualifiers_by_group` | `[]` | o mesmo número para todos |
 | `wildcard_slots` | 0 | sem repescagem |
 | `wildcard_from_position` | 0 | a colocação seguinte ao corte |
-| `tiebreak_order` | `[]` | a ordem oficial |
+| `tiebreak_order` | `[]` | LEGADO: só vale enquanto o torneio não tem `tournaments.tiebreak_order` |
 | `cross_group_method` | `rate` | aproveitamento |
 | `direct_entry` | `{mode:'none'}` | ninguém pula fase |
 

@@ -5,6 +5,8 @@ import {
   useAllModalityMatches, useModalities, useModalityRankingStructured, useRegistrations,
 } from '@/modules/tournament/hooks/useTournament';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
+import { describeTiebreakOrder } from '@/core/domain/tiebreak';
+import { tournamentTiebreakSummary } from '@/modules/tournament/domain/tournamentTiebreak';
 import V2BracketTree from './V2BracketTree';
 import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { V2Badge, V2Surface } from '@/v2/ui/primitives';
@@ -190,6 +192,7 @@ export function V2ModalityRanking({ modality }) {
 
 export function V2TournamentRanking({ tournament }) {
   const { data: modalities = [] } = useModalities(tournament.id);
+  const desempate = tournamentTiebreakSummary(tournament, modalities);
   if (modalities.length === 0) {
     return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">{t('Sem modalidades.')}</p></V2Surface>;
   }
@@ -198,8 +201,12 @@ export function V2TournamentRanking({ tournament }) {
       <div className="flex items-start gap-2 rounded-3xl border border-acid/30 bg-acid/10 p-4 text-sm text-ink">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
         <div>
-          <strong>{t('Como funciona a classificação:')}</strong> {t('a posição é definida pelo número de vitórias. Em caso de empate, valem na ordem:')}
-          <strong> {t('saldo de pontos')}</strong> {t('(a favor − contra),')} <strong>{t('pontos marcados')}</strong> {t('e, por fim,')} <strong>{t('menor número de pontos sofridos')}</strong>{t('. Em torneios com fases e grupos, a classificação é mostrada por fase e por grupo; no mata-mata, pela chave.')}
+          <strong>{t('Como funciona a classificação:')}</strong>{' '}
+          {/* A ordem que VALE (`tournamentTiebreak.js`), a mesma das tabelas abaixo. */}
+          {desempate.uniform
+            ? t('a ordem de desempate do torneio é {ordem}.', { ordem: describeTiebreakOrder(desempate.order).map((c) => c.label).join(' → ') })
+            : t('cada modalidade segue a ordem de desempate escolhida para ela (veja nas informações da modalidade).')}
+          {' '}{t('Em torneios com fases e grupos, a classificação é mostrada por fase e por grupo; no mata-mata, pela chave.')}
         </div>
       </div>
       {modalities.map((m) => <V2ModalityRanking key={m.id} modality={m} />)}

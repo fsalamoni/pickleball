@@ -72,7 +72,7 @@ const TORNEIO = {
         tk('Modalidade é cada disputa dentro do torneio — "Dupla Masculina B", "Simples Feminina A", "Mista Open". É nela que ficam as inscrições, os jogos e a classificação.'),
         tk('Para cada uma você define: FORMATO (simples, duplas ou equipes), GÊNERO, FAIXA ETÁRIA, o MODELO DA CHAVE (grupos, eliminatória, todos contra todos, suíço, americano, mexicano…), as quadras disponíveis e o horário de início.'),
         tk('Não existe limite: crie quantas modalidades o seu torneio tiver. Cada uma corre de forma independente das outras.'),
-        tk('No cartão de cada fase ficam os TURNOS (1 turno, ou 2 turnos: ida e volta). E cada FASE tem um bloco "Regras avançadas", e ali praticamente tudo é seu: tamanho de cada grupo à mão, quantos passam em cada grupo, REPESCAGEM (vagas extras para os melhores da colocação seguinte ao corte), a ORDEM dos critérios de desempate e como comparar quem veio de grupos de tamanhos diferentes.'),
+        tk('No cartão de cada fase ficam os TURNOS (1 turno, ou 2 turnos: ida e volta). E cada FASE tem um bloco "Regras avançadas", e ali praticamente tudo é seu: tamanho de cada grupo à mão, quantos passam em cada grupo, REPESCAGEM (vagas extras para os melhores da colocação seguinte ao corte) e como comparar quem veio de grupos de tamanhos diferentes. A ORDEM dos critérios de desempate é uma só para o torneio inteiro e fica na aba Geral.'),
       ],
       tip: tk('Não mexer em nada é uma escolha legítima: em branco, cada campo vale o padrão do regulamento. Na dúvida sobre o modelo de chave, abra o Guia de formatos (Torneios → Guia).'),
     },

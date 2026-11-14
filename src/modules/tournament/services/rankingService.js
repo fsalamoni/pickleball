@@ -13,6 +13,7 @@ import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { buildRanking } from '../domain/ranking.js';
 import { normalizePhase, normalizePhases, supportsGroups } from '../domain/phases.js';
 import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
+import { effectiveTiebreakOrder } from '../domain/tournamentTiebreak.js';
 import { TOURNAMENT_STAGE_TYPE, TOURNAMENT_STAGE_TYPE_LABELS, PHASE_DIVISION_MODE } from '../domain/constants.js';
 
 /**
@@ -42,6 +43,13 @@ export async function computeModalityRanking(modalityId, stageIndex) {
     typeof stageIndex === 'number'
       ? resolveStageScoringConfig(modality, tournament, stageIndex)
       : (match) => resolveStageScoringConfig(modality, tournament, match.stage_index ?? 0),
+    {
+      // A ordem de desempate do torneio (uma só, nas regras gerais).
+      tiebreakOrder: effectiveTiebreakOrder(
+        tournament,
+        typeof stageIndex === 'number' ? normalizePhases(modality.stages)[stageIndex] : null,
+      ),
+    },
   );
 
   // enriquece com label e fotos dos participantes para o front
@@ -181,10 +189,10 @@ export async function computeModalityRankingStructured(modalityId) {
     // cada etapa são só a organização dos jogos (e não há grupo gravado).
     const tabelaUnica = phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
     const storedGroups = tabelaUnica ? [] : await readPhaseGroups(modalityId, i);
-    // 🐞 A ordem de desempate que o organizador escolheu para a fase decidia
-    // quem AVANÇAVA, mas a tabela da tela usava sempre a ordem padrão — e a
-    // tela podia mostrar uma classificação diferente da que valeu.
-    const phaseRankOptions = { ...rankOptions, tiebreakOrder: phase.tiebreak_order };
+    // 🐞 A ordem de desempate decidia quem AVANÇAVA, mas a tabela da tela usava
+    // sempre a ordem padrão — e a tela podia mostrar uma classificação diferente
+    // da que valeu. A ordem é a do TORNEIO (regras gerais), a mesma do avanço.
+    const phaseRankOptions = { ...rankOptions, tiebreakOrder: effectiveTiebreakOrder(tournament, phase) };
 
     // Linhas de uma tabela a partir de um conjunto de jogos (participantes
     // deduzidos dos lados dos jogos). Usado em ambos os ramos abaixo.

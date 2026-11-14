@@ -41,6 +41,7 @@ import {
   instante, msToLocalDate, publishOutcome, scheduleProblems, statusPatchForManualChange,
 } from '../domain/registrationWindow.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
+import { normalizeTiebreakOrder } from '../domain/tiebreak.js';
 import { isTournamentComplete } from '../domain/tournamentCompletion.js';
 import { summarizeMyRegistrations } from '../domain/participation.js';
 import {
@@ -99,6 +100,10 @@ export async function createTournament(creator, data) {
     venue: data.venue?.trim() || '',
     ruleset: data.ruleset || 'cbp',
     scoring: normalizeScoringConfig(data.scoring || DEFAULT_SCORING_CONFIG),
+    // A ordem de desempate do torneio inteiro (regras gerais) — explícita
+    // desde o nascimento, para valer em todas as modalidades. `null` só na
+    // cópia de um torneio antigo com ordens por fase (`duplication.js`).
+    ...(data.tiebreak_order === null ? {} : { tiebreak_order: normalizeTiebreakOrder(data.tiebreak_order) }),
     visibility: data.visibility || TOURNAMENT_VISIBILITY.PRIVATE,
     invite_code: data.invite_code || inviteCode(),
     cover_image_url: data.cover_image_url || '',

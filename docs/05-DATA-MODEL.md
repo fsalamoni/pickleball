@@ -154,6 +154,11 @@ Registro auditável de aceites legais (LGPD).
   o servidor grava `schedule_change` (`open`|`close`), `schedule_changed_ms` e
   `registrations_open_notified`. Ausentes = torneio antigo, status manual.
   Ver `docs/56-TORNEIO-RASCUNHO-E-PRAZOS.md`.
+- **Ordem de desempate** (2026-11-14, opcional): `tiebreak_order[]` — ids de
+  `TIEBREAK_CRITERIA`, uma ordem só para todas as modalidades e fases.
+  Ausente/vazio = torneio antigo: vale o `stages[].tiebreak_order` de cada fase
+  (ou a oficial). Lido por `effectiveTiebreakOrder`; nada migrado. Ver
+  `docs/26-TORNEIO-FORMATOS-E-REGRAS.md` §3.
 
 ### `tournament_modalities/{id}`
 Modalidade dentro de um torneio: `tournament_id`, formato
@@ -187,7 +192,7 @@ Configuração avançada do admin do torneio (**todos opcionais**, Onda AT):
 | `qualifiers_by_group` | `[]` | classificados grupo a grupo (`[2,2,1]`) |
 | `wildcard_slots` | 0 | vagas de repescagem para fechar a chave |
 | `wildcard_from_position` | 0 | de qual colocação repescar (0 = a seguinte ao corte) |
-| `tiebreak_order` | `[]` | ordem dos critérios de desempate (vazio = a oficial) |
+| `tiebreak_order` | `[]` | LEGADO (a ordem agora é do torneio, `tournaments.tiebreak_order`); só vale em torneio sem ela |
 | `cross_group_method` | `rate` | `rate` \| `absolute` \| `drop_last` |
 | `direct_entry` | `{mode:'none'}` | quem **entra direto** nesta fase, pulando as anteriores |
 | `etapa_count` | 3 | **só** em `type: 'americano_etapas'` (Americano aprimorado em etapas): quantas etapas (1–12). O tamanho do grupo é o `max_per_group` de sempre (4, 5, 8 ou 9) |

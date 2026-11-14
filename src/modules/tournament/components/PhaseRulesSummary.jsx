@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { SlidersHorizontal, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { describePhaseRules } from '@/modules/tournament/domain/phaseRules';
+import { effectiveTiebreakOrder } from '@/modules/tournament/domain/tournamentTiebreak';
 import { t, tn } from '@/core/i18n';
 
 /**
@@ -17,11 +18,13 @@ import { t, tn } from '@/core/i18n';
  * ninguém lê). "Ver todas as regras" abre a lista inteira com o porquê de
  * cada uma.
  */
-export default function PhaseRulesSummary({ phase, isFirst, isLast, groupCount, onEdit }) {
+export default function PhaseRulesSummary({ tournament, phase, isFirst, isLast, groupCount, onEdit }) {
   const [aberto, setAberto] = useState(false);
+  // O desempate é do TORNEIO (regras gerais), o mesmo em toda fase.
+  const tiebreakOrder = useMemo(() => effectiveTiebreakOrder(tournament, phase), [tournament, phase]);
   const { rows, changedCount } = useMemo(
-    () => describePhaseRules(phase, { isFirst, isLast, groupCount }),
-    [phase, isFirst, isLast, groupCount],
+    () => describePhaseRules(phase, { isFirst, isLast, groupCount, tiebreakOrder }),
+    [phase, isFirst, isLast, groupCount, tiebreakOrder],
   );
   if (rows.length === 0) return null;
 

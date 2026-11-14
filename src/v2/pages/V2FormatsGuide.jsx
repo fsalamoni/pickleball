@@ -173,7 +173,7 @@ export default function V2FormatsGuide() {
               {t('Classificados por grupo — inclusive grupo a grupo (')}<code>2, 2, 1</code>{t(') —, critério geral ou por gênero, vagas de repescagem e de qual colocação repescar.')}
             </Item>
             <Item title={t('Como se compara')}>
-              {t('A ordem dos critérios de desempate dentro do grupo (9 critérios, com ordens prontas) e o método de comparação entre grupos: aproveitamento, números absolutos, ou descartar o jogo contra o último colocado de cada grupo (a regra da FIFA).')}
+              {t('A ordem dos critérios de desempate (9 critérios, com ordens prontas), uma só para o torneio inteiro, nas regras gerais; e, em cada fase, o método de comparação entre grupos: aproveitamento, números absolutos, ou descartar o jogo contra o último colocado de cada grupo (a regra da FIFA).')}
             </Item>
             <Item title={t('A fase seguinte')}>
               {t('Como recebe os classificados, se forma duplas, o chaveamento, a disputa de 3º lugar, e quem entra direto nela.')}
