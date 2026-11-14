@@ -19,6 +19,9 @@ import { dicaVisivel } from './guias.js';
 import { casaAlgumaRota } from './dicasRota.js';
 
 /** No máximo tantos pontos por tela — mais que isso vira confete. */
+/** As cinco flags das ligas: qualquer uma ligada mostra as ligas a todos. */
+const LIGAS_FLAGS = ['leagues_athletes', 'leagues_clubs', 'leagues_arenas', 'leagues_coaches', 'leagues_federations'];
+
 export const MAX_PONTOS_POR_TELA = 6;
 
 export const PONTOS_DE_DICA = Object.freeze([
@@ -169,12 +172,107 @@ export const PONTOS_DE_DICA = Object.freeze([
     body: tk('Mostra o torneio como os atletas e o público o veem.'),
   },
   {
+    id: 'torneio-gestao:desempate',
+    route: '/torneios/*/gerenciar',
+    target: 'torneio-desempate',
+    title: tk('Ordem de desempate'),
+    body: tk('Uma ordem só para o torneio inteiro: vale em todas as modalidades e fases, e a capa mostra a mesma.'),
+    guide: 'desempate-do-torneio',
+  },
+  {
+    id: 'torneio:criterio',
+    route: '/torneios/*',
+    target: 'torneio-criterio',
+    title: tk('Critério de classificação'),
+    body: tk('A ordem de desempate que vale neste torneio — a mesma da tabela, do avanço de fase e do pódio.'),
+  },
+  {
     id: 'criar-torneio:etapas',
     route: '/torneios/criar',
     target: 'criar-torneio-etapas',
     title: tk('As etapas do cadastro'),
     body: tk('Toque numa etapa para voltar a ela. Nada é definitivo até você criar.'),
     guide: 'criar-torneio',
+  },
+
+  /* -------------------------------------------------------------- ligas -- */
+  {
+    id: 'ligas:criar',
+    route: '/ligas',
+    target: 'ligas-criar',
+    title: tk('Criar liga'),
+    body: tk('Abre o cadastro da liga, em cinco etapas.'),
+    guide: 'criar-liga',
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'ligas:abas',
+    route: '/ligas',
+    target: 'ligas-abas',
+    title: tk('Abertas e as suas'),
+    body: tk('Troca entre as ligas abertas a todos e aquelas em que você joga ou organiza.'),
+    guide: 'inscrever-em-liga',
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'liga:inscrever',
+    route: '/ligas/*',
+    target: 'liga-inscrever',
+    title: tk('Inscrever-se'),
+    body: tk('Abre a inscrição nesta divisão. Nas duplas, você escolhe o parceiro ali.'),
+    guide: 'inscrever-em-liga',
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'liga:gerenciar',
+    route: '/ligas/*',
+    target: 'liga-gerenciar',
+    title: tk('Gerenciar liga'),
+    body: tk('Leva à gestão da liga: situação, dados, temporada, divisões, inscrições, rodadas e organização.'),
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'liga:criterio',
+    route: '/ligas/*',
+    target: 'liga-criterio',
+    title: tk('Critério de classificação'),
+    body: tk('A pontuação e a ordem de desempate desta liga — as mesmas da tabela de todas as divisões.'),
+    guide: 'desempate-da-liga',
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'liga-gestao:secoes',
+    route: '/ligas/*/gerenciar',
+    target: 'liga-gerir-secoes',
+    title: tk('As seções da liga'),
+    body: tk('Cada aba cuida de uma parte: em Situação você abre as inscrições e começa a temporada; em Rodadas, gera os jogos.'),
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'liga-gestao:publica',
+    route: '/ligas/*/gerenciar',
+    target: 'liga-pagina-publica',
+    title: tk('Página pública'),
+    body: tk('Mostra a liga como os atletas e o público a veem.'),
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'liga-gestao:desempate',
+    route: '/ligas/*/gerenciar',
+    target: 'desempate-ordem',
+    title: tk('Ordem de desempate'),
+    body: tk('Uma ordem só para todas as divisões — o mesmo editor do torneio.'),
+    guide: 'desempate-da-liga',
+    flags: LIGAS_FLAGS,
+  },
+  {
+    id: 'criar-liga:etapas',
+    route: '/ligas/criar',
+    target: 'criar-liga-etapas',
+    title: tk('As etapas do cadastro'),
+    body: tk('Toque numa etapa para voltar a ela. Nada é definitivo até você criar.'),
+    guide: 'criar-liga',
+    flags: LIGAS_FLAGS,
   },
   {
     id: 'ranking:abas',

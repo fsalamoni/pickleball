@@ -670,7 +670,7 @@ export function explainAmericanoEtapas(n, phase = {}) {
     status = 'info';
     recommendation = sim.jogosPorAtleta.min === sim.jogosPorAtleta.max
       ? t('Os grupos têm tamanhos diferentes, mas a mistura reveza quem fica no maior: no fim, todos jogam o mesmo número de jogos.')
-      : t('Os grupos têm tamanhos diferentes e o total de jogos não fecha igual para todos. Se quiser comparar por percentual, use o desempate por aproveitamento nas regras avançadas da fase.');
+      : t('Os grupos têm tamanhos diferentes e o total de jogos não fecha igual para todos. Se quiser comparar por percentual, escolha a ordem de desempate por aproveitamento nas regras gerais do torneio (Gestão → Geral → Classificação e desempate).');
   }
   if (sizes.length === 1 && n > 0) {
     status = 'warn';

@@ -11,6 +11,7 @@ import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
+import TiebreakCaption from '@/v2/components/tournament/TiebreakCaption';
 import { t, fmtData } from '@/core/i18n';
 
 /**
@@ -114,7 +115,7 @@ export default function PrintTournament() {
       )}
 
       {modalities.map((m) => (
-        <PrintModality key={m.id} modality={m} />
+        <PrintModality key={m.id} tournament={tournament} modality={m} />
       ))}
 
       <footer className="text-[10px] text-gray-400 mt-6">
@@ -141,7 +142,7 @@ function roundLabel(m) {
   return m.round;
 }
 
-function PrintModality({ modality }) {
+function PrintModality({ tournament, modality }) {
   const { data: matches = [], isError: falhouJogos } = useQuery({
     queryKey: ['print', 'matches', modality.id, 'all'],
     queryFn: () => listAllMatchesForModality(modality.id),
@@ -287,6 +288,13 @@ function PrintModality({ modality }) {
               ))}
             </div>
           ))}
+          {/* O papel sobrevive à tela: a folha diz por que um ficou à frente do outro. */}
+          <TiebreakCaption
+            tournament={tournament}
+            modality={modality}
+            stageIndexes={rankingPhases.map((p) => p.stageIndex)}
+            className="space-y-0.5 text-[11px] leading-4 text-gray-600"
+          />
         </div>
       )}
 

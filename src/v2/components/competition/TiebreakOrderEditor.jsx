@@ -1,6 +1,7 @@
 /**
- * Editor da ORDEM dos critérios de desempate — o mesmo no torneio (fase de
- * grupos e pontos corridos) e na liga. Os critérios, as ordens prontas e a
+ * Editor da ORDEM dos critérios de desempate — o mesmo no torneio (regras
+ * gerais, uma ordem para todas as modalidades e fases) e na liga (Temporada,
+ * uma ordem para todas as divisões). Os critérios, as ordens prontas e a
  * conta moram em `core/domain/tiebreak.js`.
  *
  * Escolher uma ordem pronta, subir/descer, tirar e acrescentar — sem arrastar,
@@ -64,9 +65,9 @@ export default function TiebreakOrderEditor({ value, onChange, defaultOrder = DE
         {(allowedKeys ? [] : TIEBREAK_PRESETS).map((p) => {
           const ativo = igual(ordem, normalizeTiebreakOrder(p.order));
           return (
-            <button key={p.id} type="button" title={p.help} aria-pressed={ativo} onClick={() => onChange([...p.order])}
+            <button key={p.id} type="button" title={t(p.help)} aria-pressed={ativo} onClick={() => onChange([...p.order])}
               className={cn(chip, ativo ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-ink hover:border-ink')}>
-              {ativo && <Check className="h-3.5 w-3.5" aria-hidden="true" />} {p.label}
+              {ativo && <Check className="h-3.5 w-3.5" aria-hidden="true" />} {t(p.label)}
             </button>
           );
         })}
@@ -84,17 +85,17 @@ export default function TiebreakOrderEditor({ value, onChange, defaultOrder = DE
             <li key={chave} className="flex items-start gap-3 px-3 py-2.5">
               <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-acid/20 text-2xs font-bold text-ink" aria-hidden="true">{i + 1}</span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink">{c?.label || chave}</p>
-                {c?.help && <p className="mt-0.5 text-xs leading-5 text-gray-500">{c.help}</p>}
+                <p className="text-sm font-semibold text-ink">{c ? t(c.label) : chave}</p>
+                {c?.help && <p className="mt-0.5 text-xs leading-5 text-gray-500">{t(c.help)}</p>}
               </div>
               <div className="flex shrink-0 items-center">
-                <button type="button" className={iconBtn} aria-label={t('Subir {criterio}', { criterio: c?.label || chave })} disabled={i === 0} onClick={() => mover(i, -1)}>
+                <button type="button" className={iconBtn} aria-label={t('Subir {criterio}', { criterio: c ? t(c.label) : chave })} disabled={i === 0} onClick={() => mover(i, -1)}>
                   <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </button>
-                <button type="button" className={iconBtn} aria-label={t('Descer {criterio}', { criterio: c?.label || chave })} disabled={i === ordem.length - 1} onClick={() => mover(i, 1)}>
+                <button type="button" className={iconBtn} aria-label={t('Descer {criterio}', { criterio: c ? t(c.label) : chave })} disabled={i === ordem.length - 1} onClick={() => mover(i, 1)}>
                   <ArrowDown className="h-4 w-4" aria-hidden="true" />
                 </button>
-                <button type="button" className={iconBtn} aria-label={t('Tirar {criterio}', { criterio: c?.label || chave })} disabled={ordem.length <= 1} onClick={() => remover(chave)}>
+                <button type="button" className={iconBtn} aria-label={t('Tirar {criterio}', { criterio: c ? t(c.label) : chave })} disabled={ordem.length <= 1} onClick={() => remover(chave)}>
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
@@ -107,9 +108,9 @@ export default function TiebreakOrderEditor({ value, onChange, defaultOrder = DE
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500">{t('Acrescentar:')}</span>
           {foraDaOrdem.map((c) => (
-            <button key={c.key} type="button" title={c.help} onClick={() => onChange([...ordem, c.key])}
+            <button key={c.key} type="button" title={t(c.help)} onClick={() => onChange([...ordem, c.key])}
               className={cn(chip, 'border-dashed border-gray-200 bg-transparent text-ink hover:border-ink')}>
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {c.label}
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t(c.label)}
             </button>
           ))}
         </div>

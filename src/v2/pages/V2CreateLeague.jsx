@@ -159,7 +159,7 @@ function Criar() {
         <CompetitionStepper steps={PASSOS} current={passo} onGo={setPasso} dica="criar-liga-etapas" />
 
         {passo === 0 && (
-          <section className="space-y-4">
+          <section className="space-y-4" data-dica="criar-liga-organizacao">
             <V2SectionHeader eyebrow={t('Passo 1')} title={t('Em nome de quem é a liga?')} />
             {falhouOpcoes.length > 0 && (
               <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
@@ -204,7 +204,7 @@ function Criar() {
         )}
 
         {passo === 1 && (
-          <section className="space-y-5">
+          <section className="space-y-5" data-dica="criar-liga-formato">
             <V2SectionHeader eyebrow={t('Passo 2')} title={t('Como a liga é jogada?')} />
             {Object.values(LEAGUE_FORMAT_FAMILY).map((fam) => (
               <div key={fam.id}>
@@ -238,7 +238,7 @@ function Criar() {
         )}
 
         {passo === 2 && (
-          <section className="space-y-6">
+          <section className="space-y-6" data-dica="criar-liga-temporada">
             <V2SectionHeader eyebrow={t('Passo 3')} title={t('Temporada e pontuação')} />
             <SeasonFields value={season} onChange={setSeason} ladder={ladder} />
             <PointsFields value={standings} onChange={setStandings} ladder={ladder} />
@@ -246,7 +246,7 @@ function Criar() {
         )}
 
         {passo === 3 && (
-          <section className="space-y-5">
+          <section className="space-y-5" data-dica="criar-liga-divisoes">
             <V2SectionHeader
               eyebrow={t('Passo 4')}
               title={t('Divisões')}
@@ -285,7 +285,7 @@ function Criar() {
         )}
 
         {passo === 4 && (
-          <section className="space-y-4">
+          <section className="space-y-4" data-dica="criar-liga-dados">
             <V2SectionHeader eyebrow={t('Passo 5')} title={t('Nome e local')} />
             <V2Field label={t('Nome da liga')} htmlFor="liga-nome" required>
               <V2Input id="liga-nome" value={dados.name} maxLength={100} onChange={(e) => setDados({ ...dados, name: e.target.value })} placeholder={t('Ex.: Liga de Duplas do Verão')} />
@@ -331,8 +331,8 @@ function Criar() {
           last={passo === PASSOS.length - 1}
           onCancel={() => navigate('/ligas')}
           onBack={() => setPasso((p) => p - 1)}
-          next={{ onClick: avancar, disabled: passo === 0 && !opcoes.length }}
-          create={{ label: t('Criar liga'), onClick: concluir, busy: criar.isPending }}
+          next={{ onClick: avancar, disabled: passo === 0 && !opcoes.length, dica: 'criar-liga-avancar' }}
+          create={{ label: t('Criar liga'), onClick: concluir, busy: criar.isPending, dica: 'criar-liga-criar' }}
         />
       </V2Surface>
       </div>

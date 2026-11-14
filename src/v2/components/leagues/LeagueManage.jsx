@@ -30,13 +30,13 @@ import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
 import { LeagueStatusBadge, divisionSummary, entryNoun, personUid } from './leagueUi';
 
 const SECOES = [
-  { value: 'situacao', label: tk('Situação'), icon: Flag },
-  { value: 'dados', label: tk('Dados'), icon: Settings },
-  { value: 'temporada', label: tk('Temporada'), icon: CalendarDays },
-  { value: 'divisoes', label: tk('Divisões'), icon: Layers },
-  { value: 'inscricoes', label: tk('Inscrições'), icon: ListChecks },
-  { value: 'rodadas', label: tk('Rodadas'), icon: Shuffle },
-  { value: 'equipe', label: tk('Organização'), icon: Users },
+  { value: 'situacao', label: tk('Situação'), icon: Flag, dica: 'liga-aba-situacao' },
+  { value: 'dados', label: tk('Dados'), icon: Settings, dica: 'liga-aba-dados' },
+  { value: 'temporada', label: tk('Temporada'), icon: CalendarDays, dica: 'liga-aba-temporada' },
+  { value: 'divisoes', label: tk('Divisões'), icon: Layers, dica: 'liga-aba-divisoes' },
+  { value: 'inscricoes', label: tk('Inscrições'), icon: ListChecks, dica: 'liga-aba-inscricoes' },
+  { value: 'rodadas', label: tk('Rodadas'), icon: Shuffle, dica: 'liga-aba-rodadas' },
+  { value: 'equipe', label: tk('Organização'), icon: Users, dica: 'liga-aba-equipe' },
 ];
 
 // O botão de cada mudança de situação (a ordem segue LEAGUE_STATUS_NEXT).
@@ -66,7 +66,7 @@ export default function LeagueManage(props) {
           : t('Situação, temporada, divisões, inscrições, rodadas e organização — separados da visão do atleta.')}
       />
       <V2SectionNav
-        sections={SECOES.map((s) => ({ id: s.value, icon: s.icon, label: s.value === 'rodadas' && escada ? t('Sessões') : t(s.label) }))}
+        sections={SECOES.map((s) => ({ id: s.value, icon: s.icon, dica: s.dica, label: s.value === 'rodadas' && escada ? t('Sessões') : t(s.label) }))}
         activeId={secao}
         onSelect={(s) => setParams((p) => { p.set('secao', s.id); return p; }, { replace: true })}
         ariaLabel={t('Seções da gestão da liga')}
@@ -170,8 +170,8 @@ function Temporada({ league }) {
     <V2Surface className="space-y-6">
       <SeasonFields value={season} onChange={setSeason} idPrefix="g-temporada" ladder={isLadderFormat(league.format)} />
       <PointsFields value={standings} onChange={setStandings} idPrefix="g-pontos" ladder={isLadderFormat(league.format)} />
-      <p className="text-xs leading-5 text-gray-500">{t('Mudar a pontuação recalcula a tabela na hora. Mudar o calendário muda as datas das rodadas, não os jogos.')}</p>
-      <V2Button type="button" disabled={pending} onClick={() => salvar({ action: 'update', leagueId: league.id, patch: { season, standings } }, t('Temporada salva.'))}>{t('Salvar')}</V2Button>
+      <p className="text-xs leading-5 text-gray-500">{t('Mudar a pontuação ou a ordem de desempate recalcula a tabela na hora, em todas as divisões. Mudar o calendário muda as datas das rodadas, não os jogos.')}</p>
+      <V2Button type="button" data-dica="liga-temporada-salvar" disabled={pending} onClick={() => salvar({ action: 'update', leagueId: league.id, patch: { season, standings } }, t('Temporada salva.'))}>{t('Salvar')}</V2Button>
     </V2Surface>
   );
 }

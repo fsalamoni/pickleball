@@ -233,6 +233,17 @@ a pessoa liga as dicas, começa um guia ou abre o painel (`DicasCamada`, com
    travando) — importá-lo de uma tela comum põe os 44 guias no pacote de todo
    mundo.
 
+### 8.0 Ligas e desempate nas dicas (2026-11-14)
+
+Guias `desempate-do-torneio` (aba Geral → Classificação e desempate →
+Salvar → a capa, âncoras `torneio-desempate`, `torneio-salvar`,
+`torneio-criterio`), `inscrever-em-liga`, `criar-liga` e `desempate-da-liga`.
+Os três da liga e os pontos das telas de liga levam `flags` com as cinco
+flags `leagues_*` (qualquer uma ligada): `/ligas` aparece para todos com
+qualquer uma ligada, e o guia segue a mesma régua. Na gestão da liga a
+barra de seções tem âncora por seção (`liga-aba-<valor>`), para o passo
+apontar a aba certa.
+
 ### 8.1 A gamificação nas dicas (flag `gamification_v2`)
 
 Uma área própria no painel — **Gamificação** (ícone `Sparkles`), depois de
