@@ -193,3 +193,63 @@ export function layoutJudges(id) {
   const ps = layoutById(id).positions.map((p) => CAMERA_POSITIONS[p]);
   return { bounce: true, feet: ps.some((p) => p.footWeight > 0) };
 }
+
+/**
+ * Como a quadra aparece NA IMAGEM desta câmera — para o desenho da
+ * calibração ficar igual ao que a pessoa vê e para dizer onde fica cada ponto
+ * ("perto da câmera, à direita"). `rot` é o giro do desenho de cima (lado A
+ * embaixo) que põe a câmera EMBAIXO: a lateral da rede vê a quadra DEITADA
+ * (larga e rasa), o fundo B a vê de ponta-cabeça. A de cima e os cantos (na
+ * diagonal) não dizem direita/esquerda.
+ */
+const VIEW_ROT = Object.freeze({ fundo_a: 0, fundo_b: 180, rede_1: -90, rede_2: 90 });
+
+/** O giro do desenho para esta posição: 0, 180, -90 (lateral 1) ou 90 (lateral 2). */
+export const cameraViewRotation = (positionId) => VIEW_ROT[positionId] ?? (/^canto_b/.test(positionId || '') ? 180 : 0);
+
+/**
+ * O ponto do chão como a câmera o vê: `u` cresce para a DIREITA da imagem e
+ * `v` para LONGE da câmera (metros). `null` onde não há direita/esquerda.
+ */
+export function viewOf(positionId, { x, y }) {
+  switch (VIEW_ROT[positionId]) {
+    case 0: return { u: x, v: y };
+    case 180: return { u: W - x, v: L - y };
+    // Da lateral 1 olhando para a lateral 2, o lado A fica à direita.
+    case -90: return { u: L - y, v: x };
+    case 90: return { u: y, v: W - x };
+    default: return null;
+  }
+}
+
+/** De que lado da imagem ficam o lado A e o lado B (só nas laterais da rede). */
+export function viewSides(positionId) {
+  const a = viewOf(positionId, { x: W / 2, y: 0 });
+  const b = viewOf(positionId, { x: W / 2, y: L });
+  if (!a || !b || Math.abs(a.u - b.u) < 1) return null;
+  return a.u > b.u ? { A: 'right', B: 'left' } : { A: 'left', B: 'right' };
+}
+
+const SPOT_TEXT = {
+  near_left: tk('perto da câmera, à esquerda'),
+  near_center: tk('perto da câmera, no meio'),
+  near_right: tk('perto da câmera, à direita'),
+  far_left: tk('longe da câmera, à esquerda'),
+  far_center: tk('longe da câmera, no meio'),
+  far_right: tk('longe da câmera, à direita'),
+  mid_left: tk('na ponta esquerda da imagem'),
+  mid_center: tk('no meio da imagem'),
+  mid_right: tk('na ponta direita da imagem'),
+};
+
+/** Onde o ponto aparece na imagem desta câmera, em palavras (tk), ou `null`. */
+export function spotInView(positionId, p) {
+  const q = viewOf(positionId, p);
+  if (!q) return null;
+  const deitada = VIEW_ROT[positionId] % 180 !== 0;
+  const span = deitada ? L : W; // a largura da imagem, em metros da quadra
+  const depth = deitada ? W : L;
+  const h = q.u < span * 0.4 ? 'left' : q.u > span * 0.6 ? 'right' : 'center';
+  const d = q.v < depth * 0.4 ? 'near' : q.v > depth * 0.6 ? 'far' : 'mid';
+  return SPOT_TEXT[`${d}_${h}`];
+}

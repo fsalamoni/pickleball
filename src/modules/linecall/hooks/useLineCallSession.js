@@ -25,7 +25,13 @@ import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
 import { headlineFirst } from '../domain/fusion.js';
 import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
 import { cameraKey, fixedPrefId, fixedSnapshot, fixedPatches, restoreDecision, restoredCalib } from '../domain/fixedCalib.js';
-import { cameraTodo, remoteCalibFor, calibForDb } from '../domain/remoteCalib.js';
+import { cameraTodo, remoteCalibFor, curForDb, savedCalibFor, seenFromSaved } from '../domain/remoteCalib.js';
+
+/** Os campos com a calibração completa (`cur`); incompleta não vai, para não apagar a guardada. */
+const withCur = (fields, c) => {
+  const cur = curForDb(c);
+  return cur ? { ...fields, cur } : fields;
+};
 import { listCameras, openCamera, closeCamera } from '../services/cameraService.js';
 import { createPoseDetector } from '../services/poseService.js';
 import { upsertLineCam, removeLineCam, postLineCall, HEARTBEAT_MS } from '../services/lineCallSync.js';
@@ -275,6 +281,8 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
   );
   const [remote, setRemote] = useState(null);
   const [remoteApplied, setRemoteApplied] = useState(null);
+  // A calibração voltou do que ficou guardado na quadra (para a tela avisar e pedir a conferência).
+  const [restoredFromCourt, setRestoredFromCourt] = useState(false);
   const [pendingRun, setPendingRun] = useState(null);
   const calibNow = useRef(calib);
   calibNow.current = calib;
@@ -287,11 +295,28 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     let vivo = true;
     let unsub = null;
     let timer = null;
-    const first = () => {
+    const first = async () => {
       if (!vivo) return;
       const v = videoRef.current;
       if (!v?.videoWidth) { timer = setTimeout(first, 400); return; }
-      const fields = { vw: v.videoWidth, vh: v.videoHeight, cur: calibForDb(calibNow.current) };
+      // A calibração GUARDADA NA QUADRA (de outra vez, de outro aparelho):
+      // volta quando este aparelho abre sem nada marcado. O começar antigo não.
+      if (calibSync.saved) {
+        try {
+          const { own, all } = await calibSync.saved();
+          if (!vivo) return;
+          seen.current = { ...seenFromSaved(own), calibMs: Math.max(seenFromSaved(own).calibMs, seen.current.calibMs) };
+          const back = calibNow.current.corners.length === 4 ? null : savedCalibFor(all, v.videoWidth);
+          if (back) {
+            calibNow.current = { ...calibNow.current, ...back };
+            setCalib((old) => (old.corners.length === 4 ? old : { ...old, ...back }));
+            setRestoredFromCourt(true);
+          }
+        } catch (e) {
+          logger.warn('linhas: calibração guardada na quadra', e);
+        }
+      }
+      const fields = withCur({ vw: v.videoWidth, vh: v.videoHeight }, calibNow.current);
       if (calibNow.current.corners.length !== 4) {
         const sn = grabSnap(v);
         if (sn) { fields.snap = sn.snap; fields.snap_ms = Date.now(); seen.current.snapMs = fields.snap_ms; }
@@ -303,8 +328,18 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     first();
     return () => { vivo = false; clearTimeout(timer); unsub?.(); };
   }, [calibSync, stream]);
-  // Saiu da tela: a foto e o resto saem do banco (o convidado sai pelo servidor).
-  useEffect(() => () => { calibSync?.remove?.()?.catch?.(() => {}); }, [calibSync]);
+  // Saiu da tela: a FOTO sai do banco e a calibração fica guardada na quadra
+  // (o convidado sai pelo servidor, que apaga tudo).
+  useEffect(() => () => {
+    const out = calibSync?.release || calibSync?.remove;
+    out?.()?.catch?.(() => {});
+  }, [calibSync]);
+  // Toda calibração completa vai para a quadra (com uma pausa, para não gravar a cada arrasto).
+  useEffect(() => {
+    if (!calibSync || !stream || calib.corners.length !== 4) return undefined;
+    const id = setTimeout(() => { calibSync.write(withCur({}, calib)).catch(() => {}); }, 1500);
+    return () => clearTimeout(id);
+  }, [calibSync, stream, calib]);
 
   // O que a central pediu: aplicar a calibração, mandar foto nova, começar/pausar.
   useEffect(() => {
@@ -318,13 +353,13 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
         setRunning(false);
         setCalib((old) => ({ ...old, ...c, remoteMs: remote.calib_ms }));
         setRemoteApplied(remote.calib_ms);
-        calibSync.write({ applied_ms: remote.calib_ms, cur: calibForDb(c) }).catch(() => {});
+        calibSync.write(withCur({ applied_ms: remote.calib_ms }, c)).catch(() => {});
       }
     }
     if (todo.sendSnap && v?.videoWidth) {
       seen.current.snapMs = remote.snap_req_ms;
       const sn = grabSnap(v);
-      if (sn) calibSync.write({ ...sn, snap_ms: Date.now(), cur: calibForDb(calibNow.current) }).catch((e) => logger.warn('linhas: foto para a central', e));
+      if (sn) calibSync.write(withCur({ ...sn, snap_ms: Date.now() }, calibNow.current)).catch((e) => logger.warn('linhas: foto para a central', e));
     }
     if (todo.run !== null) { seen.current.runMs = remote.run_ms; setPendingRun(todo.run); }
   }, [remote, calibSync]);
@@ -527,7 +562,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
 
   return {
     ...cal, position: pos,
-    videoRef, cameras, start, stream, settings, cameraError, cameraChecks, remote: remoteOn, remoteApplied,
+    videoRef, cameras, start, stream, settings, cameraError, cameraChecks, remote: remoteOn, remoteApplied, restoredFromCourt,
     running, setRunning, poseState, events, clearEvents, fps, frameMs, ball, shareError, battery, health,
     restored, dismissRestored,
   };

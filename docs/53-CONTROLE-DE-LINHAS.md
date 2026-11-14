@@ -279,6 +279,16 @@ sai, e entra na exclusão de conta.
   com o controle ligado na quadra) e `lcCalOrg` (quem organiza, só essas
   chaves e sempre apagando `snap`); ler e apagar, só a própria câmera e quem
   organiza. Exclusão de conta pelo grupo `line_calib.uid`.
+- **A calibração fica guardada NA QUADRA** (2026-11-14): ao sair, a câmera
+  apaga só a FOTO (`snap`) e o documento fica. Toda calibração completa vai
+  para `cur` (com `cur.ms`, a hora; incompleta nunca sobrescreve a guardada).
+  Quem abre a mesma posição sem nada marcado no aparelho recebe a mais nova
+  (`savedCalibFor`, reescalada pela largura do vídeo): o próprio documento e,
+  para quem organiza (que lê os de todos), o das outras câmeras daquela
+  posição. O começar/pausar antigo não volta e a calibração da central já
+  aplicada não passa por cima da marcada depois (`seenFromSaved`); a tela
+  avisa que os pontos vieram da quadra e pede a conferência. Zero regra nova.
+  A câmera SEM conta não guarda (o `leave` apaga tudo).
 
 ## 5. Guia de uso por aparelho
 
@@ -310,6 +320,17 @@ a uma posição já calibrada, com a câmera permitida para o site
 (`navigator.permissions`), tem a MESMA câmera reaberta sozinha
 (`linhas:camera:ultima:<posição>`, no aparelho; a chave sem posição vale de
 reserva) — falta só "Começar a analisar".
+
+**A marcação como a câmera vê** (2026-11-14): o desenho da calibração gira
+para o olhar da posição (`cameraViewRotation`/`viewOf` em `cameraLayouts.js`,
+`CourtDiagram view`): a lateral da rede vê a quadra DEITADA (larga e rasa), com
+o lado dela embaixo — da lateral 1 o lado A fica à DIREITA da imagem, da
+lateral 2 à esquerda (`viewSides`); o fundo B, de ponta-cabeça. Os pontos vêm
+numerados na ordem do toque, e cada pedido diz onde o ponto aparece
+("longe da câmera, à direita", `spotInView`). Na lateral, as áreas A/B dizem o
+lado da imagem e a tela explica lado 1/2 × lado A/B. A ORDEM dos pontos não
+mudou (calibrações guardadas seguem valendo): em toda área ela dá a volta na
+imagem de qualquer posição (teste em `cameraView.test.js`).
 
 **Câmera fixa lembra a calibração** (`domain/fixedCalib.js`): ao ficar pronta,
 a calibração é guardada também por POSIÇÃO e por CÂMERA
@@ -537,7 +558,8 @@ calibração chega, ele avisa "A central calibrou esta câmera às …".
   calibração pronta e a câmera acima do mínimo — a mesma trava do botão.
 - **Privacidade**: é a única imagem que sai do aparelho. Só a câmera e quem
   organiza leem; toda escrita de quem organiza APAGA a foto (a regra exige);
-  a câmera apaga o documento ao sair da página; entra na exclusão de conta.
+  a câmera apaga a foto ao sair da página (a calibração, sem imagem, fica
+  guardada na quadra); entra na exclusão de conta.
 - **Câmera sem conta** (§5c): o mesmo, pela função `lineGuest` (ação
   `calib`): grava a foto (só JPEG, abaixo do teto) e devolve o que quem
   organiza mandou; o aparelho pergunta a cada 4 s. `leave` apaga a foto.

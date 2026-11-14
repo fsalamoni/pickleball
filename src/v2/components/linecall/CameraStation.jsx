@@ -366,6 +366,11 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 {t('A central calibrou esta câmera às {h}.', { h: fmtData(s.remoteApplied, { timeStyle: 'short' }) })}
               </p>
             )}
+            {s.restoredFromCourt && !remotoAgora && (
+              <p className="rounded-2xl bg-amber-50 p-3 text-sm font-medium text-amber-900" role="status">
+                {t('Os pontos voltaram do que ficou guardado nesta quadra. Se a câmera saiu do lugar, as linhas azuis não vão bater: confira com o 5º ponto ou marque de novo.')}
+              </p>
+            )}
             {s.restored && RESTORED_TEXT[s.restored.decision] && (
               <div
                 className={cn('flex flex-wrap items-start justify-between gap-2 rounded-2xl p-3 text-sm', s.restored.decision === 'same' ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900')}

@@ -5,8 +5,8 @@
  */
 
 import React from 'react';
-import { MapPin, ArrowUpFromLine, Crosshair, Smartphone, Webcam, Video, Wifi, AlertTriangle } from 'lucide-react';
-import { CAMERA_POSITIONS } from '@/modules/linecall/domain/cameraLayouts';
+import { MapPin, ArrowUpFromLine, Crosshair, Compass, Smartphone, Webcam, Video, Wifi, AlertTriangle } from 'lucide-react';
+import { CAMERA_POSITIONS, viewSides } from '@/modules/linecall/domain/cameraLayouts';
 import { CAMERA_MIN, CAMERA_GOOD } from '@/modules/linecall/domain/cameraCheck';
 import CourtDiagram from './CourtDiagram';
 import { t, tk } from '@/core/i18n';
@@ -85,6 +85,20 @@ export default function PlacementGuide({ position, layoutPositions }) {
     { icon: ArrowUpFromLine, label: t('Altura'), text: t(p.height) },
     { icon: Crosshair, label: t('Para onde aponta'), text: t(p.aim) },
   ];
+  // A lateral vê a quadra deitada: diz de que lado da imagem fica cada fundo.
+  const sides = viewSides(position);
+  if (sides) {
+    rows.push({
+      icon: Compass,
+      label: t('Lados na imagem'),
+      text: t('A câmera fica no {l}, olhando para o {o}. Na imagem, o lado A fica à {a} e o lado B à {b}; a quadra aparece deitada (larga e rasa).', {
+        l: position === 'rede_2' ? t('lado 2') : t('lado 1'),
+        o: position === 'rede_2' ? t('lado 1') : t('lado 2'),
+        a: sides.A === 'right' ? t('direita') : t('esquerda'),
+        b: sides.B === 'right' ? t('direita') : t('esquerda'),
+      }),
+    });
+  }
   return (
     <div className="grid gap-4 sm:grid-cols-[minmax(0,180px)_1fr]">
       <CourtDiagram
