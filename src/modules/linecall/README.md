@@ -8,7 +8,11 @@ voleio, o pé no saque e os dois quiques; a central da quadra junta o que as
 câmeras dela viram. O vídeo fica no aparelho; vão ao banco só a configuração da
 quadra, a presença de cada câmera (`line_cams`), as marcações (`line_calls`) e,
 para calibrar pela central, uma foto da quadra que só a câmera e quem organiza
-veem e que some a cada envio (`line_calib`, docs/53 §5d):
+veem e que some a cada envio (`line_calib`, docs/53 §5d). A calibração de cada
+posição (sem imagem) fica guardada na quadra em `line_calib.cur` e volta para
+quem abre a posição sem nada marcado (`savedCalibFor`). O desenho da marcação
+gira para o olhar da câmera (`cameraViewRotation`, `viewOf`, `spotInView`):
+a lateral da rede vê a quadra deitada.
 
 - dia de jogo: `game_days/{id}/line_courts/court-N` (`domain/gameDayLine.js`,
   `services/gameDayLineService.js`, `hooks/useGameDayLineCourts.js`);

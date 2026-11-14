@@ -5,9 +5,13 @@
  * grava a foto da quadra e o que ela tem; quem organiza grava a calibração, o
  * pedido de foto nova e o começar/pausar — e toda escrita de quem organiza
  * apaga a foto (a regra exige). Só a própria câmera e quem organiza leem: a
- * foto mostra a quadra e quem está nela. A câmera apaga o documento ao sair.
+ * foto mostra a quadra e quem está nela. Ao sair, a câmera apaga a FOTO e o
+ * documento fica: a calibração (`cur`) é a que está GUARDADA NA QUADRA e volta
+ * na próxima vez que alguém filmar dali.
  */
-import { doc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot } from 'firebase/firestore';
+import {
+  doc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, getDoc, getDocs, collection, query, where,
+} from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { hostPath, camDocId } from './lineCallSync.js';
 import { SNAP_MAX_CHARS, snapScale, calibForDb } from '../domain/remoteCalib.js';
@@ -41,6 +45,20 @@ export function cameraCalibSync(host, uid, position) {
     write: (fields) => setDoc(ref, { ...fields, uid, position }, { merge: true }),
     watch: (cb, onError) => onSnapshot(ref, (s) => cb(s.exists() ? s.data() : null), onError),
     remove: () => deleteDoc(ref),
+    /**
+     * A calibração que ficou guardada NA QUADRA para esta posição: o próprio
+     * documento e — para quem organiza, que lê os de todos — o das outras
+     * câmeras que já filmaram dali. Quem não organiza recebe só o seu.
+     */
+    saved: async () => {
+      const own = await getDoc(ref).then((s) => (s.exists() ? s.data() : null));
+      const others = await getDocs(query(collection(db, hostPath(host), 'line_calib'), where('position', '==', position)))
+        .then((q) => q.docs.map((d) => d.data()))
+        .catch(() => []);
+      return { own, all: [own, ...others].filter(Boolean) };
+    },
+    // Ao sair, só a FOTO sai do banco: a calibração fica guardada na quadra.
+    release: () => updateDoc(ref, { snap: deleteField() }),
   };
 }
 

@@ -355,7 +355,7 @@ export default function CalibrationView({ s, mode, onTap, zone, hint, status, to
           )}
 
           {!compact && !hidden && diagram && (
-            <div className="absolute bottom-2 left-2 w-14 rounded-lg bg-black/50 p-1 backdrop-blur">
+            <div className={cn('absolute bottom-2 left-2 rounded-lg bg-black/50 p-1 backdrop-blur', diagram.wide ? 'w-28' : 'w-14')}>
               <CourtDiagram {...diagram} zone={zone} className="w-full text-white" />
             </div>
           )}

@@ -15,7 +15,8 @@ import { Check, Crosshair, Move, Target, ScanSearch, Magnet } from 'lucide-react
 
 import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import { applyHomography } from '@/modules/linecall/domain/homography';
-import { insideMargin, kitchenDepth } from '@/modules/linecall/domain/court';
+import { insideMargin, kitchenDepth, COURT_POINTS } from '@/modules/linecall/domain/court';
+import { spotInView, viewSides, cameraViewRotation } from '@/modules/linecall/domain/cameraLayouts';
 import { CAMERA_ZONES, zoneById } from '@/modules/linecall/domain/zones';
 import { CHECK_LEVEL } from '@/modules/linecall/domain/calibrationCheck';
 import CourtDiagram from './CourtDiagram';
@@ -84,11 +85,18 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
   const ids = s.targets.map((p) => p.id);
   const nextPoint = mode === 'corners' ? ids[Math.min(s.calib.corners.length, 3)] : null;
   const calibrada = Boolean(s.H);
+  const posId = s.position.id;
+  // O nome do ponto e ONDE ele aparece na imagem desta câmera ("longe, à direita").
+  const where = (label, p) => {
+    const spot = p && spotInView(posId, p);
+    return spot ? `${t(label)} (${t(spot)})` : t(label);
+  };
+  const sides = viewSides(posId);
 
   let hint = null;
-  if (mode === 'corners' && nextPoint) hint = t('Ponto {n} de 4: toque em {p}. Aproxime com dois dedos ou com o +; com zoom o ponto continua preso na quadra.', { n: s.calib.corners.length + 1, p: t(POINT_LABEL[nextPoint]) });
+  if (mode === 'corners' && nextPoint) hint = t('Ponto {n} de 4: toque em {p}. Aproxime com dois dedos ou com o +; com zoom o ponto continua preso na quadra.', { n: s.calib.corners.length + 1, p: where(POINT_LABEL[nextPoint], COURT_POINTS[nextPoint]) });
   else if (mode === 'adjust') hint = t('Arraste um ponto amarelo para o lugar exato, olhando a lupa. Toque em "Pronto" ao terminar.');
-  else if (mode === 'check') hint = t('Agora toque em {p}. É a prova de que a calibração está certa.', { p: t(CHECK_LABEL[s.checkPoint.id]) });
+  else if (mode === 'check') hint = t('Agora toque em {p}. É a prova de que a calibração está certa.', { p: where(CHECK_LABEL[s.checkPoint.id], s.checkPoint) });
   else if (mode === 'inspect') hint = t('Ponha a bola parada sobre uma linha e toque nela: a tela diz onde a calibração acha que ela está.');
   else if (mode === 'color') hint = t('Toque na bola, parada no chão.');
   else if (calibrada) hint = t('Calibrada. Confira se as linhas azuis caem em cima das linhas da quadra; se não, ajuste os pontos.');
@@ -148,7 +156,17 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
     </div>
   ) : null;
 
-  const diagram = { points: ids, current: nextPoint, done: ids.slice(0, s.calib.corners.length), label: t('Os pontos da calibração no desenho da quadra') };
+  // O desenho fica como ESTA câmera vê a quadra (a lateral, deitada), com os pontos numerados.
+  const diagram = {
+    points: ids, current: nextPoint, done: ids.slice(0, s.calib.corners.length), view: posId, numbered: true,
+    wide: cameraViewRotation(posId) % 180 !== 0,
+    label: t('Os pontos da calibração no desenho da quadra, como esta câmera a vê'),
+  };
+  // Na lateral, cada área diz de que lado da imagem ela fica.
+  const zoneLabel = (z) => {
+    const lado = sides && (/_a$/.test(z.id) ? sides.A : /_b$/.test(z.id) ? sides.B : null);
+    return lado ? `${t(z.label)} · ${lado === 'right' ? t('à direita') : t('à esquerda')}` : t(z.label);
+  };
 
   return (
     <>
@@ -164,10 +182,20 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
                 aria-pressed={zona.id === z.id}
                 onClick={() => { if (zona.id !== z.id) { s.setZone(z.id); setMode(null); } }}
               >
-                {t(z.label)}
+                {zoneLabel(z)}
               </V2Button>
             ))}
           </div>
+          {sides && (
+            <p className="text-xs font-semibold text-ink">
+              {t('Desta câmera você olha a quadra de lado, a partir do {l}: o lado A fica à {a} da imagem e o lado B à {b}. Perto da câmera é o {l}; longe, o {o}.', {
+                l: posId === 'rede_2' ? t('lado 2') : t('lado 1'),
+                o: posId === 'rede_2' ? t('lado 1') : t('lado 2'),
+                a: sides.A === 'right' ? t('direita') : t('esquerda'),
+                b: sides.B === 'right' ? t('direita') : t('esquerda'),
+              })}
+            </p>
+          )}
           <p className="text-xs text-gray-500">
             {zona.id === 'full'
               ? t('A câmera marca os lances da quadra toda.')
@@ -191,14 +219,11 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
       {ready && (
         <div className="flex items-start gap-3">
           <CourtDiagram
-            positions={[s.position.id]}
-            active={s.position.id}
-            points={ids}
-            current={nextPoint}
-            done={ids.slice(0, s.calib.corners.length)}
+            {...diagram}
+            positions={[posId]}
+            active={posId}
             zone={zona}
-            className="w-20 shrink-0 text-ink sm:hidden"
-            label={diagram.label}
+            className={cn('shrink-0 text-ink', diagram.wide ? 'w-40' : 'w-24')}
           />
           <p className="text-xs text-gray-500">{t('Os botões e os avisos ficam sobre a imagem. Use a tela cheia para marcar com mais precisão.')}</p>
         </div>

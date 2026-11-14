@@ -78,6 +78,47 @@ export function remoteCalibFor(docData, videoW) {
 }
 
 /**
+ * A calibração GUARDADA NA QUADRA (o `cur` que ficou no banco de uma vez
+ * anterior), para uma câmera que abriu sem nada marcado neste aparelho: a
+ * mais recente entre os documentos desta posição, com os quatro pontos,
+ * levada aos pixels do vídeo de agora. `null` se não há nenhuma.
+ * @param {object[]} docs documentos `line_calib` (o da própria câmera primeiro)
+ * @param {number} videoW a largura do vídeo agora
+ */
+export function savedCalibFor(docs, videoW) {
+  const quando = (d) => (finito(d?.cur?.ms) ? d.cur.ms : Math.max(finito(d?.applied_ms) ? d.applied_ms : 0, finito(d?.calib_ms) ? d.calib_ms : 0));
+  let best = null;
+  (docs || []).forEach((d) => {
+    const c = sanitizeCalib(d?.cur);
+    if (!c || c.corners.length !== 4) return;
+    if (!best || quando(d) > quando(best.d)) best = { d, c };
+  });
+  if (!best) return null;
+  const vw = best.d.vw;
+  const k = finito(vw) && vw > 0 && finito(videoW) && videoW > 0 ? videoW / vw : 1;
+  return scaleCalib(best.c, k);
+}
+
+/**
+ * O que a câmera já "viu" de um documento que ficou de uma vez anterior: o
+ * começar/pausar antigo NÃO vale de novo (a análise não começa sozinha ao
+ * abrir), e a calibração da central já aplicada não volta por cima da que a
+ * câmera marcou depois.
+ */
+export function seenFromSaved(d) {
+  if (!d) return { calibMs: 0, runMs: 0, snapMs: 0 };
+  const calibMs = finito(d.calib_ms) ? d.calib_ms : 0;
+  const applied = finito(d.applied_ms) && d.applied_ms >= calibMs;
+  return { calibMs: applied ? calibMs : 0, runMs: finito(d.run_ms) ? d.run_ms : 0, snapMs: finito(d.snap_ms) ? d.snap_ms : 0 };
+}
+
+/** A calibração no formato do banco, com a hora em que foi guardada (`cur.ms`). */
+export function curForDb(c, now = Date.now()) {
+  const out = calibForDb(c);
+  return out && out.corners.length === 4 ? { ...out, ms: now } : null;
+}
+
+/**
  * O que a câmera faz com o documento que acabou de ler.
  * @param {object|null} d o documento `line_calib`
  * @param {{ calibMs?: number, runMs?: number, snapMs?: number }} seen o que ela já fez
