@@ -1784,10 +1784,10 @@ const ATLETA = {
           tk('Em Ligas → "Criar liga", escolha em nome de quem ela é (você, um clube, uma arena, o seu perfil de professor ou uma federação — o que estiver liberado para você).'),
           tk('Escolha o formato (duplas por divisão, liga flexível, simples, escadas ou equipes da MiLP), o calendário (toda semana, a cada 2 semanas, todo mês ou datas escolhidas) e a pontuação. Dá para ligar o playoff no fim da temporada.'),
           tk('Monte as divisões: cada uma é uma tabela própria, separada por nível (DUPR) e por categoria. Há um conjunto sugerido por DUPR.'),
-          tk('A liga nasce como rascunho. Em Gerir → Situação, abra as inscrições; depois, em Rodadas, gere os jogos de cada divisão.'),
+          tk('A liga nasce como rascunho. Em "Gerenciar liga" → Situação, abra as inscrições; depois, em Rodadas, gere os jogos de cada divisão.'),
         ),
         list(
-          tk('ENTRAR — na página da liga, escolha a divisão e a dupla. Quem está fora da faixa de nível ou da categoria não entra sozinho; a organização pode inscrever por exceção.'),
+          tk('ENTRAR — na página da liga, toque em "Inscrever-se" no card da divisão e escolha a dupla. Quem está fora da faixa de nível ou da categoria não entra sozinho; a organização pode inscrever por exceção.'),
           tk('PLACAR — quem gere a liga lança o placar de cada jogo (até 5 games) ou o W.O. Na liga flexível, quem joga lança e o outro lado confirma (o jogo aparece em "Precisa de você", na Minha área); sem resposta em 72 horas, o placar vale; se houver contestação, a organização decide. Desempate: vitórias, confronto direto, saldo de games, saldo de pontos e pontos feitos.'),
           tk('ESCADA E EQUIPES — a escada joga por sessão: a organização faz a chamada, as quadras saem pela posição, o 1º sobe e o último desce. Nas equipes, cada confronto tem um game por jogo e, no 2 a 2, o DreamBreaker decide.'),
           tk('RANKING E DUPR — os jogos da liga contam no ranking da plataforma (nacional, 2.0–8.0 e duplas) e vão ao DUPR como os de torneio, a partir do lançamento do placar. Placar a confirmar ainda não conta; W.O. conta no ranking e não vai ao DUPR; jogo com atleta sem conta fica de fora. Nas equipes, cada jogo do confronto conta quando a organização diz quem jogou (a escalação).'),

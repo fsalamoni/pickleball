@@ -28,8 +28,11 @@ o desempate (`core/domain/tiebreak.js`), os grupos e o rodízio do Americano
 | `hooks/` | `useLeagues.js` | React Query (`leagueKeys`), `useLeaguesVisible`, `useLeagueAction`; `leagueActivityQuery` (uma chave), `useLeagueActivityOf`/`useMyLeagueActivity`, `useLeagueGamesOf`/`useMyLeagueGames` (a parte `games`), `fetchLeagueGames` |
 | `i18n/` | `locales/{en,es}.js` | traduções |
 
-Telas em `src/v2/pages/V2Leagues.jsx`, `V2CreateLeague.jsx`, `V2League.jsx` e
-componentes em `src/v2/components/leagues/`.
+Telas em `src/v2/pages/V2Leagues.jsx`, `V2CreateLeague.jsx`, `V2League.jsx`,
+`V2LeagueAdmin.jsx` (a gestão, `/ligas/:id/gerenciar`) e componentes em
+`src/v2/components/leagues/`. O desenho é o do torneio: capa, abas, cabeçalho
+de gestão, cartões da lista e da criação saem de `src/v2/components/competition/`
+(docs/57 §15) — peça nova que os dois usam entra lá, nunca num dos módulos.
 
 ## Regras que não podem regredir
 

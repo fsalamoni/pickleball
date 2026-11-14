@@ -13,7 +13,8 @@ import { BR_UFS } from '@/core/domain/ufs';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle, V2ErrorState,
 } from '@/v2/ui/primitives';
-import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import { V2SectionNav } from '@/v2/ui/V2SectionNav';
+import { CompetitionAdminHub } from '@/v2/components/competition/CompetitionHero';
 import PersonPicker from '@/v2/components/people/PersonPicker';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { useLeagueAction } from '@/modules/leagues/hooks/useLeagues';
@@ -54,22 +55,32 @@ const ACAO_DE_STATUS = {
 export default function LeagueManage(props) {
   const [params, setParams] = useSearchParams();
   const secao = SECOES.some((s) => s.value === params.get('secao')) ? params.get('secao') : 'situacao';
+  const escada = isLadderFormat(props.league.format);
+  // O mesmo topo da gestão do torneio: a faixa escura e a barra de seções.
   return (
-    <div className="space-y-5">
-      <V2SubTabs
-        tabs={SECOES.map((s) => ({ ...s, label: s.value === 'rodadas' && isLadderFormat(props.league.format) ? t('Sessões') : t(s.label) }))}
-        activeValue={secao}
-        onSelect={(s) => setParams((p) => { p.set('secao', s.value); return p; }, { replace: true })}
+    <div className="space-y-6">
+      <CompetitionAdminHub
+        title={t('Controle a temporada da liga.')}
+        description={escada
+          ? t('Situação, temporada, divisões, inscrições, sessões e organização — separados da visão do atleta.')
+          : t('Situação, temporada, divisões, inscrições, rodadas e organização — separados da visão do atleta.')}
+      />
+      <V2SectionNav
+        sections={SECOES.map((s) => ({ id: s.value, icon: s.icon, label: s.value === 'rodadas' && escada ? t('Sessões') : t(s.label) }))}
+        activeId={secao}
+        onSelect={(s) => setParams((p) => { p.set('secao', s.id); return p; }, { replace: true })}
         ariaLabel={t('Seções da gestão da liga')}
         dica="liga-gerir-secoes"
       />
-      {secao === 'situacao' && <Situacao {...props} />}
-      {secao === 'dados' && <Dados {...props} />}
-      {secao === 'temporada' && <Temporada {...props} />}
-      {secao === 'divisoes' && <Divisoes {...props} />}
-      {secao === 'inscricoes' && <Inscricoes {...props} />}
-      {secao === 'rodadas' && (isLadderFormat(props.league.format) ? <Sessoes {...props} /> : <Rodadas {...props} />)}
-      {secao === 'equipe' && <Equipe {...props} />}
+      <div className="space-y-5">
+        {secao === 'situacao' && <Situacao {...props} />}
+        {secao === 'dados' && <Dados {...props} />}
+        {secao === 'temporada' && <Temporada {...props} />}
+        {secao === 'divisoes' && <Divisoes {...props} />}
+        {secao === 'inscricoes' && <Inscricoes {...props} />}
+        {secao === 'rodadas' && (escada ? <Sessoes {...props} /> : <Rodadas {...props} />)}
+        {secao === 'equipe' && <Equipe {...props} />}
+      </div>
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ClipboardCheck, FolderCog, LayoutDashboard, Settings2, ShieldAlert, Sparkles, Swords, Users } from 'lucide-react';
+import { ClipboardCheck, FolderCog, LayoutDashboard, Settings2, Swords, Users } from 'lucide-react';
+import { CompetitionAdminHub } from '@/v2/components/competition/CompetitionHero';
 import V2TournamentOpsTab from '@/v2/components/tournament/V2TournamentOpsTab';
 import V2TournamentModalitiesTab from '@/v2/components/tournament/V2TournamentModalitiesTab';
 import V2TournamentRegistrationsTab from '@/v2/components/tournament/V2TournamentRegistrationsTab';
 import V2TournamentDrawTab from '@/v2/components/tournament/V2TournamentDrawTab';
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import TournamentAdminTab from '@/modules/tournament/components/TournamentAdminTab';
-import { V2Badge } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { useModalities, useMatchesByTournament, useMaybeAutoCloseTournament } from '@/modules/tournament/hooks/useTournament';
 import { isTournamentComplete } from '@/modules/tournament/domain/tournamentCompletion';
@@ -62,29 +62,10 @@ export default function V2TournamentAdminPanel({ tournament }) {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-4xl bg-ink p-6 shadow-organic sm:p-8">
-        <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
-        <div className="relative z-10 max-w-3xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-widest text-acid">
-              <Sparkles className="h-3.5 w-3.5" /> {t('Hub administrativo')}
-            </span>
-            <V2Badge tone="amber">{t('Somente admins')}</V2Badge>
-          </div>
-
-          <div className="mt-5 flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-display text-2xl font-bold leading-tight text-white sm:text-3xl">{t('Controle a operação do torneio.')}</h3>
-              <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
-                {t('Status, modalidades, inscrições, sorteio e resultados — separados da visão do atleta.')}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CompetitionAdminHub
+        title={t('Controle a operação do torneio.')}
+        description={t('Status, modalidades, inscrições, sorteio e resultados — separados da visão do atleta.')}
+      />
 
       {/* Quebra em linhas no celular em vez de rolar para o lado: aba que não
           cabe na tela não é vista. */}

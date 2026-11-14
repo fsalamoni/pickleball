@@ -7,14 +7,17 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Building2, Check, GraduationCap, Landmark, ListOrdered, Plus, Shield, Trash2, User, Warehouse } from 'lucide-react';
+import { Building2, CalendarDays, Check, GraduationCap, Landmark, Layers, Plus, Shield, Trash2, Trophy, User, Users, Warehouse } from 'lucide-react';
 import { t, tk } from '@/core/i18n';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
 import {
-  HERO_TITLE, V2BackLink, V2Badge, V2Button, V2Field, V2Input, V2Page, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
+  V2BackLink, V2Badge, V2Button, V2Field, V2Input, V2Page, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
+import { CompetitionCreateHero } from '@/v2/components/competition/CompetitionHero';
+import { CompetitionStepper, CompetitionWizardFooter } from '@/v2/components/competition/CompetitionNav';
+import { SEASON_CADENCE_LABELS } from '@/modules/leagues/domain/leagueSeason';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
@@ -22,13 +25,12 @@ import { useFederation, useMyFederationRoles } from '@/modules/federations/hooks
 import { useLeagueAction, useLeaguesVisible } from '@/modules/leagues/hooks/useLeagues';
 import { LEAGUE_FLAG_BY_ORGANIZER, LEAGUE_ORGANIZER, LEAGUE_ORGANIZER_LABELS, leagueOrganizerOptions } from '@/modules/leagues/domain/leagueAccess';
 import { LEAGUE_FORMAT, LEAGUE_FORMAT_FAMILY, LEAGUE_FORMAT_META, formatMeta, isTeamFormat } from '@/modules/leagues/domain/leagueFormats';
-import { STANDINGS_MODE_LABELS } from '@/modules/leagues/domain/leagueResults';
 import LeaguesGate from '@/v2/components/leagues/LeaguesGate';
 import DivisionFields, { suggestedDivisions, emptyDivision, milpDivisions } from '@/v2/components/leagues/DivisionFields';
 import SeasonFields from '@/v2/components/leagues/SeasonFields';
 import PointsFields from '@/v2/components/leagues/PointsFields';
 import { isLadderFormat } from '@/modules/leagues/domain/leagueLadder';
-import { divisionSummary } from '@/v2/components/leagues/leagueUi';
+import { divisionSummary, shortDate } from '@/v2/components/leagues/leagueUi';
 
 const PASSOS = [
   { id: 'org', label: tk('Quem organiza') },
@@ -119,30 +121,42 @@ function Criar() {
         state: String(dados.state || '').toUpperCase(),
       });
       toast.success(t('Liga criada como rascunho. Abra as inscrições quando estiver pronta.'));
-      navigate(`/ligas/${leagueId}/gerir`);
+      navigate(`/ligas/${leagueId}/gerenciar`);
     } catch (err) {
       toast.error(err.message || t('Não foi possível criar a liga.'));
     }
   }
 
   return (
-    <V2Page className="space-y-6">
-      <V2BackLink to="/ligas">{t('Voltar às ligas')}</V2BackLink>
+    <V2Page>
+      <V2BackLink to="/ligas" className="mb-5">{t('Voltar às ligas')}</V2BackLink>
 
-      <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
-        <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
-        <div className="relative z-10 max-w-2xl">
-          <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Nova liga')}</span>
-          <h1 className={`mt-4 ${HERO_TITLE}`}>{t('Uma temporada inteira de jogos, rodada a rodada.')}</h1>
-          <p className="mt-3 text-sm leading-7 text-gray-300">
+      <div className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
+      {/* A mesma coluna da criação do torneio: capa + prévia que se atualiza. */}
+      <CompetitionCreateHero
+        eyebrow={t('Nova liga')}
+        title={t('Uma temporada inteira de jogos, rodada a rodada.')}
+        description={(
+          <>
             {t('A liga dura semanas ou meses: cada divisão joga em pontos corridos e a classificação se atualiza a cada placar. Quer um evento de um fim de semana?')}{' '}
             <Link to="/torneios/criar" className="font-bold text-acid underline-offset-4 hover:underline">{t('Crie um torneio')}</Link>
-          </p>
-        </div>
-      </div>
+          </>
+        )}
+        preview={{
+          name: dados.name.trim() || t('Sua liga ainda sem nome'),
+          description: dados.description.trim() || t('Adicione uma descrição para dar contexto a atletas e público.'),
+          location: [dados.city && `${dados.city}${dados.state ? ` / ${String(dados.state).toUpperCase()}` : ''}`, dados.location].filter(Boolean).join(' · ') || t('Cidade e local ainda não definidos'),
+          facts: [
+            { icon: Users, label: t('Organização'), value: org ? (org.type === LEAGUE_ORGANIZER.FEDERATION ? t(LEAGUE_ORGANIZER_LABELS[org.type]) : (org.name || t('Você'))) : t('A definir') },
+            { icon: Trophy, label: t('Formato'), value: t(formatMeta(format)?.label || '') },
+            { icon: CalendarDays, label: t('Temporada'), value: `${t(SEASON_CADENCE_LABELS[season.cadence] || '')}${season.start_date ? ` · ${shortDate(season.start_date)}` : ''}` },
+            { icon: Layers, label: t('Divisões'), value: String(divisoes.length) },
+          ],
+        }}
+      />
 
       <V2Surface className="space-y-6">
-        <Passos atual={passo} onIr={setPasso} />
+        <CompetitionStepper steps={PASSOS} current={passo} onGo={setPasso} dica="criar-liga-etapas" />
 
         {passo === 0 && (
           <section className="space-y-4">
@@ -307,21 +321,21 @@ function Criar() {
           </section>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-5">
-          <V2Button type="button" variant="ghost" onClick={() => setPasso((p) => Math.max(0, p - 1))} disabled={passo === 0}>
-            {t('Voltar')}
-          </V2Button>
-          {passo < PASSOS.length - 1 ? (
-            <V2Button type="button" onClick={avancar} disabled={passo === 0 && !opcoes.length}>
-              {t('Continuar')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </V2Button>
-          ) : (
-            <V2Button type="button" onClick={concluir} disabled={criar.isPending}>
-              <ListOrdered className="h-4 w-4" aria-hidden="true" /> {criar.isPending ? t('Criando…') : t('Criar liga')}
-            </V2Button>
-          )}
-        </div>
+        <p className="rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-600">
+          {t('A liga nasce como rascunho: só a organização a vê. Monte as divisões e, quando estiver pronta, abra as inscrições em "Gerenciar liga".')}
+        </p>
+
+        {/* Os mesmos botões do assistente do torneio. */}
+        <CompetitionWizardFooter
+          step={passo}
+          last={passo === PASSOS.length - 1}
+          onCancel={() => navigate('/ligas')}
+          onBack={() => setPasso((p) => p - 1)}
+          next={{ onClick: avancar, disabled: passo === 0 && !opcoes.length }}
+          create={{ label: t('Criar liga'), onClick: concluir, busy: criar.isPending }}
+        />
       </V2Surface>
+      </div>
     </V2Page>
   );
 }
@@ -331,31 +345,3 @@ function NomeDaFederacao({ id }) {
   return q.data?.name || q.data?.acronym || t('Federação');
 }
 
-function Passos({ atual, onIr }) {
-  return (
-    <ol className="flex items-center gap-2" aria-label={t('Passos')}>
-      {PASSOS.map((p, i) => {
-        const feito = i < atual;
-        const ativo = i === atual;
-        return (
-          <React.Fragment key={p.id}>
-            <li>
-              <button type="button"
-                onClick={() => (i <= atual ? onIr(i) : null)}
-                disabled={i > atual}
-                aria-current={ativo ? 'step' : undefined}
-                className={cn('flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors', ativo ? 'bg-ink text-white' : feito ? 'bg-acid/20 text-ink' : 'bg-paper text-gray-500')}
-              >
-                <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-2xs', ativo ? 'bg-acid text-ink' : feito ? 'bg-ink text-acid' : 'bg-gray-200 text-gray-500')}>
-                  {feito ? <Check className="h-3 w-3" aria-hidden="true" /> : i + 1}
-                </span>
-                <span className="hidden sm:inline">{t(p.label)}</span>
-              </button>
-            </li>
-            {i < PASSOS.length - 1 && <li aria-hidden="true" className="h-px flex-1 bg-gray-200" />}
-          </React.Fragment>
-        );
-      })}
-    </ol>
-  );
-}

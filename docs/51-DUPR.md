@@ -209,7 +209,7 @@ livro, um documento por partida em `dupr_submissions/{identifier}`
   piloto (`audience: admins`) só entram partidas com algum admin da plataforma.
 * **A escolha de quem cria** é a caixa *Enviar os resultados ao DUPR*
   (`DuprSubmitChoice`), no cartão de configurações do dia de jogo (as três
-  origens), no formulário da modalidade do torneio e em Gerir → Dados da liga. Ela só aparece quando a regra
+  origens), no formulário da modalidade do torneio e em Gerenciar liga → Dados. Ela só aparece quando a regra
   do grupo é *quem cria escolhe*; nos grupos *sempre*/*nunca* vira uma linha que
   diz a regra, e some sem o DUPR valendo para quem vê, sem a política carregada
   ou com o envio desligado. Sem escolha (`null`) vale o padrão do admin.

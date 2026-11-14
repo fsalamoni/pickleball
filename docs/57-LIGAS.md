@@ -132,9 +132,10 @@ ou apagar placar e ao mudar a organização (`league_created`, `league_status`,
 
 | Rota | Tela |
 |---|---|
-| `/ligas` | `V2Leagues` — "Abertas a todos" e "Minhas ligas"; "Criar liga" e "Criar torneio" |
-| `/ligas/criar` | `V2CreateLeague` — 5 passos: organizador, formato, temporada e pontuação (com a ordem do desempate), divisões ("Uma divisão por faixa de DUPR" monta as cinco faixas numéricas da lista oficial), dados |
-| `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `playoff` (só com o playoff ligado, `LeaguePlayoff`), `inscritos` e, para quem gere, `gerir` (`?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe`). Na escada as abas se chamam **Escada** (`LeagueLadder`) e **Sessões** (`LeagueSessions`), e Gerir → Sessões é a chamada (`LeagueSessionPanel`) — os valores de aba são os mesmos |
+| `/ligas` | `V2Leagues` — "Abertas a todos" e "Minhas ligas" (`?aba=minhas`); a faixa de região nas abertas; as encerradas e canceladas atrás de "Ver as N ligas encerradas"; "Criar liga" e "Criar torneio" |
+| `/ligas/criar` | `V2CreateLeague` — 5 passos: organizador, formato, temporada e pontuação (com a ordem do desempate), divisões ("Uma divisão por faixa de DUPR" monta as cinco faixas numéricas da lista oficial), dados; ao lado, a prévia da liga. Ao criar, abre a gestão |
+| `/ligas/:id/:tab?` | `V2League` — `visao`, `classificacao`, `rodadas`, `playoff` (só com o playoff ligado, `LeaguePlayoff`) e `inscritos`. Na escada as abas se chamam **Escada** (`LeagueLadder`) e **Sessões** (`LeagueSessions`) — os valores de aba são os mesmos. O antigo `gerir` redireciona para a gestão, com o `?secao=` |
+| `/ligas/:id/gerenciar` | `V2LeagueAdmin` — a gestão, só para quem gere (os outros voltam à página da liga): `?secao=situacao|dados|temporada|divisoes|inscricoes|rodadas|equipe` (`LeagueManage`); na escada, Sessões é a chamada (`LeagueSessionPanel`) |
 
 Componentes em `src/v2/components/leagues/`. Sem nenhuma flag ligada, as rotas
 redirecionam para `/torneios` (`LeaguesGate`). Os valores de aba e de `?secao=`
@@ -466,3 +467,45 @@ dividem UM pedido.
   tempo (`faltou`).
 - O torneio não importa nada disso e a liga não importa nada do torneio: quem
   junta os dois é o módulo de troféus, a Carreira e as telas.
+
+## 15. O mesmo desenho do torneio (2026-11-14)
+
+Pedido do dono: liga e torneio "o mais semelhantes possível, com as mesmas
+ferramentas", respeitadas as diferenças. O torneio é a referência; as peças
+que os dois usam moram em `src/v2/components/competition/` (nenhum dos dois
+módulos importa do outro):
+
+| Peça | O quê | Torneio | Liga |
+|---|---|---|---|
+| `CompetitionHero` | a capa (ícone, título, selos, três fatos, nota, ações) | `V2Tournament` | `V2League` |
+| `CompetitionTabs` | a barra de abas em pílula (teclado pelas setas) | abas do torneio e "Públicos / Meus" | abas da liga e "Abertas / Minhas" |
+| `CompetitionAdminHeader` + `CompetitionAdminHub` | o cabeçalho compacto da gestão e a faixa "Hub administrativo" | `V2TournamentAdmin` | `V2LeagueAdmin` |
+| `CompetitionCard` | o cartão da lista | `V2Tournaments` | `V2Leagues` |
+| `CompetitionCreateHero` + `CompetitionStepper` + `CompetitionWizardFooter` | a coluna com a prévia, os passos e Cancelar/Voltar/Avançar/Criar da criação | `V2CreateTournament` | `V2CreateLeague` |
+| `CompetitionOverview` (`SummaryTile`, `InfoSurface`, `RankingRule`, `CapacityBar`) | as peças da visão geral | (o desenho de `V2OverviewBlock`) | `LeagueOverview` |
+
+O que mudou na liga para ficar igual:
+
+- **Gestão numa página própria**, `/ligas/:id/gerenciar` (como
+  `/torneios/:id/gerenciar`), com as seções na `V2SectionNav`. A aba "Gerir"
+  saiu da página da liga; o botão é "Gerenciar liga" na capa, e o link antigo
+  `/ligas/:id/gerir?secao=…` redireciona. Os links que o servidor manda
+  (`/ligas/{id}`, `/rodadas`, `/classificacao`, `/playoff`) não mudaram.
+- **Visão geral no desenho do torneio**: o cartão escuro do panorama
+  (divisões, inscrições ativas, acesso, temporada com o calendário, local,
+  como se joga, pontuação) e o cartão **Critério de classificação**, que lista
+  a regra da tabela e os critérios de desempate **na ordem configurada na
+  liga** — a mesma `leagueTiebreakOrder`/`ladderTiebreakOrder` da tabela.
+- **Divisões como as modalidades**: um card por divisão com a faixa, as vagas
+  (barra de ocupação), os jogos com placar, "Você está inscrito" e "Sair da
+  liga". **"Inscrever-se" abre o diálogo** (`LeagueRegisterDialog`) já na
+  divisão escolhida, como o "Inscrever-se" da modalidade.
+- **Lista**: a mesma barra de abas (`?aba=minhas`), a mesma faixa de região
+  nas abertas e as encerradas guardadas atrás de um botão, como nos torneios.
+- **Criação**: a mesma coluna da esquerda com a prévia que se atualiza e os
+  mesmos botões do assistente.
+
+Diferenças que ficam de propósito: a liga não tem taxa de inscrição, código
+de acesso nem página de modalidade; o critério da escada é "posição na escada"
+antes dos desempates. Guarda de comportamento:
+`src/v2/components/leagues/LeagueOverview.runtime.test.jsx`.

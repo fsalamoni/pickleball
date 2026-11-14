@@ -37,7 +37,7 @@ import { t } from '@/core/i18n';
  * End vão às pontas. Enter/Espaço continuam sendo o toque. Só move o FOCO — não
  * troca de seção sozinho, porque aqui trocar é navegar (a aba mora na URL).
  */
-function moverFocoComSetas(e) {
+export function moverFocoComSetas(e) {
   const teclas = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: 0, End: 0 };
   if (!(e.key in teclas) || e.target.tagName !== 'BUTTON') return;
   const botoes = [...e.currentTarget.querySelectorAll('button:not([disabled])')];

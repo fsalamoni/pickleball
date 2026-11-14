@@ -93,7 +93,7 @@ export default function LeagueStandings({ league, divisions, entries, matches })
       </V2Surface>
       <p className="px-1 text-xs leading-5 text-gray-500">
         {pontos ? t('Ordem: pontos.') : t('Ordem: aproveitamento.')}{' '}
-        {t('Desempate: {criterios}.', { criterios: fmtLista(describeTiebreakOrder(leagueTiebreakOrder(league.standings?.tiebreak_order)).map((c) => c.label)) })}
+        {t('Desempate: {criterios}.', { criterios: fmtLista(describeTiebreakOrder(leagueTiebreakOrder(league.standings?.tiebreak_order)).map((c) => t(c.label))) })}
       </p>
     </div>
   );

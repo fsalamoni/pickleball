@@ -23,8 +23,9 @@ import { V2TournamentOverview } from '@/v2/components/tournament/V2OverviewBlock
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2TournamentRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { V2TournamentGallery } from '@/v2/components/tournament/V2Gallery';
-import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
-import { cn } from '@/core/lib/utils';
+import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page } from '@/v2/ui/primitives';
+import { CompetitionHero, HERO_ACTION, HERO_ACTION_PRIMARY, HERO_CHIP, HeroAdminChip } from '@/v2/components/competition/CompetitionHero';
+import { CompetitionTabs } from '@/v2/components/competition/CompetitionNav';
 import { t, fmtData } from '@/core/i18n';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
 import ClubTournamentBadge from '@/v2/components/clubs/ClubTournamentBadge';
@@ -204,65 +205,58 @@ export default function V2Tournament() {
 
       {isAdmin && isDraft && <div className="mb-5"><PublishTournamentBanner tournament={tournament} /></div>}
 
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
-        <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-acid opacity-20 blur-[80px]" />
-        <div className="relative z-10">
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm"><Trophy className="h-6 w-6" /></div>
-            <div className="min-w-0 flex-1">
-              <h1 className={HERO_TITLE}>{tournament.name}</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-300">{tournament.description || t('Acompanhe modalidades, jogos, ranking e operação do evento.')}</p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_STATUS_LABELS[statusAgora] || statusAgora}</span>
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-white">{TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</span>
-            {isAdmin && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> {t('Admin')}</span>}
+      <CompetitionHero
+        icon={Trophy}
+        title={tournament.name}
+        description={tournament.description || t('Acompanhe modalidades, jogos, ranking e operação do evento.')}
+        chips={(
+          <>
+            <span className={HERO_CHIP}>{TOURNAMENT_STATUS_LABELS[statusAgora] || statusAgora}</span>
+            <span className={HERO_CHIP}>{TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</span>
+            {isAdmin && <HeroAdminChip />}
             <TournamentSanctionBadge tournament={tournament} />
             <ClubTournamentBadge tournament={tournament} />
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <HeroFact icon={MapPin} label={t('Local')} value={location} />
-            <HeroFact icon={Calendar} label={t('Datas')} value={dateRange || 'A definir'} />
-            <HeroFact icon={Hash} label={t('Inscrições até')} value={deadline || t('A definir')} />
-          </div>
-          <RegistrationWindowNote tournament={tournament} className="mt-4 text-sm leading-6 text-gray-300" />
-
-          <div className="mt-6 flex flex-wrap gap-2">
+          </>
+        )}
+        facts={[
+          { icon: MapPin, label: t('Local'), value: location },
+          { icon: Calendar, label: t('Datas'), value: dateRange || t('A definir') },
+          { icon: Hash, label: t('Inscrições até'), value: deadline || t('A definir') },
+        ]}
+        note={<RegistrationWindowNote tournament={tournament} className="mt-4 text-sm leading-6 text-gray-300" />}
+        actions={(
+          <>
             {adminConsoleOn && isAdmin && (
-              <Link to={`/torneios/${tournament.id}/gerenciar`} data-dica="torneio-gerenciar" className="btn-press inline-flex items-center gap-2 rounded-full bg-acid px-4 py-2 text-sm font-bold text-ink">
+              <Link to={`/torneios/${tournament.id}/gerenciar`} data-dica="torneio-gerenciar" className={HERO_ACTION_PRIMARY}>
                 <ShieldCheck className="h-4 w-4" /> {t('Gerenciar torneio')}
               </Link>
             )}
             {tournament.invite_code && (
-              <button onClick={() => copy(tournament.invite_code, t('Código copiado!'))} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+              <button type="button" onClick={() => copy(tournament.invite_code, t('Código copiado!'))} className={HERO_ACTION}>
                 {copied ? <Check className="h-4 w-4 text-acid" /> : <Copy className="h-4 w-4" />} {t('Código:')} <strong>{tournament.invite_code}</strong>
               </button>
             )}
             {isPublic && !isDraft && (
-              <button onClick={() => copy(publicUrl, t('Link público copiado!'))} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+              <button type="button" onClick={() => copy(publicUrl, t('Link público copiado!'))} className={HERO_ACTION}>
                 <Share2 className="h-4 w-4" /> {t('Compartilhar link')}
               </button>
             )}
-            <a href={`/p/${tournament.id}`} target="_blank" rel="noopener noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+            <a href={`/p/${tournament.id}`} target="_blank" rel="noopener noreferrer" className={HERO_ACTION}>
               <Eye className="h-4 w-4" /> {t('Visão pública')}
             </a>
             {tvModeOn && (
-              <a href={`/torneios/${tournament.id}/telao`} target="_blank" rel="noopener noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+              <a href={`/torneios/${tournament.id}/telao`} target="_blank" rel="noopener noreferrer" className={HERO_ACTION}>
                 <MonitorPlay className="h-4 w-4" /> {t('Telão')}
               </a>
             )}
             {calendarExportOn && toDateSafe(tournament.starts_at) && (
-              <button onClick={downloadTournamentIcs} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+              <button type="button" onClick={downloadTournamentIcs} className={HERO_ACTION}>
                 <CalendarPlus className="h-4 w-4" /> {t('Adicionar ao calendário')}
               </button>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+      />
 
       <TournamentIntegrityNotice tournament={tournament} className="mt-6" />
 
@@ -285,19 +279,7 @@ export default function V2Tournament() {
         <MyNextMatchStrip tournament={tournament} onOpen={() => goTab('minha-participacao')} />
       )}
 
-      {/* Tabs */}
-      <div data-dica="torneio-abas" className="mt-6 inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-        {tabs.map((tt) => {
-          const Icon = tt.icon;
-          return (
-            <button key={tt.value} onClick={() => goTab(tt.value)}
-              className={cn('inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors',
-                activeTab === tt.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-              {Icon && <Icon className="h-4 w-4" />} {tt.label}
-            </button>
-          );
-        })}
-      </div>
+      <CompetitionTabs tabs={tabs} active={activeTab} onSelect={goTab} ariaLabel={t('Abas do torneio')} dica="torneio-abas" className="mt-6" />
 
       <div className="mt-6">
         {activeTab === 'visao-geral' && <V2TournamentOverview tournament={tournament} isAdmin={isAdmin} />}
@@ -311,17 +293,5 @@ export default function V2Tournament() {
 
       {!showGallery && <div className="mt-6"><V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} /></div>}
     </V2Page>
-  );
-}
-
-function HeroFact({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-2.5xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-bold uppercase tracking-widest text-white/60">{label}</span>
-        <Icon className="h-4 w-4 text-white/70" />
-      </div>
-      <p className="mt-2 text-sm font-medium text-white">{value}</p>
-    </div>
   );
 }

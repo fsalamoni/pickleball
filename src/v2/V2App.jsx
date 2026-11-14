@@ -42,6 +42,7 @@ const V2CreateTournament = lazy(() => import('@/v2/pages/V2CreateTournament'));
 const V2Leagues = lazy(() => import('@/v2/pages/V2Leagues'));
 const V2CreateLeague = lazy(() => import('@/v2/pages/V2CreateLeague'));
 const V2League = lazy(() => import('@/v2/pages/V2League'));
+const V2LeagueAdmin = lazy(() => import('@/v2/pages/V2LeagueAdmin'));
 const V2JoinTournament = lazy(() => import('@/v2/pages/V2JoinTournament'));
 const V2CreateArena = lazy(() => import('@/v2/pages/V2CreateArena'));
 const V2CreateClub = lazy(() => import('@/v2/pages/V2CreateClub'));
@@ -242,6 +243,7 @@ export default function V2App() {
           <Route path="ligas" element={<Isolada nome="ligas"><V2Leagues /></Isolada>} />
           <Route path="ligas/criar" element={<Isolada nome="criar-liga"><V2CreateLeague /></Isolada>} />
           <Route path="ligas/:leagueId" element={<Isolada nome="liga"><V2League /></Isolada>} />
+          <Route path="ligas/:leagueId/gerenciar" element={<Isolada nome="gerir-liga"><V2LeagueAdmin /></Isolada>} />
           <Route path="ligas/:leagueId/:tab" element={<Isolada nome="liga"><V2League /></Isolada>} />
 
           {/* Comunidade */}

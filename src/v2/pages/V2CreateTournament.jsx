@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, CalendarDays, Check, FileStack, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
+import { ArrowRight, CalendarDays, FileStack, Globe, Lock, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateTournament, useMyTournaments, useDuplicateTournament } from '@/modules/tournament/hooks/useTournament';
 import { listModalities } from '@/modules/tournament/services/modalityService';
@@ -14,8 +14,9 @@ import {
 } from '@/modules/tournament/domain/constants';
 import {
   V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2BackLink, V2Page,
-  HERO_TITLE,
 } from '@/v2/ui/primitives';
+import { CompetitionCreateHero } from '@/v2/components/competition/CompetitionHero';
+import { CompetitionStepper, CompetitionWizardFooter } from '@/v2/components/competition/CompetitionNav';
 import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
@@ -132,41 +133,34 @@ export default function V2CreateTournament() {
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
         {/* Hero + preview */}
-        <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
-          <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
-          <div className="relative z-10">
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Novo torneio')}</span>
-            <h1 className={`mt-4 ${HERO_TITLE}`}>{t('Monte um torneio com cara de evento real.')}</h1>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-gray-300">{t('Configure identidade, acesso, regras e calendário. A prévia abaixo atualiza enquanto você preenche.')}</p>
-
-            {/* O tutorial completo (criação → modalidades → inscrições →
-                sorteio → resultados) já aqui, para quem nunca montou um
-                torneio. `autoOpen` desligado: quem chegou nesta tela veio
-                fazer, não ler — mas a porta fica visível.
-                Compartilha a mesma marca de "já vi" com o console de gestão. */}
-            <div className="mt-5">
-              <V2TutorialLauncher
-                tutorialId={TUTORIAL_ID.TOURNAMENT}
-                label={t('Como funciona um torneio')}
-                autoOpen={false}
-                guia="criar-torneio"
-              />
-            </div>
-
-            <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-lg">
-              <div className="text-2xs font-bold uppercase tracking-widest text-acid">{t('Prévia do evento')}</div>
-              <div className="mt-2 font-display text-2xl font-bold text-white">{form.name.trim() || t('Seu torneio ainda sem nome')}</div>
-              <p className="mt-2 text-sm leading-6 text-gray-300">{form.description.trim() || t('Adicione uma descrição para dar contexto a atletas e público.')}</p>
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-300"><MapPin className="h-4 w-4 text-acid" /> {locationPreview}</div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <PreviewFact icon={form.visibility === TOURNAMENT_VISIBILITY.PUBLIC ? Globe : Lock} label={t('Acesso')} value={TOURNAMENT_VISIBILITY_LABELS[form.visibility]} />
-                <PreviewFact icon={ShieldCheck} label={t('Regras')} value={RULESET_LABELS[form.ruleset]} />
-                <PreviewFact icon={Trophy} label={t('Inscrições até')} value={formatInstant(localInputToMs(form.schedule.closes)) || t('A definir')} />
-                <PreviewFact icon={CalendarDays} label={t('Datas')} value={`${formatDatePreview(form.starts_at)} → ${formatDatePreview(form.ends_at)}`} />
-              </div>
-            </div>
-          </div>
-        </div>
+        <CompetitionCreateHero
+          eyebrow={t('Novo torneio')}
+          title={t('Monte um torneio com cara de evento real.')}
+          description={t('Configure identidade, acesso, regras e calendário. A prévia abaixo atualiza enquanto você preenche.')}
+          preview={{
+            name: form.name.trim() || t('Seu torneio ainda sem nome'),
+            description: form.description.trim() || t('Adicione uma descrição para dar contexto a atletas e público.'),
+            location: locationPreview,
+            facts: [
+              { icon: form.visibility === TOURNAMENT_VISIBILITY.PUBLIC ? Globe : Lock, label: t('Acesso'), value: TOURNAMENT_VISIBILITY_LABELS[form.visibility] },
+              { icon: ShieldCheck, label: t('Regras'), value: RULESET_LABELS[form.ruleset] },
+              { icon: Trophy, label: t('Inscrições até'), value: formatInstant(localInputToMs(form.schedule.closes)) || t('A definir') },
+              { icon: CalendarDays, label: t('Datas'), value: `${formatDatePreview(form.starts_at)} → ${formatDatePreview(form.ends_at)}` },
+            ],
+          }}
+        >
+          {/* O tutorial completo (criação → modalidades → inscrições →
+              sorteio → resultados) já aqui, para quem nunca montou um
+              torneio. `autoOpen` desligado: quem chegou nesta tela veio
+              fazer, não ler — mas a porta fica visível.
+              Compartilha a mesma marca de "já vi" com o console de gestão. */}
+          <V2TutorialLauncher
+            tutorialId={TUTORIAL_ID.TOURNAMENT}
+            label={t('Como funciona um torneio')}
+            autoOpen={false}
+            guia="criar-torneio"
+          />
+        </CompetitionCreateHero>
 
         {/* Form */}
         <V2Surface>
@@ -177,7 +171,7 @@ export default function V2CreateTournament() {
               </div>
             )}
 
-            {wizardOn && <WizardStepper steps={WIZARD_STEPS} current={step} onGo={setStep} />}
+            {wizardOn && <CompetitionStepper steps={WIZARD_STEPS} current={step} onGo={setStep} dica="criar-torneio-etapas" />}
 
             {showStep(0) && (<>
             <V2SectionHeader eyebrow={t('Identidade')} title={t('Dados do evento')} titleClassName="text-xl" />
@@ -251,18 +245,14 @@ export default function V2CreateTournament() {
             )}
 
             {wizardOn ? (
-              <div className="flex justify-between gap-2 pt-2">
-                <V2Button type="button" variant="ghost" onClick={() => (step === 0 ? navigate('/torneios') : setStep((s) => s - 1))}>
-                  {step === 0 ? t('Cancelar') : <><ArrowLeft className="h-4 w-4" /> {t('Voltar')}</>}
-                </V2Button>
-                {isLastStep ? (
-                  <V2Button type="submit" disabled={createMutation.isPending || isPreview} data-dica="criar-torneio-criar">
-                    {createMutation.isPending ? t('Criando…') : t('Criar torneio')} <Check className="h-4 w-4" />
-                  </V2Button>
-                ) : (
-                  <V2Button type="button" onClick={goNext} data-dica="criar-torneio-avancar">{t('Avançar')} <ArrowRight className="h-4 w-4" /></V2Button>
-                )}
-              </div>
+              <CompetitionWizardFooter
+                step={step}
+                last={isLastStep}
+                onCancel={() => navigate('/torneios')}
+                onBack={() => setStep((s) => s - 1)}
+                next={{ onClick: goNext, dica: 'criar-torneio-avancar' }}
+                create={{ label: t('Criar torneio'), submit: true, busy: createMutation.isPending, disabled: isPreview, dica: 'criar-torneio-criar' }}
+              />
             ) : (
               <div className="flex justify-end gap-2 pt-2">
                 <V2Button type="button" variant="ghost" onClick={() => navigate('/torneios')}>{t('Cancelar')}</V2Button>
@@ -335,48 +325,6 @@ function TemplatePicker() {
         </V2Button>
       </div>
     </V2Surface>
-  );
-}
-
-function WizardStepper({ steps, current, onGo }) {
-  return (
-    <div data-dica="criar-torneio-etapas" className="flex items-center gap-2">
-      {steps.map((s, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <React.Fragment key={s.id}>
-            <button
-              type="button"
-              onClick={() => (i <= current ? onGo(i) : null)}
-              disabled={i > current}
-              className={cn(
-                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors',
-                active ? 'bg-ink text-white' : done ? 'bg-acid/20 text-ink' : 'bg-paper text-gray-400',
-              )}
-            >
-              <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-2xs', active ? 'bg-acid text-ink' : done ? 'bg-ink text-acid' : 'bg-gray-200 text-gray-500')}>
-                {done ? <Check className="h-3 w-3" /> : i + 1}
-              </span>
-              <span className="hidden sm:inline">{t(s.label)}</span>
-            </button>
-            {i < steps.length - 1 && <span className="h-px flex-1 bg-gray-200" />}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
-
-function PreviewFact({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-bold uppercase tracking-widest text-white/50">{label}</span>
-        <Icon className="h-3.5 w-3.5 text-white/60" />
-      </div>
-      <p className="mt-1.5 truncate text-xs font-semibold text-white">{value}</p>
-    </div>
   );
 }
 

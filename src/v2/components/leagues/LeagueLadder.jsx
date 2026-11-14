@@ -53,7 +53,7 @@ export default function LeagueLadder(props) {
   const rows = dados?.ladder.rows || [];
   const fechadas = (dados?.ladder.sessions || []).filter((s) => s.complete);
   const ultima = fechadas[fechadas.length - 1];
-  const criterios = fmtLista(describeTiebreakOrder(ladderTiebreakOrder(league.standings?.tiebreak_order)).map((c) => c.label));
+  const criterios = fmtLista(describeTiebreakOrder(ladderTiebreakOrder(league.standings?.tiebreak_order)).map((c) => t(c.label)));
 
   return (
     <div className="space-y-4">
@@ -144,7 +144,7 @@ export function LeagueSessions(props) {
           <V2EmptyState
             icon={Swords}
             title={t('Nenhuma sessão ainda')}
-            description={canManage ? t('Em Gerir → Sessões, marque quem veio e gere as quadras da sessão.') : t('A organização monta as quadras de cada sessão com quem vier.')}
+            description={canManage ? t('Em "Gerenciar liga" → Sessões, marque quem veio e gere as quadras da sessão.') : t('A organização monta as quadras de cada sessão com quem vier.')}
           />
         </V2Surface>
       ) : sessoes.map((s) => {

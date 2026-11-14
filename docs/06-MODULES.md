@@ -59,8 +59,9 @@ pública, impressão e telão.
   `tournament/` e o torneio não importa daqui. `docs/57-LIGAS.md`.
 - **Domínio**: `leagueFlags`, `leagueAccess`, `leagueFormats`, `leagueDivisions`,
   `leagueSeason`, `leagueResults` (cópia no servidor em `functions/leaguePolicy.js`).
-- **Rotas**: `/ligas`, `/ligas/criar`, `/ligas/:leagueId/:tab?` (`visao`,
-  `classificacao`, `rodadas`, `inscritos`, `gerir`).
+- **Rotas**: `/ligas`, `/ligas/criar`, `/ligas/:leagueId/gerenciar` (a gestão),
+  `/ligas/:leagueId/:tab?` (`visao`, `classificacao`, `rodadas`, `playoff`,
+  `inscritos`; o antigo `gerir` redireciona à gestão).
 - **Coleções**: `leagues` (+ `divisions`, `entries`, `matches`), escritas só
   pela função `leagues`.
 

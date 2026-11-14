@@ -13,7 +13,7 @@
 | Item | Valor |
 |---|---|
 | Módulos de domínio (`src/modules/`) | 34 |
-| Telas V2 (`src/v2/pages/V2*.jsx`) | 120 |
+| Telas V2 (`src/v2/pages/V2*.jsx`) | 121 |
 | Pastas de componentes V2 (`src/v2/components/`) | 36 |
 | Coleções raiz no `firestore.rules` | 248 |
 | Blocos `match` (raiz + subcoleções) | 277 |
@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 16 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 1017 |
+| Arquivos de teste (`*.test.js(x)`) | 1018 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 63 |
 
@@ -146,7 +146,7 @@ Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`,
 | `/boloes/:tournamentId` | → redireciona para `/torneios/:tournamentId` |
 | `/*` | `MainEntry` |
 
-### Aplicativo (`src/v2/V2App.jsx`) — dentro do `V2Layout`, exige login (130)
+### Aplicativo (`src/v2/V2App.jsx`) — dentro do `V2Layout`, exige login (131)
 
 | Caminho | Tela |
 |---|---|
@@ -201,6 +201,7 @@ Pastas de componentes V2: `admin`, `arenas`, `career`, `chat`, `clubs`, `coach`,
 | `ligas` | `V2Leagues` |
 | `ligas/criar` | `V2CreateLeague` |
 | `ligas/:leagueId` | `V2League` |
+| `ligas/:leagueId/gerenciar` | `V2LeagueAdmin` |
 | `ligas/:leagueId/:tab` | `V2League` |
 | `atletas` | `V2Athletes` |
 | `buscar` | `V2Search` |

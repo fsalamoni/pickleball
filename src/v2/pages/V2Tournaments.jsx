@@ -7,7 +7,7 @@ import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { Link } from 'react-router-dom';
-import { Archive, Calendar, Globe, Hash, ListOrdered, MapPin, Plus, Trophy } from 'lucide-react';
+import { Archive, Calendar, Globe, Hash, ListOrdered, Plus, Trophy } from 'lucide-react';
 import { useLeaguesVisible } from '@/modules/leagues/hooks/useLeagues';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import {
@@ -24,8 +24,9 @@ import {
   V2Skeleton,
   V2Surface, V2ErrorState, V2Page,
 } from '@/v2/ui/primitives';
-import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
+import CompetitionCard from '@/v2/components/competition/CompetitionCard';
+import { CompetitionTabs } from '@/v2/components/competition/CompetitionNav';
 import { TournamentSanctionBadge } from '@/v2/components/federations/FedTags';
 import ClubTournamentBadge from '@/v2/components/clubs/ClubTournamentBadge';
 
@@ -104,10 +105,14 @@ export default function V2Tournaments() {
         )}
       />
 
-      <div data-dica="torneios-abas" className="mb-4 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-        <TabButton active={tab === 'public'} onClick={() => setTab('public')}>{t('Públicos')}</TabButton>
-        <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>{t('Meus torneios')}</TabButton>
-      </div>
+      <CompetitionTabs
+        tabs={[{ value: 'public', label: t('Públicos') }, { value: 'mine', label: t('Meus torneios') }]}
+        active={tab}
+        onSelect={setTab}
+        ariaLabel={t('Torneios públicos ou meus')}
+        dica="torneios-abas"
+        className="mb-4"
+      />
 
       {tab === 'public' && <RegionBar regional={regional} className="mb-6" nomeItens={['torneio', 'torneios']} />}
       {!(tab === 'public' && regional.ativa) && <div className="mb-4" />}
@@ -177,38 +182,17 @@ export default function V2Tournaments() {
   );
 }
 
-function TabButton({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'rounded-full px-6 py-2.5 text-sm font-semibold transition-colors',
-        active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 function TournamentCard({ tournament, distancia = null }) {
   const dateRange = formatDateRange(tournament.starts_at, tournament.ends_at);
   const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : t('Local a definir');
 
   return (
-    <Link
+    <CompetitionCard
       to={`/torneios/${tournament.id}`}
-      className="group flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic sm:p-7"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-ink text-white transition-colors group-hover:bg-acid group-hover:text-ink">
-            <Trophy className="h-5 w-5" />
-          </span>
-          <h3 className="truncate font-display text-lg font-bold text-ink">{tournament.name}</h3>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+      icon={Trophy}
+      title={tournament.name}
+      status={(
+        <>
           <V2Badge tone={STATUS_TONE[effectiveTournamentStatus(tournament)] || 'neutral'}>
             {TOURNAMENT_STATUS_LABELS[effectiveTournamentStatus(tournament)] || tournament.status}
           </V2Badge>
@@ -217,29 +201,22 @@ function TournamentCard({ tournament, distancia = null }) {
               <Archive className="h-3 w-3" /> {t('Arquivado')}
             </V2Badge>
           )}
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-        <MapPin className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">{location}{distancia ? ` · ${distancia}` : ''}</span>
-      </div>
-
-      {tournament.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-500">{tournament.description}</p>}
-
-      <div className="mt-4 flex flex-wrap gap-2 text-xs">
-        {dateRange && <V2Badge tone="neutral"><Calendar className="h-3 w-3" /> {dateRange}</V2Badge>}
-        <V2Badge tone="neutral"><Globe className="h-3 w-3" /> {TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</V2Badge>
-        {tournament.invite_code && <V2Badge tone="neutral"><Hash className="h-3 w-3" /> {tournament.invite_code}</V2Badge>}
-        <TournamentSanctionBadge tournament={tournament} link={false} />
-        <ClubTournamentBadge tournament={tournament} link={false} />
-      </div>
-
-      {/* Com a inscrição aberta, o cartão diz o que dá para FAZER nele: é lá
-          dentro, em cada modalidade, que fica o "Inscrever-se". */}
-      <div className="mt-auto flex items-center justify-between pt-6 text-sm font-bold text-ink">
-        <span>{isTournamentOpen(tournament, hojeLocal()) ? t('Ver modalidades e se inscrever') : t('Abrir torneio')}</span>
-        <span className="transition-transform group-hover:translate-x-1">→</span>
-      </div>
-    </Link>
+        </>
+      )}
+      location={`${location}${distancia ? ` · ${distancia}` : ''}`}
+      description={tournament.description}
+      badges={(
+        <>
+          {dateRange && <V2Badge tone="neutral"><Calendar className="h-3 w-3" /> {dateRange}</V2Badge>}
+          <V2Badge tone="neutral"><Globe className="h-3 w-3" /> {TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}</V2Badge>
+          {tournament.invite_code && <V2Badge tone="neutral"><Hash className="h-3 w-3" /> {tournament.invite_code}</V2Badge>}
+          <TournamentSanctionBadge tournament={tournament} link={false} />
+          <ClubTournamentBadge tournament={tournament} link={false} />
+        </>
+      )}
+      /* Com a inscrição aberta, o cartão diz o que dá para FAZER nele: é lá
+         dentro, em cada modalidade, que fica o "Inscrever-se". */
+      footer={isTournamentOpen(tournament, hojeLocal()) ? t('Ver modalidades e se inscrever') : t('Abrir torneio')}
+    />
   );
 }
