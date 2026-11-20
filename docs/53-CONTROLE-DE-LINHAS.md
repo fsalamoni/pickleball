@@ -365,6 +365,18 @@ vez: a câmera que recusa um não perde o outro, e a recusa nunca derruba o
 vídeo. A tela já fica acesa (`useWakeLock`); o navegador NÃO analisa aba em
 segundo plano — deixe a janela da câmera visível.
 
+**A câmera que abre e não entrega quadro desce de modo** (`cameraMode`,
+`nextCameraLevel`, `QUICK_DROP_MS`). Duas webcams em 1080p a 100 quadros não
+cabem na mesma controladora USB do computador (a banda é reservada por
+câmera, mesmo em portas diferentes): a segunda abre, anuncia 100 e entrega
+ZERO quadros, imagem preta, com o cabo perfeito. Sem nenhum quadro por 4 s
+(`track.stats`, com a aba visível) conta como queda; a queda nos primeiros
+20 s depois de abrir reabre a câmera um degrau abaixo — 720p a 60, depois
+720p a 30 — e os pontos marcados acompanham o novo tamanho (`scaleCalib`).
+A tela diz em que modo ficou e como voltar ao máximo (outra porta/outro lado
+do computador e "Trocar câmera", que sempre tenta o máximo de novo). O nome
+"OBSBOT" não é mais tomado por câmera virtual do OBS (`cameraSource`).
+
 Para a energia não cortar a câmera (Windows): ligue o notebook na tomada e
 use o modo de energia **Melhor desempenho**; em Painel de Controle → Opções
 de Energia → Alterar configurações do plano → Configurações avançadas →

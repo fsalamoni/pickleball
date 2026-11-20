@@ -146,7 +146,8 @@ export const KIT_WARNING_TEXT = Object.freeze({
  */
 export function cameraSource(label = '') {
   const l = String(label).toLowerCase();
-  if (/obs/.test(l)) return 'obs';
+  // "OBSBOT" é marca de webcam, não o OBS.
+  if (/\bobs\b/.test(l)) return 'obs';
   if (/ndi/.test(l)) return 'ndi';
   if (/droidcam|iriun|camo|epoccam|ivcam|continuity|iphone/.test(l)) return 'phone_wireless';
   if (/capture|cam link|hdmi|usb video|elgato|avermedia|magewell/.test(l)) return 'capture';

@@ -137,3 +137,30 @@ export function reconnectDelayMs(n) {
 
 /** Vídeo mudo (sem quadros) por mais que isto conta como câmera caída. */
 export const STREAM_MUTE_MS = 4000;
+
+/**
+ * O MODO em que a câmera é aberta, do mais pesado ao mais leve. Duas webcams
+ * em 1080p a 100 quadros não cabem na mesma controladora USB do computador:
+ * a segunda abre, anuncia 100 e entrega ZERO quadros (imagem preta), com o
+ * cabo perfeito. Nível 0 = o máximo; 1 = 720p a 60; 2 = 720p a 30.
+ */
+export const CAMERA_MODES = Object.freeze([
+  Object.freeze({ width: 1920, height: 1080, fps: 120 }),
+  Object.freeze({ width: 1280, height: 720, fps: 60 }),
+  Object.freeze({ width: 1280, height: 720, fps: 30 }),
+]);
+
+export function cameraMode(level = 0) {
+  return CAMERA_MODES[Math.min(CAMERA_MODES.length - 1, Math.max(0, Math.trunc(level) || 0))];
+}
+
+/** Caiu (ou não entregou quadro) antes disto depois de abrir: o modo é pesado demais para a porta. */
+export const QUICK_DROP_MS = 20000;
+
+/**
+ * O nível da PRÓXIMA abertura: a câmera que cai logo depois de abrir desce um
+ * degrau; a que ficou no ar um bom tempo (energia da porta) volta no mesmo.
+ */
+export function nextCameraLevel(level, aliveMs) {
+  return aliveMs < QUICK_DROP_MS ? Math.min(CAMERA_MODES.length - 1, level + 1) : level;
+}

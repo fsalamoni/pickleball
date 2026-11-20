@@ -349,7 +349,12 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                   : t('A câmera parou de mandar imagem. Reabrindo sozinha; a calibração fica.')}
               </p>
             )}
-            {!s.drop?.down && s.drop?.count > 0 && (
+            {!s.drop?.down && s.drop?.level > 0 && (
+              <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900" role="status">
+                {t('No modo máximo esta câmera não mandou imagem, então foi reaberta num modo mais leve ({w}×{h}) e está funcionando. O cabo está bom: duas webcams em Full HD e muitos quadros não cabem na mesma controladora USB do computador. Para voltar ao máximo, ligue esta câmera numa porta de outro lado do computador (ou numa porta USB-C/Thunderbolt) e toque em "Trocar câmera".', { w: s.settings?.width || 1280, h: s.settings?.height || 720 })}
+              </p>
+            )}
+            {!s.drop?.down && !s.drop?.level && s.drop?.count > 0 && (
               <p className="rounded-2xl bg-paper p-3 text-sm text-ink" role="status">
                 {t('A câmera caiu {n} vez(es) e voltou sozinha. Quem desliga é a economia de energia do computador, não o cabo: ligue o notebook na tomada, use o modo de energia "Melhor desempenho" e, no Windows, desligue a "Suspensão seletiva de USB" (passo a passo na ajuda do controle de linhas).', { n: s.drop?.count })}
               </p>
