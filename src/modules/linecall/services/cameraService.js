@@ -9,6 +9,7 @@
 import { t } from '@/core/i18n';
 import { inboundVideoSettings } from '../domain/ipCamera.js';
 import { framesFirst } from '../domain/webcamTuning.js';
+import { cameraMode } from '../domain/cameraHealth.js';
 
 /** As câmeras disponíveis (os nomes só aparecem depois da permissão). */
 export async function listCameras() {
@@ -23,19 +24,22 @@ export async function listCameras() {
  * @param {string|{ url: string, local: boolean }} [deviceId] a câmera do
  *   aparelho, ou a ponte de uma câmera IP (`parseBridgeUrl`)
  */
-export async function openCamera(deviceId) {
+export async function openCamera(deviceId, level = 0) {
   if (deviceId && typeof deviceId === 'object') return openIpCamera(deviceId);
   if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera-unsupported');
+  // `level` > 0: o modo cheio não entregou quadros (banda da porta USB) — abre num mais leve.
+  const modo = cameraMode(level);
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
     video: {
       ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }),
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      frameRate: { ideal: 120, min: 24 },
+      width: { ideal: modo.width },
+      height: { ideal: modo.height },
+      frameRate: level > 0 ? { ideal: modo.fps, max: modo.fps } : { ideal: modo.fps, min: 24 },
     },
   });
   const track = stream.getVideoTracks()[0];
+  if (level > 0) return { stream, settings: track?.getSettings?.() || {} };
   // Abriu em 1080p a 30 podendo 720p a 60? Troca: para a bola, quadro vale mais que pixel.
   let caps = null;
   try { caps = track?.getCapabilities?.() || null; } catch { /* navegador sem getCapabilities */ }

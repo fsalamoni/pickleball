@@ -6,7 +6,7 @@
  * moram), quem pode ser câmera e como o arranjo é gravado (`save`).
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Camera, MonitorPlay, ArrowLeftRight, Radio, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ import LineCentral from './LineCentral';
 import LayoutPicker from './LayoutPicker';
 import SetupGuide, { useDeviceProfile } from './SetupGuide';
 import CourtDiagram from './CourtDiagram';
+import { useAlignedRows } from './alignRows';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
@@ -139,6 +140,9 @@ export default function LineControlScreen({ host, live, podeConfigurar, camera, 
     .filter((p) => CAMERA_POSITIONS[p] && layout.positions.includes(p))
     .slice(0, MAX_STATIONS);
   const livres = layout.positions.filter((p) => !posicoes.includes(p));
+  // Várias câmeras lado a lado: cada etapa de uma na mesma altura da outra.
+  const colunasRef = useRef(null);
+  useAlignedRows(colunasRef, modo === 'camera' && Boolean(camera) && posicoes.length > 1);
   const ir = (patch) => {
     const next = new URLSearchParams(params);
     Object.entries(patch).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
@@ -183,7 +187,7 @@ export default function LineControlScreen({ host, live, podeConfigurar, camera, 
                 {t('Só a primeira câmera fala os lances, para a voz não sair repetida; todas mandam para a central. Ligue cada webcam numa porta USB diferente do computador.')}
               </p>
             )}
-            <div className={varias ? 'grid gap-4 xl:grid-cols-2' : undefined}>
+            <div ref={colunasRef} className={varias ? 'grid items-start gap-4 xl:grid-cols-2' : undefined}>
               {posicoes.map((p, i) => (
                 <section key={p} aria-label={t(CAMERA_POSITIONS[p].label)} className="min-w-0 space-y-2">
                   {varias && (

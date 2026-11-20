@@ -18,6 +18,7 @@
  */
 
 import { CAMERA_ZONES } from './zones.js';
+import { COURT_POINTS } from './court.js';
 import { BALL_DEFAULTS } from './ballDetection.js';
 
 /** Maior lado da foto (px): o bastante para o "Grudar na linha", leve no banco. */
@@ -53,6 +54,8 @@ export function sanitizeCalib(raw) {
   };
   if (raw.hueSet === true) out.hueSet = true;
   if (ZONE_IDS.has(raw.zone)) out.zone = raw.zone;
+  // Os pontos que a marcação tocou (`calibrationTargets`): sem eles, vale a regra antiga.
+  if (Array.isArray(raw.pts) && raw.pts.length === 4 && raw.pts.every((id) => COURT_POINTS[id])) out.pts = [...raw.pts];
   return out;
 }
 
@@ -63,6 +66,7 @@ export function calibForDb(c) {
   const out = { corners: s.corners, hue: s.hue, checkTap: s.checkTap };
   if (s.hueSet) out.hueSet = true;
   if (s.zone) out.zone = s.zone;
+  if (s.pts) out.pts = s.pts;
   return out;
 }
 

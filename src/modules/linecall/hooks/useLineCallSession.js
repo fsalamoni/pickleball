@@ -23,9 +23,9 @@ import { assessCamera, CAMERA_LEVEL } from '../domain/cameraCheck.js';
 import { eventInZone } from '../domain/zones.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
 import { headlineFirst } from '../domain/fusion.js';
-import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
+import { toGray, cutPatch, matchPatch, driftFrom, brightness, reconnectDelayMs, STREAM_MUTE_MS, nextCameraLevel } from '../domain/cameraHealth.js';
 import { cameraKey, fixedPrefId, fixedSnapshot, fixedPatches, restoreDecision, restoredCalib } from '../domain/fixedCalib.js';
-import { cameraTodo, remoteCalibFor, curForDb, savedCalibFor, seenFromSaved } from '../domain/remoteCalib.js';
+import { scaleCalib, cameraTodo, remoteCalibFor, curForDb, savedCalibFor, seenFromSaved } from '../domain/remoteCalib.js';
 
 /** Os campos com a calibração completa (`cur`); incompleta não vai, para não apagar a guardada. */
 const withCur = (fields, c) => {
@@ -217,8 +217,18 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     setEvents([]);
   }, []);
 
+  // A câmera que a pessoa escolheu: é ela que volta se o sistema derrubar o vídeo.
+  const sourceRef = useRef(undefined);
+  // `level`: o modo em que a câmera está aberta (0 = o máximo; ver `cameraMode`).
+  const [drop, setDrop] = useState({ down: false, attempt: 0, count: 0, level: 0 });
+  const levelRef = useRef(0);
+  const openedRef = useRef({ at: 0, width: 0 });
   const start = useCallback(async (deviceId) => {
     setCameraError(null);
+    sourceRef.current = deviceId;
+    // Abrir à mão tenta de novo o modo máximo (a pessoa pode ter trocado a porta USB).
+    levelRef.current = 0;
+    setDrop((d) => (d.down || d.level ? { ...d, down: false, attempt: 0, level: 0 } : d));
     try {
       // Outra câmera = outro relógio de vídeo (o `t` recomeça do zero) e outra
       // imagem: os lances da anterior saem, senão um velho seguiria de manchete
@@ -229,6 +239,7 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
       restoredRef.current = null;
       setRestored(null);
       const opened = await openCamera(deviceId);
+      openedRef.current = { at: performance.now(), width: opened.settings?.width || 0 };
       setStream(opened.stream);
       setSettings(opened.settings);
       refreshCameras(); // depois da permissão os nomes aparecem
@@ -242,6 +253,75 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     if (videoRef.current && stream) videoRef.current.srcObject = stream;
   }, [stream]);
   useEffect(() => () => closeCamera(stream), [stream]);
+
+  // ---- A câmera caiu: reabre sozinha (cabo ok, mas o sistema cortou a porta USB) ----
+  // `ended` = o sistema encerrou o vídeo; mudo por STREAM_MUTE_MS = parou de mandar quadros.
+  useEffect(() => {
+    const track = stream?.getVideoTracks?.()[0];
+    if (!track) return undefined;
+    let mudo = null;
+    let parado = null;
+    let feito = false;
+    const caiu = () => {
+      if (feito) return;
+      feito = true;
+      clearTimeout(mudo);
+      clearInterval(parado);
+      // Caiu logo depois de abrir = o modo não cabe na porta USB: a próxima abertura é mais leve.
+      levelRef.current = nextCameraLevel(levelRef.current, performance.now() - openedRef.current.at);
+      logger.warn('linecall: câmera caiu', { position: pos.id, state: track.readyState, level: levelRef.current });
+      setDrop((d) => (d.down ? d : { ...d, down: true, attempt: 0, count: d.count + 1 }));
+    };
+    // Aberta e "ligada", mas sem NENHUM quadro por 4 s (duas webcams pesadas na mesma controladora USB).
+    const quadros = () => { const st = track.stats; return st ? (st.totalFrames ?? st.deliveredFrames) : null; };
+    let antes = quadros();
+    let vazias = 0;
+    parado = setInterval(() => {
+      const agora = quadros();
+      if (agora == null || document.visibilityState !== 'visible') { vazias = 0; antes = agora; return; }
+      vazias = agora === antes ? vazias + 1 : 0;
+      antes = agora;
+      if (vazias >= 2 && track.readyState === 'live') caiu();
+    }, 2000);
+    const onMute = () => { clearTimeout(mudo); mudo = setTimeout(caiu, STREAM_MUTE_MS); };
+    const onUnmute = () => clearTimeout(mudo);
+    track.addEventListener('ended', caiu);
+    track.addEventListener('mute', onMute);
+    track.addEventListener('unmute', onUnmute);
+    if (track.readyState === 'ended') caiu();
+    return () => {
+      clearTimeout(mudo);
+      clearInterval(parado);
+      track.removeEventListener('ended', caiu);
+      track.removeEventListener('mute', onMute);
+      track.removeEventListener('unmute', onUnmute);
+    };
+  }, [stream, pos.id]);
+  useEffect(() => {
+    if (!drop.down) return undefined;
+    let vivo = true;
+    const id = setTimeout(async () => {
+      try {
+        const level = levelRef.current;
+        const opened = await openCamera(sourceRef.current, level);
+        if (!vivo) { closeCamera(opened.stream); return; }
+        // Outro tamanho de imagem (modo mais leve): os pontos marcados acompanham.
+        const antes = openedRef.current.width;
+        const agora = opened.settings?.width || 0;
+        if (antes && agora && antes !== agora) setCalib((c) => scaleCalib(c, agora / antes));
+        openedRef.current = { at: performance.now(), width: agora };
+        // Outro relógio de vídeo: os lances locais saem, como em "Trocar câmera". A calibração e a análise ficam.
+        clearEvents();
+        setStream(opened.stream);
+        setSettings(opened.settings);
+        setCameraError(null);
+        setDrop((d) => ({ ...d, down: false, attempt: 0, level }));
+      } catch {
+        if (vivo) setDrop((d) => (d.down ? { ...d, attempt: d.attempt + 1 } : d));
+      }
+    }, reconnectDelayMs(drop.attempt));
+    return () => { vivo = false; clearTimeout(id); };
+  }, [drop.down, drop.attempt, clearEvents]);
 
   // "Estou no ar": sinal de vida enquanto a câmera está aberta.
   const live = useRef({});
@@ -564,6 +644,6 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     ...cal, position: pos,
     videoRef, cameras, start, stream, settings, cameraError, cameraChecks, remote: remoteOn, remoteApplied, restoredFromCourt,
     running, setRunning, poseState, events, clearEvents, fps, frameMs, ball, shareError, battery, health,
-    restored, dismissRestored,
+    restored, dismissRestored, drop,
   };
 }

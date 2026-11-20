@@ -37,6 +37,7 @@
 
 import { tk } from '@/core/i18n';
 import { COURT, COURT_POINTS, CORNER_SET } from './court.js';
+import { zoneCalibrationPoints } from './zones.js';
 
 const { WIDTH: W, LENGTH: L, NET_Y: N } = COURT;
 
@@ -186,6 +187,27 @@ export function layoutsByCount() {
 export function calibrationPoints(positionId) {
   const set = CORNER_SET[CAMERA_POSITIONS[positionId]?.corners || 'court'];
   return set.map((id) => ({ id, ...COURT_POINTS[id] }));
+}
+
+/**
+ * Os quatro pontos a tocar, pela área vigiada. "Quadra inteira" é SEMPRE os
+ * quatro cantos da quadra — 🐞 antes ela seguia a posição, e na lateral da
+ * rede (que se calibra pelas cozinhas) quem escolhia a quadra inteira marcava
+ * só as pontas das cozinhas e o desenho saía só na cozinha.
+ *
+ * A calibração guarda os pontos que foram tocados (`pts`). A antiga, sem
+ * `pts`, segue lida como foi marcada: a área com os pontos da posição.
+ * @param {{ zone?: string, pts?: string[], corners?: object[] }} calib
+ */
+export function calibrationTargets(calib, positionId) {
+  const ids = calib?.pts;
+  if (Array.isArray(ids) && ids.length === 4 && ids.every((id) => COURT_POINTS[id])) {
+    return ids.map((id) => ({ id, ...COURT_POINTS[id] }));
+  }
+  const area = zoneCalibrationPoints(calib?.zone);
+  if (area) return area;
+  if (calib?.corners?.length) return calibrationPoints(positionId);
+  return CORNER_SET.court.map((id) => ({ id, ...COURT_POINTS[id] }));
 }
 
 /** O que o arranjo julga: dentro/fora sempre; pé na cozinha só com câmera que vê pés. */

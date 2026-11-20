@@ -1,5 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { toGray, cutPatch, matchPatch, driftFrom, brightness, HEALTH } from './cameraHealth.js';
+import { toGray, cutPatch, matchPatch, driftFrom, brightness, HEALTH, reconnectDelayMs, cameraMode, nextCameraLevel, QUICK_DROP_MS } from './cameraHealth.js';
+
+describe('modo da câmera', () => {
+  it('desce um degrau quando cai logo depois de abrir, e para no mais leve', () => {
+    expect(cameraMode(0)).toMatchObject({ height: 1080 });
+    expect(cameraMode(9)).toMatchObject({ height: 720, fps: 30 });
+    expect(nextCameraLevel(0, 4000)).toBe(1);
+    expect(nextCameraLevel(2, 4000)).toBe(2);
+    expect(nextCameraLevel(0, QUICK_DROP_MS + 1)).toBe(0);
+  });
+});
+
+describe('reabrir a câmera que caiu', () => {
+  it('tenta logo e espaça até 15 s, sem desistir', () => {
+    expect(reconnectDelayMs(0)).toBe(500);
+    expect(reconnectDelayMs(1)).toBe(1000);
+    expect(reconnectDelayMs(3)).toBe(4000);
+    expect(reconnectDelayMs(10)).toBe(15000);
+  });
+});
 
 const W = 120;
 const H = 80;

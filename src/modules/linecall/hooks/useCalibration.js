@@ -10,11 +10,11 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 import { solveHomography, invertHomography } from '../domain/homography.js';
-import { calibrationPoints } from '../domain/cameraLayouts.js';
+import { calibrationTargets } from '../domain/cameraLayouts.js';
 import { rgbToHsv } from '../domain/ballDetection.js';
 import { worstCmPerPixel } from '../domain/cameraCheck.js';
 import { checkPointFor, calibrationCheck } from '../domain/calibrationCheck.js';
-import { zoneById, zoneCalibrationPoints, zoneCheckPoint } from '../domain/zones.js';
+import { zoneById, zoneCheckPoint } from '../domain/zones.js';
 import { snapToOuterCorner, centroid } from '../domain/snapCorner.js';
 
 /** Os cantos da quadra (os únicos que o "Grudar na linha" mexe). */
@@ -36,8 +36,14 @@ export function mediaSize(el) {
 export function useCalibration(positionId, calib, setCalib, mediaRef) {
   // A área vigiada (quadra inteira ou uma parte) decide os pontos tocados e o que a câmera marca.
   const zone = zoneById(calib.zone).id;
-  const targets = useMemo(() => zoneCalibrationPoints(zone) || calibrationPoints(positionId), [zone, positionId]);
-  const checkPoint = useMemo(() => zoneCheckPoint(zone) || checkPointFor(positionId), [zone, positionId]);
+  // Os pontos desta marcação: os gravados nela (`pts`) ou os da área ("quadra inteira" = os cantos da quadra).
+  const ptsKey = Array.isArray(calib.pts) ? calib.pts.join(',') : '';
+  const marcando = calib.corners.length > 0;
+  const targets = useMemo(
+    () => calibrationTargets({ zone, pts: ptsKey ? ptsKey.split(',') : undefined, corners: marcando ? [0] : [] }, positionId),
+    [zone, ptsKey, marcando, positionId],
+  );
+  const checkPoint = useMemo(() => zoneCheckPoint(zone) || checkPointFor(positionId, targets), [zone, positionId, targets]);
   const H = useMemo(
     () => (calib.corners.length === 4 ? solveHomography(calib.corners, targets) : null),
     [calib.corners, targets],
@@ -52,8 +58,12 @@ export function useCalibration(positionId, calib, setCalib, mediaRef) {
 
   /** Toque na imagem (coordenadas da IMAGEM): marca o próximo ponto. */
   const addCorner = useCallback((pt) => {
-    setCalib((c) => ({ ...c, checkTap: null, corners: c.corners.length >= 4 ? [pt] : [...c.corners, pt] }));
-  }, [setCalib]);
+    // O 1º toque grava QUAIS pontos esta marcação toca: a leitura não muda se a regra mudar depois.
+    const novos = calibrationTargets({ zone }, positionId).map((p) => p.id);
+    setCalib((c) => (c.corners.length === 0 || c.corners.length >= 4
+      ? { ...c, checkTap: null, pts: novos, corners: [pt] }
+      : { ...c, checkTap: null, corners: [...c.corners, pt] }));
+  }, [setCalib, zone, positionId]);
   /** Arrasta um ponto já marcado (ajuste fino com a lupa). */
   const moveCorner = useCallback((i, pt) => {
     setCalib((c) => ({ ...c, checkTap: null, corners: c.corners.map((p, j) => (j === i ? pt : p)) }));
@@ -93,8 +103,8 @@ export function useCalibration(positionId, calib, setCalib, mediaRef) {
     if (prev) setCalib((c) => ({ ...c, checkTap: null, corners: prev }));
   }, [setCalib]);
   /** Troca a área vigiada: os pontos são outros, então a marcação recomeça. */
-  const setZone = useCallback((id) => setCalib((c) => (zoneById(c.zone).id === id ? c : { ...c, zone: id, corners: [], checkTap: null })), [setCalib]);
-  const resetCorners = useCallback(() => setCalib((c) => ({ ...c, corners: [], checkTap: null })), [setCalib]);
+  const setZone = useCallback((id) => setCalib((c) => (zoneById(c.zone).id === id ? c : { ...c, zone: id, corners: [], pts: undefined, checkTap: null })), [setCalib]);
+  const resetCorners = useCallback(() => setCalib((c) => ({ ...c, corners: [], pts: undefined, checkTap: null })), [setCalib]);
   /** Toque no 5º ponto (o de conferência). */
   const setCheckTap = useCallback((pt) => setCalib((c) => ({ ...c, checkTap: pt })), [setCalib]);
   /** Toque na bola parada: aprende a cor dela. */

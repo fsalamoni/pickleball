@@ -46,6 +46,7 @@ describe('kitWarnings', () => {
 describe('cameraSource', () => {
   it('reconhece OBS, NDI, celular sem fio, captura e a câmera da frente', () => {
     expect(cameraSource('OBS Virtual Camera')).toBe('obs');
+    expect(cameraSource('OBSBOT Meet SE StreamCamera (3564:fef8)')).toBe('other');
     expect(cameraSource('NDI Webcam Video 1')).toBe('ndi');
     expect(cameraSource('DroidCam Source 2')).toBe('phone_wireless');
     expect(cameraSource('Cam Link 4K')).toBe('capture');

@@ -73,7 +73,16 @@ export default function WebcamTuning({ stream, announcedFps }) {
       setErro(true);
     }
   };
-  const travar = (on) => mudar(lockConstraints(caps, track?.getSettings?.(), on), () => setTravado(on));
+  // Foco e cor, um de cada vez: a câmera que recusa um não perde o outro.
+  const travar = async (on) => {
+    setErro(false);
+    const partes = lockConstraints(caps, track?.getSettings?.(), on)?.advanced || [];
+    let ok = 0;
+    // Em sequência: dois ajustes ao mesmo tempo na mesma câmera se atropelam.
+    await partes.reduce((fila, p) => fila.then(() => track.applyConstraints({ advanced: [p] }).then(() => { ok += 1; }, () => {})), Promise.resolve());
+    if (ok) setTravado(on);
+    if (ok < partes.length) setErro(ok ? 'parcial' : true);
+  };
   const angular = (on) => mudar({ advanced: [{ zoom: on ? grande : 1 }] }, () => setLargo(on));
   if (!opcoes.length && entregue === null && !podeTravar && grande === null) return null;
 
@@ -124,7 +133,8 @@ export default function WebcamTuning({ stream, announcedFps }) {
           </p>
         </div>
       )}
-      {erro && <p className="text-sm text-red-700" role="alert">{t('A câmera não aceitou esse ajuste.')}</p>}
+      {erro === 'parcial' && <p className="text-sm text-amber-700" role="status">{t('A câmera travou só uma parte (o foco ou a cor); a outra ela segue ajustando sozinha. A imagem continua normal.')}</p>}
+      {erro === true && <p className="text-sm text-red-700" role="alert">{t('A câmera não aceitou esse ajuste. A imagem continua normal; ajuste pelo programa da câmera (OBSBOT Center, Logi Tune) se precisar.')}</p>}
     </div>
   );
 }
