@@ -22,9 +22,11 @@ export const CHECK_LEVEL = Object.freeze({ GREAT: 'great', GOOD: 'good', REDO: '
 export const CHECK_CM = Object.freeze({ great: 3, good: 6 });
 
 /** O ponto de conferência da posição: `{ id, x, y }` em metros. */
-export function checkPointFor(positionId) {
+export function checkPointFor(positionId, targets = null) {
   const p = CAMERA_POSITIONS[positionId] || CAMERA_POSITIONS.fundo_a;
-  if (p.corners === 'kitchens') return { id: 'TA', x: W / 2, y: 0 };
+  // Calibrada pelas cozinhas (a lateral da rede, por padrão): o meio do fundo A.
+  const cozinhas = targets ? targets.some((q) => q.id === 'KA1') : p.corners === 'kitchens';
+  if (cozinhas) return { id: 'TA', x: W / 2, y: 0 };
   const sideB = /_b/.test(p.id);
   return sideB ? { id: 'KTB', x: W / 2, y: N + K } : { id: 'KTA', x: W / 2, y: N - K };
 }

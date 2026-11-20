@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { toGray, cutPatch, matchPatch, driftFrom, brightness, HEALTH } from './cameraHealth.js';
+import { toGray, cutPatch, matchPatch, driftFrom, brightness, HEALTH, reconnectDelayMs } from './cameraHealth.js';
+
+describe('reabrir a câmera que caiu', () => {
+  it('tenta logo e espaça até 15 s, sem desistir', () => {
+    expect(reconnectDelayMs(0)).toBe(500);
+    expect(reconnectDelayMs(1)).toBe(1000);
+    expect(reconnectDelayMs(3)).toBe(4000);
+    expect(reconnectDelayMs(10)).toBe(15000);
+  });
+});
 
 const W = 120;
 const H = 80;

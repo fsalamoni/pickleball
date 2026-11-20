@@ -23,7 +23,7 @@ import { assessCamera, CAMERA_LEVEL } from '../domain/cameraCheck.js';
 import { eventInZone } from '../domain/zones.js';
 import { createFrameRing, clipWindow, REPLAY } from '../domain/replay.js';
 import { headlineFirst } from '../domain/fusion.js';
-import { toGray, cutPatch, matchPatch, driftFrom, brightness } from '../domain/cameraHealth.js';
+import { toGray, cutPatch, matchPatch, driftFrom, brightness, reconnectDelayMs, STREAM_MUTE_MS } from '../domain/cameraHealth.js';
 import { cameraKey, fixedPrefId, fixedSnapshot, fixedPatches, restoreDecision, restoredCalib } from '../domain/fixedCalib.js';
 import { cameraTodo, remoteCalibFor, curForDb, savedCalibFor, seenFromSaved } from '../domain/remoteCalib.js';
 
@@ -217,8 +217,13 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     setEvents([]);
   }, []);
 
+  // A câmera que a pessoa escolheu: é ela que volta se o sistema derrubar o vídeo.
+  const sourceRef = useRef(undefined);
+  const [drop, setDrop] = useState({ down: false, attempt: 0, count: 0 });
   const start = useCallback(async (deviceId) => {
     setCameraError(null);
+    sourceRef.current = deviceId;
+    setDrop((d) => (d.down ? { ...d, down: false, attempt: 0 } : d));
     try {
       // Outra câmera = outro relógio de vídeo (o `t` recomeça do zero) e outra
       // imagem: os lances da anterior saem, senão um velho seguiria de manchete
@@ -242,6 +247,50 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     if (videoRef.current && stream) videoRef.current.srcObject = stream;
   }, [stream]);
   useEffect(() => () => closeCamera(stream), [stream]);
+
+  // ---- A câmera caiu: reabre sozinha (cabo ok, mas o sistema cortou a porta USB) ----
+  // `ended` = o sistema encerrou o vídeo; mudo por STREAM_MUTE_MS = parou de mandar quadros.
+  useEffect(() => {
+    const track = stream?.getVideoTracks?.()[0];
+    if (!track) return undefined;
+    let mudo = null;
+    const caiu = () => {
+      clearTimeout(mudo);
+      logger.warn('linecall: câmera caiu', { position: pos.id, state: track.readyState });
+      setDrop((d) => (d.down ? d : { down: true, attempt: 0, count: d.count + 1 }));
+    };
+    const onMute = () => { clearTimeout(mudo); mudo = setTimeout(caiu, STREAM_MUTE_MS); };
+    const onUnmute = () => clearTimeout(mudo);
+    track.addEventListener('ended', caiu);
+    track.addEventListener('mute', onMute);
+    track.addEventListener('unmute', onUnmute);
+    if (track.readyState === 'ended') caiu();
+    return () => {
+      clearTimeout(mudo);
+      track.removeEventListener('ended', caiu);
+      track.removeEventListener('mute', onMute);
+      track.removeEventListener('unmute', onUnmute);
+    };
+  }, [stream, pos.id]);
+  useEffect(() => {
+    if (!drop.down) return undefined;
+    let vivo = true;
+    const id = setTimeout(async () => {
+      try {
+        const opened = await openCamera(sourceRef.current);
+        if (!vivo) { closeCamera(opened.stream); return; }
+        // Outro relógio de vídeo: os lances locais saem, como em "Trocar câmera". A calibração e a análise ficam.
+        clearEvents();
+        setStream(opened.stream);
+        setSettings(opened.settings);
+        setCameraError(null);
+        setDrop((d) => ({ ...d, down: false, attempt: 0 }));
+      } catch {
+        if (vivo) setDrop((d) => (d.down ? { ...d, attempt: d.attempt + 1 } : d));
+      }
+    }, reconnectDelayMs(drop.attempt));
+    return () => { vivo = false; clearTimeout(id); };
+  }, [drop.down, drop.attempt, clearEvents]);
 
   // "Estou no ar": sinal de vida enquanto a câmera está aberta.
   const live = useRef({});
@@ -564,6 +613,6 @@ export function useLineCallSession(gameDayId, position, { layout = null, share =
     ...cal, position: pos,
     videoRef, cameras, start, stream, settings, cameraError, cameraChecks, remote: remoteOn, remoteApplied, restoredFromCourt,
     running, setRunning, poseState, events, clearEvents, fps, frameMs, ball, shareError, battery, health,
-    restored, dismissRestored,
+    restored, dismissRestored, drop,
   };
 }

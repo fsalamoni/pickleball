@@ -347,6 +347,34 @@ resolução → não volta (`size`). A tela diz qual dos quatro aconteceu.
 "Mais uma câmera nesta tela" acrescenta a próxima posição livre; cada uma tem
 "Tirar desta tela". Só a primeira fala os lances (`announce`), para a voz não
 sair dobrada; todas mandam para a central. "Abrir em outra aba" continua.
+Lado a lado, cada etapa de uma câmera fica na MESMA altura da mesma etapa da
+outra (`alignRows.js`, `useAlignedRows`): os blocos marcados com
+`data-alinhar` (posicionar, próximo passo, passo 1, área vigiada, imagem,
+desenho, avisos da calibração, passos 3 e 4) ganham a altura do maior entre
+as colunas; empilhadas (tela estreita), nada muda.
+
+**A câmera que cai volta sozinha** (`useLineCallSession`, `reconnectDelayMs`,
+`STREAM_MUTE_MS`). Com o cabo bom, o vídeo cai porque o SISTEMA corta a porta
+USB para poupar energia (ou o driver reinicia depois de um ajuste recusado).
+O vídeo encerrado (`ended`) ou mudo por 4 s conta como queda: a mesma câmera
+é reaberta em 0,5 s, 1 s, 2 s… até 15 s entre tentativas, sem desistir; a
+calibração e a análise continuam, e só a lista local de lances recomeça (o
+relógio do vídeo é outro). A tela diz "reabrindo sozinha" e, depois, quantas
+vezes caiu, com o que fazer. "Travar foco e cor" aplica foco e cor um de cada
+vez: a câmera que recusa um não perde o outro, e a recusa nunca derruba o
+vídeo. A tela já fica acesa (`useWakeLock`); o navegador NÃO analisa aba em
+segundo plano — deixe a janela da câmera visível.
+
+Para a energia não cortar a câmera (Windows): ligue o notebook na tomada e
+use o modo de energia **Melhor desempenho**; em Painel de Controle → Opções
+de Energia → Alterar configurações do plano → Configurações avançadas →
+**Configurações USB → Suspensão seletiva de USB → Desabilitado** (na tomada
+e na bateria); no Gerenciador de Dispositivos, em cada **Hub USB raiz** /
+**Controlador de host USB** e na própria câmera (Câmeras), aba Gerenciamento
+de Energia, desmarque **"O computador pode desligar o dispositivo para
+economizar energia"**. No Chrome, desligue a **Economia de memória** para o
+site (Configurações → Desempenho) e não minimize a janela. No macOS, ajustes
+→ Bateria → Opções: "Evitar repouso automático na tomada".
 
 **Webcam** (`domain/webcamTuning.js`, `WebcamTuning`): quando a câmera deixa
 (`getCapabilities().exposureMode` com `manual`), botões de obturador
@@ -745,6 +773,14 @@ Ajustes em `ENGINE_DEFAULTS` — botões de calibração do mundo real.
   fica calada — nada vai para a central. A área mora na calibração do aparelho
   (`calib.zone`, ausente = quadra inteira, igual a antes); zero banco. Os ids
   das áreas e dos pontos são contrato: nunca renomeie.
+  **Quadra inteira = os quatro cantos da quadra, em toda posição**
+  (`calibrationTargets`, 2026-11-20). 🐞 Antes ela seguia a posição, e na
+  lateral da rede (que por padrão se calibra pelas cozinhas) quem escolhia
+  "Quadra inteira" marcava as pontas das cozinhas e o desenho saía só na
+  cozinha. Agora o 1º toque grava QUAIS pontos a marcação toca
+  (`calib.pts`, também no `cur`/`calib` da quadra); a calibração antiga, sem
+  `pts`, segue lida como foi marcada (a lateral, pelas cozinhas) até alguém
+  marcar de novo. Na lateral com a quadra inteira o 5º ponto é o `KTA`.
 - **Calibração com prova**: lupa ao tocar (4×), "Ajustar os pontos" (arrastar),
   e o **5º ponto** (`domain/calibrationCheck.js`: o "T" da central com a
   cozinha) mede o erro em cm — até 3 ótimo, até 6 bom, acima refazer. O erro vai

@@ -171,7 +171,7 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
   return (
     <>
       {ready && (
-        <fieldset className="space-y-2" data-dica="linhas-area">
+        <fieldset className="space-y-2" data-dica="linhas-area" data-alinhar="calib-area">
           <legend className="text-xs font-semibold text-gray-500">{t('O que esta câmera vigia')}</legend>
           <div className="flex flex-wrap gap-2">
             {CAMERA_ZONES.map((z) => (
@@ -203,7 +203,7 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
           </p>
         </fieldset>
       )}
-      <div className={cn(!ready && 'hidden')}>
+      <div className={cn(!ready && 'hidden')} data-alinhar="calib-imagem">
         {/* A imagem fica montada desde o início: o vídeo recebe a câmera assim que ela abre. */}
         <CalibrationView
           s={s}
@@ -217,7 +217,7 @@ export default function CalibrationMarker({ s, mode, setMode, ready = true, extr
         />
       </div>
       {ready && (
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3" data-alinhar="calib-desenho">
           <CourtDiagram
             {...diagram}
             positions={[posId]}

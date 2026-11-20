@@ -13,7 +13,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Camera, Crosshair, Palette, Play, Pause, Trash2, Check, Radio, AlertTriangle,
-  Move, Volume2, VolumeX, Film, BatteryLow, Bell, BellOff, MonitorSmartphone,
+  Move, Volume2, VolumeX, Film, BatteryLow, Bell, BellOff, MonitorSmartphone, RefreshCw,
 } from 'lucide-react';
 
 import { V2Surface, V2Button, V2Badge, V2Select, V2Input, V2ErrorState } from '@/v2/ui/primitives';
@@ -92,9 +92,9 @@ const ITEM_TEXT = {
 };
 const LEVEL_TONE = { ok: 'green', todo: 'neutral', warn: 'amber', block: 'red' };
 const LEVEL_TEXT = { ok: tk('ok'), todo: tk('falta'), warn: tk('atenção'), block: tk('resolver') };
-function Step({ n, done, active, title, children, dica }) {
+function Step({ n, done, active, title, children, dica, alinhar }) {
   return (
-    <li className={cn('flex gap-3', !active && !done && 'opacity-60')} data-dica={dica}>
+    <li className={cn('flex gap-3', !active && !done && 'opacity-60')} data-dica={dica} data-alinhar={alinhar}>
       <span
         className={cn(
           'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
@@ -227,6 +227,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
         description={t(s.position.label)}
         className="p-4"
         data-dica="linhas-posicionar"
+        data-alinhar="posicionar"
       >
         <div className="space-y-4">
           <PlacementGuide position={s.position.id} layoutPositions={layoutPositions} />
@@ -234,7 +235,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
         </div>
       </V2Surface>
 
-      <V2Surface className="space-y-3 p-4" aria-live="polite" data-dica="linhas-proximo-passo">
+      <V2Surface className="space-y-3 p-4" aria-live="polite" data-dica="linhas-proximo-passo" data-alinhar="proximo">
         {proximo ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -266,7 +267,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
       <V2Surface className="space-y-4 p-4">
         <ol className="space-y-4">
-          <Step n={1} done={Boolean(s.stream)} active={!s.stream} title={t('Abra a câmera')} dica="linhas-abrir-camera">
+          <Step n={1} done={Boolean(s.stream)} active={!s.stream} title={t('Abra a câmera')} dica="linhas-abrir-camera" alinhar="passo-1">
             <div className="flex flex-wrap items-end gap-2">
               <label className="min-w-0 flex-1 text-xs font-semibold text-gray-500">
                 {t('Câmera')}
@@ -340,6 +341,19 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 )}
               </div>
             )}
+            {s.drop?.down && (
+              <p className="flex items-start gap-1.5 rounded-2xl bg-amber-50 p-3 text-sm font-medium text-amber-900" role="status">
+                <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                {s.drop?.attempt > 0
+                  ? t('A câmera parou de mandar imagem. Reabrindo sozinha (tentativa {n}); a calibração fica.', { n: s.drop?.attempt + 1 })
+                  : t('A câmera parou de mandar imagem. Reabrindo sozinha; a calibração fica.')}
+              </p>
+            )}
+            {!s.drop?.down && s.drop?.count > 0 && (
+              <p className="rounded-2xl bg-paper p-3 text-sm text-ink" role="status">
+                {t('A câmera caiu {n} vez(es) e voltou sozinha. Quem desliga é a economia de energia do computador, não o cabo: ligue o notebook na tomada, use o modo de energia "Melhor desempenho" e, no Windows, desligue a "Suspensão seletiva de USB" (passo a passo na ajuda do controle de linhas).', { n: s.drop?.count })}
+              </p>
+            )}
             {s.stream && deviceId !== IP_OPTION && (
               <WebcamTuning stream={s.stream} announcedFps={s.cameraChecks.find((c) => c.key === 'fps')?.value} />
             )}
@@ -355,6 +369,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
 
           <Step n={2} done={calibrada && s.check?.level !== CHECK_LEVEL.REDO && Boolean(s.check)} active={Boolean(s.stream) && (!calibrada || !s.check)} title={t('Marque os pontos da quadra e confira')} dica="linhas-calibrar">
             <CalibrationMarker s={s} mode={mode} setMode={setMode} ready={Boolean(s.stream)} />
+            <div className="space-y-2" data-alinhar="calib-avisos">
             {s.stream && s.remote && (
               <p className="flex items-start gap-1.5 rounded-2xl bg-paper p-3 text-sm text-ink">
                 <MonitorSmartphone className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -382,9 +397,10 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
                 <V2Button type="button" size="sm" variant="ghost" onClick={s.dismissRestored}>{t('Entendi')}</V2Button>
               </div>
             )}
+            </div>
           </Step>
 
-          <Step n={3} done={Boolean(s.calib.hueSet)} active={calibrada && !s.calib.hueSet} title={t('Ensine a cor da bola (opcional)')}>
+          <Step n={3} done={Boolean(s.calib.hueSet)} active={calibrada && !s.calib.hueSet} title={t('Ensine a cor da bola (opcional)')} alinhar="passo-3">
             {calibrada && (
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">{mode === 'color' ? t('Toque na bola, parada no chão.') : t('Já vem pronta para bola amarela/verde-limão. Com outra cor, toque na bola parada.')}</p>
@@ -395,7 +411,7 @@ export default function CameraStation({ gameDayId, position, layout, layoutPosit
             )}
           </Step>
 
-          <Step n={4} done={false} active={calibrada} title={t('Analise o jogo')} dica="linhas-analisar">
+          <Step n={4} done={false} active={calibrada} title={t('Analise o jogo')} dica="linhas-analisar" alinhar="passo-4">
             {calibrada && (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">

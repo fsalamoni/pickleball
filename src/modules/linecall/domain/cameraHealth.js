@@ -124,3 +124,16 @@ export function brightness(gray) {
   const mean = Math.round(s / n);
   return { mean, dark: mean < HEALTH.DARK, glare: blown / n >= HEALTH.GLARE };
 }
+
+/**
+ * A câmera CAIU (o sistema encerrou o vídeo ou parou de mandar quadros):
+ * quanto esperar antes da tentativa `n` de reabrir (0, 1, 2…). Começa rápido
+ * — o cabo segue ligado, quase sempre foi a energia da porta USB — e espaça
+ * até 15 s, sem desistir: a câmera da quadra não pode ficar desligada.
+ */
+export function reconnectDelayMs(n) {
+  return Math.min(15000, 500 * 2 ** Math.max(0, n));
+}
+
+/** Vídeo mudo (sem quadros) por mais que isto conta como câmera caída. */
+export const STREAM_MUTE_MS = 4000;
