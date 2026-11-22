@@ -392,6 +392,24 @@ tem e a última aplicada; sempre devolve o que quem organiza mandou
 (calibração, pedido de foto, começar/pausar), sem a foto. `leave` apaga também
 a `line_calib` da câmera. Testes: `functions/lineGuest.test.js`.
 
+### 7.3 Avatar criado por IA (`avatarAi`, `functions/avatarAi.js`, flag `avatar_creator`)
+
+Régua pura em `functions/avatarAiPolicy.js` (catálogo → frases do pedido,
+limites, configuração), com paridade contra o cliente em
+`avatarAi.parity.test.js`; testes em `avatarAi.test.js`. Doc:
+[`58-AVATARES.md`](./58-AVATARES.md) §5.
+
+| Função | Tipo / gatilho | O que faz | Quem chama |
+|---|---|---|---|
+| `avatarAi` | callable (300 s, 512 MiB) | `status` (disponível? quantas restam), `generate` (reserva a criação numa transação — limite do dia e do mês da pessoa, teto do mês da plataforma, uma por vez —, escreve o pedido a partir dos ids, chama a API de imagens com a chave de `platform_secrets/avatar_ai`, guarda `avatar-ia/{uid}/last.jpg` e, se do zero, `base.jpg`, devolve a imagem; falhou ⇒ devolve a criação), `last` (a última imagem criada), `config`/`config_save` (só o admin: configuração em `platform_settings/avatar_ai`, chave só de escrita, auditoria `avatar_ai_config_changed`) | `/avatar` e Painel admin → Avatares → Criador |
+
+Lê `platform_settings/global` (a flag), `platform_settings/avatar_ai`,
+`platform_settings/avatar_catalog` e `platform_secrets/avatar_ai`; escreve
+`avatar_usage/{uid}`, `avatar_usage/_platform` e o Storage `avatar-ia/{uid}/`.
+É a única função daqui que chama um serviço de fora pago por uso: o teto do
+mês da plataforma é o que limita o gasto. Nenhum texto e nenhuma imagem do
+navegador chega ao provedor, e a chave não vai à resposta nem ao log.
+
 ## 7a. Carreira — a dupla confirma (flag `athlete_career`, `functions/career.js`)
 
 | Função | Gatilho | O que faz | Escreve |

@@ -98,6 +98,7 @@ import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
 const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
 const AdminAvatarCatalogTab = lazy(() => import('@/v2/components/admin/AdminAvatarCatalogTab'));
+const AdminAvatarAiTab = lazy(() => import('@/v2/components/admin/AdminAvatarAiTab'));
 const AdminGameDaysTab = lazy(() => import('@/v2/components/admin/AdminGameDaysTab'));
 const DuprPolicyCard = lazy(() => import('@/v2/components/admin/DuprPolicyCard'));
 const AdminDuprPilotTab = lazy(() => import('@/v2/components/admin/AdminDuprPilotTab'));
@@ -185,8 +186,10 @@ const SECTIONS = Object.freeze([
   { id: 'careerSection', label: tk('Carreira'), icon: Route, flag: 'athlete_career', dica: 'admin-secao-carreira', tabs: [
     { id: 'carreira-moderacao', label: tk('Denúncias de dupla'), icon: Flag, keywords: ['carreira', 'dupla', 'confirmação', 'visão', 'denúncia', 'moderação'] },
   ] },
-  // Avatares (flag `avatar_creator`): as raquetes de marca do estúdio.
-  { id: 'avatarSection', label: tk('Avatares'), icon: Smile, flag: 'avatar_creator', tabs: [
+  // Avatares: o criador (chave do provedor, limites) e as raquetes de marca. Sem `flag` de propósito:
+  // o admin configura a chave ANTES de ligar a funcionalidade `avatar_creator` para todo mundo.
+  { id: 'avatarSection', label: tk('Avatares'), icon: Smile, tabs: [
+    { id: 'avatar-criador', label: tk('Criador'), icon: Smile, keywords: ['avatar', 'inteligência artificial', 'ia', 'chave', 'limite', 'provedor', 'openai'] },
     { id: 'avatar-marcas', label: tk('Raquetes de marca'), icon: Smile, keywords: ['avatar', 'patrocínio', 'patrocinado', 'marca', 'raquete'] },
   ] },
   { id: 'outreach', label: tk('Divulgação'), icon: Megaphone, tabs: [
@@ -297,6 +300,11 @@ export default function V2AdminConsole() {
         {tab === 'federacoes' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminFederationsPanel />
+          </Suspense>
+        )}
+        {tab === 'avatar-criador' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminAvatarAiTab />
           </Suspense>
         )}
         {tab === 'avatar-marcas' && (

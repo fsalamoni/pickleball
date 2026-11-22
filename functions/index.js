@@ -2225,3 +2225,27 @@ exports.lineGuest = onCall({ region: REGION, timeoutSeconds: 20, memory: '256MiB
     throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
   }
 });
+
+// Avatar por IA (docs/58, flag `avatar_creator`): a pessoa manda ids do
+// catálogo, o servidor escreve o pedido e chama o provedor de imagens com a
+// chave de `platform_secrets/avatar_ai`. `action`: `status`, `generate`,
+// `last` e, só para o admin, `config`/`config_save`.
+const avatarAiLib = require('./avatarAi');
+exports.avatarAi = onCall({ region: REGION, timeoutSeconds: 300, memory: '512MiB', maxInstances: 5 }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
+  const token = req.auth.token || {};
+  const data = req.data || {};
+  const fn = (Object.hasOwn(avatarAiLib.ACOES, data.action) ? avatarAiLib.ACOES[data.action] : undefined);
+  if (!fn) throw new HttpsError('invalid-argument', 'Ação desconhecida.');
+  const db = getFirestore(getApp(), DATABASE_ID);
+  let bucket = null;
+  try { bucket = getStorage().bucket(); } catch (err) { logger.warn('avatarAi: Storage indisponível.', err); }
+  const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '', isPlatformAdmin: () => isPlatformAdminUser(req, db) };
+  try {
+    return await fn({ db, bucket, fetch, FieldValue: FieldValueDel, Timestamp, now: Date.now(), logger }, actor, data);
+  } catch (err) {
+    if (err instanceof avatarAiLib.AvatarAiError) throw new HttpsError(err.code, err.message);
+    logger.error('avatarAi falhou', err);
+    throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+  }
+});

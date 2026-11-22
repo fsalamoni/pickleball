@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MAX_BRAND_PADDLES, brandItemId, isBrandItemLive, liveBrandPaddles, normalizeBrandCatalog, normalizeBrandPaddle, resolvePaddle,
+  MAX_BRAND_PADDLES, brandItemId, isBrandItemLive, liveBrandPaddles, normalizeBrandCatalog, normalizeBrandPaddle,
 } from './brandItems.js';
-import { DEFAULT_RECIPE } from './recipe.js';
 
 const acme = { brand: 'ACME', name: 'Pró 16', shape: 'elongated', art: 'split', color: '#FF0000', link_url: 'https://acme.example/pro' };
 
@@ -52,20 +51,5 @@ describe('raquetes de marca', () => {
     expect(isBrandItemLive(item, 2500)).toBe(false);
     expect(isBrandItemLive({ ...item, active: false }, 1500)).toBe(false);
     expect(liveBrandPaddles([{ ...acme, active: false }, { brand: 'B', name: 'Dois' }], 1)).toHaveLength(1);
-  });
-});
-
-describe('resolvePaddle', () => {
-  const item = normalizeBrandPaddle(acme);
-
-  it('desenha a de marca quando a receita aponta para uma no ar', () => {
-    const p = resolvePaddle({ ...DEFAULT_RECIPE, paddleBrand: item.id }, [item]);
-    expect(p).toMatchObject({ shape: 'elongated', art: 'brand_split', color: '#ff0000', wordmark: 'ACME' });
-    expect(p.brand).toBe(item);
-  });
-
-  it('sem a marca no ar, volta a raquete da própria pessoa', () => {
-    const p = resolvePaddle({ ...DEFAULT_RECIPE, paddleBrand: item.id }, []);
-    expect(p).toMatchObject({ shape: DEFAULT_RECIPE.paddleShape, art: DEFAULT_RECIPE.paddleArt, color: DEFAULT_RECIPE.paddleColor, brand: null });
   });
 });

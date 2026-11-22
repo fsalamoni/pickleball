@@ -156,12 +156,13 @@ export const FEATURE_FLAG = Object.freeze({
   ATHLETE_CAREER: 'athlete_career',
 
   /**
-   * AVATAR (docs/58): o estúdio `/avatar`, onde a pessoa monta o próprio
-   * jogador (rosto, cabelo, roupa, raquete, pose, movimento) e pode usá-lo
-   * como foto do perfil. Grava só no próprio `users` (campo `avatar`) e na
-   * própria pasta do Storage; raquetes de marca em
-   * `platform_settings/avatar_catalog` (só o admin escreve). Desligada, o
-   * estúdio some; quem já usa o avatar como foto pode voltar à foto de antes.
+   * AVATAR (docs/58): o criador `/avatar`, onde a pessoa escolhe as partes
+   * do próprio jogador (rosto, cabelo, roupa, raquete, pose) e o servidor
+   * pede a imagem a um serviço de IA (callable `avatarAi`, que confere a
+   * flag, a chave e os limites). O avatar pode virar a foto do perfil. Grava
+   * só no próprio `users` (campo `avatar`) e na própria pasta do Storage;
+   * raquetes de marca em `platform_settings/avatar_catalog`. Desligada, o
+   * criador some; quem já usa o avatar como foto pode voltar à foto de antes.
    */
   AVATAR_CREATOR: 'avatar_creator',
 
@@ -614,7 +615,7 @@ export const FEATURE_FLAG_META = Object.freeze({
   },
   [FEATURE_FLAG.AVATAR_CREATOR]: {
     label: tk('Avatar do jogador'),
-    description: tk('Abre /avatar: cada pessoa monta o próprio avatar de pickleball (rosto, cabelo, roupa, raquete, pose e movimento) e pode usá-lo como foto do perfil, que então aparece no ranking, nos jogos, nos torneios e nos clubes. A foto anterior fica guardada. O admin cadastra raquetes de marca em Painel admin → Avatares. Desligada, o estúdio some; quem já usa o avatar como foto pode voltar à foto de antes.'),
+    description: tk('Abre /avatar: cada pessoa escolhe as partes do próprio avatar de pickleball (rosto, cabelo, roupa, raquete e pose) e a imagem é criada por inteligência artificial, com limite por pessoa. O avatar pode virar a foto do perfil, que então aparece no ranking, nos jogos, nos torneios e nos clubes; a foto anterior fica guardada. Antes de ligar, salve a chave do provedor em Painel admin → Avatares → Criador (cada imagem criada é cobrada pelo provedor). Desligada, o criador some; quem já usa o avatar como foto pode voltar à foto de antes.'),
   },
   [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW]: {
     label: tk('Torneio — Minha participação e Acompanhar'),

@@ -1,282 +1,195 @@
-# 58 — Avatar do jogador (3D)
+# 58 — Avatar do jogador (criado por IA)
 
-> Flag `avatar_creator` (default **OFF**, só o admin liga em Painel admin →
-> Funcionalidades → "Avatar do jogador"). Módulo `src/modules/avatar/`
-> ([README](../src/modules/avatar/README.md)). Rota `/avatar`.
-> **Zero coleção nova, zero índice, zero regra nova, zero Cloud Function.**
+> Flag `avatar_creator` (default **OFF**, só o admin liga). Rota `/avatar`.
+> Módulo `src/modules/avatar/`, servidor `functions/avatarAi.js`.
+> Conferido no código em 2026-11-22.
 
 ## 1. O que é
 
-Cada pessoa monta o próprio jogador de pickleball **em 3D** — rosto, cabelo,
-expressão, roupa, raquete, acessórios, pose e fundo — e pode usá-lo como foto
-do perfil. O avatar é **vivo**: respira e pisca sozinho, **gira com o dedo** e,
-ao toque, faz o movimento da pose (saque por baixo, golpe de forehand,
-comemoração, aceno).
+Cada pessoa cria o **próprio jogador de pickleball** num desenho 3D estilizado
+(o estilo dos avatares do celular: pele lisa, olhos grandes, cabelo esculpido).
+Ela **toca em opções** — pessoa, cabelo, roupa, acessórios, raquete, pose e
+fundo — e a imagem é criada na hora por um **serviço de inteligência
+artificial**. O avatar pode virar a **foto do perfil**; aí ele aparece em toda
+a plataforma (ranking, jogos, torneios, clubes) sem que nenhuma lista tenha
+sido alterada, porque a imagem dele vira o `photo_url`.
 
-O catálogo já aceita **raquetes de marca** (itens patrocinados), cadastradas
-pelo admin da plataforma. O fluxo comercial (contrato, cobrança, métricas da
-marca) **não existe**: só o cadastro e a exibição, sempre com o selo
-"Patrocinado".
+### 1.1 Por que por IA (a história)
 
-### 1.1 Por que 3D feito em código (e o limite disso)
+O dono pediu avatares "de extrema qualidade, como os do iPhone e do WhatsApp".
+Três caminhos foram feitos e **recusados por ele em 2026-11-22**, nesta ordem:
+o desenho 2D em SVG, o boneco 3D modelado em código com a three.js (PR #433,
+chegou a ser publicado atrás da flag desligada) e um protótipo quase realista
+sobre malha aberta. Nenhuma arte desenhada em código nem malha aberta chega ao
+acabamento pedido; uma imagem gerada chega. O boneco 3D e a three.js **saíram
+do código** neste PR.
 
-A primeira versão foi um desenho 2D em SVG e foi **recusada pelo dono** em
-2026-11-22 ("quero extrema qualidade, avatar perfeito e não algo 2D simples").
-O avatar passou a ser 3D de verdade, com a three.js (MIT), **modelado por
-código**: nenhuma malha vem de arquivo, nenhum serviço de terceiros participa.
+O que o caminho por IA custa, e como é contido:
 
-- Por que não um serviço pronto: o Ready Player Me (a referência do setor)
-  foi desligado em 31/01/2026; depender de serviço de fora para a foto de
-  perfil de todo mundo é um risco que já se materializou no mercado.
-- Por que não modelos de artista agora: não há artista 3D contratado, e cada
-  roupa, cabelo e raquete pediria modelagem, rig e textura.
-- **O limite, dito com honestidade**: o acabamento é de boneco de vinil
-  (estilo "toy"), não o de um Memoji esculpido por uma equipe de arte. O motor
-  aceita trocar uma peça por um modelo `.glb` de artista sem mudar a receita
-  nem as telas (§8) — é o caminho para subir o nível visual.
+| Custo | Como é contido |
+|---|---|
+| Cada imagem é cobrada pelo provedor | limite por pessoa (dia e mês) e **teto do mês da plataforma**, conferidos no servidor |
+| O resultado varia a cada criação | "Manter o rosto e mudar o resto" edita a partir da imagem-base guardada |
+| A imagem é parada (não gira nem anima) | fora do escopo; ver §8 |
+| Um terceiro recebe um pedido | o pedido é escrito pelo servidor só com ids do catálogo: nada pessoal sai (§5) |
 
 ## 2. Onde aparece
 
 | Lugar | O quê |
 |---|---|
-| `/avatar` (`V2AvatarStudio`) | o estúdio: palco 3D + escolhas por assunto + salvar |
-| Minha área (`UserArea`) | botão "Criar avatar" / "Editar avatar" (`data-dica="perfil-avatar"`); com o avatar como foto, o cartão mostra o avatar vivo |
-| Editar perfil (`V2ProfileEdit`) | link "Ou crie um avatar de pickleball para usar como foto" |
-| Perfil do atleta (`V2AthleteProfile`) | com o avatar como foto, o avatar vivo no lugar da foto |
-| **Toda tela que mostra a foto** | a imagem do avatar, porque ela É o `photo_url` (ranking, jogos, torneios, ligas, clubes, cartões de campeão, chat) — nenhuma dessas telas foi alterada |
-| Painel admin → Avatares → Raquetes de marca | cadastro dos itens patrocinados (`AdminAvatarCatalogTab`) |
-| Central de Ajuda | artigo `avatar` (atrás da flag) e pista de rota `/avatar` |
+| `/avatar` (`V2AvatarStudio`) | o criador: escolhas, criar, salvar, usar como foto, baixar |
+| Minha área (`UserArea`, âncora `perfil-avatar`) e Editar perfil | o atalho "Criar avatar" / "Editar avatar", só com a flag |
+| Toda a plataforma | a miniatura do avatar, **quando a pessoa o escolheu como foto** (é o `photo_url`) |
+| Painel admin → Avatares → **Criador** (`AdminAvatarAiTab`) | ligar, chave do provedor, modelo, qualidade, limites, uso do mês |
+| Painel admin → Avatares → **Raquetes de marca** (`AdminAvatarCatalogTab`) | as raquetes patrocinadas |
 
-O avatar **vivo** só é montado onde ele é o assunto (estúdio, Minha área,
-perfil do atleta). Nas listas vai a imagem parada: é leve e funciona em cartão
-impresso ou compartilhado.
-
-Com a flag **desligada**: o estúdio some, a Minha área e o Editar perfil não
-oferecem, o perfil mostra a foto (que, para quem usa o avatar, é a imagem
-dele — continua aparecendo). Quem abre `/avatar` vê "não está disponível" e,
-se o avatar era a foto, o botão **"Voltar para a minha foto"**: nada fica preso
-a uma funcionalidade fechada.
+A seção Avatares do Painel admin **não depende da flag**, de propósito: o admin
+salva a chave e os limites **antes** de ligar a funcionalidade para todos.
 
 ## 3. Dados
 
-Nada de coleção nova. Tudo em documentos e pastas que já existiam, com as
-regras que já existiam.
+Nenhuma regra nova do Firestore nem do Storage. O que existe:
 
-| Onde | Campo | Quem escreve |
+| Onde | O quê | Quem lê | Quem grava |
+|---|---|---|---|
+| `users/{uid}.avatar` | `{ v, recipe, url, full_url, path, full_path, as_photo, photo_backup, updated_at_ms }` | o dono | o dono |
+| `athlete_profiles/{uid}.avatar` | `{ recipe, full_url, updated_at_ms }` só quando o avatar É a foto (`publicAvatar`); senão `null` | conta logada | o dono (espelho) |
+| Storage `uploads/{uid}/avatar/` | a miniatura (384 px, a foto do perfil) e a imagem inteira (1024 px) do avatar **salvo** | regra de `uploads` | o dono |
+| `platform_settings/avatar_catalog` | `brand_paddles[]` (§6) | todos | o admin |
+| `platform_settings/avatar_ai` | `{ enabled, model, quality, per_day, per_month, platform_month, has_key, updated_at_ms, updated_by }` | todos | **só o servidor** (ação `config_save`) |
+| `platform_secrets/avatar_ai` | `{ api_key }` — a chave do provedor | **ninguém pelo cliente** (nem o admin) | só o servidor |
+| `avatar_usage/{uid}` | contagem do dia e do mês, trava "uma por vez", `base_recipe`, `last_recipe`, `last_ms`, `total` | **ninguém pelo cliente** | só o servidor |
+| `avatar_usage/_platform` | contador do mês da plataforma | idem | só o servidor |
+| Storage `avatar-ia/{uid}/base.jpg` e `last.jpg` | a imagem-base ("manter o rosto") e a última criada (recuperar a não salva) | **ninguém pelo cliente** (sem regra: negado) | só o servidor |
+
+`avatar_usage` e `avatar-ia/` não têm regra (o padrão nega tudo): a tela sabe o
+que precisa pela própria callable (`status`, `last`). Na **exclusão de conta**
+(`functions/accountDeletion.js`) saem `avatar_usage/{uid}` e a pasta
+`avatar-ia/{uid}/`; as imagens salvas saem com `uploads/{uid}/`.
+
+### 3.1 A receita
+
+`users.avatar.recipe` guarda **só ids do catálogo**, o sim/não das sardas e o
+id da raquete de marca — nenhum texto livre (`normalizeRecipe`,
+`domain/recipe.js`, versão 2). É isso que permite pô-la no espelho público e,
+principalmente, é dela que o servidor escreve o pedido da imagem. Receita
+antiga (a do boneco 3D, v1) ou adulterada cai no padrão campo a campo; nada
+antigo é migrado, e a imagem já salva de quem tinha o boneco continua valendo.
+
+Os campos: `body`, `age`, `build`, `skin`, `face`, `eyeColor`, `freckles`,
+`hair`, `hairColor`, `beard` (a **pessoa** — `IDENTITY_FIELDS`), e `glasses`,
+`headwear`, `headwearColor`, `top`, `topColor`, `bottom`, `bottomColor`,
+`paddleColor`, `paddleBrand`, `expression`, `pose`, `background`, `frame` (o
+**visual**). Catálogo em `domain/catalog.js`.
+
+⚠️ **Os ids do catálogo são gravados**: nunca renomeie; opção nova entra no fim.
+
+## 4. Como a pessoa usa (`/avatar`)
+
+1. Escolhe nas abas Pessoa · Cabelo · Roupa · Acessórios · Raquete · Pose ·
+   Fundo (`AvatarStudio`). "Surpreenda-me" sorteia o visual (`randomLook`) sem
+   gastar criação.
+2. **Criar avatar**: a tela manda `{ recipe, keep: false }`; em cerca de meio
+   minuto a imagem aparece. A tela mostra quantas criações restam hoje.
+3. **Salvar avatar**: a página recorta a miniatura (`thumbCrop`: no corpo
+   inteiro a foto é o rosto), envia as duas imagens e grava `users.avatar`
+   (`avatarSaveUpdate`). Com "Usar como foto do perfil", o `photo_url` passa a
+   ser a miniatura e **a foto de verdade fica em `photo_backup`**.
+4. **Manter o rosto e mudar o resto** (aparece depois do primeiro avatar criado
+   do zero): `keep: true`. A pessoa (os `IDENTITY_FIELDS`) vem da receita-base
+   guardada no servidor; as abas Pessoa e Cabelo não mudam nada.
+5. Criou e saiu sem salvar? Ao voltar, a tela oferece **ver o avatar** de novo
+   (ação `last`): a criação já foi paga, não se perde.
+
+Estados que a tela separa: consulta falhou (`V2ErrorState` com tentar de novo —
+nunca "indisponível"), criador ainda não ligado pelo admin, limite atingido (o
+botão trava e a frase diz qual limite) e flag desligada (`AvatarDesligado`:
+quem usa o avatar como foto ainda **volta para a foto de antes**).
+
+## 5. O servidor (`avatarAi`)
+
+Callable `avatarAi` (`functions/avatarAi.js`, régua pura em
+`functions/avatarAiPolicy.js`), ações por chave própria (`Object.hasOwn`):
+
+| Ação | Quem | O que faz |
 |---|---|---|
-| `users/{uid}` | `avatar` (opcional) — abaixo | o dono |
-| `users/{uid}` | `photo_url` — a imagem do avatar, **só se a pessoa escolher** | o dono |
-| `athlete_profiles/{uid}` | `avatar: { recipe, full_url, updated_at_ms }` ou `null` | o dono (espelho, via `updateUserProfile`) |
-| `platform_settings/avatar_catalog` | `brand_paddles[]`, `updated_at`, `updated_by` | só o admin da plataforma |
-| Storage `uploads/{uid}/avatar/` | as duas imagens (rosto 512×512, corpo 680×1040; WebP, ou PNG onde o navegador não codifica WebP) | o dono |
+| `status` | conta logada | disponível? quantas restam hoje e no mês, `last_ms`, `base_recipe` |
+| `generate` | conta logada | reserva a criação, escreve o pedido, chama o provedor, guarda `last.jpg` (e `base.jpg` se do zero), devolve a imagem em base64 |
+| `last` | conta logada | devolve a última imagem criada (a não salva) |
+| `config` | admin | a configuração, **sem a chave** (só `has_key` e os 4 últimos caracteres) e o uso do mês |
+| `config_save` | admin | grava configuração e/ou chave; recusa ligar sem chave; auditoria `avatar_ai_config_changed` (sem a chave) |
 
-```js
-users/{uid}.avatar = {
-  v: 1,
-  recipe: { … },        // a RECEITA: só ids do catálogo, cores #rrggbb e o número do peito
-  url, full_url,        // as duas imagens salvas
-  path, full_path,      // caminhos no Storage
-  as_photo: boolean,    // o avatar é a foto do perfil?
-  photo_backup: string, // a foto de verdade, guardada para voltar
-  updated_at_ms: number,
-}
-```
+O que **não pode regredir**:
 
-- **A receita não tem dado pessoal.** `normalizeRecipe` (`domain/recipe.js`)
-  confere cada campo contra o catálogo e devolve só as chaves da receita:
-  campo estranho não entra, valor desconhecido vira o padrão daquela parte
-  (receita antiga ou adulterada nunca quebra o desenho).
-- **O espelho público** (`publicAvatar`, `domain/publicAvatar.js`) só leva o
-  avatar quando ele **é** a foto do perfil (`as_photo` **e** `photo_url ===
-  avatar.url`) — trocar a foto por outra tira o avatar do espelho. Vai a
-  receita, a imagem de corpo inteiro e a data; **nunca** `photo_backup` nem os
-  caminhos do Storage. É um arquivo-folha sem imports de propósito: o perfil
-  público é montado no login (pacote inicial) e o catálogo não pode ir junto.
-- **A foto de verdade não se perde.** `avatarSaveUpdate`
-  (`domain/profileAvatar.js`) guarda em `photo_backup` a foto que estava no
-  perfil — e, se a foto atual já era um avatar, mantém a guardada (🐞 sem isso,
-  salvar duas vezes guardaria o primeiro avatar como "foto de antes"). Voltar,
-  usar de novo e apagar são `avatarRestorePhotoUpdate`,
-  `avatarUseAsPhotoUpdate` e `avatarRemoveUpdate`.
-- **Imagens antigas não são apagadas** ao salvar de novo: cópias do
-  `photo_url` vivem em inscrições, membros de clube, jogos — apagar o arquivo
-  quebraria a foto lá. Cada versão tem dezenas de kB.
-- **Exclusão de conta**: `users/{uid}`, `athlete_profiles/{uid}` e a pasta
-  `uploads/{uid}` já saem pela exclusão de sempre — nada novo a cobrir.
+1. **Nenhum texto e nenhuma imagem do navegador chega ao provedor.** A tela
+   manda ids; `buildPrompt` os troca por frases fixas em inglês (tabela `FRAG`).
+   A edição usa a `base.jpg` que o próprio servidor guardou — aceitar imagem
+   enviada faria da função um editor gratuito de fotos alheias. O nome escrito
+   na raquete de marca vem do cadastro do admin, limpo (`cleanWordmark`).
+2. **Toda criação é reservada numa transação antes da chamada** (limite do dia
+   e do mês da pessoa, teto do mês da plataforma, uma por vez com trava que
+   vence sozinha) e **devolvida se a chamada falhar** — a pessoa não perde a vez
+   por erro do provedor nem por recusa da moderação.
+3. **A chave nunca sai do servidor**: não vai na resposta nem no log, e a tela
+   do admin só a escreve.
+4. Dia e mês dos limites são os de **Brasília**.
+5. O catálogo, a receita padrão, os campos da pessoa e os padrões da
+   configuração têm **cópia no servidor com paridade**
+   (`functions/avatarAi.parity.test.js`): opção nova entra nos dois lados, com a
+   frase dela em `FRAG`.
+6. O provedor recebe um `safety_identifier` embaralhado (hash do uid): barra
+   abuso sem saber quem é a pessoa.
 
-### 3.1 Raquetes de marca
+Provedor: API de imagens da OpenAI (`/v1/images/generations` do zero,
+`/v1/images/edits` no "manter o rosto"), 1024 × 1024, JPEG. O modelo e a
+qualidade são do admin (`platform_settings/avatar_ai`); os padrões estão em
+`DEFAULT_CONFIG`.
+
+## 6. Raquetes de marca
 
 `platform_settings/avatar_catalog.brand_paddles[]` (até 40), cada item limpo
-por `normalizeBrandPaddle` (`domain/brandItems.js`):
+por `normalizeBrandPaddle`: marca, modelo, nome escrito na face (até 14),
+formato, **duas cores** (face e segunda cor), link `https`, ligada e datas. A
+raquete é **descrição**, não imagem enviada: o servidor a põe no pedido
+(formato, cores e o nome na face). Na tela ela aparece sempre com o selo
+**"Patrocinado"**; marca que não carregou não trava o criador. O servidor
+confere de novo se a raquete está **no ar** na hora de criar. Os campos `art`,
+`edge`, `grip` e `ink` do cadastro antigo seguem gravados, sem uso.
 
-`id` (`brand_…`, estável: a receita das pessoas aponta para ele), `brand`,
-`name`, `wordmark` (o nome escrito na face, ≤ 14), `shape`, `art`
-(`wordmark` · `stripe` · `split`), `color`, `color2`, `edge`, `grip`, `ink`,
-`link_url` (**só https**), `active`, `starts_ms`, `ends_ms`.
+## 7. O que depende do dono para ligar
 
-- O item é **desenho, não imagem enviada**: formato, cores e o nome da marca
-  escritos na raquete. Mantém o avatar leve e a imagem salva sem depender de
-  arquivo de outro domínio.
-- "No ar" = `active` e dentro da janela de datas (`isBrandItemLive`).
-- A receita guarda só `paddleBrand: <id>`. Item fora do ar ⇒ `normalizeRecipe`
-  devolve `null` e a pessoa volta a ter a própria raquete na próxima edição; a
-  imagem já salva não muda sozinha.
-- O selo **"Patrocinado"** aparece sempre ao lado do item no estúdio.
-- Gravar passa por `saveAvatarCatalog`, que normaliza a lista e registra
-  `avatar_catalog_changed` na auditoria.
-- Se a leitura do catálogo falhar, o estúdio segue com as raquetes da casa e
-  **diz** que as de marca não carregaram (marca é extra, não trava o avatar).
+1. Criar a chave da API de imagens no provedor e colá-la em **Painel admin →
+   Avatares → Criador** (a conta do provedor pode exigir verificação da
+   organização para o modelo de imagem).
+2. Conferir os limites (padrão: 3 por dia e 15 por mês por pessoa; 2.000 por
+   mês na plataforma) e ligar "Criador ligado".
+3. A política de privacidade passar a **nomear o provedor** de imagens.
+4. Ligar `avatar_creator` em Painel admin → Funcionalidades.
 
-## 4. O que o avatar tem
+## 8. O que ficou de fora
 
-Fonte única: `domain/catalog.js` (`RECIPE_OPTIONS`, uma lista por campo da
-receita). **Os ids são gravados** — nunca renomeie; opção nova entra no fim.
-
-Pele · formato do rosto · olhos e cor · sobrancelhas · nariz · bochechas ·
-sardas · corte e cor do cabelo · barba e bigode · óculos · viseira, boné, boné
-para trás, faixa e chapéu · parte de cima (camiseta, polo, regata, manga longa,
-vestido), duas cores, estampa e marca no peito (com número) · parte de baixo ·
-meias · tênis · munhequeira · raquete (formato, arte, quatro cores) ou raquete
-de marca · bola · expressão · pose · fundo.
-
-Poses (`domain/poses.js`): pronto, saque, raquete no ombro, comemoração e
-aceno. Cada pose tem o seu movimento ao toque (`POSE_MOTION`): golpe, saque,
-golpe, comemoração e aceno. Um movimento é uma lista de quadros-chave sobre a
-pose de partida, interpolados por `poseAt`.
-
-> 🐞 Quadro-chave que não cita uma junta **herda a pose de partida**: um quadro
-> só com `ball: false` fazia o braço voltar de um salto no meio do saque. Todo
-> quadro do meio leva os valores das juntas que estão em movimento (há teste).
-
-## 5. Como é desenhado
-
-```
-src/modules/avatar/
-├── domain/      puro, com teste: catalog, recipe, color, poses, brandItems,
-│                profileAvatar, publicAvatar
-├── three/       o 3D (só por import dinâmico):
-│   ├── support.js    webglAvailable() — SEM three.js
-│   ├── geom.js       superfícies por função, tubos, chapas com espessura
-│   ├── tex.js        texturas em canvas (olhos, estampas, arte da raquete)
-│   ├── head.js       cabeça, rosto, cabelo, barba, óculos, chapéus
-│   ├── body.js       tronco, braços, pernas, roupa, raquete, bola
-│   ├── character.js  monta o personagem e refaz só o que mudou
-│   └── stage.js      cena, luz, câmera, laço de desenho, foto fora da tela
-├── services/    avatarSnapshots (fila de fotos), avatarExport (imagem salva),
-│                avatarService (envio e catálogo de marca)
-├── hooks/       useAvatarCatalog
-└── components/  Avatar3D (o vivo) e AvatarSnap (a foto parada)
-```
-
-- **Uma peça, um desenho**: `Character.update(recipe, paddle)` refaz só o
-  grupo cujas chaves mudaram (cabeça, corpo ou raquete). Trocar a cor do tênis
-  não reconstrói o cabelo.
-- **Luz e material**: ambiente de estúdio (`RoomEnvironment` + PMREM), luz
-  principal, de preenchimento e de contorno, tom neutro, sombra de contato no
-  chão. O personagem olha para +z; a mão da raquete é a direita dele (à
-  esquerda de quem olha).
-- **Enquadramentos** (`VIEWS` em `stage.js`): `full` (corpo), `bust` (foto do
-  perfil), `face` e `paddle` (só para as miniaturas do estúdio).
-
-### 5.1 `Avatar3D` — o vivo
-
-`<Avatar3D recipe view brandItems label fallback />` (ref: `play()`,
-`resetView()`).
-
-- A three.js e o palco entram por **import dinâmico**, só quando o componente
-  aparece. Enquanto baixam — e onde o aparelho não desenha em 3D — fica o
-  `fallback` (a foto de sempre, ou a imagem já salva). Nada pisca, ninguém
-  fica sem ver.
-- Arrastar gira (acima de 6 px é giro, abaixo é toque); tocar faz o movimento;
-  duplo toque devolve o ângulo; **setas do teclado** giram. O botão tem nome
-  acessível.
-- Fora da tela (`IntersectionObserver`) ou com a aba escondida, o desenho
-  **para** (bateria). Parado, desenha a 30 quadros; em movimento e giro, a 60.
-- Com "reduzir movimento" ligado no aparelho: não respira, não pisca e o toque
-  não anima (o giro segue).
-- Contexto WebGL perdido ⇒ volta ao `fallback`.
-
-### 5.2 `AvatarSnap` e a fila de fotos
-
-As miniaturas do estúdio mostram **o próprio avatar** com cada opção (como o
-Memoji), não um ícone genérico. Dezenas de canvas WebGL não cabem numa página
-(o navegador mantém poucos contextos), então:
-
-- **um palco só, fora da tela**, tira todas as fotos (`snapAvatar`);
-- os pedidos entram numa **fila** (`avatarSnapshots.js`), saem um por vez e
-  cedem a vez à tela entre um e outro — trocar a cor da pele redesenha uma
-  dúzia de miniaturas sem travar o toque;
-- pedido cancelado (a pessoa já mudou de novo) não é desenhado;
-- as fotos ficam num cache pequeno (120), cuja chave (`snapKey`) leva a
-  receita, o enquadramento, o tamanho **e a raquete de marca como ela está
-  agora**;
-- ao sair do estúdio, `releaseSnapshots()` devolve a memória.
-
-### 5.3 A imagem salva
-
-`renderAvatarBlob(recipe, { view })` usa a mesma fila (com prioridade e sem
-cache) e gera WebP — ou PNG onde o navegador não codifica WebP. Tudo no
-aparelho da pessoa: sem servidor, sem serviço de terceiros.
-
-## 6. O estúdio (`/avatar`)
-
-- **Palco** com o avatar vivo; alterna "Corpo" e "Foto" (como vai ficar no
-  círculo do perfil). No celular o palco fica **preso no alto** enquanto as
-  escolhas rolam por baixo — a pessoa vê o avatar mudar ao tocar numa opção — e
-  o botão de salvar vai para o fim.
-- **Oito assuntos**: Rosto, Cabelo, Expressão, Roupa, Raquete, Acessórios,
-  Pose e Fundo. Opções de formato são miniaturas do próprio avatar; cores são
-  bolinhas de 44 px com nome acessível; o resto são botões de texto. Tudo é
-  `radiogroup`/`radio`.
-- **Surpreenda-me** sorteia o avatar inteiro; **Sortear só o visual** mantém
-  rosto, pele e cabelo. **Desfazer / Refazer** (60 passos).
-- **Salvar**: gera as duas imagens, envia e grava o cadastro. "Usar como foto
-  do perfil" vem ligado para quem não tem foto e desligado para quem tem.
-- Avatar já salvo: "Voltar para a minha foto" / "Usar o avatar salvo como
-  foto" / "Apagar avatar" (com confirmação em dois toques).
-- Sair com mudança não salva pede confirmação do navegador.
-- **Sem 3D no aparelho**: o palco diz isso (ou mostra a imagem já salva), as
-  escolhas seguem funcionando e salvar avisa que ali não dá.
-
-## 7. O que não pode regredir
-
-1. **A three.js nunca entra no pacote inicial.** Só `three/stage.js` (e o que
-   ele importa) toca a biblioteca, e só por `import()`. Quem só quer saber se o
-   aparelho desenha em 3D importa `three/support.js`. Conferido no build
-   (`npm run build:budget`) e nos testes, que fazem o módulo do palco lançar
-   erro se alguém o importar sem WebGL.
-2. **A receita só guarda o que é do catálogo** (`normalizeRecipe`) — é o que
-   permite pô-la no espelho público.
-3. **O espelho público só leva o avatar quando ele é a foto**, e nunca a foto
-   guardada.
-4. **A foto de verdade fica em `photo_backup`** e volta com um toque, inclusive
-   com a flag desligada.
-5. **Ids do catálogo, das poses e dos itens de marca são gravados**: nunca
-   renomeie.
-6. **Item de marca aparece sempre como "Patrocinado"** e o link de saída é só
-   `https`.
-7. **Não crie um canvas WebGL por miniatura**: use `AvatarSnap` (a fila).
-8. Texto em `t()`/`tk()` com en e es em `src/modules/avatar/i18n/locales/`.
-
-## 8. O que ficou de fora (e o caminho)
-
-| Ficou de fora | Caminho |
-|---|---|
-| Peças esculpidas por artista 3D (acabamento de Memoji) | o `Character` monta grupos por peça; uma peça pode passar a carregar um `.glb` sem mudar receita nem telas |
-| Fluxo comercial das marcas (contrato, cobrança, cliques, relatório) | o catálogo já tem `link_url` e janela de datas; falta a parte comercial |
-| Outros itens de marca (roupa, tênis, bola) | hoje só a raquete; o desenho de `brandItems.js` serve de molde |
-| Avatar vivo nas listas (ranking, chat) | de propósito: um contexto WebGL por linha não cabe; vai a imagem |
-| Limpeza das imagens antigas do avatar | exige saber quem ainda aponta para cada uma |
-| Avatar em vídeo/figurinha para compartilhar | o palco já desenha quadro a quadro; falta o exportador |
+- **Movimento** (girar, animar): uma imagem não se move. Voltaria com arte 3D
+  contratada, que não pode morar neste repositório (público).
+- **Avatar a partir de uma selfie**: só com consentimento explícito (LGPD) e
+  revisão de privacidade própria.
+- Figurinhas, fundo transparente e conjunto de expressões da mesma pessoa.
+- Limpeza das imagens antigas em `uploads/{uid}/avatar/` (cópias do
+  `photo_url` vivem em inscrições e membros de clube).
+- Esconder o atalho "Criar avatar" enquanto o criador não está configurado: por
+  isso a ordem do §7 (chave antes da flag).
 
 ## 9. Testes
 
-- `domain/*.test.js` — cores, catálogo e receita (normalização, sorteio com
-  semente), poses e movimentos (inclusive o salto do saque), raquetes de marca,
-  o avatar no perfil e o espelho público.
-- `services/avatarSnapshots.test.js` — a chave das fotos e a falha sem 3D.
-- `src/v2/components/avatar/AvatarStudio.runtime.test.jsx` — o estúdio sem 3D:
-  aviso, imagem salva, escolher, desfazer, sortear, raquete de marca.
-- O desenho 3D em si foi conferido no navegador (computador e celular, todas
-  as opções, os quatro movimentos). **Não há teste visual automático** e o
-  desempenho em celular real ainda não foi medido — pendente do dono.
+| Arquivo | O que prova |
+|---|---|
+| `functions/avatarAi.test.js` | pedido só com frases do catálogo; limites; reserva e devolução; trava; flag/config/chave; marca fora do ar; "manter o rosto" só com a base do servidor; `last`; admin e segredo da chave |
+| `functions/avatarAi.parity.test.js` | catálogo, receita, campos da pessoa e configuração iguais nos dois lados |
+| `src/modules/avatar/domain/*.test.js` | receita, raquetes de marca, o avatar no perfil (foto guardada) |
+| `src/v2/pages/V2AvatarStudio.runtime.test.jsx` | a tela manda só as escolhas; limite trava; falha não vira "indisponível"; salvar guarda a foto de antes; recuperar a não salva; flag desligada devolve a foto |
+
+A exclusão de `avatar_usage/{uid}` e de `avatar-ia/{uid}/` está nas listas
+`DELETE_BY_ID` e `STORAGE_PREFIXES` de `functions/accountDeletion.js`. O guarda
+`exclusaoCobreColecoes` não a enxerga (ele lê o `firestore.rules`, e a coleção
+não tem regra): ao criar outra coleção só do servidor, lembre da lista à mão. A
+exportação de conta não leva `avatar_usage` (são contadores; o avatar em si
+está em `users.avatar`, que já é exportado).

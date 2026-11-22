@@ -2,13 +2,15 @@
  * ITENS DE MARCA do avatar (puro): as raquetes patrocinadas que o admin da
  * plataforma cadastra em `platform_settings/avatar_catalog.brand_paddles`.
  *
- * O item é desenho, não imagem enviada: formato, cores e o nome da marca
- * escrito na face. Isso mantém o avatar exportável (uma imagem de outro
- * domínio "contamina" o canvas e o PNG não sai) e leve. Sempre aparece com o
- * selo "Patrocinado" — a pessoa sabe o que é anúncio.
+ * O item é DESCRIÇÃO, não imagem enviada: formato, cores e o nome da marca
+ * escrito na face. O servidor a põe no pedido da imagem
+ * (`functions/avatarAiPolicy.js`). Sempre aparece com o selo "Patrocinado" —
+ * a pessoa sabe o que é anúncio. `art`, `edge`, `grip` e `ink` vêm do desenho
+ * antigo e seguem gravados (nada é migrado); o pedido não os usa.
  */
 import { PADDLE_SHAPES } from './catalog.js';
-import { isHexColor } from './color.js';
+
+const isHexColor = (v) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
 
 const SHAPES = new Set(PADDLE_SHAPES.map((s) => s.id));
 const BRAND_ARTS = new Set(['wordmark', 'stripe', 'split']);
@@ -80,23 +82,4 @@ export function isBrandItemLive(item, now = Date.now()) {
 
 export function liveBrandPaddles(list, now = Date.now()) {
   return normalizeBrandCatalog(list).filter((i) => isBrandItemLive(i, now));
-}
-
-/**
- * O que a raquete desenha: a de marca (se a receita aponta para uma no ar)
- * ou a da própria receita.
- */
-export function resolvePaddle(recipe, brandItems = []) {
-  const brand = recipe?.paddleBrand ? brandItems.find((b) => b.id === recipe.paddleBrand) : null;
-  if (brand) {
-    return {
-      shape: brand.shape, art: `brand_${brand.art}`, color: brand.color, color2: brand.color2,
-      edge: brand.edge, grip: brand.grip, wordmark: brand.wordmark, ink: brand.ink, brand,
-    };
-  }
-  return {
-    shape: recipe.paddleShape, art: recipe.paddleArt, color: recipe.paddleColor,
-    color2: recipe.paddleColor2, edge: recipe.paddleEdge, grip: recipe.paddleGrip,
-    wordmark: '', ink: '#ffffff', brand: null,
-  };
 }

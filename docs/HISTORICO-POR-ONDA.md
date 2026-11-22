@@ -2417,3 +2417,23 @@ depender de serviço de fora para a foto de perfil era o risco a evitar).
   o motor aceita peças `.glb` de artista depois.
 
 Zero coleção, zero índice, zero regra, zero função. `docs/58-AVATARES.md`.
+
+## Avatar criado por IA (2026-11-22)
+
+O dono recusou também o boneco 3D em código ("quero quase realista") e, em
+seguida, um protótipo quase realista sobre malha aberta ("Não está bom!"),
+fechando o alvo em "algo semelhante ao do iPhone e do WhatsApp". Nenhuma arte
+feita em código chega a esse acabamento; uma imagem gerada chega.
+
+- O boneco 3D e a three.js saíram do código (pacote e dependência).
+- A pessoa toca nas escolhas e o servidor pede a imagem (callable `avatarAi`):
+  o pedido é escrito só com ids do catálogo, a chave do provedor fica em
+  `platform_secrets`, e toda criação é reservada antes (limite por pessoa e
+  teto do mês da plataforma) e devolvida se falhar.
+- "Manter o rosto e mudar o resto" edita a imagem-base que o servidor guardou.
+- Painel admin → Avatares → Criador: ligar, chave, modelo, qualidade, limites.
+- O que o perfil guarda não mudou de forma (`users.avatar`, `photo_backup`):
+  quem tinha o boneco salvo continua com a imagem.
+
+Zero regra nova; uma coleção só do servidor (`avatar_usage`) e uma função.
+`docs/58-AVATARES.md`.
