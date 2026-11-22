@@ -52,6 +52,22 @@ pública, impressão e telão.
   `tournament_photos`, `tournament_rankings`, `provisional_claims`,
   `club_event_games` (espelho de equipes).
 
+### avatar/ — avatar do jogador em 3D (flag `avatar_creator`)
+
+- **O quê**: cada pessoa monta o próprio jogador de pickleball em 3D (rosto,
+  cabelo, roupa, raquete, pose, fundo), que respira, gira com o dedo e faz o
+  movimento da pose ao toque; pode virar a foto do perfil. Aceita raquetes de
+  marca (patrocinadas) cadastradas pelo admin. `docs/58-AVATARES.md`.
+- **Domínio**: `catalog` (ids gravados), `recipe` (`normalizeRecipe`), `poses`,
+  `brandItems`, `profileAvatar`, `publicAvatar`, `color`. O desenho fica em
+  `three/` (three.js, **só por import dinâmico**).
+- **Rotas**: `/avatar` (`V2AvatarStudio`). Entradas: Minha área, Editar perfil,
+  perfil do atleta (`ProfileAvatarSlot`), Painel admin → Avatares → Raquetes de
+  marca (`AdminAvatarCatalogTab`).
+- **Coleções**: nenhuma nova. Campos opcionais `users.avatar` e
+  `athlete_profiles.avatar`; documento `platform_settings/avatar_catalog`;
+  Storage `uploads/{uid}/avatar/`.
+
 ### leagues/ — ligas (flags `leagues_*`)
 
 - **O quê**: temporada com rodadas no calendário, divisões por DUPR e

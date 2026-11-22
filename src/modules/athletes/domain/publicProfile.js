@@ -10,6 +10,7 @@
 import { calculateAge } from '@/core/lib/profileValidation';
 import { isValidDuprRating } from '@/core/domain/duprRating';
 import { ATHLETE_PRIVACY_FIELDS } from './constants.js';
+import { publicAvatar } from '@/modules/avatar/domain/publicAvatar.js';
 
 function trimmed(value) {
   return String(value ?? '').trim();
@@ -103,6 +104,8 @@ export function buildAthletePublicProfile(uid, profile = {}, clubs = [], options
     leveling_level: profile.leveling_level || null,
     pickleball_experience: profile.pickleball_experience || null,
     photo_url: profile.photo_url || '',
+    // Avatar (docs/58): só com o avatar como foto; a receita desenha o avatar vivo.
+    avatar: publicAvatar(profile),
     clubs: safeClubs,
     club_ids: safeClubs.map((club) => club.id),
     // Contatos: publicados apenas se autorizado; caso contrário, string vazia.

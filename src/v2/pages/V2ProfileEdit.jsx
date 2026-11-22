@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { Printer, Shield } from 'lucide-react';
+import { Printer, Shield, Smile } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   birthDateToBrtDate, validateRequiredProfile, normalizeFullName, isRequiredProfileComplete, parseDuprRating,
 } from '@/core/lib/profileValidation';
@@ -38,6 +40,7 @@ import { duprRatingToInput } from '@/core/domain/duprRating';
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
+  const avatarOn = useFeatureFlag(FEATURE_FLAG.AVATAR_CREATOR);
   const { track } = useFunnel();
   const coachDirectoryOn = true;
   // Conexão oficial com o DUPR: o ID e o rating digitados à mão dão lugar ao login do DUPR.
@@ -339,6 +342,12 @@ export default function V2ProfileEdit() {
               label={t('Enviar foto')}
               hint={t('Sua foto aparece no perfil, no diretório de atletas e nos clubes.')}
             />
+            {avatarOn && (
+              <Link to="/avatar" className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink underline-offset-4 hover:underline">
+                <Smile className="h-4 w-4" />
+                {userProfile?.avatar ? t('Editar meu avatar') : t('Ou crie um avatar de pickleball para usar como foto')}
+              </Link>
+            )}
             <p className="mt-2 text-xs text-gray-500">{user?.email} · {t('Login via Google')}</p>
           </div>
 

@@ -55,6 +55,12 @@ Perfil privado/operacional do usuário autenticado.
 - `email`, `platform_name` (nome de exibição), `full_name`, `phone`,
   `birth_date`, `pickleball_experience`.
 - `role`: `'platform_admin' | 'user'`. `can_create_pools: bool`.
+- **`avatar`** (2026-11-22, opcional, flag `avatar_creator`): `{ v, recipe,
+  url, full_url, path, full_path, as_photo, photo_backup, updated_at_ms }` —
+  o avatar 3D da pessoa. `recipe` só tem ids do catálogo, cores `#rrggbb` e o
+  número do peito (`normalizeRecipe`); `url`/`full_url` são as imagens em
+  `uploads/{uid}/avatar/`; `photo_backup` guarda a foto de verdade quando o
+  avatar vira a foto (`photo_url`). Escreve o dono. Ver `docs/58-AVATARES.md`.
 - **`account_status`** (2026-10-11, opcional): `'active' | 'suspended' | 'blocked'`;
   ausente vale `active`. Com `status_reason`, `status_until` (ms, só na
   suspensão — informativo: nada reativa sozinho), `status_set_at`,
@@ -95,6 +101,10 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
 - `directory_listed: bool` — controla visibilidade no diretório (privacidade
   aplicada na escrita; `listAthletes()` filtra `where('directory_listed','==',true)`).
 - Campos públicos: nome de exibição, nível, experiência, cidade etc.
+- **`avatar`** (2026-11-22, opcional): `{ recipe, full_url, updated_at_ms }`
+  quando o avatar É a foto do perfil, senão `null` (`publicAvatar`). Nunca a
+  foto guardada nem os caminhos do Storage. É o que deixa o perfil mostrar o
+  avatar em 3D a quem visita. Ver `docs/58-AVATARES.md` §3.
 - **`dupr_id`** (PR #90, Sprint 27): espelho de `users/{uid}.dupr_id`
   (null quando vazio). Visível no diretório, perfil público,
   inscrições de torneio e meu perfil.
@@ -587,7 +597,9 @@ função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field
 Leitura pública; escrita só do admin da plataforma. Singletons:
 `global` (`feature_flags.{key}` — valores das flags de `FEATURE_FLAG` — e
 `inicio.promocoes`), `arena_modules`, `gamification`, `marketplace`,
-`training`, `messaging` (configuração dos avisos por e-mail/celular, sem
+`training`, `avatar_catalog` (`brand_paddles[]` — as raquetes de marca do
+avatar, até 40, cada uma limpa por `normalizeBrandPaddle`; ver `docs/58` §3.1),
+`messaging` (configuração dos avisos por e-mail/celular, sem
 segredo: provedores, domínio, remetente, matriz área × canal, horários,
 limites, `push.vapid_public_key` — ver `docs/49`), `messaging_status` (estado
 do domínio e dos modelos, escrito pelo servidor), `ranking_worker` (este
@@ -3072,7 +3084,7 @@ Seis blocos; o resto é negado (`/{allPaths=**}`: sem leitura nem escrita).
 | Caminho | Quem lê | Quem escreve | Limite |
 |---|---|---|---|
 | `uploads/{uid}/private/**` | só o dono | só o dono (grava e apaga) | < 25 MB |
-| `uploads/{uid}/{pasta}/**` (exceto `private`) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
+| `uploads/{uid}/{pasta}/**` (exceto `private`) — inclui `avatar/` (as imagens do avatar 3D, `docs/58`) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
 | `uploads/{uid}/{arquivo}` (legado, solto) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
 | `treino/{uid}/{arquivo}` | `get`: conta logada; `list`: o dono | o dono, só cria (sem sobrescrever) | imagem webp/jpeg/png < 3 MB; vídeo mp4/webm/quicktime < 60 MB |
 | `mercado/{uid}/{arquivo}` | `get`: conta logada; `list`: o dono | o dono, só cria; apaga, exceto `comprovante-*` | como `treino`, mais PDF < 3 MB |

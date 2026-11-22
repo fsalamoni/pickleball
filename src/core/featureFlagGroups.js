@@ -48,6 +48,11 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.ATHLETE_CAREER],
   },
   {
+    id: 'avatar',
+    label: tk('Avatar do jogador'),
+    keys: [FEATURE_FLAG.AVATAR_CREATOR],
+  },
+  {
     id: 'marketplace',
     label: tk('Mercado'),
     keys: [FEATURE_FLAG.MARKETPLACE],
