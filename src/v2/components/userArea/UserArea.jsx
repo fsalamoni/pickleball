@@ -15,7 +15,7 @@ import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, Building2, Dumbbell, Eye, GraduationCap, Landmark, LayoutDashboard,
-  LayoutGrid, Medal, Pencil, Route, ShoppingBag, Swords, Trophy, User, Users,
+  LayoutGrid, Medal, Pencil, Route, ShoppingBag, Smile, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
@@ -55,10 +55,12 @@ import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifie
 import {
   USER_AREA_GROUPS, marketPendingCounts, memberSince, resolveUserAreaSection, userAreaPending, userAreaSections,
 } from '@/modules/athletes/domain/userArea';
-import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
+import ProfileAvatarSlot from '@/v2/components/avatar/ProfileAvatarSlot';
+import { photoIsAvatar } from '@/modules/avatar/domain/profileAvatar.js';
 import { SECOES } from './UserAreaSections';
 import { t } from '@/core/i18n';
 
@@ -292,6 +294,9 @@ function PendenciaLink({ item, onSecao }) {
 
 function Cabecalho({ user, userProfile }) {
   const { level, source } = useMyUnifiedLevel();
+  const { flags } = useFeatureFlags();
+  const avatarOn = Boolean(flags?.[FEATURE_FLAG.AVATAR_CREATOR]);
+  const avatarRecipe = photoIsAvatar(userProfile) ? userProfile.avatar.recipe : null;
   const name = userProfile?.platform_name || user?.displayName || 'Atleta';
   const photo = userProfile?.photo_url || user?.photoURL || '';
   const location = [userProfile?.city, userProfile?.state].filter(Boolean).join(', ');
@@ -303,7 +308,7 @@ function Cabecalho({ user, userProfile }) {
   return (
     <header className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm sm:p-6">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <V2Avatar name={name} photoUrl={photo} size="xl" className="h-20 w-20 text-2xl" />
+        <ProfileAvatarSlot name={name} photoUrl={photo} recipe={avatarRecipe} className="h-20 w-20 text-2xl" />
         <div className="min-w-0 flex-1">
           <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Minha área')}</p>
           <h1 className={`truncate ${PAGE_TITLE}`}>{name}</h1>
@@ -323,6 +328,11 @@ function Cabecalho({ user, userProfile }) {
           <V2Button asChild variant="subtle" size="sm" className="flex-1 sm:flex-none">
             <Link to="/perfil/editar" data-dica="perfil-editar"><Pencil className="h-4 w-4" /> {t('Editar perfil')}</Link>
           </V2Button>
+          {avatarOn && (
+            <V2Button asChild variant="subtle" size="sm" className="flex-1 sm:flex-none">
+              <Link to="/avatar" data-dica="perfil-avatar"><Smile className="h-4 w-4" /> {userProfile?.avatar ? t('Editar avatar') : t('Criar avatar')}</Link>
+            </V2Button>
+          )}
           {user?.uid && (
             <V2Button asChild variant="ghost" size="sm" className="flex-1 sm:flex-none">
               <Link to={`/atleta/${user.uid}`}><Eye className="h-4 w-4" /> {t('Ver perfil público')}</Link>

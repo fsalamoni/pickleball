@@ -56,6 +56,7 @@ import {
   Gauge,
   FileText,
   Inbox,
+  Smile,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -96,6 +97,7 @@ import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 // Sob demanda: só com a flag `platform_marketing`, e só quando a aba abre.
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
 const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
+const AdminAvatarCatalogTab = lazy(() => import('@/v2/components/admin/AdminAvatarCatalogTab'));
 const AdminGameDaysTab = lazy(() => import('@/v2/components/admin/AdminGameDaysTab'));
 const DuprPolicyCard = lazy(() => import('@/v2/components/admin/DuprPolicyCard'));
 const AdminDuprPilotTab = lazy(() => import('@/v2/components/admin/AdminDuprPilotTab'));
@@ -182,6 +184,10 @@ const SECTIONS = Object.freeze([
   // A voz da plataforma e dos parceiros falando com todos.
   { id: 'careerSection', label: tk('Carreira'), icon: Route, flag: 'athlete_career', dica: 'admin-secao-carreira', tabs: [
     { id: 'carreira-moderacao', label: tk('Denúncias de dupla'), icon: Flag, keywords: ['carreira', 'dupla', 'confirmação', 'visão', 'denúncia', 'moderação'] },
+  ] },
+  // Avatares (flag `avatar_creator`): as raquetes de marca do estúdio.
+  { id: 'avatarSection', label: tk('Avatares'), icon: Smile, flag: 'avatar_creator', tabs: [
+    { id: 'avatar-marcas', label: tk('Raquetes de marca'), icon: Smile, keywords: ['avatar', 'patrocínio', 'patrocinado', 'marca', 'raquete'] },
   ] },
   { id: 'outreach', label: tk('Divulgação'), icon: Megaphone, tabs: [
     { id: 'promo', label: tk('Cupons e campanhas'), icon: Megaphone, keywords: ['divulgação', 'banner'] },
@@ -291,6 +297,11 @@ export default function V2AdminConsole() {
         {tab === 'federacoes' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminFederationsPanel />
+          </Suspense>
+        )}
+        {tab === 'avatar-marcas' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminAvatarCatalogTab />
           </Suspense>
         )}
         {tab === 'carreira-moderacao' && (

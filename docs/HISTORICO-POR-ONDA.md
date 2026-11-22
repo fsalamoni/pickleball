@@ -2397,3 +2397,23 @@ torneio). O que a varredura achou e corrigiu:
   ordem de desempate do torneio não tinha guia.
 
 Zero banco, zero regra, nada migrado.
+
+## Avatar do jogador em 3D (2026-11-22)
+
+Pedido do dono: avatares próprios "de extrema qualidade", com tema de
+pickleball, corpo, rosto, poses, expressões, roupas e movimento, e o catálogo
+pronto para receber raquetes de marcas. A primeira versão, um desenho 2D em
+SVG, foi recusada ("avatar perfeito e não algo 2D simples") antes de ser
+publicada; o avatar foi refeito em 3D de verdade com a three.js, modelado em
+código (o Ready Player Me, referência do setor, foi desligado em 31/01/2026 —
+depender de serviço de fora para a foto de perfil era o risco a evitar).
+
+- Estúdio em `/avatar`, avatar vivo na Minha área e no perfil, raquetes de
+  marca no Painel admin; atrás da flag `avatar_creator` (desligada).
+- A imagem do avatar vira o `photo_url`: ele aparece em toda tela sem mexer
+  em nenhuma. A foto de verdade fica guardada e volta com um toque.
+- three.js só por import dinâmico (pacote inicial 392 kB, teto 400).
+- Limite assumido: acabamento de boneco de vinil, não de Memoji esculpido;
+  o motor aceita peças `.glb` de artista depois.
+
+Zero coleção, zero índice, zero regra, zero função. `docs/58-AVATARES.md`.

@@ -31,7 +31,9 @@ associação" (`club_association`, `docs/52-CLUBE-ASSOCIACAO.md` §5.15). As dem
 (gamificação, treino, dicas…) viraram código permanente e os artigos delas
 aparecem sempre. O mais novo é "Instalar o PickleRush no celular" (Começar
 aqui), que explica a instalação no Android, no iPhone/iPad e no computador e o
-ícone claro/escuro conforme o tema do celular.
+ícone claro/escuro conforme o tema do celular. Em 2026-11-22 entrou "Seu
+avatar: um jogador de pickleball com a sua cara" (Começar aqui, atrás da flag
+`avatar_creator`, com a pista de rota `/avatar` — `docs/58-AVATARES.md`).
 
 ## 2. O momento em que esta tela é usada
 

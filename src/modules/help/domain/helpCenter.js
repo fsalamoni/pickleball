@@ -167,6 +167,28 @@ const COMECAR = {
       ],
     },
     {
+      id: 'avatar',
+      flags: ['avatar_creator'],
+      title: tk('Seu avatar: um jogador de pickleball com a sua cara'),
+      summary: tk('Monte o avatar em 3D, gire, veja o movimento e use como foto do perfil.'),
+      keywords: ['avatar', 'boneco', 'personagem', 'foto do perfil', '3d', 'raquete', 'patrocinado', 'marca'],
+      blocks: [
+        p(tk('O AVATAR é o seu jogador em 3D: rosto, cabelo, roupa, raquete, pose e fundo, tudo escolhido por você. Ele respira e pisca sozinho; arraste para girar e toque nele para ver o movimento da pose (o saque, o golpe, a comemoração, o aceno).')),
+        steps(
+          tk('Abra a Minha área e toque em "Criar avatar".'),
+          tk('Escolha por assunto: Rosto, Cabelo, Expressão, Roupa, Raquete, Acessórios, Pose e Fundo. Cada opção já aparece no seu próprio avatar. "Surpreenda-me" sorteia um avatar inteiro; as setas desfazem e refazem.'),
+          tk('Toque em "Salvar avatar". Com "Usar como foto do perfil" ligado, ele passa a ser a sua foto no ranking, nos jogos, nos torneios e nos clubes.'),
+        ),
+        list(
+          tk('A SUA FOTO NÃO SE PERDE — a foto de antes fica guardada, e "Voltar para a minha foto" a devolve quando você quiser.'),
+          tk('RAQUETES DE MARCA — na aba Raquete podem aparecer raquetes de marcas parceiras, sempre com o selo "Patrocinado". Usar é escolha sua, e tocar nela de novo devolve a sua raquete.'),
+          tk('NO SEU PERFIL — com o avatar como foto, quem abre o seu perfil o vê em 3D e pode girá-lo.'),
+        ),
+        tip(tk('O avatar é desenhado no seu aparelho. Num aparelho ou navegador que não desenha em 3D, a plataforma avisa e mostra a imagem já salva.')),
+        link('/avatar', tk('Abrir o meu avatar')),
+      ],
+    },
+    {
       id: 'dicas',
       title: tk('Dicas: a plataforma mostra na tela, quando você pedir'),
       summary: tk('Guias que apontam o botão de verdade, e pontos que explicam cada tela.'),
@@ -3175,6 +3197,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   // O perfil de outra pessoa: o bloco "Carreira" (vitrine, PR 7) — o artigo segue atrás da flag.
   { pattern: '/atleta/*', label: tk('o perfil de um atleta'),
     refs: [[HELP_SECTION.ATHLETE, 'carreira-vitrine'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+  { pattern: '/avatar', label: tk('o seu avatar'), refs: [[HELP_SECTION.START, 'avatar']] },
   { pattern: '/perfil/editar', label: tk('editar seu perfil'),
     refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade'], [HELP_SECTION.COACH, 'virar-professor']] },
   { pattern: '/perfil', label: tk('seu perfil'),

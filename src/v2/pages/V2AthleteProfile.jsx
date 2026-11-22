@@ -15,11 +15,12 @@ import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
-import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
+import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 import { useDuprMode } from '@/modules/rating/hooks/useDuprMode';
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
+import ProfileAvatarSlot from '@/v2/components/avatar/ProfileAvatarSlot';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { t, tn, fmtData } from '@/core/i18n';
@@ -114,7 +115,7 @@ export default function V2AthleteProfile() {
         <div className="relative px-6 pb-8 sm:px-8">
           <div className="-mt-16 mb-6 flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="rounded-full border-8 border-paper-pure bg-paper-pure shadow-md">
-              <V2Avatar name={athlete.platform_name} photoUrl={athlete.photo_url} size="xl" className="h-32 w-32 text-4xl" />
+              <ProfileAvatarSlot name={athlete.platform_name} photoUrl={athlete.photo_url} recipe={athlete.avatar?.recipe || null} className="h-32 w-32 text-4xl" />
             </div>
             <div className="flex w-full items-center gap-2 sm:w-auto">
               {followOn && <FollowButton targetUid={uid} />}

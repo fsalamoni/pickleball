@@ -156,6 +156,16 @@ export const FEATURE_FLAG = Object.freeze({
   ATHLETE_CAREER: 'athlete_career',
 
   /**
+   * AVATAR (docs/58): o estúdio `/avatar`, onde a pessoa monta o próprio
+   * jogador (rosto, cabelo, roupa, raquete, pose, movimento) e pode usá-lo
+   * como foto do perfil. Grava só no próprio `users` (campo `avatar`) e na
+   * própria pasta do Storage; raquetes de marca em
+   * `platform_settings/avatar_catalog` (só o admin escreve). Desligada, o
+   * estúdio some; quem já usa o avatar como foto pode voltar à foto de antes.
+   */
+  AVATAR_CREATOR: 'avatar_creator',
+
+  /**
    * TORNEIO — "Minha participação" e "Acompanhar" (docs/55): dentro do
    * torneio, a linha do tempo dos jogos da pessoa em TODAS as categorias, em
    * ordem de dia e horário, com fase, quadra, placar e o próximo confronto
@@ -601,6 +611,10 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.ATHLETE_CAREER]: {
     label: tk('Carreira (torneios de fora)'),
     description: tk('Abre /carreira: a linha do tempo da pessoa com os torneios e dias de jogo da plataforma e os torneios de fora que ela registra (resultado declarado, foto, dupla), a estante "Fora da plataforma" e a seção Carreira na Minha área. O resultado declarado nunca entra em ranking, rating nem XP. Desligada, a regra recusa criar e editar; quem já tem registros continua abrindo /carreira para apagar e tirar do perfil público.'),
+  },
+  [FEATURE_FLAG.AVATAR_CREATOR]: {
+    label: tk('Avatar do jogador'),
+    description: tk('Abre /avatar: cada pessoa monta o próprio avatar de pickleball (rosto, cabelo, roupa, raquete, pose e movimento) e pode usá-lo como foto do perfil, que então aparece no ranking, nos jogos, nos torneios e nos clubes. A foto anterior fica guardada. O admin cadastra raquetes de marca em Painel admin → Avatares. Desligada, o estúdio some; quem já usa o avatar como foto pode voltar à foto de antes.'),
   },
   [FEATURE_FLAG.TOURNAMENT_PERSONAL_VIEW]: {
     label: tk('Torneio — Minha participação e Acompanhar'),
