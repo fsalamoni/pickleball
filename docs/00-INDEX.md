@@ -115,7 +115,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Aviso novo, canal de envio (e-mail/WhatsApp/SMS/push), provedor | `49-AVISOS-POR-EMAIL-E-CELULAR.md` (+ paridade `messagingPolicy`, `npm run i18n:avisos`) |
 | Regra de ranking/rating | `18-RANKINGS.md` (+ paridade cliente × servidor) |
 | Carreira (torneios de fora, linha do tempo, fotos da carreira) | `54-CARREIRA-DO-ATLETA.md` + `src/modules/career/README.md`; coleção `career_*` nova também na exclusão e na exportação (`exclusaoCobreColecoes`), e nada de ranking/XP lê `career_*` (`carreiraNaoPontua`) |
-| Avatar (opção do catálogo, pose, raquete de marca, onde aparece) | `58-AVATARES.md` + `src/modules/avatar/README.md`; id do catálogo é gravado (nunca renomear); `three.js` só por `import()` (conferir `npm run build:budget`); texto novo em `src/modules/avatar/i18n/locales/` |
+| Avatar (opção do catálogo, pedido da imagem, limites, raquete de marca, onde aparece) | `58-AVATARES.md` + `src/modules/avatar/README.md`; id do catálogo é gravado (nunca renomear) e opção nova entra nos DOIS lados (cliente e `functions/avatarAiPolicy.js`, paridade); mexeu na callable `avatarAi` → `47` §7.3 e `48`; texto novo em `src/modules/avatar/i18n/locales/` |
 | Liga (formato, divisão, rodada, placar, quem cria) | `57-LIGAS.md` + `src/modules/leagues/README.md`; a regra do domínio nos DOIS lados (`functions/leaguePolicy.js`, paridade); coleção nova debaixo de `leagues/` também na exclusão (`coletarLigas`) e na exportação |
 | Padrão de código, fluxo de trabalho, deploy | `02-STANDARDS.md` / `03-WORKFLOW.md` e `CLAUDE.md` |
 | Fronteira entre camadas ou módulos (imports) | `04-ARCHITECTURE.md` §1.1a; o guarda `fronteirasDeModulos` reprova o que cruzar |

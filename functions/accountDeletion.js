@@ -119,6 +119,9 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'user_kudos_index', label: 'Índice de kudos' },
   // Gamificação (PR 0b da carreira: lacunas que existiam). Tudo de id = uid.
   { col: 'user_gamification_prefs', label: 'Preferências da gamificação' },
+  // Avatar por IA (docs/58): o contador de criações e a receita-base. As imagens
+  // de origem moram em `avatar-ia/{uid}/` (STORAGE_PREFIXES).
+  { col: 'avatar_usage', label: 'Contagem de avatares criados' },
   // A reputação é o AGREGADO das avaliações sobre a pessoa (que também somem,
   // senão o servidor a recriaria na próxima passada).
   { col: 'user_reputation', label: 'Reputação pública (gamificação)' },
@@ -1736,7 +1739,7 @@ async function contaDeLoginExiste(auth, uid) {
  * tipo e tamanho), as fotos do Mercado e os documentos enviados a federações
  * (`federacao/`), e as fotos dos torneios de fora da Carreira (`carreira/`).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `carreira/${uid}/`, (uid) => `carreira-publica/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `carreira/${uid}/`, (uid) => `carreira-publica/${uid}/`, (uid) => `mercado/${uid}/`, (uid) => `federacao/${uid}/`, (uid) => `federacao-acervo/${uid}/`, (uid) => `federacao-laudos/${uid}/`, (uid) => `clube-protecao/${uid}/`, (uid) => `avatar-ia/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {

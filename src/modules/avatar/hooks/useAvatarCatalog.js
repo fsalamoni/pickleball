@@ -11,8 +11,8 @@ export function useAvatarCatalog({ enabled = true } = {}) {
 }
 
 /**
- * As raquetes de marca NO AR. Se a leitura falhar, o estúdio segue com as
- * raquetes da casa (marca é extra, não pode travar o avatar) e diz que não
+ * As raquetes de marca NO AR. Se a leitura falhar, o criador segue com a
+ * raquete de cor (marca é extra, não pode travar o avatar) e diz que não
  * carregou.
  */
 export function useLiveBrandPaddles({ enabled = true } = {}) {

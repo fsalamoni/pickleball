@@ -1,35 +1,26 @@
 /**
  * Painel admin → Avatares → Raquetes de marca (flag `avatar_creator`).
  *
- * A raquete de marca é DESENHO (formato, cores e o nome escrito na face),
- * não imagem enviada: assim o avatar continua exportável e leve. Cada item
- * aparece no estúdio com o selo "Patrocinado", só enquanto estiver ligado e
- * dentro das datas. O id nasce de marca + nome e fica gravado na receita de
+ * A raquete de marca é DESCRIÇÃO (formato, duas cores e o nome escrito na
+ * face), não imagem enviada: é dela que o servidor escreve a raquete no pedido
+ * da imagem do avatar. Cada item aparece no criador com o selo "Patrocinado",
+ * só enquanto estiver ligado e dentro das datas. O id nasce de marca + nome e fica gravado na receita de
  * quem escolheu: renomear depois NÃO troca o id (o item segue o mesmo).
  *
  * Grava `platform_settings/avatar_catalog` (regra de sempre: só o admin
  * escreve; todos leem) e registra na auditoria.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { t, tk } from '@/core/i18n';
+import { t } from '@/core/i18n';
 import {
   V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
 import { useAvatarCatalog, useSaveAvatarCatalog } from '@/modules/avatar/hooks/useAvatarCatalog';
-import {
-  BRAND_ART_IDS, MAX_BRAND_PADDLES, brandItemId, isBrandItemLive, normalizeBrandCatalog,
-} from '@/modules/avatar/domain/brandItems.js';
+import { MAX_BRAND_PADDLES, brandItemId, isBrandItemLive, normalizeBrandCatalog } from '@/modules/avatar/domain/brandItems.js';
 import { PADDLE_SHAPES } from '@/modules/avatar/domain/catalog.js';
-import { DEFAULT_RECIPE } from '@/modules/avatar/domain/recipe.js';
-import { AvatarSnap } from '@/modules/avatar/components/AvatarSnap.jsx';
-
-const ART_LABEL = { wordmark: tk('Nome da marca'), stripe: tk('Faixa'), split: tk('Duas cores') };
-const COLOR_FIELDS = [
-  ['color', tk('Face')], ['color2', tk('Segunda cor')], ['edge', tk('Borda')], ['grip', tk('Grip')], ['ink', tk('Letra')],
-];
 
 const dayToMs = (d, end) => (d ? new Date(`${d}T${end ? '23:59:59' : '00:00:00'}`).getTime() : null);
 const msToDay = (ms) => {
@@ -39,12 +30,15 @@ const msToDay = (ms) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+/** Uma ideia das cores (a raquete de verdade quem desenha é o criador de imagens). */
 function Preview({ item }) {
-  const recipe = useMemo(() => ({ ...DEFAULT_RECIPE, pose: 'celebrate', paddleBrand: item.id || 'brand_preview' }), [item.id]);
-  const items = useMemo(() => [{ ...item, id: item.id || 'brand_preview' }], [item]);
   return (
-    <span className="block h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-paper">
-      <AvatarSnap recipe={recipe} view="paddle" brandItems={items} />
+    <span
+      aria-hidden="true"
+      className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border-8 p-1 text-center text-2xs font-black uppercase"
+      style={{ background: item.color, borderColor: item.color2, color: item.color2 }}
+    >
+      {item.wordmark}
     </span>
   );
 }
@@ -68,7 +62,7 @@ function ItemEditor({ item, onChange, onRemove }) {
           <V2Field label={t('Modelo')} htmlFor={fid('name')} required>
             <V2Input id={fid('name')} value={item.name} maxLength={40} onChange={(e) => set({ name: e.target.value })} />
           </V2Field>
-          <V2Field label={t('Escrito na face')} htmlFor={fid('wordmark')} hint={t('Até 14 letras.')}>
+          <V2Field label={t('Escrito na face')} htmlFor={fid('wordmark')} hint={t('Até 14 letras, sem acento.')}>
             <V2Input id={fid('wordmark')} value={item.wordmark} maxLength={14} onChange={(e) => set({ wordmark: e.target.value })} />
           </V2Field>
           <V2Field label={t('Formato')} htmlFor={fid('shape')}>
@@ -76,20 +70,16 @@ function ItemEditor({ item, onChange, onRemove }) {
               {PADDLE_SHAPES.map((s) => <option key={s.id} value={s.id}>{t(s.label)}</option>)}
             </V2Select>
           </V2Field>
-          <V2Field label={t('Arte')} htmlFor={fid('art')}>
-            <V2Select id={fid('art')} value={item.art} onChange={(e) => set({ art: e.target.value })}>
-              {BRAND_ART_IDS.map((a) => <option key={a} value={a}>{t(ART_LABEL[a])}</option>)}
-            </V2Select>
-          </V2Field>
           <V2Field label={t('Site da marca')} htmlFor={fid('link')} hint={t('Opcional. Só endereço https.')}>
             <V2Input id={fid('link')} type="url" value={item.link_url} onChange={(e) => set({ link_url: e.target.value })} />
           </V2Field>
         </div>
         <div className="flex flex-wrap gap-4">
-          {COLOR_FIELDS.map(([k, label]) => (
+          {/* As duas cores que entram no pedido da imagem (as demais do cadastro antigo seguem gravadas, sem uso). */}
+          {['color', 'color2'].map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm font-semibold text-ink">
               <input type="color" value={item[k]} onChange={(e) => set({ [k]: e.target.value })} className="h-11 w-11 cursor-pointer rounded-xl border border-gray-200 bg-paper-pure p-1" />
-              {t(label)}
+              {k === 'color' ? t('Face') : t('Segunda cor')}
             </label>
           ))}
         </div>
@@ -148,7 +138,7 @@ export default function AdminAvatarCatalogTab() {
       <V2Surface variant="compacto" className="space-y-2">
         <h2 className="font-display text-lg font-bold text-ink">{t('Raquetes de marca')}</h2>
         <p className="text-sm text-gray-500">
-          {t('Raquetes patrocinadas que as pessoas podem escolher no avatar. Aparecem com o selo "Patrocinado", só ligadas e dentro das datas. Quem já escolheu uma raquete que saiu do ar volta para a própria raquete.')}
+          {t('Raquetes patrocinadas que as pessoas podem escolher no avatar. Aparecem com o selo "Patrocinado", só ligadas e dentro das datas. Raquete que sai do ar deixa de ser oferecida; os avatares já criados com ela não mudam.')}
         </p>
       </V2Surface>
       {list.length === 0 && <p className="text-sm text-gray-500">{t('Nenhuma raquete de marca cadastrada.')}</p>}

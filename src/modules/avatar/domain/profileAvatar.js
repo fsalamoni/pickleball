@@ -27,7 +27,8 @@ export function avatarSaveUpdate(profile, saved) {
   const backup = wasAvatar ? (prev?.photo_backup || '') : photo;
   const avatar = {
     v: 1,
-    recipe: normalizeRecipe(saved.recipe),
+    // A raquete de marca já foi conferida pelo servidor ao criar a imagem: fica como veio.
+    recipe: normalizeRecipe(saved.recipe, { brandIds: saved.recipe?.paddleBrand ? [saved.recipe.paddleBrand] : [] }),
     url: saved.url,
     full_url: saved.fullUrl,
     path: saved.path || '',

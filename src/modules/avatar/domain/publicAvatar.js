@@ -1,12 +1,10 @@
 /**
  * O que o espelho público (`athlete_profiles.avatar`) leva do avatar: a
- * receita (para o avatar VIVO no perfil público) e a imagem de corpo
- * inteiro — só quando a pessoa escolheu o avatar como foto. Nada pessoal:
- * ids do catálogo e cores.
+ * receita (as escolhas) e a imagem inteira — só quando a pessoa escolheu o
+ * avatar como foto. Nada pessoal: ids do catálogo.
  *
  * Arquivo-folha SEM imports de propósito: o perfil público é montado no
- * login (pacote inicial), e o catálogo do avatar não pode ir junto. Quem
- * desenha normaliza a receita na hora.
+ * login (pacote inicial), e o catálogo do avatar não pode ir junto.
  */
 export function publicAvatar(profile) {
   const a = profile?.avatar;

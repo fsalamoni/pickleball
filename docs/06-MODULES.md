@@ -52,21 +52,26 @@ pública, impressão e telão.
   `tournament_photos`, `tournament_rankings`, `provisional_claims`,
   `club_event_games` (espelho de equipes).
 
-### avatar/ — avatar do jogador em 3D (flag `avatar_creator`)
+### avatar/ — avatar do jogador, criado por IA (flag `avatar_creator`)
 
-- **O quê**: cada pessoa monta o próprio jogador de pickleball em 3D (rosto,
-  cabelo, roupa, raquete, pose, fundo), que respira, gira com o dedo e faz o
-  movimento da pose ao toque; pode virar a foto do perfil. Aceita raquetes de
-  marca (patrocinadas) cadastradas pelo admin. `docs/58-AVATARES.md`.
-- **Domínio**: `catalog` (ids gravados), `recipe` (`normalizeRecipe`), `poses`,
-  `brandItems`, `profileAvatar`, `publicAvatar`, `color`. O desenho fica em
-  `three/` (three.js, **só por import dinâmico**).
+- **O quê**: cada pessoa toca nas escolhas (pessoa, cabelo, roupa, acessórios,
+  raquete, pose, fundo) e o servidor pede a imagem a um serviço de IA; o avatar
+  pode virar a foto do perfil. Limite por pessoa e teto da plataforma. Aceita
+  raquetes de marca (patrocinadas) cadastradas pelo admin. `docs/58-AVATARES.md`.
+- **Domínio**: `catalog` (ids gravados), `recipe` (`normalizeRecipe`,
+  `randomLook`), `brandItems`, `profileAvatar`, `publicAvatar`, `aiConfig`. A
+  régua do pedido da imagem mora no servidor (`functions/avatarAiPolicy.js`,
+  com paridade).
 - **Rotas**: `/avatar` (`V2AvatarStudio`). Entradas: Minha área, Editar perfil,
-  perfil do atleta (`ProfileAvatarSlot`), Painel admin → Avatares → Raquetes de
-  marca (`AdminAvatarCatalogTab`).
-- **Coleções**: nenhuma nova. Campos opcionais `users.avatar` e
-  `athlete_profiles.avatar`; documento `platform_settings/avatar_catalog`;
-  Storage `uploads/{uid}/avatar/`.
+  Painel admin → Avatares → Criador (`AdminAvatarAiTab`) e Raquetes de marca
+  (`AdminAvatarCatalogTab`).
+- **Servidor**: callable `avatarAi` (`status`, `generate`, `last`, `config`,
+  `config_save`).
+- **Coleções**: `avatar_usage` (só o servidor, sem regra). Campos opcionais
+  `users.avatar` e `athlete_profiles.avatar`; documentos
+  `platform_settings/avatar_catalog`, `platform_settings/avatar_ai` e
+  `platform_secrets/avatar_ai`; Storage `uploads/{uid}/avatar/` (o avatar
+  salvo) e `avatar-ia/{uid}/` (só o servidor).
 
 ### leagues/ — ligas (flags `leagues_*`)
 

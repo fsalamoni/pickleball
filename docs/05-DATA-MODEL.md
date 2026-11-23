@@ -57,8 +57,8 @@ Perfil privado/operacional do usuário autenticado.
 - `role`: `'platform_admin' | 'user'`. `can_create_pools: bool`.
 - **`avatar`** (2026-11-22, opcional, flag `avatar_creator`): `{ v, recipe,
   url, full_url, path, full_path, as_photo, photo_backup, updated_at_ms }` —
-  o avatar 3D da pessoa. `recipe` só tem ids do catálogo, cores `#rrggbb` e o
-  número do peito (`normalizeRecipe`); `url`/`full_url` são as imagens em
+  o avatar da pessoa (criado por IA a partir das escolhas). `recipe` só tem
+  ids do catálogo (`normalizeRecipe`, v2); `url`/`full_url` são as imagens em
   `uploads/{uid}/avatar/`; `photo_backup` guarda a foto de verdade quando o
   avatar vira a foto (`photo_url`). Escreve o dono. Ver `docs/58-AVATARES.md`.
 - **`account_status`** (2026-10-11, opcional): `'active' | 'suspended' | 'blocked'`;
@@ -103,8 +103,7 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
 - Campos públicos: nome de exibição, nível, experiência, cidade etc.
 - **`avatar`** (2026-11-22, opcional): `{ recipe, full_url, updated_at_ms }`
   quando o avatar É a foto do perfil, senão `null` (`publicAvatar`). Nunca a
-  foto guardada nem os caminhos do Storage. É o que deixa o perfil mostrar o
-  avatar em 3D a quem visita. Ver `docs/58-AVATARES.md` §3.
+  foto guardada nem os caminhos do Storage. Ver `docs/58-AVATARES.md` §3.
 - **`dupr_id`** (PR #90, Sprint 27): espelho de `users/{uid}.dupr_id`
   (null quando vazio). Visível no diretório, perfil público,
   inscrições de torneio e meu perfil.
@@ -568,6 +567,19 @@ Código do celular em andamento: `phone`, `phone_masked`, `channel`,
 `code_hash` (nunca o código), `attempts`, `expires_ms` (10 min), `sends[]`.
 Ninguém pelo cliente; apagado ao confirmar.
 
+### `platform_secrets/avatar_ai` e `avatar_usage/{uid}` (2026-11-22)
+`platform_secrets/avatar_ai`: `{ api_key, updated_at_ms, updated_by }` — a
+chave do provedor de imagens do avatar. Ninguém lê pelo navegador (nem o
+admin); só a callable `avatarAi`.
+
+`avatar_usage/{uid}`: a contagem de criações da pessoa — `uid`, `day`,
+`day_count`, `month`, `month_count` (dia e mês de Brasília), `busy_until_ms`
+(uma criação por vez), `base_recipe`/`base_ms` (a pessoa do último avatar
+criado do zero), `last_recipe`/`last_ms` (a última criação), `total`. O
+documento `avatar_usage/_platform` é o contador do mês da plataforma. **Sem
+regra** (o padrão nega tudo): só o servidor lê e grava; a tela pergunta pela
+ação `status`. Sai na exclusão de conta. Ver `docs/58-AVATARES.md` §3 e §5.
+
 ### `platform_secrets/{messaging|messaging_runtime}` (2026-10-16)
 Chaves dos provedores (SES, Resend, WhatsApp, Twilio, Zenvia), a chave HMAC
 dos links assinados e identificadores internos. `allow read, write: if false`
@@ -598,7 +610,10 @@ Leitura pública; escrita só do admin da plataforma. Singletons:
 `global` (`feature_flags.{key}` — valores das flags de `FEATURE_FLAG` — e
 `inicio.promocoes`), `arena_modules`, `gamification`, `marketplace`,
 `training`, `avatar_catalog` (`brand_paddles[]` — as raquetes de marca do
-avatar, até 40, cada uma limpa por `normalizeBrandPaddle`; ver `docs/58` §3.1),
+avatar, até 40, cada uma limpa por `normalizeBrandPaddle`; ver `docs/58` §6),
+`avatar_ai` (a configuração do criador de avatar: `enabled`, `model`,
+`quality`, `per_day`, `per_month`, `platform_month`, `has_key` — **gravada só
+pelo servidor**, ação `config_save` da callable `avatarAi`),
 `messaging` (configuração dos avisos por e-mail/celular, sem
 segredo: provedores, domínio, remetente, matriz área × canal, horários,
 limites, `push.vapid_public_key` — ver `docs/49`), `messaging_status` (estado
@@ -3084,8 +3099,9 @@ Seis blocos; o resto é negado (`/{allPaths=**}`: sem leitura nem escrita).
 | Caminho | Quem lê | Quem escreve | Limite |
 |---|---|---|---|
 | `uploads/{uid}/private/**` | só o dono | só o dono (grava e apaga) | < 25 MB |
-| `uploads/{uid}/{pasta}/**` (exceto `private`) — inclui `avatar/` (as imagens do avatar 3D, `docs/58`) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
+| `uploads/{uid}/{pasta}/**` (exceto `private`) — inclui `avatar/` (as imagens do avatar salvo, `docs/58`) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
 | `uploads/{uid}/{arquivo}` (legado, solto) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
+| `avatar-ia/{uid}/base.jpg` e `last.jpg` (a imagem-base e a última criada do avatar, `docs/58`) | ninguém pelo cliente (sem regra) | só o servidor (`avatarAi`) | — |
 | `treino/{uid}/{arquivo}` | `get`: conta logada; `list`: o dono | o dono, só cria (sem sobrescrever) | imagem webp/jpeg/png < 3 MB; vídeo mp4/webm/quicktime < 60 MB |
 | `mercado/{uid}/{arquivo}` | `get`: conta logada; `list`: o dono | o dono, só cria; apaga, exceto `comprovante-*` | como `treino`, mais PDF < 3 MB |
 | `/{allPaths=**}` | ninguém | ninguém | — |

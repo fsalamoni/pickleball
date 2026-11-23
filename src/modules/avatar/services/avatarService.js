@@ -6,26 +6,28 @@
  *
  * ponytail: imagens antigas do avatar NÃO são apagadas — cópias do
  * `photo_url` vivem em inscrições, membros de clube etc., e apagar o arquivo
- * quebraria a foto lá. Cada versão tem ~30–80 kB; limpar exige saber quem
- * ainda aponta para ela.
+ * quebraria a foto lá. Cada versão tem ~30 kB (miniatura) + ~250 kB (inteira),
+ * e o limite de criações por mês segura o total; limpar exige saber quem ainda
+ * aponta para ela.
  */
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { uploadImage } from '@/core/services/storageService';
 import { createAuditLog } from '@/core/services/auditService';
-import { blobToFile } from './avatarExport.js';
 import { normalizeBrandCatalog } from '../domain/brandItems.js';
 
 export const AVATAR_CATALOG_DOC = 'avatar_catalog';
 const catalogRef = () => doc(db, 'platform_settings', AVATAR_CATALOG_DOC);
 
 /**
- * Envia as duas imagens e devolve os endereços.
+ * Envia a miniatura (a foto do perfil) e a imagem inteira; devolve os endereços.
+ * @param {string} uid
+ * @param {{ thumb: File, full: File }} files de `avatarFiles`
  * @returns {Promise<{ url:string, fullUrl:string, path:string, fullPath:string }>}
  */
-export async function uploadAvatarImages(uid, { bust, full }, onProgress) {
-  const a = await uploadImage(blobToFile(bust, 'avatar'), { uid, folder: 'avatar', onProgress: (p) => onProgress?.(Math.round(p / 2)) });
-  const b = await uploadImage(blobToFile(full, 'avatar-corpo'), { uid, folder: 'avatar', onProgress: (p) => onProgress?.(50 + Math.round(p / 2)) });
+export async function uploadAvatarImages(uid, { thumb, full }, onProgress) {
+  const a = await uploadImage(thumb, { uid, folder: 'avatar', onProgress: (p) => onProgress?.(Math.round(p / 2)) });
+  const b = await uploadImage(full, { uid, folder: 'avatar', onProgress: (p) => onProgress?.(50 + Math.round(p / 2)) });
   return { url: a.url, path: a.path, fullUrl: b.url, fullPath: b.path };
 }
 

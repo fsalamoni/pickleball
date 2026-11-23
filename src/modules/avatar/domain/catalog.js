@@ -1,13 +1,35 @@
 /**
  * O CATÁLOGO do avatar (puro). Cada id aqui é GRAVADO na receita
- * (`users.avatar.recipe`) — renomear um id faz a receita antiga cair no
- * padrão daquela parte. Acrescente; não renomeie.
+ * (`users.avatar.recipe`) e tem um par no servidor
+ * (`functions/avatarAiPolicy.js`, que traduz o id no pedido da imagem — há
+ * teste de paridade). Renomear um id faz a receita antiga cair no padrão
+ * daquela parte. Acrescente no fim; não renomeie.
  *
  * Os rótulos saem por `tk()` e viram `t(rotulo)` na tela.
  */
 import { tk } from '@/core/i18n';
 
 const opt = (id, label, extra = {}) => Object.freeze({ id, label, ...extra });
+
+export const BODIES = Object.freeze([
+  opt('f', tk('Feminino')),
+  opt('m', tk('Masculino')),
+  opt('n', tk('Neutro')),
+]);
+
+export const AGES = Object.freeze([
+  opt('young', tk('Jovem')),
+  opt('adult', tk('Adulto')),
+  opt('mature', tk('Maduro')),
+  opt('senior', tk('Sênior')),
+]);
+
+export const BUILDS = Object.freeze([
+  opt('slim', tk('Magro')),
+  opt('average', tk('Médio')),
+  opt('athletic', tk('Atlético')),
+  opt('broad', tk('Forte')),
+]);
 
 /** Tons de pele: do mais claro ao mais escuro. */
 export const SKIN_TONES = Object.freeze([
@@ -30,14 +52,6 @@ export const FACE_SHAPES = Object.freeze([
   opt('heart', tk('Coração')),
 ]);
 
-export const EYE_SHAPES = Object.freeze([
-  opt('round', tk('Redondos')),
-  opt('almond', tk('Amendoados')),
-  opt('wide', tk('Grandes')),
-  opt('hooded', tk('Puxados')),
-  opt('lashes', tk('Com cílios')),
-]);
-
 export const EYE_COLORS = Object.freeze([
   opt('brown', tk('Castanho'), { color: '#6b3e1f' }),
   opt('dark', tk('Escuro'), { color: '#3a2414' }),
@@ -47,21 +61,6 @@ export const EYE_COLORS = Object.freeze([
   opt('gray', tk('Cinza'), { color: '#7d8a99' }),
   opt('amber', tk('Âmbar'), { color: '#c48a1d' }),
   opt('teal', tk('Azul-esverdeado'), { color: '#2f8c8a' }),
-]);
-
-export const BROWS = Object.freeze([
-  opt('natural', tk('Naturais')),
-  opt('thick', tk('Grossas')),
-  opt('arched', tk('Arqueadas')),
-  opt('straight', tk('Retas')),
-  opt('thin', tk('Finas')),
-]);
-
-export const NOSES = Object.freeze([
-  opt('button', tk('Pequeno')),
-  opt('soft', tk('Arredondado')),
-  opt('wide', tk('Largo')),
-  opt('long', tk('Fino')),
 ]);
 
 export const HAIR_STYLES = Object.freeze([
@@ -79,6 +78,7 @@ export const HAIR_STYLES = Object.freeze([
   opt('wavy', tk('Ondulado')),
   opt('locs', tk('Dreads')),
   opt('bald', tk('Careca')),
+  opt('longcurly', tk('Cacheado longo')),
 ]);
 
 export const HAIR_COLORS = Object.freeze([
@@ -129,21 +129,6 @@ export const TOPS = Object.freeze([
   opt('dress', tk('Vestido')),
 ]);
 
-export const TOP_PATTERNS = Object.freeze([
-  opt('solid', tk('Lisa')),
-  opt('side', tk('Faixa lateral')),
-  opt('band', tk('Faixa no peito')),
-  opt('chevron', tk('Chevron')),
-  opt('split', tk('Duas cores')),
-]);
-
-export const CHEST_MARKS = Object.freeze([
-  opt('none', tk('Nada')),
-  opt('ball', tk('Bola')),
-  opt('rush', tk('PickleRush')),
-  opt('number', tk('Número')),
-]);
-
 export const BOTTOMS = Object.freeze([
   opt('shorts', tk('Short')),
   opt('skort', tk('Saia-short')),
@@ -151,30 +136,30 @@ export const BOTTOMS = Object.freeze([
   opt('pants', tk('Calça')),
 ]);
 
-export const SOCKS = Object.freeze([
-  opt('low', tk('Soquete')),
-  opt('crew', tk('Cano médio')),
+/** Cores de roupa, acessório e raquete: a receita guarda o id, nunca o hex. */
+export const GEAR_COLORS = Object.freeze([
+  opt('lime', tk('Verde-limão'), { color: '#d4f82e' }),
+  opt('green', tk('Verde'), { color: '#22c55e' }),
+  opt('teal', tk('Azul-esverdeado'), { color: '#14b8a6' }),
+  opt('sky', tk('Azul-claro'), { color: '#38bdf8' }),
+  opt('blue', tk('Azul'), { color: '#2563eb' }),
+  opt('navy', tk('Azul-marinho'), { color: '#1e3a8a' }),
+  opt('purple', tk('Roxo'), { color: '#7c3aed' }),
+  opt('pink', tk('Rosa'), { color: '#ec4899' }),
+  opt('coral', tk('Coral'), { color: '#fb7185' }),
+  opt('red', tk('Vermelho'), { color: '#ef4444' }),
+  opt('orange', tk('Laranja'), { color: '#f97316' }),
+  opt('yellow', tk('Amarelo'), { color: '#facc15' }),
+  opt('white', tk('Branco'), { color: '#ffffff' }),
+  opt('gray', tk('Cinza'), { color: '#9ca3af' }),
+  opt('black', tk('Preto'), { color: '#0b0f19' }),
 ]);
 
+/** Formatos da raquete de MARCA (cadastro do admin; a receita não os guarda). */
 export const PADDLE_SHAPES = Object.freeze([
   opt('standard', tk('Padrão')),
   opt('elongated', tk('Alongada')),
   opt('wide', tk('Larga')),
-]);
-
-export const PADDLE_ARTS = Object.freeze([
-  opt('plain', tk('Lisa')),
-  opt('stripes', tk('Listras')),
-  opt('flame', tk('Chamas')),
-  opt('fade', tk('Degradê')),
-  opt('carbon', tk('Carbono')),
-  opt('rush', tk('PickleRush')),
-]);
-
-export const BALL_COLORS = Object.freeze([
-  opt('yellow', tk('Amarela'), { color: '#f4dd2b' }),
-  opt('lime', tk('Verde-limão'), { color: '#c9ef3b' }),
-  opt('orange', tk('Laranja'), { color: '#ff8a1f' }),
 ]);
 
 export const EXPRESSIONS = Object.freeze([
@@ -194,63 +179,52 @@ export const POSES = Object.freeze([
   opt('shoulder', tk('Raquete no ombro')),
   opt('celebrate', tk('Comemoração')),
   opt('wave', tk('Aceno')),
+  opt('thumbsup', tk('Joinha')),
 ]);
 
 export const BACKGROUNDS = Object.freeze([
   opt('acid', tk('Limão'), { from: '#e8fb8c', to: '#b8de1f' }),
   opt('sky', tk('Céu'), { from: '#bfe3ff', to: '#5aa9f0' }),
   opt('sunset', tk('Pôr do sol'), { from: '#ffd59a', to: '#ff7a7a' }),
-  opt('court', tk('Quadra'), { from: '#4f8fd6', to: '#2b5fa8', court: true }),
+  opt('court', tk('Quadra'), { from: '#4f8fd6', to: '#2b5fa8' }),
   opt('mint', tk('Menta'), { from: '#c9f5e4', to: '#57c9a0' }),
   opt('grape', tk('Uva'), { from: '#d9c8ff', to: '#8a6be0' }),
   opt('night', tk('Noite'), { from: '#34405e', to: '#0b0f19' }),
   opt('paper', tk('Claro'), { from: '#ffffff', to: '#e9edf3' }),
 ]);
 
-/**
- * Cores das roupas, da raquete e dos acessórios. A receita aceita qualquer
- * `#rrggbb`; a tela oferece esta paleta (combina com a marca e entre si).
- */
-export const GEAR_COLORS = Object.freeze([
-  '#d4f82e', '#a6c61a', '#22c55e', '#0f766e', '#14b8a6', '#38bdf8',
-  '#2563eb', '#1e3a8a', '#7c3aed', '#c026d3', '#ec4899', '#ef4444',
-  '#f97316', '#f59e0b', '#facc15', '#ffffff', '#e5e7eb', '#9ca3af',
-  '#4b5563', '#1f2937', '#0b0f19', '#7c2d12', '#d6b48a', '#fbcfe8',
+export const FRAMES = Object.freeze([
+  opt('bust', tk('Rosto e ombros')),
+  opt('full', tk('Corpo inteiro')),
 ]);
 
 /** As listas por campo da receita — a normalização confere contra elas. */
 export const RECIPE_OPTIONS = Object.freeze({
+  body: BODIES,
+  age: AGES,
+  build: BUILDS,
   skin: SKIN_TONES,
   face: FACE_SHAPES,
-  eyes: EYE_SHAPES,
   eyeColor: EYE_COLORS,
-  brows: BROWS,
-  nose: NOSES,
   hair: HAIR_STYLES,
   hairColor: HAIR_COLORS,
   beard: BEARDS,
   glasses: GLASSES,
   headwear: HEADWEAR,
+  headwearColor: GEAR_COLORS,
   top: TOPS,
-  topPattern: TOP_PATTERNS,
-  chestMark: CHEST_MARKS,
+  topColor: GEAR_COLORS,
   bottom: BOTTOMS,
-  socks: SOCKS,
-  paddleShape: PADDLE_SHAPES,
-  paddleArt: PADDLE_ARTS,
-  ball: BALL_COLORS,
+  bottomColor: GEAR_COLORS,
+  paddleColor: GEAR_COLORS,
   expression: EXPRESSIONS,
   pose: POSES,
   background: BACKGROUNDS,
+  frame: FRAMES,
 });
 
-/** Os campos de COR livre (`#rrggbb`) da receita. */
-export const RECIPE_COLOR_FIELDS = Object.freeze([
-  'glassesColor', 'headwearColor', 'topColor', 'topColor2', 'bottomColor',
-  'shoesColor', 'socksColor', 'paddleColor', 'paddleColor2', 'paddleEdge', 'paddleGrip',
-]);
-
-/** Acha a opção pelo id (ou a primeira da lista). */
-export function optionOf(list, id) {
-  return list.find((o) => o.id === id) || list[0];
-}
+/**
+ * O que é da PESSOA (fica igual em "manter o rosto") e o que é do VISUAL
+ * (o que a edição troca). O servidor usa a mesma divisão.
+ */
+export const IDENTITY_FIELDS = Object.freeze(['body', 'age', 'build', 'skin', 'face', 'eyeColor', 'hair', 'hairColor', 'beard', 'freckles']);

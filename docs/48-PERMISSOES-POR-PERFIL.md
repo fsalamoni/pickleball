@@ -116,8 +116,9 @@ torneio, `/c/:clubId`) existem para isso.
 | Editar o próprio perfil | ✔ exceto `role`, `can_create_pools`, `hidden*`, `account_status*`, `phone_verified_*`; `dupr_rating` só número de 2 a 8 (ou nulo) | — | rules (`duprOk`, também na correção do admin e no espelho) |
 | Confirmar o celular (`phone_verified_number`) | ◐ só pelo código de 6 números | ✖ pelo cliente | **Cloud Function** `messagingUser` (+ rules recusam o cliente — senão mandaria mensagem paga para o número de outra pessoa) |
 | Escolher canais de aviso (`notification_channels`) | ✔ o próprio | — | rules (campo do dono) |
-| Criar, usar como foto e apagar o próprio avatar 3D (`users.avatar`, imagens em `uploads/{uid}/avatar/`) | ✔ o próprio, com a flag `avatar_creator`; **voltar para a própria foto vale mesmo com a flag desligada** | — | rules (campo do dono; Storage: pasta do dono) + **só UI** para a flag — nenhuma regra nova (`docs/58-AVATARES.md`) |
-| Ver o avatar 3D de outra pessoa | ✔ conta logada, só quando ele é a foto do perfil (`athlete_profiles.avatar`: receita + imagem, nunca a foto guardada) | ✔ | rules do espelho público + `publicAvatar` na escrita |
+| Criar o próprio avatar (callable `avatarAi`: `status`, `generate`, `last`) | ✔ conta logada, com a flag `avatar_creator`, o criador ligado e a chave salva; dentro do limite do dia e do mês da pessoa e do teto do mês da plataforma | ✔ (mesmos limites) | **servidor** (`functions/avatarAi.js`: flag, configuração, reserva em transação); `avatar_usage` e `avatar-ia/` sem regra (só o servidor) |
+| Salvar, usar como foto e apagar o próprio avatar (`users.avatar`, imagens em `uploads/{uid}/avatar/`) | ✔ o próprio, com a flag `avatar_creator`; **voltar para a própria foto vale mesmo com a flag desligada** | — | rules (campo do dono; Storage: pasta do dono) + **só UI** para a flag — nenhuma regra nova (`docs/58-AVATARES.md`) |
+| Ver o avatar de outra pessoa | ✔ conta logada, só quando ele é a foto do perfil (`athlete_profiles.avatar`: receita + imagem, nunca a foto guardada) | ✔ | rules do espelho público + `publicAvatar` na escrita |
 | Corrigir cadastro de outro | ✖ | ◐ lista **fechada** de campos (nome, nascimento, telefone, cidade…); **nunca** `role`, privacidade (`*_public`, `directory_listed`) nem `email` | rules (`hasOnly`) + `adminUserEdit.js` na tela |
 | Ocultar atleta (moderação) | ✖ | ✔ (`hidden*`) | rules |
 | Suspender / bloquear / reativar | ✖ | ✔ via função | **Cloud Function** `adminSetAccountStatus` (+ rules recusam o cliente) |
@@ -537,6 +538,7 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Painel `/admin/painel` | ✔ | ✔ | **só UI** (`AdminRoute`/`isPlatformAdmin`), e as regras de cada coleção |
 | Escrever ranking/rating pelo cliente | ✖ | ✖ | rules (`allow write: if false`) |
 | Cadastrar raquetes de marca do avatar (`platform_settings/avatar_catalog`) | ✔ | ✔ | rules (`platform_settings`) + auditoria `avatar_catalog_changed`; leitura pública |
+| Configurar o criador de avatar: ligar, chave do provedor, modelo, qualidade e limites (`platform_settings/avatar_ai`, `platform_secrets/avatar_ai`) | ✔ | ✔ | **servidor** (`avatarAi`, ações `config`/`config_save`, `isPlatformAdminUser`); a chave é só de escrita — nem o admin a lê de volta; auditoria `avatar_ai_config_changed` |
 | Escrever `season_rankings` pelo cliente | ✔ pelas regras (`isPlatformAdmin`) | ✔ | rules; na prática quem escreve é a função diária |
 | Excluir contas / unificar históricos (**executar**) | ✖ | ✔ | **Cloud Function** (e-mail do dono verificado) |
 | Suspender / bloquear / revelar contato | ✔ | ✔ | **Cloud Function** |

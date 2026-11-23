@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 248 |
 | Blocos `match` (raiz + subcoleções) | 277 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 131 |
+| Cloud Functions exportadas | 132 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 17 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 14 |
-| Arquivos de teste (`*.test.js(x)`) | 1031 |
+| Arquivos de teste (`*.test.js(x)`) | 1030 |
 | Workflows do GitHub Actions | 8 |
 | Documentos/pastas em `docs/` | 64 |
 
@@ -42,7 +42,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `analytics` | 1 | · | 1 | 1 | · | · | sim |
 | `arenas` | 62 | 24 | 17 | 6 | · | 2 | sim |
 | `athletes` | 8 | 1 | 2 | 1 | · | · | sim |
-| `avatar` | 7 | 3 | 1 | 2 | · | 2 | sim |
+| `avatar` | 6 | 2 | 2 | · | · | 2 | sim |
 | `career` | 11 | 2 | 2 | · | · | 2 | sim |
 | `chat` | 2 | 1 | 1 | 1 | · | · | sim |
 | `circuits` | 1 | 1 | 1 | · | · | · | sim |
@@ -460,6 +460,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `careerDebriefWritten` | gatilho Firestore | `training_debriefs/{id}` |
 | `careerReminders` | agendada | `0 9 * * *` |
 | `lineGuest` | chamável (callable) |  |
+| `avatarAi` | chamável (callable) |  |
 
 ## 8. Feature flags
 
